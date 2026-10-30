@@ -1,8 +1,8 @@
-import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkChoice, checkOptions, checkRecord, checkString, describe } from "../checks.js";
 import { DataError, type ReadError } from "../errors.js";
 import { isXmlLanguage } from "./language.js";
-import { parseXml } from "./parse.js";
-import { readError } from "./read-error.js";
+import { type ParseXmlOptions, parseXml } from "./parse.js";
+import { locationOf, readError } from "./read-error.js";
 import { XML_NAMESPACE, XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, XSI_NAMESPACE } from "./tree.js";
 
 /** What an {@link ElementReader} needs to know about the documents it reads. */
@@ -13,6 +13,21 @@ export interface ReaderRules {
   readonly source: string;
   /** The namespaces of the elements the schema defines, the schema's own first; elements in other namespaces are extensions. */
   readonly namespaces: readonly string[];
+  /** The path of the document in its package or directory, which the issues name. `open` sets it from its options. */
+  readonly path?: string;
+}
+
+/**
+ * Returns a conversion for `ElementReader.text` and `ElementReader.attribute`: the text must be one of some terms.
+ *
+ * @param terms - The terms.
+ * @param label - Names the text in the message of the `DataError` that a wrong term gives. Default: `The text`.
+ */
+export function termOf<T extends string>(terms: readonly T[], label = "The text"): (text: string) => T {
+  return (text) => {
+    checkChoice(text, label, terms);
+    return text;
+  };
 }
 
 /** Returns whether a text node holds only XML white space. */
@@ -51,6 +66,7 @@ export class ElementReader {
     checkString(rules.module, "The module of the rules of a reader");
     checkString(rules.source, "The source of the rules of a reader");
     checkArray(rules.namespaces, "The namespaces of the rules of a reader must be an array");
+    if (rules.path !== undefined) checkString(rules.path, "The path of the rules of a reader");
     this.element = element;
     this.rules = rules;
     this.trail = trail === "" ? element.name : `${trail}/${element.name}`;
@@ -62,13 +78,19 @@ export class ElementReader {
    * @param input - The document.
    * @param rules - See {@link ReaderRules}.
    * @param what - Names the document in messages, such as `The results`.
-   * @throws `DataError` when `input` is none of these.
+   * @param options - The options of {@link parseXml}: `path` names the document in the issues, and `limits` apply to text
+   * and bytes. Default: none.
+   * @throws `DataError` when `input` is none of these, or an option has the wrong type.
    * @throws `ReadError`, `SecurityError` as {@link parseXml} does.
    */
-  static open(input: unknown, rules: ReaderRules, what: string): ElementReader {
-    if (typeof input === "string" || input instanceof Uint8Array) return new ElementReader(parseXml(input), rules);
+  static open(input: unknown, rules: ReaderRules, what: string, options: ParseXmlOptions = {}): ElementReader {
+    checkOptions(options);
+    const located = options.path === undefined ? rules : { ...rules, path: options.path };
+    if (typeof input === "string" || input instanceof Uint8Array) {
+      return new ElementReader(parseXml(input, options), located);
+    }
     if (typeof input === "object" && input !== null && Reflect.get(input, "kind") === "element") {
-      return new ElementReader(input as XmlElement, rules);
+      return new ElementReader(input as XmlElement, located);
     }
     throw new DataError(`${what} to read must be a string, a Uint8Array or an XmlElement, found ${describe(input)}.`);
   }
@@ -90,8 +112,12 @@ export class ElementReader {
 
   /** Builds the `ReadError` for a problem at this element. Throw the result. */
   fail(code: string, message: string, source: string = this.rules.source): ReadError {
-    const { line, column } = this.element;
-    return readError(`olah/${this.rules.module}/${code}`, message, source, { line, column, element: this.trail });
+    return readError(
+      `olah/${this.rules.module}/${code}`,
+      message,
+      source,
+      locationOf(this.element, this.rules.path, this.trail),
+    );
   }
 
   /**
@@ -191,6 +217,11 @@ export class ElementReader {
     if (text === undefined || isXmlLanguage(text)) return text;
     const message = `The attribute xml:lang of the element ${this.name} is invalid. The text ${describe(text)} is not a language tag such as en or pt-BR.`;
     throw this.fail("invalid-attribute", message, "XML 1.0 §2.12");
+  }
+
+  /** Returns the value of `xml:base`, or `undefined` when the element has none. */
+  base(): string | undefined {
+    return this.attributeNamed(XML_NAMESPACE, "base")?.value;
   }
 
   /** Returns the value of `xml:lang`; a `ReadError` when the element has none or an invalid one. */
@@ -321,6 +352,18 @@ export class ElementReader {
     return parse === undefined
       ? text
       : this.convert(parse, text, "invalid-text", `The text of the element ${this.name}`);
+  }
+
+  /**
+   * Returns the text of an element that holds text only, converted, and finishes the element: `text(parse)` and `done()`.
+   *
+   * @param parse - Converts the text, as for {@link attribute}.
+   * @throws `ReadError` as `text` and `done` do.
+   */
+  leaf<T>(parse: (text: string) => T): T {
+    const value = this.text(parse);
+    this.done();
+    return value;
   }
 
   /**

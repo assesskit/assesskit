@@ -14,6 +14,8 @@ export {
   ReadError,
   SecurityError,
 } from "./errors.js";
+export * from "./metadata/index.js";
+export * from "./package/index.js";
 export * from "./pnp/index.js";
 export { createRandom, type Random, type RandomState, restoreRandom, type SeededRandom } from "./random.js";
 export * from "./results/index.js";

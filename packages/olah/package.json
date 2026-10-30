@@ -46,6 +46,14 @@
       "types": "./dist/usage/index.d.ts",
       "default": "./dist/usage/index.js"
     },
+    "./metadata": {
+      "types": "./dist/metadata/index.d.ts",
+      "default": "./dist/metadata/index.js"
+    },
+    "./package": {
+      "types": "./dist/package/index.d.ts",
+      "default": "./dist/package/index.js"
+    },
     "./values": {
       "types": "./dist/values/index.d.ts",
       "default": "./dist/values/index.js"
@@ -81,6 +89,7 @@
     "fast-check": "^4.10.2"
   },
   "dependencies": {
+    "fflate": "0.8.3",
     "libxml2-wasm": "0.7.2",
     "saxes": "6.0.0",
     "xmlchars": "2.2.0"

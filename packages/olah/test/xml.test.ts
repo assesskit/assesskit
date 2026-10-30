@@ -2,17 +2,23 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  attributeOf,
   buildElement,
+  childElements,
   DataError,
   DEFAULT_XML_LIMITS,
   ElementReader,
   type Issue,
   isXmlLanguage,
+  locationOf,
   parseXml,
   ReadError,
+  readError,
   resolveIncludes,
   SecurityError,
   serializeXml,
+  termOf,
+  textOf,
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,
   XMLNS_NAMESPACE,
@@ -1090,6 +1096,65 @@ describe("ElementReader", () => {
       );
     });
   });
+
+  describe("path, base, leaf and termOf", () => {
+    it("names the document in the issues when open gets a path, and passes the limits to parseXml", () => {
+      const reader = ElementReader.open(`<a xmlns="${Ns}"><b/></a>`, rules, "The demo", { path: "d/a.xml" });
+      const error = failure(() => reader.done());
+      expect(error.issues[0]?.location).toEqual({ path: "d/a.xml", line: 1, column: 21, element: "a/b" });
+      expect(() => ElementReader.open(`<a xmlns="${Ns}"/>`, rules, "The demo", { limits: { maxNodes: 0 } })).toThrow(
+        DataError,
+      );
+      expect(() =>
+        ElementReader.open(`<a xmlns="${Ns}"><b/></a>`, rules, "The demo", { limits: { maxNodes: 1 } }),
+      ).toThrow(SecurityError);
+      expect(() => ElementReader.open(`<a xmlns="${Ns}"/>`, rules, "The demo", JSON.parse("null"))).toThrow(DataError);
+    });
+
+    it("names the document in the issues when the rules have a path, and rejects a path that is not a string", () => {
+      const element = parseXml(`<a xmlns="${Ns}"><b/></a>`);
+      const reader = new ElementReader(element, { ...rules, path: "r.xml" });
+      expect(failure(() => reader.done()).issues[0]?.location?.path).toBe("r.xml");
+      expect(
+        () => new ElementReader(element, JSON.parse('{"module":"m","source":"s","namespaces":[],"path":5}')),
+      ).toThrow("The path of the rules of a reader must be a string, found 5.");
+    });
+
+    it("reads xml:base, which is the value or undefined, and counts it as read", () => {
+      const reader = open(`<a xmlns="${Ns}" xml:base="items/"/>`);
+      expect(reader.base()).toBe("items/");
+      expect(() => reader.done()).not.toThrow();
+      expect(open(`<a xmlns="${Ns}"/>`).base()).toBeUndefined();
+      expect(failure(() => open(`<a xmlns="${Ns}" xml:base="items/"/>`).done()).issues[0]?.code).toBe(
+        "olah/demo/unexpected-attribute",
+      );
+    });
+
+    it("reads the text of an element and finishes it, so that an attribute that is left is an error", () => {
+      const integer = (text: string): number => {
+        if (!/^\d+$/.test(text)) throw new DataError("The text must be digits.");
+        return Number(text);
+      };
+      expect(open(`<a xmlns="${Ns}">12</a>`).leaf(integer)).toBe(12);
+      expect(failure(() => open(`<a xmlns="${Ns}" x="1">12</a>`).leaf(integer)).issues[0]?.code).toBe(
+        "olah/demo/unexpected-attribute",
+      );
+      expect(failure(() => open(`<a xmlns="${Ns}">x</a>`).leaf(integer)).issues[0]?.code).toBe(
+        "olah/demo/invalid-text",
+      );
+    });
+
+    it("converts the text of an element or an attribute to one of some terms", () => {
+      const terms = termOf(["red", "green"]);
+      expect(open(`<a xmlns="${Ns}">red</a>`).text(terms)).toBe("red");
+      expect(open(`<a xmlns="${Ns}" c="green"/>`).attribute("c", terms)).toBe("green");
+      expect(() => terms("blue")).toThrow('The text must be "red" or "green", found "blue".');
+      expect(() => termOf(["a", "b"], "The color")("c")).toThrow('The color must be "a" or "b", found "c".');
+      expect(failure(() => open(`<a xmlns="${Ns}">blue</a>`).text(terms)).issues[0]?.code).toBe(
+        "olah/demo/invalid-text",
+      );
+    });
+  });
 });
 
 describe("isXmlLanguage", () => {
@@ -1102,6 +1167,62 @@ describe("isXmlLanguage", () => {
     for (const tag of ["en_US", "-en", "en-", "en--US", "123", "waytoolongsubtag", " en"])
       expect(isXmlLanguage(tag), tag).toBe(false);
     expect(isXmlLanguage(JSON.parse("5"))).toBe(false);
+  });
+});
+
+describe("childElements, attributeOf and textOf", () => {
+  const root = parsed(
+    '<a xmlns:p="urn:p" x="1" p:x="2" xml:lang="en">t1<b/><!--c-->t2<![CDATA[<cd>]]><p:c/><?pi d?></a>',
+  );
+
+  it("returns the child elements in document order, without the nodes between them", () => {
+    expect(childElements(root).map(({ name }) => name)).toEqual(["b", "c"]);
+    expect(childElements(element("e"))).toEqual([]);
+  });
+
+  it("returns the value of an attribute of a namespace, the unqualified one by default, or undefined", () => {
+    expect(attributeOf(root, "x")).toBe("1");
+    expect(attributeOf(root, "x", "urn:p")).toBe("2");
+    expect(attributeOf(root, "lang", XML_NAMESPACE)).toBe("en");
+    expect(attributeOf(root, "y")).toBeUndefined();
+    expect(attributeOf(root, "lang")).toBeUndefined();
+  });
+
+  it("joins the text and CDATA children of an element, and leaves out comments, instructions and child elements", () => {
+    expect(textOf(root)).toBe("t1t2<cd>");
+    expect(textOf(element("e"))).toBe("");
+  });
+});
+
+describe("readError and locationOf", () => {
+  it("builds a ReadError with one issue and the position in its message", () => {
+    const error = readError("olah/xml/example", "The example is wrong.", "XML 1.0 §2.1", {
+      path: "a.xml",
+      line: 3,
+      column: 7,
+    });
+    expect(error).toBeInstanceOf(ReadError);
+    expect(error.message).toBe("The example is wrong. (line 3, column 7)");
+    expect(error.issues).toEqual([
+      {
+        severity: "error",
+        code: "olah/xml/example",
+        message: "The example is wrong.",
+        source: "XML 1.0 §2.1",
+        location: { path: "a.xml", line: 3, column: 7 },
+      },
+    ]);
+    expect(readError("olah/xml/example", "m", "s").issues[0]).not.toHaveProperty("location");
+  });
+
+  it("takes the location of an element from its start tag", () => {
+    expect(locationOf(parseXml("<a>\n  <b/></a>"), "x.xml")).toEqual({ path: "x.xml", line: 1, column: 1 });
+    const b = childElements(parseXml("<a>\n  <b/></a>"))[0];
+    expect(b && locationOf(b, undefined)).toEqual({ path: undefined, line: 2, column: 3 });
+  });
+
+  it("adds the path of the element names when the caller tracks it", () => {
+    expect(locationOf(parseXml("<a/>"), "x.xml", "r/a")).toEqual({ path: "x.xml", line: 1, column: 1, element: "r/a" });
   });
 });
 

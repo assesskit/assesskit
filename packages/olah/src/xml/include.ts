@@ -1,7 +1,8 @@
 import { checkFunction, checkOptions, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError, type IssueLocation, type ReadError, SecurityError } from "../errors.js";
 import { resolveLimits, type XmlLimits } from "./limits.js";
-import { readError } from "./read-error.js";
+import { attributeOf } from "./query.js";
+import { locationOf, readError } from "./read-error.js";
 import { XINCLUDE_NAMESPACE, type XmlElement, type XmlNode } from "./tree.js";
 
 /**
@@ -50,14 +51,6 @@ function xincludeName(node: XmlNode): string | undefined {
 
 function isFallback(node: XmlNode): node is XmlElement {
   return xincludeName(node) === "fallback";
-}
-
-function attributeOf(element: XmlElement, name: string): string | undefined {
-  return element.attributes.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
-}
-
-function locationOf(element: XmlElement, context: Context): IssueLocation {
-  return { path: context.base, line: element.line, column: element.column };
 }
 
 /** Expands the `xi:include` elements of a tree, counting the nodes of the result against the limits. */
@@ -109,7 +102,7 @@ class Expander {
         "olah/xml/xinclude-structure",
         "An xi:fallback must be a child of an xi:include.",
         FALLBACK_SYNTAX,
-        locationOf(node, context),
+        locationOf(node, context.base),
       );
     }
     this.checkDepth(context.depth);
@@ -120,7 +113,7 @@ class Expander {
 
   /** Returns the href of an include after checking its attributes and children. */
   private checkInclude(include: XmlElement, context: Context): string {
-    const location = locationOf(include, context);
+    const location = locationOf(include, context.base);
     const fail = (message: string, source: string, code = "olah/xml/xinclude-attribute"): ReadError =>
       readError(code, message, source, location);
     if (attributeOf(include, "xpointer") !== undefined) {
@@ -155,7 +148,7 @@ class Expander {
     const key = joinReference(context.base, href);
     if (context.chain.includes(key)) {
       const message = `The xi:include of ${JSON.stringify(href)} includes a document that is already being included.`;
-      throw readError("olah/xml/xinclude-cycle", message, "XInclude 1.0 §4.2.7", locationOf(include, context));
+      throw readError("olah/xml/xinclude-cycle", message, "XInclude 1.0 §4.2.7", locationOf(include, context.base));
     }
     if (context.chain.length > this.limits.maxIncludeDepth) {
       const { maxIncludeDepth } = this.limits;
@@ -168,7 +161,7 @@ class Expander {
     } catch (error) {
       // XInclude 1.0 §4.4: a resource error falls back; limits and path rules are not resource errors.
       if (error instanceof SecurityError) throw error;
-      if (fallback === undefined) throw resourceError(href, error, locationOf(include, context));
+      if (fallback === undefined) throw resourceError(href, error, locationOf(include, context.base));
       return this.expandNodes(fallback.children, context);
     }
     return this.expandNode(checkTarget(returned), { base: key, chain: [...context.chain, key], depth: context.depth });

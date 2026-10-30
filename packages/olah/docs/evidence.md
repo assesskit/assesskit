@@ -130,15 +130,20 @@ shows in the matrix as accepted and not as a difference.
 Expected values come from an oracle, never from the code under test. The scripts that write them are in `validation/` of
 the repository and use the standard library of Python 3.12 or later:
 
-| Script        | Fixture                                     | Oracle                                                                                     |
-| ------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `printf.py`   | `packages/olah/test/fixtures/printf.json`   | Python's `%` operator, for `e E f g G d i o x X` with flags, width and precision           |
-| `rounding.py` | `packages/olah/test/fixtures/rounding.json` | Python's `decimal` module with `ROUND_HALF_UP`, for `qti-round-to` and `qti-equal-rounded` |
+| Script        | Fixture                                     | Oracle                                                                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `printf.py`   | `packages/olah/test/fixtures/printf.json`   | Python's `%` operator, for `e E f g G d i o x X` with flags, width and precision                                                                                                                                                                                                           |
+| `rounding.py` | `packages/olah/test/fixtures/rounding.json` | Python's `decimal` module with `ROUND_HALF_UP`, for `qti-round-to` and `qti-equal-rounded`                                                                                                                                                                                                 |
+| `zip.py`      | `packages/olah/test/fixtures/zip/`          | Python's `zipfile`, which writes the archives (stored and deflated entries, UTF-8 names, directories, data descriptors, a zip-slip, an absolute path, a backslash, a symbolic link, two names that normalize alike, a zip bomb) and reads back the ZIP64 archive that the script assembles |
 
 Python and C differ in a few printf cases, which the printf script leaves out: the alternate form of `o`; the alternate
 form and precision 0 of the integer conversions at the value 0; the flag `0` together with a precision on an integer
 conversion; the flags `+` and space, and negative values, on the unsigned conversions `o`, `x` and `X`. Every case that
 remains gives the same string with the C library's `printf`.
 
-Both scripts use a fixed seed for their random samples and write the same files every time. Run them from the
-repository root and commit the result.
+`zips.json` lists the files of each valid archive with the size and SHA-256 that `zipfile` read from it. The tests that need an
+archive no tool writes, such as an encrypted entry, a header that understates a size, or a local header that names another
+file, build it byte by byte (`test/zip-builder.ts`): their expected result is the rule, not an oracle.
+
+The scripts use a fixed seed for their random samples and write the same files every time. Run them from the repository root
+and commit the result.

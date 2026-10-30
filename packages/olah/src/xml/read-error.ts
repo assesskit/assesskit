@@ -1,4 +1,5 @@
 import { type Issue, type IssueLocation, ReadError } from "../errors.js";
+import type { XmlElement } from "./tree.js";
 
 /** Returns how messages name a document: "The document" or, with a path, the document by its path. */
 export function documentName(path: string | undefined): string {
@@ -17,4 +18,12 @@ export function readError(code: string, message: string, source: string, locatio
   const issue: Issue = { severity: "error", code, message, source, ...(location ? { location } : {}) };
   const position = location?.line === undefined ? "" : ` (line ${location.line}, column ${location.column ?? 1})`;
   return new ReadError(`${message}${position}`, [issue]);
+}
+
+/**
+ * Returns the location of an element: its path in the document, the position of its start tag and, when the caller tracks it,
+ * the path of element names that leads to it.
+ */
+export function locationOf(element: XmlElement, path: string | undefined, trail?: string): IssueLocation {
+  return { path, line: element.line, column: element.column, ...(trail === undefined ? {} : { element: trail }) };
 }

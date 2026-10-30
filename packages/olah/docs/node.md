@@ -1,16 +1,19 @@
 # node
 
 `@luthfanwakan/olah/node` is for Node.js 22 and later. It validates XML documents against the official XSD schemas of
-QTI 3.0 and the specifications it references. The schemas are 1EdTech and W3C files that olah does not ship (they are
-copyrighted); the module pins them by SHA-256 and compiles them with libxml2 in WebAssembly.
+QTI 3.0 and the specifications it references, and reads and writes QTI content packages as files. The schemas are 1EdTech and
+W3C files that olah does not ship (they are copyrighted); the module pins them by SHA-256 and compiles them with libxml2 in
+WebAssembly.
 
-| Export                             | Purpose                                                                                  |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| `SCHEMA_FILES`, `SchemaFile`       | The pinned list: URL, file name and SHA-256 of every schema.                             |
-| `loadSchemaSet(directory)`         | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.             |
-| `SchemaSet`                        | The schemas of a directory, compiled when first needed and reused; `close()` frees them. |
-| `validateXmlFiles(schemas, files)` | Parses each document with `parseXml`, then validates it; returns `Issue`s.               |
-| `XmlFile`                          | A document: `path` and `content` (text or bytes).                                        |
+| Export                                    | Purpose                                                                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `SCHEMA_FILES`, `SchemaFile`              | The pinned list: URL, file name and SHA-256 of every schema.                             |
+| `loadSchemaSet(directory)`                | Checks the files of `SCHEMA_FILES` in a directory and returns a `SchemaSet`.             |
+| `SchemaSet`                               | The schemas of a directory, compiled when first needed and reused; `close()` frees them. |
+| `validateXmlFiles(schemas, files)`        | Parses each document with `parseXml`, then validates it; returns `Issue`s.               |
+| `XmlFile`                                 | A document: `path` and `content` (text or bytes).                                        |
+| `readPackageFile(path, options?)`         | Reads a package from a ZIP file or an unpacked directory.                                |
+| `writePackageFile(path, manifest, files)` | Writes a package as a ZIP file.                                                          |
 
 ## Example
 
@@ -34,6 +37,30 @@ try {
   schemas.close();
 }
 ```
+
+## Package files
+
+`readPackageFile(path, options?)` returns a `QtiPackage` (see [package](package.md)) and takes the options of `readPackage`: `limits`
+(`ZipLimits`) and `xmlLimits`. What the path is decides how it reads:
+
+| Path        | Reading                                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| A file      | The bytes go to `readPackage`. A file larger than `maxTotalBytes` is a `SecurityError` before it is read.                 |
+| A directory | The directory is listed once; each file is read when `file(path)` asks for it. `paths` are sorted, with `/` as separator. |
+
+A directory is read with these rules (§2.6):
+
+- Listing checks every entry with `lstat`. A symbolic link anywhere below the directory is a `SecurityError` with `limit` `"symlink"`,
+  also a link to a file inside the directory; a socket, device or pipe has `limit` `"special-file"`; a name that is not allowed in a
+  package (a backslash, a control character) has `limit` `"path"`.
+- Reading a file checks again with `lstat` and `realpath` that it is a regular file below the directory, so that a file replaced by a
+  link after the listing is not followed. The check and the read are two calls: a directory that another process changes while olah
+  reads it is not protected against a race, and a package directory should not be writable by untrusted users.
+- `maxEntries`, `maxEntryBytes` and `maxTotalBytes` apply to the files and directories, by their size on disk.
+- The path given to `readPackageFile` may itself be a link; olah resolves it once and reads below the result.
+
+`writePackageFile(path, manifest, files)` writes what `writePackage` returns to a ZIP file and replaces a file that is there. It
+does not write unpacked directories. Both functions throw a `DataError` for a path that cannot be read or written.
 
 ## Getting the schemas
 

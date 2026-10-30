@@ -23,3 +23,10 @@ Readers and writers for the companion specifications: Results Reporting (`result
 asks for. Everything written validates against the official schemas. `xml` has `ElementReader`, which maps a document to a model
 and reports what the model leaves unread, and `buildElement`; `values` has the lexical forms of `xs:date`, `xs:dateTime`
 and ISO 8601 durations.
+
+QTI content packages (`package`): the manifest, ZIP archives read with the checks against zip-slip, links, encryption and zip
+bombs, ZIP64 reading, the documents of a package with their includes resolved, the resolvers of the delivery engine with the
+variants of an item and their accessibility description, the dependency closure and LTI link documents; the metadata of their
+resources (`metadata`): QTI metadata, LOM, curriculum standards and the accessibility description. `ElementReader` also reads
+`xml:base`, takes the options of `parseXml`, and finishes an element that holds text only. For Node.js: packages from
+ZIP files and from directories, with symbolic links rejected, and packages to ZIP files.

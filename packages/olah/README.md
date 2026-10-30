@@ -2,9 +2,9 @@
 
 A QTI 3.0 runtime for JavaScript and TypeScript: it reads, writes, validates and executes assessment items, tests,
 content packages and results, and runs a test session without presentation. It is under development; this version has
-the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the
-typed model of assessment documents with its reader and writer, and the readers and writers of results, usage data and
-personal needs and preferences.
+the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the typed
+model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
+and preferences, and QTI content packages with their metadata.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -82,16 +82,18 @@ writeAsi(document).includes(
 
 ## API
 
-| Import                       | Contents                                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@luthfanwakan/olah`         | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                           |
-| `@luthfanwakan/olah/asi`     | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`             |
-| `@luthfanwakan/olah/results` | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                  |
-| `@luthfanwakan/olah/usage`   | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                          |
-| `@luthfanwakan/olah/pnp`     | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                           |
-| `@luthfanwakan/olah/values`  | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex` |
-| `@luthfanwakan/olah/xml`     | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                      |
-| `@luthfanwakan/olah/node`    | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`                                                                                            |
+| Import                        | Contents                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@luthfanwakan/olah`          | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                           |
+| `@luthfanwakan/olah/asi`      | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`             |
+| `@luthfanwakan/olah/results`  | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                  |
+| `@luthfanwakan/olah/usage`    | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                          |
+| `@luthfanwakan/olah/pnp`      | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                           |
+| `@luthfanwakan/olah/metadata` | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant |
+| `@luthfanwakan/olah/package`  | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                  |
+| `@luthfanwakan/olah/values`   | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex` |
+| `@luthfanwakan/olah/xml`      | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                      |
+| `@luthfanwakan/olah/node`     | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                     |
 
 The errors are `DataError` for a wrong argument, `ReadError` for a document that cannot be read, `SecurityError` for
 input that breaks a limit and `ProcessingError` for a condition that processing does not define as NULL. Validation does
@@ -102,11 +104,13 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
 - [ASI](docs/asi.md): the model of assessment documents, the reader and the writer, the covers of external scores, and the element table.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
-- [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the reader of models.
+- [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
 - [Results](docs/results.md): the model of a Results Reporting document, its values and its rules.
 - [Usage data](docs/usage.md): item statistics, their values and mappings.
 - [PNP](docs/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
-- [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, and the engine.
+- [Metadata](docs/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
+- [Package](docs/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
+- [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
 - [Evidence](docs/evidence.md): how every construct is tested, and how to refresh the corpus and the fixtures.
 - [Conformance](docs/conformance.md): the inventory, the certification features and the accepted differences.
 

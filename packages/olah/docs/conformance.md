@@ -30,7 +30,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB3 | merged | 3 |
 | OB4 | merged | 149 |
 | OB5 | merged | 77 |
-| OB6 | pending | 67 |
+| OB6 | merged | 67 |
 | OB7 | pending | 185 |
 | OB8 | pending | 59 |
 | OB9 | pending | 8 |
@@ -662,9 +662,9 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B57 | Choice shuffling: `shuffle` randomizes initial order, `fixed` choices keep their positions, each match set shuffles separately | INFO §5.30.1, INFO §5.132.2, INFO §5.89.1 | interactions | S P | OB10 |  |
 | B58 | Solution state replaces responses with correct responses, or NULL | INFO §2.2.1 | delivery | S | OB13a |  |
 | B59 | Clones: a clone gets its own identifier and records template values; reports convert back to the template | INFO §2.7 | delivery, results | S | OB13a |  |
-| B60 | Item and test fragments through XInclude where the XSD allows `xi:include` (42 types), as parsed XML, without xpointer | INFO §2.12 | xml, asi | S N | OB3 | [xml.test.ts](../test/xml.test.ts) |
+| B60 | Item and test fragments through XInclude where the XSD allows `xi:include` (42 types), as parsed XML, without xpointer | INFO §2.12 | xml, asi | S N | OB3 | [package.test.ts](../test/package.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | B61 | External scoring: `external-scored` (human, externalMachine), `variable-identifier-ref`; session waits in pendingExternalScoring until scores applied | INFO §4.5.10–11, BPIG §3.4.5, RR §2.7.7 | delivery, results | S | OB16 |  |
-| B62 | Shared stimulus through `qti-assessment-stimulus-ref` and package dependencies | BPIG §3.7.7, BIND §8.5 | asi, package | C | OB6 |  |
+| B62 | Shared stimulus through `qti-assessment-stimulus-ref` and package dependencies | BPIG §3.7.7, BIND §8.5 | asi, package | C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
 | B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 |  |
 | B64 | Custom operators: dispatch to a registered function by `definition`, else `class`; unregistered is a ProcessingError (G7) | INFO §2.11.3.2, INFO §10.1.5 | processing | S N | OB8 |  |
 | B65 | Custom interaction (deprecated): data kept; response binding unchecked | INFO §2.4.4.5, INFO §10.1.4 | asi, interactions | R | OB10 |  |
@@ -691,12 +691,12 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B86 | `match` compares equal values (pair unordered); should not be used for float, must not for duration | INFO §2.11.3.28 | processing, validate | S P N | OB8 |  |
 | B87 | Outcome-only expressions are errors in response processing: `outcome-minimum`, `outcome-maximum`, `test-variables` (BIND rule set), and the `number-*` expressions (INFO "only in outcomes processing") | BIND §5.3.2, INFO §2.11.2 | validate | N | OB14 |  |
 | B88 | End of attempt only on a candidate action or an expected event, such as the end of the test | INFO §2.5 | delivery | S | OB13b |  |
-| B89 | Package rules: one resource per item, section, test, stimulus; single-item packages put metadata on the resource; `cp:organization` and `cp:item` prohibited; schema and version values; auxiliary files listed or shared through dependencies | BIND §8.1–8.8 | package, validate | S N C | OB6 |  |
-| B90 | Variants: `cpx:variant` on the core item's resource, with DRD metadata | BIND §8.1.1, BPIG §6.6 | package, metadata | S C | OB6 |  |
-| B91 | Separate outcome declaration and response processing template resources, linked by dependencies | BIND §8.6–8.7 | package, asi | S C | OB6 |  |
+| B89 | Package rules: one resource per item, section, test, stimulus; single-item packages put metadata on the resource; `cp:organization` and `cp:item` prohibited; schema and version values; auxiliary files listed or shared through dependencies | BIND §8.1–8.8 | package, validate | S N C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| B90 | Variants: `cpx:variant` on the core item's resource, with DRD metadata | BIND §8.1.1, BPIG §6.6 | package, metadata | S C | OB6 | [package.test.ts](../test/package.test.ts) |
+| B91 | Separate outcome declaration and response processing template resources, linked by dependencies | BIND §8.6–8.7 | package, asi | S C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
 | B92 | CAT configuration files listed in the manifest when package-relative | CAT §2.6 | package, validate | S N | OB14 |  |
-| B93 | Relative hrefs resolve against the referencing file and `xml:base`; references outside the package are reported | BIND §8, BPIG §6.7 | package | S P N | OB6 |  |
-| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
+| B93 | Relative hrefs resolve against the referencing file and `xml:base`; references outside the package are reported | BIND §8, BPIG §6.7 | package | S P N | OB6 | [package.test.ts](../test/package.test.ts) |
+| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 | [node.test.ts](../test/node.test.ts), [node.xsd.test.ts](../test/node.xsd.test.ts), [package.test.ts](../test/package.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | B95 | Adaptive items in review: final outcomes decide integrated feedback; `show-feedback` ignored when `allow-review` is true | INFO §7.19.3 | delivery, content | S | OB13a |  |
 | B96 | Draft and submitted responses are kept apart: expressions, outcome processing and results `final` read the last submitted values; RR `pendingSubmission` snapshots the drafts | INFO §2.11.1.2, RR §2.7.7 | delivery | S P | OB13a |  |
 | B97 | A branch rule must not target an item that selection with replacement can repeat | INFO §5.98 (Ordering class) | validate | N | OB14 |  |
@@ -825,73 +825,73 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| K1 | `manifest` (`identifier!`, `xml:base`), namespace `http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1` | CP XSD, BIND §8.8.1 | package | R X C | OB6 |  |
-| K2 | `metadata` (manifest): `schema` ∈ {QTI Package, QTI Item Bank, QTI Test Bank, QTI Object Bank, QTI Test, QTI Section, QTI Item}, `schemaversion` = `3.0.0`, `lom:lom`, `csmd:curriculumStandardsMetadataSet` | BIND §8, CP XSD | package, metadata | R X V N | OB6 |  |
-| K3 | `organizations`; `cp:item`; nested `cp:manifest` | BIND §8 | package, validate | N | OB6 |  |
-| K4 | `resources` (`xml:base`) | CP XSD | package | R X | OB6 |  |
-| K5 | `resource` (`identifier!`, `type!`, `href`, `xml:base`) | BIND §8.1–8.7 | package | R X C | OB6 |  |
-| K6 | `metadata` (resource): `lom:lom`, `qmd:qtiMetadata`, `csmd:curriculumStandardsMetadataSet` | BIND §8.8, INFO §4.1.1 | package, metadata, validate | R X N | OB6 |  |
-| K7 | `file` (`href!`), with `metadata` | BIND §8.1, CAT §2.6 | package, validate | R X N C | OB6 |  |
-| K8 | `dependency` (`identifierref!`) | BIND §8.1–8.5 | package, validate | R X N | OB6 |  |
-| K9 | `cpx:variant` (`identifier!`, `identifierref!`) and `cpx:metadata` with `drd:accessForAllResource` | BIND §8.1.1, CPX XSD, BPIG §6.6 | package, metadata, delivery | R X N S | OB6 |  |
-| K10 | Resource type `imsqti_test_xmlv3p0` | CP XSD | package | V C | OB6 |  |
-| K11 | Resource type `imsqti_section_xmlv3p0` | CP XSD | package | V C | OB6 |  |
-| K12 | Resource type `imsqti_item_xmlv3p0` | CP XSD | package | V C | OB6 |  |
-| K13 | Resource type `imsqti_resprocessing_xmlv3p0` | CP XSD | package | V | OB6 |  |
-| K14 | Resource type `imsqti_outcomes_xmlv3p0` | CP XSD, BIND §8.7 | package | V C | OB6 |  |
-| K15 | Resource type `imsqti_stimulus_xmlv3p0` | CP XSD, BIND §8.5 | package | V C | OB6 |  |
-| K16 | Resource type `imsqti_fragment_xmlv3p0` | CP XSD, BIND §8.4 | package, xml | V | OB6 |  |
-| K17 | Resource type `imsqti_rptemplate_xmlv3p0` | CP XSD, BIND §8.6 | package, processing | V C | OB6 |  |
-| K18 | Resource type `associatedcontent/learning-application-resource` | CP XSD | package | V | OB6 |  |
-| K19 | Resource type `webcontent` | CP XSD | package | V C | OB6 |  |
-| K20 | Resource type `imsbasiclti_xmlv1p3` | CP XSD, BPIG §6.2.9 | package, delivery | V C S | OB6 |  |
-| K21 | Resource type `controlfile` | CP XSD | package | V | OB6 |  |
-| K22 | Resource type `resourcemetadata/xml` | CP XSD, BPIG §6.3 | package, metadata | V C | OB6 |  |
-| K23 | Resource type `resourceextmetadata/xml` | CP XSD | package | V | OB6 |  |
-| K24 | Resource type `qtiusagedata/xml` | CP XSD, BPIG §6.5 | package, usage | V C | OB6 |  |
-| K25 | Resource type `pls` | CP XSD | package | V | OB6 |  |
-| K26 | Resource type `css2` | CP XSD | package | V | OB6 |  |
-| K27 | Resource type `css3` | CP XSD | package | V | OB6 |  |
-| K28 | Resource type `extension` | CP XSD | package | V | OB6 |  |
+| K1 | `manifest` (`identifier!`, `xml:base`), namespace `http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1` | CP XSD, BIND §8.8.1 | package | R X C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K2 | `metadata` (manifest): `schema` ∈ {QTI Package, QTI Item Bank, QTI Test Bank, QTI Object Bank, QTI Test, QTI Section, QTI Item}, `schemaversion` = `3.0.0`, `lom:lom`, `csmd:curriculumStandardsMetadataSet` | BIND §8, CP XSD | package, metadata | R X V N | OB6 | [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K3 | `organizations`; `cp:item`; nested `cp:manifest` | BIND §8 | package, validate | N | OB6 | [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K4 | `resources` (`xml:base`) | CP XSD | package | R X | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K5 | `resource` (`identifier!`, `type!`, `href`, `xml:base`) | BIND §8.1–8.7 | package | R X C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K6 | `metadata` (resource): `lom:lom`, `qmd:qtiMetadata`, `csmd:curriculumStandardsMetadataSet` | BIND §8.8, INFO §4.1.1 | package, metadata, validate | R X N | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K7 | `file` (`href!`), with `metadata` | BIND §8.1, CAT §2.6 | package, validate | R X N C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K8 | `dependency` (`identifierref!`) | BIND §8.1–8.5 | package, validate | R X N | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K9 | `cpx:variant` (`identifier!`, `identifierref!`) and `cpx:metadata` with `drd:accessForAllResource` | BIND §8.1.1, CPX XSD, BPIG §6.6 | package, metadata, delivery | R X N S | OB6 | [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K10 | Resource type `imsqti_test_xmlv3p0` | CP XSD | package | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K11 | Resource type `imsqti_section_xmlv3p0` | CP XSD | package | V C | OB6 | [package.test.ts](../test/package.test.ts) |
+| K12 | Resource type `imsqti_item_xmlv3p0` | CP XSD | package | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K13 | Resource type `imsqti_resprocessing_xmlv3p0` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K14 | Resource type `imsqti_outcomes_xmlv3p0` | CP XSD, BIND §8.7 | package | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K15 | Resource type `imsqti_stimulus_xmlv3p0` | CP XSD, BIND §8.5 | package | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K16 | Resource type `imsqti_fragment_xmlv3p0` | CP XSD, BIND §8.4 | package, xml | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K17 | Resource type `imsqti_rptemplate_xmlv3p0` | CP XSD, BIND §8.6 | package, processing | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K18 | Resource type `associatedcontent/learning-application-resource` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K19 | Resource type `webcontent` | CP XSD | package | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K20 | Resource type `imsbasiclti_xmlv1p3` | CP XSD, BPIG §6.2.9 | package, delivery | V C S | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
+| K21 | Resource type `controlfile` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K22 | Resource type `resourcemetadata/xml` | CP XSD, BPIG §6.3 | package, metadata | V C | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K23 | Resource type `resourceextmetadata/xml` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K24 | Resource type `qtiusagedata/xml` | CP XSD, BPIG §6.5 | package, usage | V C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
+| K25 | Resource type `pls` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K26 | Resource type `css2` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K27 | Resource type `css3` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
+| K28 | Resource type `extension` | CP XSD | package | V | OB6 | [package.test.ts](../test/package.test.ts) |
 | K29 | PNP files must not be in a package; results files must not be in a package | BIND §7 | validate | N | OB14 |  |
-| K30 | Zip container, file paths, limits | BPIG §6.7 | package, node | N P | OB6 |  |
+| K30 | Zip container, file paths, limits | BPIG §6.7 | package, node | N P | OB6 | [node.test.ts](../test/node.test.ts), [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts), [package.xsd.test.ts](../test/package.xsd.test.ts) |
 
 ### Q: Metadata
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| Q1 | `qtiMetadata` (namespace `http://www.imsglobal.org/xsd/imsqti_metadata_v3p0`) | MD §2.3.1 | metadata | R X C | OB6 |  |
-| Q2 | `itemTemplate` | MD §2.3.1, INFO §2.7 | metadata | R X S | OB6 |  |
-| Q3 | `timeDependent` | MD §2.3.1 | metadata | R X S | OB6 |  |
-| Q4 | `composite` | MD §2.3.1, INFO §1.5 | metadata | R X S | OB6 |  |
-| Q5 | `interactionType` | MD §2.6.2 | metadata | R X S | OB6 |  |
-| Q6 | `portableCustomInteractionContext` | MD §2.4.1 | metadata | R X | OB6 |  |
-| Q7 | `customTypeIdentifier` | MD §2.4.1 | metadata | R X | OB6 |  |
-| Q8 | `interactionKind` | MD §2.4.1 | metadata | R X | OB6 |  |
-| Q9 | `feedbackType` | MD §2.6.1 | metadata | R X S | OB6 |  |
-| Q10 | `solutionAvailable` | MD §2.3.1 | metadata | R X S | OB6 |  |
-| Q11 | `scoringMode` | MD §2.6.3 | metadata | R X S | OB6 |  |
-| Q12 | `toolName` | MD §2.5.1 | metadata | R X | OB6 |  |
-| Q13 | `toolVersion` | MD §2.5.1 | metadata | R X | OB6 |  |
-| Q14 | `toolVendor` | MD §2.5.1 | metadata | R X | OB6 |  |
-| Q15 | Vocabulary InteractionType (22 terms, `associateInteraction` … `uploadInteraction`) | MD §2.6.2 | metadata | V | OB6 |  |
-| Q16 | Vocabulary FeedbackType (`adaptive`, `nonadaptive`, `none`) | MD §2.6.1 | metadata | V | OB6 |  |
-| Q17 | Vocabulary ScoringMode (`human`, `externalmachine`, `responseprocessing`) | MD §2.6.3 | metadata | V | OB6 |  |
-| Q18 | LOM `general` | MD §2.7.1 | metadata | R X C | OB6 |  |
-| Q19 | LOM `lifeCycle` | MD §2.7.2 | metadata | R X | OB6 |  |
-| Q20 | LOM `metaMetadata` | MD §2.7.3 | metadata | R X | OB6 |  |
-| Q21 | LOM `technical` | MD §2.7.4 | metadata | R X | OB6 |  |
-| Q22 | LOM `educational` | MD §2.7.5 | metadata | R X | OB6 |  |
-| Q23 | LOM `rights` | MD §2.7.6 | metadata | R X | OB6 |  |
-| Q24 | LOM `relation` | MD §2.7.7 | metadata | R X | OB6 |  |
-| Q25 | LOM `annotation` | MD §2.7.8 | metadata | R X | OB6 |  |
-| Q26 | LOM `classification` | MD §2.7.9 | metadata | R X | OB6 |  |
-| Q27 | CSM `curriculumStandardsMetadataSet` (`resourceLabel`, `resourcePartId`) | CSM XSD, BIND §8.8.2 | metadata | R X C | OB6 |  |
-| Q28 | CSM `curriculumStandardsMetadata` (`providerId`) | CSM XSD | metadata | R X | OB6 |  |
-| Q29 | CSM `setOfGUIDs` (`region`, `version`) | CSM XSD | metadata | R X | OB6 |  |
-| Q30 | CSM `labelledGUID`, `label`, `caseItemURI`, `GUID` | CSM XSD, BPIG §6.4 | metadata | R X C | OB6 |  |
-| Q31 | DRD `accessForAllResource` | DRD XSD, BPIG §6.6 | metadata | R X C | OB6 |  |
-| Q32 | DRD children `accessMode`, `accessModeAdapted`, `adaptationDetail`, `adaptationMediaType`, `adaptationType`, `apiInteroperable`, `atInteroperable`, `controlFlexibility`, `displayTransformability`, `educationalComplexityOfAdaptation`, `educationalLevelOfAdaptation`, `hasAdaptation`, `hazard`, `isAdaptationOf`, `isFullAdaptationOf`, `isPartialAdaptationOf`, `languageOfAdaptation` | DRD XSD | metadata | R X V | OB6 |  |
+| Q1 | `qtiMetadata` (namespace `http://www.imsglobal.org/xsd/imsqti_metadata_v3p0`) | MD §2.3.1 | metadata | R X C | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts), [package.test.ts](../test/package.test.ts) |
+| Q2 | `itemTemplate` | MD §2.3.1, INFO §2.7 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q3 | `timeDependent` | MD §2.3.1 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q4 | `composite` | MD §2.3.1, INFO §1.5 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q5 | `interactionType` | MD §2.6.2 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q6 | `portableCustomInteractionContext` | MD §2.4.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q7 | `customTypeIdentifier` | MD §2.4.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q8 | `interactionKind` | MD §2.4.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q9 | `feedbackType` | MD §2.6.1 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q10 | `solutionAvailable` | MD §2.3.1 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q11 | `scoringMode` | MD §2.6.3 | metadata | R X S | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q12 | `toolName` | MD §2.5.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q13 | `toolVersion` | MD §2.5.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q14 | `toolVendor` | MD §2.5.1 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q15 | Vocabulary InteractionType (22 terms, `associateInteraction` … `uploadInteraction`) | MD §2.6.2 | metadata | V | OB6 | [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q16 | Vocabulary FeedbackType (`adaptive`, `nonadaptive`, `none`) | MD §2.6.1 | metadata | V | OB6 | [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q17 | Vocabulary ScoringMode (`human`, `externalmachine`, `responseprocessing`) | MD §2.6.3 | metadata | V | OB6 | [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q18 | LOM `general` | MD §2.7.1 | metadata | R X C | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts), [package.test.ts](../test/package.test.ts) |
+| Q19 | LOM `lifeCycle` | MD §2.7.2 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts) |
+| Q20 | LOM `metaMetadata` | MD §2.7.3 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts) |
+| Q21 | LOM `technical` | MD §2.7.4 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts) |
+| Q22 | LOM `educational` | MD §2.7.5 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts) |
+| Q23 | LOM `rights` | MD §2.7.6 | metadata | R X | OB6 | [metadata.test.ts](../test/metadata.test.ts) |
+| Q24 | LOM `relation` | MD §2.7.7 | metadata | R X | OB6 | [metadata.test.ts](../test/metadata.test.ts) |
+| Q25 | LOM `annotation` | MD §2.7.8 | metadata | R X | OB6 | [metadata.test.ts](../test/metadata.test.ts) |
+| Q26 | LOM `classification` | MD §2.7.9 | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts) |
+| Q27 | CSM `curriculumStandardsMetadataSet` (`resourceLabel`, `resourcePartId`) | CSM XSD, BIND §8.8.2 | metadata | R X C | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts), [package.test.ts](../test/package.test.ts) |
+| Q28 | CSM `curriculumStandardsMetadata` (`providerId`) | CSM XSD | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q29 | CSM `setOfGUIDs` (`region`, `version`) | CSM XSD | metadata | R X | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q30 | CSM `labelledGUID`, `label`, `caseItemURI`, `GUID` | CSM XSD, BPIG §6.4 | metadata | R X C | OB6 | [metadata.corpus.test.ts](../test/metadata.corpus.test.ts), [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q31 | DRD `accessForAllResource` | DRD XSD, BPIG §6.6 | metadata | R X C | OB6 | [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
+| Q32 | DRD children `accessMode`, `accessModeAdapted`, `adaptationDetail`, `adaptationMediaType`, `adaptationType`, `apiInteroperable`, `atInteroperable`, `controlFlexibility`, `displayTransformability`, `educationalComplexityOfAdaptation`, `educationalLevelOfAdaptation`, `hasAdaptation`, `hazard`, `isAdaptationOf`, `isFullAdaptationOf`, `isPartialAdaptationOf`, `languageOfAdaptation` | DRD XSD | metadata | R X V | OB6 | [metadata.test.ts](../test/metadata.test.ts), [metadata.xsd.test.ts](../test/metadata.xsd.test.ts) |
 
 ### U: Usage data
 
@@ -1102,7 +1102,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b |  |
 | G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 | [asi.test.ts](../test/asi.test.ts) |
-| G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 |  |
+| G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
 | G13 | Population variance and SD require more than one value | INFO §8.31 | processing | S | OB8 |  |
 | G14 | ISO 8601 durations with years or months have no fixed length in seconds; BPIG App. C.1's own example `P10Y3M20DT4H30M25S` has both | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G15 | Range of `random-float` and admissible values of `random-integer` | INFO §7.33–7.34 | processing | S | OB8 |  |

@@ -1,0 +1,150 @@
+{
+  "valid.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "items/a.xml",
+      "size": 1880,
+      "sha256": "fdc2a9047762dbbd1b4017e297f37803e384346116cf937573b3a2dc83b2e321"
+    },
+    {
+      "name": "media/noise.bin",
+      "size": 300,
+      "sha256": "768df61123d5121d6b962947aa4dcb8b2453b5e1ba4b775d22379fdb6b897bcf"
+    },
+    {
+      "name": "media/ünï.txt",
+      "size": 9,
+      "sha256": "2339cb732d32543bafd93b1589ae651e75b3464e521af77f9c0cd760d821dfd0"
+    },
+    {
+      "name": "empty.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "streamed.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "items/a.xml",
+      "size": 1880,
+      "sha256": "fdc2a9047762dbbd1b4017e297f37803e384346116cf937573b3a2dc83b2e321"
+    },
+    {
+      "name": "media/noise.bin",
+      "size": 300,
+      "sha256": "768df61123d5121d6b962947aa4dcb8b2453b5e1ba4b775d22379fdb6b897bcf"
+    },
+    {
+      "name": "media/ünï.txt",
+      "size": 9,
+      "sha256": "2339cb732d32543bafd93b1589ae651e75b3464e521af77f9c0cd760d821dfd0"
+    },
+    {
+      "name": "empty.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "zip64.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "items/a.xml",
+      "size": 1880,
+      "sha256": "fdc2a9047762dbbd1b4017e297f37803e384346116cf937573b3a2dc83b2e321"
+    },
+    {
+      "name": "empty.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "zip-slip.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "../evil.txt",
+      "size": 1,
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    }
+  ],
+  "absolute.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "/etc/passwd",
+      "size": 1,
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    }
+  ],
+  "backslash.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "items\\a.xml",
+      "size": 1,
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    }
+  ],
+  "symlink.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "link",
+      "size": 11,
+      "sha256": "74acf31844532670be412c65b8251ee55d072549080b1cffdbea6b1a192230a0"
+    }
+  ],
+  "duplicate.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "a.xml",
+      "size": 1,
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    },
+    {
+      "name": "./a.xml",
+      "size": 1,
+      "sha256": "a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa"
+    }
+  ],
+  "bomb.zip": [
+    {
+      "name": "imsmanifest.xml",
+      "size": 353,
+      "sha256": "f6bef64cd4c0044e0ac6c295e514910fe0d675dcd2291ad5a8dc9e84c31ee65e"
+    },
+    {
+      "name": "zeros.bin",
+      "size": 40000000,
+      "sha256": "c0e6623abfbed73c146be81338cff1e8e4c06dd05eb98721163dc79fbbd20562"
+    }
+  ]
+}

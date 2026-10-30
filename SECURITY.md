@@ -26,6 +26,15 @@ Points to be aware of when deploying olah:
   `SCHEMA_FILES`, and again when it compiles a file. `validateXmlFiles` parses every document with `parseXml` first and
   runs libxml2 with network access and external entities off. A document has no way to name another schema file than the
   pinned ones.
+- **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (§2.6, BPIG §6.7). An archive
+  entry whose name is absolute, leaves the package with `..`, or has a backslash, a drive letter or a control character
+  rejects the archive (zip-slip), as do two entries with one normalized name, a symbolic link, and an encrypted entry. The
+  entry count, the declared sizes and the compression ratio are checked from the central directory, and the bytes are counted
+  again while an entry inflates, so that a header that understates a size cannot make the output larger. A package directory is
+  read with `lstat` and `realpath`: a symbolic link or a file that is not a regular file rejects it, and a file replaced by a
+  link after the listing is not followed. A reference in a document that leaves the package, and an `xi:include` that names a
+  file outside it, are never resolved. A package directory that another process can change while olah reads it is not protected
+  against a race.
 
 ## Default limits
 
@@ -41,6 +50,17 @@ its attributes on an element.
 | `maxNodes`        | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.              |
 | `maxIncludeDepth` | 8          | The nesting of `xi:include`.                                                |
 
+The limits of archives and package directories, `ZipLimits`, are about 1,000 times the entries of the largest package of the
+examples (99), 100 times its largest entry (5.0 MiB), 200 times its size (11.0 MB) and 9 times its largest compression ratio
+(27.9, on a 7.5 KB entry; 3.6 on the entries above the exemption).
+
+| Limit           | Default       | Applies to                                                                                               |
+| --------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
+| `maxEntries`    | 100,000       | Entries of an archive, directories included; files and directories of a package directory.               |
+| `maxEntryBytes` | 536,870,912   | The uncompressed bytes of one file.                                                                      |
+| `maxTotalBytes` | 2,147,483,648 | The uncompressed bytes of all files.                                                                     |
+| `maxRatio`      | 250           | The uncompressed size of an entry over its compressed size; entries of 102,400 bytes or less are exempt. |
+
 ## Runtime dependencies
 
 The packages that olah loads at run time are pinned to exact versions:
@@ -49,4 +69,5 @@ The packages that olah loads at run time are pinned to exact versions:
 | -------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `saxes`        | 6.0.0   | ISC     | `xml`: a namespace-aware parser that rejects documents that are not well-formed. It expands no entity but the five predefined ones and reads no DTD. It has not changed since 2021; if a defect needs a fix, olah forks it. |
 | `xmlchars`     | 2.2.0   | MIT     | `xml`: the character and name tables of XML 1.0 (a dependency of `saxes`, also used by the writer).                                                                                                                         |
+| `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. olah reads the central directory itself.                         |
 | `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                    |
