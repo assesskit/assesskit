@@ -2,7 +2,8 @@
 
 The protocol is what a browser and a session host send each other. It is JSON around olah's JSON forms, which olah writes
 and reads: `actionToJson` and `parseCandidateAction` for actions, `viewToJson` and `viewFromJson` for views. The checks
-here look at the envelope only; olah reads what is inside.
+here look at the envelope only; olah reads what is inside. The submission that a rater reads is the one form that tempuh
+itself defines, because the server writes it and the browser shows it.
 
 ```ts
 import { checkActionEnvelope } from "@luthfanwakan/tempuh/protocol";
@@ -89,3 +90,24 @@ session has of its test.
 and `isOfficialResult(value)` tells whether a value is one: a copy of the report, a report parsed from JSON and the report of a
 practice session are not. The marking function is not exported; only `server/` and `lti/` may import `protocol/official.ts`
 (lint). A service that reports a score takes only an `OfficialResult` and refuses any other object.
+
+## Submission
+
+A `Submission` is what a rater or a scorer service needs to rate one externally scored outcome. `toSubmission` of
+`@luthfanwakan/tempuh/scoring` writes it from olah's scorer view, and `mountSubmission` of `@luthfanwakan/tempuh/player` shows
+it ([scoring](scoring.md) lists its properties). It holds the correct responses of the items, so it goes only to raters.
+
+`checkSubmission(value)` throws `DataError` when `value`
+
+- is not an object, or has a property other than those of its form, at any level;
+- has a field of another type, such as a `mode` other than `human` or `externalMachine`;
+- has a time that a datestamp of the years 1 to 9999 cannot show;
+- has content that is not a list of nodes, each an object with a string `kind`;
+- has a part that names an item the submission lacks, or an item twice.
+
+```ts
+import { checkSubmission } from "@luthfanwakan/tempuh/protocol";
+
+checkSubmission(JSON.parse('{"request":"item:essay:1:SCORE","outcome":"SCORE","mode":"robot"}'));
+// DataError: The mode of a submission must be "human" or "externalMachine", found "robot".
+```

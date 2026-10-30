@@ -135,6 +135,24 @@ request, and `forwardEvents` against a log that records its calls. The fixture o
 served on 2026-10-30 (SHA-256 `8a78d3d0d380e80c03c7507d1e6d0113d8ab2aa2f772f3e1c8442d958d40837d`); a new version of the context is
 a new file and a new decision.
 
+## Tests of scoring
+
+The tests of `scoring/` run in Node against olah's engine, and those of the display run in the browsers. Their oracles are not
+the code under test.
+
+| Oracle                                                               | Used for                                                                                                                                                  |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| olah's engine: `scorerView`, `pending`, `apply` and `results`        | The scorer view that `toSubmission` reads, and what the engine does with the action of `toSupplyScores`: the events, the pending requests and the results |
+| olah's codec, `toWireValue` and `fromWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                |
+| INFO §4.5.10 and olah's scoring requests                             | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
+
+`scoring.test.ts` plays tests and items through the engine: the request of an item outcome and of a test outcome with covers,
+an item that was not presented, correct responses and template values, a score supplied before, and `unknown-request` for a
+request the state lacks. A property test takes a candidate's text from the engine through a submission, as JSON text, to a
+score, a second score that replaces it and the submission read again. The display has `submission.browser.test.ts`: the
+content roots and their references, the values by cardinality and base type, the files by media type, the themes, and axe at
+WCAG 2.2 A and AA with the contrast of the nested content in every theme.
+
 ## Tests name their rows and criteria
 
 A title names what it evidences in brackets, as a string literal: `it("[T97] chooses the catalog of the language")` or

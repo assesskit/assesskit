@@ -40,6 +40,10 @@
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"
     },
+    "./scoring": {
+      "types": "./dist/scoring/index.d.ts",
+      "default": "./dist/scoring/index.js"
+    },
     "./cat": {
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"

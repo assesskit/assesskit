@@ -31,7 +31,7 @@ const ANIMATED_IMAGE_TYPES: ReadonlySet<string> = new Set([
 const ANIMATED_IMAGE_EXTENSIONS = /\.(?:apng|avif|gif|svg|webp)$/iu;
 
 /** Returns the media type without its parameters, in lower case. */
-function essence(type: string): string {
+export function essence(type: string): string {
   return (type.split(";")[0] ?? "").trim().toLowerCase();
 }
 

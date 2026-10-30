@@ -401,4 +401,58 @@ export interface Messages {
   readonly refusalValueOutOfRange: string;
   /** The reason for refusing to submit one question of a part that submits all together. */
   readonly refusalWrongSubmissionMode: string;
+  /** The heading of the display of a submission that a rater scores. */
+  readonly submissionTitle: string;
+  /** The name of the outcome that the rater scores. */
+  readonly submissionOutcome: string;
+  /** The name of the field that says who scores the outcome. */
+  readonly submissionScorer: string;
+  /** The scorer that is a person. */
+  readonly submissionHuman: string;
+  /** The scorer that is an external machine. */
+  readonly submissionMachine: string;
+  /** The name of the cardinality and base type of the outcome. */
+  readonly submissionType: string;
+  /** The name of the least value of the outcome in normal use. */
+  readonly submissionMinimum: string;
+  /** The name of the greatest value of the outcome in normal use. */
+  readonly submissionMaximum: string;
+  /** The name of the value from which the aspect counts as mastered. */
+  readonly submissionMastery: string;
+  /** The name of the short statement of what the outcome means. */
+  readonly submissionMeaning: string;
+  /** The name of the address of a longer description of the outcome. */
+  readonly submissionDetails: string;
+  /** The name of the variable reference that the outcome's declaration names. */
+  readonly submissionVariable: string;
+  /** The notice of an item that is a link to a tool. */
+  readonly submissionLinkedTool: string;
+  /** The name of the time the score was requested. */
+  readonly submissionRequested: string;
+  /** The name of the score that a scorer gave before. */
+  readonly submissionEarlier: string;
+  /** The name of who gave the earlier score. */
+  readonly submissionEarlierBy: string;
+  /** The name of the time the earlier score was given. */
+  readonly submissionEarlierAt: string;
+  /** The heading of the rubric for the scorer. */
+  readonly submissionRubric: string;
+  /** The notice of an item that the candidate was not shown. */
+  readonly submissionNotPresented: string;
+  /** The name of the response variable of a response that the outcome rates. */
+  readonly submissionResponseId: string;
+  /** The name of the kind of interaction that binds a response. */
+  readonly submissionInteraction: string;
+  /** The name of what the candidate answered. */
+  readonly submissionResponse: string;
+  /** The text that stands for a response with no value. */
+  readonly submissionNoResponse: string;
+  /** The heading of the correct responses of an item. */
+  readonly submissionCorrect: string;
+  /** The heading of the template values of an item. */
+  readonly submissionTemplates: string;
+  /** The text that stands for a variable with no value. */
+  readonly submissionNoValue: string;
+  /** The name of a file that the candidate submitted, when it has no name of its own. */
+  readonly submissionFile: string;
 }

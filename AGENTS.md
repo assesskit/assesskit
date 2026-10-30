@@ -59,7 +59,7 @@ packages/tempuh/          the player
                           checkNonEmptyString, checkNonNegativeInteger, checkPositiveInteger, checkBoolean, checkPositive,
                           checkChoice
   src/messages/           Messages, the English and Indonesian catalogs, selectMessages
-  src/protocol/           Caller, ActionEnvelope and ViewEnvelope, with their checks
+  src/protocol/           Caller, ActionEnvelope, ViewEnvelope and Submission, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
   player.css              the stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation
   scripts/                build-static.ts writes the static files of the player: the PCI frame and the recording worklet

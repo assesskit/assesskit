@@ -18,7 +18,7 @@
     "TB13b",
     "TB15"
   ],
-  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6", "TB14", "TB12", "TB7", "TB9"],
+  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6", "TB14", "TB12", "TB7", "TB9", "TB11"],
   "rows": [
     {
       "id": "T1",
@@ -918,7 +918,7 @@
       "olah": ["E17"],
       "modules": ["server/", "lti/"],
       "evidence": ["E"],
-      "unit": "TB11"
+      "unit": "TB13b"
     },
     {
       "id": "T114",

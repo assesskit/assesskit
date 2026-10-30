@@ -183,6 +183,22 @@ tempuh, and only `cat/takar/` imports it.
 - The token goes only in the `Authorization` header of that endpoint. A `ServiceError` carries the endpoint's answer as
   `body`: log it as untrusted text.
 
+## tempuh: external scoring
+
+A `Submission` of `toSubmission` carries what a rater needs to score a response, which includes the correct responses of the
+items and the rubric for the scorer ([scoring.md](packages/tempuh/docs/scoring.md)).
+
+- Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
+  candidate's session or to the candidate's browser. It is not a view of the candidate.
+- `mountSubmission` draws the content of a submission with the renderer of the player, so the content is sanitized as a
+  candidate's is. It draws a file that a candidate submitted as an image, audio, video or a link, and never in a frame, because
+  the candidate chose its bytes and its media type. The URL of a file comes from the host's `files.url`, which must give an
+  `http` or `https` URL. Serve the files of candidates from an origin that is not the host's page, with `nosniff` and a
+  `Content-Disposition` that downloads what the display does not play.
+- The text of a response is data: the display sets it as text and never as markup.
+- `toSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
+  trusts a score it is given, so authenticate the rater and log who supplied it.
+
 ## tempuh: content
 
 The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from olah's typed

@@ -11,4 +11,13 @@ export { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocume
 export { isOfficialResult, type OfficialResult } from "./official.js";
 export { checkRefusal, REFUSAL_CODES } from "./refusal.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";
+export {
+  checkSubmission,
+  type Submission,
+  type SubmissionItem,
+  type SubmissionPart,
+  type SubmissionSupplied,
+  type SubmissionValue,
+  type SubmissionVariable,
+} from "./submission.js";
 export { checkViewEnvelope, type ViewEnvelope } from "./view-envelope.js";

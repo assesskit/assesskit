@@ -2,11 +2,13 @@ import type { CandidateView, RefusalCode } from "@luthfanwakan/olah/delivery";
 import type { AssessmentResult } from "@luthfanwakan/olah/results";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { isRecord } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 import {
   checkActionEnvelope,
   checkCaller,
   checkRefusal,
+  checkSubmission,
   checkViewEnvelope,
   isOfficialResult,
   REFUSAL_CODES,
@@ -259,6 +261,172 @@ describe("official results", () => {
 
   it("[T67] marks nothing that is not an object", () => {
     for (const text of ["null", "5", '"result"', "[]"]) expect(isOfficialResult(json(text)), text).toBe(false);
+  });
+});
+
+/** A submission as JSON delivers it: a request of an item outcome with one part, one item and a score supplied before. */
+const SUBMISSION = {
+  request: "item:e:1:SCORE",
+  outcome: "SCORE",
+  mode: "human",
+  declaration: { cardinality: "single", baseType: "float", normalMaximum: 10 },
+  requestedAt: 2_000,
+  supplied: {
+    value: { cardinality: "single", baseType: "float", value: { base: { float: 7.5 } } },
+    at: 3_000,
+    scorer: "human",
+  },
+  rubric: [{ kind: "p", children: [{ kind: "text", value: "Rate the content." }] }],
+  parts: [
+    {
+      item: { ref: "e", instance: 1 },
+      responseIdentifier: "RESPONSE",
+      label: "Essay",
+      presented: true,
+      interaction: "extended-text-interaction",
+      value: { cardinality: "single", baseType: "string", value: { base: { string: "Dear Sir" } } },
+    },
+  ],
+  items: [
+    {
+      key: { ref: "e", instance: 1 },
+      title: "Essay",
+      presented: true,
+      body: [{ kind: "p", children: [{ kind: "text", value: "Write." }] }],
+      templateValues: [{ identifier: "N", value: null }],
+      correctResponses: [],
+    },
+  ],
+};
+
+/** A step of a path into JSON: a property or an index. */
+type Step = string | number;
+
+/** Returns a copy of JSON with the value at a path replaced; an `undefined` value leaves the property out of the text. */
+function set(node: unknown, path: readonly Step[], value: unknown): unknown {
+  const [step, ...rest] = path;
+  if (step === undefined) return value;
+  if (Array.isArray(node)) return node.map((child, index) => (index === step ? set(child, rest, value) : child));
+  if (isRecord(node)) return { ...node, [step]: set(node[step], rest, value) };
+  throw new Error("The path leaves the submission.");
+}
+
+/** Returns the submission with the value at a path replaced, as JSON delivers it. */
+const changed = (path: readonly Step[], value: unknown): unknown => json(JSON.stringify(set(SUBMISSION, path, value)));
+
+describe("checkSubmission", () => {
+  it("[T110] accepts a submission with every part of its form", () => {
+    expect(() => checkSubmission(json(JSON.stringify(SUBMISSION)))).not.toThrow();
+  });
+
+  it("[T110] accepts the optional parts left out, a record declaration and NULL values", () => {
+    const edits: readonly (readonly [readonly Step[], unknown])[] = [
+      [["supplied"], undefined],
+      [["declaration"], { cardinality: "record" }],
+      [["parts", 0, "label"], undefined],
+      [["parts", 0, "interaction"], undefined],
+      [["parts", 0, "value"], null],
+      [["lti"], true],
+      [["variableIdentifierRef"], "ref"],
+    ];
+    for (const [path, value] of edits)
+      expect(() => checkSubmission(changed(path, value)), path.join(".")).not.toThrow();
+  });
+
+  it("[T110] rejects what is not an object, and a property that its form lacks", () => {
+    for (const text of ["null", "[]", '"s"', "5"]) {
+      expect(() => checkSubmission(json(text)), text).toThrow(/^A submission must be an object, found /);
+    }
+    expect(() => checkSubmission(changed(["session"], "s1"))).toThrow(
+      /^A submission has the properties "request", "outcome", .* and "items", found "session"\.$/,
+    );
+    expect(() => checkSubmission(changed(["items", 0, "secret"], 1))).toThrow(
+      /^An item of a submission has the properties .*, found "secret"\.$/,
+    );
+  });
+
+  it("[T110] rejects a field of another type, and says which", () => {
+    const cases: readonly (readonly [readonly Step[], unknown, string | RegExp])[] = [
+      [["request"], "", 'The request of a submission must be a non-empty string, found "".'],
+      [["outcome"], 5, "The outcome of a submission must be a non-empty string, found 5."],
+      [["mode"], "robot", 'The mode of a submission must be "human" or "externalMachine", found "robot".'],
+      [["lti"], false, "The lti of a submission must be true or absent, found false."],
+      [["variableIdentifierRef"], 1, "The variableIdentifierRef of a submission must be a string, found 1."],
+      [["requestedAt"], "now", 'The requestedAt of a submission must be a finite number, found "now".'],
+      [
+        ["requestedAt"],
+        253_402_300_800_000,
+        "The requestedAt of a submission must be epoch milliseconds from the year 1 to the year 9999, found 253402300800000.",
+      ],
+      [["rubric"], {}, "The rubric of a submission must be an array of nodes, found an object."],
+      [
+        ["rubric"],
+        [{ text: "x" }],
+        "The rubric of a submission must hold nodes, each an object with a string kind, found an object.",
+      ],
+      [["parts"], null, "The parts of a submission must be an array, found null."],
+      [["items"], "x", 'The items of a submission must be an array, found "x".'],
+      [["supplied"], 7, "The supplied of a submission must be an object, found 7."],
+      [["supplied", "at"], -1e16, /^The time of the supplied of a submission must be epoch milliseconds/],
+      [
+        ["supplied", "scorer"],
+        "x",
+        'The scorer of the supplied of a submission must be "human" or "externalMachine", found "x".',
+      ],
+      [["supplied", "value"], 5, "The value of the supplied of a submission must be a wire value or null, found 5."],
+      [["declaration", "cardinality"], "pair", /^The cardinality of the declaration of a submission must be /],
+      [["declaration", "baseType"], "text", /^The base type of the declaration of a submission must be /],
+      [
+        ["declaration", "normalMaximum"],
+        "10",
+        'The normalMaximum of the declaration of a submission must be a finite number, found "10".',
+      ],
+      [
+        ["declaration", "interpretation"],
+        1,
+        "The interpretation of the declaration of a submission must be a string, found 1.",
+      ],
+      [["declaration"], { cardinality: "record", baseType: "float" }, 'A record has no base type, found "float".'],
+      [
+        ["parts", 0, "item", "instance"],
+        0,
+        "The instance of the item of a part of a submission must be a positive integer, found 0.",
+      ],
+      [["parts", 0, "presented"], "yes", 'The presented of a part of a submission must be true or false, found "yes".'],
+      [["parts", 0, "label"], 1, "The label of a part of a submission must be a string, found 1."],
+      [["parts", 0, "value"], [1], "The value of a part of a submission must be a wire value or null, found an array."],
+      [["items", 0, "title"], null, "The title of an item of a submission must be a string, found null."],
+      [
+        ["items", 0, "body"],
+        [null],
+        "The body of an item of a submission must hold nodes, each an object with a string kind, found null.",
+      ],
+      [
+        ["items", 0, "templateValues"],
+        {},
+        "The templateValues of an item of a submission must be an array, found an object.",
+      ],
+      [
+        ["items", 0, "correctResponses"],
+        [{ identifier: 1, value: null }],
+        "An identifier of the correctResponses of an item of a submission must be a string, found 1.",
+      ],
+    ];
+    for (const [path, value, message] of cases) {
+      const input = changed(path, value);
+      expect(() => checkSubmission(input), path.join(".")).toThrow(
+        typeof message === "string" ? new DataError(message) : message,
+      );
+    }
+  });
+
+  it("[T110] rejects a part that names an item the submission lacks, and an item that it has twice", () => {
+    expect(() => checkSubmission(changed(["parts", 0, "item", "instance"], 2))).toThrow(
+      new DataError('A part of a submission names the item "e" instance 2, which the submission lacks.'),
+    );
+    expect(() => checkSubmission(changed(["items"], [SUBMISSION.items[0], SUBMISSION.items[0]]))).toThrow(
+      new DataError('A submission has the item "e" instance 1 twice.'),
+    );
   });
 });
 

@@ -77,3 +77,12 @@ session to the principal that started it, applies a client-action policy that le
 saves by version with bounded retries, schedules time-outs and answers a repeated sequence number with the stored answer.
 `createAssetGate` serves package files only under signed prefixes in the path, never a file that can hold a key, and signs the
 files of the candidate for five minutes.
+
+External scoring in `@luthfanwakan/tempuh/scoring`: `toSubmission` turns olah's scorer view of one scoring request into a
+`Submission` that is JSON as it is, with the outcome and its declaration, the covers as parts with their `presented` flag and
+value, the rubric for the scorer, and for each covered item its body as the candidate saw it, its template values and its
+correct responses, all values as olah's wire values. `toSupplyScores` builds the `supply-scores` action for one value and checks
+it against the declaration, which the engine accepts after the test ended and replaces when it is supplied again.
+`checkSubmission` in `@luthfanwakan/tempuh/protocol` checks a submission that arrived as JSON, and `mountSubmission` in
+`@luthfanwakan/tempuh/player` shows it read-only to a rater in a shadow root, with the body and the rubric in content roots,
+each response of the outcome, the correct responses, and files as images, players or links.
