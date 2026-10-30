@@ -371,7 +371,8 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
 /** The signatures by any string, so that a kind from untrusted data can be looked up. */
 const BY_KIND: ReadonlyMap<string, OperatorSignature> = OPERATOR_SIGNATURES;
 
-function describeCount({ minOperands, maxOperands }: OperatorSignature): string {
+/** Describes how many operands an operator takes, such as `2` or `1 or more`. */
+export function describeCount({ minOperands, maxOperands }: OperatorSignature): string {
   if (maxOperands === MANY) return `${minOperands} or more`;
   return minOperands === maxOperands ? String(minOperands) : `${minOperands} to ${maxOperands}`;
 }
@@ -380,7 +381,8 @@ function mismatch(kind: string, signature: OperatorSignature, problem: string): 
   return new ProcessingError(`The operator qti-${kind} ${problem}.`, signature.source);
 }
 
-function describeOperand(expected: OperandSignature): string {
+/** Describes what an operand takes, such as `single or multiple integer`. */
+export function describeOperand(expected: OperandSignature): string {
   const cardinalities = expected.cardinalities.join(" or ");
   return expected.baseTypes === undefined ? cardinalities : `${cardinalities} ${expected.baseTypes.join(" or ")}`;
 }

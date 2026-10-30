@@ -66,6 +66,10 @@
       "types": "./dist/usage/index.d.ts",
       "default": "./dist/usage/index.js"
     },
+    "./validate": {
+      "types": "./dist/validate/index.d.ts",
+      "default": "./dist/validate/index.js"
+    },
     "./metadata": {
       "types": "./dist/metadata/index.d.ts",
       "default": "./dist/metadata/index.js"

@@ -37,16 +37,50 @@ export type StringFormat =
  * | `reference` | a number, or the identifier of a variable that holds it; with `braced`, the identifier is written `{identifier}` (INFO §9.3.1) and a bare identifier reads too |
  */
 export type AttributeType =
-  | { readonly kind: "string"; readonly format?: StringFormat }
-  | { readonly kind: "boolean" }
-  | { readonly kind: "integer"; readonly minimum?: number }
-  | { readonly kind: "double"; readonly minimum?: number }
-  | { readonly kind: "enum"; readonly terms: readonly string[]; readonly extension?: true }
-  | { readonly kind: "list"; readonly item: AttributeType }
   | {
-      readonly kind: "reference";
-      readonly value: "integer" | "double";
+      /** Text. */
+      readonly kind: "string";
+      /** What the text means, when the schema says. */
+      readonly format?: StringFormat;
+    }
+  | {
+      /** `true` or `false`. */
+      readonly kind: "boolean";
+    }
+  | {
+      /** A safe integer. */
+      readonly kind: "integer";
+      /** The least value, when the schema bounds it. */
       readonly minimum?: number;
+    }
+  | {
+      /** A number. */
+      readonly kind: "double";
+      /** The least value, when the schema bounds it. */
+      readonly minimum?: number;
+    }
+  | {
+      /** One of a list of terms. */
+      readonly kind: "enum";
+      /** The terms, in schema order. */
+      readonly terms: readonly string[];
+      /** Whether an `ext:` term is also valid. */
+      readonly extension?: true;
+    }
+  | {
+      /** Items separated by white space. */
+      readonly kind: "list";
+      /** The type of each item. */
+      readonly item: AttributeType;
+    }
+  | {
+      /** A number, or the identifier of a variable that holds it. */
+      readonly kind: "reference";
+      /** The base type of the number. */
+      readonly value: "integer" | "double";
+      /** The least value, when the schema bounds it. */
+      readonly minimum?: number;
+      /** Whether the identifier is written `{identifier}` (INFO §9.3.1). */
       readonly braced?: true;
     };
 

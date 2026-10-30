@@ -1,4 +1,4 @@
-import { checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { checkFunction, checkOptions, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type ParseXmlOptions, parseXml, serializeXml, XMLNS_NAMESPACE, type XmlElement } from "../xml/index.js";
 import { DOCUMENT_ELEMENTS } from "./element-table.js";
@@ -16,6 +16,7 @@ import { ASI_NAMESPACE } from "./namespace.js";
 import { readElement } from "./read.js";
 import { asiError, type ReadContext } from "./read-error.js";
 import { typeNamed } from "./type-index.js";
+import { type ElementVisit, walkElement } from "./walk.js";
 import { writeElement } from "./write.js";
 
 /**
@@ -155,6 +156,17 @@ export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAs
   return { kind: entry.kind, [entry.property]: model } as AsiDocument;
 }
 
+/** Returns the entry of a document, after checking that it is an object of one of the kinds of {@link AsiDocument}. */
+function entryOfDocument(document: unknown): DocumentEntry {
+  checkRecord(document, "The document must be an object");
+  const entry = typeof document.kind === "string" ? BY_KIND.get(document.kind) : undefined;
+  if (entry === undefined) {
+    const kinds = ENTRIES.map(({ kind }) => JSON.stringify(kind)).join(", ");
+    throw new DataError(`The kind of a document must be one of ${kinds}, found ${describe(document.kind)}.`);
+  }
+  return entry;
+}
+
 /**
  * Writes a document as XML in UTF-8: the root element in the ASI namespace, with `xsi:schemaLocation` naming the 3.0.1
  * ASI schema (BPIG §1.1.5). Attributes and child elements are in the order of the schema, so that the output is valid
@@ -166,12 +178,7 @@ export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAs
  * value of the wrong type.
  */
 export function writeAsi(document: AsiDocument): string {
-  checkRecord(document, "The document must be an object");
-  const entry = typeof document.kind === "string" ? BY_KIND.get(document.kind) : undefined;
-  if (entry === undefined) {
-    const kinds = ENTRIES.map(({ kind }) => JSON.stringify(kind)).join(", ");
-    throw new DataError(`The kind of a document must be one of ${kinds}, found ${describe(document.kind)}.`);
-  }
+  const entry = entryOfDocument(document);
   const root = writeElement(
     typeNamed(DOCUMENT_ELEMENTS[entry.element]),
     entry.element,
@@ -186,4 +193,23 @@ export function writeAsi(document: AsiDocument): string {
       ...root.attributes,
     ],
   });
+}
+
+/**
+ * Calls `visit` for each element of a document that has a model, in document order, the element before its children:
+ * the root, then its children by property in the order of the schema. Each visit carries the element's name, its model,
+ * the attributes the schema gives it with their types, and the element that holds it. MathML, SSML and `xi:include`
+ * stay XML and are in `foreign` of the element that holds them. The walk checks the shape of the models as `writeAsi`
+ * does but not their values, and it writes nothing.
+ *
+ * @param document - The document.
+ * @param visit - The function to call for each element.
+ * @throws `DataError` when an argument has the wrong type, the document is not an object of one of the kinds of
+ * {@link AsiDocument}, or a model is not an object of the shape the element has: a property that should hold an array
+ * does not, or a member has a kind that its property does not accept.
+ */
+export function walkDocument(document: AsiDocument, visit: (element: ElementVisit) => void): void {
+  const entry = entryOfDocument(document);
+  checkFunction(visit, "The visitor must be a function");
+  walkElement(typeNamed(DOCUMENT_ELEMENTS[entry.element]), entry.element, Reflect.get(document, entry.property), visit);
 }

@@ -5,20 +5,27 @@ every expression and rule, the variables of an item session, the six standard re
 operators, and the signatures of the operators for static checks. It imports `values` and `asi` and runs in any
 JavaScript runtime. The delivery engine decides when each processing runs; these functions run it.
 
-| Export                                                  | Purpose                                                                                         |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `createItemVariables(item, options?)`                   | The variables of a new item session, before template processing.                                |
-| `runTemplateProcessing(item, variables, context)`       | Template processing, with the constraint loop.                                                  |
-| `runResponseProcessing(item, variables, context)`       | Response processing, from the item's rules or its template.                                     |
-| `runOutcomeProcessing(test, outcomes, scope, context)`  | Outcome processing of a test.                                                                   |
-| `evaluate(expression, variables, item, context)`        | The value of an expression in an item.                                                          |
-| `evaluateTestExpression(expression, test, outcomes, …)` | The value of an expression of a test: a pre-condition, branch rule or template default.         |
-| `ItemVariables`, `CreateItemVariablesOptions`           | The six maps of an item session's variables, and the context values of a new session.           |
-| `ProcessingContext`, `CustomOperator`, …                | The random source, custom operators, template resolver and limits that every run takes.         |
-| `TestScope`, `ItemSessionView`, `ItemSessionFilter`     | What outcome processing reads from the delivery engine: item sessions and the test's variables. |
-| `STANDARD_TEMPLATES`, `standardTemplateUri(uri)`        | The six standard templates as models, and the normalization of their URIs.                      |
-| `OPERATOR_SIGNATURES`                                   | The operand and result types of the 64 expressions.                                             |
-| `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`         | The limit on the size of containers that expressions build.                                     |
+| Export                                                         | Purpose                                                                                                                                      |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createItemVariables(item, options?)`                          | The variables of a new item session, before template processing.                                                                             |
+| `runTemplateProcessing(item, variables, context)`              | Template processing, with the constraint loop.                                                                                               |
+| `runResponseProcessing(item, variables, context)`              | Response processing, from the item's rules or its template.                                                                                  |
+| `runOutcomeProcessing(test, outcomes, scope, context)`         | Outcome processing of a test.                                                                                                                |
+| `evaluate(expression, variables, item, context)`               | The value of an expression in an item.                                                                                                       |
+| `evaluateTestExpression(expression, test, outcomes, …)`        | The value of an expression of a test: a pre-condition, branch rule or template default.                                                      |
+| `ItemVariables`, `CreateItemVariablesOptions`                  | The six maps of an item session's variables, and the context values of a new session.                                                        |
+| `ProcessingContext`, `CustomOperator`, …                       | The random source, custom operators, template resolver and limits that every run takes.                                                      |
+| `TestScope`, `ItemSessionView`, `ItemSessionFilter`            | What outcome processing reads from the delivery engine: item sessions and the test's variables.                                              |
+| `STANDARD_TEMPLATES`, `standardTemplateUri(uri)`               | The six standard templates as models, and the normalization of their URIs.                                                                   |
+| `OPERATOR_SIGNATURES`                                          | The operand and result types of the 64 expressions.                                                                                          |
+| `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`                | The limit on the size of containers that expressions build.                                                                                  |
+| `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of D5, and the type of a variable.                             |
+| `describeType(type)`, `describeCount`, `describeOperand`       | A type, an operand count and an operand signature as text for a message.                                                                     |
+| `operandsOf(expression)`                                       | The operand expressions of an expression, in order.                                                                                          |
+| `declaredValue`, `readPrimitive`                               | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                       |
+| `isQti2TemplateUri(uri)`, `itemIdentifier(ref, name)`          | Whether a template address is a QTI 2.x one, and the item's name for a variable of an item ref.                                              |
+| `BUILT_IN_RESPONSES`, `BUILT_IN_OUTCOMES`, `BUILT_IN_CONTEXTS` | The built-in variables with their types; `NUM_ATTEMPTS`, `DURATION`, `COMPLETION_STATUS`, `COMPLETION_STATUSES` and `QTI_CONTEXT` name them. |
+| `DEFAULT_RANDOM_MIN`, `DEFAULT_RANDOM_STEP`                    | 0 and 1: the `min` and `step` of the random expressions when absent.                                                                         |
 
 ## Example
 

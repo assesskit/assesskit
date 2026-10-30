@@ -5,8 +5,18 @@
  * @module @luthfanwakan/olah/asi
  */
 export * from "./body.js";
-export { readScoreCovers, type ScoreCover, scoreCoversBlock } from "./covers.js";
-export { type AsiDocument, type ReadAsiOptions, readAsi, writeAsi } from "./document.js";
+export {
+  readScoreCovers,
+  SCORE_COVERS_CLASS,
+  type ScoreCover,
+  type ScoreCoverBlock,
+  type ScoreCoverEntry,
+  scoreCoverBlocks,
+  scoreCoversBlock,
+} from "./covers.js";
+export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi } from "./document.js";
 export * from "./model.js";
 export { ASI_NAMESPACE } from "./namespace.js";
 export { childNodes, descendantNodes, isBodyNode, isModelNode, type ModelNode } from "./nodes.js";
+export type { AttributeDef, AttributeType, StringFormat } from "./table.js";
+export type { ElementVisit } from "./walk.js";

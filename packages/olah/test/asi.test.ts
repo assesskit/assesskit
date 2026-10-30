@@ -16,6 +16,7 @@ import {
   childNodes,
   DataError,
   descendantNodes,
+  type ElementVisit,
   type Expression,
   isBodyNode,
   isModelNode,
@@ -29,11 +30,14 @@ import {
   type ResponseRule,
   readAsi,
   readScoreCovers,
+  SCORE_COVERS_CLASS,
   type ScoreCover,
+  scoreCoverBlocks,
   scoreCoversBlock,
   serializeXml,
   type TemplateRule,
   type TestRubricBlock,
+  walkDocument,
   writeAsi,
   XINCLUDE_NAMESPACE,
   type XmlElement,
@@ -480,6 +484,159 @@ describe("scoreCoversBlock and readScoreCovers", () => {
 function testModel(): AssessmentTest {
   return testOf(`${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part>`);
 }
+
+describe("scoreCoverBlocks", () => {
+  const entries = (text: string): string =>
+    `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers other" data-outcome-identifier="CONTENT"><qti-content-body><p>Notes</p><ul>${text}</ul><ul><li data-item-ref="W3" data-response-identifier="R">Third</li></ul></qti-content-body></qti-rubric-block>`;
+  const testWith = (blocks: string) =>
+    `<qti-assessment-test ${NAMESPACE} identifier="T" title="t">${blocks}${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part></qti-assessment-test>`;
+
+  it("[O1] reads the blocks that carry the class token with their entries as written, those without an attribute included", () => {
+    const read = checked(
+      testWith(
+        entries(
+          '<li data-item-ref="W1" data-response-identifier="R"> One\n  line </li><li data-item-ref="W2">No response</li><li>Nothing</li>',
+        ),
+      ),
+    );
+    if (read.kind !== "test") throw new Error("Expected a test.");
+    const [block, ...others] = scoreCoverBlocks(read.test);
+    expect(others).toEqual([]);
+    expect(block?.outcomeIdentifier).toBe("CONTENT");
+    expect(block?.entries).toEqual([
+      { itemRef: "W1", responseIdentifier: "R", label: "One line" },
+      { itemRef: "W2", label: "No response" },
+      { label: "Nothing" },
+      { itemRef: "W3", responseIdentifier: "R", label: "Third" },
+    ]);
+  });
+
+  it("[O1] leaves out a rubric block without the class token and keeps one without an outcome, with the outcome absent", () => {
+    const plain =
+      '<qti-rubric-block view="scorer" use="scoring"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block>';
+    const unnamed =
+      '<qti-rubric-block view="scorer" use="scoring" class="external-score-covers"><qti-content-body><ul/></qti-content-body></qti-rubric-block>';
+    const read = checked(testWith(`${plain}${unnamed}`));
+    if (read.kind !== "test") throw new Error("Expected a test.");
+    expect(
+      scoreCoverBlocks(read.test).map(({ outcomeIdentifier, entries: found }) => [outcomeIdentifier, found.length]),
+    ).toEqual([[undefined, 0]]);
+    expect(readScoreCovers(read.test).size).toBe(0);
+  });
+
+  it("[O2] names the class token that marks the block", () => {
+    expect(SCORE_COVERS_CLASS).toBe("external-score-covers");
+  });
+
+  it("throws a DataError for a test whose rubric blocks are not the model", () => {
+    for (const bad of [
+      '{"rubricBlocks":"x"}',
+      '{"rubricBlocks":[null]}',
+      '{"rubricBlocks":[{"contentBody":{"children":"x"}}]}',
+      "null",
+    ]) {
+      expect(() => scoreCoverBlocks(JSON.parse(bad))).toThrow(DataError);
+    }
+  });
+});
+
+describe("walkDocument", () => {
+  const namesOf = (document: AsiDocument): string[] => {
+    const names: string[] = [];
+    walkDocument(document, ({ name }) => names.push(name));
+    return names;
+  };
+
+  it("visits the elements of a document in document order, an element before its children, by their element names", () => {
+    const document = checked(
+      item(
+        '<qti-response-declaration identifier="R" cardinality="single" base-type="string"/><qti-item-body><p>a <em>b</em><qti-text-entry-interaction response-identifier="R"/></p></qti-item-body>',
+      ),
+    );
+    expect(namesOf(document)).toEqual([
+      "qti-assessment-item",
+      "qti-response-declaration",
+      "qti-item-body",
+      "p",
+      "em",
+      "qti-text-entry-interaction",
+    ]);
+  });
+
+  it("tells the HTML label from qti-label, which have the same kind", () => {
+    const document = checked(
+      item(
+        '<qti-item-body><p><label>x</label><qti-inline-choice-interaction response-identifier="R"><qti-label>y</qti-label><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p></qti-item-body>',
+      ),
+    );
+    const found: string[] = [];
+    walkDocument(document, ({ name, model }) => {
+      if (model.kind === "label") found.push(name);
+    });
+    expect(found).toEqual(["label", "qti-label"]);
+  });
+
+  it("gives the parent, the model, the attribute definitions and the kind of attribute wildcard of an element", () => {
+    const document = checked(item('<qti-item-body><p data-x="1" class="c">a</p></qti-item-body>'));
+    const visits: ElementVisit[] = [];
+    walkDocument(document, (visit) => visits.push(visit));
+    const paragraph = visits.find(({ name }) => name === "p");
+    expect(paragraph?.parent?.name).toBe("qti-item-body");
+    expect(paragraph?.parent?.parent?.name).toBe("qti-assessment-item");
+    expect(paragraph?.parent?.parent?.parent).toBeUndefined();
+    expect(paragraph?.model).toMatchObject({ kind: "p", class: ["c"] });
+    expect(paragraph?.attributes.map(({ name }) => name)).toContain("class");
+    expect(paragraph?.attributeWildcard).toBe("any");
+    expect(visits[0]?.attributeWildcard).toBe("any");
+    expect(visits.find(({ name }) => name === "qti-item-body")?.attributeWildcard).toBeUndefined();
+  });
+
+  it("keeps MathML, SSML and xi:include out of the visits and gives them as the foreign elements of the element that holds them", () => {
+    const document = checked(
+      item(
+        '<qti-item-body><p>a <math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p></qti-item-body>',
+      ),
+    );
+    const visits: ElementVisit[] = [];
+    walkDocument(document, (visit) => visits.push(visit));
+    expect(visits.map(({ name }) => name)).toEqual(["qti-assessment-item", "qti-item-body", "p"]);
+    expect(visits.find(({ name }) => name === "p")?.foreign.map(({ name }) => name)).toEqual(["math"]);
+  });
+
+  it("walks every kind of document", () => {
+    for (const xml of [
+      `<qti-assessment-stimulus ${NAMESPACE} identifier="s" title="t"><qti-stimulus-body><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
+      `<qti-assessment-section ${NAMESPACE} identifier="s" title="t" visible="true"/>`.replace(
+        "/>",
+        '><qti-assessment-item-ref identifier="a" href="a.xml"/></qti-assessment-section>',
+      ),
+      `<qti-outcome-declaration ${NAMESPACE} identifier="O" cardinality="single" base-type="float"/>`,
+      `<qti-outcome-processing ${NAMESPACE}/>`,
+      `<qti-response-processing ${NAMESPACE}/>`,
+    ]) {
+      expect(namesOf(readAsi(xml))[0]).toMatch(/^qti-/);
+    }
+  });
+
+  it("throws a DataError for a model that is not the shape the schema gives it, naming where", () => {
+    const document = checked(item("<qti-item-body><p>a</p></qti-item-body>"));
+    if (document.kind !== "item") throw new Error("Expected an item.");
+    const withBody = (children: unknown): AsiDocument =>
+      JSON.parse(
+        JSON.stringify({ kind: "item", item: { ...document.item, body: { ...document.item.body, children } } }),
+      );
+    expect(() => walkDocument(withBody("x"), () => undefined)).toThrow(
+      'The property children of qti-item-body must be an array, found "x". It is in qti-assessment-item/qti-item-body.',
+    );
+    expect(() => walkDocument(withBody([null]), () => undefined)).toThrow(
+      "A member of children of qti-item-body must be an object",
+    );
+    expect(() => walkDocument(withBody([{ kind: "nope" }]), () => undefined)).toThrow('has the kind "nope"');
+    expect(() => walkDocument(JSON.parse("null"), () => undefined)).toThrow("The document must be an object");
+    expect(() => walkDocument(JSON.parse('{"kind":"x"}'), () => undefined)).toThrow(DataError);
+    expect(() => walkDocument(document, JSON.parse("1"))).toThrow("The visitor must be a function");
+  });
+});
 
 describe("readAsi: documents", () => {
   it("[A1] qti-assessment-item: reads every attribute and leaves the omitted ones omitted", () => {

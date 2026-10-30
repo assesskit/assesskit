@@ -13,21 +13,32 @@ import {
   createRandom,
   DataError,
   DEFAULT_PROCESSING_LIMITS,
+  DEFAULT_RANDOM_MIN,
+  DEFAULT_RANDOM_STEP,
   DEFAULT_XML_LIMITS,
+  declaredValue,
+  describeCount,
+  describeOperand,
+  describeType,
   type Expression,
   evaluate,
   evaluateTestExpression,
+  fitsBaseType,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
+  isQti2TemplateUri,
+  itemIdentifier,
   normalizeValue,
   OPERATOR_SIGNATURES,
+  operandsOf,
   type Primitive,
   type ProcessingContext,
   ProcessingError,
   type Random,
   ReadError,
   readAsi,
+  readPrimitive,
   record,
   runOutcomeProcessing,
   runResponseProcessing,
@@ -2096,6 +2107,88 @@ describe("createItemVariables", () => {
     expect(() => createItemVariables(json("[]"))).toThrow(
       "The item must be an object of the model of qti-assessment-item, found an array.",
     );
+  });
+});
+
+describe("what the static checks of validate read", () => {
+  it("[G3] says which base types a value of a base type fits: its own, and an integer to a float or duration", () => {
+    expect(fitsBaseType("integer", "float")).toBe(true);
+    expect(fitsBaseType("integer", "duration")).toBe(true);
+    expect(fitsBaseType("integer", "integer")).toBe(true);
+    expect(fitsBaseType("string", "string")).toBe(true);
+    for (const [value, variable] of [
+      ["float", "integer"],
+      ["float", "duration"],
+      ["duration", "float"],
+      ["integer", "string"],
+      ["string", "identifier"],
+    ] as const) {
+      expect(fitsBaseType(value, variable), `${value} to ${variable}`).toBe(false);
+    }
+  });
+
+  it("[G43] tells the address of a QTI 2.x template from a QTI 3.0 one", () => {
+    expect(isQti2TemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct")).toBe(true);
+    expect(isQti2TemplateUri("http://www.imsglobal.org/question/qti_v2p0/rptemplates/map_response.xml")).toBe(true);
+    expect(isQti2TemplateUri("https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml")).toBe(false);
+    expect(isQti2TemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/CC2_match")).toBe(false);
+    expect(isQti2TemplateUri("urn:other")).toBe(false);
+  });
+
+  it("lists the operands of an expression, whether it has an operand or operands", () => {
+    const one: Expression = { kind: "base-value", baseType: "integer", value: "1" };
+    expect(operandsOf({ kind: "not", operand: one })).toEqual([one]);
+    expect(operandsOf({ kind: "and", operands: [one, one] })).toEqual([one, one]);
+    expect(operandsOf(one)).toEqual([]);
+  });
+
+  it("describes what an operator takes", () => {
+    const sum = OPERATOR_SIGNATURES.get("sum");
+    const divide = OPERATOR_SIGNATURES.get("divide");
+    const member = OPERATOR_SIGNATURES.get("member");
+    expect(sum && describeCount(sum)).toBe("1 or more");
+    expect(divide && describeCount(divide)).toBe("2");
+    const mathOperator = OPERATOR_SIGNATURES.get("math-operator");
+    expect(mathOperator && describeCount(mathOperator)).toBe("1 to 2");
+    expect(sum?.operands[0] && describeOperand(sum.operands[0])).toBe("single or multiple or ordered integer or float");
+    expect(member?.operands[1] && describeOperand(member.operands[1])).toMatch(/^multiple or ordered boolean or /);
+    expect(describeType({ cardinality: "ordered", baseType: "float" })).toBe("an ordered float");
+  });
+
+  it("[A19] names the variable a mapping reads under the name the test uses", () => {
+    const ref: AssessmentItemRef = {
+      kind: "assessment-item-ref",
+      identifier: "I",
+      href: "i.xml",
+      preConditions: [],
+      branchRules: [],
+      variableMappings: [{ kind: "variable-mapping", sourceIdentifier: "SCORE", targetIdentifier: "POINTS" }],
+      weights: [],
+      templateDefaults: [],
+      extensions: [],
+    };
+    expect(itemIdentifier(ref, "POINTS")).toBe("SCORE");
+    expect(itemIdentifier(ref, "OTHER")).toBe("OTHER");
+  });
+
+  it("[G15][G32] gives the defaults of the random expressions", () => {
+    expect([DEFAULT_RANDOM_MIN, DEFAULT_RANDOM_STEP]).toEqual([0, 1]);
+  });
+
+  it("reads a declared value and a lexical form as processing does", () => {
+    expect(readPrimitive("7", "integer", "The text")).toBe(7);
+    expect(() => readPrimitive("x", "integer", "The text")).toThrow(ProcessingError);
+    expect(declaredValue(undefined, { cardinality: "single", baseType: "integer" }, "The default")).toBeNull();
+    expect(() =>
+      declaredValue(
+        [
+          { kind: "value", value: "x" },
+          { kind: "value", value: "y" },
+        ],
+        { cardinality: "single", baseType: "string" },
+        "The default",
+      ),
+    ).toThrow(ProcessingError);
   });
 });
 

@@ -60,8 +60,8 @@ const DEFAULT_TOLERANCE_MODE = "exact";
 /** Whether `qti-equal` includes a bound when the attribute is absent (INFO §5.46.3–4). */
 const DEFAULT_INCLUDE_BOUND = true;
 
-/** Returns the expressions of the operands of an expression. */
-function operandsOf(expression: Expression): readonly Expression[] {
+/** Returns the expressions of the operands of an expression, in order. */
+export function operandsOf(expression: Expression): readonly Expression[] {
   if ("operands" in expression) return expression.operands;
   return "operand" in expression ? [expression.operand] : [];
 }

@@ -8,7 +8,7 @@ import { typeNamed } from "./type-index.js";
 import { writeElement } from "./write.js";
 
 /** The class token that marks a test-level rubric block as the covers of an outcome (olah convention, §4.16). */
-const COVERS_CLASS = "external-score-covers";
+export const SCORE_COVERS_CLASS = "external-score-covers";
 /** The attributes of the convention: the outcome on the block, and the item reference and response on an `li`. */
 const OUTCOME_ATTRIBUTE = "data-outcome-identifier";
 const ITEM_ATTRIBUTE = "data-item-ref";
@@ -22,6 +22,26 @@ export interface ScoreCover {
   readonly responseIdentifier: string;
   /** The text of the list entry, with white space normalized; absent when the entry has no text. */
   readonly label?: string;
+}
+
+/** A list entry of a covers block as written: an attribute that the entry lacks is absent. */
+export interface ScoreCoverEntry {
+  /** The `data-item-ref` attribute: the identifier of the `qti-assessment-item-ref` of the item. */
+  readonly itemRef?: string;
+  /** The `data-response-identifier` attribute: the identifier of the response variable of the item. */
+  readonly responseIdentifier?: string;
+  /** The text of the list entry, with white space normalized; absent when the entry has no text. */
+  readonly label?: string;
+}
+
+/** A test-level rubric block that carries the class token of the convention, read without judging it. */
+export interface ScoreCoverBlock {
+  /** The rubric block. */
+  readonly block: TestRubricBlock;
+  /** The `data-outcome-identifier` attribute; absent when the block lacks it. */
+  readonly outcomeIdentifier?: string;
+  /** The list entries of the block's lists, in document order. */
+  readonly entries: readonly ScoreCoverEntry[];
 }
 
 /** A list entry of the convention, as the model has it. */
@@ -43,30 +63,54 @@ function textOf(node: XmlNode): string {
   return node.kind === "element" ? node.children.map(textOf).join("") : "";
 }
 
-function coverOf(entry: Entry): ScoreCover | undefined {
+function entryOf(entry: Entry): ScoreCoverEntry {
   const itemRef = attributeOf(entry, ITEM_ATTRIBUTE);
   const responseIdentifier = attributeOf(entry, RESPONSE_ATTRIBUTE);
-  if (itemRef === undefined || responseIdentifier === undefined) return undefined;
   const label = xmlTokens(textOf(writeElement(typeNamed("LI"), "li", entry))).join(" ");
-  return { itemRef, responseIdentifier, ...(label === "" ? {} : { label }) };
+  return {
+    ...(itemRef === undefined ? {} : { itemRef }),
+    ...(responseIdentifier === undefined ? {} : { responseIdentifier }),
+    ...(label === "" ? {} : { label }),
+  };
 }
 
-/** Returns the outcome that a rubric block covers, or `undefined` when it is not a covers block. */
-function outcomeOf(block: TestRubricBlock): string | undefined {
-  if (!block.class?.includes(COVERS_CLASS)) return undefined;
-  return attributeOf(block, OUTCOME_ATTRIBUTE);
-}
-
-function coversOf(block: TestRubricBlock): ScoreCover[] {
-  const covers: ScoreCover[] = [];
+function entriesOf(block: TestRubricBlock): ScoreCoverEntry[] {
+  const entries: ScoreCoverEntry[] = [];
   for (const node of block.contentBody.children) {
     if (node.kind !== "ul") continue;
-    for (const entry of node.items) {
-      const cover = entry.kind === "li" ? coverOf(entry) : undefined;
-      if (cover !== undefined) covers.push(cover);
-    }
+    for (const item of node.items) if (item.kind === "li") entries.push(entryOf(item));
   }
-  return covers;
+  return entries;
+}
+
+/**
+ * Reads the rubric blocks of a test that carry the class token `external-score-covers` (olah convention, §4.16), as they
+ * are written: a block without `data-outcome-identifier` and a list entry without `data-item-ref` or
+ * `data-response-identifier` are kept, with the attribute absent, so that a check can report them. Rubric blocks of test
+ * parts and sections are not recognized.
+ *
+ * @param test - The test.
+ * @returns The blocks in document order.
+ * @throws `DataError` when the test, its rubric blocks or their content are not objects and arrays of the model.
+ */
+export function scoreCoverBlocks(test: AssessmentTest): readonly ScoreCoverBlock[] {
+  checkRecord(test, "The test must be an object");
+  checkArray(test.rubricBlocks, "The rubric blocks of the test must be an array");
+  const blocks: ScoreCoverBlock[] = [];
+  for (const block of test.rubricBlocks) {
+    checkRecord(block, "A rubric block must be an object");
+    checkRecord(block.contentBody, "The content body of a rubric block must be an object");
+    checkArray(block.contentBody.children, "The children of the content body must be an array");
+    checkArray(block.extensions, "The extensions of a rubric block must be an array");
+    if (!block.class?.includes(SCORE_COVERS_CLASS)) continue;
+    const outcomeIdentifier = attributeOf(block, OUTCOME_ATTRIBUTE);
+    blocks.push({
+      block,
+      ...(outcomeIdentifier === undefined ? {} : { outcomeIdentifier }),
+      entries: entriesOf(block),
+    });
+  }
+  return blocks;
 }
 
 /**
@@ -80,16 +124,15 @@ function coversOf(block: TestRubricBlock): ScoreCover[] {
  * @throws `DataError` when the test, its rubric blocks or their content are not objects and arrays of the model.
  */
 export function readScoreCovers(test: AssessmentTest): ReadonlyMap<string, readonly ScoreCover[]> {
-  checkRecord(test, "The test must be an object");
-  checkArray(test.rubricBlocks, "The rubric blocks of the test must be an array");
   const covers = new Map<string, ScoreCover[]>();
-  for (const block of test.rubricBlocks) {
-    checkRecord(block, "A rubric block must be an object");
-    checkRecord(block.contentBody, "The content body of a rubric block must be an object");
-    checkArray(block.contentBody.children, "The children of the content body must be an array");
-    checkArray(block.extensions, "The extensions of a rubric block must be an array");
-    const outcome = outcomeOf(block);
-    if (outcome !== undefined) covers.set(outcome, [...(covers.get(outcome) ?? []), ...coversOf(block)]);
+  for (const { outcomeIdentifier, entries } of scoreCoverBlocks(test)) {
+    if (outcomeIdentifier === undefined) continue;
+    const complete = entries.flatMap(({ itemRef, responseIdentifier, label }) =>
+      itemRef === undefined || responseIdentifier === undefined
+        ? []
+        : [{ itemRef, responseIdentifier, ...(label === undefined ? {} : { label }) }],
+    );
+    covers.set(outcomeIdentifier, [...(covers.get(outcomeIdentifier) ?? []), ...complete]);
   }
   return covers;
 }
@@ -104,7 +147,7 @@ function checkIdentifier(value: unknown, label: string): string {
   return value;
 }
 
-function entryOf(cover: unknown): Entry {
+function coverEntry(cover: unknown): Entry {
   checkRecord(cover, "A cover must be an object");
   const { itemRef, responseIdentifier, label } = cover;
   if (label !== undefined) checkString(label, "The label of a cover");
@@ -145,12 +188,12 @@ export function scoreCoversBlock(
   if (!notes.every(isNodeLike)) {
     throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
   }
-  const list: List = { kind: "ul", items: covers.map(entryOf), extensions: [] };
+  const list: List = { kind: "ul", items: covers.map(coverEntry), extensions: [] };
   return {
     kind: "rubric-block",
     view: ["scorer"],
     use: "scoring",
-    class: [COVERS_CLASS],
+    class: [SCORE_COVERS_CLASS],
     stylesheets: [],
     contentBody: { kind: "content-body", children: [...notes, list] },
     extensions: [{ namespace: "", name: OUTCOME_ATTRIBUTE, value: outcomeIdentifier }],

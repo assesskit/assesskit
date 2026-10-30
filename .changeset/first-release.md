@@ -64,3 +64,11 @@ shows (`content`): visibility of feedback, template content and choices, printed
 conversions, the substitution of template values in parameters and MathML, rubric views and their order, catalogs and
 cards, and the mapping of the hazards of a resource to the terms of a PNP. `asi` has `childNodes` and `descendantNodes`
 for walking content.
+
+Validation (`validate`): `validateAsi`, `validateTest`, `validatePackage`, `validateResults`, `validatePnp` and
+`validatePnpNamespace` return `Issue`s for what a schema cannot state. They check the rule sets of BIND §5, the
+constraints of the Information Model, the static types of every expression and rule against `OPERATOR_SIGNATURES`, the
+variables, the structure of a test (selection, adaptive sections, branch rules and what no path reaches), the covers of
+externally scored outcomes, the files and resources of a package, Results Reporting and personal needs profiles.
+`validateTest` is the static gate of a delivery engine. `asi` has `walkDocument` and `scoreCoverBlocks`, and
+`processing` has the types and built-ins that the checks read.

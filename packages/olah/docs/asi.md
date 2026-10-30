@@ -6,23 +6,25 @@ interactions, feedback, templates, rubric blocks, catalogs and companion materia
 attribute and child element of the ASI schema, with types derived from the same table that drives the reader, the writer
 and the generators of the tests. It imports `xml` and `values` and runs in any JavaScript runtime.
 
-| Export                                         | Purpose                                                                                                  |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `readAsi(input, options?)`                     | Reads text, bytes or a parsed tree into an `AsiDocument`.                                                |
-| `writeAsi(document)`                           | Writes an `AsiDocument` as XML in UTF-8.                                                                 |
-| `AsiDocument`, `ReadAsiOptions`                | The seven document kinds, and the options of the reader.                                                 |
-| `ASI_NAMESPACE`                                | The namespace of every element of an assessment document.                                                |
-| `AssessmentItem`, `AssessmentTest`, …          | The model of each element of the rows A1 to A130 of the inventory, such as `ResponseCondition`.          |
-| `ChoiceInteraction`, `SimpleChoice`, `Card`, … | The model of each element of the rows A131 to A202, such as `PrintedVariable`.                           |
-| `Expression`, `NumericExpression`              | The 64 expressions, and the 44 that yield numbers.                                                       |
-| `ResponseRule`, `OutcomeRule`, `TemplateRule`  | The rules of the three kinds of processing.                                                              |
-| `Interaction`                                  | The 22 interactions.                                                                                     |
-| `HtmlElement`                                  | The 76 HTML elements; narrow it by `kind`, such as `"p"`.                                                |
-| `BodyNode`, `TextNode`                         | A node of flow content: an element, text, or XML for MathML, SSML and `xi:include`.                      |
-| `RubricBlock`, `TestRubricBlock`               | A rubric block wherever it occurs, and the one of a test, test part or section.                          |
-| `ElementModel`                                 | The model of any element of the table.                                                                   |
-| `readScoreCovers(test)`, `scoreCoversBlock(…)` | The covers of externally scored outcomes: read them from a test, build the rubric block that names them. |
-| `ScoreCover`                                   | One covered response.                                                                                    |
+| Export                                             | Purpose                                                                                                  |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `readAsi(input, options?)`                         | Reads text, bytes or a parsed tree into an `AsiDocument`.                                                |
+| `writeAsi(document)`                               | Writes an `AsiDocument` as XML in UTF-8.                                                                 |
+| `AsiDocument`, `ReadAsiOptions`                    | The seven document kinds, and the options of the reader.                                                 |
+| `ASI_NAMESPACE`                                    | The namespace of every element of an assessment document.                                                |
+| `AssessmentItem`, `AssessmentTest`, …              | The model of each element of the rows A1 to A130 of the inventory, such as `ResponseCondition`.          |
+| `ChoiceInteraction`, `SimpleChoice`, `Card`, …     | The model of each element of the rows A131 to A202, such as `PrintedVariable`.                           |
+| `Expression`, `NumericExpression`                  | The 64 expressions, and the 44 that yield numbers.                                                       |
+| `ResponseRule`, `OutcomeRule`, `TemplateRule`      | The rules of the three kinds of processing.                                                              |
+| `Interaction`                                      | The 22 interactions.                                                                                     |
+| `HtmlElement`                                      | The 76 HTML elements; narrow it by `kind`, such as `"p"`.                                                |
+| `BodyNode`, `TextNode`                             | A node of flow content: an element, text, or XML for MathML, SSML and `xi:include`.                      |
+| `RubricBlock`, `TestRubricBlock`                   | A rubric block wherever it occurs, and the one of a test, test part or section.                          |
+| `ElementModel`                                     | The model of any element of the table.                                                                   |
+| `readScoreCovers(test)`, `scoreCoversBlock(…)`     | The covers of externally scored outcomes: read them from a test, build the rubric block that names them. |
+| `scoreCoverBlocks(test)`, `SCORE_COVERS_CLASS`     | The covers blocks as written, with what they lack; the class token that marks them.                      |
+| `ScoreCover`, `ScoreCoverBlock`, `ScoreCoverEntry` | One covered response, a block as written, and one list entry of it.                                      |
+| `walkDocument(document, visit)`, `ElementVisit`    | Visits each element of a document with its name, model, attribute definitions and parent.                |
 
 ## Example
 
@@ -257,6 +259,14 @@ below find nodes without knowing which place of which element holds them.
 | `isModelNode(value)`    | Whether a value is an object with a string `kind`; the check is shallow.                                                        |
 | `isBodyNode(value)`     | The same check, as a guard for a `BodyNode`.                                                                                    |
 
+`walkDocument(document, visit)` walks a whole document the way `writeAsi` does, without writing, and calls `visit` for
+each element with an `ElementVisit` before its children. It gives what the `kind` of a model does not: `name`, the element
+as a document writes it (`qti-label` and the HTML `label` share the kind `label`), `model`, the `attributes` with their
+`AttributeDef`, `attributeWildcard`, `foreign` (the MathML, SSML, `xi:include` and wildcard elements the model keeps as
+XML) and the `parent` visit. It checks the shape of every model (an array where the schema has many, a `kind` the
+property accepts) and throws `DataError` for one that is wrong, so a check that reads the model by its properties can
+rely on it. The `validate` module reads documents this way.
+
 MathML, SSML and `xi:include` are leaves: the model keeps them as XML, and their children are not walked. Narrow a node by
 its `kind` with a guard of your own, such as `(node): node is HotText => node.kind === "hottext"`.
 
@@ -359,6 +369,10 @@ if (document.kind === "test") {
 | A cover is a `li` of a `ul` that is a child of the content body, with `data-item-ref` and `data-response-identifier`.          |
 | The label is the text of the `li` with white space normalized, and absent when empty.                                          |
 | Several blocks for one outcome add their covers in document order.                                                             |
+
+`scoreCoverBlocks(test)` returns the blocks that carry the class token (`SCORE_COVERS_CLASS`) as they are written: a block
+without `data-outcome-identifier` and an entry without `data-item-ref` or `data-response-identifier` stay, with the field
+absent, so that [validate](validate.md) can report them; `readScoreCovers` is derived from it.
 
 `scoreCoversBlock(outcome, covers, notes?)` builds the block: `view="scorer"`, `use="scoring"`, the class token, the
 attribute, the notes (nodes of the content of a rubric block), then the list. Identifiers must be identifiers; labels are

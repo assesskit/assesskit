@@ -113,7 +113,7 @@ if (document.kind === "item") {
 | Import                            | Contents                                                                                                                                                                                                          |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@luthfanwakan/olah`              | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                                                                                |
-| `@luthfanwakan/olah/asi`          | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment and content element, `BodyNode`, `Interaction`, `Expression`, `readScoreCovers`, `scoreCoversBlock`                                           |
+| `@luthfanwakan/olah/asi`          | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment and content element, `BodyNode`, `Interaction`, `Expression`, `readScoreCovers`, `scoreCoversBlock`, `walkDocument`                           |
 | `@luthfanwakan/olah/results`      | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                                                                       |
 | `@luthfanwakan/olah/usage`        | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                                                                               |
 | `@luthfanwakan/olah/pnp`          | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                                                                                |
@@ -124,6 +124,7 @@ if (document.kind === "item") {
 | `@luthfanwakan/olah/pci`          | `encodePciValue`, `decodePciValue` with file callbacks, `parseModuleResolution`, `resolvePciModules`, `pciProperties`, `checkPortableInteraction`                                                                 |
 | `@luthfanwakan/olah/content`      | `resolveContent`, `formatPrintedVariable`, `isShown`, feedback, rubric, `selectCard`, `catalogsFor` and `hazardExposure`                                                                                          |
 | `@luthfanwakan/olah/processing`   | `createItemVariables`, `runTemplateProcessing`, `runResponseProcessing`, `runOutcomeProcessing`, `evaluate`, `evaluateTestExpression`, `TestScope`, `STANDARD_TEMPLATES`, `OPERATOR_SIGNATURES`, custom operators |
+| `@luthfanwakan/olah/validate`     | `validateAsi`, `validateTest`, `validatePackage`, `validateResults`, `validatePnp`, `validatePnpNamespace`: the rule sets of BIND §5, the static types of processing, test structure, covers, packages            |
 | `@luthfanwakan/olah/delivery`     | `resolveStructure`, `planTest`, `planItems`, `nextItem`, `previousItem`, `sessionControl`, `timeLimits`, `additionalTestingTime` and the types of the structure and the plan                                      |
 | `@luthfanwakan/olah/values`       | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
 | `@luthfanwakan/olah/xml`          | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
@@ -138,6 +139,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
 - [ASI](docs/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
 - [Processing](docs/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
+- [Validate](docs/validate.md): the rule sets of BIND §5, the static types of processing, test structure, covers, packages, results and profiles, with every issue code and the decisions.
 - [Delivery](docs/delivery.md): the plan of a test session: section references, selection, ordering, item instances, pre-conditions and branch rules, item session control and time limits.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.

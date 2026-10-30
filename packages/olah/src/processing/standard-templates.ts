@@ -132,3 +132,12 @@ export function standardTemplateUri(uri: string): string | undefined {
   const name = isTemplateName(qti3, TEMPLATES.keys()) ? qti3 : isTemplateName(qti2, QTI2_TEMPLATES) ? qti2 : undefined;
   return name === undefined ? undefined : `${TEMPLATE_BASE}${name}.xml`;
 }
+
+/**
+ * Returns whether a URI is the address of a QTI 2.0, 2.1 or 2.2 response processing template, such as
+ * `http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct`, whose algorithm olah applies from the
+ * standard templates (G43).
+ */
+export function isQti2TemplateUri(uri: string): boolean {
+  return standardTemplateUri(uri) !== undefined && QTI2_URI.test(uri);
+}
