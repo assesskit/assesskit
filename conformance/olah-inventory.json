@@ -22,7 +22,7 @@
     "OB20",
     "OB21"
   ],
-  "merged": ["OB1"],
+  "merged": ["OB1", "OB2"],
   "rows": [
     {
       "id": "A1",

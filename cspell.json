@@ -19,12 +19,16 @@
     "conformance/test/*.ts"
   ],
   "words": [
+    "aeiou",
     "Bahasa",
     "Blackman",
+    "BPIG",
     "finalizer",
+    "Greekand",
     "Longsight",
     "longsightgroup",
     "luthfanwakan",
+    "multiset",
     "olah",
     "prec",
     "qtiv",
@@ -37,5 +41,9 @@
     "xoshiro",
     "xsdtests"
   ],
-  "ignorePaths": ["packages/olah/docs/conformance.md"]
+  "ignorePaths": [
+    "packages/olah/docs/conformance.md",
+    "packages/olah/src/values/unicode-blocks.ts",
+    "packages/olah/src/values/unicode-categories.ts"
+  ]
 }

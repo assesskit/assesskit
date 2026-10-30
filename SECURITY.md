@@ -13,3 +13,8 @@ Points to be aware of when deploying olah:
 - **Randomness.** `createRandom` is a seeded generator whose draws are reproducible from the seed. It is not
   cryptographically secure. Selections and shuffles that use it can be reproduced by anyone who knows the seed, so keep the
   seed of an exam session on the server.
+- **Regular expressions.** Patterns that authors write, such as `qti-pattern-match` and `pattern-mask`, run on a
+  linear-time automaton, never on a backtracking `RegExp`, so no pattern or text can make a match take exponential time.
+  `compileXsdRegex` limits the size of the automaton (`maxStates`) and the nesting of the pattern (`maxDepth`); both have
+  defaults and a `DataError` reports a pattern above them. The time of a match is linear in the text and the memory a
+  match keeps is bounded, whatever the pattern.

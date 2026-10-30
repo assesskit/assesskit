@@ -75,6 +75,11 @@ fails without writing when a download does not. `pnpm test:corpus` runs the test
 which `pnpm test` leaves out so that it runs offline. A corpus test calls `requireCorpus` of `scripts/corpus.ts`, which
 fails with an instruction when the corpus is missing.
 
+The regular expression tests (`packages/olah/test/values.corpus.test.ts`) apply the patterns of `msData/regex/` to the
+instances that `msMeta/Regex_w3c.xml` names. They follow XML Schema 1.0, which INFO cites, and Unicode 6.0.0 where the
+suite's result depends on the Unicode version. Tests that the suite marks as queried and tests of other base types than
+string are left out.
+
 To move a source to another commit, run `pnpm corpus:pin <source> [commit]`: it downloads the commit (the head of the
 default branch when none is given), hashes the files that the source's `include` list selects and writes the lock.
 

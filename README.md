@@ -24,6 +24,7 @@ pnpm conformance     # every row of a merged unit has a test; the matrix is curr
 pnpm docs:api        # TypeDoc into docs/api; fails on undocumented exports
 pnpm corpus          # downloads the 1EdTech examples and the W3C regular expression suite
 pnpm test:corpus     # tests that read the corpus
+pnpm unicode         # regenerates the Unicode tables of the regular expressions
 ```
 
 [AGENTS.md](AGENTS.md) states the conventions, [CONTRIBUTING.md](CONTRIBUTING.md) the process and
@@ -36,7 +37,7 @@ packages/olah/    the library; docs/ holds its guides
 packages/tempuh/  the player
 differential/     private package: olah against Longsight qti3-core
 conformance/      the inventory of every construct, the certification features, the corpus pins, the coverage check
-scripts/          corpus download
+scripts/          corpus download, Unicode table generator
 validation/       Python scripts that write the printf and rounding fixtures
 biome/            GritQL lint rules
 ```

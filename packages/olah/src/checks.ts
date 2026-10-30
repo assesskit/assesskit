@@ -23,7 +23,7 @@ export function isRecord(value: unknown): value is Readonly<Record<string, unkno
  * @param message - Says what the value should be, such as `The limits must be an object`.
  * @throws `DataError` when it is not.
  */
-export function checkRecord(value: unknown, message: string): void {
+export function checkRecord(value: unknown, message: string): asserts value is Readonly<Record<string, unknown>> {
   if (!isRecord(value)) throw new DataError(`${message}, found ${describe(value)}.`);
 }
 
@@ -33,7 +33,7 @@ export function checkRecord(value: unknown, message: string): void {
  * @param message - Says what the value should be, such as `The issues must be an array`.
  * @throws `DataError` when it is not.
  */
-export function checkArray(value: unknown, message: string): void {
+export function checkArray(value: unknown, message: string): asserts value is readonly unknown[] {
   if (!Array.isArray(value)) throw new DataError(`${message}, found ${describe(value)}.`);
 }
 

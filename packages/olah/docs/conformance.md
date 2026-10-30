@@ -26,7 +26,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | Unit | Status | Rows |
 | --- | --- | --- |
 | OB1 | merged | 0 |
-| OB2 | pending | 26 |
+| OB2 | merged | 26 |
 | OB3 | pending | 3 |
 | OB4 | pending | 149 |
 | OB5 | pending | 77 |
@@ -574,23 +574,23 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| T1 | `boolean` | INFO §8.13, BIND §2.9 | values | S P | OB2 |  |
-| T2 | `integer` | INFO §8.13, BIND §2.9 | values, delivery | S P N | OB2 |  |
-| T3 | `float` | INFO §8.13 | values | S P | OB2 |  |
-| T4 | `string` | INFO §8.13, INFO §2.2.2 | values | S P | OB2 |  |
-| T5 | `identifier` | INFO §8.13, INFO §4.1.1 | values | S P N | OB2 |  |
-| T6 | `uri` | INFO §8.13 | values | S | OB2 |  |
-| T7 | `point` | INFO §8.13 | values | S P | OB2 |  |
-| T8 | `pair` | INFO §8.13 | values | S P | OB2 |  |
-| T9 | `directedPair` | INFO §8.13 | values | S P | OB2 |  |
-| T10 | `duration` | INFO §8.13 | values | S P | OB2 |  |
-| T11 | `file` | INFO §8.13 | values | S P | OB2 |  |
-| T12 | `single` | INFO §8.16 | values | P | OB2 |  |
-| T13 | `multiple` | INFO §8.16, RR §2.7.4 | values | P | OB2 |  |
-| T14 | `ordered` | INFO §8.16 | values | P | OB2 |  |
-| T15 | `record` | INFO §8.16, INFO §5.34.3 | values | P | OB2 |  |
-| T16 | NULL | INFO §2.2.2, INFO §2.11.3.34 | values, processing | P | OB2 |  |
-| T17 | Type promotion | INFO §2.11.1.2, INFO §7.47.2, INFO §7.39.6 | values, processing | P S | OB2 |  |
+| T1 | `boolean` | INFO §8.13, BIND §2.9 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T2 | `integer` | INFO §8.13, BIND §2.9 | values, delivery | S P N | OB2 | [values.test.ts](../test/values.test.ts) |
+| T3 | `float` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T4 | `string` | INFO §8.13, INFO §2.2.2 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T5 | `identifier` | INFO §8.13, INFO §4.1.1 | values | S P N | OB2 | [values.test.ts](../test/values.test.ts) |
+| T6 | `uri` | INFO §8.13 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
+| T7 | `point` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T8 | `pair` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T9 | `directedPair` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T10 | `duration` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T11 | `file` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T12 | `single` | INFO §8.16 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T13 | `multiple` | INFO §8.16, RR §2.7.4 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T14 | `ordered` | INFO §8.16 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T15 | `record` | INFO §8.16, INFO §5.34.3 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T16 | NULL | INFO §2.2.2, INFO §2.11.3.34 | values, processing | P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T17 | Type promotion | INFO §2.11.1.2, INFO §7.47.2, INFO §7.39.6 | values, processing | P S | OB2 | [values.test.ts](../test/values.test.ts) |
 | T18 | `numAttempts` | INFO §2.2.2.2 | delivery | S P N | OB13a |  |
 | T19 | `duration` (item) | INFO §2.2.2.2 | delivery, processing | S P N | OB13a |  |
 | T20 | `completionStatus` | INFO §2.2.2.3 | delivery | S | OB13a |  |
@@ -653,7 +653,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B48 | Assignment checks base type and cardinality against the declaration, with promotion per D5 | INFO §5.130.2 | processing | S N | OB8 |  |
 | B49 | `lookup-outcome-value`: interpolation table takes the first entry whose `source-value` ≤ value (strict when `include-boundary` is false); match table takes the exact integer; otherwise `default-value` or NULL | INFO §5.78, INFO §5.90, INFO §5.87, INFO §7.18 | processing | S P | OB8 |  |
 | B50 | Context declarations in items and tests; delivery engine supplies values before processing | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery | S | OB13b |  |
-| B51 | Identifier syntax: letter or `_` first; letters, digits, `_`, `-`, `.`; period reserved for prefixes; case-sensitive; 32 characters recommended | INFO §4.1.1 | values, validate | P N | OB2 |  |
+| B51 | Identifier syntax: letter or `_` first; letters, digits, `_`, `-`, `.`; period reserved for prefixes; case-sensitive; 32 characters recommended | INFO §4.1.1 | values, validate | P N | OB2 | [values.test.ts](../test/values.test.ts) |
 | B52 | Response binding per interaction: base type and cardinality allowed for each of the 23 interactions | INFO §2.4.1–2.4.5 | interactions, validate | S N | OB10 |  |
 | B53 | Text and extended text: record fields `stringValue`, `floatValue`, `integerValue`, `leftDigits`, `rightDigits`, `ndp`, `nsf`, `exponent`; `string-identifier` keeps the raw text; `base` | INFO §2.4.2.2–3 | interactions | S P | OB10 |  |
 | B54 | Order interaction: a default value overrides the initial order | INFO §2.4.1.2 | interactions | S | OB10 |  |
@@ -681,7 +681,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B76 | `map-response`: single maps one value; containers sum distinct values once; `default-value` for unmapped keys; bounds; `case-sensitive` keys default false | INFO §2.11.1.5, INFO §5.88, INFO §7.21.3 | processing | S P D | OB8 |  |
 | B77 | `map-response-point`: areas tested in order, each area counted once; bounds | INFO §2.11.1.6, INFO §5.5.4 | processing | S P D | OB8 |  |
 | B78 | Shapes and coordinates for `inside` and area maps: circle, rect, poly, ellipse, default; percentages | INFO §5.75.2, `CoordsDType` | processing | S P | OB8 |  |
-| B79 | `pattern-match` in XML Schema regex syntax, matching the whole string | INFO §5.104.1 | values, processing | S P | OB8 |  |
+| B79 | `pattern-match` in XML Schema regex syntax, matching the whole string | INFO §5.104.1 | values, processing | S P | OB8 | [values.corpus.test.ts](../test/values.corpus.test.ts), [values.test.ts](../test/values.test.ts) |
 | B80 | `string-match` with `case-sensitive`; deprecated `substring` flag; `substring` operator | INFO §5.138, INFO §5.139 | processing | S P | OB8 |  |
 | B81 | `stats-operator`: mean; sample and population variance and SD require more than one value | INFO §2.11.3.44, INFO §8.31 | processing | S P | OB8 |  |
 | B82 | Integer arithmetic: `integer-divide` floors, `integer-modulus` is x − z·y, zero divisor gives NULL; `gcd`/`lcm` zero rules; `sum`, `product`, `min`, `max`, `subtract` integer only when all operands are | INFO §2.11.3.11–31, .40 | processing | S P | OB8 |  |
@@ -720,10 +720,10 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W10 | `ARIASelectedEnum` | INFO §8.10 | asi | V X | OB7 |  |
 | W11 | `ARIASortEnum` | INFO §8.11 | asi | V X | OB7 |  |
 | W12 | `AlignEnum` | INFO §8.12 | asi | V X | OB7 |  |
-| W13 | `BaseTypeEnum` | INFO §8.13 | values | V X P | OB2 |  |
+| W13 | `BaseTypeEnum` | INFO §8.13 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W14 | `CORSSettingsEnum` | INFO §8.14 | asi | V X | OB7 |  |
 | W15 | `CalculatorTypeEnum` | INFO §8.15 | content | V X | OB10 |  |
-| W16 | `CardinalityEnum` | INFO §8.16 | values | V X P | OB2 |  |
+| W16 | `CardinalityEnum` | INFO §8.16 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W17 | `DIR` | INFO §8.17 | asi | V X | OB7 |  |
 | W18 | `ExternalScoredEnum` | INFO §8.18 | delivery, results | V X | OB16 |  |
 | W19 | `KindValueEnum` | INFO §8.19 | asi | V X | OB7 |  |
@@ -750,8 +750,8 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W40 | `USUnitTypeEnum` | INFO §8.40 | content | V X | OB10 |  |
 | W41 | `UseEnum` | INFO §8.41 | content | V X | OB10 |  |
 | W42 | `ValignEnum` | INFO §8.42 | asi | V X | OB7 |  |
-| W43 | `IdentifierList` | INFO §9.1.1 | values | V X P | OB2 |  |
-| W44 | `IntegerList` | INFO §9.1.2 | values | V X P | OB2 |  |
+| W43 | `IdentifierList` | INFO §9.1.1 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
+| W44 | `IntegerList` | INFO §9.1.2 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W45 | `MimeTypeList` | INFO §9.1.3 | interactions | V X | OB10 |  |
 | W46 | `StringList` | INFO §9.1.4 | asi | V X | OB7 |  |
 | W47 | `ToleranceList` | INFO §9.1.5 | processing | V X P | OB8 |  |
@@ -1005,9 +1005,9 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| J1 | JSON binding of single values `{ "base":  { "<type>":  … } }`, NULL `{ "base":  null }`; duration as ISO 8601; file `{ data, mime, name }` converted to and from references through host callbacks; `intOrIdentifier` (G38) | BPIG App. C.1 | pci, values | S P | OB10 |  |
+| J1 | JSON binding of single values `{ "base":  { "<type>":  … } }`, NULL `{ "base":  null }`; duration as ISO 8601; file `{ data, mime, name }` converted to and from references through host callbacks; `intOrIdentifier` (G38) | BPIG App. C.1 | pci, values | S P | OB10 | [values.test.ts](../test/values.test.ts) |
 | J2 | JSON binding of multiple and ordered values `{ "list":  { "<type>":  […] } }` | BPIG App. C.2 | pci | S P | OB10 |  |
-| J3 | JSON binding of records `{ "record":  [ { "name", "base" } ] }`; a field may be `"base":  null` (G37) | BPIG App. C.3 | pci, values | S P | OB10 |  |
+| J3 | JSON binding of records `{ "record":  [ { "name", "base" } ] }`; a field may be `"base":  null` (G37) | BPIG App. C.3 | pci, values | S P | OB10 | [values.test.ts](../test/values.test.ts) |
 | J4 | Module resolution file: JSON with `waitSeconds` (default 7, 0 = no timeout) and `paths` (no `.js` extension; protocol means absolute, else package-relative) | BPIG §3.7.12.2, App. D | pci | S | OB10 |  |
 | J5 | Default configuration files `modules/module_resolution.js` and `modules/fallback_module_resolution.js` | BPIG §3.7.12.1–3, A169 | pci | S | OB10 |  |
 | J6 | `module` attribute or `qti-interaction-modules` must name a configured module; per-module `primary-path` and `fallback-path` | BPIG §3.7.12.4 | pci, validate | S N | OB10 |  |
@@ -1048,7 +1048,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | E27 | Scorer view (R6): the request plus the scorer rubric and, per covered item, its body as the candidate saw it after template processing with scorer-view rubric, template values, submitted responses and correct responses; server side only | INFO §2.8.6 | delivery | S | OB16 |  |
 | E28 | Support toggles (R2): `support` action turns an `activate-as-option` support on or off; prohibited supports are refused `support-not-available`; supports active while an item is presented are recorded for its results | BPIG §5.3, RR §2.6.4 | delivery, pnp | S | OB13b |  |
 | E29 | PCI state (R3): `set-responses` may carry opaque PCI states per response identifier (size-limited); the engine stores the latest and returns it in the view for `getInstance` on resume, also on another device | BPIG §3.7.12, CERT App. A T-14 ("Record and Restore Responses") | delivery, pci | S P | OB13a |  |
-| E30 | JSON wire forms (R1): `viewToJson`/`viewFromJson`, `actionToJson`/`parseCandidateAction` and `serializeState`/`deserializeState` carry values as `WireValue` (`{ cardinality, baseType?, value }` around App. C), decodable without declarations and lossless (multiple versus ordered, typed NULL, durations as `PT<shortest decimal>S`); maps become entry arrays, never objects keyed by identifiers | BPIG App. C | delivery, values | P | OB17 |  |
+| E30 | JSON wire forms (R1): `viewToJson`/`viewFromJson`, `actionToJson`/`parseCandidateAction` and `serializeState`/`deserializeState` carry values as `WireValue` (`{ cardinality, baseType?, value }` around App. C), decodable without declarations and lossless (multiple versus ordered, typed NULL, durations as `PT<shortest decimal>S`); maps become entry arrays, never objects keyed by identifiers | BPIG App. C | delivery, values | P | OB17 | [values.test.ts](../test/values.test.ts) |
 
 ### O: olah conventions, not QTI
 
@@ -1092,7 +1092,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
 | G1 | `round`, `truncate`, `floor` and `ceil` return integers but "INF gives INF" | INFO §2.11.3.37–38, Table 8.21 | processing | S | OB8 |  |
-| G2 | Base type integer maps to `xs:integer` (unbounded) | BIND §2.9 | values | S | OB2 |  |
+| G2 | Base type integer maps to `xs:integer` (unbounded) | BIND §2.9 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G3 | "Effective base-type" of assigned expressions is not defined | INFO §5.130.2 | processing | S | OB8 |  |
 | G4 | Relative tolerance with negative x gives a lower bound above the upper bound | INFO §5.46.2 | processing | S | OB8 |  |
 | G5 | `map-response` of a NULL response; bounds stated for containers only | INFO §2.11.1.5, INFO §5.88.1–2 | processing | S | OB8 |  |
@@ -1100,11 +1100,11 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 |  |
 | G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 |  |
 | G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b |  |
-| G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 |  |
+| G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 |  |
 | G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 |  |
 | G13 | Population variance and SD require more than one value | INFO §8.31 | processing | S | OB8 |  |
-| G14 | ISO 8601 durations with years or months have no fixed length in seconds; BPIG App. C.1's own example `P10Y3M20DT4H30M25S` has both | BPIG App. C.1 | values | S | OB2 |  |
+| G14 | ISO 8601 durations with years or months have no fixed length in seconds; BPIG App. C.1's own example `P10Y3M20DT4H30M25S` has both | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G15 | Range of `random-float` and admissible values of `random-integer` | INFO §7.33–7.34 | processing | S | OB8 |  |
 | G16 | `count-attempt` is boolean but described as a number of attempts | INFO §5.45.3 | delivery | S | OB13a |  |
 | G17 | Unknown template URI with no internal rules and no resolver | INFO §4.6.1–2 | processing | S | OB8 |  |
@@ -1128,8 +1128,8 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G35 | `test-variables` with a weight and `base-type="integer"` is undefined | INFO §7.39.5 | processing, validate | S | OB8 |  |
 | G36 | RR `value` is `xs:normalizedString`; newlines in essay responses are lost to schema-aware consumers | RR XSD | results | S | OB8 |  |
 | G37 | PCI JSON record fields may be `"base":  null`, but record fields are single values | BPIG App. C.3 | values, pci | S | OB8 |  |
-| G38 | Mapping of PCI `intOrIdentifier` to a value | BPIG App. C.1 | values, pci | S | OB8 |  |
-| G39 | BPIG's duration example uses years and months | BPIG App. C.1 | values | S | OB2 |  |
+| G38 | Mapping of PCI `intOrIdentifier` to a value | BPIG App. C.1 | values, pci | S | OB8 | [values.test.ts](../test/values.test.ts) |
+| G39 | BPIG's duration example uses years and months | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G40 | `SCORE`, `MAXSCORE` must be float and `PASSED` boolean, yet content in the field varies | INFO §2.2.2.3, BPIG §3.5 | validate | S | OB14 |  |
 | G41 | PNP `fixed-minutes` and `unlimited` with nested time limits (BPIG speaks of the test's time) | BPIG §5.2.4 | delivery | S | OB11 |  |
 | G42 | How an LTI-launched item's grade maps to QTI outcomes | BPIG §6.2.9 | delivery | S | OB16 |  |

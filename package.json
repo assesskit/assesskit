@@ -20,6 +20,7 @@
     "conformance:render": "node conformance/render.ts",
     "corpus": "node scripts/corpus.ts fetch",
     "corpus:pin": "node scripts/corpus.ts pin",
+    "unicode": "node scripts/unicode.ts",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
     "prepare": "lefthook install"
