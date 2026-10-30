@@ -12,3 +12,7 @@ The frame of portable custom interactions (`player`): `mountPciFrame` puts an in
 opaque origin that restricts itself with a content security policy, loads its modules with RequireJS from primary and
 fallback locations, provides the communication bridge `qtiCustomInteractionContext`, and reports the response, the state,
 the height and the validity methods to the player. The static files of the frame are exported as `pci-frame/*`.
+
+The tools of an item (`player`): `mountTools` shows a rule, a protractor, basic and standard calculators, a line reader,
+answer masking, digital and physical materials, and slots for the tools that the host provides, for the companion
+materials that olah reads and the supports of a candidate's profile.

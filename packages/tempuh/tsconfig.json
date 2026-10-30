@@ -4,6 +4,10 @@
     "noEmit": true,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true,
+    "paths": {
+      "@luthfanwakan/olah": ["../olah/src/index.ts"],
+      "@luthfanwakan/olah/*": ["../olah/src/*/index.ts"]
+    },
     "types": ["node"]
   },
   "include": ["scripts", "test"]

@@ -40,7 +40,13 @@ the servers, so each test names its paths with a token of its own. The browser c
 page cannot do: run axe-core inside a frame of an opaque origin, click in it, and read the accessibility tree with its
 frames.
 
-The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame.
+The browser tests of the tools build their page in the test: the toolbar in the document and the item in a shadow root, as
+the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG §3.7.8 with olah's `readAsi`, so that the
+tools get what the player gets. The tests run axe-core with the rules of WCAG 2.2 A and AA and `label-content-name-mismatch`,
+which axe leaves off by default, and press real keys and pointer buttons.
+
+The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
+operates the tools by keyboard.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
 repository. The container needs network access to install the dependencies and the browsers:

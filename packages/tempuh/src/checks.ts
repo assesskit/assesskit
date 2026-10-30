@@ -97,3 +97,44 @@ export function checkNonNegativeInteger(value: unknown, label: string): asserts 
     throw new DataError(`${label} must be a non-negative integer, found ${describe(value)}.`);
   }
 }
+
+/**
+ * Checks that a value is a boolean.
+ *
+ * @param label - Names the value in the error message, such as `The property active`.
+ * @throws `DataError` when it is not.
+ */
+export function checkBoolean(value: unknown, label: string): asserts value is boolean {
+  if (typeof value !== "boolean") throw new DataError(`${label} must be true or false, found ${describe(value)}.`);
+}
+
+/**
+ * Checks that a value is a finite number greater than 0, such as a length.
+ *
+ * @param label - Names the value in the error message, such as `The property minimumLength`.
+ * @throws `DataError` when it is not.
+ */
+export function checkPositive(value: unknown, label: string): asserts value is number {
+  if (!(typeof value === "number" && Number.isFinite(value) && value > 0)) {
+    throw new DataError(`${label} must be a positive number, found ${describe(value)}.`);
+  }
+}
+
+/**
+ * Checks that a value is one of the given strings, such as a unit.
+ *
+ * @param label - Names the value in the error message, such as `The property unit`.
+ * @param allowed - The strings it may be, at least two.
+ * @throws `DataError` when it is not.
+ */
+export function checkChoice<T extends string>(
+  value: unknown,
+  label: string,
+  allowed: readonly T[],
+): asserts value is T {
+  if (allowed.some((choice) => choice === value)) return;
+  const quoted = allowed.map((choice) => JSON.stringify(choice));
+  throw new DataError(
+    `${label} must be ${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}, found ${describe(value)}.`,
+  );
+}

@@ -3,7 +3,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { COMMANDS } from "./packages/tempuh/test/fixtures/commands.js";
 
-/** Resolves olah and its subpaths to their sources, so that the differential tests run the code and not a build. */
+/** Resolves olah and its subpaths to their sources, so that the differential and tempuh tests run the code and not a build. */
 const OLAH_SOURCES = [
   { find: /^@luthfanwakan\/olah$/, replacement: resolve(import.meta.dirname, "packages/olah/src/index.ts") },
   { find: /^@luthfanwakan\/olah\/(.+)$/, replacement: resolve(import.meta.dirname, "packages/olah/src/$1/index.ts") },
@@ -21,6 +21,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias: OLAH_SOURCES },
         test: {
           name: "tempuh",
           include: ["packages/tempuh/test/**/*.test.ts"],
@@ -29,6 +30,7 @@ export default defineConfig({
       },
       {
         // Browser tests run in the engines of the player: the page is the fixture, and the global setup serves the frame.
+        resolve: { alias: OLAH_SOURCES },
         test: {
           name: "tempuh-browser",
           include: ["packages/tempuh/test/**/*.browser.test.ts"],

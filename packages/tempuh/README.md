@@ -9,7 +9,8 @@ The package is under development, private and not published. This version has th
 messages in English and Indonesian, the protocol between a browser and a session host, and the stylesheet of a content
 root. It also has the frame of portable custom interactions: a sandboxed frame with its own content security policy,
 RequireJS loading with fallback locations, and the communication bridge of the QTI 3.0 Best Practices and Implementation
-Guide (§3.7.12).
+Guide (§3.7.12). It also has the tools of an item: a rule, a protractor, basic and standard calculators, a line reader, answer
+masking, materials, and slots for the tools that the host provides.
 
 ## Browser baseline
 
@@ -31,13 +32,13 @@ envelope.seq; // 3
 
 ## API
 
-| Import                             | Contents                                                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`          |
-| `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciModules`, `PciEvent`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT` and the types of their fields |
-| `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                   |
-| `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                             |
-| `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                  |
+| Import                             | Contents                                                                                                                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`                                                                                           |
+| `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciModules`, `PciEvent`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields |
+| `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                    |
+| `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                              |
+| `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                   |
 
 ## Documentation
 
@@ -47,4 +48,5 @@ envelope.seq; // 3
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
 - [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
+- [Tools](docs/tools.md): the tools of an item, how they are shown and operated.
 - [Evidence](docs/evidence.md): the inventory of rows and WCAG criteria, and the coverage gate.

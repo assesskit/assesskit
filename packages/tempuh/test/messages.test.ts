@@ -97,7 +97,7 @@ describe("selectMessages", () => {
 
   it("rejects a message key that the catalog does not have", () => {
     expect(() => select("id", { id: { toolRulers: "x" } })).toThrow(
-      /^The catalog for the language "id" has the properties "interactiveQuestion", .* and "toolStandardCalculator", found "toolRulers"\.$/,
+      /^The catalog for the language "id" has the properties "interactiveQuestion", .* and "calculatorMemorySubtract", found "toolRulers"\.$/,
     );
   });
 

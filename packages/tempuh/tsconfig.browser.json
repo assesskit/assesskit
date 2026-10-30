@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@luthfanwakan/olah": ["../olah/src/index.ts"],
+      "@luthfanwakan/olah/*": ["../olah/src/*/index.ts"]
+    }
   },
   "include": [
     "src/index.ts",

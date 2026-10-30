@@ -38,7 +38,7 @@ messages and nothing of the other subpaths, so that a browser bundle and a serve
 | Subpath      | Side    | Contents                                                                                                     |
 | ------------ | ------- | ------------------------------------------------------------------------------------------------------------ |
 | `.`          | shared  | The errors and the interface messages                                                                        |
-| `player`     | browser | The host of portable custom interactions ([PCI](pci.md))                                                     |
+| `player`     | browser | The host of portable custom interactions ([PCI](pci.md)) and the tools of an item ([tools](tools.md))        |
 | `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                  |
 | `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/` |
 

@@ -10,6 +10,11 @@ interface SmokePage {
   goto(url: string): Promise<unknown>;
   /** Evaluates JavaScript in the page and returns the value, awaiting a promise. */
   evaluate(expression: string): Promise<unknown>;
+  /** The keyboard of the page. */
+  readonly keyboard: {
+    /** Presses a key, such as `Enter` or `ArrowRight`, on the element that has the focus. */
+    press(key: string): Promise<unknown>;
+  };
 }
 
 /** The engine a case runs in. */
@@ -177,6 +182,77 @@ const PCI_FRAME = `(async () => {
   return { events, sandbox: frame.element.getAttribute("sandbox"), probes: probes.map((probe) => probe.result) };
 })()`;
 
+/**
+ * Mounts the tools of the player as the player lays them out, the item in a shadow root, with a rule, a standard
+ * calculator, the line reader and answer masking, and focuses the button of the rule. It leaves the scene in `window.scene`.
+ */
+const MOUNT_TOOLS = `(async () => {
+  const { mountTools } = await import("/dist/player/index.js");
+  const { EN_MESSAGES } = await import("/dist/index.js");
+  const host = document.createElement("div");
+  const container = document.createElement("div");
+  const stage = document.createElement("div");
+  stage.style.cssText = "position: relative; width: 360px; min-height: 400px; font: 16px/24px sans-serif;";
+  stage.innerHTML = '<p style="margin: 0; white-space: pre-line; line-height: 24px;">one\\ntwo\\nthree</p>' +
+    '<qti-choice-interaction><qti-simple-choice><input type="radio"> Alpha</qti-simple-choice></qti-choice-interaction>';
+  container.attachShadow({ mode: "open" }).append(stage);
+  document.body.append(host, container);
+  const tools = mountTools(host, { messages: EN_MESSAGES, language: "en", stage, assets: (path) => path, onSupport: () => undefined });
+  tools.update({
+    companion: {
+      calculators: [{ calculatorType: { value: "standard" }, description: { value: "Standard" } }],
+      rules: [{
+        description: { value: "Ruler" },
+        ruleSystem: { minimumLength: { value: 10 }, majorIncrement: { unit: "Centimeter", value: "1" } },
+      }],
+      protractors: [], digitalMaterials: [], physicalMaterials: [],
+    },
+    supports: [
+      { name: "line-reader", state: "active", active: true },
+      { name: "answer-masking", state: "active", active: true },
+    ],
+  });
+  window.scene = { host, stage };
+  const button = (name) => [...host.querySelectorAll(".tempuh-row > button")].find((each) => each.textContent === name);
+  window.scene.button = button;
+  button("Ruler").focus();
+})()`;
+
+/** What the keyboard did to the tools, as JSON: the focus, the rule's transform, the calculator's display, the line reader and the mask. */
+const READ_TOOLS = `(() => {
+  const { host, stage } = window.scene;
+  let active = document.activeElement;
+  while (active && active.shadowRoot && active.shadowRoot.activeElement) active = active.shadowRoot.activeElement;
+  const rule = stage.querySelector('.tempuh-placed[aria-label="Ruler"]');
+  const band = stage.querySelector("[role=slider]");
+  const display = host.querySelector("output");
+  return JSON.stringify({
+    focused: active ? active.tagName + ":" + (active.getAttribute("aria-label") || active.textContent) : null,
+    transform: rule ? rule.style.transform : null,
+    display: display ? display.textContent : null,
+    line: band ? band.getAttribute("aria-valuenow") + " of " + band.getAttribute("aria-valuemax") : null,
+    masked: getComputedStyle(stage.querySelector("qti-simple-choice")).display === "none",
+  });
+})()`;
+
+/** What {@link READ_TOOLS} reads. */
+interface ToolsReading {
+  readonly focused: string | null;
+  readonly transform: string | null;
+  readonly display: string | null;
+  readonly line: string | null;
+  readonly masked: boolean;
+}
+
+async function readTools(page: SmokePage): Promise<ToolsReading> {
+  return JSON.parse(String(await page.evaluate(READ_TOOLS)));
+}
+
+/** Reads the horizontal offset of the transform of a placed tool, in CSS pixels. */
+function offsetOf(transform: string | null): number {
+  return Number(/translate\((-?[\d.]+)px/.exec(transform ?? "")?.[1]);
+}
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -244,6 +320,43 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           sandbox: "allow-scripts",
           probes: ["blocked"],
         });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "operates the rule, the calculator, the line reader and answer masking of the player by keyboard",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        await page.evaluate(MOUNT_TOOLS);
+        // The profile has the line reader and answer masking on from the start.
+        const start = await readTools(page);
+        assert.equal(start.focused, "BUTTON:Ruler");
+        // The text of the mask is lines too, and how it wraps depends on the engine.
+        assert.match(String(start.line), /^1 of \d+$/);
+        assert.equal(start.masked, true);
+        await page.keyboard.press("Enter");
+        const opened = await readTools(page);
+        assert.equal(opened.focused, "DIV:Ruler");
+        await page.keyboard.press("ArrowRight");
+        await page.keyboard.press("PageDown");
+        const moved = await readTools(page);
+        assert.match(String(opened.transform), /rotate\(0deg\)/);
+        assert.match(String(moved.transform), /rotate\(5deg\)/);
+        assert.equal(offsetOf(moved.transform) - offsetOf(opened.transform), 10);
+        await page.evaluate(`window.scene.button("Standard calculator").focus()`);
+        await page.keyboard.press("Enter");
+        for (const key of ["1", "2", "*", "3", "Enter"]) await page.keyboard.press(key);
+        assert.equal((await readTools(page)).display, "36");
+        await page.evaluate(`window.scene.stage.querySelector("[role=slider]").focus()`);
+        await page.keyboard.press("ArrowDown");
+        assert.match(String((await readTools(page)).line), /^2 of \d+$/);
+        await page.evaluate(`window.scene.stage.querySelector(".tempuh-mask button").focus()`);
+        await page.keyboard.press("Enter");
+        assert.equal((await readTools(page)).masked, false);
       } finally {
         await stop();
       }

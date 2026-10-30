@@ -275,6 +275,10 @@ importers:
         version: 4.10.2
 
   packages/tempuh:
+    dependencies:
+      '@luthfanwakan/olah':
+        specifier: workspace:^
+        version: link:../olah
     devDependencies:
       axe-core:
         specifier: ^4.14.0

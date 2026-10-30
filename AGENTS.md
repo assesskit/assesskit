@@ -55,7 +55,7 @@ packages/tempuh/          the player
   src/index.ts            re-exports the errors and the messages
   src/errors.ts           TempuhError, DataError, AccessError, LtiError, ServiceError
   src/checks.ts           describe, and checkRecord, checkArray, checkFunction, checkProperties, checkString,
-                          checkNonEmptyString, checkNonNegativeInteger
+                          checkNonEmptyString, checkNonNegativeInteger, checkBoolean, checkPositive, checkChoice
   src/messages/           Messages, the English and Indonesian catalogs, selectMessages
   src/protocol/           Caller, ActionEnvelope and ViewEnvelope, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
