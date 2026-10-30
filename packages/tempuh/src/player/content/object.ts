@@ -42,7 +42,7 @@ export function renderObject(node: ModelNode, context: RenderContext): Node[] {
   });
   const [first] = embedded;
   if (first instanceof Element) setCommonAttributes(first, node, context);
-  if (first instanceof HTMLImageElement) {
+  if (first instanceof Element) {
     if (width !== undefined) declareSize(first, "width", width);
     if (height !== undefined) declareSize(first, "height", height);
   }

@@ -160,6 +160,28 @@ export function examFiles(
   };
 }
 
+/** A pronunciation lexicon (PLS) that says W3C as the words. */
+const LEXICON =
+  '<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0" alphabet="ipa" xml:lang="en"><lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>';
+
+/** The files of the fixture where the first item depends on a pronunciation lexicon and both items say W3C. */
+export function lexiconFiles(lexicon = LEXICON): Readonly<Record<string, string | Uint8Array>> {
+  const files = { ...examFiles() };
+  files["imsmanifest.xml"] = String(files["imsmanifest.xml"])
+    .replace(
+      '<file href="items/q1/style.css"/></resource>',
+      '<file href="items/q1/style.css"/><dependency identifierref="words"/></resource>',
+    )
+    .replace(
+      "</resources>",
+      '<resource identifier="words" type="pls" href="items/q1/words.pls"><file href="items/q1/words.pls"/></resource></resources>',
+    );
+  files["items/q1/words.pls"] = lexicon;
+  files["items/q1/item.xml"] = String(files["items/q1/item.xml"]).replace("<p>Look at ", "<p>Look at the W3C and ");
+  files["items/q2/item.xml"] = String(files["items/q2/item.xml"]).replace("<p>Question</p>", "<p>The W3C again</p>");
+  return files;
+}
+
 /** Opens a package from files given as text or bytes. */
 export function packageOf(files: Readonly<Record<string, string | Uint8Array>>): QtiPackage {
   const bytes = new Map(

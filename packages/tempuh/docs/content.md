@@ -46,18 +46,18 @@ stimuli share one root, so that `label for`, `aria-describedby` and `data-catalo
 stylesheets neither leak into the page nor take their rules from it. `player.css` gives the host `contain: layout paint` and
 `isolation: isolate`, so that the fixed-position CSS of an item cannot cover the page's chrome ([styling](styling.md)).
 
-| Option         | Type                          | Meaning                                                                                                                                               |
-| -------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `messages`     | `Messages`                    | The text of the interface, from `selectMessages`.                                                                                                     |
-| `assets`       | `(path: string) => string`    | Turns the path of a file in the package into the URL to load it from.                                                                                 |
-| `fetch`        | `StylesheetFetch`             | Loads item stylesheets; `fetch` of the page fits. It is called with `credentials: "omit"` and `referrerPolicy: "no-referrer"`.                        |
-| `stylesheet`   | `CSSStyleSheet`               | The player's stylesheet, built from `player.css`. Every root adopts it first. Keep one root that lives as long as the player ([styling](styling.md)). |
-| `origins`      | `readonly string[]`           | The origins besides the package's that content may reference, such as `https://media.example`. Default: none.                                         |
-| `interactions` | `InteractionRenderers`        | The renderers of interactions by kind. Default: none, so that each interaction is a placeholder.                                                      |
-| `view`         | `View`                        | The view whose rubric blocks are drawn. Default: `candidate`.                                                                                         |
-| `mediaScale`   | `number`                      | The factor for the pixel `width` and `height` of images, video and objects, which the magnification of non-text content sets. Default: `1`.           |
-| `fileUrl`      | `(file: FileValue) => string` | The URL of a file value that a printed variable prints, such as an upload under review. Default: none, so that a file prints as its name.             |
-| `typesetter`   | `MathTypesetter`              | From `createMathTypesetter` ([math](math.md)). Default: none, so that the browser renders MathML.                                                     |
+| Option         | Type                          | Meaning                                                                                                                                                                       |
+| -------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `messages`     | `Messages`                    | The text of the interface, from `selectMessages`.                                                                                                                             |
+| `assets`       | `(path: string) => string`    | Turns the path of a file in the package into the URL to load it from.                                                                                                         |
+| `fetch`        | `StylesheetFetch`             | Loads item stylesheets; `fetch` of the page fits. It is called with `credentials: "omit"` and `referrerPolicy: "no-referrer"`.                                                |
+| `stylesheet`   | `CSSStyleSheet`               | The player's stylesheet, built from `player.css`. Every root adopts it first. Keep one root that lives as long as the player ([styling](styling.md)).                         |
+| `origins`      | `readonly string[]`           | The origins besides the package's that content may reference, such as `https://media.example`. Default: none.                                                                 |
+| `interactions` | `InteractionRenderers`        | The renderers of interactions by kind. Default: none, so that each interaction is a placeholder.                                                                              |
+| `view`         | `View`                        | The view whose rubric blocks are drawn. Default: `candidate`.                                                                                                                 |
+| `mediaScale`   | `number`                      | The factor for the pixel `width` and `height` of images, video and objects, which the magnification of non-text content sets; `setMediaScale` changes it later. Default: `1`. |
+| `fileUrl`      | `(file: FileValue) => string` | The URL of a file value that a printed variable prints, such as an upload under review. Default: none, so that a file prints as its name.                                     |
+| `typesetter`   | `MathTypesetter`              | From `createMathTypesetter` ([math](math.md)). Default: none, so that the browser renders MathML.                                                                             |
 
 `root.show(content)` replaces what the root showed. The DOM is built before the promise settles; the promise settles when
 the item's stylesheets are adopted and the expressions are typeset.
@@ -78,26 +78,45 @@ the item's stylesheets are adopted and the expressions are typeset.
 MathJax cannot be loaded; the content is on the screen by then, the stylesheets that loaded are adopted and the
 expressions stay MathML. A stylesheet that failed is fetched again by the next `show`.
 
-| Member                            | Meaning                                                                                               |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `root`                            | The shadow root.                                                                                      |
-| `card(idref, support, language?)` | The card that the catalogs of the shown content have for a support ([Catalogs](#catalogs-and-cards)). |
-| `showFeedback(feedback)`          | Shows modal feedback in a dialog and resolves when the candidate closes it ([Feedback](#feedback)).   |
-| `destroy()`                       | Takes the content and the listeners away. The shadow root stays, empty.                               |
+| Member                            | Meaning                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `root`                            | The shadow root.                                                                                                                     |
+| `stage`                           | The positioned element in the shadow root that holds the content, and stays when the content is replaced ([The stage](#the-stage)).  |
+| `card(idref, support, language?)` | The card that the catalogs of the shown content have for a support ([Catalogs](#catalogs-and-cards)).                                |
+| `setMediaScale(scale)`            | Changes the factor for the pixel sizes of media, in the content shown and in what comes later ([The media scale](#the-media-scale)). |
+| `showFeedback(feedback)`          | Shows modal feedback in a dialog and resolves when the candidate closes it ([Feedback](#feedback)).                                  |
+| `destroy()`                       | Takes the content and the listeners away. The shadow root stays, empty.                                                              |
 
 A link to an `id` of the content (`href="#note"`) moves the focus to that element inside the shadow root. The browser
 cannot find the target of the fragment inside it and would only change the address of the page.
+
+### The stage
+
+`root.stage` is the `div.tempuh-stage` that `player.css` positions. The content stands in it, and `show` replaces the
+content in it, so that what lies over the item stays: the tools of an item ([tools](tools.md)) mount their layer in it, and
+read the text and the choices of the item there. The stylesheets that other parts adopt into the shadow root stay when the
+root adopts the stylesheets of the next item.
+
+### The media scale
+
+The magnification of non-text content (BPIG 5.2.9.7) multiplies the pixel sizes that the author gave to images, video, objects
+and other elements with a `width` or `height` in pixels. The renderer keeps the size of the author in `data-tempuh-width` and
+`data-tempuh-height`, and `root.setMediaScale(scale)` sets the attributes again from it: two changes do not compound, and
+`1` gives the author's size back. The content is not drawn again, so the focus, the caret and the responses stay. A card drawn
+after the change has the new scale. `setMediaScale` throws `DataError` unless `scale` is a positive number. Sizes that are not
+pixels, such as `50%`, stay.
 
 ## Where it appears
 
 | Part                     | Markup                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The content              | `div.tempuh-content`, with `lang` when the content states a language.                                                                                                    |
+| The content              | `div.tempuh-content` in the stage, with `lang` when the content states a language.                                                                                       |
 | The notice of a hazard   | `div.tempuh-hazards` with `role="note"`, first.                                                                                                                          |
 | The rubric               | `div.tempuh-rubric`.                                                                                                                                                     |
 | The stimuli and the body | `div.tempuh-main`, with `data-tempuh-stimuli` when there are stimuli; `div.tempuh-stimuli` holds one `section.tempuh-stimulus` for each, and `div.tempuh-body` the item. |
 | The test feedback        | `section.tempuh-test-feedback`, labelled Feedback, with `h2` for a title.                                                                                                |
-| The dialog               | `dialog.tempuh-dialog`, a sibling of the content in the shadow root.                                                                                                     |
+| The stage                | `div.tempuh-stage`, the parent of the content in the shadow root.                                                                                                        |
+| The dialog               | `dialog.tempuh-dialog`, a sibling of the stage in the shadow root.                                                                                                       |
 
 ## The renderer
 
@@ -187,10 +206,10 @@ a candidate with a refused URL or a descriptor that is not a width or a density 
 | Anything else                        | A link that opens in a tab of its own, with the fallback content or the message `toolOpenFile` as its text.                    |
 
 The `id`, `class`, `lang`, ARIA and `data-*` attributes of the object go to the element, and its `width` and `height`,
-multiplied by `mediaScale` when they are pixels, go to `img`, `video` and `iframe`. An `img` that an object or an `img` of the
-item makes keeps the pixel size the author gave it in `data-tempuh-width` and `data-tempuh-height`, which the coordinates of the
-graphic interactions are measured in ([graphics](graphics.md#shapes-and-coordinates)). A file that the URL policy refuses
-leaves the fallback content.
+multiplied by `mediaScale` when they are pixels, go to `img`, `video` and `iframe`. An element with a size in pixels keeps the
+size the author gave it in `data-tempuh-width` and `data-tempuh-height`, which the coordinates of the graphic interactions are
+measured in ([graphics](graphics.md#shapes-and-coordinates)) and `setMediaScale` scales from. A file that the URL policy
+refuses leaves the fallback content.
 
 ### Links
 

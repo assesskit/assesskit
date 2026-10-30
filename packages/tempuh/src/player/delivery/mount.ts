@@ -1,4 +1,5 @@
 import type { CandidateAction, CandidateItem, CandidateView, ItemKey } from "@luthfanwakan/olah/delivery";
+import type { SupportName } from "@luthfanwakan/olah/pnp";
 import type { Value } from "@luthfanwakan/olah/values";
 import { AccessError, isDataError } from "../../errors.js";
 import { selectMessages } from "../../messages/index.js";
@@ -18,6 +19,7 @@ import { createAnnouncer } from "./announcer.js";
 import { createCommentBox } from "./comment.js";
 import { confirmAction } from "./confirm.js";
 import { modalFeedbackOf, rootContentOf } from "./content.js";
+import { createLexicons } from "./lexicons.js";
 import { renderNavigation } from "./navigation.js";
 import { checkDeliveryOptions, type DeliveryOptions, type Mounted } from "./options.js";
 import { createPciHost } from "./pci.js";
@@ -25,6 +27,7 @@ import { REFUSAL_MESSAGES } from "./refusals.js";
 import { chromeStyles } from "./styles.js";
 import { type DeliverySupports, mountDeliverySupports } from "./supports.js";
 import { createTimerBar } from "./timers.js";
+import { type DeliveryTools, mountDeliveryTools } from "./tools.js";
 
 /** How often the timers count down on screen, in milliseconds. */
 const TICK_MS = 1000;
@@ -67,7 +70,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     chrome = true,
     hooks = {},
   } = options;
-  const { voice = webSpeech() } = hooks;
+  const { voice = webSpeech(), tools: toolSlots = {} } = hooks;
   const messages = selectMessages(language, options.messages);
   const shadow = host.attachShadow({ mode: "open" });
   shadow.adoptedStyleSheets = [chromeStyles()];
@@ -81,6 +84,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const mapSlot = html("div", { class: "tempuh-map" });
   const actionsSlot = html("div", { class: "tempuh-actions", role: "group", "aria-label": messages.actionsLabel });
   const supportsSlot = html("div", { class: "tempuh-supports-slot" });
+  const toolsSlot = html("div", { class: "tempuh-supports-slot" });
   const contentHost = html("div", { class: "tempuh-content-host" });
   const lti = createLtiSlot({
     host,
@@ -118,6 +122,9 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       () => status.say(messages.answersSaved),
     );
   };
+
+  /** Asks to turn a support on or off: the next view says whether it took effect. */
+  const request = (name: SupportName, active: boolean): void => void send({ type: "support", name, active });
 
   const pci = createPciHost({
     messages,
@@ -281,8 +288,12 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
         reportError(error);
       }
     }
+    // The player may have been destroyed while the content was drawn.
+    if (destroyed) return;
     if (current !== undefined) bindInteractions(current, drawn);
     supports.applyToContent(next, drawn);
+    lexicons.follow(client.documents.lexicons);
+    tools?.update(next);
   };
 
   /** Shows the modal feedback of a view once, when the item or the attempt or the feedback is new. */
@@ -307,6 +318,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       heading,
       notices,
       supportsSlot,
+      toolsSlot,
       contentHost,
       lti.element,
       attempts,
@@ -331,8 +343,27 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     content,
     pci,
     voice,
-    ...(chrome ? { request: (name, active) => void send({ type: "support", name, active }) } : {}),
+    ...(chrome ? { request } : {}),
   });
+
+  const lexicons = createLexicons({
+    fetch: options.fetch,
+    assets: (path) => client.assets(path),
+    apply: (loaded) => {
+      if (!destroyed) supports.setLexicons(loaded);
+    },
+  });
+  const tools: DeliveryTools | undefined = chrome
+    ? mountDeliveryTools({
+        messages,
+        language,
+        slot: toolsSlot,
+        stage: content.stage,
+        assets: (path) => client.assets(path),
+        slots: toolSlots,
+        request,
+      })
+    : undefined;
 
   let chain: Promise<void> = Promise.resolve();
   const update = (next: CandidateView): void => {
@@ -363,6 +394,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       destroyed = true;
       unsubscribe();
       clearInterval(ticker);
+      tools?.destroy();
       supports.destroy();
       status.stop();
       timerStatus.stop();

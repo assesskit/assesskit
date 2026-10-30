@@ -76,7 +76,7 @@ never started twice or bound to another principal.
    nothing, and applied.
 5. The deadlines of the new state are scheduled, then the state is saved by version, then the events are forwarded.
 6. The answer is the view, with the actions the policy allows, the signed asset prefixes and the documents of the
-   content. A refusal of the engine is in the envelope and the state stays as it was; the `seq` is still stored, so a repeat
+   content, among them the pronunciation lexicons of the item. A refusal of the engine is in the envelope and the state stays as it was; the `seq` is still stored, so a repeat
    of the refused request gets the same refusal.
 
 When another request saved first, the host loads the record again and handles the request again, up to `MAX_SAVE_RETRIES`

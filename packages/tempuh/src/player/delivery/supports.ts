@@ -2,9 +2,10 @@ import type { CandidateView } from "@luthfanwakan/olah/delivery";
 import type { SupportName } from "@luthfanwakan/olah/pnp";
 import type { Messages } from "../../messages/index.js";
 import type { ContentRoot } from "../roots/index.js";
-import type { SpeechHook } from "../speech/index.js";
+import type { Lexicon, SpeechHook } from "../speech/index.js";
 import {
   applyPresentation,
+  mediaScaleOf,
   mountContentSupports,
   mountSpoken,
   mountSupportPanel,
@@ -35,8 +36,13 @@ export interface SupportsContext {
 
 /** The supports of the candidate, applied to the chrome and the content of the views the player shows. */
 export interface DeliverySupports {
-  /** Applies what the supports of a view change outside the content: the look, the panel and the notice of the variant. */
+  /**
+   * Applies what the supports of a view change outside the content: the look, the scale of media sized in pixels, the panel
+   * and the notice of the variant. The content is not drawn again.
+   */
   update(view: CandidateView): void;
+  /** Gives reading aloud the pronunciation lexicons of the item shown, in order of preference. */
+  setLexicons(lexicons: readonly Lexicon[]): void;
   /**
    * Applies what they change inside the content: the cards, the text tracks, the alternative text and reading aloud. Call it
    * once the content of the view is shown; `drawn` says the content was drawn again. Nothing is applied again for a view
@@ -48,10 +54,10 @@ export interface DeliverySupports {
 }
 
 /**
- * Mounts the parts of the supports in the chrome and the content (the guide to supports): the panel of the supports that
- * are options, which sends the `support` action through `request`, and the notice of the variant; the look, the cards and
- * the reading aloud that the supports that are on ask for. A support that is not an option has no control, and shows by what
- * it changes. The parts decide nothing: they follow `CandidateView.supports`.
+ * Mounts the parts of the supports in the chrome and the content (the guide to supports): the panel of the supports, with
+ * a button for each option that sends the `support` action through `request`, and the notice of the variant; the look, the
+ * scale of media, the cards and the reading aloud that the supports that are on ask for. The parts decide nothing: they
+ * follow `CandidateView.supports`.
  *
  * @param context - See {@link SupportsContext}.
  */
@@ -72,10 +78,12 @@ export function mountDeliverySupports(context: SupportsContext): DeliverySupport
         const presentation = presentationOf(view.supports);
         applyPresentation(contentHost, presentation);
         pci.setPresentation(presentation);
+        content.setMediaScale(mediaScaleOf(view.supports));
       }
       panel?.update(view.supports);
       variant.update(view.current?.variant);
     },
+    setLexicons: (lexicons) => spoken.setLexicons(lexicons),
     applyToContent: (view, drawn) => {
       const key = JSON.stringify(view.supports);
       if (!drawn && key === applied) return;

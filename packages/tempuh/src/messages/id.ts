@@ -91,6 +91,7 @@ export const ID_MESSAGES: Messages = {
   drawClear: "Bersihkan",
   drawStartSet: "Titik awal ditetapkan. Sekarang pilih titik akhir.",
   drawSaveFailed: "Gambar tidak dapat disimpan. Gambar lagi untuk mencoba sekali lagi.",
+  drawLoadFailed: "Gambar untuk digambari tidak dapat dimuat.",
   drawHint:
     "Pena dan penghapus memerlukan mouse, jari, atau stilus. Untuk alat lain, klik atau ketuk gambar untuk memilih titik, atau buka gambar, geser garis bidik dengan tombol panah, lalu tekan Enter atau Spasi. Garis, persegi panjang, dan elips memerlukan dua titik; isi warna memerlukan satu titik.",
   feedbackTitle: "Umpan balik",
@@ -264,6 +265,8 @@ export const ID_MESSAGES: Messages = {
   submissionNoValue: "Tidak ada nilai",
   submissionFile: "Berkas yang diserahkan",
   supportsLabel: "Dukungan",
+  supportOn: "aktif",
+  supportOff: "nonaktif",
   supportHazardAvoidance: "Penghindaran bahaya",
   supportInputRequirements: "Kebutuhan masukan",
   supportLanguageOfInterface: "Bahasa antarmuka",

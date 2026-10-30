@@ -31,7 +31,7 @@ export interface RemoteSessionOptions {
   readonly clock?: Clock;
 }
 
-const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [] };
+const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [], lexicons: [] };
 
 type SetResponses = Extract<CandidateAction, { readonly type: "set-responses" }>;
 

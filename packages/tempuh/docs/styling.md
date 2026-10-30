@@ -67,8 +67,8 @@ sets them ([supports](supports.md)); a frame of a portable custom interaction ge
 | `keyword-emphasis`                     | `data-tempuh-keyword-emphasis`                       | Present: `.qti-keyword-emphasis` shows. Default: absent      |
 
 The base size is `1rem`, so a root inside a root does not multiply a zoom twice. Magnification of non-text content has no
-form in CSS inside the baseline, because `zoom` needs Firefox 126: the renderer multiplies the pixel sizes it gives media by its
-`mediaScale` option ([content](content.md)).
+form in CSS inside the baseline, because `zoom` needs Firefox 126: the renderer multiplies the pixel sizes it gives media by the
+media scale of the root, which `setMediaScale` changes without drawing the content again ([content](content.md#the-media-scale)).
 
 These values are not PNP and complete the markup:
 

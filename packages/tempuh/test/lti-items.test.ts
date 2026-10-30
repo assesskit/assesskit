@@ -289,7 +289,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(viewOf(reply).current?.lti?.title).toBe("Drawing tool");
     const launched = await launchTool(ctx, DRAW);
     expect(launched.storageTarget).toBe("lti-storage");
-    expect(reply.documents).toEqual({ test: "tests/exam.xml", item: "", stimuli: [] });
+    expect(reply.documents).toEqual({ test: "tests/exam.xml", item: "", stimuli: [], lexicons: [] });
     expect(Object.keys(reply.assets)).toEqual([]);
   });
 

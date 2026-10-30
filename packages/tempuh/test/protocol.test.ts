@@ -150,23 +150,32 @@ describe("checkViewEnvelope: documents and refusal", () => {
   const base = { seq: 2, view: {}, assets: {} };
 
   it("[T71] accepts the documents of a view and the refusal of an action", () => {
-    const documents = { test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: ["stimuli/s1.xml"] };
+    const documents = {
+      test: "tests/exam.xml",
+      item: "items/q1/item.xml",
+      stimuli: ["stimuli/s1.xml"],
+      lexicons: ["items/q1/words.pls"],
+    };
     const refusal = { code: "time-over", message: "The time is over.", source: "INFO §2.8.5" };
     expect(() => checkViewEnvelope(json(JSON.stringify({ ...base, documents, refusal })))).not.toThrow();
   });
 
-  it("[T71] rejects documents that are not an object of the test, the item and the stimuli", () => {
+  it("[T71] rejects documents that are not an object of the test, the item, the stimuli and the lexicons", () => {
     const check = (documents: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"documents":${documents}}`));
     expect(() => check("[]")).toThrow("The documents of a view envelope must be an object, found an array.");
-    expect(() => check('{"test":"","item":""}')).toThrow(
+    expect(() => check('{"test":"","item":"","lexicons":[]}')).toThrow(
       "The property stimuli of the documents of a view envelope must be an array",
     );
-    expect(() => check('{"test":1,"item":"","stimuli":[]}')).toThrow(
+    expect(() => check('{"test":1,"item":"","stimuli":[],"lexicons":[]}')).toThrow(
       "The property test of the documents of a view envelope must be a string",
     );
-    expect(() => check('{"test":"","item":"","stimuli":[5]}')).toThrow("A path of the stimuli");
-    expect(() => check('{"test":"","item":"","stimuli":[],"other":1}')).toThrow(
+    expect(() => check('{"test":"","item":"","stimuli":[5],"lexicons":[]}')).toThrow("A path of the stimuli");
+    expect(() => check('{"test":"","item":"","stimuli":[]}')).toThrow(
+      "The property lexicons of the documents of a view envelope must be an array",
+    );
+    expect(() => check('{"test":"","item":"","stimuli":[],"lexicons":[5]}')).toThrow("A path of the lexicons");
+    expect(() => check('{"test":"","item":"","stimuli":[],"lexicons":[],"other":1}')).toThrow(
       "The documents of a view envelope has the properties",
     );
   });
@@ -224,7 +233,9 @@ describe("viewDocuments", () => {
   const source = {
     test: "tests/t.xml",
     item: (reference: string) =>
-      reference === "q1" ? { path: "items/q1.xml", stimuli: ["stimuli/s.xml"] } : undefined,
+      reference === "q1"
+        ? { path: "items/q1.xml", stimuli: ["stimuli/s.xml"], lexicons: ["items/words.pls"] }
+        : undefined,
   };
 
   it("[T73] names the documents of the item presented and the test", () => {
@@ -232,11 +243,12 @@ describe("viewDocuments", () => {
       test: "tests/t.xml",
       item: "items/q1.xml",
       stimuli: ["stimuli/s.xml"],
+      lexicons: ["items/words.pls"],
     });
   });
 
   it("[T73] resolves against the root of the package for a variant, an unknown item, no item, and no source", () => {
-    const root = { test: "tests/t.xml", item: "", stimuli: [] };
+    const root = { test: "tests/t.xml", item: "", stimuli: [], lexicons: [] };
     expect(viewDocuments(view({ key: { ref: "q1", instance: 1 }, variant: { resource: "v" } }), source)).toEqual(root);
     expect(viewDocuments(view({ key: { ref: "q9", instance: 1 } }), source)).toEqual(root);
     expect(viewDocuments(view(undefined), source)).toEqual(root);
@@ -244,6 +256,7 @@ describe("viewDocuments", () => {
       test: "",
       item: "",
       stimuli: [],
+      lexicons: [],
     });
   });
 });

@@ -22,6 +22,7 @@ import {
   type SpeechRequest,
   type SpeechSettings,
 } from "../speech/index.js";
+import { checkLexicons } from "../speech/lexicon.js";
 import { checkSpeechSettings } from "../speech/settings.js";
 import { activeSupport, checkSupportViews } from "./check.js";
 import { adoptSupportStyles } from "./styles.js";
@@ -34,7 +35,7 @@ export interface SpokenOptions {
   readonly language: string;
   /** The voice that reads: the host's text-to-speech, or `webSpeech()`. */
   readonly voice: SpeechHook;
-  /** The pronunciation lexicons of the item, in order of preference. Default: none. */
+  /** The pronunciation lexicons of the item, in order of preference; `setLexicons` replaces them. Default: none. */
   readonly lexicons?: readonly Lexicon[];
 }
 
@@ -51,6 +52,12 @@ export interface Spoken {
    * @throws `DataError` when `supports` is not a list of olah's `SupportView`s.
    */
   update(supports: readonly SupportView[]): void;
+  /**
+   * Replaces the pronunciation lexicons that the next reading uses, in order of preference, such as those of the next item.
+   *
+   * @throws `DataError` when `lexicons` is not a list of lexicons that `parseLexicon` made.
+   */
+  setLexicons(lexicons: readonly Lexicon[]): void;
   /** Stops the voice and takes the controls and the echo away. */
   destroy(): void;
 }
@@ -131,7 +138,8 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
  */
 export function mountSpoken(host: HTMLElement, root: ContentRoot, options: SpokenOptions): Spoken {
   checkSpokenOptions(host, root, options);
-  const { messages, language, voice, lexicons = [] } = options;
+  const { messages, language, voice } = options;
+  let lexicons = options.lexicons ?? [];
   const scope = root.root;
   const release = adoptSupportStyles(host);
   const status = html("output", { class: "tempuh-read-aloud-word" });
@@ -237,6 +245,10 @@ export function mountSpoken(host: HTMLElement, root: ContentRoot, options: Spoke
       cursor = -1;
       group.hidden = false;
       echoTypedText(spoken.typingEcho);
+    },
+    setLexicons(next) {
+      checkLexicons(next);
+      lexicons = next;
     },
     destroy() {
       clear();

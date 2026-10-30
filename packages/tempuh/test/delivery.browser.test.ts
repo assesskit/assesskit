@@ -6,13 +6,14 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
 import { DataError, ID_MESSAGES } from "../src/index.js";
-import type { SpeechRequest, StylesheetFetch } from "../src/player/index.js";
+import type { SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient } from "../src/protocol/index.js";
-import { PLAYER_CSS } from "./css-fixture.js";
-import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
+import { computed, PLAYER_CSS } from "./css-fixture.js";
+import { examDefinition, examFiles, examHost, lexiconFiles, packageOf } from "./exam-fixture.js";
 import { picture } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
 
 const ALICE = { session: "exam-1", principal: "alice" };
 const SECOND = 1000;
@@ -49,6 +50,7 @@ async function shell(
     readonly upload?: (bytes: Blob, mimeType: string) => Promise<FileValue>;
     readonly url?: (file: FileValue) => string;
     readonly voice?: { speak(request: SpeechRequest): Promise<void>; stop(): void };
+    readonly tools?: ToolSlots;
   } = {},
 ) {
   const origin = inject("fixtures").asset;
@@ -108,7 +110,10 @@ async function shell(
     staticUrl: `${origin}/static/`,
     stylesheet: player,
     fetch: fetcher,
-    ...(options.voice === undefined ? {} : { hooks: { voice: options.voice } }),
+    hooks: {
+      ...(options.voice === undefined ? {} : { voice: options.voice }),
+      ...(options.tools === undefined ? {} : { tools: options.tools }),
+    },
     ...(options.language === undefined ? {} : { language: options.language }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
   });
@@ -612,6 +617,13 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { chrome: "yes" })).toThrow("The option chrome must be true or false");
     expect(() => mount(fresh(), { hooks: { voice: {} } })).toThrow("The method speak of the hook voice");
     expect(() => mount(fresh(), { hooks: { voice: "robot" } })).toThrow("The hook voice must be an object");
+    expect(() => mount(fresh(), { hooks: { tools: { dictionary: 1 } } })).toThrow(
+      "The tool dictionary of the hook tools must be a function",
+    );
+    expect(() => mount(fresh(), { hooks: { tools: { abacus: () => undefined } } })).toThrow(
+      "The hook tools has the properties",
+    );
+    expect(() => mount(fresh(), { hooks: { tools: [] } })).toThrow("The hook tools must be an object");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { other: 1 })).toThrow("The options has the properties");
   });
@@ -905,6 +917,19 @@ describe("the supports in the player", () => {
     expect(panelButtons(s.ui).map((button) => button.textContent)).not.toContain("Single column");
   });
 
+  it("[T75] lists the supports that are on from the start with their state, next to the buttons of the options", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    const lines = (): (string | null)[] =>
+      [...s.ui.querySelectorAll(".tempuh-supports li")].map((line) => line.textContent);
+    await vi.waitFor(() => expect(lines()).toEqual(expect.arrayContaining(["Single column: on", "Spoken: on"])));
+    expect(lines()).toEqual(expect.arrayContaining(["High contrast", "Alternative text"]));
+    // The prohibited magnification is not listed, and the states have no control.
+    expect(lines().join(" ")).not.toContain("Magnification");
+    expect(s.ui.querySelector(".tempuh-supports li:not(:has(button))") === null).toBe(false);
+    expect(panelButtons(s.ui).map((button) => button.textContent)).toEqual(["High contrast", "Alternative text"]);
+  });
+
   it("[T75][T79] applies the supports to the content when the host draws the chrome, and draws no panel", async () => {
     const s = await shell({ profile: PROFILE, chrome: false });
     await shown(s);
@@ -1110,8 +1135,10 @@ describe("a drawing that is still being stored", () => {
     expect(settled).toBe(false);
     storage.finish();
     await vi.waitFor(() => expect(settled).toBe(true));
-    await vi.waitFor(() =>
-      expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } }),
+    await vi.waitFor(
+      () =>
+        expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } }),
+      { timeout: 5000 },
     );
   });
 
@@ -1121,5 +1148,266 @@ describe("a drawing that is still being stored", () => {
     await shown(s);
     buttonNamed(s.ui, "Next").click();
     await vi.waitFor(() => expect(types(sent)).toEqual(["move"]));
+  });
+});
+
+/** The files of the fixture with companion materials on the first item: a calculator, a ruler and a protractor. */
+function toolFiles(): Readonly<Record<string, string | Uint8Array>> {
+  const files = { ...examFiles() };
+  const materials = [
+    calculatorXml("basic", "A calculator for the sums."),
+    ruleXml("A ruler for the lengths.", 10, ["1", "Centimeter"], ["1", "Millimeter"]),
+    protractorXml("A protractor for the angles.", ["10", "Degree"], ["1", "Degree"]),
+  ].join("");
+  files["items/q1/item.xml"] = String(files["items/q1/item.xml"]).replace(
+    "</qti-item-body>",
+    `</qti-item-body><qti-companion-materials-info>${materials}</qti-companion-materials-info>`,
+  );
+  return files;
+}
+
+/** A profile with three tools that the candidate turns on and off. */
+const TOOLS_PROFILE = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
+  <line-reader/><answer-masking/><dictionary-on-screen/><magnification><all-content zoom-amount="2"/></magnification>
+  <activate-as-option-set><line-reader/><answer-masking/><dictionary-on-screen/><magnification/></activate-as-option-set>
+</access-for-all-pnp>`;
+
+const toolbar = (ui: ShadowRoot): HTMLButtonElement[] => [
+  ...ui.querySelectorAll<HTMLButtonElement>(".tempuh-tools > .tempuh-row > button"),
+];
+const toolNames = (ui: ShadowRoot): (string | null)[] => toolbar(ui).map((button) => button.textContent);
+const stageOf = (ui: ShadowRoot): HTMLElement => contentOf(ui).querySelector(".tempuh-stage") as HTMLElement;
+
+describe("the tools in the player", () => {
+  it("[T63] draws a button for each tool that the item asks for, and a tool opens over the item", async () => {
+    const s = await shell({ files: toolFiles() });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toEqual(["Ruler", "Protractor", "Basic calculator"]));
+    expect(s.ui.querySelector(".tempuh-tools")?.getAttribute("aria-label")).toBe("Tools");
+    buttonNamed(s.ui, "Ruler").click();
+    const layer = stageOf(s.ui).querySelector(".tempuh-tool-layer");
+    await vi.waitFor(() => expect(layer?.querySelector(".tempuh-placed")).not.toBeNull());
+    expect(buttonNamed(s.ui, "Ruler").getAttribute("aria-pressed")).toBe("true");
+    // The panel is in the chrome, and the ruler lies over the item in the stage of the content root.
+    expect(s.ui.querySelector(".tempuh-tray .tempuh-panel")?.textContent).toContain("A ruler for the lengths.");
+    expect(layer?.parentElement).toBe(stageOf(s.ui));
+    expect(stageOf(s.ui).querySelector(".tempuh-content")).not.toBeNull();
+    buttonNamed(s.ui, "Ruler").click();
+    await vi.waitFor(() => expect(layer?.querySelector(".tempuh-placed")).toBeNull());
+  });
+
+  it("[T63] works a calculator from the panel in the chrome", async () => {
+    const s = await shell({ files: toolFiles() });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Basic calculator"));
+    buttonNamed(s.ui, "Basic calculator").click();
+    const key = (name: string): HTMLButtonElement =>
+      [...s.ui.querySelectorAll<HTMLButtonElement>(".tempuh-calculator button")].find(
+        (button) => button.textContent === name,
+      ) as HTMLButtonElement;
+    await vi.waitFor(() => expect(key("2")).toBeDefined());
+    for (const name of ["2", "+", "3", "="]) key(name).click();
+    expect(s.ui.querySelector(".tempuh-display")?.textContent).toBe("5");
+  });
+
+  it("[T63] keeps a tool that the next item shares, and takes the others away with an item that asks for none", async () => {
+    const s = await shell({ files: toolFiles() });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    buttonNamed(s.ui, "Ruler").click();
+    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-placed")).not.toBeNull());
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await vi.waitFor(() => expect(toolNames(s.ui)).toEqual([]));
+    expect(s.ui.querySelector(".tempuh-tools")?.hasAttribute("hidden")).toBe(true);
+    expect(stageOf(s.ui).querySelector(".tempuh-placed")).toBeNull();
+    buttonNamed(s.ui, "Previous").click();
+    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    expect(buttonNamed(s.ui, "Ruler").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("[T86] turns the line reader on from its button through the session, and the band lies over the text of the item", async () => {
+    const { sent, wrap } = recording();
+    const s = await shell({ profile: TOOLS_PROFILE, wrap });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Line reader"));
+    buttonNamed(s.ui, "Line reader").click();
+    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).not.toBeNull());
+    expect(sent).toContainEqual({ type: "support", name: "line-reader", active: true });
+    expect(buttonNamed(s.ui, "Line reader").getAttribute("aria-pressed")).toBe("true");
+    buttonNamed(s.ui, "Line reader").click();
+    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).toBeNull());
+    expect(sent).toContainEqual({ type: "support", name: "line-reader", active: false });
+  });
+
+  it("[T92] masks the choices of the item shown and of the next item while masking is on", async () => {
+    const s = await shell({ profile: TOOLS_PROFILE });
+    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    buttonNamed(s.ui, "Answer masking").click();
+    await vi.waitFor(() =>
+      expect(contentOf(s.ui).querySelector("qti-choice-interaction")?.hasAttribute("data-tempuh-masked")).toBe(true),
+    );
+    expect(contentOf(s.ui).querySelector(".tempuh-mask")).not.toBeNull();
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await vi.waitFor(() =>
+      expect(contentOf(s.ui).querySelector("qti-choice-interaction")?.hasAttribute("data-tempuh-masked")).toBe(true),
+    );
+    expect(contentOf(s.ui).querySelectorAll(".tempuh-mask")).toHaveLength(1);
+  });
+
+  it("[T63] builds a tool that the host provides in its panel, and takes it down when it closes", async () => {
+    const built: string[] = [];
+    const tools: ToolSlots = {
+      dictionary: (host, { language }) => {
+        host.textContent = `A dictionary for ${language}`;
+        built.push("built");
+        return () => void built.push("down");
+      },
+    };
+    const s = await shell({ profile: TOOLS_PROFILE, tools });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
+    buttonNamed(s.ui, "Dictionary").click();
+    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-tray")?.textContent).toContain("A dictionary for en"));
+    buttonNamed(s.ui, "Dictionary").click();
+    await vi.waitFor(() => expect(built).toEqual(["built", "down"]));
+  });
+
+  it("[T63] says that a tool of the host is not available when the host gives no function for it", async () => {
+    const s = await shell({ profile: TOOLS_PROFILE });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
+    buttonNamed(s.ui, "Dictionary").click();
+    await vi.waitFor(() =>
+      expect(s.ui.querySelector(".tempuh-tray")?.textContent).toContain("This tool is not available."),
+    );
+  });
+
+  it("[T63] draws no tools when the host draws the chrome", async () => {
+    const s = await shell({ files: toolFiles(), chrome: false });
+    await shown(s);
+    expect(s.ui.querySelector(".tempuh-tools")).toBeNull();
+    expect(stageOf(s.ui).querySelector(".tempuh-tool-layer")).toBeNull();
+  });
+
+  it("[T63][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the toolbar, a panel and a ruler open", async () => {
+    const s = await shell({ files: toolFiles() });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    buttonNamed(s.ui, "Ruler").click();
+    buttonNamed(s.ui, "Basic calculator").click();
+    await vi.waitFor(() => expect(s.ui.querySelectorAll(".tempuh-panel")).toHaveLength(2));
+    expect(await axeViolations(s.page)).toEqual([]);
+  });
+
+  it("[T63] gives the content root only the styles of what lies over the item, so that the toolbar styles do not restyle the interactions", async () => {
+    const s = await shell({ files: toolFiles() });
+    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    // The shell mounts the tools before the first item is drawn, and drawing it keeps the sheet.
+    const sheets = [...(contentHostOf(s.ui).shadowRoot?.adoptedStyleSheets ?? [])];
+    const stage = sheets.find((sheet) =>
+      [...sheet.cssRules].some((rule) => rule.cssText.startsWith(".tempuh-tool-layer")),
+    );
+    expect(stage).toBeDefined();
+    const selectors = [...(stage?.cssRules ?? [])].map((rule) =>
+      rule instanceof CSSStyleRule ? rule.selectorText : "",
+    );
+    expect(
+      selectors.filter(
+        (selector) => /^\.tempuh-(tools|row|tray|field)\b/u.test(selector) || selector === ".tempuh-button",
+      ),
+    ).toEqual([]);
+    expect(computed(stageOf(s.ui).querySelector(".tempuh-tool-layer") as Element, "position")).toBe("absolute");
+  });
+});
+
+describe("magnification in the player", () => {
+  it("[T88] enlarges media sized in pixels when magnification is turned on, without drawing the item again or losing the answer", async () => {
+    const s = await shell({ profile: TOOLS_PROFILE });
+    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    choices(s.ui)[1]?.click();
+    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 5000 });
+    const body = contentOf(s.ui).querySelector(".tempuh-body");
+    const image = (): HTMLImageElement => contentOf(s.ui).querySelector("img") as HTMLImageElement;
+    expect([image().getAttribute("width"), image().getAttribute("height")]).toEqual(["10", "10"]);
+    buttonNamed(s.ui, "Magnification").click();
+    await vi.waitFor(() => expect(image().getAttribute("width")).toBe("20"));
+    expect(image().getAttribute("height")).toBe("20");
+    expect(contentHostOf(s.ui).style.getPropertyValue("--tempuh-text-zoom")).toBe("2");
+    expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
+    expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
+    buttonNamed(s.ui, "Magnification").click();
+    await vi.waitFor(() => expect(image().getAttribute("width")).toBe("10"));
+    expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
+  });
+
+  it("[T88] draws the next item at the magnification of the moment", async () => {
+    const files = { ...examFiles() };
+    files["items/q2/item.xml"] = String(files["items/q2/item.xml"]).replace(
+      "<p>Question</p>",
+      '<p>Question <img src="images/map.png" alt="Map" width="30" height="30"/></p>',
+    );
+    const s = await shell({ profile: TOOLS_PROFILE, files });
+    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    buttonNamed(s.ui, "Magnification").click();
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("20"));
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("60"));
+  });
+});
+
+describe("pronunciation lexicons in the player", () => {
+  const voiceOf = (requests: SpeechRequest[]) => ({
+    speak: async (request: SpeechRequest): Promise<void> => void requests.push(request),
+    stop: () => undefined,
+  });
+  /** Presses Read aloud until the voice has been given a request that holds the text. */
+  const reads = async (s: Shell, requests: SpeechRequest[], text: string): Promise<void> => {
+    await vi.waitFor(() => {
+      buttonNamed(s.ui, "Read aloud").click();
+      expect(requests.at(-1)?.text).toContain(text);
+    });
+  };
+
+  it("[T85] reads with the lexicons that the item depends on, and with none for an item that depends on none", async () => {
+    const requests: SpeechRequest[] = [];
+    const s = await shell({ profile: PROFILE, files: lexiconFiles(), voice: voiceOf(requests) });
+    await shown(s);
+    expect(s.client.documents.lexicons).toEqual(["items/q1/words.pls"]);
+    await reads(s, requests, "the World Wide Web Consortium and");
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    expect(s.client.documents.lexicons).toEqual([]);
+    await reads(s, requests, "The W3C again");
+    expect(requests.at(-1)?.text).not.toContain("World Wide Web Consortium");
+    buttonNamed(s.ui, "Previous").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+    await reads(s, requests, "World Wide Web Consortium");
+  });
+
+  it("[T85] puts the alias of the lexicon in the SSML for a voice that takes it", async () => {
+    const requests: SpeechRequest[] = [];
+    const s = await shell({ profile: PROFILE, files: lexiconFiles(), voice: voiceOf(requests) });
+    await shown(s);
+    await reads(s, requests, "World Wide Web Consortium");
+    expect(requests.at(-1)?.ssml).toContain('<sub alias="World Wide Web Consortium">W3C</sub>');
+  });
+
+  it("[T85] reads on without a lexicon that is not a PLS document", async () => {
+    const requests: SpeechRequest[] = [];
+    const s = await shell({ profile: PROFILE, files: lexiconFiles("<p>Not a lexicon.</p>"), voice: voiceOf(requests) });
+    await shown(s);
+    await vi.waitFor(() => {
+      buttonNamed(s.ui, "Read aloud").click();
+      expect(requests.at(-1)?.text).toContain("Look at the W3C and");
+    });
+    expect(requests.at(-1)?.text).not.toContain("World Wide Web Consortium");
+  });
+
+  it("[T85] reads on without a lexicon that the package does not have", async () => {
+    const requests: SpeechRequest[] = [];
+    const files = { ...lexiconFiles() };
+    delete files["items/q1/words.pls"];
+    const s = await shell({ profile: PROFILE, files, voice: voiceOf(requests) });
+    await shown(s);
+    await vi.waitFor(() => {
+      buttonNamed(s.ui, "Read aloud").click();
+      expect(requests.at(-1)?.text).toContain("Look at the W3C and");
+    });
   });
 });

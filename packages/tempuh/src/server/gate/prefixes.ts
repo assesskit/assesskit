@@ -1,6 +1,6 @@
 import { descendantNodes, type ModelNode, type PortableCustomInteraction } from "@luthfanwakan/olah/asi";
 import type { CandidateView } from "@luthfanwakan/olah/delivery";
-import { dependencyClosure, type QtiPackage, resourcePath } from "@luthfanwakan/olah/package";
+import { type QtiPackage, resourcePath } from "@luthfanwakan/olah/package";
 import {
   isPackageRelative,
   moduleConfigurationPaths,
@@ -10,6 +10,7 @@ import {
 } from "@luthfanwakan/olah/pci";
 import { isDataError } from "../../errors.js";
 import type { ViewDocuments } from "../../protocol/index.js";
+import { dependenciesOf } from "./dependencies.js";
 import { locateDocuments } from "./documents.js";
 
 /** The properties of content nodes that name a file: `qti-file-href` keeps its reference in `value`. */
@@ -58,11 +59,7 @@ function referencedPaths(pkg: QtiPackage, base: string, nodes: readonly ModelNod
 /** Returns the files that the manifest lists for the resource whose main file is the document, and for its dependencies. */
 function manifestFiles(pkg: QtiPackage, document: string, variant: string | undefined): string[] {
   const { manifest } = pkg;
-  const resource = manifest.resources.find((each) =>
-    variant === undefined ? document !== "" && resourcePath(manifest, each) === document : each.identifier === variant,
-  );
-  if (resource === undefined) return [];
-  return dependencyClosure(manifest, resource.identifier).flatMap((each) => [
+  return dependenciesOf(pkg, document, variant).flatMap((each) => [
     ...(resourcePath(manifest, each) ?? []),
     ...each.files.flatMap((file) => resourcePath(manifest, each, file.href) ?? []),
   ]);

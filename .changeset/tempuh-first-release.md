@@ -72,7 +72,7 @@ through the audio worklet that the package exports as `recorder-worklet.js`.
 
 The player shell (`player`): `mountDelivery` shows a session with a navigation map, timers with warnings 300 and 60 seconds
 before a limit, actions with refusal messages and confirmations, review, solution, comments and attempts, in status regions that
-never take the focus, and runs portable custom interactions with their state. It mounts the supports of the candidate: the panel of options, which sends the `support` action, the look, the cards, reading aloud and the notice of the variant. Before a request that submits or leaves the item it waits for the interactions to hand over their responses (`settled`), so that a drawing that is still being stored is not missed; `Mounted.settled()` lets a host with its own chrome do the same. The session clients (`client`):
+never take the focus, and runs portable custom interactions with their state. It mounts the supports of the candidate: the panel, with a button for each option that sends the `support` action and the state of the other supports, the look, the size of media, the cards, reading aloud with the pronunciation lexicons of the item, and the notice of the variant; and the tools of the item and the profile (`hooks.tools` gives the tools of the host). Before a request that submits or leaves the item it waits for the interactions to hand over their responses (`settled`), so that a drawing that is still being stored is not missed; `Mounted.settled()` lets a host with its own chrome do the same. The session clients (`client`):
 `createRemoteSession` sends envelopes with autosave and resends a request whose answer was lost, and `createLocalSession` runs
 olah's engine on the device for practice and previews. The session host of exam mode (`server`): `createSessionHost` binds a
 session to the principal that started it, applies a client-action policy that leaves `suspend` and `resume` to the proctor,
@@ -99,11 +99,13 @@ picture, in the media type of the image, through the host's `files`, and `settle
 The supports of a candidate (`player`), applied from the `SupportView`s of olah's view: `presentationOf` and
 `applyPresentation` set the themes, colors, text appearance, zoom, single column and keyword emphasis that `player.css`
 reads, on a content root and, through `PciFrame.setPresentation`, inside the frame of a portable custom interaction while it
-runs. `mountSupportPanel` shows the supports that are options as toggle buttons that ask the host for the `support` action.
+runs. `mountSupportPanel` shows the supports that are options as toggle buttons that ask the host for the `support` action, and lists the others with their state.
 `mountContentSupports` shows the cards of the catalogs in popups that meet WCAG 1.4.13, in place of the content or beside
 it, shows caption and description tracks, and shows the alternative text of images. `mountSpoken` has the controls of
-reading aloud, a word-by-word cursor and the typing echo, and `mountVariantNotice` shows the variant that olah delivered with
-its language. The tools take the supports of the view as they are.
+reading aloud, a word-by-word cursor and the typing echo, and takes the pronunciation lexicons of each item with `setLexicons`, and `mountVariantNotice` shows the variant that olah delivered with
+its language. The tools take the supports of the view as they are. The content root has a `stage`, the element that holds the item and
+that tools lie over, and `setMediaScale`, which enlarges media sized in pixels without drawing the item again. The documents of a view name the
+pronunciation lexicons of the item (`lexicons`), and `createLocalSession` takes them from the host with its `lexicons` option.
 
 LTI scores and LTI items. `publishScore` in `@luthfanwakan/tempuh/lti` posts the score of a finished test to the line item of
 the launch that started it: `scoreGiven` is `SCORE` raised to 0, with `scoreMaximum` from `MAXSCORE` or the line item,

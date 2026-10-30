@@ -1,5 +1,5 @@
 import { container, single } from "@luthfanwakan/olah/values";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
 import { pointsOf } from "../src/player/elements/values.js";
@@ -920,6 +920,22 @@ describe("drawing", () => {
     await settle();
     expect(shown.find("img").getAttribute("src")).toContain("data:image/png");
     expect(shown.find("img").getAttribute("src")).not.toBe(earlier);
+  });
+
+  it("[T44][SC 3.3.1] says so when the picture to draw on cannot be loaded, and draws again on the picture of the question", async () => {
+    const shown = await show(DRAWING(), declare("single", "file"));
+    // Bytes that are no image: the browser loads the file and cannot decode it.
+    const broken = `data:image/png;base64,${btoa("not an image")}`;
+    shown.setValue("RESPONSE", single("file", { reference: broken, mimeType: "image/png" }));
+    await vi.waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(EN_MESSAGES.drawLoadFailed));
+    expect(shown.find(".tempuh-surface").getAttribute("aria-invalid")).toBe("true");
+    expect(shown.find(".tempuh-surface").getAttribute("aria-describedby")).toContain(shown.find(".tempuh-hint").id);
+    await userEvent.click(shown.find('button[data-action="clear"]'));
+    await vi.waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(""));
+    expect(shown.find(".tempuh-surface").hasAttribute("aria-invalid")).toBe(false);
+    await drag(shown, [20, 20], [120, 20]);
+    await stored(shown);
+    expect(drawn(shown, 70, 20)[3]).toBeGreaterThan(200);
   });
 
   it("[T44] says so when the drawing cannot be stored, and keeps the response it had", async () => {

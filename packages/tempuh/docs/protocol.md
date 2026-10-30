@@ -64,7 +64,8 @@ code ([delivery](delivery.md#refusals-and-status-messages)).
 
 A reference in content is written against its own document (B93), and the view does not say which document that is. The
 host does: `documents` has `test`, the path of the test document, `item`, the path of the document of the item presented,
-and `stimuli`, the paths of the documents of its stimuli, in the order of the view. A path is a path in the package; `""` is its
+`stimuli`, the paths of the documents of its stimuli, in the order of the view, and `lexicons`, the paths of the pronunciation
+lexicons (PLS) that the item depends on, which reading aloud uses ([speech](speech.md#lexicons)); a variant has none. A path is a path in the package; `""` is its
 root, which is where a variant's references resolve, since olah does not know its path (olah E19). Without `documents`, every
 reference resolves against the root. `viewDocuments(view, source)` builds them from the `DocumentSource` that a host or a local
 session has of its test. A reference that names a link to a tool has no document of QTI, so `item` is `""` for it.

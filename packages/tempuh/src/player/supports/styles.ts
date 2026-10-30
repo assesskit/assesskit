@@ -16,6 +16,8 @@ const SUPPORTS_CSS = `
   min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.75rem; font: inherit; color: CanvasText;
   background: color-mix(in srgb, CanvasText 10%, Canvas); border: 2px solid CanvasText; border-radius: 0.375rem;
   cursor: pointer; }
+.tempuh-support-state { display: inline-flex; align-items: center; box-sizing: border-box; min-height: 2.75rem;
+  padding: 0 0.75rem; border: 2px dashed CanvasText; border-radius: 0.375rem; }
 .tempuh-support-button[aria-pressed="true"] { color: Canvas; background: CanvasText; font-weight: 700;
   box-shadow: inset 0 -0.25rem 0 currentColor; }
 .tempuh-supports :focus-visible, .tempuh-read-aloud :focus-visible {

@@ -106,6 +106,8 @@ export class DrawingInteractionElement extends InteractionElement {
   #known: string | undefined;
   #pending: Promise<void> = Promise.resolve();
   #queued = 0;
+  /** Whether the picture on show could not be decoded, so that there is nothing to draw on. */
+  #failed = false;
   readonly #usage = html("p", { class: "tempuh-usage" });
   #loaded: { readonly url: string; readonly image: HTMLImageElement } | undefined;
 
@@ -146,7 +148,23 @@ export class DrawingInteractionElement extends InteractionElement {
       { passive: false },
     );
     // The picture has its size once it has loaded, and the canvas has the pixels of the picture.
-    this.addEventListener("load", () => void this.#fit(), true);
+    this.addEventListener(
+      "load",
+      (event) => {
+        if (event.target === this.#image()) this.#setFailed(false);
+        void this.#fit();
+      },
+      true,
+    );
+    // Some engines decode the picture that was there before when the source has just changed, so that they say only by
+    // this event that the new one cannot be drawn on.
+    this.addEventListener(
+      "error",
+      (event) => {
+        if (event.target === this.#image()) this.#setFailed(true);
+      },
+      true,
+    );
   }
 
   override settled(): Promise<void> {
@@ -305,9 +323,23 @@ export class DrawingInteractionElement extends InteractionElement {
     if (image === null || base === undefined) return;
     if (image.getAttribute("src") !== base) {
       image.setAttribute("src", base);
-      await image.decode();
+      try {
+        await image.decode();
+      } catch {
+        // A picture that replaced this one while it was decoding fails this decode too, and that is no failure of its own.
+        if (image.getAttribute("src") === base) this.#setFailed(true);
+        return;
+      }
+      this.#setFailed(image.complete && image.naturalWidth === 0);
     }
     await this.#fit();
+  }
+
+  /** Records whether the picture can be drawn on, and shows the hint of the element when that changes. */
+  #setFailed(failed: boolean): void {
+    if (this.#failed === failed) return;
+    this.#failed = failed;
+    this.refresh();
   }
 
   /** Gives the canvas the pixels of the picture, and the strokes of the current snapshot back. */
@@ -443,6 +475,10 @@ export class DrawingInteractionElement extends InteractionElement {
     }
     const surface = this.querySelector<HTMLElement>(".tempuh-surface");
     if (surface !== null) surface.tabIndex = answerable && !FREEHAND_TOOLS.has(this.#tool) ? 0 : -1;
+  }
+
+  protected override extraHints(messages: Messages): readonly string[] {
+    return this.#failed ? [messages.drawLoadFailed] : [];
   }
 
   protected override controls(): readonly Element[] {

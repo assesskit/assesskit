@@ -263,7 +263,7 @@ describe("mountSupportPanel", () => {
     supportView("ext:kxz-illustrated-glossary", { state: "option" }),
   ];
 
-  it("[T75] shows a toggle button for each option support, pressed when it is on, and for nothing else", () => {
+  it("[T75] shows a toggle button for each option support, pressed when it is on, and no button for any other", () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
     const region = el(host, "section");
@@ -294,19 +294,65 @@ describe("mountSupportPanel", () => {
     expect(requests.at(-1)).toEqual(["captions", false]);
   });
 
-  it("[T75] has no region when there is no option, and takes a button away when its support leaves", () => {
+  it("[T75] lists the supports that the candidate cannot change with their state, and gives them no control", () => {
     const { host, panel } = mountPanel();
-    panel.update([supportView("spoken", { state: "active", active: true })]);
+    panel.update(offered);
+    const lines = [...host.querySelectorAll("li")].map((line) => [
+      line.textContent,
+      line.querySelector("button") !== null,
+    ]);
+    // The prohibited magnification and the supports that the tools turn on and off are not listed.
+    expect(lines).toEqual([
+      ["Captions", true],
+      ["High contrast", true],
+      ["Spoken: on", false],
+      ["Transcript: on", false],
+      ["kxz-illustrated-glossary", true],
+    ]);
+    panel.update(offered.map((support) => (support.name === "transcript" ? { ...support, active: false } : support)));
+    expect(host.querySelectorAll("li")[3]?.textContent).toBe("Transcript: off");
+  });
+
+  it("[T75][T97] writes the state of a support in the language of the interface", () => {
+    const { host, panel } = mountPanel({ messages: ID_MESSAGES });
+    panel.update([
+      supportView("additional-testing-time", { state: "assigned", active: true }),
+      supportView("encouragement", { state: "active", active: false }),
+    ]);
+    expect([...host.querySelectorAll("li")].map(({ textContent }) => textContent)).toEqual([
+      `${ID_MESSAGES.supportAdditionalTestingTime}: ${ID_MESSAGES.supportOn}`,
+      `${ID_MESSAGES.supportEncouragement}: ${ID_MESSAGES.supportOff}`,
+    ]);
+  });
+
+  it("[T75] has no region when there is nothing to list, and takes a line away when its support leaves", () => {
+    const { host, panel } = mountPanel();
+    panel.update([
+      supportView("magnification", { state: "prohibited" }),
+      supportView("line-reader", { state: "active", active: true }),
+    ]);
     expect(el(host, "section").hidden).toBe(true);
     panel.update(offered);
-    panel.update(offered.filter(({ name }) => name !== "captions"));
+    panel.update(offered.filter(({ name }) => name !== "captions" && name !== "spoken"));
     expect([...host.querySelectorAll("button")].map(({ textContent }) => textContent)).toEqual([
       "High contrast",
       "kxz-illustrated-glossary",
     ]);
-    expect(host.querySelectorAll("li")).toHaveLength(2);
+    expect(host.querySelectorAll("li")).toHaveLength(3);
     panel.update([]);
     expect(el(host, "section").hidden).toBe(true);
+  });
+
+  it("[T75] turns a line into a button, and back, when the state of its support changes", () => {
+    const { host, panel } = mountPanel();
+    panel.update([supportView("captions", { state: "assigned", active: true })]);
+    expect(host.querySelector("button")).toBeNull();
+    expect(host.querySelector("li")?.textContent).toBe("Captions: on");
+    panel.update([supportView("captions", { state: "option", active: true })]);
+    expect(buttonOf(host, "Captions").getAttribute("aria-pressed")).toBe("true");
+    panel.update([supportView("captions", { state: "assigned", active: false })]);
+    expect(host.querySelector("button")).toBeNull();
+    expect(host.querySelector("li")?.textContent).toBe("Captions: off");
   });
 
   it("keeps the focus on a button while the supports update around it, and keeps the order of the supports", () => {

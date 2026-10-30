@@ -65,7 +65,7 @@ describe("createRemoteSession", () => {
   it("[T67] shows the first view, resolves paths through the signed prefixes and reads the documents of the content", async () => {
     const { client, initial } = await remote();
     expect(client.view.current?.key).toEqual(Q1);
-    expect(client.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [] });
+    expect(client.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [], lexicons: [] });
     const url = client.assets("items/q1/images/map.png");
     expect(url).toBe(`${initial.assets["items/q1/"]}items/q1/images/map.png`);
     expect(client.assets("items/q2/other.png")).toBe("about:blank");
@@ -304,7 +304,7 @@ describe("createLocalSession", () => {
     const client = await createLocalSession(options);
     expect(client.view.current?.key).toEqual(Q1);
     expect(client.assets("items/q1/images/map.png")).toBe("/assets/items/q1/images/map.png");
-    expect(client.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [] });
+    expect(client.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [], lexicons: [] });
     expect(client.view.actions).toContain("suspend");
     clock.advance(2 * SECOND);
     expect(client.age()).toBe(2 * SECOND);
@@ -383,13 +383,30 @@ describe("createLocalSession", () => {
     const { options } = localOptions({ definition: { kind: "item", item: document.item, base: "items/q1/item.xml" } });
     const client = await createLocalSession(options);
     expect(client.view.current?.key.ref).toBe("q1");
-    expect(client.documents).toEqual({ test: "", item: "items/q1/item.xml", stimuli: [] });
+    expect(client.documents).toEqual({ test: "", item: "items/q1/item.xml", stimuli: [], lexicons: [] });
     const answered = await client.dispatch({
       type: "set-responses",
       item: client.view.current?.key ?? Q1,
       responses: new Map([["RESPONSE", single("identifier", "A")]]),
     });
     expect(answered.refusal).toBeUndefined();
+    client.close();
+  });
+
+  it("[T70][T85] names the lexicons that the host gives for the item presented", async () => {
+    const asked: string[] = [];
+    const { options } = localOptions({
+      lexicons: (item) => {
+        asked.push(item);
+        return item === "items/q1/item.xml" ? ["items/q1/words.pls"] : [];
+      },
+    });
+    const client = await createLocalSession(options);
+    expect(client.documents.lexicons).toEqual(["items/q1/words.pls"]);
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect(moved.view.current?.key.ref).toBe("q2");
+    expect(client.documents.lexicons).toEqual([]);
+    expect(asked).toContain("items/q2/item.xml");
     client.close();
   });
 
@@ -401,6 +418,7 @@ describe("createLocalSession", () => {
     await expect(make('{"store":{"load":1,"save":1}}')).rejects.toThrow("The function load of the option store");
     await expect(make('{"session":""}')).rejects.toThrow("The option session must be a non-empty string");
     await expect(make('{"assets":null}')).rejects.toThrow("The option assets must be a function");
+    await expect(make('{"lexicons":[]}')).rejects.toThrow("The option lexicons must be a function");
     await expect(make('{"clock":{}}')).rejects.toThrow("The function now of the option clock");
     await expect(make('{"definition":5}')).rejects.toThrow("The option definition must be an object");
     await expect(make('{"extra":1}')).rejects.toThrow("The options has the properties");

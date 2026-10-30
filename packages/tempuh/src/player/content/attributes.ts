@@ -101,13 +101,13 @@ const ARIA_BACKUP = /^data-qti-aria-([a-z]+)$/u;
 const PIXELS = /^\d+$/u;
 
 /**
- * The attribute in which the renderer keeps the width an author gave an image, in the pixels of the author, before the
+ * The attribute in which the renderer keeps the width an author gave an element, in the pixels of the author, before the
  * magnification of non-text content scales the `width` of the element. The coordinates of the graphic interactions are
- * measured in those pixels (INFO §7.9).
+ * measured in those pixels (INFO §7.9), and a change of the magnification scales the element from them again.
  */
 export const DECLARED_WIDTH = "data-tempuh-width";
 
-/** The attribute in which the renderer keeps the height an author gave an image; see {@link DECLARED_WIDTH}. */
+/** The attribute in which the renderer keeps the height an author gave an element; see {@link DECLARED_WIDTH}. */
 export const DECLARED_HEIGHT = "data-tempuh-height";
 
 const DECLARED_ATTRIBUTES: ReadonlyMap<string, string> = new Map([
@@ -115,10 +115,10 @@ const DECLARED_ATTRIBUTES: ReadonlyMap<string, string> = new Map([
   ["height", DECLARED_HEIGHT],
 ]);
 
-/** Records on an image the `width` or `height` an author gave it, when it is a number of pixels. */
-export function declareSize(image: Element, dimension: string, size: string): void {
+/** Records on an element the `width` or `height` an author gave it, when it is a number of pixels. */
+export function declareSize(element: Element, dimension: string, size: string): void {
   const attribute = DECLARED_ATTRIBUTES.get(dimension);
-  if (attribute !== undefined && PIXELS.test(size)) image.setAttribute(attribute, size);
+  if (attribute !== undefined && PIXELS.test(size)) element.setAttribute(attribute, size);
 }
 
 const isAria = (property: string): boolean => /^aria[A-Z]/u.test(property);
@@ -139,6 +139,19 @@ function textOf(value: unknown): string | undefined {
 /** Returns the size of media for the DOM: a whole number of pixels grows with the magnification, any other length stays. */
 export function scaleSize(size: string, mediaScale: number): string {
   return PIXELS.test(size) ? String(Math.round(Number(size) * mediaScale)) : size;
+}
+
+/**
+ * Sets the `width` and `height` of each element under `root` whose size the author declared in pixels to that size times
+ * `mediaScale`, so that a change of the magnification reaches content that is already drawn.
+ */
+export function scaleDeclaredSizes(root: ParentNode, mediaScale: number): void {
+  for (const element of root.querySelectorAll(`[${DECLARED_WIDTH}], [${DECLARED_HEIGHT}]`)) {
+    for (const [dimension, attribute] of DECLARED_ATTRIBUTES) {
+      const declared = element.getAttribute(attribute);
+      if (declared !== null) element.setAttribute(dimension, scaleSize(declared, mediaScale));
+    }
+  }
 }
 
 /** Returns the value of an attribute for the DOM, or `undefined` when the attribute stays off the element. */
@@ -169,7 +182,7 @@ function setModelAttributes(element: Element, node: ModelNode, context: Attribut
     const name = attributeName(property);
     const kept = attributeValue(name, text, context);
     if (kept !== undefined) element.setAttribute(name, kept);
-    if (element.localName === "img") declareSize(element, name, text);
+    declareSize(element, name, text);
   }
   if (typeof language === "string") element.setAttribute("lang", language);
 }

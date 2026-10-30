@@ -12,7 +12,7 @@ import { toolName } from "./names.js";
 import { openTool } from "./open.js";
 import { isAbsoluteUrl } from "./package-path.js";
 import { resolveTools } from "./resolve.js";
-import { adoptToolStyles } from "./styles.js";
+import { adoptStageStyles, adoptToolStyles } from "./styles.js";
 
 /** The options of {@link mountTools}. */
 export interface ToolsOptions {
@@ -118,7 +118,7 @@ function buttonNames(entries: readonly ToolEntry[], messages: Messages): readonl
 export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
   checkToolsOptions(host, options);
   const { messages, language, stage, assets, slots = {}, onSupport } = options;
-  const releases = [adoptToolStyles(host), adoptToolStyles(stage)];
+  const releases = [adoptToolStyles(host), adoptStageStyles(stage)];
   const toolbar = html("div", { class: "tempuh-row" });
   const physical = html("div", { class: "tempuh-physical", role: "group" });
   const tray = html("div", { class: "tempuh-tray" });

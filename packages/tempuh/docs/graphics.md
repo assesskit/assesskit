@@ -101,6 +101,11 @@ A response that the player gives, such as a drawing from an earlier attempt, is 
 because the fill and the stored file are made from the pixels of the picture; without it the drawing still shows, and storing and
 filling fail with the message `drawSaveFailed`.
 
+A picture that the browser cannot decode, such as a file that `files.url` points to and that is not an image, leaves nothing to
+draw on. The element then shows the hint `drawLoadFailed` as a status that the controls are described by, marks the drawing
+area `aria-invalid`, and rejects nothing; Clear brings back the picture of the question, and the hint goes with a picture that
+loads.
+
 ## Where the sources differ
 
 | Case                                                                                           | Reading                                                                                                                                     |

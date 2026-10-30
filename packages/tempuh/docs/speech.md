@@ -125,6 +125,11 @@ the words wins.
 An alias becomes a `sub` and a phoneme becomes a `phoneme` in the `ssml`, so that a voice that takes SSML needs no
 lexicon and fetches nothing. The `text` has the alias.
 
+In the player, `mountDelivery` reads the lexicons of the item shown: the files of the resources of type `pls` that the
+item's resource depends on, which the documents of the view name (`documents.lexicons`, [protocol](protocol.md#documents)).
+It loads them through the gate when the item changes, reads each file once, leaves out a file that is missing or is not a
+PLS document, and gives the others to reading aloud in the order of the dependencies. An item with none is read with none.
+
 ## Restriction types
 
 The restriction types of the support apply together ([BPIG] §5.2.1.2). A term the player does not know, such as

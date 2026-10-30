@@ -7,7 +7,8 @@ import {
   resolveReference,
   resourcePath,
 } from "@luthfanwakan/olah/package";
-import { type DocumentSource, type ViewDocuments, viewDocuments } from "../../protocol/index.js";
+import { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "../../protocol/index.js";
+import { dependenciesOf } from "./dependencies.js";
 
 /** A test of a package with its structure resolved, which every session of the test shares. */
 interface LocatedTest {
@@ -82,6 +83,18 @@ function stimulusPaths(pkg: QtiPackage, itemPath: string): readonly string[] {
   return document.item.stimulusRefs.map((ref) => resolveReference(itemPath, ref.href) ?? "");
 }
 
+/** Returns the paths of the pronunciation lexicons that an item depends on: the resources of type `pls` among its dependencies. */
+function lexiconPaths(pkg: QtiPackage, itemPath: string): readonly string[] {
+  return dependenciesOf(pkg, itemPath, undefined)
+    .filter(({ type }) => type === "pls")
+    .flatMap((resource) => resourcePath(pkg.manifest, resource) ?? []);
+}
+
+/** Returns the documents of an item: its own, those of its stimuli and its lexicons. */
+function itemDocuments(pkg: QtiPackage, path: string): ItemDocuments {
+  return { path, stimuli: stimulusPaths(pkg, path), lexicons: lexiconPaths(pkg, path) };
+}
+
 /** Returns where the documents of the session of a view are: those of the test, else those of the item delivered alone. */
 function sourceOf(pkg: QtiPackage, identifier: string): DocumentSource | undefined {
   const test = testOf(pkg, identifier);
@@ -92,14 +105,12 @@ function sourceOf(pkg: QtiPackage, identifier: string): DocumentSource | undefin
         const node = test.structure.itemRef(reference);
         const path = node === undefined ? undefined : resolveReference(node.base, node.model.href);
         // A link to a tool has no document of QTI to read, and no content that the gate serves.
-        return path === undefined || isLtiLink(pkg, path) ? undefined : { path, stimuli: stimulusPaths(pkg, path) };
+        return path === undefined || isLtiLink(pkg, path) ? undefined : itemDocuments(pkg, path);
       },
     };
   }
   const alone = standaloneItemPath(pkg, identifier);
-  return alone === undefined
-    ? undefined
-    : { test: "", item: () => ({ path: alone, stimuli: stimulusPaths(pkg, alone) }) };
+  return alone === undefined ? undefined : { test: "", item: () => itemDocuments(pkg, alone) };
 }
 
 /**

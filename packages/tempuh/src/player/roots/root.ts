@@ -1,10 +1,16 @@
 import type { Catalog, ModalFeedback } from "@luthfanwakan/olah/asi";
 import type { SupportName } from "@luthfanwakan/olah/pnp";
-import { checkArray, checkFunction, checkProperties, checkRecord, describe } from "../../checks.js";
+import { checkArray, checkFunction, checkPositive, checkProperties, checkRecord, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { renderCard } from "../catalogs/index.js";
-import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
+import {
+  type BodyRenderer,
+  type BodyRendererOptions,
+  createBodyRenderer,
+  scaleDeclaredSizes,
+} from "../content/index.js";
 import { readRenderOptions } from "../content/options.js";
+import { html } from "../dom.js";
 import { showFeedbackDialog } from "../feedback/index.js";
 import type { MathTypesetter } from "../math/index.js";
 import { buildContent } from "./build.js";
@@ -31,6 +37,11 @@ export interface ContentRoot {
   /** The shadow root, which holds the content and adopts the stylesheets. */
   readonly root: ShadowRoot;
   /**
+   * The positioned element that holds the content and stays when the content is replaced, for what lies over the item,
+   * such as the tools. Its content is the item, so a tool that reads the text of the item reads it here.
+   */
+  readonly stage: HTMLElement;
+  /**
    * Shows content in place of what the root showed. The DOM is built before the promise settles; the promise settles
    * when the item's stylesheets are adopted and the expressions are typeset.
    *
@@ -48,6 +59,15 @@ export interface ContentRoot {
    * @returns The content, or `undefined` when no catalog has the id or no card fits.
    */
   card(idref: string, support: SupportName, language?: string): DocumentFragment | undefined;
+  /**
+   * Sets the factor for the pixel sizes of media, which the magnification of non-text content gives, and applies it to the
+   * content that is shown and to the cards drawn later. The content is not drawn again, so the focus, the caret and the
+   * responses stay.
+   *
+   * @param scale - A positive number: 1 is the size the author gave, 2 is twice that.
+   * @throws `DataError` when `scale` is not a positive number.
+   */
+  setMediaScale(scale: number): void;
   /**
    * Shows modal feedback in a dialog and resolves when the candidate closes it.
    *
@@ -97,7 +117,7 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
   }
   if (typesetter !== undefined)
     checkFunction(typesetter.typeset, "The typeset method of the option typesetter must be a function");
-  const { assets, origins } = readRenderOptions({ ...rendererOptions, base: "" });
+  const { assets, origins, mediaScale: initialScale } = readRenderOptions({ ...rendererOptions, base: "" });
   let shadow: ShadowRoot;
   try {
     shadow = host.attachShadow({ mode: "open" });
@@ -105,12 +125,22 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
     throw new DataError("The host must be an element that can have a shadow root and has none.");
   }
   shadow.adoptedStyleSheets = [stylesheet];
+  let itemSheets: readonly CSSStyleSheet[] = [];
+  /** Adopts the stylesheets of the item after the player's, and leaves the sheets that others adopted, such as the tools. */
+  const adoptItemSheets = (next: readonly CSSStyleSheet[]): void => {
+    const others = shadow.adoptedStyleSheets.filter((sheet) => sheet !== stylesheet && !itemSheets.includes(sheet));
+    itemSheets = next;
+    shadow.adoptedStyleSheets = [stylesheet, ...others, ...next];
+  };
   const sheets = new Map<string, Promise<CSSStyleSheet>>();
   const stopLinks = followFragmentLinks(shadow);
   let generation = 0;
   let current: HTMLElement | undefined;
   let catalogs: readonly Catalog[] = [];
   let itemRenderer: BodyRenderer = createBodyRenderer(rendererOptions);
+  let mediaScale = initialScale;
+  const stage = html("div", { class: "tempuh-stage" });
+  shadow.append(stage);
 
   const sheetFor = (path: string): Promise<CSSStyleSheet> => {
     const url = new URL(assets(path), document.baseURI).href;
@@ -125,29 +155,36 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
 
   return {
     root: shadow,
+    stage,
     show: async (content) => {
       checkContent(content);
-      const built = buildContent(content, rendererOptions);
+      const built = buildContent(content, { ...rendererOptions, mediaScale });
       itemRenderer = built.renderer;
       catalogs = content.catalogs ?? [];
       current?.remove();
       current = built.container;
-      shadow.prepend(built.container);
+      stage.prepend(built.container);
       generation += 1;
       const mine = generation;
-      shadow.adoptedStyleSheets = [stylesheet];
+      adoptItemSheets([]);
       const loaded = await Promise.allSettled((content.stylesheets ?? []).map(sheetFor));
       if (mine === generation) {
-        shadow.adoptedStyleSheets = [
-          stylesheet,
-          ...loaded.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])),
-        ];
+        adoptItemSheets(loaded.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])));
         await typesetter?.typeset(shadow);
       }
       const failed = loaded.find((result) => result.status === "rejected");
       if (failed?.status === "rejected") throw failed.reason;
     },
-    card: (idref, support, language) => renderCard(catalogs, idref, support, language, itemRenderer),
+    card: (idref, support, language) => {
+      const card = renderCard(catalogs, idref, support, language, itemRenderer);
+      if (card !== undefined) scaleDeclaredSizes(card, mediaScale);
+      return card;
+    },
+    setMediaScale: (scale) => {
+      checkPositive(scale, "The media scale");
+      mediaScale = scale;
+      scaleDeclaredSizes(shadow, scale);
+    },
     showFeedback: (feedback) => {
       checkArray(feedback, "The feedback must be an array");
       return showFeedbackDialog(shadow, feedback, itemRenderer, options.messages);

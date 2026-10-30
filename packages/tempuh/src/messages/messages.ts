@@ -175,6 +175,8 @@ export interface Messages {
   readonly drawStartSet: string;
   /** The notice when the drawing could not be stored or read, with the way out. */
   readonly drawSaveFailed: string;
+  /** The hint when the picture to draw on cannot be loaded. */
+  readonly drawLoadFailed: string;
   /** The instructions for drawing: the pen needs a pointer, and the other tools can be used with one pointer or the keyboard. */
   readonly drawHint: string;
   /** The heading of the feedback that the candidate gets after an attempt or during a test. */
@@ -515,8 +517,12 @@ export interface Messages {
   readonly submissionNoValue: string;
   /** The name of a file that the candidate submitted, when it has no name of its own. */
   readonly submissionFile: string;
-  /** The name of the region that holds the supports the candidate can turn on and off. */
+  /** The name of the region that holds the supports of the candidate. */
   readonly supportsLabel: string;
+  /** The state of a support that the candidate cannot change, when it is on. */
+  readonly supportOn: string;
+  /** The state of a support that the candidate cannot change, when it is off. */
+  readonly supportOff: string;
   /** The name of the support that keeps content with a hazard away from the candidate. */
   readonly supportHazardAvoidance: string;
   /** The name of the support for the way the candidate operates the interface. */

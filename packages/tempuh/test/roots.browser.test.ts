@@ -608,6 +608,86 @@ describe("hostile stylesheets", () => {
   });
 });
 
+describe("the stage and the media scale", () => {
+  const Pictures =
+    '<p id="line">Look.</p><p id="images"><img src="images/dot.png" alt="a" width="120" height="80"/><img src="images/dot.png" alt="b" width="50%"/></p><p id="object"><object type="image/png" data="images/dot.png" width="200" height="100">c</object></p><div id="video"><video width="300" height="150" controls="controls"><source src="media/clip.mp4" type="video/mp4"/></video></div>';
+
+  const sizes = (root: ParentNode, selector: string): (string | null)[][] =>
+    [...root.querySelectorAll(selector)].map((each) => [each.getAttribute("width"), each.getAttribute("height")]);
+
+  it("[T1] holds the content in a positioned element that stays when the content is replaced", async () => {
+    const { root } = createRoot();
+    expect(root.stage.parentNode).toBe(root.root);
+    expect(computed(root.stage, "position")).toBe("relative");
+    await root.show({ body: { nodes: itemBody("<p>First.</p>") } });
+    expect(el(root.stage, ".tempuh-content").textContent).toBe("First.");
+    await root.show({ body: { nodes: itemBody("<p>Second.</p>") } });
+    expect(root.stage.querySelectorAll(".tempuh-content")).toHaveLength(1);
+    expect(el(root.stage, ".tempuh-content").textContent).toBe("Second.");
+    expect(root.root.querySelector(".tempuh-content")?.parentNode).toBe(root.stage);
+  });
+
+  it("[T4] scales the pixel sizes of media from the size the author gave, and leaves percentages alone", async () => {
+    const { root } = createRoot();
+    await root.show({ body: { nodes: itemBody(Pictures) } });
+    expect(sizes(root.root, "#images img")).toEqual([
+      ["120", "80"],
+      ["50%", null],
+    ]);
+    root.setMediaScale(2);
+    expect(sizes(root.root, "#images img")).toEqual([
+      ["240", "160"],
+      ["50%", null],
+    ]);
+    expect(sizes(root.root, "#object > *")).toEqual([["400", "200"]]);
+    expect(sizes(root.root, "#video video")).toEqual([["600", "300"]]);
+    // It scales from the author's size, so that two changes do not compound.
+    root.setMediaScale(3);
+    expect(sizes(root.root, "#images img")[0]).toEqual(["360", "240"]);
+    root.setMediaScale(1);
+    expect(sizes(root.root, "#images img")[0]).toEqual(["120", "80"]);
+    expect(sizes(root.root, "#video video")).toEqual([["300", "150"]]);
+  });
+
+  it("[T4] does not draw the content again when the scale changes", async () => {
+    const { root } = createRoot();
+    await root.show({ body: { nodes: itemBody(Pictures) } });
+    const content = el(root.root, ".tempuh-content");
+    const line = el(root.root, "#line");
+    const image = el(root.root, "img");
+    root.setMediaScale(2);
+    expect(el(root.root, ".tempuh-content")).toBe(content);
+    expect(el(root.root, "#line")).toBe(line);
+    expect(el(root.root, "img")).toBe(image);
+  });
+
+  it("[T4] draws the content that comes after a change at the scale of the moment", async () => {
+    const { root } = createRoot();
+    root.setMediaScale(2);
+    await root.show({ body: { nodes: itemBody(Pictures) } });
+    expect(sizes(root.root, "#images img")[0]).toEqual(["240", "160"]);
+    root.setMediaScale(1.5);
+    await root.show({ body: { nodes: itemBody(Pictures) } });
+    expect(sizes(root.root, "#images img")[0]).toEqual(["180", "120"]);
+  });
+
+  it("[T4] starts at the scale of the option", async () => {
+    const { root } = createRoot({ mediaScale: 1.5 });
+    await root.show({ body: { nodes: itemBody(Pictures) } });
+    expect(sizes(root.root, "#images img")[0]).toEqual(["180", "120"]);
+    root.setMediaScale(1);
+    expect(sizes(root.root, "#images img")[0]).toEqual(["120", "80"]);
+  });
+
+  it("[T4] rejects a scale that is not a positive number", () => {
+    const { root } = createRoot();
+    const scale = (value: string): void => root.setMediaScale(JSON.parse(value));
+    expect(() => scale('"2"')).toThrow(new DataError('The media scale must be a positive number, found "2".'));
+    expect(() => scale("0")).toThrow("The media scale must be a positive number, found 0.");
+    expect(() => scale("null")).toThrow(DataError);
+  });
+});
+
 describe("options", () => {
   const create = (host: unknown, options: unknown): unknown => createContentRoot(host as never, options as never);
   const valid = () => ({

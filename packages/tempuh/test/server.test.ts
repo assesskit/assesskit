@@ -48,6 +48,7 @@ import {
   examHost,
   gateKey,
   HIDDEN_KEY_FILE,
+  lexiconFiles,
   memoryFileStore,
   packageOf,
   recordingScheduler,
@@ -874,7 +875,7 @@ describe("createSessionHost", () => {
     expect(view.status).toBe("in-progress");
     expect(view.current?.key).toEqual(Q1);
     expect(view.rubric.length).toBeGreaterThan(0);
-    expect(started.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [] });
+    expect(started.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [], lexicons: [] });
     expect(Object.entries(started.assets)).toEqual([
       ["items/q1/", expect.stringMatching(/^https:\/\/assets\.example\/g\//u)],
     ]);
@@ -889,6 +890,23 @@ describe("createSessionHost", () => {
     expect(text).not.toContain("987654321");
     expect(text).not.toContain("correct");
     expect(text).not.toContain("match_correct");
+  });
+
+  it("[T85][T73] names the pronunciation lexicons that the item presented depends on, and none for an item that depends on none", async () => {
+    const { host } = await examHost({}, lexiconFiles());
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(started.documents?.lexicons).toEqual(["items/q1/words.pls"]);
+    const moved = await host.handle(ALICE, request(1, { type: "move", to: { ref: "q2", instance: 1 } }));
+    expect(moved.documents?.lexicons).toEqual([]);
+  });
+
+  it("[T85][T73] serves a lexicon under the prefix of the item, as a file of web content", async () => {
+    const { host, gate } = await examHost({}, lexiconFiles());
+    const started = await host.start(ALICE, { seed: 7 });
+    const base = started.assets["items/q1/"] ?? "";
+    const response = await gate.serve({ path: new URL(`${base}items/q1/words.pls`).pathname }, 0);
+    expect(response.status).toBe(200);
+    expect(response.headers["Content-Type"]).toBe("application/pls+xml");
   });
 
   it("[T67] answers an action with the view that the engine gives, and keeps the principal that started the session", async () => {

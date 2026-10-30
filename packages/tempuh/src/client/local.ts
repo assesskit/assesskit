@@ -48,21 +48,32 @@ export interface LocalSessionOptions {
   readonly seed: number;
   /** Turns the path of a file in the package into the URL to load it from, such as a URL of the host's own files. */
   readonly assets: (path: string) => string;
+  /**
+   * Returns the paths of the pronunciation lexicons (PLS) that the item whose document is at the given path depends on,
+   * which reading aloud uses. The host reads them from the manifest of the package the definition was made from.
+   *
+   * @defaultValue No lexicons.
+   */
+  readonly lexicons?: (item: string) => readonly string[];
   /** The clock that stamps actions and times the deadlines. Default: the clock of the browser. */
   readonly clock?: Clock;
 }
 
-const OPTION_NAMES = ["definition", "engine", "start", "store", "session", "seed", "assets", "clock"];
+const OPTION_NAMES = ["definition", "engine", "start", "store", "session", "seed", "assets", "lexicons", "clock"];
 
 /** Returns the paths of the stimuli an item names, resolved against its document. */
 const stimulusPaths = (item: AssessmentItem, path: string): readonly string[] =>
   item.stimulusRefs.map((ref) => resolveReference(path, ref.href) ?? "");
 
 /** Returns where the documents of the definition are, for the paths that the references of the content resolve against. */
-function sourceOf(definition: DeliveryDefinition, structure: TestStructure | undefined): DocumentSource {
+function sourceOf(
+  definition: DeliveryDefinition,
+  structure: TestStructure | undefined,
+  lexicons: (item: string) => readonly string[],
+): DocumentSource {
   if (definition.kind === "item") {
     const { item, base } = definition;
-    return { test: "", item: () => ({ path: base, stimuli: stimulusPaths(item, base) }) };
+    return { test: "", item: () => ({ path: base, stimuli: stimulusPaths(item, base), lexicons: lexicons(base) }) };
   }
   return {
     test: definition.base,
@@ -71,7 +82,11 @@ function sourceOf(definition: DeliveryDefinition, structure: TestStructure | und
       const path = node === undefined ? undefined : resolveReference(node.base, node.model.href);
       if (node === undefined || path === undefined) return undefined;
       const { deliverable } = definition.resolvers.items(node.model.href, node.base);
-      return { path, stimuli: deliverable.kind === "qti" ? stimulusPaths(deliverable.item, path) : [] };
+      return {
+        path,
+        stimuli: deliverable.kind === "qti" ? stimulusPaths(deliverable.item, path) : [],
+        lexicons: lexicons(path),
+      };
     },
   };
 }
@@ -91,13 +106,14 @@ function sourceOf(definition: DeliveryDefinition, structure: TestStructure | und
 export async function createLocalSession(options: LocalSessionOptions): Promise<SessionClient> {
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", OPTION_NAMES);
-  const { definition, store, session, seed, assets, clock = BROWSER_CLOCK } = options;
+  const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
   checkRecord(definition, "The option definition must be an object");
   checkRecord(store, "The option store must be an object");
   checkFunction(store.load, "The function load of the option store must be a function");
   checkFunction(store.save, "The function save of the option store must be a function");
   checkNonEmptyString(session, "The option session");
   checkFunction(assets, "The option assets must be a function");
+  checkFunction(lexicons, "The option lexicons must be a function");
   checkClock(clock);
 
   const delivery = await import("@luthfanwakan/olah/delivery");
@@ -106,7 +122,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     definition.kind === "test"
       ? delivery.resolveStructure(definition.test, definition.base, definition.resolvers)
       : undefined;
-  const source = sourceOf(definition, structure);
+  const source = sourceOf(definition, structure, lexicons);
 
   const saved = await store.load(session);
   let state: DeliveryState;

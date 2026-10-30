@@ -57,28 +57,33 @@ presentationOf([
 ## In the player
 
 `mountDelivery` ([delivery](delivery.md)) is a chrome that mounts the parts and feeds them `view.supports` of every view. A
-host that draws its own chrome (`chrome: false`) keeps the parts that act on the content and mounts the panel itself.
+host that draws its own chrome (`chrome: false`) keeps the parts that act on the content and mounts the panel and the tools
+itself.
 
-| Part                   | Where it is                                      | When it is updated                                                                       |
-| ---------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `applyPresentation`    | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                |
-| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false`                                          |
-| `mountVariantNotice`   | Above the content                                | With every view                                                                          |
-| `mountContentSupports` | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's |
-| `mountSpoken`          | Above the content, and the content root          | Together with `mountContentSupports`                                                     |
+| Part                   | Where it is                                      | When it is updated                                                                                      |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `applyPresentation`    | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                               |
+| `setMediaScale`        | The content root                                 | Together with `applyPresentation`; the content is not drawn again                                       |
+| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false`                                                         |
+| `mountVariantNotice`   | Above the content                                | With every view                                                                                         |
+| `mountContentSupports` | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's                |
+| `mountSpoken`          | Above the content, and the content root          | Together with `mountContentSupports`                                                                    |
+| `mountTools`           | Above the content, and over the item             | When the item or the supports of the view differ from the last view's ([tools](tools.md#in-the-player)) |
 
 - **Options** are the supports whose state is `option`. A button sends `{ type: "support", name, active }` through the session
   client, so in an exam the host receives it like any other action (the default client-action policy allows it). The button
   follows the next view, and a refusal such as `support-not-available` is said in the status region.
-- **Other supports** have no control. A support that is `active` or `assigned` shows by what it changes, and a prohibited one
-  changes nothing.
+- **Other supports** have no control. The panel lists a support that is `active` or `assigned` with its state, such as
+  "Additional testing time: on", so that the candidate sees what is in force; the supports also show by what they change. A
+  prohibited support is not listed and changes nothing.
 - **Answers do not undo the supports.** A view that carries only an answer has the supports of the view before, so the cards,
   text tracks and reading controls stay as they are, and a popup that the candidate opened stays open.
-- **The voice** of reading aloud is `hooks.voice`, by default the voice of the browser ([speech](speech.md)). The shell gives
-  it no pronunciation lexicons.
-- **Not mounted by the shell:** the tools ([tools](tools.md)), which a host mounts with `mountTools`, and the scale of the
-  pixel sizes of media (`mediaScale` is fixed when a content root is created), so that a magnification enlarges the text and
-  not the media that state their size in pixels.
+- **The voice** of reading aloud is `hooks.voice`, by default the voice of the browser ([speech](speech.md)). It reads with
+  the pronunciation lexicons of the item shown: the shell loads the files that `documents.lexicons` names, through the gate,
+  and leaves out one that is missing or is not a PLS document ([speech](speech.md#lexicons)).
+- **The magnification** of non-text content reaches media sized in pixels at once: the shell sets the media scale of the
+  content root from `mediaScaleOf` with every change of the supports, and the item is not drawn again, so what the candidate
+  typed and chose stays.
 
 ## The support action
 
@@ -88,8 +93,8 @@ is assigned with `support-not-available`, and records the supports that were on 
 
 - The panel and the tools ask; they never decide. A button shows the `active` flag of the last input, and it calls
   `onSupport(name, !active)` when pressed. The host sends the action, and the next view says whether it took effect.
-- A prohibited support has no control. A support that is `active` or `assigned` has none either, because olah would
-  refuse it.
+- A prohibited support has no control and is not listed. A support that is `active` or `assigned` has no control either,
+  because olah would refuse it; the panel lists it with its state.
 - The panel does not list the supports that the toolbar of the tools turns on and off (`line-reader`, `answer-masking`,
   `calculator-on-screen` and the on-screen tools but the glossary), so that no support has two controls.
 
@@ -110,8 +115,9 @@ frame, and takes off those that an earlier presentation set. Other attributes an
 | `layout-single-column`    | `data-tempuh-single-column`                                                                                      |
 | `keyword-emphasis`        | `data-tempuh-keyword-emphasis`                                                                                   |
 
-`mediaScaleOf(supports)` gives the factor for the pixel sizes of media, from `allContent` or `nonText`; it is the
-`mediaScale` option of the content root ([content](content.md)), and it is 1 without a magnification.
+`mediaScaleOf(supports)` gives the factor for the pixel sizes of media, from `allContent` or `nonText`; it is the `mediaScale`
+option of the content root and the argument of `setMediaScale` ([content](content.md#the-media-scale)), and it is 1 without
+a magnification.
 
 | Case                                                              | Reading                                                                                                             |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -126,15 +132,17 @@ frame, and takes off those that an earlier presentation set. Other attributes an
 ## The panel
 
 `mountSupportPanel(host, options)` puts a region named Supports into `host`, with a toggle button (`aria-pressed`) for each
-support whose state is `option`. It adopts its stylesheet into the document or shadow root of `host`.
+support whose state is `option`, and a line of text with the state of each support that is `active` or `assigned`, such as
+"Additional testing time: on" or "Additional testing time: off". The line has no control. It adopts its stylesheet into the
+document or shadow root of `host`.
 
 | Option      | Type                                           | Meaning                                                            |
 | ----------- | ---------------------------------------------- | ------------------------------------------------------------------ |
 | `messages`  | `Messages`                                     | The text of the interface; the supports are named in its language. |
 | `onSupport` | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.        |
 
-`update(supports)` shows the buttons for the supports of the view, in their order, and keeps the focus on the button that
-has it. A custom support (BPIG §5.4) is named by the local name of its element. `destroy()` takes the panel away.
+`update(supports)` shows the buttons and the lines for the supports of the view, in their order, and keeps the focus on the
+button that has it. A prohibited support is not shown. A custom support (BPIG §5.4) is named by the local name of its element. `destroy()` takes the panel away.
 
 ## Cards
 
@@ -223,6 +231,8 @@ support. The popup is a group with a Close button.
 
 `update(supports)` reads the `spoken` support that is on. Call it after `show` of the root settles, and again when the
 supports change. It throws `DataError` for settings that reading aloud cannot use, such as a pitch above 1.
+`setLexicons(lexicons)` replaces the lexicons for the next reading, such as when the item changes; it throws `DataError`
+unless `lexicons` is a list of what `parseLexicon` makes.
 
 | Reading type                           | What it does                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |

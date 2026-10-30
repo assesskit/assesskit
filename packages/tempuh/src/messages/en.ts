@@ -91,6 +91,7 @@ export const EN_MESSAGES: Messages = {
   drawClear: "Clear",
   drawStartSet: "Start point set. Now choose the end point.",
   drawSaveFailed: "The drawing could not be saved. Draw again to try once more.",
+  drawLoadFailed: "The picture to draw on could not be loaded.",
   drawHint:
     "The pen and the eraser need a mouse, a finger or a stylus. For the other tools, click or tap the image to choose a point, or go to the image, move the crosshair with the arrow keys and press Enter or Space. A line, a rectangle and an ellipse need two points; a fill needs one.",
   feedbackTitle: "Feedback",
@@ -264,6 +265,8 @@ export const EN_MESSAGES: Messages = {
   submissionNoValue: "No value",
   submissionFile: "Submitted file",
   supportsLabel: "Supports",
+  supportOn: "on",
+  supportOff: "off",
   supportHazardAvoidance: "Hazard avoidance",
   supportInputRequirements: "Input requirements",
   supportLanguageOfInterface: "Interface language",

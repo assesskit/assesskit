@@ -12,21 +12,28 @@ export interface ViewDocuments {
   readonly item: string;
   /** The paths of the documents of the stimuli of the item, in the order of `CandidateItem.stimuli`. */
   readonly stimuli: readonly string[];
+  /**
+   * The paths of the pronunciation lexicons (PLS) that the item depends on, which reading aloud uses; none for a variant,
+   * whose resource olah does not name, and when no item is presented.
+   */
+  readonly lexicons: readonly string[];
 }
 
 /**
  * Checks documents that arrived as JSON.
  *
- * @throws `DataError` when they are not an object with the properties `test`, `item` and `stimuli` only, the first two
- * strings and the last an array of strings.
+ * @throws `DataError` when they are not an object with the properties `test`, `item`, `stimuli` and `lexicons` only, the
+ * first two strings and the last two arrays of strings.
  */
 export function checkViewDocuments(value: unknown): asserts value is ViewDocuments {
   checkRecord(value, "The documents of a view envelope must be an object");
-  checkProperties(value, "The documents of a view envelope", ["test", "item", "stimuli"]);
+  checkProperties(value, "The documents of a view envelope", ["test", "item", "stimuli", "lexicons"]);
   checkString(value.test, "The property test of the documents of a view envelope");
   checkString(value.item, "The property item of the documents of a view envelope");
   checkArray(value.stimuli, "The property stimuli of the documents of a view envelope must be an array");
   for (const path of value.stimuli) checkString(path, "A path of the stimuli of the documents of a view envelope");
+  checkArray(value.lexicons, "The property lexicons of the documents of a view envelope must be an array");
+  for (const path of value.lexicons) checkString(path, "A path of the lexicons of the documents of a view envelope");
 }
 
 /** The documents of an item that a test names: its own, and those of the stimuli it names. */
@@ -35,6 +42,8 @@ export interface ItemDocuments {
   readonly path: string;
   /** The paths of the documents of its stimuli, in the order it names them. */
   readonly stimuli: readonly string[];
+  /** The paths of the pronunciation lexicons it depends on. */
+  readonly lexicons: readonly string[];
 }
 
 /** Where the documents of a test are, as the host that runs the engine knows: the path of the test, and for an item reference those of its documents. */
@@ -56,7 +65,9 @@ export function viewDocuments(view: CandidateView, source: DocumentSource | unde
   const { current } = view;
   const test = source?.test ?? "";
   if (source === undefined || current === undefined || current.variant !== undefined)
-    return { test, item: "", stimuli: [] };
+    return { test, item: "", stimuli: [], lexicons: [] };
   const item = source.item(current.key.ref);
-  return item === undefined ? { test, item: "", stimuli: [] } : { test, item: item.path, stimuli: item.stimuli };
+  return item === undefined
+    ? { test, item: "", stimuli: [], lexicons: [] }
+    : { test, item: item.path, stimuli: item.stimuli, lexicons: item.lexicons };
 }

@@ -31,6 +31,9 @@ const CATALOG = `<qti-catalog-info>
     </qti-card>
     <qti-card support="long-description"><qti-html-content><p>A long description with a <a href="https://elsewhere.invalid/x">link</a>.</p></qti-html-content></qti-card>
   </qti-catalog>
+  <qti-catalog id="pictured">
+    <qti-card support="glossary-on-screen"><qti-html-content><p><img src="images/dot.png" alt="A dot" width="100" height="50"/></p></qti-html-content></qti-card>
+  </qti-catalog>
   <qti-catalog id="empty-support">
     <qti-card support="spoken"><qti-html-content><p>Spoken card.</p></qti-html-content></qti-card>
   </qti-catalog>
@@ -82,6 +85,20 @@ describe("catalogs", () => {
     holder.append(card as DocumentFragment);
     expect(holder.querySelector("qti-html-content > p")?.textContent).toBe("The process by which plants make food.");
     expect(holder.querySelector("em")?.textContent).toBe("process");
+  });
+
+  it("[T17][T4] draws a card at the scale of the media that the root has now", async () => {
+    const { root } = await openRoot();
+    const widths = (): (string | null | undefined)[] =>
+      ["glossary-on-screen"].map(() => {
+        const holder = document.createElement("div");
+        const card = root.card("pictured", "glossary-on-screen");
+        if (card !== undefined) holder.append(card);
+        return holder.querySelector("img")?.getAttribute("width");
+      });
+    expect(widths()).toEqual(["100"]);
+    root.setMediaScale(2);
+    expect(widths()).toEqual(["200"]);
   });
 
   it("[T17][T25] chooses the entry by language as olah does: the language itself, its primary language, then the default", async () => {

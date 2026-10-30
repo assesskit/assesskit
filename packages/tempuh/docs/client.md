@@ -78,16 +78,17 @@ client.view.current?.title; // "Question"
 `createLocalSession(options)` is asynchronous because it loads the engine. It throws `DataError` when an option is not of its
 type, the engine cannot be created from the definition, or the session cannot start.
 
-| Option       | Type                                 | Meaning                                                                                 |
-| ------------ | ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `definition` | `DeliveryDefinition`                 | What to deliver: a test, or an item alone for a preview (olah E12).                     |
-| `engine`     | `EngineOptions`                      | The options of `createEngine`. Default: none.                                           |
-| `start`      | `Omit<StartOptions, "seed" \| "at">` | The PNP, the universal supports and the context of `Engine.start`. Default: none.       |
-| `store`      | `LocalStore`                         | Where the state is saved and restored from: `load(session)` and `save(session, state)`. |
-| `session`    | `string`                             | The identifier of the session in the store.                                             |
-| `seed`       | `number`                             | The seed of a session that the store does not have yet, a safe integer.                 |
-| `assets`     | `(path: string) => string`           | Turns the path of a file in the package into the URL to load it from.                   |
-| `clock`      | `Clock`                              | Stamps actions and times the deadlines. Default: the clock of the browser.              |
+| Option       | Type                                  | Meaning                                                                                                      |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview (olah E12).                                          |
+| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                |
+| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                            |
+| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load(session)` and `save(session, state)`.                      |
+| `session`    | `string`                              | The identifier of the session in the store.                                                                  |
+| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                      |
+| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                        |
+| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none. |
+| `clock`      | `Clock`                               | Stamps actions and times the deadlines. Default: the clock of the browser.                                   |
 
 It stamps each action with `stamp(state, action, now)`, saves the state after each accepted step, and fires a `time` action
 at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that has the session
@@ -95,3 +96,23 @@ resumes it. The candidate can suspend and resume. Results of practice are never 
 `publishScore` refuses them.
 
 A preview of one item is a session of `{ kind: "item", item, base }`; `documents.item` is `base`.
+
+The session has the engine and the definition but not the package, so a host that wants reading aloud to use the lexicons of
+the items names them with `lexicons`, from the manifest of the package it made the definition from:
+
+```ts
+import { dependencyClosure, type QtiPackage, resourcePath } from "@luthfanwakan/olah/package";
+
+declare const pkg: QtiPackage;
+
+const lexicons = (item: string): string[] => {
+  const { manifest } = pkg;
+  const resource = manifest.resources.find((each) => resourcePath(manifest, each) === item);
+  if (resource === undefined) return [];
+  return dependencyClosure(manifest, resource.identifier)
+    .filter(({ type }) => type === "pls")
+    .flatMap((each) => resourcePath(manifest, each) ?? []);
+};
+```
+
+The server's session host finds them the same way for an exam.

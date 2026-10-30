@@ -17,6 +17,7 @@ import type { CustomInteractionHook } from "../elements/index.js";
 import type { LtiLogin } from "../lti-frame/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { SpeechHook } from "../speech/index.js";
+import { SLOT_TOOLS, type ToolSlots } from "../tools/index.js";
 
 /** The host's storage of files, which interactions and the review of an upload use: file values are references to it (olah D7). */
 export interface MountFiles {
@@ -54,7 +55,11 @@ export interface MountOptions {
     readonly customInteraction?: CustomInteractionHook;
     /** Whether an upload of audio offers a recording. Default: `true`. */
     readonly record?: boolean;
-    /** The voice that reads aloud for the candidates whose supports ask for it. Default: the voice of the browser, `webSpeech()`. */
+    /**
+     * The voice that reads aloud for the candidates whose supports ask for it.
+     *
+     * @defaultValue The voice of the browser, `webSpeech()`.
+     */
     readonly voice?: SpeechHook;
     /**
      * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item (see
@@ -63,6 +68,13 @@ export interface MountOptions {
      * @defaultValue none, so that an LTI item says that its tool is not available
      */
     readonly ltiLogin?: LtiLogin;
+    /**
+     * The tools that the host provides, by name: the scientific and graphing calculators, the dictionary and the other
+     * tools of the supports. A tool without a function says that it is not available.
+     *
+     * @defaultValue No tools.
+     */
+    readonly tools?: ToolSlots;
   };
 }
 
@@ -103,7 +115,7 @@ const OPTION_NAMES = [
 /** Checks the hooks of the host. */
 function checkHooks(hooks: unknown): void {
   checkRecord(hooks, "The option hooks must be an object");
-  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice", "ltiLogin"]);
+  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice", "ltiLogin", "tools"]);
   if (hooks.customInteraction !== undefined) {
     checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
   }
@@ -114,6 +126,14 @@ function checkHooks(hooks: unknown): void {
     checkFunction(hooks.voice.stop, "The method stop of the hook voice must be a function");
   }
   if (hooks.ltiLogin !== undefined) checkFunction(hooks.ltiLogin, "The hook ltiLogin must be a function");
+  if (hooks.tools !== undefined) {
+    checkRecord(hooks.tools, "The hook tools must be an object");
+    checkProperties(hooks.tools, "The hook tools", SLOT_TOOLS);
+    for (const name of SLOT_TOOLS) {
+      if (hooks.tools[name] !== undefined)
+        checkFunction(hooks.tools[name], `The tool ${name} of the hook tools must be a function`);
+    }
+  }
 }
 
 /**
