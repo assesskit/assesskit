@@ -6,11 +6,13 @@ import {
   PNP_HAZARDS,
   resolveSupports,
   type SupportName,
+  type SupportSetting,
 } from "../pnp/index.js";
 import { givenContext } from "../processing/variables.js";
 import { createRandom } from "../random.js";
 import type { Value } from "../values/index.js";
 import { type Action, checkAction } from "./action.js";
+import type { CandidateView } from "./candidate-view.js";
 import { buildCourse, type Course, type DeliveryDefinition, type EngineOptions } from "./course.js";
 import { type Deadline, deadlinesOf } from "./deadlines.js";
 import {
@@ -24,6 +26,7 @@ import {
 import { planTest } from "./plan.js";
 import { SessionStep } from "./session-step.js";
 import { additionalTestingTime } from "./time-limits.js";
+import { candidateView } from "./view.js";
 
 /** The options of `Engine.start`. */
 export interface StartOptions {
@@ -74,6 +77,14 @@ export interface Engine {
    * @throws `DataError` when the state is not one of this engine.
    */
   deadlines(state: DeliveryState): readonly Deadline[];
+  /**
+   * Returns what the candidate sees of a state at the time `now` (E19–E21): the state after the maximum times that passed
+   * up to `now` are applied, as a `time` action applies them, built field by field so that no answer key, processing or
+   * hidden content reaches it. A time before the latest step of the state counts as that step.
+   *
+   * @throws `DataError` when the state is not one of this engine, or `now` is not a finite number.
+   */
+  view(state: DeliveryState, now: number): CandidateView;
 }
 
 /** Returns what the engine takes from a profile besides the supports (BPIG §5.2.4–5). */
@@ -103,8 +114,14 @@ function supportsOf(
   universal: readonly SupportName[],
 ): Map<SupportName, SessionSupport> {
   const supports = new Map<SupportName, SessionSupport>();
+  const settings = new Map<string, SupportSetting>(profile?.supports);
   for (const [name, state] of profile === undefined ? [] : resolveSupports(profile)) {
-    supports.set(name, { state, active: state === "active" || state === "assigned" });
+    const given = settings.get(name);
+    supports.set(name, {
+      state,
+      active: state === "active" || state === "assigned",
+      ...(given === undefined ? {} : { settings: given }),
+    });
   }
   for (const name of universal) if (!supports.has(name)) supports.set(name, { state: "option", active: false });
   return supports;
@@ -191,6 +208,11 @@ export function createEngine(definition: DeliveryDefinition, options: EngineOpti
     deadlines: (state) => {
       checkState(state);
       return deadlinesOf(course, state);
+    },
+    view: (state, now) => {
+      checkState(state);
+      checkFinite(now, "The time now");
+      return candidateView(course, state, now);
     },
   };
 }

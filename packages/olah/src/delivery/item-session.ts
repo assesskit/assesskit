@@ -6,7 +6,8 @@ import type { ItemVariables, ProcessingContext } from "../processing/index.js";
 import { checkItem, checkVariables } from "../processing/variables.js";
 import type { Value } from "../values/index.js";
 import type { DeliveryEvent } from "./events.js";
-import { checkKey, type ItemKey } from "./plan.js";
+import { checkKey, type ItemKey } from "./item-key.js";
+import { ITEM_SESSION_STATUSES } from "./names.js";
 import { type Refusal, refuse } from "./refusal.js";
 import { checkSessionControl, type EffectiveSessionControl } from "./session-control.js";
 
@@ -23,16 +24,6 @@ import { checkSessionControl, type EffectiveSessionControl } from "./session-con
  * | `solution`    | is presented after it closed, with the correct responses in place of the candidate's                |
  */
 export type ItemSessionStatus = "initial" | "interacting" | "suspended" | "closed" | "review" | "solution";
-
-/** The states, for the checks. */
-export const ITEM_SESSION_STATUSES: readonly ItemSessionStatus[] = [
-  "initial",
-  "interacting",
-  "suspended",
-  "closed",
-  "review",
-  "solution",
-];
 
 /**
  * The state of one item instance for one candidate: its variables, its drafts, its attempts and where it is in its

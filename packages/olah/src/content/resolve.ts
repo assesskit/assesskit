@@ -92,7 +92,10 @@ function lookup(variables: ContentVariables, identifier: string): Value | null {
     : (variables.templates.get(identifier) ?? null);
 }
 
-function substitutions(item: AssessmentItem, variables: ContentVariables): Pick<Resolution, "numbers" | "parameters"> {
+function substitutions(
+  item: Pick<AssessmentItem, "templateDeclarations">,
+  variables: ContentVariables,
+): Pick<Resolution, "numbers" | "parameters"> {
   const parameters = new Map<string, string>();
   const numbers = new Map<string, string>();
   for (const declaration of item.templateDeclarations) {
@@ -174,7 +177,8 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
  *
  * @param nodes - The content, such as the children of the item body.
  * @param variables - The outcomes and template variables of the item session.
- * @param item - The item, for the declarations of its template variables.
+ * @param item - The item, for the declarations of its template variables; for the content of a test, an object with no
+ * declarations.
  * @param options - See {@link ResolveContentOptions}.
  * @returns New nodes; the input is not changed.
  * @throws `DataError` when an argument has the wrong type.
@@ -182,7 +186,7 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
 export function resolveContent(
   nodes: readonly BodyNode[],
   variables: ContentVariables,
-  item: AssessmentItem,
+  item: Pick<AssessmentItem, "templateDeclarations">,
   options: ResolveContentOptions,
 ): readonly BodyNode[] {
   checkArray(nodes, "The nodes must be an array");

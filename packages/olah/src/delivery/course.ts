@@ -1,8 +1,14 @@
-import type { AssessmentItem, AssessmentTest, ItemSessionControl, ResponseProcessing } from "../asi/index.js";
+import type {
+  AssessmentItem,
+  AssessmentStimulus,
+  AssessmentTest,
+  ItemSessionControl,
+  ResponseProcessing,
+} from "../asi/index.js";
 import { checkFunction, checkOptions, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
 import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
 import { DataError, type Issue } from "../errors.js";
-import type { DeliverableItem, ResolvedItem, Resolvers } from "../package/index.js";
+import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
 import type { VariableType } from "../processing/assign.js";
 import {
@@ -26,7 +32,8 @@ import { type ContentNode, type ItemRefNode, resolveStructure, type TestStructur
  *
  * - `test`: the test, the path of its document, and the resolvers of its references, such as those of
  *   `packageResolvers`.
- * - `item`: the item, the path of its document, and the item session control that the host gives it, if any.
+ * - `item`: the item, the path of its document, the resolver of the stimuli it names, and the item session control that
+ *   the host gives it, if any.
  */
 export type DeliveryDefinition =
   | {
@@ -44,8 +51,13 @@ export type DeliveryDefinition =
       readonly kind: "item";
       /** The item, as `readAsi` reads it, with its includes resolved. */
       readonly item: AssessmentItem;
-      /** The path of the item document, named in the issues of the static checks. */
+      /** The path of the item document, named in the issues of the static checks; its references resolve against it. */
       readonly base: string;
+      /**
+       * The resolver of the stimuli the item names, such as that of `packageResolvers`. Default: none, so that an item
+       * that names a stimulus presents it without one.
+       */
+      readonly resolvers?: Pick<Resolvers, "stimuli">;
       /** The item session control of the item, as `standaloneSessionControl` applies it. Default: none. */
       readonly control?: ItemSessionControl;
     };
@@ -66,12 +78,29 @@ export interface EngineOptions {
   readonly limits?: Partial<ProcessingLimits & PlanLimits>;
 }
 
+/** A stimulus that an item names, with the path of its document. */
+interface CandidateStimulus {
+  /** The stimulus as `readAsi` reads it. */
+  readonly stimulus: AssessmentStimulus;
+  /** The package path of its document, against which its references resolve; absent when the item's path is not known. */
+  readonly path?: string;
+}
+
 /** An item that an item instance may present: the item an item reference names, or one of its variants. */
 export interface Candidate {
   /** The manifest resource; for an item delivered alone, the identifier of the item. */
   readonly resource: string;
   /** The item; a link to a tool is modeled as an item (E25). */
   readonly item: AssessmentItem;
+  /** The link to a tool that the item models; absent for a QTI item. */
+  readonly link?: LtiLink;
+  /**
+   * The package path of the document of the item, against which its references resolve (B93); absent for a variant,
+   * whose path the resolvers do not give.
+   */
+  readonly path?: string;
+  /** The stimuli the item names, in the order it names them. */
+  readonly stimuli: readonly CandidateStimulus[];
   /** The hazards of the resource, in the terms of the DRD (B99). */
   readonly hazards: readonly DrdHazardTerm[];
   /** The languages of a variant's adaptation, BCP 47 tags; none for the item itself. */
@@ -125,6 +154,11 @@ export function candidateOf(entry: CourseItem, variant: string | undefined): Can
     );
   }
   return candidate;
+}
+
+/** Returns the title that the candidate sees: the title of the link for an item that models a link to a tool (E25). */
+export function candidateTitle(candidate: Candidate): string {
+  return candidate.link?.title ?? candidate.item.title;
 }
 
 /** Returns the context values that an item reads: those of the variables it declares, and `QTI_CONTEXT` (B50). */
@@ -192,20 +226,69 @@ function itemOf(deliverable: DeliverableItem): AssessmentItem {
 
 const isDrdHazard = (term: string): term is DrdHazardTerm => [...HAZARD_TERMS.keys()].some((known) => known === term);
 
-/** Returns the item and the variants of a resolved item reference. */
-function candidatesOf(resolved: ResolvedItem): readonly [Candidate, ...Candidate[]] {
-  const own: Candidate = {
-    resource: resolved.resource,
-    item: itemOf(resolved.deliverable),
-    hazards: resolved.hazards,
-    languages: [],
+/**
+ * Returns the stimuli an item names, each resolved against the document of the item (B62). Without resolvers an item
+ * has none.
+ */
+function stimuliOf(
+  item: AssessmentItem,
+  path: string | undefined,
+  resolvers: Pick<Resolvers, "stimuli"> | undefined,
+): CandidateStimulus[] {
+  if (resolvers === undefined) return [];
+  return item.stimulusRefs.map((ref) => {
+    const stimulusPath = path === undefined ? undefined : resolveReference(path, ref.href);
+    return {
+      stimulus: resolvers.stimuli(ref.href, path ?? ""),
+      ...(stimulusPath === undefined ? {} : { path: stimulusPath }),
+    };
+  });
+}
+
+/** Returns the candidate that a deliverable makes: the item it presents, with its link and stimuli. */
+function makeCandidate(
+  resource: string,
+  deliverable: DeliverableItem,
+  extra: Pick<Candidate, "hazards" | "languages">,
+  path: string | undefined,
+  resolvers: Pick<Resolvers, "stimuli"> | undefined,
+): Candidate {
+  const item = itemOf(deliverable);
+  return {
+    resource,
+    item,
+    ...(deliverable.kind === "lti" ? { link: deliverable.link } : {}),
+    ...(path === undefined ? {} : { path }),
+    stimuli: stimuliOf(item, path, resolvers),
+    ...extra,
   };
-  const variants = resolved.variants.map((variant) => ({
-    resource: variant.resource,
-    item: itemOf(variant.deliverable),
-    hazards: variant.drd.hazard.filter(isDrdHazard),
-    languages: variant.drd.languageOfAdaptation,
-  }));
+}
+
+/**
+ * Returns the item and the variants of a resolved item reference. The path is that of the item's document; the variants'
+ * paths are not known to the resolvers.
+ */
+function candidatesOf(
+  resolved: ResolvedItem,
+  path: string,
+  resolvers: Pick<Resolvers, "stimuli">,
+): readonly [Candidate, ...Candidate[]] {
+  const own = makeCandidate(
+    resolved.resource,
+    resolved.deliverable,
+    { hazards: resolved.hazards, languages: [] },
+    path,
+    resolvers,
+  );
+  const variants = resolved.variants.map((variant) =>
+    makeCandidate(
+      variant.resource,
+      variant.deliverable,
+      { hazards: variant.drd.hazard.filter(isDrdHazard), languages: variant.drd.languageOfAdaptation },
+      undefined,
+      resolvers,
+    ),
+  );
   return [own, ...variants];
 }
 
@@ -266,16 +349,22 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
     const path = resolveReference(node.base, node.model.href) ?? node.model.href;
     const item = resolved.get(path) ?? resolvers.items(node.model.href, node.base);
     resolved.set(path, item);
-    items.set(node.model.identifier, { node, control: sessionControl(node), candidates: candidatesOf(item) });
+    items.set(node.model.identifier, {
+      node,
+      control: sessionControl(node),
+      candidates: candidatesOf(item, path, resolvers),
+    });
   }
   return courseOf(structure, items, checked);
 }
 
 /** Builds the course of an item delivered alone: a test of one nonlinear part with the item (E12). */
 function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, options: EngineOptions): Course {
-  const { item, base, control } = definition;
+  const { item, base, control, resolvers } = definition;
   checkItem(item);
   checkString(base, "The base");
+  if (resolvers !== undefined) checkRecord(resolvers, "The resolvers must be an object with a function stimuli");
+  if (resolvers !== undefined) checkFunction(resolvers.stimuli, "The stimuli of the resolvers must be a function");
   const checked = checkEngineOptions(options);
   const effective = standaloneSessionControl(control);
   gate(validateAsi({ kind: "item", item }, { ...checked, path: base }), "item");
@@ -283,7 +372,7 @@ function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, o
   const node = structure.itemRef(item.identifier);
   if (node === undefined)
     throw new DataError(`The test of the item has no item reference ${describe(item.identifier)}.`);
-  const own: Candidate = { resource: item.identifier, item, hazards: [], languages: [] };
+  const own = makeCandidate(item.identifier, { kind: "qti", item }, { hazards: [], languages: [] }, base, resolvers);
   return courseOf(structure, new Map([[item.identifier, { node, control: effective, candidates: [own] }]]), checked);
 }
 

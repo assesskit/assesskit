@@ -1,11 +1,12 @@
 import { checkArray, checkChoice, checkFinite, checkRecord, describe } from "../checks.js";
 import type { PnpHazardTerm } from "../content/index.js";
 import { DataError } from "../errors.js";
-import type { SupportName, SupportState, TestingTime } from "../pnp/index.js";
+import type { SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";
 import type { RandomState } from "../random.js";
 import type { Value } from "../values/index.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession } from "./item-session.js";
+import { DELIVERY_STATUSES } from "./names.js";
 import { type ItemKey, sameKey, type TestPlan } from "./plan.js";
 import type { Refusal } from "./refusal.js";
 
@@ -14,9 +15,6 @@ export const STATE_VERSION = 1;
 
 /** Where a candidate session is: running, suspended (INFO §2.2.1) or ended. */
 export type DeliveryStatus = "in-progress" | "suspended" | "ended";
-
-/** The statuses, for the checks. */
-export const DELIVERY_STATUSES: readonly DeliveryStatus[] = ["in-progress", "suspended", "ended"];
 
 /**
  * What a maximum time did when it passed (D9): `closed` the scope, because it does not allow late submission, or left
@@ -62,6 +60,11 @@ export interface SessionSupport {
   readonly state: SupportState;
   /** Whether the support is on. */
   readonly active: boolean;
+  /**
+   * The settings that the profile gives the support (BPIG §5.2); absent for a universal support that the profile does
+   * not name, and for a custom support.
+   */
+  readonly settings?: SupportSetting;
 }
 
 /** What the engine takes from the candidate's PNP besides the supports (BPIG §5.2). */

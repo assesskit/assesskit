@@ -1,6 +1,5 @@
 import {
   checkArray,
-  checkBoolean,
   checkChoice,
   checkFinite,
   checkNonNegative,
@@ -10,12 +9,11 @@ import {
   describe,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { isSupportName, PNP_HAZARDS, type SupportName, type SupportState, type TestingTime } from "../pnp/index.js";
+import { isSupportName, PNP_HAZARDS, type SupportName, type TestingTime } from "../pnp/index.js";
 import { type RandomState, restoreRandom } from "../random.js";
 import {
   type CandidateNeeds,
   checkState,
-  DELIVERY_STATUSES,
   type DeliveredItem,
   type DeliveryState,
   EXPIRIES,
@@ -23,11 +21,12 @@ import {
   type SessionSupport,
   STATE_VERSION,
 } from "./delivery-state.js";
-import { itemSessionFromJson, itemSessionToJson, readEntries, readValues, valuesToJson } from "./item-session-json.js";
-import { checkKey, type ItemKey, type PlannedChild, type PlannedPart, type TestPlan } from "./plan.js";
-
-/** The states of a support, for the checks. */
-const SUPPORT_STATES: readonly SupportState[] = ["prohibited", "active", "option", "assigned"];
+import { readEntries, readValues, valuesToJson } from "./entries-json.js";
+import { checkKey, type ItemKey } from "./item-key.js";
+import { itemSessionFromJson, itemSessionToJson } from "./item-session-json.js";
+import { DELIVERY_STATUSES } from "./names.js";
+import type { PlannedChild, PlannedPart, TestPlan } from "./plan.js";
+import { readSessionSupport } from "./support-json.js";
 
 /** The kinds of scope of a clock, for the checks. */
 const CLOCK_SCOPES: readonly ScopeClock["scope"][] = ["test", "part", "section"];
@@ -152,16 +151,9 @@ function readClock(json: unknown): ScopeClock {
   return { scope: json.scope, identifier: json.identifier, spent: json.spent, ...readExpiry(json.expired) };
 }
 
-function readSupport(json: unknown, name: string): SessionSupport {
-  checkRecord(json, `The support ${describe(name)} of the state must be an object`);
-  checkChoice(json.state, `The state of the support ${describe(name)}`, SUPPORT_STATES);
-  checkBoolean(json.active, `The active of the support ${describe(name)}`);
-  return { state: json.state, active: json.active };
-}
-
 function readSupports(json: unknown): Map<SupportName, SessionSupport> {
   const supports = new Map<SupportName, SessionSupport>();
-  for (const [name, support] of readEntries(json, "The supports of the state", readSupport)) {
+  for (const [name, support] of readEntries(json, "The supports of the state", readSessionSupport)) {
     if (!isSupportName(name))
       throw new DataError(`A support of the state must have a support name, found ${describe(name)}.`);
     supports.set(name, support);

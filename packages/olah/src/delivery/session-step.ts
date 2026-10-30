@@ -1,4 +1,4 @@
-import type { AssessmentItem, TestPart } from "../asi/index.js";
+import type { AssessmentItem } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { DataError, OlahError } from "../errors.js";
 import type { SupportName } from "../pnp/index.js";
@@ -9,7 +9,7 @@ import type { Value } from "../values/index.js";
 import type { Action } from "./action.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
-import { maximumAt, type RunningScope, runningScopes } from "./deadlines.js";
+import { expiriesOf, maximumAt, type RunningScope, runningScopes } from "./deadlines.js";
 import {
   type DeliveredItem,
   type DeliveryState,
@@ -22,6 +22,7 @@ import type { DeliveryEvent } from "./events.js";
 import { applyItemAction, type ItemAction } from "./item-action.js";
 import { closeItem, presentItem, startItemSession, suspendItem } from "./item-lifecycle.js";
 import type { ItemSessionContext, ItemStep } from "./item-session.js";
+import { partModel, submissionModeOf } from "./modes.js";
 import {
   type Destination,
   destinationAfter,
@@ -204,38 +205,21 @@ export class SessionStep {
     };
   }
 
-  private partOf(placement: Placement): TestPart {
-    const part = this.course.structure.part(placement.part);
-    if (part === undefined)
-      throw new DataError(`The plan names ${describe(placement.part)}, which the test does not have.`);
-    return part.model;
-  }
-
   private submissionMode(placement: Placement): "individual" | "simultaneous" {
-    const { structure } = this.course;
-    // CAT §2.4: the items of an adaptive section are processed one by one, in a part of either mode (B27).
-    const adaptive = placement.sections.some(
-      (section) => structure.section(section.identifier)?.model.adaptiveSelection !== undefined,
-    );
-    return adaptive ? "individual" : this.partOf(placement).submissionMode;
+    return submissionModeOf(this.course.structure, placement);
   }
 
   private linear(placement: Placement): boolean {
-    return this.partOf(placement).navigationMode === "linear";
+    return partModel(this.course.structure, placement).navigationMode === "linear";
   }
 
   private clockOf(scope: ScopeClock["scope"], identifier: string): ScopeClock | undefined {
     return this.state.clocks.find((clock) => clock.scope === scope && clock.identifier === identifier);
   }
 
-  /** The expiries of the scopes of an instance: its own, then those of its test part and sections. */
+  /** The expiries of the scopes of an instance: its own, then those of its test, test part and sections. */
   private expiries(placement: Placement): (Expiry | undefined)[] {
-    return [
-      findDelivered(this.state, placement.key)?.expired,
-      this.clockOf("test", this.course.structure.test.model.identifier)?.expired,
-      this.clockOf("part", placement.part)?.expired,
-      ...placement.sections.map((section) => this.clockOf("section", section.identifier)?.expired),
-    ];
+    return expiriesOf(this.course.structure, this.state, placement);
   }
 
   private store(item: DeliveredItem): void {

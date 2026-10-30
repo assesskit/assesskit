@@ -3,8 +3,8 @@ import { DataError } from "../errors.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import type { Course } from "./course.js";
 import { type DeliveryState, type Expiry, findDelivered } from "./delivery-state.js";
-import { planIndex } from "./plan-index.js";
-import type { StructureNode } from "./structure.js";
+import { type Placement, planIndex } from "./plan-index.js";
+import type { StructureNode, TestStructure } from "./structure.js";
 import { type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
 
 /**
@@ -108,10 +108,29 @@ export function maximumAt(scope: RunningScope, at: number): number | undefined {
 }
 
 /** Returns when the minimum time of a running scope is reached, `undefined` when it has none or was reached. */
-function minimumAt(scope: RunningScope, at: number): number | undefined {
+export function minimumAt(scope: RunningScope, at: number): number | undefined {
   const { minTime } = scope.limits;
   if (minTime === undefined || scope.spent >= minTime * MILLISECONDS_PER_SECOND) return undefined;
   return at + minTime * MILLISECONDS_PER_SECOND - scope.spent;
+}
+
+/**
+ * Returns what the maximum times did in the scopes of an item instance: its own, then those of the test, its test part
+ * and its sections; `undefined` for a scope whose maximum time did not pass (D9).
+ */
+export function expiriesOf(
+  structure: TestStructure,
+  state: DeliveryState,
+  placement: Placement,
+): (Expiry | undefined)[] {
+  const expiry = (scope: "test" | "part" | "section", identifier: string): Expiry | undefined =>
+    state.clocks.find((clock) => clock.scope === scope && clock.identifier === identifier)?.expired;
+  return [
+    findDelivered(state, placement.key)?.expired,
+    expiry("test", structure.test.model.identifier),
+    expiry("part", placement.part),
+    ...placement.sections.map((section) => expiry("section", section.identifier)),
+  ];
 }
 
 /**

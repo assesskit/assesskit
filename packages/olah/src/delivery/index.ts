@@ -4,12 +4,31 @@
  * suspension, supports, variants, events and serializable states; the planning of a test session — the structure of a
  * test with its section references resolved, the selection and ordering of its items, the item instances, the order of
  * presentation in linear test parts under pre-conditions and branch rules, the inheritance of item session control, and
- * the time limits with a candidate's extra time — and the item sessions: attempts, adaptive items, drafts and submitted
- * responses, review and solution, comments, PCI states, and processing failures as data.
+ * the time limits with a candidate's extra time — the item sessions: attempts, adaptive items, drafts and submitted
+ * responses, review and solution, comments, PCI states, and processing failures as data — and the candidate side: the
+ * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions, with
+ * the limits that a server puts on the actions of its clients.
  *
  * @module @luthfanwakan/olah/delivery
  */
 export type { Action, CandidateAction, HostAction } from "./action.js";
+export { type ActionLimits, actionToJson, DEFAULT_ACTION_LIMITS, parseCandidateAction } from "./action-json.js";
+export type {
+  CandidateItem,
+  CandidateView,
+  HazardView,
+  LtiView,
+  NavigationEntry,
+  NavigationItem,
+  NavigationSection,
+  PartView,
+  PciView,
+  StimulusView,
+  SupportView,
+  TestView,
+  TimerView,
+  VariantView,
+} from "./candidate-view.js";
 export type { DeliveryDefinition, EngineOptions } from "./course.js";
 export type { Deadline } from "./deadlines.js";
 export type {
@@ -66,3 +85,4 @@ export {
   type TestStructure,
 } from "./structure.js";
 export { additionalTestingTime, type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
+export { viewFromJson, viewToJson } from "./view-json.js";

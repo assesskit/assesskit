@@ -1,5 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { CANDIDATE_ACTION_TYPES } from "../src/delivery/candidate-actions.js";
 import { itemSessionFromJson, itemSessionToJson } from "../src/delivery/item-session-json.js";
 import {
   type AccessForAllResource,
@@ -8,15 +9,19 @@ import {
   type AssessmentItem,
   type AssessmentSection,
   type AssessmentTest,
+  actionToJson,
   additionalTestingTime,
   ancestry,
   applyItemAction,
+  BASE_TYPES,
   type CandidateAction,
+  type CandidateView,
   closeItem,
   container,
   createEngine,
   createRandom,
   DataError,
+  DEFAULT_ACTION_LIMITS,
   DEFAULT_PLAN_LIMITS,
   type DeliveryEvent,
   type DeliveryEventType,
@@ -35,11 +40,13 @@ import {
   type ItemStep,
   itemFeedback,
   itemResponses,
+  type LtiLink,
   nextItem,
   type PersonalNeedsProfile,
   type PlannedChild,
   PNP_NAMESPACE,
   ProcessingError,
+  parseCandidateAction,
   partOf,
   planItems,
   planTest,
@@ -47,6 +54,7 @@ import {
   previousItem,
   type Random,
   type Refusal,
+  type RefusalCode,
   type ResolvedItem,
   type RuleContext,
   readAsi,
@@ -74,7 +82,10 @@ import {
   type TestStructure,
   timeLimits,
   type Value,
+  viewFromJson,
+  viewToJson,
 } from "../src/index.js";
+import { identifier as identifierArbitrary, recordValue, valueArbitrary } from "./arbitraries/values.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -685,7 +696,7 @@ describe("Engine.start", () => {
     );
     const { state } = begun(engine, { pnp, universalSupports: ["calculator-on-screen", "spell-checker-on-screen"] });
     expect([...state.supports]).toEqual([
-      ["line-reader", { state: "active", active: true }],
+      ["line-reader", { state: "active", active: true, settings: { name: "line-reader", replaceAccessModes: [] } }],
       ["dictionary-on-screen", { state: "option", active: false }],
       ["spell-checker-on-screen", { state: "prohibited", active: false }],
       ["calculator-on-screen", { state: "option", active: false }],
@@ -1411,6 +1422,566 @@ describe("Engine.deadlines", () => {
     expect(() => engine.deadlines(json("null"))).toThrow(
       "The state must be an object from Engine.start or deserializeState, found null.",
     );
+  });
+});
+
+/** What a view must not hold: each string stands for a key, a processing step or a content that is hidden. */
+const LEAK = /LEAK-[A-Z-]+/g;
+
+/** The strings of a view, as JSON text, that mark a leak. */
+const leaksIn = (view: CandidateView): string[] => [...new Set(JSON.stringify(viewToJson(view)).match(LEAK) ?? [])];
+
+/**
+ * An item with everything that a view settles or leaves out: a correct response and a mapping of a text, outcomes and
+ * template values that nothing prints, feedback, modal feedback, template content and a choice that the variables hide,
+ * and rubric for the candidate and for the scorer. A string with `LEAK-` marks what the candidate must never see.
+ */
+function leakyItem(): AssessmentItem {
+  const content = (text: string): string => `<qti-content-body><p>${text}</p></qti-content-body>`;
+  return itemOf(
+    'adaptive="false" time-dependent="true" xml:lang="id" label="Question"',
+    `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+      <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
+    </qti-response-declaration>
+    <qti-response-declaration identifier="TEXT" cardinality="single" base-type="string">
+      <qti-correct-response><qti-value>LEAK-CORRECT-TEXT</qti-value></qti-correct-response>
+      <qti-mapping default-value="0"><qti-map-entry map-key="LEAK-MAP-KEY" mapped-value="2"/></qti-mapping>
+    </qti-response-declaration>
+    <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+    <qti-outcome-declaration identifier="FB" cardinality="single" base-type="identifier"><qti-default-value><qti-value>none</qti-value></qti-default-value></qti-outcome-declaration>
+    <qti-outcome-declaration identifier="NOTE" cardinality="single" base-type="string"><qti-default-value><qti-value>LEAK-OUTCOME-DEFAULT</qti-value></qti-default-value></qti-outcome-declaration>
+    <qti-outcome-declaration identifier="TRIES" cardinality="single" base-type="integer"><qti-default-value><qti-value>3</qti-value></qti-default-value></qti-outcome-declaration>
+    <qti-template-declaration identifier="TV" cardinality="single" base-type="identifier"><qti-default-value><qti-value>A</qti-value></qti-default-value></qti-template-declaration>
+    <qti-template-declaration identifier="KEPT" cardinality="single" base-type="string"><qti-default-value><qti-value>LEAK-TEMPLATE-DEFAULT</qti-value></qti-default-value></qti-template-declaration>
+    <qti-template-processing><qti-set-template-value identifier="KEPT"><qti-base-value base-type="string">LEAK-TEMPLATE-PROCESSING</qti-base-value></qti-set-template-value></qti-template-processing>
+    <qti-item-body>
+      <p>Count <qti-printed-variable identifier="TRIES"/> times.</p>
+      <qti-choice-interaction response-identifier="RESPONSE" max-choices="1" shuffle="true">
+        <qti-simple-choice identifier="A">A</qti-simple-choice>
+        <qti-simple-choice identifier="B">B</qti-simple-choice>
+        <qti-simple-choice identifier="C" template-identifier="TV" show-hide="show">LEAK-HIDDEN-CHOICE</qti-simple-choice>
+        <qti-simple-choice identifier="D">D</qti-simple-choice>
+      </qti-choice-interaction>
+      <p><qti-text-entry-interaction response-identifier="TEXT"/></p>
+      <qti-template-block template-identifier="TV" identifier="Z" show-hide="show">${content("LEAK-HIDDEN-TEMPLATE")}</qti-template-block>
+      <qti-feedback-block outcome-identifier="FB" identifier="right" show-hide="show">${content("FEEDBACK-OK")}</qti-feedback-block>
+      <qti-feedback-block outcome-identifier="FB" identifier="never" show-hide="show">${content("LEAK-HIDDEN-FEEDBACK")}</qti-feedback-block>
+      <qti-rubric-block view="candidate" use="instructions">${content("ITEM-RUBRIC-OK")}</qti-rubric-block>
+      <qti-rubric-block view="scorer" use="scoring">${content("LEAK-ITEM-RUBRIC-SCORER")}</qti-rubric-block>
+    </qti-item-body>
+    <qti-response-processing>
+      <qti-response-condition>
+        <qti-response-if><qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match>
+          <qti-set-outcome-value identifier="FB"><qti-base-value base-type="identifier">right</qti-base-value></qti-set-outcome-value>
+          <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value>
+        </qti-response-if>
+      </qti-response-condition>
+      <qti-set-outcome-value identifier="NOTE"><qti-base-value base-type="string">LEAK-OUTCOME-SET</qti-base-value></qti-set-outcome-value>
+    </qti-response-processing>
+    <qti-modal-feedback outcome-identifier="FB" identifier="right" show-hide="show">${content("MODAL-OK")}</qti-modal-feedback>
+    <qti-modal-feedback outcome-identifier="FB" identifier="never" show-hide="show">${content("LEAK-HIDDEN-MODAL")}</qti-modal-feedback>`,
+  );
+}
+
+/** The text of the nodes of some content, as one string. */
+const textOf = (nodes: unknown): string => JSON.stringify(nodes);
+
+const rubricBlock = (view: string, text: string): string =>
+  `<qti-rubric-block view="${view}" use="instructions"><qti-content-body><p>${text}</p></qti-content-body></qti-rubric-block>`;
+const feedback = (access: "during" | "atEnd", identifier: string, text: string): string =>
+  `<qti-test-feedback access="${access}" outcome-identifier="SHOW" show-hide="show" identifier="${identifier}"><qti-content-body><p>${text}</p></qti-content-body></qti-test-feedback>`;
+const SHOW = outcomeDeclaration("SHOW", "identifier");
+const SET_SHOW = outcomeProcessing(setOutcome("SHOW", '<qti-base-value base-type="identifier">go</qti-base-value>'));
+const CONTROL = '<qti-item-session-control show-feedback="true" show-solution="true" allow-comment="true"/>';
+
+/** A test of the leaky item `a` and a plain item `b`, whose solution its own item session control keeps from the candidate. */
+function leakyEngine(head = CONTROL): Engine {
+  const noSolution =
+    '<qti-assessment-item-ref identifier="b" href="b.xml"><qti-item-session-control show-solution="false"/></qti-assessment-item-ref>';
+  return engineOf(
+    `${SHOW}${rubricBlock("candidate", "TEST-RUBRIC-OK")}${rubricBlock("scorer", "LEAK-TEST-RUBRIC-SCORER")}${testPart(
+      "P",
+      `${rubricBlock("candidate", "PART-RUBRIC-OK")}${section("S", rubricBlock("candidate", "SECTION-RUBRIC-OK") + rubricBlock("author", "LEAK-SECTION-RUBRIC-AUTHOR") + refs("a") + noSolution)}`,
+      "nonlinear",
+      "individual",
+      head,
+    )}${SET_SHOW}${feedback("during", "go", "DURING-OK")}${feedback("atEnd", "go", "AT-END-OK")}${feedback("atEnd", "never", "LEAK-TEST-FEEDBACK")}`,
+    { "a.xml": leakyItem() },
+  );
+}
+
+describe("Engine.view", () => {
+  it("[E19] names the test and the test part, and maps a nonlinear part with every item and the reach of a move", () => {
+    const engine = engineOf(
+      testPart(
+        "P",
+        section("S", refs("a")) + section("U", refs("b"), 'visible="false"') + section("V", refs("c")),
+        "nonlinear",
+      ),
+    );
+    const { state } = begun(engine);
+    const first = engine.view(state, 0);
+    expect([first.status, first.test, first.part]).toEqual([
+      "in-progress",
+      { identifier: "T", title: "T" },
+      { identifier: "P", navigationMode: "nonlinear", submissionMode: "individual" },
+    ]);
+    // The invisible section U has no entry of its own; its item stands at the depth of the section above.
+    expect(first.navigation).toEqual([
+      { kind: "section", identifier: "S", title: "S", depth: 0 },
+      { kind: "item", key: key("a"), title: "Item", depth: 1, status: "interacting", current: true, reachable: false },
+      { kind: "item", key: key("b"), title: "Item", depth: 0, status: "initial", current: false, reachable: true },
+      { kind: "section", identifier: "V", title: "V", depth: 0 },
+      { kind: "item", key: key("c"), title: "Item", depth: 1, status: "initial", current: false, reachable: true },
+    ]);
+    const moved = played(engine, state, moveTo(key("c"), 1));
+    expect(
+      engine
+        .view(moved.state, 1)
+        .navigation.flatMap((entry) => (entry.kind === "item" ? [[entry.key.ref, entry.status, entry.reachable]] : [])),
+    ).toEqual([
+      ["a", "suspended", true],
+      ["b", "initial", true],
+      ["c", "interacting", false],
+    ]);
+  });
+
+  it("[E19][B26] maps a linear part with the items presented so far, none of them reachable", () => {
+    const engine = engineOf(testPart("P", section("S", refs("a", "b", "c")), "linear"));
+    const { state } = begun(engine);
+    const entries = (view: CandidateView): string[] =>
+      view.navigation.flatMap((entry) =>
+        entry.kind === "item" ? [`${entry.key.ref} ${entry.status} ${entry.current} ${entry.reachable}`] : [],
+      );
+    expect(entries(engine.view(state, 0))).toEqual(["a interacting true false"]);
+    const next = played(engine, state, on("submit", "a", 1), moveTo("next", 2));
+    expect(entries(engine.view(next.state, 2))).toEqual(["a closed false false", "b interacting true false"]);
+  });
+
+  it("[E19] shows the item after resolution: printed variables, feedback, template content, hidden choices and the order of the choices", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine, { seed: 3 });
+    const item = engine.view(state, 0).current;
+    if (item === undefined) return fail("No item.");
+    expect([item.key, item.title, item.label, item.language, item.timeDependent]).toEqual([
+      key("a"),
+      "Item",
+      "Question",
+      "id",
+      true,
+    ]);
+    const body = textOf(item.body);
+    expect(body).toContain("ITEM-RUBRIC-OK");
+    expect(body).toContain('"value":"3"');
+    for (const hidden of [
+      "FEEDBACK-OK",
+      "LEAK-HIDDEN-FEEDBACK",
+      "LEAK-HIDDEN-TEMPLATE",
+      "LEAK-HIDDEN-CHOICE",
+      "SCORER",
+    ]) {
+      expect(body).not.toContain(hidden);
+    }
+    // The choices stand in the body in the order of the descriptor, which is the order the session drew.
+    const [choices] = item.interactions;
+    const order = choices?.choices.map(({ identifier }) => identifier) ?? [];
+    expect([...order].sort()).toEqual(["A", "B", "D"]);
+    expect(order).not.toEqual(["A", "B", "D"]);
+    const inBody = [...body.matchAll(/"identifier":"([A-D])","extensions"/g)].map((match) => match[1]);
+    expect(inBody).toEqual(order);
+    expect(order).toEqual(
+      sessionOf(state, "a")
+        .choiceOrders.get("RESPONSE")?.[0]
+        ?.filter((each) => each !== "C"),
+    );
+    expect(item.responses).toEqual(
+      new Map([
+        ["RESPONSE", null],
+        ["TEXT", null],
+      ]),
+    );
+    expect([item.numAttempts, item.attemptsLeft, item.modalFeedback, item.status]).toEqual([1, 1, [], "interacting"]);
+  });
+
+  it("[E19][E20] shows the feedback and the modal feedback only once the outcomes select them, and the submitted responses", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    const wrong = played(engine, state, answer("a", "A", 1), on("submit", "a", 2));
+    const afterWrong = engine.view(wrong.state, 2).current;
+    expect(textOf(afterWrong?.body)).not.toContain("FEEDBACK-OK");
+    expect([afterWrong?.status, afterWrong?.modalFeedback, afterWrong?.attemptsLeft]).toEqual(["closed", [], 0]);
+    const right = played(engine, state, answer("a", "B", 1), on("submit", "a", 2));
+    const afterRight = engine.view(right.state, 2).current;
+    expect(textOf(afterRight?.body)).toContain("FEEDBACK-OK");
+    expect(textOf(afterRight?.modalFeedback)).toContain("MODAL-OK");
+    expect(afterRight?.responses.get("RESPONSE")).toEqual(identifier("B"));
+    expect(leaksIn(engine.view(right.state, 2))).toEqual([]);
+  });
+
+  it("[E19] shows the drafts while the attempt is open, and the stored states of portable custom interactions", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+      <qti-context-declaration identifier="LANG" cardinality="single" base-type="string"><qti-default-value><qti-value>id</qti-value></qti-default-value></qti-context-declaration>
+      <qti-template-declaration identifier="TV" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+      <qti-item-body><qti-portable-custom-interaction response-identifier="RESPONSE" custom-interaction-type-identifier="urn:fdc:example.com:pci:any" module="any"><qti-interaction-markup><p>Any</p></qti-interaction-markup><qti-template-variable template-identifier="TV"/><qti-context-variable identifier="LANG"/></qti-portable-custom-interaction></qti-item-body>`,
+    );
+    const engine = engineOf(testPart("P", section("S", refs("a")), "nonlinear"), { "a.xml": item });
+    const { state } = begun(engine);
+    const before = engine.view(state, 0).current?.pci;
+    expect(before).toEqual(
+      new Map([
+        ["RESPONSE", { templateValues: new Map([["TV", integer(7)]]), contextValues: new Map([["LANG", text("id")]]) }],
+      ]),
+    );
+    const set = played(engine, state, {
+      type: "set-responses",
+      item: key("a"),
+      responses: new Map([["RESPONSE", text("draft")]]),
+      pciStates: new Map([["RESPONSE", '{"strokes":[1,2]}']]),
+      at: 1,
+    });
+    const after = engine.view(set.state, 1).current;
+    expect(after?.responses).toEqual(new Map([["RESPONSE", text("draft")]]));
+    expect(after?.pci.get("RESPONSE")?.state).toBe('{"strokes":[1,2]}');
+  });
+
+  it("[E19][F-m25] gives the rubric of the test, the test part and the sections top down for the candidate, and the test feedback", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    const view = engine.view(state, 0);
+    const rubric = textOf(view.rubric);
+    const order = ["TEST-RUBRIC-OK", "PART-RUBRIC-OK", "SECTION-RUBRIC-OK"].map((each) => rubric.indexOf(each));
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((first, second) => first - second));
+    expect(rubric).not.toContain("LEAK");
+    // The feedback `during` waits for the outcome that outcome processing sets after the first submission.
+    expect(view.testFeedback).toEqual([]);
+    const submitted = played(engine, state, on("submit", "a", 1));
+    expect(textOf(engine.view(submitted.state, 1).testFeedback)).toContain("DURING-OK");
+    const ended = played(engine, submitted.state, { type: "end-test", at: 2 });
+    const last = engine.view(ended.state, 2);
+    expect([last.status, last.part, last.current, last.navigation, last.timers, last.actions]).toEqual([
+      "ended",
+      undefined,
+      undefined,
+      [],
+      [],
+      [],
+    ]);
+    expect(textOf(last.testFeedback)).toContain("AT-END-OK");
+    expect(textOf(last.testFeedback)).not.toContain("DURING-OK");
+    expect(leaksIn(last)).toEqual([]);
+  });
+
+  it("[E19][E21] shows the correct responses in the solution state and nowhere else, and only when the control shows the solution", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    const closed = played(engine, state, answer("a", "A", 1), on("submit", "a", 2));
+    expect(leaksIn(engine.view(closed.state, 2))).toEqual([]);
+    const solved = played(engine, closed.state, { type: "solution", item: key("a"), at: 3 });
+    const view = engine.view(solved.state, 3);
+    expect(view.current?.status).toBe("solution");
+    expect(view.current?.responses).toEqual(
+      new Map([
+        ["RESPONSE", identifier("B")],
+        ["TEXT", text("LEAK-CORRECT-TEXT")],
+      ]),
+    );
+    // Only the correct response of the text appears; the mapping, the outcomes and the template values never do.
+    expect(leaksIn(view)).toEqual(["LEAK-CORRECT-TEXT"]);
+    const reviewed = played(engine, solved.state, { type: "review", item: key("a"), at: 4 });
+    expect(leaksIn(engine.view(reviewed.state, 4))).toEqual([]);
+    // Item b keeps its solution from the candidate.
+    const other = played(engine, reviewed.state, moveTo(key("b"), 5), on("submit", "b", 6));
+    expect(engine.view(other.state, 6).actions).not.toContain("solution");
+    expect(refusalOf(engine, other.state, { type: "solution", item: key("b"), at: 7 }).code).toBe(
+      "solution-not-allowed",
+    );
+  });
+
+  it("[E19][E7] shows the timers, and a maximum time that passed as applied, as a time action would apply it", () => {
+    const content = `<qti-time-limits max-time="60"/>${testPart(
+      "P",
+      section("S", itemRef("a", '<qti-time-limits max-time="20"/>') + refs("b")),
+      "linear",
+      "individual",
+      '<qti-time-limits min-time="10"/>',
+    )}`;
+    const engine = engineOf(content);
+    const { state } = begun(engine, { at: 1_000 });
+    expect(engine.view(state, 4_000).timers).toEqual([
+      { scope: "test", identifier: "T", remaining: 57_000, late: false },
+      { scope: "part", identifier: "P", minimumRemaining: 7_000, late: false },
+      { scope: "item", identifier: "a", remaining: 17_000, late: false },
+    ]);
+    // The view at 25 s: the item a timed out at 21 s, so the candidate is in b, as after a time action.
+    const view = engine.view(state, 25_000);
+    const timed = played(engine, state, { type: "time", at: 25_000 });
+    expect(view).toEqual(engine.view(timed.state, 25_000));
+    expect(view.current?.key).toEqual(key("b"));
+    expect(view.navigation.flatMap((entry) => (entry.kind === "item" ? [[entry.key.ref, entry.status]] : []))).toEqual([
+      ["a", "closed"],
+      ["b", "interacting"],
+    ]);
+    // A time before the latest step counts as that step, and the state stays as it was.
+    const written = serializeState(state);
+    expect(engine.view(state, -5)).toEqual(engine.view(state, state.at));
+    expect(serializeState(state)).toBe(written);
+    const ended = engine.view(state, 70_000);
+    expect([ended.status, ended.current, ended.actions]).toEqual(["ended", undefined, []]);
+  });
+
+  it("[E19][E7] marks a scope late when its maximum time passed and late submission is allowed", () => {
+    const engine = engineOf(
+      testPart(
+        "P",
+        section("S", itemRef("a", '<qti-time-limits max-time="10" allow-late-submission="true"/>')),
+        "nonlinear",
+      ),
+    );
+    const { state } = begun(engine);
+    expect(engine.view(state, 4_000).timers).toEqual([
+      { scope: "item", identifier: "a", remaining: 6_000, late: false },
+    ]);
+    const late = engine.view(state, 15_000);
+    expect(late.timers).toEqual([{ scope: "item", identifier: "a", remaining: 0, late: true }]);
+    expect(late.status).toBe("in-progress");
+    expect(late.actions).toContain("submit");
+  });
+
+  it("[E19][E8] shows a suspended session with no content and the action resume only", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    const paused = played(engine, state, { type: "suspend", at: 5 });
+    const view = engine.view(paused.state, 50);
+    expect([
+      view.status,
+      view.current,
+      view.navigation,
+      view.rubric,
+      view.testFeedback,
+      view.timers,
+      view.actions,
+    ]).toEqual(["suspended", undefined, [], [], [], [], ["resume"]]);
+    expect(view.part).toEqual({ identifier: "P", navigationMode: "nonlinear", submissionMode: "individual" });
+    expect(engine.view(played(engine, paused.state, { type: "resume", at: 60 }).state, 60).current?.status).toBe(
+      "interacting",
+    );
+  });
+
+  it("[E19] lists the actions the state allows, which Engine.apply refuses when they are left out", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    expect(engine.view(state, 0).actions).toEqual([
+      "set-responses",
+      "submit",
+      "skip",
+      "comment",
+      "move",
+      "end-part",
+      "end-test",
+      "suspend",
+    ]);
+    const closed = played(engine, state, answer("a", "A", 1), on("submit", "a", 2));
+    expect(engine.view(closed.state, 2).actions).toEqual([
+      "review",
+      "solution",
+      "comment",
+      "move",
+      "end-part",
+      "end-test",
+      "suspend",
+    ]);
+    const together = engineOf(testPart("P", section("S", refs("a")), "nonlinear", "simultaneous"));
+    expect(together.view(begun(together).state, 0).actions).toEqual([
+      "set-responses",
+      "move",
+      "end-part",
+      "end-test",
+      "suspend",
+    ]);
+  });
+
+  it("[E19][R2] lists the supports with their state and settings, and the settings of a prohibited one stay out", () => {
+    const engine = leakyEngine();
+    const pnp = pnpOf(
+      '<line-reader/><magnification><all-content zoom-amount="2"/></magnification><braille/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><braille/></prohibit-set>',
+    );
+    const { state } = begun(engine, { pnp, universalSupports: ["calculator-on-screen"] });
+    const { supports } = engine.view(state, 0);
+    expect(supports.map(({ name, state: supportState, active }) => [name, supportState, active])).toEqual([
+      ["line-reader", "active", true],
+      ["magnification", "assigned", true],
+      ["braille", "prohibited", false],
+      ["dictionary-on-screen", "option", false],
+      ["calculator-on-screen", "option", false],
+    ]);
+    expect(supports[0]?.settings).toEqual({ name: "line-reader", replaceAccessModes: [] });
+    expect(supports[1]?.settings).toMatchObject({ name: "magnification", allContent: { zoomAmount: 2 } });
+    expect(supports[2]).not.toHaveProperty("settings");
+    expect(supports[3]).not.toHaveProperty("settings");
+    const toggled = played(engine, state, { type: "support", name: "dictionary-on-screen", active: true, at: 1 });
+    expect(engine.view(toggled.state, 1).supports[3]).toEqual({
+      name: "dictionary-on-screen",
+      state: "option",
+      active: true,
+    });
+    expect(engine.view(state, 0).actions).toContain("support");
+  });
+
+  it("[E19][R4][R5] shows the variant presented, the hazards with the flag of those avoided, and the link to a tool", () => {
+    const resolved = withVariants(["flashing", "sound"], [{ resource: "v", drd: drd([], ["en"]) }]);
+    const link: LtiLink = {
+      title: "Lab",
+      description: "A simulator",
+      launchUrl: "http://tool.example/launch",
+      custom: new Map([["mode", "exam"]]),
+      extensions: [],
+    };
+    const lti: ResolvedItem = {
+      resource: "lab",
+      deliverable: { kind: "lti", identifier: "lab", link },
+      hazards: [],
+      variants: [],
+    };
+    const engine = engineOf(testPart("P", section("S", refs("a", "b", "c")), "nonlinear"), {
+      "a.xml": resolved,
+      "b.xml": lti,
+      "c.xml": withVariants(["flashing"], []),
+    });
+    // The variant has no hazard and the language asked for, so it is presented in place of the item.
+    const avoids = begun(engine, {
+      pnp: pnpOf('<hazard-avoidance>sound</hazard-avoidance><item-translation xml:lang="en"/>'),
+    });
+    const variant = engine.view(avoids.state, 0).current;
+    expect([variant?.variant, variant?.hazards]).toEqual([{ resource: "v", language: "en" }, []]);
+    const plain = engine.view(begun(engine).state, 0).current;
+    expect([plain?.variant, plain?.hazards]).toEqual([
+      undefined,
+      [
+        { hazard: "flashing", avoided: false },
+        { hazard: "sound", avoided: false },
+      ],
+    ]);
+    // No variant of c is free of the hazard, so it is presented with the hazard flagged as avoided.
+    const flagged = played(
+      engine,
+      begun(engine, { pnp: pnpOf("<hazard-avoidance>flashing</hazard-avoidance>") }).state,
+      moveTo(key("c"), 1),
+    );
+    expect(engine.view(flagged.state, 1).current?.hazards).toEqual([{ hazard: "flashing", avoided: true }]);
+    const tool = engine.view(played(engine, avoids.state, moveTo(key("b"), 1)).state, 1).current;
+    expect(tool?.lti).toEqual({
+      title: "Lab",
+      description: "A simulator",
+      launchUrl: "http://tool.example/launch",
+      custom: new Map([["mode", "exam"]]),
+    });
+    expect([tool?.title, tool?.body, tool?.interactions, tool?.responses]).toEqual(["Lab", [], [], new Map()]);
+  });
+
+  it("[E19][B62] shows the stimuli of the item, and the stylesheets of both as package paths", () => {
+    const stimulus = readAsi(
+      `<qti-assessment-stimulus xmlns="${ASI_NAMESPACE}" identifier="passage" title="Passage"><qti-stylesheet href="s.css" type="text/css"/><qti-stimulus-body><p>Read <img src="pic.png" alt="a picture"/></p></qti-stimulus-body></qti-assessment-stimulus>`,
+    );
+    if (stimulus.kind !== "stimulus") return fail(`Expected a stimulus, found ${stimulus.kind}.`);
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-assessment-stimulus-ref identifier="passage" href="../stimuli/passage.xml"/>
+      <qti-stylesheet href="../css/item.css" type="text/css"/>
+      <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>`,
+    );
+    const calls: [string, string][] = [];
+    const engine = createEngine({
+      kind: "test",
+      test: testDocument(
+        testPart("P", section("S", '<qti-assessment-item-ref identifier="a" href="items/a.xml"/>'), "nonlinear"),
+      ),
+      base: "test.xml",
+      resolvers: {
+        items: () => resolution(item),
+        sections: NO_SECTIONS.sections,
+        stimuli: (href, base) => {
+          calls.push([href, base]);
+          return stimulus.stimulus;
+        },
+      },
+    });
+    expect(calls).toContainEqual(["../stimuli/passage.xml", "items/a.xml"]);
+    const view = engine.view(begun(engine).state, 0).current;
+    expect(view?.stylesheets).toEqual(["css/item.css", "stimuli/s.css"]);
+    expect(view?.stimuli.map(({ identifier: id }) => id)).toEqual(["passage"]);
+    expect(textOf(view?.stimuli[0]?.body)).toContain("pic.png");
+  });
+
+  it("[E19][E12] delivers a standalone item, with the resolver of its stimuli when the host gives one", () => {
+    const engine = createEngine({ kind: "item", item: leakyItem(), base: "item.xml" });
+    const { state } = begun(engine);
+    const view = engine.view(state, 0);
+    expect([view.test, view.part?.identifier, view.current?.key]).toEqual([
+      { identifier: "item", title: "item" },
+      "item-part",
+      key("item"),
+    ]);
+    expect(leaksIn(view)).toEqual([]);
+  });
+
+  it("[E20] holds the view to the properties of its form: nothing of the item model but what the view names", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    const view = engine.view(state, 0);
+    const names = new Set<string>();
+    const collect = (value: unknown): void => {
+      if (Array.isArray(value)) value.forEach(collect);
+      else if (typeof value === "object" && value !== null) {
+        for (const [name, member] of Object.entries(value)) {
+          names.add(name);
+          collect(member);
+        }
+      }
+    };
+    collect(viewToJson(view));
+    for (const forbidden of [
+      "correctResponse",
+      "mapping",
+      "areaMapping",
+      "lookupTable",
+      "responseProcessing",
+      "templateProcessing",
+      "outcomeDeclarations",
+      "responseDeclarations",
+      "templateDeclarations",
+      "contextDeclarations",
+      "defaultValue",
+      "outcomes",
+      "templates",
+      "correctResponses",
+    ]) {
+      expect(names.has(forbidden), forbidden).toBe(false);
+    }
+  });
+
+  it("[E20] gives the same view from a state read back from its JSON form, also on another device", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine, { seed: 9 });
+    const set = played(engine, state, {
+      type: "set-responses",
+      item: key("a"),
+      responses: new Map([["TEXT", text("x")]]),
+      at: 1,
+    });
+    expect(engine.view(deserializeState(serializeState(set.state)), 5)).toEqual(engine.view(set.state, 5));
+  });
+
+  it("refuses arguments of other types", () => {
+    const engine = leakyEngine();
+    const { state } = begun(engine);
+    expect(() => engine.view(json("null"), 0)).toThrow(
+      "The state must be an object from Engine.start or deserializeState, found null.",
+    );
+    expect(() => engine.view(state, json('"0"'))).toThrow('The time now must be a finite number, found "0".');
   });
 });
 
@@ -3092,6 +3663,380 @@ describe("sessionControl", () => {
   });
 });
 
+/** A value or NULL of any cardinality and base type. */
+const anyValue = fc.oneof(
+  ...(["single", "multiple", "ordered"] as const).flatMap((cardinality) =>
+    BASE_TYPES.map((type) => valueArbitrary(cardinality, type)),
+  ),
+  recordValue,
+);
+
+/** Writes a view or an action as JSON text and reads the text back, as a server and its client do. */
+const throughText = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
+
+describe("viewToJson", () => {
+  const engine = leakyEngine();
+  const { state } = begun(engine, { seed: 3 });
+  const closed = played(engine, state, answer("a", "B", 1), on("submit", "a", 2));
+  const solved = played(engine, closed.state, { type: "solution", item: key("a"), at: 3 });
+  const views = (): CandidateView[] => [
+    engine.view(state, 0),
+    engine.view(closed.state, 2),
+    engine.view(solved.state, 3),
+    engine.view(played(engine, state, { type: "suspend", at: 1 }).state, 1),
+    engine.view(played(engine, closed.state, { type: "end-test", at: 3 }).state, 3),
+  ];
+
+  it("[E30] reads back, from the JSON text, the view in every state of a session", () => {
+    for (const view of views()) expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+  });
+
+  it("[E30][R1] writes values as wire values and maps as arrays of entries, NULL as null", () => {
+    const current = engine.view(closed.state, 2).current;
+    const written = JSON.parse(JSON.stringify(viewToJson(engine.view(closed.state, 2)))).current;
+    expect(written.responses).toEqual([
+      ["RESPONSE", { cardinality: "single", baseType: "identifier", value: { base: { identifier: "B" } } }],
+      ["TEXT", null],
+    ]);
+    expect(written.pci).toEqual([]);
+    expect(current?.responses.get("TEXT")).toBeNull();
+  });
+
+  it("[E30] keeps an ordered container apart from a multiple one, and the identifier __proto__ as data", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="__proto__" cardinality="ordered" base-type="identifier"/>
+      <qti-response-declaration identifier="MANY" cardinality="multiple" base-type="identifier"/>
+      <qti-item-body>
+        <qti-order-interaction response-identifier="__proto__">${CHOICES}</qti-order-interaction>
+        <qti-choice-interaction response-identifier="MANY" max-choices="0">${CHOICES}</qti-choice-interaction>
+      </qti-item-body>`,
+    );
+    const one = engineOf(testPart("P", section("S", refs("a")), "nonlinear"), { "a.xml": item });
+    const set = played(one, begun(one).state, {
+      type: "set-responses",
+      item: key("a"),
+      responses: new Map<string, Value | null>([
+        ["__proto__", container("ordered", "identifier", ["B", "A"])],
+        ["MANY", container("multiple", "identifier", ["B", "A"])],
+      ]),
+      at: 1,
+    });
+    const view = one.view(set.state, 1);
+    const read = viewFromJson(throughText(viewToJson(view)));
+    expect(read).toEqual(view);
+    expect(read.current?.responses.get("__proto__")).toEqual(container("ordered", "identifier", ["B", "A"]));
+    expect(read.current?.responses.get("MANY")).toEqual(container("multiple", "identifier", ["B", "A"]));
+  });
+
+  it("[E30] reads back any value of a response, of any cardinality and base type", () => {
+    const view = engine.view(state, 0);
+    const current = view.current ?? fail("No item.");
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(fc.tuple(identifierArbitrary, anyValue), { selector: ([name]) => name }),
+        (entries) => {
+          const given: CandidateView = { ...view, current: { ...current, responses: new Map(entries) } };
+          expect(viewFromJson(throughText(viewToJson(given)))).toEqual(given);
+        },
+      ),
+    );
+  });
+
+  it("[E20] writes the properties of a view and no other, and refuses a view that has another", () => {
+    const view = engine.view(state, 0);
+    expect(() => viewToJson(Object.assign({}, view, { correct: "LEAK-X" }))).toThrow(
+      /^The view has the properties "status", "test", .*, found "correct"\.$/,
+    );
+    const item = view.current ?? fail("No item.");
+    expect(() => viewToJson({ ...view, current: Object.assign({}, item, { correctResponses: [] }) })).toThrow(
+      /^The item of the view has the properties .*, found "correctResponses"\.$/,
+    );
+    expect(() =>
+      viewToJson({
+        ...view,
+        timers: [Object.assign({}, { scope: "test", identifier: "T", late: false } as const, { key: 1 })],
+      }),
+    ).toThrow(
+      /^A timer has the properties "scope", "identifier", "late", "remaining" and "minimumRemaining", found "key"\.$/,
+    );
+  });
+
+  it("[E30] refuses JSON that is not the form of a view", () => {
+    const good = JSON.parse(JSON.stringify(viewToJson(engine.view(state, 0))));
+    const change = (edit: (view: Record<string, unknown>) => void): unknown => {
+      const copy = JSON.parse(JSON.stringify(good));
+      edit(copy);
+      return copy;
+    };
+    expect(() => viewFromJson(json("null"))).toThrow("The view must be an object, found null.");
+    expect(() => viewFromJson(change((view) => delete view.timers))).toThrow(
+      'The view must have the property "timers".',
+    );
+    expect(() => viewFromJson(change((view) => (view.status = "paused")))).toThrow(
+      'The status of the view must be "in-progress", "suspended" or "ended", found "paused".',
+    );
+    expect(() => viewFromJson(change((view) => (view.answer = 1)))).toThrow(/found "answer"\.$/);
+    expect(() => viewFromJson(change((view) => (view.actions = ["time"])))).toThrow(
+      /^An action of the view must be "set-responses", .*, found "time"\.$/,
+    );
+    expect(() => viewFromJson(change((view) => (view.rubric = [{ text: "no kind" }])))).toThrow(
+      "The rubric of the view must hold nodes, each an object with a string kind, found an object.",
+    );
+    expect(() => viewFromJson(change((view) => (view.rubric = [{ kind: "p", children: [null] }])))).toThrow(
+      /^The rubric of the view must hold only strings, finite numbers, booleans, arrays and objects, found null\.$/,
+    );
+    expect(() =>
+      viewFromJson(change((view) => (view.supports = [{ name: "chocolate", state: "option", active: false }]))),
+    ).toThrow('The name of a support must be the name of a support of a PNP, found "chocolate".');
+    expect(() =>
+      viewFromJson(
+        change((view) => {
+          const item = view.current as { responses: unknown[] };
+          item.responses = [item.responses[0], item.responses[0]];
+        }),
+      ),
+    ).toThrow('The responses of the item has the identifier "RESPONSE" twice.');
+    expect(() =>
+      viewFromJson(change((view) => ((view.current as { interactions: unknown[] }).interactions = [{ kind: "x" }]))),
+    ).toThrow(/^The response identifier of an interaction descriptor must be a string/);
+  });
+
+  it("[E30] refuses content that JSON cannot carry or that nests too deep", () => {
+    const view = engine.view(state, 0);
+    const node = (value: unknown): CandidateView => ({ ...view, rubric: json(JSON.stringify([{ kind: "p", value }])) });
+    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: Number.NaN } as never] })).toThrow(
+      "The rubric of the view holds NaN, which JSON cannot carry.",
+    );
+    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: new Map() } as never] })).toThrow(
+      /^The rubric of the view must hold only strings, finite numbers, booleans, arrays and objects, found an object\.$/,
+    );
+    let deep: unknown = "x";
+    for (let level = 0; level < 300; level++) deep = [deep];
+    expect(() => viewToJson({ ...view, rubric: [{ kind: "p", deep } as never] })).toThrow(
+      "The rubric of the view nests deeper than 256 levels.",
+    );
+    expect(() => viewFromJson(json('{"__proto__":1}'))).toThrow(/^The view has the properties/);
+    expect(node("fine").rubric).toHaveLength(1);
+  });
+
+  it("refuses a view of other types", () => {
+    expect(() => viewToJson(json("null"))).toThrow("The view must be an object, found null.");
+    expect(() => viewToJson(json('{"status":"in-progress"}'))).toThrow(/^The view must have the property/);
+  });
+});
+
+describe("parseCandidateAction", () => {
+  const item = key("a");
+  const actions: CandidateAction[] = [
+    {
+      type: "set-responses",
+      item,
+      responses: new Map<string, Value | null>([
+        ["RESPONSE", identifier("B")],
+        ["TEXT", null],
+      ]),
+    },
+    {
+      type: "set-responses",
+      item: key("a", 2),
+      responses: new Map(),
+      pciStates: new Map([["__proto__", '{"state":"é"}']]),
+    },
+    { type: "submit", item },
+    { type: "skip", item },
+    { type: "next-attempt", item },
+    { type: "review", item },
+    { type: "solution", item },
+    { type: "end-attempt", item, interaction: "HINT" },
+    { type: "comment", item, text: "The question is ambiguous" },
+    { type: "move", to: "next" },
+    { type: "move", to: "previous" },
+    { type: "move", to: key("b", 3) },
+    { type: "support", name: "line-reader", active: true },
+    { type: "support", name: "ext:highlighter", active: false },
+    { type: "end-part" },
+    { type: "end-test" },
+    { type: "suspend" },
+    { type: "resume" },
+  ];
+
+  it("[E22][E30] reads back, from the JSON text, each action of the candidate that actionToJson wrote", () => {
+    for (const action of actions) expect(parseCandidateAction(throughText(actionToJson(action)))).toEqual(action);
+  });
+
+  it("[E30] writes an action as plain data: values as wire values, maps as entries, and no time", () => {
+    const [set] = actions;
+    if (set === undefined) return fail("No action.");
+    expect(actionToJson(set)).toEqual({
+      type: "set-responses",
+      item: { ref: "a", instance: 1 },
+      responses: [
+        ["RESPONSE", { cardinality: "single", baseType: "identifier", value: { base: { identifier: "B" } } }],
+        ["TEXT", null],
+      ],
+    });
+    expect(actionToJson({ type: "move", to: key("b", 3) })).toEqual({ type: "move", to: { ref: "b", instance: 3 } });
+    expect(actionToJson(Object.assign({}, { type: "submit", item } as const, { at: 12 }))).toEqual({
+      type: "submit",
+      item: { ref: "a", instance: 1 },
+    });
+  });
+
+  it("[E22] refuses the actions of the host, and any action with a time", () => {
+    for (const type of ["time", "supply-scores", "cat-response"]) {
+      expect(() => parseCandidateAction({ type, at: 1 })).toThrow(
+        `The type "${type}" is an action of the host, and a candidate does not send it; the type of an action of a candidate is "set-responses",`,
+      );
+    }
+    expect(() => parseCandidateAction({ type: "submit", item: { ref: "a", instance: 1 }, at: 1 })).toThrow(
+      'A submit action has the properties "type" and "item", found "at".',
+    );
+    expect(() => parseCandidateAction({ type: "suspend", at: 1 })).toThrow(
+      'A suspend action has the property "type", found "at".',
+    );
+  });
+
+  it("[E22] refuses input that is not an action, naming what is wrong", () => {
+    const refuses = (input: string, message: string | RegExp): void => {
+      expect(() => parseCandidateAction(json(input))).toThrow(message);
+    };
+    refuses("null", "The action must be an object with a type, found null.");
+    refuses("[]", "The action must be an object with a type, found an array.");
+    refuses('{"type":"dance"}', /^The type of the action must be "set-responses", .* or "resume", found "dance"\.$/);
+    refuses('{"type":"submit"}', 'A submit action must have the property "item".');
+    refuses(
+      '{"type":"submit","item":{"ref":"a","instance":0}}',
+      "The instance of the item instance must be a positive integer, found 0.",
+    );
+    refuses('{"type":"submit","item":{"ref":"a","instance":1},"answer":"B"}', /found "answer"\.$/);
+    refuses(
+      '{"type":"comment","item":{"ref":"a","instance":1},"text":5}',
+      "The text of comment must be a string, found 5.",
+    );
+    refuses(
+      '{"type":"end-attempt","item":{"ref":"a","instance":1}}',
+      'An end-attempt action must have the property "interaction".',
+    );
+    refuses(
+      '{"type":"move","to":"left"}',
+      'The place of move must be "next", "previous" or an item instance, found "left".',
+    );
+    refuses('{"type":"move","to":5}', "The item instance must be an object with a ref and an instance, found 5.");
+    refuses(
+      '{"type":"support","name":"chocolate","active":true}',
+      'The name of support must be the name of a support of a PNP, found "chocolate".',
+    );
+    refuses(
+      '{"type":"support","name":"line-reader","active":"yes"}',
+      'The active of support must be a boolean, found "yes".',
+    );
+    refuses(
+      '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}',
+      "The responses of set-responses must be an array of entries, found an object.",
+    );
+    refuses(
+      '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",null],["R",null]]}',
+      'The responses of set-responses has the identifier "R" twice.',
+    );
+    refuses(
+      '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",{"cardinality":"single","baseType":"integer","value":{"base":{"integer":"x"}}}]]}',
+      /integer/,
+    );
+    refuses(
+      '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[],"pciStates":[["R",5]]}',
+      'The PCI state of "R" must be a string, found 5.',
+    );
+  });
+
+  it("[E22] refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
+    const comment = (text: string): unknown => actionToJson({ type: "comment", item, text });
+    expect(DEFAULT_ACTION_LIMITS).toEqual({ maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 });
+    expect(parseCandidateAction(comment("x".repeat(100)), { maxActionSize: 200 })).toMatchObject({ type: "comment" });
+    expect(() => parseCandidateAction(comment("x".repeat(300)), { maxActionSize: 200 })).toThrow(
+      "The action is larger than the limit maxActionSize of 200.",
+    );
+    expect(() => parseCandidateAction(comment("x".repeat(DEFAULT_ACTION_LIMITS.maxActionSize)))).toThrow(
+      "The action is larger than the limit maxActionSize of 4194304.",
+    );
+    const pci = (state: string): unknown =>
+      actionToJson({ type: "set-responses", item, responses: new Map(), pciStates: new Map([["P", state]]) });
+    expect(parseCandidateAction(pci("x".repeat(10)), { maxPciStateLength: 10 })).toMatchObject({
+      type: "set-responses",
+    });
+    expect(() => parseCandidateAction(pci("x".repeat(11)), { maxPciStateLength: 10 })).toThrow(
+      'The PCI state of "P" has 11 code units, more than the limit maxPciStateLength of 10.',
+    );
+    expect(() => parseCandidateAction(pci("x".repeat(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1)))).toThrow(
+      /more than the limit maxPciStateLength of 1048576\.$/,
+    );
+    const many = json<unknown>(
+      JSON.stringify({
+        type: "set-responses",
+        item: { ref: "a", instance: 1 },
+        responses: Array.from({ length: 300 }, (_, at) => [`R${at}`, null]),
+      }),
+    );
+    expect(() => parseCandidateAction(many, { maxActionSize: 1_000 })).toThrow(
+      "The action is larger than the limit maxActionSize of 1000.",
+    );
+    expect(parseCandidateAction(many)).toMatchObject({ type: "set-responses" });
+  });
+
+  it("[E22] counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
+    let deep: unknown = [];
+    for (let level = 0; level < 200_000; level++) deep = [deep];
+    expect(() => parseCandidateAction(deep)).toThrow("The action must be an object with a type, found an array.");
+    const cycle: unknown[] = [];
+    cycle.push(cycle);
+    expect(() => parseCandidateAction(cycle, { maxActionSize: 10_000 })).toThrow(
+      "The action is larger than the limit maxActionSize of 10000.",
+    );
+  });
+
+  it("refuses limits of other types", () => {
+    const input = actionToJson({ type: "end-test" });
+    expect(() => parseCandidateAction(input, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => parseCandidateAction(input, json('{"maxActionSize":"1"}'))).toThrow(
+      'The limit maxActionSize must be a positive integer, found "1".',
+    );
+    expect(() => parseCandidateAction(input, { maxPciStateLength: 0 })).toThrow(
+      "The limit maxPciStateLength must be a positive integer, found 0.",
+    );
+  });
+
+  it("[E22] stamps an action of a client on the server: the time is the server's, never earlier than the session's", () => {
+    const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
+    const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
+    const received = parseCandidateAction(throughText(actionToJson({ type: "submit", item: key("a") })));
+    const stamped = stamp(state, received, 3_000);
+    expect(stamped).toEqual({ type: "submit", item: key("a"), at: 5_000 });
+    const step = engine.apply(state, stamped);
+    expect(step.ok && step.state.items[0]?.session.status).toBe("closed");
+  });
+});
+
+describe("actionToJson", () => {
+  it("refuses an action of other types", () => {
+    expect(() => actionToJson(json("null"))).toThrow("The action must be an object with a type, found null.");
+    expect(() => actionToJson(json('{"type":"time"}'))).toThrow(
+      /^The type of the action must be "set-responses", .* or "resume", found "time"\.$/,
+    );
+    expect(() => actionToJson(json('{"type":"submit","item":{"ref":"a"}}'))).toThrow(
+      "The instance of the item instance must be a positive integer, found undefined.",
+    );
+    expect(() => actionToJson(json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}'))).toThrow(
+      "The responses of set-responses must be a Map from response identifier to value, found an object.",
+    );
+    expect(() =>
+      actionToJson({ type: "set-responses", item: key("a"), responses: new Map(), pciStates: json('{"R":"s"}') }),
+    ).toThrow("The pciStates of set-responses must be a Map from response identifier to state, found an object.");
+    expect(() => actionToJson(json('{"type":"comment","item":{"ref":"a","instance":1},"text":5}'))).toThrow(
+      "The text of comment must be a string, found 5.",
+    );
+  });
+});
+
 describe("stamp", () => {
   const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
 
@@ -3102,6 +4047,16 @@ describe("stamp", () => {
     expect(stamp(state, submit, 7_000)).toEqual({ ...submit, at: 7_000 });
     expect(engine.apply(state, stamp(state, submit, 3_000)).ok).toBe(true);
     expect(refusalOf(engine, state, { ...submit, at: 3_000 }).code).toBe("clock-regression");
+  });
+
+  it("[E22][E5] replaces a time the action carries, and refuses what is not an action of the engine", () => {
+    const { state } = begun(engine);
+    const submit = Object.assign({ type: "submit", item: key("a") } as const, { at: 1 });
+    expect(stamp(state, submit, 9)).toEqual({ type: "submit", item: key("a"), at: 9 });
+    expect(() => stamp(state, json('{"type":"fly"}'), 1)).toThrow(/^The type of the action must be /);
+    expect(() => stamp(state, json('{"type":"submit"}'), 1)).toThrow(
+      "The item instance must be an object with a ref and an instance, found undefined.",
+    );
   });
 
   it("refuses arguments of other types", () => {
@@ -3157,6 +4112,28 @@ describe("serializeState", () => {
       { type: "suspend", at: 26_000 },
     ).state;
   }
+
+  it("[E2][E28] keeps the settings of the supports, and refuses settings that do not fit their support", () => {
+    const engine = engineOf(testPart("P", section("S", refs("a")), "nonlinear"));
+    const pnp = pnpOf(
+      '<magnification><all-content zoom-amount="2"/></magnification><spoken><reading-type>computer-read-aloud</reading-type><speech-rate>150</speech-rate></spoken><activate-as-option-set><spoken/></activate-as-option-set>',
+    );
+    const { state } = begun(engine, { pnp });
+    const text = serializeState(state);
+    expect(deserializeState(text)).toEqual(state);
+    expect(state.supports.get("magnification")?.settings).toMatchObject({ allContent: { zoomAmount: 2 } });
+    const edited = (from: string, to: string): string => {
+      expect(text).toContain(from);
+      return text.replace(from, to);
+    };
+    expect(() => deserializeState(edited('"zoomAmount":2', '"zoomAmount":"two"'))).toThrow(DataError);
+    expect(() => deserializeState(edited('"name":"magnification"', '"name":"spoken"'))).toThrow(
+      'The settings of the support "magnification" must name a predefined support and have the name "magnification", found "spoken".',
+    );
+    expect(() => deserializeState(edited('"settings":{"name":"spoken"', '"settings":{"name":"ext:x"'))).toThrow(
+      DataError,
+    );
+  });
 
   it("[E2][E29] writes a state as JSON that reads back equal, with its variants, PCI states, supports and clocks", () => {
     const state = rich();
@@ -4403,6 +5380,207 @@ describe("properties", () => {
             moveTo(key("a"), 4),
           );
           expect(later.state.items[0]?.variant).toBe(chosen);
+        },
+      ),
+    );
+  });
+  /** The types of the refusals that the state decides, which an action the view lists never meets. */
+  const Structural: readonly RefusalCode[] = [
+    "ended",
+    "suspended",
+    "item-closed",
+    "attempts-exhausted",
+    "review-not-allowed",
+    "solution-not-allowed",
+    "comment-not-allowed",
+    "wrong-submission-mode",
+    "time-over",
+    "support-not-available",
+    "unknown-item",
+    "linear-backward",
+  ];
+
+  /** Where an action that the state does not allow changes nothing and is accepted: `next-attempt` during an attempt (INFO §7.19.1), `resume` of a session that runs. */
+  const NoChange: Partial<Record<CandidateAction["type"], (view: CandidateView) => boolean>> = {
+    "next-attempt": (view) => view.current?.status === "interacting",
+    resume: (view) => view.status !== "suspended",
+  };
+
+  /** An action of each type on an item instance, with whatever data it needs. */
+  function sampleOf(type: CandidateAction["type"], item: ItemKey): CandidateAction {
+    switch (type) {
+      case "set-responses":
+        return { type, item, responses: new Map() };
+      case "end-attempt":
+        return { type, item, interaction: "HINT" };
+      case "comment":
+        return { type, item, text: "A note" };
+      case "move":
+        return { type, to: "next" };
+      case "support":
+        return { type, name: "line-reader", active: true };
+      case "submit":
+      case "skip":
+      case "next-attempt":
+      case "review":
+      case "solution":
+        return { type, item };
+      case "end-part":
+      case "end-test":
+      case "suspend":
+      case "resume":
+        return { type };
+    }
+  }
+
+  it("[E19][E30] shows at every step a view that reads back equal from its JSON text and from a state read back", () => {
+    fc.assert(
+      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+        const engine = flowEngine(flow);
+        session(engine, seed, moves, (before, action, step) => {
+          const written = serializeState(before);
+          const states = step.ok ? [before, step.state] : [before];
+          for (const state of states) {
+            const view = engine.view(state, action.at);
+            expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+            expect(engine.view(deserializeState(serializeState(state)), action.at)).toEqual(view);
+            expect(view.status).toBe(engine.view(state, state.at).status === "ended" ? "ended" : view.status);
+          }
+          expect(serializeState(before)).toBe(written);
+        });
+      }),
+    );
+  });
+
+  it("[E22][E30] gives the same step to an action that reaches the engine through the JSON text of a server as to one applied on the device", () => {
+    fc.assert(
+      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+        const engine = flowEngine(flow);
+        session(engine, seed, moves, (before, action, step) => {
+          if (action.type === "time") return;
+          const received = parseCandidateAction(throughText(actionToJson(action)));
+          const stamped = stamp(before, received, action.at);
+          expect(stamped).toEqual(action);
+          expect(engine.apply(before, stamped)).toEqual(step);
+        });
+      }),
+    );
+  });
+
+  it("[E19] lists the actions the state allows: the engine refuses each type left out, and meets no refusal of the state in a type listed", () => {
+    fc.assert(
+      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+        const engine = flowEngine(flow);
+        session(engine, seed, moves, (before, action) => {
+          const view = engine.view(before, action.at);
+          const item = view.current?.key ?? before.current ?? key("none");
+          for (const type of CANDIDATE_ACTION_TYPES) {
+            const step = engine.apply(before, stamp(before, sampleOf(type, item), action.at));
+            if (view.actions.includes(type)) {
+              if (!step.ok) expect(Structural, `${type} is listed`).not.toContain(step.refusal.code);
+            } else if (!(NoChange[type]?.(view) ?? false)) {
+              expect(step.ok, `${type} is accepted though the view leaves it out`).toBe(false);
+            }
+          }
+          expect(view.actions.includes("resume")).toBe(view.status === "suspended");
+        });
+      }),
+    );
+  });
+
+  /** A move of the candidate in the leaky test, with the text it types and the milliseconds since the move before. */
+  const leakyMoves = fc.array(
+    fc.record({
+      move: fc.constantFrom(
+        "answer",
+        "text",
+        "submit",
+        "skip",
+        "review",
+        "solution",
+        "comment",
+        "next-attempt",
+        "goto-a",
+        "goto-b",
+        "next",
+        "previous",
+        "suspend",
+        "resume",
+        "time",
+        "end-part",
+        "end-test",
+      ),
+      choice: fc.constantFrom("A", "B", "D"),
+      typed: fc.string({ maxLength: 12 }).map((typed) => `t${typed}`),
+      gap: fc.integer({ min: 0, max: 2_000 }),
+    }),
+    { maxLength: 25 },
+  );
+
+  function leakyAction(
+    state: DeliveryState,
+    { move, choice, typed }: typeof leakyMoves extends fc.Arbitrary<(infer T)[]> ? T : never,
+  ): CandidateAction | HostAction {
+    const item = state.current ?? key("a");
+    switch (move) {
+      case "answer":
+        return { type: "set-responses", item, responses: new Map([["RESPONSE", identifier(choice)]]) };
+      case "text":
+        return { type: "set-responses", item, responses: new Map([["TEXT", text(typed)]]) };
+      case "comment":
+        return { type: "comment", item, text: typed };
+      case "goto-a":
+      case "goto-b":
+        return { type: "move", to: key(move.slice(-1)) };
+      case "next":
+      case "previous":
+        return { type: "move", to: move };
+      case "submit":
+      case "skip":
+      case "review":
+      case "solution":
+      case "next-attempt":
+        return { type: move, item };
+      case "suspend":
+      case "resume":
+      case "end-part":
+      case "end-test":
+      case "time":
+        return { type: move };
+    }
+  }
+
+  it("[E20][E21] never lets a correct response, mapping, processing, outcome, template value or hidden content into the view", () => {
+    const engine = leakyEngine();
+    fc.assert(
+      fc.property(leakyMoves, seeds, (moves, seed) => {
+        let { state } = begun(engine, { seed });
+        let now = 0;
+        const check = (shown: DeliveryState): void => {
+          const view = engine.view(shown, now);
+          // The correct response of the text is shown in the solution state of item a, which the control allows, and nowhere else.
+          const solution = view.current?.key.ref === "a" && view.current.status === "solution";
+          expect(leaksIn(view)).toEqual(solution ? ["LEAK-CORRECT-TEXT"] : []);
+        };
+        check(state);
+        for (const move of moves) {
+          now += move.gap;
+          const step = engine.apply(state, stamp(state, leakyAction(state, move), now));
+          if (step.ok) state = step.state;
+          check(state);
+        }
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it("[E30] reads back the responses of any action, of any cardinality and base type, from the JSON text", () => {
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(fc.tuple(identifierArbitrary, anyValue), { selector: ([name]) => name }),
+        (entries) => {
+          const action: CandidateAction = { type: "set-responses", item: key("a", 2), responses: new Map(entries) };
+          expect(parseCandidateAction(throughText(actionToJson(action)))).toEqual(action);
         },
       ),
     );

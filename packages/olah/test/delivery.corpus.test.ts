@@ -37,6 +37,8 @@ import {
   timeLimits,
   type Value,
   validateAsi,
+  viewFromJson,
+  viewToJson,
   visibleModalFeedback,
 } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
@@ -404,6 +406,8 @@ describe("the engine on the examples", () => {
       const step = engine.apply(state, { ...action, at });
       if (!step.ok) throw new Error(`${action.type} was refused: ${step.refusal.message}`);
       state = step.state;
+      const view = engine.view(state, at);
+      expect(viewFromJson(JSON.parse(JSON.stringify(viewToJson(view))))).toEqual(view);
     };
     for (let current = state.current; current !== undefined; current = state.current) {
       const item = items.get(current.ref);
@@ -423,7 +427,7 @@ describe("the engine on the examples", () => {
     await expect(deliveryOf("BBQsTest", "assessment.xml")).rejects.toThrow(/olah\/validate\/custom-operator/);
   });
 
-  it("[E9][W22][W32][B37][C] scores the correct answers of englishBasicLevelV2, submitted together, at its MAXSCORE", async () => {
+  it("[E9][E19][E30][W22][W32][B37][C] scores the correct answers of englishBasicLevelV2, submitted together, at its MAXSCORE", async () => {
     const { engine, items } = await deliveryOf("englishBasicLevelV2", "Test_258641331.xml");
     const state = answerAll(engine, items, false);
     expect(state.status).toBe("ended");
@@ -470,5 +474,49 @@ describe("the engine on the examples", () => {
       delivered += 1;
     }
     expect(delivered).toBeGreaterThan(40);
+  });
+
+  it("[E19][E20][E30][C] shows every example item as a view that holds no key and reads back from its JSON text", () => {
+    const keys = [
+      "correctResponse",
+      "mapping",
+      "areaMapping",
+      "lookupTable",
+      "responseProcessing",
+      "templateProcessing",
+      "outcomeDeclarations",
+      "responseDeclarations",
+      "templateDeclarations",
+      "defaultValue",
+    ];
+    const namesIn = (value: unknown, names: Set<string>): Set<string> => {
+      if (Array.isArray(value)) for (const member of value) namesIn(member, names);
+      else if (typeof value === "object" && value !== null) {
+        for (const [name, member] of Object.entries(value)) namesIn(member, names.add(name));
+      }
+      return names;
+    };
+    let shown = 0;
+    for (const { path, item } of exampleItems()) {
+      const issues = validateAsi({ kind: "item", item }, { customOperators: new Map() });
+      if (issues.some((issue) => issue.severity === "error")) continue;
+      const engine = createEngine({ kind: "item", item, base: path });
+      const started = engine.start({ seed: 1, at: 0 });
+      if (!started.ok) throw new Error(`${path}: ${started.refusal.message}`);
+      const closed = engine.apply(started.state, {
+        type: "skip",
+        item: started.state.current ?? { ref: "", instance: 1 },
+        at: 1,
+      });
+      for (const state of [started.state, closed.ok ? closed.state : started.state]) {
+        const view = engine.view(state, 5);
+        const written = viewToJson(view);
+        expect(viewFromJson(JSON.parse(JSON.stringify(written))), path).toEqual(view);
+        const names = namesIn(written, new Set());
+        for (const forbidden of keys) expect(names.has(forbidden), `${path}: ${forbidden}`).toBe(false);
+      }
+      shown += 1;
+    }
+    expect(shown).toBeGreaterThan(40);
   });
 });

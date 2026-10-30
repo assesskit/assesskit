@@ -18,7 +18,7 @@ const COMPLETED = "completed";
 export const MILLISECONDS_PER_SECOND = 1000;
 
 /** The maximum number of attempts of a non-adaptive item when no control sets one (INFO §7.19.1). */
-const DEFAULT_MAX_ATTEMPTS = 1;
+export const DEFAULT_MAX_ATTEMPTS = 1;
 
 /** How an attempt ends: a submission, a skip, an end attempt interaction, or the engine closing the session. */
 export type Ending =

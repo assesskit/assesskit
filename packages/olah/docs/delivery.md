@@ -9,45 +9,50 @@ references of a test, selects and orders the children of every section from a se
 instances, decides what follows an item in a linear test part under pre-conditions and branch rules, inherits item session
 control, and computes time limits with a candidate's extra time. It runs the session of each item instance: attempts,
 adaptive items, end attempt interactions, drafts and submitted responses, review and solution, comments, the states of
-portable custom interactions, and processing failures as data. It imports `values`, `asi`, `results`, `pnp`,
+portable custom interactions, and processing failures as data. It builds the view of a candidate session, which holds no
+answer key, processing or hidden content, and writes and reads the JSON forms of views and actions. It imports `values`, `asi`, `results`, `pnp`,
 `interactions`, `content`, `processing`, `package` and `validate` and runs in any JavaScript runtime. It reads no clock:
 every step takes the time it happened.
 
-| Export                                                | Purpose                                                                                        |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                  | The `Engine` of a test or an item: `start`, `apply`, `deadlines`.                              |
-| `stamp(state, action, now)`                           | The action with `at` = max(`now`, the time of the latest step).                                |
-| `serializeState(state)`, `deserializeState(text)`     | The JSON text of a state, and the state of a text, with the version of the format.             |
-| `DeliveryState`, `Step`, `Deadline`                   | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
-| `CandidateAction`, `HostAction`, `Action`             | The actions of the candidate and the host, with their time.                                    |
-| `DeliveryDefinition`, `EngineOptions`, `StartOptions` | What the engine delivers, its options, and the options of a session.                           |
-| `resolveStructure(test, base, resolvers)`             | The `TestStructure`: parts, sections and item references, section references replaced.         |
-| `planTest(structure, options)`                        | A `TestPlan`: the sections and item instances of one session.                                  |
-| `planItems(plan, part?)`                              | The item instances of a plan, or of one test part, in order of presentation.                   |
-| `nextItem(structure, plan, from, rules)`              | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
-| `previousItem(structure, plan, from)`                 | The item before `from`, in a nonlinear part.                                                   |
-| `sessionControl(item)`                                | The item session control of an item reference after inheritance.                               |
-| `timeLimits(node, extra?)`                            | The time limits of the test, a part, a section or an item reference, with extra time.          |
-| `additionalTestingTime(profile)`                      | The extra testing time of a PNP.                                                               |
-| `ancestry(node)`, `partOf(node)`                      | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
-| `ItemKey`                                             | An item instance: the identifier of the item reference and the instance, from 1.               |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …        | The plan: plain data, identifiers and numbers only.                                            |
-| `TestNode`, `PartNode`, `SectionNode`, …              | The nodes of the structure, with their models and the path of the document that holds them.    |
-| `RuleContext`                                         | What pre-conditions and branch rules read.                                                     |
-| `EffectiveSessionControl`, `EffectiveTimeLimits`      | The results of `sessionControl` and `timeLimits`.                                              |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`    | The limit on the size of a plan, and the options of `planTest`.                                |
-| `startItemSession(key, at, context, options?)`        | A new item session in the state `initial`, after template processing.                          |
-| `presentItem(session, at, context)`                   | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
-| `suspendItem(session, at)`                            | Suspends an interacting session, as when the candidate moves to another item.                  |
-| `closeItem(session, at, context)`                     | Closes the session, ending an open attempt with its drafts.                                    |
-| `applyItemAction(session, action, context)`           | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
-| `itemFeedback(session, item, control)`                | The outcomes that decide the feedback shown in the state of the session.                       |
-| `itemResponses(session)`                              | The responses the item shows: drafts, submitted responses, or the solution.                    |
-| `resultStatus(session, item)`                         | The session status of Results Reporting.                                                       |
-| `standaloneSessionControl(control?)`                  | The item session control of an item delivered alone.                                           |
-| `ItemSession`, `ItemSessionStatus`                    | The state of an item session: plain data with its variables, drafts and attempts.              |
-| `ItemSessionContext`, `ItemAction`, `ItemStep`        | What a step reads besides the session, the actions of the candidate, and the result of a step. |
-| `Refusal`, `RefusalCode`, `DeliveryEvent`, …          | Why a step is refused, and what an accepted step reports.                                      |
+| Export                                                        | Purpose                                                                                        |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `createEngine(definition, options?)`                          | The `Engine` of a test or an item: `start`, `apply`, `deadlines`, `view`.                      |
+| `stamp(state, action, now)`                                   | The action with `at` = max(`now`, the time of the latest step).                                |
+| `viewToJson(view)`, `viewFromJson(json)`                      | The JSON form of a `CandidateView`, and the view of a JSON form.                               |
+| `actionToJson(action)`, `parseCandidateAction(json, limits?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.             |
+| `CandidateView`, `CandidateItem`, `NavigationEntry`, …        | What the candidate sees: the item, the navigation map, timers, actions and supports.           |
+| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                       | The limits of `parseCandidateAction`.                                                          |
+| `serializeState(state)`, `deserializeState(text)`             | The JSON text of a state, and the state of a text, with the version of the format.             |
+| `DeliveryState`, `Step`, `Deadline`                           | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
+| `CandidateAction`, `HostAction`, `Action`                     | The actions of the candidate and the host, with their time.                                    |
+| `DeliveryDefinition`, `EngineOptions`, `StartOptions`         | What the engine delivers, its options, and the options of a session.                           |
+| `resolveStructure(test, base, resolvers)`                     | The `TestStructure`: parts, sections and item references, section references replaced.         |
+| `planTest(structure, options)`                                | A `TestPlan`: the sections and item instances of one session.                                  |
+| `planItems(plan, part?)`                                      | The item instances of a plan, or of one test part, in order of presentation.                   |
+| `nextItem(structure, plan, from, rules)`                      | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
+| `previousItem(structure, plan, from)`                         | The item before `from`, in a nonlinear part.                                                   |
+| `sessionControl(item)`                                        | The item session control of an item reference after inheritance.                               |
+| `timeLimits(node, extra?)`                                    | The time limits of the test, a part, a section or an item reference, with extra time.          |
+| `additionalTestingTime(profile)`                              | The extra testing time of a PNP.                                                               |
+| `ancestry(node)`, `partOf(node)`                              | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
+| `ItemKey`                                                     | An item instance: the identifier of the item reference and the instance, from 1.               |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …                | The plan: plain data, identifiers and numbers only.                                            |
+| `TestNode`, `PartNode`, `SectionNode`, …                      | The nodes of the structure, with their models and the path of the document that holds them.    |
+| `RuleContext`                                                 | What pre-conditions and branch rules read.                                                     |
+| `EffectiveSessionControl`, `EffectiveTimeLimits`              | The results of `sessionControl` and `timeLimits`.                                              |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`            | The limit on the size of a plan, and the options of `planTest`.                                |
+| `startItemSession(key, at, context, options?)`                | A new item session in the state `initial`, after template processing.                          |
+| `presentItem(session, at, context)`                           | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
+| `suspendItem(session, at)`                                    | Suspends an interacting session, as when the candidate moves to another item.                  |
+| `closeItem(session, at, context)`                             | Closes the session, ending an open attempt with its drafts.                                    |
+| `applyItemAction(session, action, context)`                   | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
+| `itemFeedback(session, item, control)`                        | The outcomes that decide the feedback shown in the state of the session.                       |
+| `itemResponses(session)`                                      | The responses the item shows: drafts, submitted responses, or the solution.                    |
+| `resultStatus(session, item)`                                 | The session status of Results Reporting.                                                       |
+| `standaloneSessionControl(control?)`                          | The item session control of an item delivered alone.                                           |
+| `ItemSession`, `ItemSessionStatus`                            | The state of an item session: plain data with its variables, drafts and attempts.              |
+| `ItemSessionContext`, `ItemAction`, `ItemStep`                | What a step reads besides the session, the actions of the candidate, and the result of a step. |
+| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                  | Why a step is refused, and what an accepted step reports.                                      |
 
 ## Engine
 
@@ -296,7 +301,108 @@ from the seed reproduces a state and its events exactly (E3).
 
 `createEngine({ kind: "item", item, base, control })` delivers an item as a test of one nonlinear test part with individual
 submission (E12): the test is named as the item, the part `<identifier>-part`, its section `<identifier>-section`, and the
-item reference has the identifier of the item. Its control is `standaloneSessionControl(control)`.
+item reference has the identifier of the item. Its control is `standaloneSessionControl(control)`. The definition may give
+`resolvers` with `stimuli`, to present the stimuli the item names.
+
+## Candidate view
+
+`engine.view(state, now)` gives what the candidate sees of a state (E19). It first applies the maximum times that passed up
+to `now`, each at its time, as a `time` action would (E7); a time before the latest step counts as that step. It then builds
+the view field by field from the item session and the item, so that nothing else can reach it (E20). The state is not
+changed.
+
+```ts
+// Continues the example above.
+const view = engine.view(started.state, 2_000);
+view.status; // "in-progress"
+view.part; // { identifier: "part", navigationMode: "linear", submissionMode: "individual" }
+view.navigation; // [{ kind: "section", identifier: "main", title: "Main", depth: 0 },
+//                    { kind: "item", key: { ref: "q1", instance: 1 }, title: "q1", depth: 1, status: "interacting", current: true, reachable: false }]
+view.current?.interactions[0]?.choices.map((choice) => choice.identifier); // ["A", "B"], in the order of presentation
+view.timers; // [{ scope: "test", identifier: "quiz", remaining: 599000, late: false }]
+view.actions; // ["set-responses", "submit", "skip", "move", "end-part", "end-test", "suspend"]
+engine.view(answered.state, 700_000).status; // "ended": the maximum time of the test passed
+```
+
+| Field of `CandidateView` | Holds                                                                                                                                                                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                 | `in-progress`, `suspended` or `ended`. A suspended session shows no content and the action `resume` only; an ended one shows the test feedback `atEnd`.                                                                                                                |
+| `test`, `part`           | The identifier and title of the test; the identifier, navigation mode and submission mode of the test part presented.                                                                                                                                                  |
+| `navigation`             | The visible sections and the item instances of the test part, in order, with the state of each item session, whether it is current and whether a `move` reaches it. A nonlinear part lists every instance; a linear part lists those presented so far, none reachable. |
+| `current`                | The `CandidateItem`.                                                                                                                                                                                                                                                   |
+| `rubric`                 | The content of the rubric blocks for the candidate: of the test, then of the test part, then of the sections from the top down (F-m25).                                                                                                                                |
+| `testFeedback`           | The content of the test feedback that is shown: `during` while the session runs, of the test and of the test part; `atEnd` once it ended, of the test and of the test parts entered.                                                                                   |
+| `timers`                 | For each running scope with a limit: `remaining` and `minimumRemaining` in milliseconds, and `late` after a maximum time that allows late submission.                                                                                                                  |
+| `actions`                | The types of the actions the state allows. The data of an action can still make it refused, such as a `submit` without a response under `allow-skipping="false"`.                                                                                                      |
+| `supports`               | Each support with its state, whether it is on and the settings of the profile; the settings of a prohibited support stay out.                                                                                                                                          |
+
+| Field of `CandidateItem`                             | Holds                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`, `title`, `label`, `language`, `timeDependent` | The item instance and the attributes of the item, of the variant when one was presented; the title of a link to a tool is the title of the link.                                                                                                                          |
+| `status`, `numAttempts`, `attemptsLeft`              | The state of the item session, the attempts started, and the attempts left including the open one; none when the item allows any number.                                                                                                                                  |
+| `body`, `stimuli`, `modalFeedback`                   | Content after resolution (below).                                                                                                                                                                                                                                         |
+| `stylesheets`, `catalogs`, `companionMaterials`      | The package paths of the stylesheets of the item and its stimuli, the catalogs of the visible content, and the materials of the item.                                                                                                                                     |
+| `interactions`, `responses`                          | The `InteractionDescriptor` of each interaction in the content, with its choices in the order of presentation; and its response by identifier: the drafts while the session is open, the submitted responses once it closed, the correct responses in the solution state. |
+| `pci`                                                | For each portable custom interaction: the template and context values it names with `qti-template-variable` and `qti-context-variable`, and its stored state (E29).                                                                                                       |
+| `variant`, `hazards`, `lti`                          | The variant presented with its language (B100); the hazards in the terms of the PNP with whether the candidate avoids each (B99); the link to a tool (E25).                                                                                                               |
+
+Resolution of content follows `content.resolveContent` for the view `candidate`: printed variables become text; feedback,
+template content and choices that the variables hide are removed; rubric blocks without the view `candidate` are removed.
+Then every list of choices in an interaction takes the order that the session drew, so that the content and the
+descriptors agree. References in the content are as the item writes them, against the document of the item; only
+`stylesheets` are package paths.
+
+The view never holds (E20, E21):
+
+- response, template or outcome processing, mappings, area mappings and lookup tables;
+- correct responses, except in the solution state, which the item session control allows only after the item closed;
+- outcome declarations or values: the candidate sees outcomes through feedback and printed variables only;
+- template declarations or values, except those a portable custom interaction names;
+- hidden feedback, template content and choices, and rubric for other views;
+- any metadata but the hazards.
+
+The property in `delivery.test.ts` runs random actions on a test whose items have a correct response, a mapping, outcome
+and template values, hidden content and rubric for the scorer, each marked, and checks every view as JSON text for the
+marks.
+
+### Wire forms
+
+The JSON forms carry values as `WireValue` (E30): `{ cardinality, baseType?, value }` around the JSON of BPIG Appendix C,
+with NULL as `null`, durations as `PT<seconds>S`, and files as references. Maps are arrays of `[identifier, value]` entries,
+so an identifier such as `__proto__` stays data. They decode without declarations and lose nothing: `multiple` stays apart
+from `ordered`, and the NULL of one type from that of another.
+
+| Function                              | Does                                                                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `viewToJson(view)`                    | Builds the JSON form property by property, reads it back with `viewFromJson` and returns it. The content nodes are shared with the view.                     |
+| `viewFromJson(json)`                  | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
+| `actionToJson(action)`                | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
+| `parseCandidateAction(json, limits?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
+
+| Limit               | Default   | Bounds                                                                                                     |
+| ------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| `maxActionSize`     | `4194304` | The size of the action: each node of the JSON counts 1, and each string and property name adds its length. |
+| `maxPciStateLength` | `1048576` | The length of one portable custom interaction state, in code units.                                        |
+
+```ts
+import { actionToJson, parseCandidateAction, stamp, viewToJson } from "@luthfanwakan/olah/delivery";
+
+// The client sends JSON text of its action; the server reads, stamps, applies and answers with the view.
+const text = JSON.stringify(actionToJson(answer)); // {"type":"set-responses","item":{"ref":"q1","instance":1},"responses":[["RESPONSE",{"cardinality":"single","baseType":"identifier","value":{"base":{"identifier":"B"}}}]]}
+const received = parseCandidateAction(JSON.parse(text), { maxActionSize: 100_000 });
+const stamped = stamp(started.state, received, 5_000); // { ...received, at: 5000 }
+const step = engine.apply(started.state, stamped);
+if (!step.ok) throw new Error(step.refusal.message);
+const reply = JSON.stringify(viewToJson(engine.view(step.state, 5_000)));
+parseCandidateAction({ type: "time" });
+// DataError: The type "time" is an action of the host, and a candidate does not send it; the type of an action of a candidate is "set-responses", "submit", ...
+```
+
+In server mode the client holds only views, which `viewFromJson` reads, and sends actions, which `actionToJson` writes;
+the server owns the engine, the state and the clock. Host actions (`time`, `supply-scores`, `cat-response`) never come from
+a client, and the time of an action is the server's `stamp`. In device mode the same engine and `engine.view` run on the
+device, and nothing is converted. `viewFromJson` and `actionToJson` import no engine code, so a browser bundle of them holds
+none of the answer keys.
 
 ## Planning example
 
@@ -660,39 +766,48 @@ their place. `max-attempts` stays with the item when no control sets it.
 
 Where the specifications are silent or contradict themselves:
 
-| Gap or topic | Decision                                                                                                                                                                                                                   |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G8           | Without replacement, a uniform subset of the children that are not required, plus the required ones. With replacement, the required ones once and the other draws uniform over all children. Ordering follows.             |
-| G41          | A multiplier on every maximum, the fixed minutes on the outermost maximum, `unlimited` removes the maximums, minimums unchanged.                                                                                           |
-| B21          | The selected children keep document order until ordering reorders them. A `select` above the number of children is a `DataError` without replacement.                                                                      |
-| B24          | An invisible section that is not kept together or fixed is mixed into a shuffled parent and has no pre-conditions, branch rules or time limits of its own.                                                                 |
-| B25          | A section reference has the identifier of the section it names.                                                                                                                                                            |
-| B28          | A NULL pre-condition skips. A nonlinear part ignores its own pre-conditions and branch rules as well as those of its sections and items.                                                                                   |
-| B29          | A target is an item or section of the same part, or a part. `EXIT_SECTION` and `EXIT_TESTPART` complete the container, so its rules follow. The first repeat ahead is the target.                                          |
-| B36          | Extra time applies whenever the profile has the support and does not prohibit it, whether or not a set lists it.                                                                                                           |
-| E11          | Instances are counted in order of presentation, for sections too.                                                                                                                                                          |
-| B3           | An attempt starts at the first presentation, with `next-attempt`, or with the next action on the item after the feedback of the last attempt.                                                                              |
-| B32          | A skip submits NULL responses. The variables of end attempt interactions are not responses, so an end attempt is never a skip.                                                                                             |
-| B33          | Only the interactions that the candidate sees are validated: those in hidden feedback or template content are not, and an end attempt is not.                                                                              |
-| E26          | A failed response processing leaves the outcomes it started from: the reset values of a non-adaptive item, the earlier outcomes of an adaptive one.                                                                        |
-| B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing; supplying the scores is pending work of the test.                                                                         |
-| B41, B100    | An item session starts at the first presentation of its instance: the variant is chosen and the template defaults are evaluated then. An instance not yet presented reads as a session before template processing.         |
-| B38, G9      | `ITEM.VAR` reads the instance whose attempt ended last, in both submission modes.                                                                                                                                          |
-| E9           | Leaving an item of a linear part with individual submission submits its open attempt, with the checks, and closes it. `end-part` and `end-test` work from any item, and end open attempts without the checks.              |
-| B29          | The branch rules of a test part are evaluated after the part ended, so after the submission of a simultaneous group.                                                                                                       |
-| E7, D9       | After a time-out the candidate goes on as after leaving the scope, in both navigation modes. Minimum times bind the candidate's moves, not time-outs.                                                                      |
-| E26          | A pre-condition or branch rule that fails ends the test; outcome processing that fails leaves the outcomes at their defaults; a template default that fails leaves the declared default. Each reports `processing-failed`. |
-| E28          | Supports `active` and `assigned` are on from the start; only options turn on and off; universal supports are options unless the profile names them.                                                                        |
-| B100         | When the item itself has an avoided hazard and no variant matches the language, the first variant without one is presented.                                                                                                |
+| Gap or topic | Decision                                                                                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G8           | Without replacement, a uniform subset of the children that are not required, plus the required ones. With replacement, the required ones once and the other draws uniform over all children. Ordering follows.                                     |
+| G41          | A multiplier on every maximum, the fixed minutes on the outermost maximum, `unlimited` removes the maximums, minimums unchanged.                                                                                                                   |
+| B21          | The selected children keep document order until ordering reorders them. A `select` above the number of children is a `DataError` without replacement.                                                                                              |
+| B24          | An invisible section that is not kept together or fixed is mixed into a shuffled parent and has no pre-conditions, branch rules or time limits of its own.                                                                                         |
+| B25          | A section reference has the identifier of the section it names.                                                                                                                                                                                    |
+| B28          | A NULL pre-condition skips. A nonlinear part ignores its own pre-conditions and branch rules as well as those of its sections and items.                                                                                                           |
+| B29          | A target is an item or section of the same part, or a part. `EXIT_SECTION` and `EXIT_TESTPART` complete the container, so its rules follow. The first repeat ahead is the target.                                                                  |
+| B36          | Extra time applies whenever the profile has the support and does not prohibit it, whether or not a set lists it.                                                                                                                                   |
+| E11          | Instances are counted in order of presentation, for sections too.                                                                                                                                                                                  |
+| B3           | An attempt starts at the first presentation, with `next-attempt`, or with the next action on the item after the feedback of the last attempt.                                                                                                      |
+| B32          | A skip submits NULL responses. The variables of end attempt interactions are not responses, so an end attempt is never a skip.                                                                                                                     |
+| B33          | Only the interactions that the candidate sees are validated: those in hidden feedback or template content are not, and an end attempt is not.                                                                                                      |
+| E26          | A failed response processing leaves the outcomes it started from: the reset values of a non-adaptive item, the earlier outcomes of an adaptive one.                                                                                                |
+| B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing; supplying the scores is pending work of the test.                                                                                                 |
+| B41, B100    | An item session starts at the first presentation of its instance: the variant is chosen and the template defaults are evaluated then. An instance not yet presented reads as a session before template processing.                                 |
+| B38, G9      | `ITEM.VAR` reads the instance whose attempt ended last, in both submission modes.                                                                                                                                                                  |
+| E9           | Leaving an item of a linear part with individual submission submits its open attempt, with the checks, and closes it. `end-part` and `end-test` work from any item, and end open attempts without the checks.                                      |
+| B29          | The branch rules of a test part are evaluated after the part ended, so after the submission of a simultaneous group.                                                                                                                               |
+| E7, D9       | After a time-out the candidate goes on as after leaving the scope, in both navigation modes. Minimum times bind the candidate's moves, not time-outs.                                                                                              |
+| E26          | A pre-condition or branch rule that fails ends the test; outcome processing that fails leaves the outcomes at their defaults; a template default that fails leaves the declared default. Each reports `processing-failed`.                         |
+| E28          | Supports `active` and `assigned` are on from the start; only options turn on and off; universal supports are options unless the profile names them.                                                                                                |
+| B100         | When the item itself has an avoided hazard and no variant matches the language, the first variant without one is presented.                                                                                                                        |
+| E19          | The navigation map lists the item instances of the test part presented only; a linear part lists those presented so far and marks none reachable, a nonlinear part marks every other instance that no maximum time closed.                         |
+| E19          | A suspended session shows no content, so that suspending the session withholds the items. An ended one shows the `atEnd` test feedback and no rubric.                                                                                              |
+| E19          | `rubric`, `testFeedback` and `modalFeedback` are the contents of the blocks and feedback that are shown, concatenated in order. The stylesheets and catalogs of a block of the test are not carried; those of the item and its modal feedback are. |
+| E19          | An invisible section has no entry in the map and its items stand at the depth of the section above; its rubric is still given, because INFO §2.8.6 orders the rubric of every section that holds the item.                                         |
+| E19          | `stylesheets` are package paths against the document of the item, and of each stimulus against its own; a variant, whose path the resolvers do not give, resolves against the package root.                                                        |
+| E19          | `timeDependent` is part of `CandidateItem`, because the player marks time-dependent items (BPIG §4.3). The title of an item that models a link to a tool is the title of the link.                                                                 |
+| E19          | `remaining` and `minimumRemaining` are in milliseconds, like every time of the engine.                                                                                                                                                             |
+| E22          | A request larger than a limit of `parseCandidateAction` is a `DataError`, as §3.9 says, and not a `SecurityError`. The limits belong to `parseCandidateAction`; `EngineOptions.limits` keeps the limits of processing and planning.                |
+| E28          | The settings of a support are kept in the state (`SessionSupport.settings`), so that the view of a state read back on another device has them.                                                                                                     |
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`       | The static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
-| `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                               |
-| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                        |
-| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate, or larger than a limit; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
+| `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and
 in the engine are data.

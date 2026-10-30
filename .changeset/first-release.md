@@ -95,3 +95,11 @@ time limits with `deadlines`, time-outs and late submission, suspension, support
 events, and processing failures reported as events. `stamp` stamps actions monotonically, and `serializeState` and
 `deserializeState` write and read states in a versioned JSON format. `startItemSession` takes the template defaults of a
 test.
+
+The candidate side of the engine: `Engine.view` gives the view of a state at a time, with the maximum times that passed
+applied, built so that no answer key, processing or hidden content reaches it: the navigation map, the item after
+resolution with its choices in the order of presentation, interaction descriptors, drafts, feedback, rubric, timers,
+allowed actions, supports with their settings, hazards, the variant, the link to a tool and the states of portable custom
+interactions. `viewToJson` and `viewFromJson`, and `actionToJson` and `parseCandidateAction`, carry values as `WireValue`;
+`parseCandidateAction` refuses the actions of the host and actions above the limits `DEFAULT_ACTION_LIMITS` sets, and
+`stamp` checks the action it stamps.

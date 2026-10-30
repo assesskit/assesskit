@@ -1,5 +1,5 @@
 import { checkFinite, checkRecord } from "../checks.js";
-import type { Action, CandidateAction, HostAction } from "./action.js";
+import { type Action, type CandidateAction, checkAction, type HostAction } from "./action.js";
 import { checkState, type DeliveryState } from "./delivery-state.js";
 
 /**
@@ -9,14 +9,17 @@ import { checkState, type DeliveryState } from "./delivery-state.js";
  * device, can be.
  *
  * @param state - The state the action applies to.
- * @param action - The action without its time.
+ * @param action - The action without its time; a time it has is replaced. A server passes the result of
+ * `parseCandidateAction`, which has none.
  * @param now - The host's clock, in epoch milliseconds.
  * @returns The action with `at` = max(`now`, `state.at`).
- * @throws `DataError` when an argument has the wrong type.
+ * @throws `DataError` when an argument has the wrong type, or the action is not an action.
  */
 export function stamp(state: DeliveryState, action: CandidateAction | HostAction, now: number): Action {
   checkState(state);
   checkRecord(action, "The action must be an object with a type");
   checkFinite(now, "The time now");
-  return { ...action, at: Math.max(now, state.at) };
+  const stamped = { ...action, at: Math.max(now, state.at) };
+  checkAction(stamped);
+  return stamped;
 }
