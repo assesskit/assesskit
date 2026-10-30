@@ -28,6 +28,7 @@ export {
   readPackage,
 } from "./package.js";
 export type { PackageFiles } from "./package-files.js";
+export { resolveReference } from "./paths.js";
 export { readManifest } from "./read-manifest.js";
 export {
   type DeliverableItem,

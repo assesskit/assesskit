@@ -2,6 +2,7 @@ import { createRandom as createTakarRandom } from "@luthfanwakan/takar";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { createRandom, DataError, type Random, restoreRandom } from "../src/index.js";
+import { drawIndex, drawUniform, shuffle } from "../src/random.js";
 
 const draws = (random: Random, count: number): number[] => Array.from({ length: count }, () => random.uniform());
 
@@ -96,5 +97,90 @@ describe("restoreRandom", () => {
     expect(() => restoreRandom(JSON.parse("[0, 0, 0, 0]"))).toThrow(
       "A random state must be four integers from 0 to 4294967295, not all 0, found an array.",
     );
+  });
+});
+
+/** A source that returns the numbers given, in order. */
+const scripted = (...draws: number[]): Random => {
+  const queue = [...draws];
+  return { uniform: () => queue.shift() ?? Number.NaN };
+};
+
+/** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
+const json = <T = never>(text: string): T => JSON.parse(text);
+
+describe("drawUniform and drawIndex", () => {
+  it("draws floor(uniform × size) as the index", () => {
+    expect([0, 0.25, 0.5, 0.75, 0.999].map((draw) => drawIndex(scripted(draw), 4))).toEqual([0, 1, 2, 3, 3]);
+    expect(drawIndex(scripted(0.5), 1)).toBe(0);
+  });
+
+  it("keeps every index in [0, size) for any seed", () => {
+    fc.assert(
+      fc.property(fc.maxSafeInteger(), fc.integer({ min: 1, max: 1000 }), (seed, size) => {
+        const index = drawIndex(createRandom(seed), size);
+        expect(Number.isInteger(index) && index >= 0 && index < size).toBe(true);
+      }),
+    );
+  });
+
+  it("refuses a source that returns anything but a number in [0, 1)", () => {
+    for (const draw of ["1", '"0.5"', "null", "-0.5", "2"]) {
+      expect(() => drawUniform({ uniform: () => json<number>(draw) })).toThrow(DataError);
+    }
+    expect(() => drawIndex(scripted(), 3)).toThrow(
+      "The function uniform of the option random must return a number in [0, 1), found NaN.",
+    );
+  });
+});
+
+describe("shuffle", () => {
+  it("permutes by Fisher–Yates from the last index: the item at i swaps with the one at floor(uniform × (i + 1))", () => {
+    // [a, b, c, d]: i = 3 swaps with floor(0.5 × 4) = 2, giving [a, b, d, c]; i = 2 swaps with floor(0.5 × 3) = 1,
+    // giving [a, d, b, c]; i = 1 swaps with floor(0.5 × 2) = 1.
+    expect(shuffle(["a", "b", "c", "d"], () => false, scripted(0.5, 0.5, 0.5))).toEqual(["a", "d", "b", "c"]);
+  });
+
+  it("keeps the items that are fixed in their places, and draws over the places that are not", () => {
+    // The movable places of [a, b*, c, d] are 0, 2 and 3: i = 2 swaps the movable places 3 and 2, i = 1 swaps with itself.
+    expect(shuffle(["a", "b", "c", "d"], (item) => item === "b", scripted(0.5, 0.5))).toEqual(["a", "b", "d", "c"]);
+  });
+
+  it("takes no draw for fewer than two movable items, and does not change the array it is given", () => {
+    const items = ["a", "b", "c"];
+    expect(shuffle(items, () => true, scripted())).toEqual(["a", "b", "c"]);
+    expect(shuffle(items, (item) => item !== "b", scripted())).toEqual(["a", "b", "c"]);
+    expect(shuffle([], () => false, scripted())).toEqual([]);
+    shuffle(items, () => false, createRandom(1));
+    expect(items).toEqual(["a", "b", "c"]);
+  });
+
+  it("returns a permutation that leaves the fixed items where they are, for any seed", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.tuple(fc.nat(50), fc.boolean()), { maxLength: 12 }),
+        fc.maxSafeInteger(),
+        (pairs, seed) => {
+          const items = pairs.map(([value, fixed], place) => ({ value, fixed, place }));
+          const shuffled = shuffle(items, (item) => item.fixed, createRandom(seed));
+          expect([...shuffled].sort((a, b) => a.place - b.place)).toEqual(items);
+          shuffled.forEach((item, place) => {
+            if (item.fixed) expect(place).toBe(item.place);
+          });
+        },
+      ),
+    );
+  });
+
+  it("gives every order of three items about equally often", () => {
+    const counts = new Map<string, number>();
+    for (let seed = 1; seed <= 6000; seed++) {
+      const order = shuffle(["a", "b", "c"], () => false, createRandom(seed)).join("");
+      counts.set(order, (counts.get(order) ?? 0) + 1);
+    }
+    expect(counts.size).toBe(6);
+    // Chi-square against equal counts, at p = 0.001 for 5 degrees of freedom.
+    const statistic = [...counts.values()].reduce((sum, observed) => sum + (observed - 1000) ** 2 / 1000, 0);
+    expect(statistic).toBeLessThan(20.515);
   });
 });

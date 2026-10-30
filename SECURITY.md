@@ -49,14 +49,15 @@ Every limit is a positive integer that a caller can replace per call with the op
 1,000 times the largest document of the 1EdTech QTI 3.0 examples for size and node count, 16 times its depth and 20 times
 its attributes on an element, and about 1,000 times the largest container of the examples, a mapping of 9 entries.
 
-| Limit              | Default    | Applies to                                                                  |
-| ------------------ | ---------- | --------------------------------------------------------------------------- |
-| `maxBytes`         | 33,554,432 | The bytes of one XML document.                                              |
-| `maxDepth`         | 256        | The nesting of elements in a document, and in a document with its includes. |
-| `maxAttributes`    | 256        | The attributes on one element.                                              |
-| `maxNodes`         | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.              |
-| `maxIncludeDepth`  | 8          | The nesting of `xi:include`.                                                |
-| `maxContainerSize` | 10,000     | The values of a container that a processing expression builds.              |
+| Limit              | Default    | Applies to                                                                                                                               |
+| ------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxBytes`         | 33,554,432 | The bytes of one XML document.                                                                                                           |
+| `maxDepth`         | 256        | The nesting of elements in a document, and in a document with its includes.                                                              |
+| `maxAttributes`    | 256        | The attributes on one element.                                                                                                           |
+| `maxNodes`         | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.                                                                           |
+| `maxIncludeDepth`  | 8          | The nesting of `xi:include`.                                                                                                             |
+| `maxContainerSize` | 10,000     | The values of a container that a processing expression builds.                                                                           |
+| `maxPlanNodes`     | 10,000     | The sections and items of a test plan, about 400 times the 24 items of the largest example test; it bounds a selection with replacement. |
 
 The limits of archives and package directories, `ZipLimits`, are about 1,000 times the entries of the largest package of the
 examples (99), 100 times its largest entry (5.0 MiB), 200 times its size (11.0 MB) and 9 times its largest compression ratio

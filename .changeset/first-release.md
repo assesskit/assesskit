@@ -43,3 +43,9 @@ expressions and every rule with the semantics of the Information Model, the cons
 tables, the six standard response processing templates as models with their URIs normalized, custom operators that the
 caller registers, the test scope through which outcome processing reads item sessions, and `OPERATOR_SIGNATURES` for static
 checks.
+
+Test session planning (`delivery`): `resolveStructure` for the section references of a test, `planTest` for the selection
+and ordering of sections and items from a seeded generator and the numbering of item instances, `nextItem` and
+`previousItem` for the order of presentation under pre-conditions and branch rules, `sessionControl` for the inheritance of
+item session control, and `timeLimits` with `additionalTestingTime` for time limits with a candidate's extra time.
+`package` has `resolveReference`.

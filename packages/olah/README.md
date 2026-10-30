@@ -4,8 +4,8 @@ A QTI 3.0 runtime for JavaScript and TypeScript: it reads, writes, validates and
 content packages and results, and runs a test session without presentation. It is under development; this version has
 the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the typed
 model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
-and preferences, QTI content packages with their metadata, the port to computer adaptive testing engines, and template,
-response and outcome processing.
+and preferences, QTI content packages with their metadata, the port to computer adaptive testing engines, template,
+response and outcome processing, and the planning of a test session.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -120,6 +120,7 @@ if (document.kind === "item") {
 | `@luthfanwakan/olah/package`    | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                                                                       |
 | `@luthfanwakan/olah/cat`        | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                                                                                 |
 | `@luthfanwakan/olah/processing` | `createItemVariables`, `runTemplateProcessing`, `runResponseProcessing`, `runOutcomeProcessing`, `evaluate`, `evaluateTestExpression`, `TestScope`, `STANDARD_TEMPLATES`, `OPERATOR_SIGNATURES`, custom operators |
+| `@luthfanwakan/olah/delivery`   | `resolveStructure`, `planTest`, `planItems`, `nextItem`, `previousItem`, `sessionControl`, `timeLimits`, `additionalTestingTime` and the types of the structure and the plan                                      |
 | `@luthfanwakan/olah/values`     | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
 | `@luthfanwakan/olah/xml`        | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
 | `@luthfanwakan/olah/node`       | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                                                                          |
@@ -133,6 +134,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
 - [ASI](docs/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
 - [Processing](docs/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
+- [Delivery](docs/delivery.md): the plan of a test session: section references, selection, ordering, item instances, pre-conditions and branch rules, item session control and time limits.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
 - [Results](docs/results.md): the model of a Results Reporting document, its values and its rules.

@@ -96,3 +96,51 @@ function next(s: Uint32Array): number {
 function rotate(x: number, k: number): number {
   return (x << k) | (x >>> (32 - k));
 }
+
+/**
+ * Draws a number in [0, 1) from a source of random numbers.
+ *
+ * @throws `DataError` when the source returns anything but a number in [0, 1).
+ */
+export function drawUniform(random: Random): number {
+  const draw: unknown = random.uniform();
+  if (!(typeof draw === "number" && draw >= 0 && draw < 1)) {
+    throw new DataError(
+      `The function uniform of the option random must return a number in [0, 1), found ${describe(draw)}.`,
+    );
+  }
+  return draw;
+}
+
+/**
+ * Draws an index in [0, size) as `floor(uniform() × size)`, the fixed draw procedure of olah.
+ *
+ * @param size - The number of places, at least 1.
+ * @throws `DataError` when the source returns anything but a number in [0, 1).
+ */
+export function drawIndex(random: Random, size: number): number {
+  return Math.min(Math.floor(drawUniform(random) * size), size - 1);
+}
+
+/** Swaps two places of an array. It moves values with `splice`, because an indexed read is `T | undefined`. */
+function swap<T>(items: T[], first: number, second: number): void {
+  const atFirst = items.splice(first, 1, ...items.slice(second, second + 1));
+  items.splice(second, 1, ...atFirst);
+}
+
+/**
+ * Returns the items in a random order, except that the items `isFixed` names keep their places. The movable items are
+ * permuted by Fisher–Yates from the last index: for i from the last movable place down to 1, the item at i swaps with
+ * the item at `drawIndex(random, i + 1)`, counting the movable places only. Equal draws give equal orders, and fewer
+ * than two movable items take no draw.
+ *
+ * @throws `DataError` when the source returns anything but a number in [0, 1).
+ */
+export function shuffle<T>(items: readonly T[], isFixed: (item: T) => boolean, random: Random): T[] {
+  const places = items.flatMap((item, place) => (isFixed(item) ? [] : [place]));
+  const result = [...items];
+  for (let at = places.length - 1; at > 0; at--) {
+    swap(result, places[at] ?? 0, places[drawIndex(random, at + 1)] ?? 0);
+  }
+  return result;
+}

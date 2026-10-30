@@ -1,6 +1,7 @@
+import { drawIndex } from "../random.js";
 import type { BaseType, ContainerValue, Primitive, Value } from "../values/index.js";
 import { primitiveKey } from "../values/match.js";
-import { checkContainerSize, drawIndex, type Environment } from "./context.js";
+import { checkContainerSize, type Environment } from "./context.js";
 import { baseTypeOf, booleanResult, integerResult, primitiveOf, primitivesOf } from "./operands.js";
 
 /**
@@ -148,7 +149,7 @@ export function index(container: Value | null, n: number | null): Value | null {
 /** `qti-random`: a value of the container, each position equally likely; NULL for NULL (INFO §2.11.3.36). */
 export function random(container: Value | null, environment: Environment): Value | null {
   if (container === null || container.cardinality === "record" || container.cardinality === "single") return null;
-  const value = container.values[drawIndex(environment, container.values.length)];
+  const value = container.values[drawIndex(environment.random, container.values.length)];
   return value === undefined ? null : { cardinality: "single", baseType: container.baseType, value };
 }
 

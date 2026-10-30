@@ -72,30 +72,6 @@ export function checkContext(context: ProcessingContext): Environment {
 }
 
 /**
- * Draws an index in [0, size) as `floor(uniform() × size)` (the fixed draw procedure of the architecture).
- *
- * @throws `DataError` when the source returns anything but a number in [0, 1).
- */
-export function drawIndex(environment: Environment, size: number): number {
-  return Math.min(Math.floor(drawUniform(environment) * size), size - 1);
-}
-
-/**
- * Draws a number in [0, 1) from the source.
- *
- * @throws `DataError` when the source returns anything else.
- */
-export function drawUniform(environment: Environment): number {
-  const draw: unknown = environment.random.uniform();
-  if (!(typeof draw === "number" && draw >= 0 && draw < 1)) {
-    throw new DataError(
-      `The function uniform of the option random must return a number in [0, 1), found ${describe(draw)}.`,
-    );
-  }
-  return draw;
-}
-
-/**
  * Checks the size of a container that an expression builds.
  *
  * @throws `SecurityError` when it is above `maxContainerSize`.

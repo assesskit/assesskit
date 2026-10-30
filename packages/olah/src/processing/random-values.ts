@@ -1,5 +1,6 @@
+import { drawIndex, drawUniform } from "../random.js";
 import type { Value } from "../values/index.js";
-import { drawIndex, drawUniform, type Environment } from "./context.js";
+import type { Environment } from "./context.js";
 import { floatResult, integerResult } from "./operands.js";
 
 /** The `min` of `qti-random-integer` and `qti-random-float` when the attribute is absent (INFO §7.33.1, §7.34.1). */
@@ -21,7 +22,7 @@ export function randomInteger(
 ): Value | null {
   if (min === null || max === null || step === null || min > max || step <= 0) return null;
   const count = Math.floor((max - min) / step) + 1;
-  return integerResult(min + drawIndex(environment, count) * step);
+  return integerResult(min + drawIndex(environment.random, count) * step);
 }
 
 /**
@@ -31,6 +32,6 @@ export function randomInteger(
  */
 export function randomFloat(min: number | null, max: number | null, environment: Environment): Value | null {
   if (min === null || max === null || min > max) return null;
-  const value = min + drawUniform(environment) * (max - min);
+  const value = min + drawUniform(environment.random) * (max - min);
   return Number.isFinite(value) ? floatResult(value) : null;
 }

@@ -12,6 +12,7 @@ API and runs in any JavaScript runtime. [node](node.md) adds reading from files 
 | `writePackage(manifest, files)`                  | Writes a manifest and files as a ZIP archive.                                    |
 | `readManifest(input, options?)`, `writeManifest` | The manifest, `Manifest`, `Resource`, `ResourceFile` and `Variant`.              |
 | `resourcePath(manifest, resource, href?)`        | The path in the package that an href of a resource names.                        |
+| `resolveReference(base, href)`                   | `resolve` of a `QtiPackage` without the package.                                 |
 | `dependencyClosure(manifest, identifier)`        | A resource with the resources it depends on.                                     |
 | `packageResolvers(pkg)`                          | The `Resolvers` of the engine: items with their variants, sections and stimuli.  |
 | `readLtiLink(input, options?)`, `LtiLink`        | The `cartridge_basiclti_link` document of an LTI resource.                       |

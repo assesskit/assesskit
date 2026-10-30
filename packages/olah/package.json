@@ -38,6 +38,10 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./delivery": {
+      "types": "./dist/delivery/index.d.ts",
+      "default": "./dist/delivery/index.js"
+    },
     "./pnp": {
       "types": "./dist/pnp/index.d.ts",
       "default": "./dist/pnp/index.js"

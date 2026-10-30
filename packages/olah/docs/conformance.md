@@ -35,7 +35,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB8 | merged | 59 |
 | OB9 | merged | 8 |
 | OB10 | pending | 43 |
-| OB11 | pending | 15 |
+| OB11 | merged | 15 |
 | OB15 | pending | 1 |
 | OB13a | pending | 26 |
 | OB14 | pending | 79 |
@@ -623,22 +623,22 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B18 | Test feedback `during` after outcome processing, `atEnd` at the end of its part or test | INFO §2.10, INFO §5.157.1 | content, delivery | S | OB10 |  |
 | B19 | Rubric blocks by `view`; section rubric concatenated from the top section down; no interactions; no nesting | INFO §2.8.6, INFO §4.2.14, INFO §5.159.11, BIND §5.3.47 | content, delivery, validate | S N | OB10 |  |
 | B20 | Printed variable: C `printf` conversions `E e f G g r R i o X x` with flags, width, precision; `i` in `base`; `index`, `field`, `delimiter` (`;`), `mapping-indicator` (`=`), `power-form`; response variables not printable | INFO §2.3.4, INFO §7.30, BPIG App. E | content | S P | OB10 |  |
-| B21 | Selection without replacement: `select` children, every `required` child included, a sub-section counts as one; fewer than required is an error | INFO §5.129.1, INFO §4.2.2 | delivery, validate | S P N | OB11 |  |
-| B22 | Selection with replacement: children eligible more than once; `select` may exceed the child count | INFO §5.129.2 | delivery | S P | OB11 |  |
-| B23 | Ordering: `shuffle` permutes children; `fixed` children keep their positions, fixed after selection | INFO §5.98.1, INFO §4.2.3 | delivery | S P | OB11 |  |
-| B24 | `visible` sections; invisible sections in a shuffled parent shuffle as a block when `keep-together`, else their children mix with the parent's | INFO §4.2.6–7 | delivery | S P | OB11 |  |
-| B25 | `qti-assessment-section-ref` resolved by href to a section document | INFO §7.5, BIND §8.2 | delivery, package | S C | OB11 |  |
-| B26 | Navigation: linear parts move forward only; non-linear parts allow any item | INFO §2.8.2, INFO §5.159.4 | delivery | S P | OB11 |  |
-| B27 | Submission: individual per item; simultaneous at the end of the part, one attempt, no feedback during the test; adaptive items incompatible with simultaneous; except that items of adaptive sections in a simultaneous part get response and outcome processing per item before Submit Results (CAT §2.4) | INFO §2.8.2, INFO §5.159.5, CAT §2.4 | delivery, validate | S N | OB11 |  |
-| B28 | Pre-conditions in order, linear parts only, skip the item, section or part when one is false; test parts may have them | INFO §2.8.3, INFO §4.2.9 | delivery | S P | OB11 |  |
-| B29 | Branch rules after presentation; target forward in the same part, or another part; `EXIT_SECTION`, `EXIT_TESTPART`, `EXIT_TEST`; ignored in non-linear parts; paths are trees | INFO §2.8.3.2, INFO §5.23.1 | delivery, validate | S N | OB11 |  |
-| B30 | Item session control inheritance: test part, then sections, then item reference, each overriding | INFO §5.159.9, INFO §4.2.11, INFO §5.6.10 | delivery | S | OB11 |  |
+| B21 | Selection without replacement: `select` children, every `required` child included, a sub-section counts as one; fewer than required is an error | INFO §5.129.1, INFO §4.2.2 | delivery, validate | S P N | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B22 | Selection with replacement: children eligible more than once; `select` may exceed the child count | INFO §5.129.2 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B23 | Ordering: `shuffle` permutes children; `fixed` children keep their positions, fixed after selection | INFO §5.98.1, INFO §4.2.3 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B24 | `visible` sections; invisible sections in a shuffled parent shuffle as a block when `keep-together`, else their children mix with the parent's | INFO §4.2.6–7 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B25 | `qti-assessment-section-ref` resolved by href to a section document | INFO §7.5, BIND §8.2 | delivery, package | S C | OB11 | [delivery.test.ts](../test/delivery.test.ts) |
+| B26 | Navigation: linear parts move forward only; non-linear parts allow any item | INFO §2.8.2, INFO §5.159.4 | delivery | S P | OB11 | [delivery.test.ts](../test/delivery.test.ts) |
+| B27 | Submission: individual per item; simultaneous at the end of the part, one attempt, no feedback during the test; adaptive items incompatible with simultaneous; except that items of adaptive sections in a simultaneous part get response and outcome processing per item before Submit Results (CAT §2.4) | INFO §2.8.2, INFO §5.159.5, CAT §2.4 | delivery, validate | S N | OB11 | [delivery.test.ts](../test/delivery.test.ts) |
+| B28 | Pre-conditions in order, linear parts only, skip the item, section or part when one is false; test parts may have them | INFO §2.8.3, INFO §4.2.9 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B29 | Branch rules after presentation; target forward in the same part, or another part; `EXIT_SECTION`, `EXIT_TESTPART`, `EXIT_TEST`; ignored in non-linear parts; paths are trees | INFO §2.8.3.2, INFO §5.23.1 | delivery, validate | S N | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B30 | Item session control inheritance: test part, then sections, then item reference, each overriding | INFO §5.159.9, INFO §4.2.11, INFO §5.6.10 | delivery | S | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | B31 | `max-attempts`: unspecified is 1 for non-adaptive items, 0 is unlimited, more than 1 requires feedback between attempts | INFO §7.19.1 | delivery | S | OB13a |  |
 | B32 | `allow-skipping`: a skip is a submission with only default or NULL responses; enforced in individual mode only; an item without response variables is never considered skipped, so `allow-skipping="false"` never blocks it | INFO §7.19.6 | delivery | S | OB13a |  |
 | B33 | `validate-responses`: submission refused until every interaction's response is valid; individual mode only | INFO §7.19.7 | delivery, interactions | S | OB13a |  |
 | B34 | `allow-review`, `show-feedback`, `show-solution`, `allow-comment` gate review, feedback, solution and comment actions | INFO §7.19.2–5 | delivery | S | OB13a |  |
-| B35 | Time limits `min-time`, `max-time`, `allow-late-submission` at item, section, part and test; minimum only in linear mode for items and sections; part and test time include navigation | INFO §2.8.5, INFO §7.40 | delivery | S P | OB11 |  |
-| B36 | PNP additional testing time: `time-multiplier` scales every maximum time, `fixed-minutes` extends the outermost maximum, `unlimited` removes maximum times; minimum times unchanged (G41) | INFO §2.8.5, PNP XSD, BPIG §5.2.4 | delivery, pnp | S | OB11 |  |
+| B35 | Time limits `min-time`, `max-time`, `allow-late-submission` at item, section, part and test; minimum only in linear mode for items and sections; part and test time include navigation | INFO §2.8.5, INFO §7.40 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
+| B36 | PNP additional testing time: `time-multiplier` scales every maximum time, `fixed-minutes` extends the outermost maximum, `unlimited` removes maximum times; minimum times unchanged (G41) | INFO §2.8.5, PNP XSD, BPIG §5.2.4 | delivery, pnp | S | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | B37 | Outcome processing after each submission (individual) or group (simultaneous), after response processing; test outcomes reset to defaults before each run | INFO §2.9 | delivery, processing | S P | OB13b | [processing.test.ts](../test/processing.test.ts) |
 | B38 | Item variable lookup `ITEM.VAR` and `ITEM.n.VAR` for with-replacement instances; last submitted instance in simultaneous mode (else per G9); response variables give the last submitted value, never drafts (B96) | INFO §2.11.1.2 | processing, delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
 | B39 | Weights: `weight-identifier` scales numeric item variables, missing weight is 1.0, result float | INFO §7.47.2, INFO §7.50 | processing | S P | OB13b | [processing.test.ts](../test/processing.test.ts) |
@@ -668,7 +668,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 |  |
 | B64 | Custom operators: dispatch to a registered function by `definition`, else `class`; unregistered is a ProcessingError (G7) | INFO §2.11.3.2, INFO §10.1.5 | processing | S N | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | B65 | Custom interaction (deprecated): data kept; response binding unchecked | INFO §2.4.4.5, INFO §10.1.4 | asi, interactions | R | OB10 |  |
-| B66 | Adaptive section (CAT): `qti-adaptive-selection` excludes `qti-selection` and `qti-ordering`; no nested sections; top-level only; branch rules and pre-conditions on its items, and branch rules targeting its items, are ignored; stages appended in order | CAT §2.1, INFO §2.3, INFO §4.2 | delivery, validate | S N | OB16 |  |
+| B66 | Adaptive section (CAT): `qti-adaptive-selection` excludes `qti-selection` and `qti-ordering`; no nested sections; top-level only; branch rules and pre-conditions on its items, and branch rules targeting its items, are ignored; stages appended in order | CAT §2.1, INFO §2.3, INFO §4.2 | delivery, validate | S N | OB16 | [delivery.test.ts](../test/delivery.test.ts) |
 | B67 | CAT item flow: response and outcome processing before Submit Results; CAT outcome values merged into results; results per presented item with `sequenceIndex`, skipped items `initial` | CAT §2.4, INFO §4.3.1 | delivery, cat | S | OB16 |  |
 | B68 | Catalogs: one card per support in a catalog; card or card entry has HTML content or file references; card entry chosen by `xml:lang`, else `default` | BPIG §3.7.10 | content, validate | S N | OB10 |  |
 | B69 | PNP sets: activate as option, activate at initialization, prohibit; a prohibited support is not assigned | BPIG §5.3 | pnp | S N | OB5 | [pnp.test.ts](../test/pnp.test.ts) |
@@ -1021,7 +1021,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | --- | --- | --- | --- | --- | --- | --- |
 | E1 | Engine as a pure reducer: `apply(state, action)` returns a new state and events, or a refusal; no I/O, timers or clock reads | INFO §2.2.1, INFO §2.8 (states and paths) | delivery | P S | OB13b |  |
 | E2 | Serializable, versioned state: plain data with values as `WireValue` (E30); file values are references (D7); PCI states, supports and variant choices included |  | delivery | P | OB13b |  |
-| E3 | Explicit seed; generator state stored in the session; replaying the action log from the seed reproduces the state exactly | INFO §2.7.3, INFO §5.129, INFO §5.98 | delivery, root | P | OB13b |  |
+| E3 | Explicit seed; generator state stored in the session; replaying the action log from the seed reproduces the state exactly | INFO §2.7.3, INFO §5.129, INFO §5.98 | delivery, root | P | OB13b | [delivery.test.ts](../test/delivery.test.ts) |
 | E4 | Refusal values `{ code, message, source }` for disallowed actions; a refusal leaves the state unchanged | INFO §2.8.2, INFO §7.19 | delivery | S P | OB13b |  |
 | E5 | Every action carries `at` (epoch milliseconds). `stamp(state, action, now)` uses `max(now, last at)`, so server clock skew never refuses; only unstamped device logs can hit `clock-regression` (G27) | INFO §2.2.2.2, INFO §2.8.5 | delivery | P | OB13b |  |
 | E6 | Deadlines the host can query: maximum and minimum times per item, section, part and test, as absolute times, PNP-adjusted, suspended time excluded | INFO §2.8.5, INFO §7.40, BPIG §5.2.4 | delivery | S P | OB13b |  |
@@ -1029,7 +1029,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | E8 | Suspend and resume of the whole session; item sessions pass to suspended; suspended time counts nowhere (G23) | INFO §2.2.1 | delivery | S P | OB13b |  |
 | E9 | Navigation, submission modes, pre-conditions, branch rules, selection and ordering applied as the candidate moves | INFO §2.8 | delivery | S P C | OB13b |  |
 | E10 | Adaptive items: repeated attempts, outcomes kept, completion ends the session | INFO §2.5 | delivery | S D | OB13a |  |
-| E11 | Item instances keyed `{ ref, instance }` (with-replacement selections and CAT repeats) | INFO §2.11.1.2, CAT §4.2 | delivery | S | OB11 |  |
+| E11 | Item instances keyed `{ ref, instance }` (with-replacement selections and CAT repeats) | INFO §2.11.1.2, CAT §4.2 | delivery | S | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | E12 | Standalone item delivery for practice: a one-item, non-linear, individual-submission session; without a given control, feedback and review are shown (`show-feedback` and `allow-review` true) and adaptive rules apply, because the item session control defaults are stated for a test context | INFO §2.2.1, INFO §7.19 | delivery | S | OB13b |  |
 | E13 | Pending external scoring: one request per external-scored outcome: item-level when its item session closes, test-level when every covered instance is closed or the test ends (G26); covers that were never presented are listed with `presented: false` | INFO §4.5.10–11, BPIG §3.4.5 | delivery | S P | OB16 |  |
 | E14 | Requests carry the outcome declaration, mode (human or externalMachine), `variable-identifier-ref`, and the covered responses (exact strings, B96) with labels | INFO §4.5.11; O12 | delivery | S | OB16 |  |
@@ -1098,7 +1098,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G5 | `map-response` of a NULL response; bounds stated for containers only | INFO §2.11.1.5, INFO §5.88.1–2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G6 | Case-insensitive comparison method | INFO §5.138, INFO §5.139, INFO §7.21.3 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 |  |
+| G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 | [delivery.test.ts](../test/delivery.test.ts) |
 | G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b |  |
 | G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 | [asi.test.ts](../test/asi.test.ts) |
@@ -1131,7 +1131,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G38 | Mapping of PCI `intOrIdentifier` to a value | BPIG App. C.1 | values, pci | S | OB8 | [values.test.ts](../test/values.test.ts) |
 | G39 | BPIG's duration example uses years and months | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G40 | `SCORE`, `MAXSCORE` must be float and `PASSED` boolean, yet content in the field varies | INFO §2.2.2.3, BPIG §3.5 | validate | S | OB14 |  |
-| G41 | PNP `fixed-minutes` and `unlimited` with nested time limits (BPIG speaks of the test's time) | BPIG §5.2.4 | delivery | S | OB11 |  |
+| G41 | PNP `fixed-minutes` and `unlimited` with nested time limits (BPIG speaks of the test's time) | BPIG §5.2.4 | delivery | S | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | G42 | How an LTI-launched item's grade maps to QTI outcomes | BPIG §6.2.9 | delivery | S | OB16 |  |
 | G43 | QTI 2.x response processing template URIs in 3.0 content | BPIG §2.5.1 (3.0 URIs only) | processing | S | OB8 | [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
 
