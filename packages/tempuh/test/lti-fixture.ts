@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
 import { createHash } from "node:crypto";
+import { vi } from "vitest";
 import type { HttpRequest, HttpResponse } from "../src/lti/index.js";
 
 /** The fixed time of the tests of LTI: 2023-11-14T22:13:20Z. */
@@ -14,14 +15,16 @@ export interface TestClock {
   advance(seconds: number): void;
 }
 
-/** Creates a clock at `NOW`. */
+/**
+ * Creates a clock at `NOW`. The clock is the time of the system, which the test fakes: the key set cache of jose reads it.
+ * A test that creates a clock restores the system time with `vi.useRealTimers()` when it ends.
+ */
 export function createClock(): TestClock {
-  let time = NOW;
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   return {
-    now: () => time,
-    advance(seconds) {
-      time += seconds * 1000;
-    },
+    now: () => Date.now(),
+    advance: (seconds) => vi.setSystemTime(Date.now() + seconds * 1000),
   };
 }
 

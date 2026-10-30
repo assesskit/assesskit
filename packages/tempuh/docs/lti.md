@@ -1,8 +1,8 @@
 # LTI tool role
 
-`@luthfanwakan/tempuh/lti` lets a learning platform launch tempuh as an LTI 1.3 tool. It runs on a server, uses only the Web
-Crypto API and has no runtime dependency. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on 2022-06-30) are refused. The same
-subpath has the [platform role](lti-platform.md), which launches tools.
+`@luthfanwakan/tempuh/lti` lets a learning platform launch tempuh as an LTI 1.3 tool. It runs on a server, with
+[jose](https://github.com/panva/jose) for the tokens and the key sets. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on
+2022-06-30) are refused. The same subpath has the [platform role](lti-platform.md), which launches tools.
 
 | Function                                      | Does                                                                                          |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -77,7 +77,7 @@ const options: LtiLaunchOptions = {
       : undefined,
   clock,
   store,
-  jwks: createJwksCache({ fetch, clock }),
+  jwks: createJwksCache({ fetch }),
 };
 
 async function toHttpRequest(request: Request): Promise<HttpRequest> {
@@ -194,7 +194,7 @@ A request that is not a POST of a form with `id_token` and `state` is a `DataErr
 | Storage path: the second post comes from the redirect URI's origin, with `stored_state` and `stored_nonce` equal to the login's | `origin-mismatch`, `storage-mismatch`             |
 | The token has three canonical base64url parts, a JSON header and a JSON payload; no `crit` header                               | `token-malformed`                                 |
 | `alg` is `RS256`; `none` and the HMAC algorithms are refused                                                                    | `algorithm-unsupported`                           |
-| The header has a `kid` that the key set holds, as an RSA signing key of 2,048 bits or more                                      | `key-unknown`                                     |
+| The header has a `kid` that one key of the key set has, an RSA key for signing with RS256 of 2,048 bits or more                 | `key-unknown`                                     |
 | The signature verifies with that key                                                                                            | `signature-invalid`                               |
 | `iss` equals the registration's issuer                                                                                          | `issuer-mismatch`                                 |
 | `aud` is the client identifier alone (a string or an array); `azp`, when present, is the client identifier                      | `audience-mismatch`, `authorized-party-mismatch`  |
@@ -242,7 +242,7 @@ An item is an LTI resource link:
 
 The response has `iss` (the client identifier), `aud` (the platform), `exp` (300 seconds after `iat`), `iat`, a `nonce`, the
 deployment, the message type, the version, the `data` of the request when it had one, and `content_items`. It is signed with
-the registration's key and `keyId`. `deepLinkResponse` throws `DataError` when the platform does not accept
+RS256 and the registration's key, and its header has `keyId` as `kid`. `deepLinkResponse` throws `DataError` when the platform does not accept
 `ltiResourceLink` or, for several items, does not say `accept_multiple: true`.
 
 ## Access tokens
@@ -259,20 +259,23 @@ function keeps none.
 
 ## The key set cache
 
-`createJwksCache({ fetch, clock })` caches each key set by its URL, which comes from a registration and never from a token.
+`createJwksCache({ fetch })` holds a remote key set of jose for each URL, which comes from a registration and never from a
+token. `cache.keySet(url)` returns the function that resolves the public key of a token from its header, and `jwtVerify` of
+jose takes it.
 
 | Option           | Meaning                                                     |
 | ---------------- | ----------------------------------------------------------- |
 | `fetch`          | The `fetch` that gets the key sets                          |
-| `clock`          | The source of the time                                      |
 | `ttlSeconds`     | How long a set stays cached. Default: `3600`.               |
 | `refreshSeconds` | The least time between two fetches of a set. Default: `60`. |
 | `timeoutMs`      | The most time one fetch may take. Default: `10000`.         |
 
 A set that is older than `ttlSeconds` is fetched again. A `kid` that the cached set lacks fetches it again only after
 `refreshSeconds` (Security Framework §6.4: the platform adds a rotated key under a new `kid`), so a token with an invented
-`kid` cannot make the tool fetch on every request. Requests that wait for one fetch share it. The cache keeps the RSA keys
-for signing of 2,048 bits or more (RFC 7518 §3.3) and skips the others.
+`kid` cannot make the tool fetch on every request. Requests that wait for one fetch share it. The set resolves the key that
+has the `kid` and is meant for signing with RS256 (`use` is `sig` or absent, `alg` is `RS256` or absent, `key_ops` has
+`verify` when present); a `kid` that two keys share, and a set that is not a JWK Set (RFC 7517 §5), are refused. A key of
+fewer than 2,048 bits does not verify (RFC 7518 §3.3). The cache reads the time of the system, as jose does.
 
 ## Calls to the platform
 
@@ -283,7 +286,8 @@ a `DataError`.
 
 ## The clock
 
-`clock.now()` answers whole milliseconds, as `Date.now()` does. The functions read no other clock.
+`clock.now()` answers whole milliseconds, as `Date.now()` does. The functions read no other clock, except that the key set
+cache of jose reads the time of the system.
 
 ## Deployment
 

@@ -1,102 +1,196 @@
-import type { webcrypto } from "node:crypto";
-import { decodeBase64Url, encodeBase64Url } from "@luthfanwakan/olah/values";
-import { describe, isRecord } from "../checks.js";
-import { LtiError } from "../errors.js";
+import { decodeBase64Url } from "@luthfanwakan/olah/values";
+import { decodeJwt, errors, type JWTVerifyGetKey, jwtVerify } from "jose";
+import { describe } from "../checks.js";
+import { DataError, LtiError, TempuhError } from "../errors.js";
+import type { Claims } from "./claims.js";
+import { CLOCK_SKEW_SECONDS } from "./clock.js";
 
-const RS256 = { name: "RSASSA-PKCS1-v1_5" };
+// The only algorithm the tool and the platform sign and accept: `none` and the HMAC algorithms are refused, so that a token
+// cannot choose a weaker check than the public key (Security Framework §5.1.3, §5.4).
+const ALGORITHM = "RS256";
 
-/** A JSON Web Token split into its parts. Its signature has not been verified. */
-export interface DecodedJwt {
-  /** The JOSE header. */
-  readonly header: Readonly<Record<string, unknown>>;
-  /** The claims. */
-  readonly payload: Readonly<Record<string, unknown>>;
-  /** The header and the payload as they were signed: the two base64url parts joined by a dot. */
-  readonly signedPart: string;
-  /** The signature bytes. */
-  readonly signature: Uint8Array<ArrayBuffer>;
+/** The protected header of a token that the tool or the platform signs with an RSA key: RS256 and the `kid` of the key set. */
+export function rs256Header(keyId: string): { readonly alg: "RS256"; readonly typ: "JWT"; readonly kid: string } {
+  return { alg: ALGORITHM, typ: "JWT", kid: keyId };
 }
 
-/** Decodes one part of a token as a JSON object. */
-function decodeObject(part: string, name: string): Readonly<Record<string, unknown>> {
-  const bytes = decodeBase64Url(part);
-  if (bytes === undefined) {
-    throw new LtiError(`The ${name} of the token is not base64url (RFC 7515 §2).`, "token-malformed");
-  }
-  let value: unknown;
-  try {
-    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  } catch {
-    throw new LtiError(`The ${name} of the token is not JSON in UTF-8 (RFC 7515 §7.1).`, "token-malformed");
-  }
-  if (!isRecord(value)) {
-    throw new LtiError(`The ${name} of the token must be a JSON object, found ${describe(value)}.`, "token-malformed");
-  }
-  return value;
+/** What a verified token must say about itself. */
+export interface JwtExpectation {
+  /** The `iss` claim. */
+  readonly issuer: string;
+  /** The `aud` claim: the one party the token is for. */
+  readonly audience: string;
+  /** The `sub` claim, when the token must have one. */
+  readonly subject?: string;
+  /** The claims that must be present besides `iss`, `aud` and `sub`, such as `exp`. */
+  readonly requiredClaims: string[];
 }
 
 /**
- * Splits a compact JWS into its parts and reads the header and the payload (RFC 7515 §7.1). It verifies nothing.
- *
- * @throws `LtiError` (`token-malformed`) when the token does not have three base64url parts, or the first two are not
- * JSON objects.
+ * Returns whether a compact JWS has three parts that are each the one canonical base64url of some bytes. jose decodes
+ * more loosely, as `atob` does: it takes white space and bits that the encoding ignores, so that one signature has many
+ * spellings.
  */
-export function decodeJwt(token: string): DecodedJwt {
+export function hasCanonicalParts(token: string): boolean {
   const parts = token.split(".");
-  const [header, payload, signature] = parts;
-  if (parts.length !== 3 || header === undefined || payload === undefined || signature === undefined) {
+  return parts.length === 3 && parts.every((part) => decodeBase64Url(part) !== undefined);
+}
+
+/**
+ * Reads the claims of a token whose signature has not been verified, after it has the shape of a token: three canonical
+ * base64url parts and a payload that is a JSON object. The tool uses them to find the key that verifies the token, and they
+ * decide nothing until `verifyJwt` has accepted it.
+ *
+ * @throws `LtiError` (`token-malformed`) when the token does not have the shape.
+ */
+export function unverifiedClaims(token: string): Claims {
+  if (!hasCanonicalParts(token)) {
     throw new LtiError(
-      `The token must have three parts separated by dots (RFC 7515 §7.1), found ${parts.length}.`,
+      "The token must have three parts separated by dots, each in base64url without padding (RFC 7515 §2, §7.1).",
       "token-malformed",
     );
   }
-  const signatureBytes = decodeBase64Url(signature);
-  if (signatureBytes === undefined) {
-    throw new LtiError("The signature of the token is not base64url (RFC 7515 §2).", "token-malformed");
+  try {
+    return decodeJwt(token);
+  } catch {
+    throw new LtiError("The payload of the token must be a JSON object in UTF-8 (RFC 7519 §7.2).", "token-malformed");
   }
-  return {
-    header: decodeObject(header, "header"),
-    payload: decodeObject(payload, "payload"),
-    signedPart: `${header}.${payload}`,
-    signature: signatureBytes,
-  };
+}
+
+/** Says what is wrong with a claim that jose rejected, as an `LtiError` with the reason of the failed check. */
+function claimError(error: errors.JWTClaimValidationFailed | errors.JWTExpired, expected: JwtExpectation): LtiError {
+  const { claim, reason, payload } = error;
+  if (error instanceof errors.JWTExpired) {
+    return new LtiError(`The token expired at ${describe(payload.exp)} (Security Framework §5.1.3).`, "token-expired");
+  }
+  if (claim === "aud") {
+    const found = describe(payload.aud);
+    return new LtiError(
+      `The audience of the token must be ${describe(expected.audience)}, found ${found}.`,
+      "audience-mismatch",
+    );
+  }
+  if (reason === "missing" || reason === "invalid") {
+    return new LtiError(`The token has no valid ${JSON.stringify(claim)} claim: ${error.message}.`, `claim-${reason}`);
+  }
+  switch (claim) {
+    case "iss":
+      return new LtiError(
+        `The issuer of the token must be ${describe(expected.issuer)}, found ${describe(payload.iss)}.`,
+        "issuer-mismatch",
+      );
+    case "sub":
+      return new LtiError(
+        `The subject of the token must be ${describe(expected.subject)}, found ${describe(payload.sub)}.`,
+        "subject-mismatch",
+      );
+    default:
+      return new LtiError(`The token is not valid yet: ${error.message}.`, "issued-in-future");
+  }
 }
 
 /**
- * Reads the `kid` of a header whose algorithm is RS256, the only algorithm the tool accepts: `none` and the HMAC
- * algorithms are refused, so that a token cannot choose a weaker check than the platform's public key (Security
- * Framework §5.1.3, §5.4).
- *
- * @throws `LtiError` (`algorithm-unsupported`) when `alg` is not `RS256`, (`token-malformed`) when the header has `crit`,
- * which names extensions the tool does not support (RFC 7515 §4.1.11), and (`key-unknown`) when it has no `kid`
- * (Security Framework §6.3).
+ * Turns what jose throws into what the module throws: an `LtiError` with the reason of the failed check, and a `DataError`
+ * for a key set that is not one. The errors of the key function that are `TempuhError`s, such as a failed fetch, pass.
  */
-export function readKeyId(header: Readonly<Record<string, unknown>>): string {
-  if (header.alg !== "RS256") {
-    throw new LtiError(`The token must be signed with RS256, found ${describe(header.alg)}.`, "algorithm-unsupported");
+function refuse(error: unknown, expected: JwtExpectation): never {
+  if (error instanceof TempuhError) throw error;
+  if (error instanceof errors.JWTClaimValidationFailed || error instanceof errors.JWTExpired) {
+    throw claimError(error, expected);
   }
-  if (header.crit !== undefined) {
-    throw new LtiError("The token has the header crit, whose extensions the tool does not support.", "token-malformed");
+  if (error instanceof errors.JOSEAlgNotAllowed) {
+    throw new LtiError(
+      `The token must be signed with ${ALGORITHM} (Security Framework §5.1.3, §5.4).`,
+      "algorithm-unsupported",
+    );
   }
-  if (typeof header.kid !== "string" || header.kid === "") {
-    throw new LtiError("The token must name its key with the header kid (Security Framework §6.3).", "key-unknown");
+  if (error instanceof errors.JWSSignatureVerificationFailed) {
+    throw new LtiError("The signature of the token is not valid for the key of its issuer.", "signature-invalid");
   }
-  return header.kid;
+  // jose throws a TypeError for a key that cannot verify with RS256, such as one of fewer than 2,048 bits (RFC 7518 §3.3).
+  if (
+    error instanceof errors.JWKSNoMatchingKey ||
+    error instanceof errors.JWKSMultipleMatchingKeys ||
+    error instanceof TypeError
+  ) {
+    throw new LtiError(`The key set has no usable key for the token: ${error.message}.`, "key-unknown");
+  }
+  if (
+    error instanceof errors.JWSInvalid ||
+    error instanceof errors.JWTInvalid ||
+    error instanceof errors.JOSENotSupported
+  ) {
+    throw new LtiError(
+      `The token is malformed, or it names extensions the tool does not support: ${error.message}.`,
+      "token-malformed",
+    );
+  }
+  if (error instanceof errors.JOSEError) {
+    throw new DataError(`The key set must be a JWK Set (RFC 7517 §5): ${error.message}.`);
+  }
+  throw error;
 }
 
-/** Returns whether the signature of a token is valid for a public key. */
-export function verifyJwt(jwt: DecodedJwt, key: webcrypto.CryptoKey): Promise<boolean> {
-  return crypto.subtle.verify(RS256, key, jwt.signature, new TextEncoder().encode(jwt.signedPart));
+/**
+ * Verifies a compact JWS as the JWT of an LTI message or a client assertion: RS256 only, a `kid` that the key function
+ * resolves, the signature, the parties that `expected` names, the times with the leeway for clock skew, and the audience
+ * as the one party (Security Framework §5.1.3, §4.1.1; RFC 7523 §3).
+ *
+ * @param keys - Resolves the public key from the header of the token, such as a key set of `createJwksCache`.
+ * @param expected - What the token must say about itself. A present `exp` or `iat` must be a number.
+ * @param nowMilliseconds - The time in milliseconds since 1970-01-01T00:00:00Z.
+ * @returns The claims.
+ * @throws `LtiError` with the reason of the failed check: `token-malformed`, `algorithm-unsupported`, `key-unknown`,
+ * `signature-invalid`, `issuer-mismatch`, `audience-mismatch`, `subject-mismatch`, `token-expired`, `issued-in-future`,
+ * `claim-missing` or `claim-invalid`.
+ * @throws `ServiceError` when the key set cannot be fetched, and `DataError` when what the platform serves is not a JWK Set.
+ */
+export async function verifyJwt(
+  token: string,
+  keys: JWTVerifyGetKey,
+  expected: JwtExpectation,
+  nowMilliseconds: number,
+): Promise<Claims> {
+  // A token that is not one is refused before any key is fetched.
+  unverifiedClaims(token);
+  // Security Framework §6.3: every key of a key set has a `kid`, and a token names the one it is signed with.
+  const keyOf: JWTVerifyGetKey = (header, jws) => {
+    if (typeof header.kid !== "string" || header.kid === "") {
+      throw new LtiError("The token must name its key with the header kid (Security Framework §6.3).", "key-unknown");
+    }
+    return keys(header, jws);
+  };
+  let claims: Claims;
+  try {
+    ({ payload: claims } = await jwtVerify(token, keyOf, {
+      ...expected,
+      algorithms: [ALGORITHM],
+      clockTolerance: CLOCK_SKEW_SECONDS,
+      currentDate: new Date(nowMilliseconds),
+    }));
+  } catch (error) {
+    return refuse(error, expected);
+  }
+  checkSoleAudience(claims, expected.audience);
+  checkIssuedAt(claims, nowMilliseconds / 1000);
+  return claims;
 }
 
-/** Signs claims with RS256 and returns the compact JWS, with `kid` in its header. */
-export async function signJwt(
-  claims: Readonly<Record<string, unknown>>,
-  key: webcrypto.CryptoKey,
-  keyId: string,
-): Promise<string> {
-  const header = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT", kid: keyId })));
-  const signedPart = `${header}.${encodeBase64Url(new TextEncoder().encode(JSON.stringify(claims)))}`;
-  const signature = await crypto.subtle.sign(RS256, key, new TextEncoder().encode(signedPart));
-  return `${signedPart}.${encodeBase64Url(new Uint8Array(signature))}`;
+/** Checks that the audience is the one party: the token is for it alone, and no other party the tool does not trust is named. */
+function checkSoleAudience(claims: Claims, audience: JwtExpectation["audience"]): void {
+  const audiences: readonly unknown[] = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (!audiences.every((item) => item === audience)) {
+    throw new LtiError(
+      `The audience of the token must be ${describe(audience)} alone, found ${describe(claims.aud)}.`,
+      "audience-mismatch",
+    );
+  }
+}
+
+/** Checks that a token is not issued in the future (Security Framework §5.1.3), allowing the leeway for clock skew. */
+function checkIssuedAt(claims: Claims, nowSeconds: number): void {
+  const { iat } = claims;
+  if (typeof iat === "number" && iat - CLOCK_SKEW_SECONDS > nowSeconds) {
+    throw new LtiError(`The token was issued at ${iat}, after the time ${nowSeconds}.`, "issued-in-future");
+  }
 }

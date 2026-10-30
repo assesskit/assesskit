@@ -84,7 +84,9 @@
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css ./recorder-worklet.js"
   },
   "dependencies": {
-    "@luthfanwakan/olah": "workspace:^"
+    "@luthfanwakan/olah": "workspace:^",
+    "jose": "6.2.12",
+    "uuid": "14.0.3"
   },
   "peerDependencies": {
     "@luthfanwakan/takar": "^1.0.0"

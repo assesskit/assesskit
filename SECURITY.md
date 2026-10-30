@@ -322,7 +322,7 @@ Measured on Node.js 26 with documents built to reach each XML limit, a document 
 
 ## Runtime dependencies
 
-The packages that olah loads at run time are pinned to exact versions:
+The packages that olah and tempuh load at run time are pinned to exact versions:
 
 | Package        | Version | License | Used by                                                                                                                                                                                                                     |
 | -------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -330,3 +330,5 @@ The packages that olah loads at run time are pinned to exact versions:
 | `xmlchars`     | 2.2.0   | MIT     | `xml`: the character and name tables of XML 1.0 (a dependency of `saxes`, also used by the writer).                                                                                                                         |
 | `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. olah reads the central directory itself.                         |
 | `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                    |
+| `jose`         | 6.2.12  | MIT     | tempuh `lti`: signs and verifies the JWS and JWT of LTI messages, assertions and hints (algorithm allowlist, `crit`, `iss`, `aud`, `sub`, `exp`), computes JWK thumbprints and fetches key sets. Web Crypto only.           |
+| `uuid`         | 14.0.3  | MIT     | tempuh `caliper`: the name-based UUID of version 5 (RFC 9562) of the identifiers of events, attempts, scores, items and sections.                                                                                           |

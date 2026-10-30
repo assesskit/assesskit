@@ -1,3 +1,4 @@
+import { exportJWK } from "jose";
 import { type HttpResponse, jsonResponse } from "../http.js";
 import { platformKeyId } from "./config.js";
 import { checkPlatformOptions, type PlatformOptions } from "./options.js";
@@ -14,7 +15,11 @@ const MAX_AGE_SECONDS = 3600;
  */
 export async function platformJwks(options: PlatformOptions): Promise<HttpResponse> {
   checkPlatformOptions(options);
-  const { e, n } = await crypto.subtle.exportKey("jwk", options.config.keys.publicKey);
-  const key = { kty: "RSA", n, e, alg: "RS256", use: "sig", kid: await platformKeyId(options.config) };
+  const key = {
+    ...(await exportJWK(options.config.keys.publicKey)),
+    alg: "RS256",
+    use: "sig",
+    kid: await platformKeyId(options.config),
+  };
   return jsonResponse(200, { keys: [key] }, { "cache-control": `public, max-age=${MAX_AGE_SECONDS}` });
 }

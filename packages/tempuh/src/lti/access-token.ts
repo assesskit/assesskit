@@ -1,3 +1,4 @@
+import { SignJWT } from "jose";
 import {
   checkArray,
   checkFunction,
@@ -9,7 +10,7 @@ import {
 import { DataError } from "../errors.js";
 import { CLAIM } from "./claims.js";
 import { readClock } from "./clock.js";
-import { signJwt } from "./jwt.js";
+import { rs256Header } from "./jwt.js";
 import type { LtiDeployment } from "./launch-model.js";
 import { type AccessTokenOptions, checkToolOptions, findDeployment } from "./options.js";
 import { randomToken } from "./random.js";
@@ -98,19 +99,15 @@ export async function ltiAccessToken(
   checkPositiveInteger(timeoutMs, "The option timeoutMs");
   const registration = await findDeployment(options, deployment);
   const iat = Math.floor(readClock(options.clock) / 1000);
-  const assertion = await signJwt(
-    {
-      iss: registration.clientId,
-      sub: registration.clientId,
-      aud: registration.accessTokenUrl,
-      iat,
-      exp: iat + ASSERTION_TTL_SECONDS,
-      jti: randomToken(),
-      [CLAIM.deploymentId]: deployment.deploymentId,
-    },
-    registration.signingKey,
-    registration.keyId,
-  );
+  const assertion = await new SignJWT({ [CLAIM.deploymentId]: deployment.deploymentId })
+    .setProtectedHeader(rs256Header(registration.keyId))
+    .setIssuer(registration.clientId)
+    .setSubject(registration.clientId)
+    .setAudience(registration.accessTokenUrl)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + ASSERTION_TTL_SECONDS)
+    .setJti(randomToken())
+    .sign(registration.signingKey);
   const body = await callService(
     { fetch, timeoutMs },
     `The token endpoint ${registration.accessTokenUrl}`,

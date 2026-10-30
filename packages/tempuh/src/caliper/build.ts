@@ -34,11 +34,11 @@ function profileOf(type: CaliperEventType): CaliperProfile {
  * Builds an event. Its identifier is the URN of the session, the step and the index of the event: the position in
  * `Step.events` of the event that it reports, so that reporting a step again gives the same identifier (F-m16).
  */
-export async function buildEvent(index: number, parts: EventParts, context: CaliperContext): Promise<CaliperEvent> {
+export function buildEvent(index: number, parts: EventParts, context: CaliperContext): CaliperEvent {
   const { type, action, actor, object, generated, time } = parts;
   return {
     "@context": CALIPER_CONTEXT,
-    id: await mintUrn(["event", context.session, context.step, index]),
+    id: mintUrn(["event", context.session, context.step, index]),
     type,
     profile: profileOf(type),
     actor,

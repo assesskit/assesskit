@@ -1,4 +1,5 @@
 import type { webcrypto } from "node:crypto";
+import { errors, type JWTVerifyGetKey } from "jose";
 import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { MAX_IDENTIFIER_LENGTH } from "../claims.js";
@@ -56,12 +57,16 @@ export function checkToolRegistration(value: unknown): asserts value is ToolRegi
   }
 }
 
-/** Returns the tool's public key with the given `kid`, or `undefined` when the tool has none. */
-export async function toolKey(
-  registration: ToolRegistration,
-  keyId: string,
-  jwks: JwksCache,
-): Promise<webcrypto.CryptoKey | undefined> {
-  if (registration.jwksUrl !== undefined) return jwks.key(registration.jwksUrl, keyId);
-  return registration.keys?.get(keyId);
+/**
+ * Returns the function that resolves the tool's public key from the header of an assertion: the key set at its `jwksUrl`,
+ * or the key of `keys` that has the `kid`.
+ */
+export function toolKeySet(registration: ToolRegistration, jwks: JwksCache): JWTVerifyGetKey {
+  if (registration.jwksUrl !== undefined) return jwks.keySet(registration.jwksUrl);
+  const keys = registration.keys ?? new Map<string, webcrypto.CryptoKey>();
+  return (header) => {
+    const key = typeof header.kid === "string" ? keys.get(header.kid) : undefined;
+    if (key === undefined) throw new errors.JWKSNoMatchingKey();
+    return Promise.resolve(key);
+  };
 }

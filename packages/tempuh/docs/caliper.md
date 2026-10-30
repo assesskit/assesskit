@@ -8,7 +8,7 @@ to the host's log and to Caliper. Both are for servers.
 ```ts
 import { caliperEvents, sendCaliper } from "@luthfanwakan/tempuh/caliper";
 
-const events = await caliperEvents(
+const events = caliperEvents(
   [
     { type: "section-entered", at: 1_700_000_000_000, scope: "main" },
     { type: "presented", at: 1_700_000_000_000, item: { ref: "q1", instance: 1 } },
@@ -97,7 +97,8 @@ An event's `id` is the URN `urn:uuid:` and a name-based UUID of version 5 (RFC 9
 UUID URN). Reporting the same step again gives the same identifiers, so an endpoint that keeps an event once by its `id`
 holds each event once.
 
-The UUID is the SHA-1 of the namespace `e77b625a-3ddd-5fa9-be27-44f813a9600d` and the UTF-8 bytes of a name. The namespace is
+The UUID is the `v5` of the [uuid](https://github.com/uuidjs/uuid) package: the SHA-1 of the namespace
+`e77b625a-3ddd-5fa9-be27-44f813a9600d` and the UTF-8 bytes of a name. The namespace is
 the UUID of `https://github.com/luthfanwakan/olah/tree/main/packages/tempuh/src/caliper` in the URL namespace of RFC 9562
 §6.6. The name is the JSON text of an array, so that no two lists of parts make one name.
 

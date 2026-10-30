@@ -1,3 +1,4 @@
+import { SignJWT } from "jose";
 import {
   checkArray,
   checkHttpsUrl,
@@ -10,7 +11,7 @@ import {
 import { DataError } from "../errors.js";
 import { CLAIM, LTI_VERSION, MESSAGE_TYPE } from "./claims.js";
 import { readClock } from "./clock.js";
-import { signJwt } from "./jwt.js";
+import { rs256Header } from "./jwt.js";
 import type { DeepLinkingLaunch } from "./launch-model.js";
 import { checkToolOptions, findDeployment, type ToolOptions } from "./options.js";
 import { randomToken } from "./random.js";
@@ -145,17 +146,18 @@ export async function deepLinkResponse(
   checkAccepted(launch, items);
   const registration = await findDeployment(options, launch);
   const iat = Math.floor(readClock(options.clock) / 1000);
-  const claims = {
-    iss: registration.clientId,
-    aud: registration.issuer,
-    exp: iat + MESSAGE_TTL_SECONDS,
-    iat,
+  return new SignJWT({
     nonce: randomToken(),
     [CLAIM.messageType]: MESSAGE_TYPE.deepLinkingResponse,
     [CLAIM.version]: LTI_VERSION,
     [CLAIM.deploymentId]: launch.deploymentId,
     [CLAIM.data]: launch.settings.data,
     [CLAIM.contentItems]: items.map(contentItem),
-  };
-  return signJwt(claims, registration.signingKey, registration.keyId);
+  })
+    .setProtectedHeader(rs256Header(registration.keyId))
+    .setIssuer(registration.clientId)
+    .setAudience(registration.issuer)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + MESSAGE_TTL_SECONDS)
+    .sign(registration.signingKey);
 }

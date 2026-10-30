@@ -136,7 +136,7 @@ export async function ltiLaunch(request: HttpRequest, options: LtiLaunchOptions)
       idToken,
     });
   }
-  const claims = await verifyIdToken(idToken, registration, options.jwks, readClock(options.clock) / 1000);
+  const claims = await verifyIdToken(idToken, registration, options.jwks, readClock(options.clock));
   if (claims.nonce !== record.nonce) {
     throw new LtiError("The nonce of the token is not the nonce of the login.", "nonce-mismatch");
   }

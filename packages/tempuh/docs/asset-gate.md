@@ -39,9 +39,10 @@ response.status; // 200, 403 or 404
 
 ## Tokens in the path
 
-A URL has the form `https://<origin>/g/<token>/<package path>`. The token is `<payload>.<mac>` in base64url. The payload
-names the session, a prefix of package paths (a directory that ends in `/`, or the empty root) and an expiry. The MAC is
-HMAC-SHA-256 over the payload with the key, checked in constant time.
+A URL has the form `https://<origin>/g/<token>/<package path>`. The token is a compact JWS (RFC 7515) with `alg: HS256`
+and the `typ` `asset`, signed with the key. Its payload names the session, a prefix of package paths (a directory that
+ends in `/`, or the empty root) and an expiry in epoch milliseconds. The token of a file of the candidate has the `typ`
+`file`. A token is refused for any other `alg` or `typ`.
 
 The token is in the path, and not the query, so that relative URLs inherit it: RequireJS resolves a PCI's
 `define(["./renderer"], …)` against `baseUrl`, and a stylesheet loaded as text resolves `url(../fonts/x.woff)` against its own

@@ -140,7 +140,7 @@ olah owns everything QTI defines that is not presentation or platform; tempuh ow
   `olah schemas fetch` run one implementation. Node runs that file directly, so it imports only `node:*` modules and types.
 - `packages/olah` never imports `tempuh`. `tempuh` and the other packages import olah by package name and subpath, never
   by a relative path into `src/` or `dist/`.
-- Runtime dependencies are listed in `packages/olah/package.json`, pinned, and recorded in `SECURITY.md`.
+- Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
 - A tempuh folder imports only the folders in its row of the table in
   [architecture.md](packages/tempuh/docs/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
   of them. Biome enforces the rows. Only `cat/takar/` imports takar, and `fetch` appears only as an option parameter.

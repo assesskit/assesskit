@@ -52,7 +52,7 @@ function memoryStore(): LtiStore & { readonly records: Map<string, LoginRecord> 
 /** The tool: its registration, a store, and a cache whose key set is never fetched. */
 function tool(): { options: LtiLaunchOptions; store: ReturnType<typeof memoryStore> } {
   const store = memoryStore();
-  const jwks = createJwksCache({ fetch: () => Promise.reject(new Error("The pages do not fetch.")), clock });
+  const jwks = createJwksCache({ fetch: () => Promise.reject(new Error("The pages do not fetch.")) });
   return { store, options: { registration: async () => registration, clock, store, jwks } };
 }
 

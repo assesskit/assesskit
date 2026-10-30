@@ -1,5 +1,5 @@
 import type { webcrypto } from "node:crypto";
-import { encodeBase64Url } from "@luthfanwakan/olah/values";
+import { calculateJwkThumbprint } from "jose";
 import { checkHttpsUrl, checkRecord, describe, isRecord } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { isHmacKey, isRsaKey } from "../keys.js";
@@ -116,15 +116,7 @@ export function platformKeyId(config: PlatformConfig): Promise<string> {
   const { publicKey } = config.keys;
   const known = keyIds.get(publicKey);
   if (known !== undefined) return known;
-  const computed = (async () => {
-    const { e, n } = await crypto.subtle.exportKey("jwk", publicKey);
-    // RFC 7638 §3.2: the required members of an RSA key in lexicographic order, without white space.
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(JSON.stringify({ e, kty: "RSA", n })),
-    );
-    return encodeBase64Url(new Uint8Array(digest));
-  })();
+  const computed = calculateJwkThumbprint(publicKey);
   keyIds.set(publicKey, computed);
   return computed;
 }

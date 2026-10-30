@@ -1,36 +1,33 @@
 import type { webcrypto } from "node:crypto";
-import { decodeBase64Url, encodeBase64Url } from "@luthfanwakan/olah/values";
+import { CompactSign, compactVerify } from "jose";
 import { isRecord } from "../../checks.js";
 import type { Claims } from "../claims.js";
+import { hasCanonicalParts } from "../jwt.js";
 
-const HMAC = { name: "HMAC" };
+const ALGORITHM = "HS256";
 
 /**
- * Seals claims with an HMAC-SHA-256: `<claims>.<mac>`, both in base64url. The sealed token is signed and not encrypted,
- * so whoever holds it can read it. The `use` names what the token is for, and a token of one use is refused for another.
+ * Seals claims as a compact JWS signed with HMAC-SHA-256 (RFC 7515). The sealed token is signed and not encrypted, so
+ * whoever holds it can read it. The `use` is the `typ` header, and a token of one use is refused for another (RFC 8725
+ * §3.11). The claims are the host's: their times, if any, are checked by whoever opens the token.
  */
-export async function sealToken(use: string, claims: Claims, key: webcrypto.CryptoKey): Promise<string> {
-  const payload = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ ...claims, use })));
-  const mac = await crypto.subtle.sign(HMAC, key, new TextEncoder().encode(payload));
-  return `${payload}.${encodeBase64Url(new Uint8Array(mac))}`;
+export function sealToken(use: string, claims: Claims, key: webcrypto.CryptoKey): Promise<string> {
+  return new CompactSign(new TextEncoder().encode(JSON.stringify(claims)))
+    .setProtectedHeader({ alg: ALGORITHM, typ: use })
+    .sign(key);
 }
 
 /**
- * Opens a sealed token: returns its claims when the MAC is valid for the key and the token is for the given use, else
- * `undefined`. The MAC is compared in constant time by the Web Crypto API.
+ * Opens a sealed token: returns its claims when the signature is valid for the key and the token is for the given use,
+ * else `undefined`.
  */
 export async function openToken(token: string, use: string, key: webcrypto.CryptoKey): Promise<Claims | undefined> {
-  const [payload, mac, ...rest] = token.split(".");
-  if (payload === undefined || mac === undefined || rest.length > 0) return undefined;
-  const macBytes = decodeBase64Url(mac);
-  const payloadBytes = decodeBase64Url(payload);
-  if (macBytes === undefined || payloadBytes === undefined) return undefined;
-  if (!(await crypto.subtle.verify(HMAC, key, macBytes, new TextEncoder().encode(payload)))) return undefined;
-  let claims: unknown;
+  if (!hasCanonicalParts(token)) return undefined;
   try {
-    claims = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(payloadBytes));
+    const { payload, protectedHeader } = await compactVerify(token, key, { algorithms: [ALGORITHM] });
+    const claims: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(payload));
+    return protectedHeader.typ === use && isRecord(claims) ? claims : undefined;
   } catch {
     return undefined;
   }
-  return isRecord(claims) && claims.use === use ? claims : undefined;
 }

@@ -458,7 +458,7 @@ describe("the asset gate", () => {
   it("[T73] signs a prefix and serves the files under it with the headers of the gate", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
-    expect(base).toMatch(/^https:\/\/assets\.example\/g\/[\w-]+\.[\w-]+\/$/u);
+    expect(base).toMatch(/^https:\/\/assets\.example\/g\/[\w-]+\.[\w-]+\.[\w-]+\/$/u);
     const response = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW);
     expect(response.status).toBe(200);
     expect(response.headers).toMatchObject({
@@ -504,12 +504,17 @@ describe("the asset gate", () => {
   it("[T73] refuses a token with a wrong MAC, another payload, or no MAC at all", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
-    const [payload = "", mac = ""] = (new URL(base).pathname.split("/")[2] ?? "").split(".");
-    const forged = Buffer.from(JSON.stringify({ use: "asset", session: "s2", prefix: "", exp: NOW + DAY })).toString(
-      "base64url",
-    );
+    const [header = "", payload = "", mac = ""] = (new URL(base).pathname.split("/")[2] ?? "").split(".");
+    const forged = Buffer.from(JSON.stringify({ session: "s2", prefix: "", exp: NOW + DAY })).toString("base64url");
     const wrong = mac.startsWith("A") ? `B${mac.slice(1)}` : `A${mac.slice(1)}`;
-    const tokens = [`${payload}.${wrong}`, `${forged}.${mac}`, payload, `${payload}.${mac}.${mac}`, ".", `${payload}.`];
+    const tokens = [
+      `${header}.${payload}.${wrong}`,
+      `${header}.${forged}.${mac}`,
+      `${header}.${payload}`,
+      `${header}.${payload}.${mac}.${mac}`,
+      "..",
+      `${header}.${payload}.`,
+    ];
     for (const token of tokens) {
       const response = await gate.serve({ path: `/g/${token}/items/q1/images/map.png` }, NOW);
       expect(response.status, token).toBe(403);
@@ -758,7 +763,7 @@ describe("the asset gate", () => {
     const { gate, fileStore } = await gateOf();
     const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", "answer.wav");
     const url = await gate.signFile("s1", file, NOW);
-    expect(url).toMatch(/^https:\/\/assets\.example\/f\/[\w-]+\.[\w-]+\/file-1$/u);
+    expect(url).toMatch(/^https:\/\/assets\.example\/f\/[\w-]+\.[\w-]+\.[\w-]+\/file-1$/u);
     const path = new URL(url).pathname;
     const response = await gate.serve({ path }, NOW);
     expect(response.status).toBe(200);

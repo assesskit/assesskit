@@ -3,7 +3,7 @@
 `@luthfanwakan/tempuh/lti` also launches tools: an LTI resource in a package (BPIG §6.2.9, resource type
 `imsbasiclti_xmlv1p3`) is an item that a tool delivers, and a conformant tool refuses a launch that skips the OpenID
 Connect handshake. The platform role is the other side of the [tool role](lti.md): it uses the same JWT, key set and HTTP
-primitives, and no dependency but the Web Crypto API.
+primitives, with [jose](https://github.com/panva/jose).
 
 | Function                                    | Does                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -94,7 +94,9 @@ cross-site frame of the tool, where Safari and Firefox may withhold the host's s
 | `login_hint`       | The principal                                                                                                                                                                              | HMAC-SHA-256 |
 
 Both are signed and not encrypted, so the tool can read them: the principal is also the `sub` of the launch, and the session
-identifier must be one that the tool may know. A hint is valid for one use: `options.once` records its `jti`.
+identifier must be one that the tool may know. Each is a compact JWS (RFC 7515) with `alg: HS256`, and its `typ` header says
+what it is for: `hint` or `login`. A token is refused for any other `typ` (RFC 8725 §3.11), and for any other `alg`. A hint is
+valid for one use: `options.once` records its `jti`.
 
 ### What `ltiPlatformAuthorize` checks
 
@@ -146,7 +148,7 @@ offered, because the platform makes the one line item an item needs.
 ## The token endpoint
 
 `platformToken` grants the client-credentials grant with a JWT assertion (Security Framework §4.1.1). The access token is
-sealed with the hint key, lasts one hour and holds the requested scopes, which must be among `lineitem.readonly` and `score`.
+a compact JWS with `alg: HS256` and the `typ` `access`, signed with the hint key; it lasts one hour and holds the requested scopes, which must be among `lineitem.readonly` and `score`.
 A request that fails gets status 400 with an `error` and an `error_description` (RFC 6749 §5.2). The checks, in order:
 
 | Check                                                                                                      | `error`                  |
@@ -166,7 +168,7 @@ set that cannot be fetched reaches the host, and the assertion is not used up.
 
 ## The line item and the scores
 
-The line item URL is `{origin}/ags/{line item}`. The identifier is sealed with the hint key and names the session, the item
+The line item URL is `{origin}/ags/{line item}`. The identifier is a compact JWS with `alg: HS256` and the `typ` `line-item`, signed with the hint key, and names the session, the item
 instance, the tool, the user (`sub`), the label and the highest score, so the platform keeps no state. It has no expiry: a
 tool may post a score long after the test (LTI AGS 2.0 §3.1).
 
@@ -242,7 +244,7 @@ const options = {
   clock,
   registration: async (_link: LtiLink) => tool,
   client: async (clientId: string) => (clientId === tool.clientId ? tool : undefined),
-  jwks: createJwksCache({ fetch, clock }),
+  jwks: createJwksCache({ fetch }),
   once: async (id: string, expiresAt: number) => {
     if (used.has(id)) return false;
     used.set(id, expiresAt);

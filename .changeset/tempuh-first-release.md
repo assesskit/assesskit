@@ -23,7 +23,9 @@ materials that olah reads and the supports of a candidate's profile.
 
 The tool role of LTI 1.3 in `@luthfanwakan/tempuh/lti`: the third-party initiated login with a state cookie or with the
 platform's browser storage (LTI Client Side OIDC), the validation of the launch, a key set cache, the response to a Deep
-Linking request and the access token of the client-credentials grant.
+Linking request and the access token of the client-credentials grant. The tokens, the assertions, the hints and the key sets
+are handled by jose, a runtime dependency, which verifies RS256 only for the keys of platforms and tools and checks `iss`, `aud`,
+`sub` and `exp`.
 
 Computer adaptive testing on the server (`cat`): `restCatPort` speaks the REST/JSON binding of CAT 1.0 to one remote
 engine over HTTPS with OAuth 2.0 client credentials, and `deployCatSections` creates the sections of a package's adaptive
@@ -53,10 +55,10 @@ stylesheets, MathJax typesetting, a notice that withholds media where a hazard r
 Caliper 1.2 in `@luthfanwakan/tempuh/caliper`: `caliperEvents` maps the events of a step of a delivery session to the events of the
 Assessment Profile (AssessmentEvent Started, Paused, Resumed and Submitted, AssessmentItemEvent Started, Skipped and Completed,
 NavigationEvent NavigatedTo), `caliperGrade` gives the GradeEvent Graded of the Grading Profile for a score, and every identifier is a
-name-based UUID of version 5 over the session, the step and the position, so that reporting a step again gives the same events.
-`sendCaliper` posts them in an envelope to an endpoint over HTTPS with a bearer token. `forwardEvents` in
-`@luthfanwakan/tempuh/server` gives every event of a step to the host's log, whatever its type, and the events that Caliper has a
-counterpart for to the endpoint.
+name-based UUID of version 5 of the `uuid` package, a runtime dependency, over the session, the step and the position, so that
+reporting a step again gives the same events. `caliperEvents` and `caliperGrade` answer synchronously. `sendCaliper` posts them
+in an envelope to an endpoint over HTTPS with a bearer token. `forwardEvents` in `@luthfanwakan/tempuh/server` gives every
+event of a step to the host's log, whatever its type, and the events that Caliper has a counterpart for to the endpoint.
 
 The interactions of text, choice and files (`player`): `createInteractionRenderers` draws choice, order, associate, match, gap
 match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload and custom interactions as elements

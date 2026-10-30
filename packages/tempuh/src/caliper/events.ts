@@ -14,7 +14,7 @@ import { caliperTime } from "./time.js";
 const STARTED_INDEX = -1;
 
 /** How one event of olah becomes the parts of a Caliper event. */
-type Rule = (event: DeliveryEvent, context: CaliperContext) => Promise<EventParts>;
+type Rule = (event: DeliveryEvent, context: CaliperContext) => EventParts;
 
 /** Reads the time of an event of olah as Caliper writes it. */
 function timeOf(event: DeliveryEvent): string {
@@ -31,11 +31,11 @@ function itemOfEvent(event: DeliveryEvent): ItemKey {
 }
 
 /** Builds the parts of an AssessmentEvent: the candidate acts on the test and the action makes the attempt at it. */
-async function assessmentEvent(
+function assessmentEvent(
   action: "Started" | "Paused" | "Resumed" | "Submitted",
   event: DeliveryEvent,
   context: CaliperContext,
-): Promise<EventParts> {
+): EventParts {
   const time = timeOf(event);
   // Caliper 1.2 §3.2: Started opens the attempt and Submitted closes it; Paused and Resumed leave it as it is.
   const times = action === "Started" ? { startedAtTime: time } : action === "Submitted" ? { endedAtTime: time } : {};
@@ -44,7 +44,7 @@ async function assessmentEvent(
     action,
     actor: person(context.actor),
     object: assessmentOf(context),
-    generated: await testAttempt(context, times),
+    generated: testAttempt(context, times),
     time,
   };
 }
@@ -57,15 +57,15 @@ function navigatedTo(event: DeliveryEvent, object: CaliperEntity, context: Calip
   return { type: "NavigationEvent", action: "NavigatedTo", actor: person(context.actor), object, time: timeOf(event) };
 }
 
-const itemPresented: Rule = async (event, context) => {
+const itemPresented: Rule = (event, context) => {
   const key = itemOfEvent(event);
   const time = timeOf(event);
   return {
     type: "AssessmentItemEvent",
     action: "Started",
     actor: person(context.actor),
-    object: await itemOf(context, key),
-    generated: await itemAttempt(context, key, { startedAtTime: time }),
+    object: itemOf(context, key),
+    generated: itemAttempt(context, key, { startedAtTime: time }),
     time,
   };
 };
@@ -75,25 +75,24 @@ const itemPresented: Rule = async (event, context) => {
  * submission, an end-attempt interaction and a close are Completed. Skipped generates the attempt (Caliper 1.2 §3.2). The
  * events hold no response, and an answer is not analytics data, so Completed generates no Response.
  */
-const itemAttemptEnded: Rule = async (event, context) => {
+const itemAttemptEnded: Rule = (event, context) => {
   const key = itemOfEvent(event);
   const time = timeOf(event);
   const parts = {
     type: "AssessmentItemEvent",
     actor: person(context.actor),
-    object: await itemOf(context, key),
+    object: itemOf(context, key),
     time,
   } as const;
   if (event.detail !== "skip") return { ...parts, action: "Completed" };
-  return { ...parts, action: "Skipped", generated: await itemAttempt(context, key, { endedAtTime: time }) };
+  return { ...parts, action: "Skipped", generated: itemAttempt(context, key, { endedAtTime: time }) };
 };
 
-const movedToItem: Rule = async (event, context) =>
-  navigatedTo(event, await itemOf(context, itemOfEvent(event)), context);
+const movedToItem: Rule = (event, context) => navigatedTo(event, itemOf(context, itemOfEvent(event)), context);
 
-const enteredSection: Rule = async (event, context) => {
+const enteredSection: Rule = (event, context) => {
   checkNonEmptyString(event.scope, `The scope of the event ${event.type}`);
-  return navigatedTo(event, await sectionOf(context, event.scope), context);
+  return navigatedTo(event, sectionOf(context, event.scope), context);
 };
 
 /**
@@ -160,21 +159,18 @@ function checkEvent(value: unknown, at: number): asserts value is DeliveryEvent 
  * @throws `DataError` when an argument has the wrong type, an event has an unknown type, or an event lacks what its
  * Caliper event needs: a valid time, an item instance or a scope.
  */
-export async function caliperEvents(
-  events: readonly DeliveryEvent[],
-  context: CaliperContext,
-): Promise<readonly CaliperEvent[]> {
+export function caliperEvents(events: readonly DeliveryEvent[], context: CaliperContext): readonly CaliperEvent[] {
   checkContext(context);
   checkArray(events, "The events must be an array");
   events.forEach(checkEvent);
-  const planned: Promise<CaliperEvent>[] = [];
+  const planned: CaliperEvent[] = [];
   const first = events[0];
   if (context.step === START_STEP && first !== undefined) {
-    planned.push(started(first, context).then((parts) => buildEvent(STARTED_INDEX, parts, context)));
+    planned.push(buildEvent(STARTED_INDEX, started(first, context), context));
   }
   events.forEach((event, index) => {
     const rule = RULES.get(event.type);
-    if (rule) planned.push(rule(event, context).then((parts) => buildEvent(index, parts, context)));
+    if (rule) planned.push(buildEvent(index, rule(event, context), context));
   });
-  return Promise.all(planned);
+  return planned;
 }

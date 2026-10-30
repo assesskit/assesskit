@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
 import { type LtiLink, readLtiLink } from "@luthfanwakan/olah/package";
 import fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccessError, DataError, ServiceError } from "../src/index.js";
 import {
   type AgsScore,
@@ -148,7 +148,6 @@ function setup(overrides: { tools?: Map<string, ToolRegistration> } = {}): Setup
     scoring: undefined as never,
   };
   const jwks = createJwksCache({
-    clock,
     fetch: async (url) => {
       state.toolFetches.push(url);
       if (state.failToolKeys) return new Response("down", { status: 503 });
@@ -276,16 +275,19 @@ async function lineItemOf(ctx: Setup): Promise<string> {
   return agsClaim((await launch(ctx)).claims).lineitem;
 }
 
-/** Reads a sealed value as an independent reader does: the payload and whether its HMAC verifies. */
-async function openSealed(token: string): Promise<{ claims: Record<string, unknown>; valid: boolean }> {
-  const [payload = "", mac = ""] = token.split(".");
+/** Reads a sealed value as an independent reader does: the header, the payload and whether its HMAC verifies. */
+async function openSealed(
+  token: string,
+): Promise<{ header: Record<string, unknown>; claims: Record<string, unknown>; valid: boolean }> {
+  const [header = "", payload = "", mac = ""] = token.split(".");
   const valid = await crypto.subtle.verify(
     "HMAC",
     hintKey,
     Buffer.from(mac, "base64url"),
-    new TextEncoder().encode(payload),
+    new TextEncoder().encode(`${header}.${payload}`),
   );
-  return { claims: JSON.parse(Buffer.from(payload, "base64url").toString("utf8")), valid };
+  const parse = (part: string): Record<string, unknown> => JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+  return { header: parse(header), claims: parse(payload), valid };
 }
 
 /** A body of a score as the spec's example 3.4.3.1 gives it. */
@@ -324,6 +326,8 @@ async function postScore(
 function toResponse({ status, headers, body }: HttpResponse): Response {
   return new Response(status === 204 ? null : body, { status, headers });
 }
+
+afterEach(() => vi.useRealTimers());
 
 describe("readAgsScore", () => {
   const complete = {
@@ -961,12 +965,27 @@ describe("ltiPlatformAuthorize", () => {
       ["a hint that is not a token", (p) => p.set("lti_message_hint", "opaque"), "hint-invalid"],
       [
         "a hint with a changed claim",
-        async (p) => p.set("lti_message_hint", await tamper(p.get("lti_message_hint") ?? "")),
+        (p) => p.set("lti_message_hint", tamper(p.get("lti_message_hint") ?? "")),
         "hint-invalid",
       ],
       [
         "a hint with a changed MAC",
         (p) => p.set("lti_message_hint", corruptMac(p.get("lti_message_hint") ?? "")),
+        "hint-invalid",
+      ],
+      [
+        "a hint whose header says alg none",
+        (p) => p.set("lti_message_hint", withHeader(p.get("lti_message_hint") ?? "", { alg: "none", typ: "hint" })),
+        "hint-invalid",
+      ],
+      [
+        "a hint whose header says RS256",
+        (p) => p.set("lti_message_hint", withHeader(p.get("lti_message_hint") ?? "", { alg: "RS256", typ: "hint" })),
+        "hint-invalid",
+      ],
+      [
+        "a hint whose header says another use",
+        (p) => p.set("lti_message_hint", withHeader(p.get("lti_message_hint") ?? "", { alg: "HS256", typ: "login" })),
         "hint-invalid",
       ],
       ["the login_hint as the hint", (p) => p.set("lti_message_hint", p.get("login_hint") ?? ""), "hint-invalid"],
@@ -1150,11 +1169,17 @@ describe("ltiPlatformAuthorize", () => {
 });
 
 /** Changes a claim of a sealed token and keeps the MAC, which then no longer fits. */
-async function tamper(token: string): Promise<string> {
-  const [payload = "", mac = ""] = token.split(".");
+function tamper(token: string): string {
+  const [header = "", payload = "", mac = ""] = token.split(".");
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   const changed = Buffer.from(JSON.stringify({ ...claims, principal: "candidate-8" })).toString("base64url");
-  return `${changed}.${mac}`;
+  return `${header}.${changed}.${mac}`;
+}
+
+/** Replaces the header of a sealed token and keeps the payload and the MAC, which then no longer fit. */
+function withHeader(token: string, header: Record<string, unknown>): string {
+  const [, payload = "", mac = ""] = token.split(".");
+  return `${Buffer.from(JSON.stringify(header)).toString("base64url")}.${payload}.${mac}`;
 }
 
 /**
@@ -1172,8 +1197,8 @@ function respell(token: string): string {
  * not do: it holds two bits that base64url ignores, so that two spellings of one MAC are the same MAC.
  */
 function corruptMac(token: string): string {
-  const [payload = "", mac = ""] = token.split(".");
-  return `${payload}.${mac.startsWith("A") ? "B" : "A"}${mac.slice(1)}`;
+  const [header = "", payload = "", mac = ""] = token.split(".");
+  return `${header}.${payload}.${mac.startsWith("A") ? "B" : "A"}${mac.slice(1)}`;
 }
 
 /** A hint that a platform with another hint key issued. */
@@ -1402,10 +1427,10 @@ describe("ltiPlatformLogin", () => {
   it("[T120] signs a message hint that names the session, the item and the principal with a jti and a five minute expiry", async () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
-    const { claims, valid } = await openSealed(initiation.messageHint);
+    const { header, claims, valid } = await openSealed(initiation.messageHint);
     expect(valid).toBe(true);
+    expect(header).toEqual({ alg: "HS256", typ: "hint" });
     expect(claims).toEqual({
-      use: "hint",
       session: "session-1",
       item: { ref: "q-draw", instance: 1 },
       principal: "candidate-7",
@@ -1422,9 +1447,10 @@ describe("ltiPlatformLogin", () => {
   it("[T120] signs the login_hint, which is the principal, with the same key", async () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
-    const { claims, valid } = await openSealed(initiation.loginHint);
+    const { header, claims, valid } = await openSealed(initiation.loginHint);
     expect(valid).toBe(true);
-    expect(claims).toEqual({ use: "login", principal: "candidate-7" });
+    expect(header).toEqual({ alg: "HS256", typ: "login" });
+    expect(claims).toEqual({ principal: "candidate-7" });
   });
 
   it("[T120] gives every login its own jti", async () => {
@@ -1946,7 +1972,7 @@ describe("the tool role and the platform role together", () => {
       registration: async () => toolSide,
       clock: ctx.clock,
       store,
-      jwks: createJwksCache({ fetch: fetchPlatform, clock: ctx.clock }),
+      jwks: createJwksCache({ fetch: fetchPlatform }),
       fetch: fetchPlatform,
     };
 
@@ -2071,19 +2097,20 @@ describe("properties", () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
     const hint = initiation.messageHint;
-    const [payload = "", mac = ""] = hint.split(".");
+    const parts = hint.split(".");
     // The last character of a part holds bits that base64url ignores, so that two spellings can decode to one value.
     const positions = fc.oneof(
-      fc.record({ part: fc.constant("payload"), at: fc.integer({ min: 0, max: payload.length - 2 }) }),
-      fc.record({ part: fc.constant("mac"), at: fc.integer({ min: 0, max: mac.length - 2 }) }),
+      ...parts.map((part, index) =>
+        fc.record({ index: fc.constant(index), at: fc.integer({ min: 0, max: part.length - 2 }) }),
+      ),
     );
     await fc.assert(
-      fc.asyncProperty(positions, fc.nat(63), async ({ part, at }, shift) => {
+      fc.asyncProperty(positions, fc.nat(63), async ({ index, at }, shift) => {
         const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-        const source = part === "payload" ? payload : mac;
+        const source = parts[index] ?? "";
         const replacement = alphabet[(alphabet.indexOf(source[at] ?? "A") + 1 + (shift % 63)) % 64] ?? "A";
         const changed = `${source.slice(0, at)}${replacement}${source.slice(at + 1)}`;
-        const token = part === "payload" ? `${changed}.${mac}` : `${payload}.${changed}`;
+        const token = parts.map((part, position) => (position === index ? changed : part)).join(".");
         const { parameters } = await begin(ctx);
         parameters.set("lti_message_hint", token);
         await expect(

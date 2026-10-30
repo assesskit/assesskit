@@ -1,7 +1,8 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of OAuth 2.0 responses are snake_case.
 import { createHmac } from "node:crypto";
 import fc from "fast-check";
-import { describe, expect, it } from "vitest";
+import { jwtVerify } from "jose";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DataError, ServiceError } from "../src/index.js";
 import {
   type AccessTokenOptions,
@@ -18,7 +19,6 @@ import {
   ltiLogin,
   type PlatformRegistration,
 } from "../src/lti/index.js";
-import { decodeJwt, signJwt, verifyJwt } from "../src/lti/jwt.js";
 import { randomToken } from "../src/lti/random.js";
 import {
   ACCESS_TOKEN_URL,
@@ -45,6 +45,7 @@ import {
   base64url,
   createClock,
   generateKeyPair,
+  type KeyPair,
   NOW,
   readPage,
   readToken,
@@ -53,6 +54,8 @@ import {
   type TestClock,
   verifyToken,
 } from "./lti-fixture.js";
+
+afterEach(() => vi.useRealTimers());
 
 const platformKey = await generateKeyPair("platform-1");
 const rotatedKey = await generateKeyPair("platform-2");
@@ -86,7 +89,7 @@ function setup(overrides: Partial<PlatformRegistration> = {}): Setup {
     },
     clock,
     store,
-    jwks: createJwksCache({ fetch: platform.fetch, clock }),
+    jwks: createJwksCache({ fetch: platform.fetch }),
     fetch: platform.fetch,
   };
   return { clock, platform, store, options, registration, lookups };
@@ -521,11 +524,14 @@ describe("deepLinkResponse", () => {
 });
 
 describe("createJwksCache", () => {
-  const key = (cache: ReturnType<typeof createJwksCache>, kid: string) => cache.key(JWKS_URL, kid);
+  /** Resolves the key that a token with the header resolves with from the key set at `JWKS_URL`. */
+  const key = (cache: ReturnType<typeof createJwksCache>, kid: string | undefined) =>
+    cache.keySet(JWKS_URL)({ alg: "RS256", kid }, { payload: "", signature: "" });
+  const NO_KEY = { code: "ERR_JWKS_NO_MATCHING_KEY" };
 
   it("[T103] fetches a key set once and serves its keys from the cache", async () => {
-    const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const { platform } = setup();
+    const cache = createJwksCache({ fetch: platform.fetch });
     const first = await key(cache, "platform-1");
     expect(first).toBeDefined();
     expect(await key(cache, "platform-1")).toBe(first);
@@ -534,10 +540,10 @@ describe("createJwksCache", () => {
 
   it("[T103] follows a rotation: a kid that the cached set lacks fetches the set again after the refresh time", async () => {
     const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const cache = createJwksCache({ fetch: platform.fetch });
     await key(cache, "platform-1");
     platform.published = [rotatedKey, platformKey];
-    expect(await key(cache, "platform-2")).toBeUndefined();
+    await expect(key(cache, "platform-2")).rejects.toMatchObject(NO_KEY);
     expect(platform.requests).toHaveLength(1);
     clock.advance(60);
     expect(await key(cache, "platform-2")).toBeDefined();
@@ -547,20 +553,20 @@ describe("createJwksCache", () => {
 
   it("[T103] does not fetch on every request that names an invented kid", async () => {
     const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
-    for (let i = 0; i < 50; i += 1) expect(await key(cache, `invented-${i}`)).toBeUndefined();
+    const cache = createJwksCache({ fetch: platform.fetch });
+    for (let i = 0; i < 50; i += 1) await expect(key(cache, `invented-${i}`)).rejects.toMatchObject(NO_KEY);
     expect(platform.requests).toHaveLength(1);
     clock.advance(59);
-    await key(cache, "invented-x");
+    await expect(key(cache, "invented-x")).rejects.toMatchObject(NO_KEY);
     expect(platform.requests).toHaveLength(1);
     clock.advance(1);
-    await key(cache, "invented-y");
+    await expect(key(cache, "invented-y")).rejects.toMatchObject(NO_KEY);
     expect(platform.requests).toHaveLength(2);
   });
 
   it("fetches a set again when it is older than the time to live", async () => {
     const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock, ttlSeconds: 100, refreshSeconds: 10 });
+    const cache = createJwksCache({ fetch: platform.fetch, ttlSeconds: 100, refreshSeconds: 10 });
     await key(cache, "platform-1");
     clock.advance(99);
     await key(cache, "platform-1");
@@ -571,100 +577,85 @@ describe("createJwksCache", () => {
   });
 
   it("shares one fetch among the requests that wait for it", async () => {
-    const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const { platform } = setup();
+    const cache = createJwksCache({ fetch: platform.fetch });
     const keys = await Promise.all(Array.from({ length: 5 }, () => key(cache, "platform-1")));
     expect(new Set(keys).size).toBe(1);
     expect(platform.requests).toHaveLength(1);
   });
 
-  it("keeps the RSA signing keys of 2,048 bits or more and skips the others", async () => {
-    const { platform, clock } = setup();
-    const weak = await generateKeyPair("weak", 1024);
+  it("serves the keys of one URL from one set, and a set for each URL", () => {
+    const { platform } = setup();
+    const cache = createJwksCache({ fetch: platform.fetch });
+    expect(cache.keySet(JWKS_URL)).toBe(cache.keySet(JWKS_URL));
+    expect(cache.keySet(`${JWKS_URL}?other`)).not.toBe(cache.keySet(JWKS_URL));
+  });
+
+  it("keeps the RSA keys that are meant for signing with RS256, and refuses a kid that two keys share", async () => {
+    const { platform } = setup();
     platform.keySetResponse = () =>
       Response.json({
         keys: [
-          weak.publicJwk,
           { ...platformKey.publicJwk, kid: "encryption", use: "enc" },
           { ...platformKey.publicJwk, kid: "other-alg", alg: "RS512" },
-          { ...platformKey.publicJwk, kid: "broken", n: "!!" },
+          { ...platformKey.publicJwk, kid: "encrypt-only", key_ops: ["encrypt"] },
           { kty: "EC", crv: "P-256", x: "a", y: "b", kid: "elliptic" },
           { ...platformKey.publicJwk, kid: undefined },
-          "not a key",
           platformKey.publicJwk,
-          { ...attackerKey.publicJwk, kid: "platform-1" },
+          { ...rotatedKey.publicJwk, kid: "shared" },
+          { ...attackerKey.publicJwk, kid: "shared" },
         ],
       });
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
-    for (const kid of ["weak", "encryption", "other-alg", "broken", "elliptic"]) {
-      expect(await key(cache, kid), kid).toBeUndefined();
+    const cache = createJwksCache({ fetch: platform.fetch });
+    for (const kid of ["encryption", "other-alg", "encrypt-only", "elliptic", "absent"]) {
+      await expect(key(cache, kid), kid).rejects.toMatchObject(NO_KEY);
     }
-    const kept = await key(cache, "platform-1");
+    await expect(key(cache, "shared")).rejects.toMatchObject({ code: "ERR_JWKS_MULTIPLE_MATCHING_KEYS" });
     const token = await signToken({ a: 1 }, platformKey);
-    expect(kept && (await verifyJwt(decodeJwt(token), kept))).toBe(true);
+    const kept = await key(cache, "platform-1");
+    expect(await jwtVerify(token, kept, { algorithms: ["RS256"] })).toMatchObject({ payload: { a: 1 } });
+    await expect(jwtVerify(token, attackerKey.publicKey, { algorithms: ["RS256"] })).rejects.toMatchObject({
+      code: "ERR_JWS_SIGNATURE_VERIFICATION_FAILED",
+    });
   });
 
   it("throws ServiceError with the status and the body when the platform refuses", async () => {
-    const { platform, clock } = setup();
+    const { platform } = setup();
     platform.keySetResponse = () => new Response("down", { status: 503 });
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const cache = createJwksCache({ fetch: platform.fetch });
     await expect(key(cache, "platform-1")).rejects.toMatchObject({ name: "ServiceError", status: 503, body: "down" });
     platform.keySetResponse = undefined;
     expect(await key(cache, "platform-1")).toBeDefined();
   });
 
   it("throws ServiceError with status 0 when the fetch fails, as it does for a redirect", async () => {
-    const { platform, clock } = setup();
+    const { platform } = setup();
     platform.keySetResponse = () => {
       throw new TypeError("redirect mode is set to error");
     };
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const cache = createJwksCache({ fetch: platform.fetch });
     await expect(key(cache, "platform-1")).rejects.toMatchObject({ name: "ServiceError", status: 0 });
   });
 
   it("throws ServiceError for an answer larger than 64 KiB", async () => {
-    const { platform, clock } = setup();
+    const { platform } = setup();
     platform.keySetResponse = () => new Response("x".repeat(65_537));
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
+    const cache = createJwksCache({ fetch: platform.fetch });
     await expect(key(cache, "platform-1")).rejects.toMatchObject({ name: "ServiceError", status: 200 });
   });
 
-  it("throws DataError for an answer that is not a key set", async () => {
-    const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
-    platform.keySetResponse = () => new Response("<html>");
-    await expect(key(cache, "platform-1")).rejects.toThrow(new DataError("The key set must be JSON."));
-    for (const body of ["[]", '{"keys":{}}', '{"key":[]}']) {
-      platform.keySetResponse = () => new Response(body);
-      await expect(key(cache, "platform-1"), body).rejects.toThrow(
-        new DataError("The key set must be an object with an array keys (RFC 7517 §5)."),
-      );
-    }
-  });
-
-  it("throws DataError for arguments and options of other types", async () => {
-    const { platform, clock } = setup();
-    const cache = createJwksCache({ fetch: platform.fetch, clock });
-    await expect(cache.key("http://lms.example.edu/jwks", "a")).rejects.toThrow(
+  it("throws DataError for arguments and options of other types", () => {
+    const { platform } = setup();
+    const cache = createJwksCache({ fetch: platform.fetch });
+    expect(() => cache.keySet("http://lms.example.edu/jwks")).toThrow(
       new DataError('The URL of a key set must be an absolute https URL, found "http://lms.example.edu/jwks".'),
     );
-    await expect(cache.key(JWKS_URL, JSON.parse('""'))).rejects.toThrow(
-      new DataError('The identifier of a key must be a non-empty string, found "".'),
-    );
-    const options = { fetch: platform.fetch, clock };
+    const options = { fetch: platform.fetch };
     const bad: readonly [string, () => unknown][] = [
       ["The options must be an object, found null.", () => createJwksCache(JSON.parse("null"))],
       [
         'The option fetch must be a function, found "f".',
         () => createJwksCache({ ...options, fetch: JSON.parse('"f"') }),
-      ],
-      [
-        "The option clock must be an object, found null.",
-        () => createJwksCache({ ...options, clock: JSON.parse("null") }),
-      ],
-      [
-        "The function now of the option clock must be a function, found undefined.",
-        () => createJwksCache({ ...options, clock: JSON.parse("{}") }),
       ],
       [
         "The option ttlSeconds must be a positive integer, found 0.",
@@ -884,6 +875,36 @@ describe("ltiLaunch", () => {
       ).rejects.toMatchObject({ reason: "key-unknown" });
       const noKid = await cookieLogin(ctx, { header: { kid: undefined } });
       await expect(ltiLaunch(noKid.request, ctx.options)).rejects.toMatchObject({ reason: "key-unknown" });
+    });
+
+    it("[T103] refuses a token signed with a key that cannot verify with RS256, as a key the set does not hold", async () => {
+      const ctx = setup();
+      const weak = await generateKeyPair("weak", 1024);
+      const cases: readonly [string, KeyPair, Record<string, unknown>][] = [
+        ["a key of 1,024 bits", weak, weak.publicJwk],
+        ["a modulus that is not base64url", platformKey, { ...platformKey.publicJwk, n: "!!" }],
+        ["a kid that two keys share", platformKey, platformKey.publicJwk],
+      ];
+      for (const [name, signer, jwk] of cases) {
+        ctx.platform.signer = signer;
+        ctx.platform.keySetResponse = () => Response.json({ keys: [jwk, { ...attackerKey.publicJwk, kid: jwk.kid }] });
+        const { request: post } = await cookieLogin(ctx);
+        await expect(ltiLaunch(post, ctx.options), name).rejects.toMatchObject({
+          name: "LtiError",
+          reason: "key-unknown",
+        });
+        ctx.clock.advance(60);
+      }
+    });
+
+    it("[T103] throws DataError when what the platform serves as its key set is not a key set", async () => {
+      const ctx = setup();
+      const { request: post } = await cookieLogin(ctx);
+      for (const body of ["<html>", "[]", '{"keys":{}}', '{"key":[]}']) {
+        ctx.platform.keySetResponse = () => new Response(body);
+        await expect(ltiLaunch(post, ctx.options), body).rejects.toMatchObject({ name: "DataError" });
+        ctx.clock.advance(60);
+      }
     });
 
     it("[T103] accepts a token signed with a key that the platform added by rotation", async () => {
@@ -1613,16 +1634,20 @@ describe("ltiLogin", () => {
 });
 
 describe("properties", () => {
-  it("signs any claims so that they decode and verify with the public key, and with no other", async () => {
+  it("signs the response to any Deep Linking text so that its claims decode and its signature verifies with the key of the tool, and with no other", async () => {
+    const ctx = setup();
+    const { request: post } = await cookieLogin(ctx, { message: "deep-linking" });
+    const launch = deepLinkingOf(await ltiLaunch(post, ctx.options));
     await fc.assert(
-      fc.asyncProperty(fc.dictionary(fc.string({ maxLength: 12 }), fc.jsonValue()), async (claims) => {
-        const jwt = await signJwt(claims, toolKey.privateKey, "tool-1");
-        const decoded = decodeJwt(jwt);
-        expect(decoded.payload).toEqual(JSON.parse(JSON.stringify(claims)));
-        expect(decoded.header).toEqual({ alg: "RS256", typ: "JWT", kid: "tool-1" });
-        expect(await verifyJwt(decoded, toolKey.publicKey)).toBe(true);
+      fc.asyncProperty(fc.string({ maxLength: 40 }), async (title) => {
+        const jwt = await deepLinkResponse(launch, [{ title }], ctx.options);
+        const { header, payload } = readToken(jwt);
+        expect(header).toEqual({ alg: "RS256", typ: "JWT", kid: "tool-1" });
+        expect(payload["https://purl.imsglobal.org/spec/lti-dl/claim/content_items"]).toEqual([
+          { type: "ltiResourceLink", title },
+        ]);
         expect(await verifyToken(jwt, toolKey)).toBe(true);
-        expect(await verifyJwt(decoded, platformKey.publicKey)).toBe(false);
+        expect(await verifyToken(jwt, platformKey)).toBe(false);
       }),
       { numRuns: 25 },
     );

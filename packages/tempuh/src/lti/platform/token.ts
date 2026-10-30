@@ -1,11 +1,11 @@
 import { LtiError } from "../../errors.js";
-import { AGS_SCOPE, NUMBER, optional, required, STRING } from "../claims.js";
-import { CLOCK_SKEW_SECONDS, readClock } from "../clock.js";
+import { AGS_SCOPE, NUMBER, required, STRING } from "../claims.js";
+import { readClock } from "../clock.js";
 import { checkHttpRequest, errorBody, type HttpRequest, type HttpResponse, jsonResponse, readForm } from "../http.js";
-import { decodeJwt, readKeyId, verifyJwt } from "../jwt.js";
+import { unverifiedClaims, verifyJwt } from "../jwt.js";
 import { endpointsOf } from "./config.js";
 import { checkRequestOrigin, checkTokenOptions, findClient, type PlatformTokenOptions } from "./options.js";
-import { toolKey } from "./registration.js";
+import { toolKeySet } from "./registration.js";
 import { sealAccess } from "./tokens.js";
 
 const GRANT_TYPE = "client_credentials";
@@ -64,40 +64,28 @@ function readRequest(request: HttpRequest): { readonly assertion: string; readon
  * not expired and does not expire in too long; it has a `jti` that `options.once` has not seen.
  */
 async function verifyAssertion(assertion: string, options: PlatformTokenOptions): Promise<string> {
-  const jwt = decodeJwt(assertion);
-  const iss = required(jwt.payload, "iss", OWNER, STRING);
+  const iss = required(unverifiedClaims(assertion), "iss", OWNER, STRING);
   const registration = await findClient(options.client, iss);
-  const key = await toolKey(registration, readKeyId(jwt.header), options.jwks);
-  if (key === undefined) throw new LtiError("The tool has no key with the kid of the assertion.", "key-unknown");
-  if (!(await verifyJwt(jwt, key)))
-    throw new LtiError("The signature of the assertion is not the tool's.", "signature-invalid");
-  const { payload } = jwt;
-  if (required(payload, "sub", OWNER, STRING) !== registration.clientId) {
-    throw new LtiError("The sub of the assertion must be the client identifier.", "subject-mismatch");
-  }
-  const audiences: readonly unknown[] = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-  const token = endpointsOf(options.config).token;
-  if (audiences.length === 0 || !audiences.every((audience) => audience === token)) {
-    throw new LtiError(`The aud of the assertion must be the token URL ${token}.`, "audience-mismatch");
-  }
-  const now = readClock(options.clock) / 1000;
-  const exp = required(payload, "exp", OWNER, NUMBER);
-  if (now - CLOCK_SKEW_SECONDS >= exp) throw new LtiError("The assertion has expired.", "assertion-expired");
-  if (exp - now > MAX_ASSERTION_LIFETIME_SECONDS) {
+  const { clientId } = registration;
+  const nowMilliseconds = readClock(options.clock);
+  const claims = await verifyJwt(
+    assertion,
+    toolKeySet(registration, options.jwks),
+    { issuer: clientId, subject: clientId, audience: endpointsOf(options.config).token, requiredClaims: ["exp"] },
+    nowMilliseconds,
+  );
+  const exp = required(claims, "exp", OWNER, NUMBER);
+  if (exp - nowMilliseconds / 1000 > MAX_ASSERTION_LIFETIME_SECONDS) {
     throw new LtiError(
       `The assertion must expire within ${MAX_ASSERTION_LIFETIME_SECONDS} seconds.`,
       "assertion-lifetime",
     );
   }
-  const iat = optional(payload, "iat", OWNER, NUMBER);
-  if (iat !== undefined && iat - CLOCK_SKEW_SECONDS > now) {
-    throw new LtiError("The assertion was issued in the future.", "issued-in-future");
-  }
-  const jti = required(payload, "jti", OWNER, STRING);
-  if (!(await options.once(`assertion:${registration.clientId}:${jti}`, exp * 1000))) {
+  const jti = required(claims, "jti", OWNER, STRING);
+  if (!(await options.once(`assertion:${clientId}:${jti}`, exp * 1000))) {
     throw new LtiError("The jti of the assertion has been used.", "assertion-replayed");
   }
-  return registration.clientId;
+  return clientId;
 }
 
 /**

@@ -63,14 +63,14 @@ function checkGrade(value: unknown): asserts value is CaliperGrade {
  * @param context - The session, the step and the parties.
  * @throws `DataError` when an argument has the wrong type.
  */
-export async function caliperGrade(grade: CaliperGrade, context: CaliperContext): Promise<CaliperEvent> {
+export function caliperGrade(grade: CaliperGrade, context: CaliperContext): CaliperEvent {
   checkContext(context);
   checkGrade(grade);
   const { index, at, item, scoreGiven, maxScore, scorer, scoredBy } = grade;
   const time = caliperTime(at, "The time of the Caliper grade");
-  const object = item === undefined ? await testAttempt(context, {}) : await itemAttempt(context, item, {});
+  const object = item === undefined ? testAttempt(context, {}) : itemAttempt(context, item, {});
   const generated: CaliperEntity = {
-    id: await mintUrn(["score", context.session, context.step, index]),
+    id: mintUrn(["score", context.session, context.step, index]),
     type: "Score",
     attempt: object.id,
     ...(maxScore === undefined ? {} : { maxScore }),

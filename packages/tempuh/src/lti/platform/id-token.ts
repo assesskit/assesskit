@@ -1,6 +1,7 @@
+import { SignJWT } from "jose";
 import { AGS_SCOPE, CLAIM, LEARNER_ROLE, LTI_VERSION, MESSAGE_TYPE } from "../claims.js";
 import { readClock } from "../clock.js";
-import { signJwt } from "../jwt.js";
+import { rs256Header } from "../jwt.js";
 import { LINE_ITEM_PATH, platformKeyId } from "./config.js";
 import type { PlatformOptions } from "./options.js";
 import type { ToolRegistration } from "./registration.js";
@@ -39,12 +40,7 @@ export async function issueIdToken(
 ): Promise<string> {
   const { config, clock } = options;
   const iat = Math.floor(readClock(clock) / 1000);
-  const claims = {
-    iss: config.issuer,
-    aud: registration.clientId,
-    sub: hint.principal,
-    exp: iat + ID_TOKEN_TTL_SECONDS,
-    iat,
+  return new SignJWT({
     nonce,
     [CLAIM.messageType]: MESSAGE_TYPE.resourceLink,
     [CLAIM.version]: LTI_VERSION,
@@ -57,6 +53,12 @@ export async function issueIdToken(
       scope: [AGS_SCOPE.lineitemReadonly, AGS_SCOPE.score],
       lineitem: await lineItemUrl(hint, options),
     },
-  };
-  return signJwt(claims, config.keys.privateKey, await platformKeyId(config));
+  })
+    .setProtectedHeader(rs256Header(await platformKeyId(config)))
+    .setIssuer(config.issuer)
+    .setAudience(registration.clientId)
+    .setSubject(hint.principal)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + ID_TOKEN_TTL_SECONDS)
+    .sign(config.keys.privateKey);
 }
