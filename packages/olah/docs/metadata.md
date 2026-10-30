@@ -4,15 +4,15 @@
 LOM, curriculum standards and the accessibility description of a variant. It uses no platform API and runs in any JavaScript
 runtime. `package` builds on it, and the manifest carries the metadata of each resource.
 
-| Export                                                          | Purpose                                                                                             |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `readResourceMetadata(element, path?)`, `writeResourceMetadata` | The metadata of a resource: `lom`, `qti` and `curriculumStandards` (`ResourceMetadata`).            |
-| `readQtiMetadata`, `writeQtiMetadata`, `QtiMetadata`            | The `qtiMetadata` element (MD §2.3.1).                                                              |
-| `readCurriculumStandardsSet`, `writeCurriculumStandardsSet`     | The `curriculumStandardsMetadataSet` element (CSM XSD).                                             |
-| `readAccessForAllResource`, `writeAccessForAllResource`         | The `accessForAllResource` element (DRD XSD).                                                       |
-| `lomGeneral(lom)`                                               | The identifiers and titles of the LOM category `general`.                                           |
-| `INTERACTION_TYPES`, `FEEDBACK_TYPES`, `SCORING_MODES`          | The vocabularies of QTI metadata. The DRD vocabularies are `ACCESS_MODES`, `DRD_HAZARDS` and so on. |
-| `*_NAMESPACE`                                                   | The namespaces of QTI metadata, LOM, curriculum standards, the DRD and content packaging.           |
+| Export                                                                   | Purpose                                                                                             |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `readResourceMetadata(element, path?)`, `writeResourceMetadata`          | The metadata of a resource: `lom`, `qti` and `curriculumStandards` (`ResourceMetadata`).            |
+| `readQtiMetadata`, `writeQtiMetadata`, `checkQtiMetadata`, `QtiMetadata` | The `qtiMetadata` element (MD §2.3.1).                                                              |
+| `readCurriculumStandardsSet`, `writeCurriculumStandardsSet`              | The `curriculumStandardsMetadataSet` element (CSM XSD).                                             |
+| `readAccessForAllResource`, `writeAccessForAllResource`                  | The `accessForAllResource` element (DRD XSD).                                                       |
+| `lomGeneral(lom)`                                                        | The identifiers and titles of the LOM category `general`.                                           |
+| `INTERACTION_TYPES`, `FEEDBACK_TYPES`, `SCORING_MODES`                   | The vocabularies of QTI metadata. The DRD vocabularies are `ACCESS_MODES`, `DRD_HAZARDS` and so on. |
+| `*_NAMESPACE`                                                            | The namespaces of QTI metadata, LOM, curriculum standards, the DRD and content packaging.           |
 
 Readers take a parsed `XmlElement` (`parseXml` of [xml](xml.md)); writers return one, and `serializeXml` writes it. `path`
 names the document in the issues of a `ReadError`.
@@ -74,6 +74,9 @@ schema: QTI metadata, curriculum standards, LOM.
 Booleans are `true`, `false`, `1` or `0`, with white space around them ignored. `customTypeIdentifier` and `interactionKind`
 are `xs:normalizedString`: a tab, line feed or carriage return reads as a space. The writer writes the children in the order of
 the schema, whatever the order of the fields.
+
+`checkQtiMetadata(value)` throws a `DataError` unless the value is valid QTI metadata: the types of the fields, the terms of
+the vocabularies and the length of the tool strings. `writeQtiMetadata` and `cat.catMetadata` check their input with it.
 
 ## Derived metadata
 

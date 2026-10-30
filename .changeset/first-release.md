@@ -30,3 +30,8 @@ variants of an item and their accessibility description, the dependency closure 
 resources (`metadata`): QTI metadata, LOM, curriculum standards and the accessibility description. `ElementReader` also reads
 `xml:base`, takes the options of `parseXml`, and finishes an element that holds text only. For Node.js: packages from
 ZIP files and from directories, with symbolic links rejected, and packages to ZIP files.
+
+Computer adaptive testing (`cat`): `CatPort`, the six requests of a CAT 1.0 engine that the host implements, with the models
+of their bodies and answers, `sectionData` for the section data of an adaptive section, `isSessionEnd` for item stages,
+`checkPool` for the agreement of the item references with the engine's pool, and `catMetadata` for the metadata JSON of CAT
+Appendix B. `metadata` has `checkQtiMetadata`.

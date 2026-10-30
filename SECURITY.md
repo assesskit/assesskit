@@ -8,6 +8,9 @@ Points to be aware of when deploying olah:
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.
 - **No fetching.** Absolute URLs in content are data. The core never fetches them, and callers supply the callbacks that
   resolve references.
+- **CAT engines.** The core never calls a CAT engine. `qti-adaptive-engine-ref` names the URL prefix of an engine, so a
+  document chooses where a host sends a candidate's results. A host that implements `CatPort` checks the prefix against
+  the engines it trusts before it sends a request.
 - **Untrusted input.** Every input is untrusted: documents, packages, actions and what callbacks return. Entry points
   validate their input and throw `DataError` on malformed data, so data from users or files can be passed in directly.
 - **Randomness.** `createRandom` is a seeded generator whose draws are reproducible from the seed. It is not

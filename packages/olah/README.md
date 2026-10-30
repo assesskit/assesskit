@@ -4,7 +4,7 @@ A QTI 3.0 runtime for JavaScript and TypeScript: it reads, writes, validates and
 content packages and results, and runs a test session without presentation. It is under development; this version has
 the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the typed
 model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
-and preferences, and QTI content packages with their metadata.
+and preferences, QTI content packages with their metadata, and the port to computer adaptive testing engines.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -91,6 +91,7 @@ writeAsi(document).includes(
 | `@luthfanwakan/olah/pnp`      | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                           |
 | `@luthfanwakan/olah/metadata` | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant |
 | `@luthfanwakan/olah/package`  | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                  |
+| `@luthfanwakan/olah/cat`      | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                            |
 | `@luthfanwakan/olah/values`   | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex` |
 | `@luthfanwakan/olah/xml`      | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                      |
 | `@luthfanwakan/olah/node`     | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                     |
@@ -110,6 +111,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [PNP](docs/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
 - [Metadata](docs/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
 - [Package](docs/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
+- [CAT](docs/cat.md): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
 - [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
 - [Evidence](docs/evidence.md): how every construct is tested, and how to refresh the corpus and the fixtures.
 - [Conformance](docs/conformance.md): the inventory, the certification features and the accepted differences.

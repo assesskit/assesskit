@@ -46,6 +46,7 @@ export {
   QTI_METADATA_NAMESPACE,
 } from "./namespaces.js";
 export {
+  checkQtiMetadata,
   FEEDBACK_TYPES,
   type FeedbackType,
   INTERACTION_TYPES,

@@ -5,6 +5,7 @@
  */
 
 export * from "./asi/index.js";
+export * from "./cat/index.js";
 export {
   DataError,
   type Issue,

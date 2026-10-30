@@ -153,13 +153,13 @@ function checkOptionalBoolean(value: unknown, label: string): void {
 }
 
 /**
- * Writes the metadata as a `qtiMetadata` element, with its children in the order of the schema (MD §2.3.1).
+ * Checks that a value is QTI metadata: an object whose fields have the types of `QtiMetadata`, whose terms are in their
+ * vocabularies and whose tool strings have at most 256 characters.
  *
- * @throws `DataError` when a field has the wrong type, a term is outside its vocabulary, or a tool string is above 256 characters.
+ * @throws `DataError` when it is not.
  */
-export function writeQtiMetadata(metadata: QtiMetadata): XmlElement {
-  const input: unknown = metadata;
-  checkRecord(input, "The QTI metadata must be an object");
+export function checkQtiMetadata(metadata: unknown): asserts metadata is QtiMetadata {
+  checkRecord(metadata, "The QTI metadata must be an object");
   const { itemTemplate, timeDependent, composite, interactionTypes, portableCustomInteractionContext } = metadata;
   const { feedbackType, solutionAvailable, scoringModes, toolName, toolVersion, toolVendor } = metadata;
   checkOptionalBoolean(itemTemplate, "The field itemTemplate");
@@ -178,15 +178,8 @@ export function writeQtiMetadata(metadata: QtiMetadata): XmlElement {
   ] as const) {
     if (value !== undefined) checkToolString(value, `The field ${label}`);
   }
-  const children: XmlElement[] = [];
-  const flag = (name: string, value: boolean | undefined): void => appendLeaf(children, QMD, name, value?.toString());
-  flag("itemTemplate", itemTemplate);
-  flag("timeDependent", timeDependent);
-  flag("composite", composite);
-  for (const type of interactionTypes) children.push(leaf(QMD, "interactionType", type));
   if (portableCustomInteractionContext !== undefined) {
-    const pci: unknown = portableCustomInteractionContext;
-    checkRecord(pci, "The field portableCustomInteractionContext must be an object");
+    checkRecord(portableCustomInteractionContext, "The field portableCustomInteractionContext must be an object");
     const { customTypeIdentifier, interactionKind } = portableCustomInteractionContext;
     for (const [label, value] of [
       ["customTypeIdentifier", customTypeIdentifier],
@@ -194,6 +187,26 @@ export function writeQtiMetadata(metadata: QtiMetadata): XmlElement {
     ] as const) {
       if (value !== undefined) checkString(value, `The field ${label}`);
     }
+  }
+}
+
+/**
+ * Writes the metadata as a `qtiMetadata` element, with its children in the order of the schema (MD §2.3.1).
+ *
+ * @throws `DataError` when a field has the wrong type, a term is outside its vocabulary, or a tool string is above 256 characters.
+ */
+export function writeQtiMetadata(metadata: QtiMetadata): XmlElement {
+  checkQtiMetadata(metadata);
+  const { itemTemplate, timeDependent, composite, interactionTypes, portableCustomInteractionContext } = metadata;
+  const { feedbackType, solutionAvailable, scoringModes, toolName, toolVersion, toolVendor } = metadata;
+  const children: XmlElement[] = [];
+  const flag = (name: string, value: boolean | undefined): void => appendLeaf(children, QMD, name, value?.toString());
+  flag("itemTemplate", itemTemplate);
+  flag("timeDependent", timeDependent);
+  flag("composite", composite);
+  for (const type of interactionTypes) children.push(leaf(QMD, "interactionType", type));
+  if (portableCustomInteractionContext !== undefined) {
+    const { customTypeIdentifier, interactionKind } = portableCustomInteractionContext;
     const context: XmlElement[] = [];
     appendLeaf(context, QMD, "customTypeIdentifier", customTypeIdentifier);
     appendLeaf(context, QMD, "interactionKind", interactionKind);

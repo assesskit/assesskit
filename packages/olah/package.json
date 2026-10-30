@@ -34,6 +34,10 @@
       "types": "./dist/asi/index.d.ts",
       "default": "./dist/asi/index.js"
     },
+    "./cat": {
+      "types": "./dist/cat/index.d.ts",
+      "default": "./dist/cat/index.js"
+    },
     "./pnp": {
       "types": "./dist/pnp/index.d.ts",
       "default": "./dist/pnp/index.js"

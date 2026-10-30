@@ -11,6 +11,7 @@ import {
   CONTROL_FLEXIBILITY,
   CP_NAMESPACE,
   CSM_NAMESPACE,
+  checkQtiMetadata,
   DataError,
   DISPLAY_TRANSFORMABILITY,
   DRD_HAZARDS,
@@ -174,6 +175,41 @@ describe("readQtiMetadata", () => {
   });
 });
 
+/** Texts of JSON that are not QTI metadata: a field of the wrong type, a term outside its vocabulary, a long tool string. */
+const INVALID_QTI_METADATA: readonly string[] = (() => {
+  const valid: QtiMetadata = { interactionTypes: [], scoringModes: [] };
+  return [
+    "{}",
+    JSON.stringify({ ...valid, interactionTypes: "choiceInteraction" }),
+    JSON.stringify({ ...valid, interactionTypes: ["choice"] }),
+    JSON.stringify({ ...valid, scoringModes: ["Human"] }),
+    JSON.stringify({ ...valid, feedbackType: "other" }),
+    JSON.stringify({ ...valid, composite: "true" }),
+    JSON.stringify({ ...valid, toolName: 3 }),
+    JSON.stringify({ ...valid, toolName: "a".repeat(257) }),
+    JSON.stringify({ ...valid, portableCustomInteractionContext: { customTypeIdentifier: 3 } }),
+    JSON.stringify({ ...valid, portableCustomInteractionContext: "x" }),
+    "null",
+    "3",
+  ];
+})();
+
+describe("checkQtiMetadata", () => {
+  it("[Q1] accepts any QTI metadata that the reader can return", () => {
+    fc.assert(
+      fc.property(qtiMetadata, (metadata) => {
+        expect(() => checkQtiMetadata(metadata)).not.toThrow();
+      }),
+    );
+  });
+
+  it("[Q1] throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
+    for (const metadata of INVALID_QTI_METADATA) {
+      expect(() => checkQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
+    }
+  });
+});
+
 describe("writeQtiMetadata", () => {
   it("[Q1][Q12] writes the children in the order of the schema, whatever the order of the fields", () => {
     const element = writeQtiMetadata({
@@ -205,22 +241,8 @@ describe("writeQtiMetadata", () => {
     );
   });
 
-  it("throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
-    const valid: QtiMetadata = { interactionTypes: [], scoringModes: [] };
-    for (const metadata of [
-      "{}",
-      JSON.stringify({ ...valid, interactionTypes: "choiceInteraction" }),
-      JSON.stringify({ ...valid, interactionTypes: ["choice"] }),
-      JSON.stringify({ ...valid, scoringModes: ["Human"] }),
-      JSON.stringify({ ...valid, feedbackType: "other" }),
-      JSON.stringify({ ...valid, composite: "true" }),
-      JSON.stringify({ ...valid, toolName: 3 }),
-      JSON.stringify({ ...valid, toolName: "a".repeat(257) }),
-      JSON.stringify({ ...valid, portableCustomInteractionContext: { customTypeIdentifier: 3 } }),
-      JSON.stringify({ ...valid, portableCustomInteractionContext: "x" }),
-      "null",
-      "3",
-    ]) {
+  it("throws a DataError for metadata that checkQtiMetadata rejects", () => {
+    for (const metadata of INVALID_QTI_METADATA) {
       expect(() => writeQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
     }
   });

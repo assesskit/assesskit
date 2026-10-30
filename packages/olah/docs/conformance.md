@@ -33,7 +33,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB6 | merged | 67 |
 | OB7 | pending | 185 |
 | OB8 | pending | 59 |
-| OB9 | pending | 8 |
+| OB9 | merged | 8 |
 | OB10 | pending | 43 |
 | OB11 | pending | 15 |
 | OB15 | pending | 1 |
@@ -906,7 +906,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | U7 | Vocabulary ObjectTypeEnum: test, testpart, section, item, outcome, interaction, choice | UD §2.7.2 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
 | U8 | External vocabulary Distractor Statistics: AISResponse, NumberChoosingResponse, PTbis-Response, PercentChoosingResponse | UD §2.8.1 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
 | U9 | External vocabulary Item Statistics: A-Param, AIS, B-Param, C-Param, D-Param, Fifths_Table_{Highest, Second_Highest, Middle, Second_Lowest, Lowest}, P-value, PHI, PTbis, Polyserial, Score_Conversion, rbis | UD §2.8.2 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
-| U10 | Usage data as CAT pool input (`qti-usagedata-ref`) | CAT §2.2 | cat | S | OB9 |  |
+| U10 | Usage data as CAT pool input (`qti-usagedata-ref`) | CAT §2.2 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
 
 ### R: Results Reporting
 
@@ -989,17 +989,17 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| C1 | Create Section `POST {prefix}/sections` with Section Data; returns `sectionIdentifier` | CAT §3.1, INFO §2.2 | cat | S | OB9 |  |
-| C2 | Get Section `GET {prefix}/sections/{id}`; returns Section Data and the pool as an Item Stage | CAT §3.2, INFO §2.1 | cat | S | OB9 |  |
-| C3 | Create Session `POST …/sessions` with PNP (base64), demographics, prior data; returns the first stage and `sessionState` | CAT §3.3 | cat, delivery | S | OB16 |  |
-| C4 | Submit Results `POST …/sessions/{id}/results`; returns CAT outcomes, next stage, `sessionState` | CAT §3.4, INFO §2.4 | cat, delivery | S P | OB16 |  |
-| C5 | End Session `DELETE …/sessions/{id}` | CAT §3.5 | cat, delivery | S | OB16 |  |
-| C6 | End Section `DELETE /sections/{id}` | CAT §3.6 | cat | U | OB9 |  |
-| C7 | Section Data: `sectionConfiguration`, `qtiUsagedata`, `qtiMetadata` (base64 of the referenced files) | CAT §4.1, INFO §2.2 | cat | S | OB9 |  |
-| C8 | Item Stage: `itemIdentifiers`, `stageLength`; presented in order; repeats instanced as with replacement; empty means session end | CAT §4.2 | cat, delivery | S P | OB16 |  |
-| C9 | Assessment Result in the REST/JSON binding (`context`, `testResult`, `itemResult`) | CAT §4.3 | cat, (types) | S | OB9 |  |
+| C1 | Create Section `POST {prefix}/sections` with Section Data; returns `sectionIdentifier` | CAT §3.1, INFO §2.2 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
+| C2 | Get Section `GET {prefix}/sections/{id}`; returns Section Data and the pool as an Item Stage | CAT §3.2, INFO §2.1 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
+| C3 | Create Session `POST …/sessions` with PNP (base64), demographics, prior data; returns the first stage and `sessionState` | CAT §3.3 | cat, delivery | S | OB16 | [cat.test.ts](../test/cat.test.ts) |
+| C4 | Submit Results `POST …/sessions/{id}/results`; returns CAT outcomes, next stage, `sessionState` | CAT §3.4, INFO §2.4 | cat, delivery | S P | OB16 | [cat.test.ts](../test/cat.test.ts) |
+| C5 | End Session `DELETE …/sessions/{id}` | CAT §3.5 | cat, delivery | S | OB16 | [cat.test.ts](../test/cat.test.ts) |
+| C6 | End Section `DELETE /sections/{id}` | CAT §3.6 | cat | U | OB9 | [cat.test.ts](../test/cat.test.ts) |
+| C7 | Section Data: `sectionConfiguration`, `qtiUsagedata`, `qtiMetadata` (base64 of the referenced files) | CAT §4.1, INFO §2.2 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
+| C8 | Item Stage: `itemIdentifiers`, `stageLength`; presented in order; repeats instanced as with replacement; empty means session end | CAT §4.2 | cat, delivery | S P | OB16 | [cat.test.ts](../test/cat.test.ts) |
+| C9 | Assessment Result in the REST/JSON binding (`context`, `testResult`, `itemResult`) | CAT §4.3 | cat, (types) | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
 | C10 | Minimal results report: SCORE (float, single) per responded item, `duration`, `numAttempts`, `completionStatus`; skipped items `initial`, unpresented items excluded or `sequenceIndex` 0; in simultaneous parts the items still get response and outcome processing before the request (B27) | CAT §4.3.1, INFO §2.4 | delivery | S | OB16 |  |
-| C11 | QTI Metadata JSON binding (`externalMetadata`, `itemMetadata`, …) | CAT App. B | cat, metadata | S | OB9 |  |
+| C11 | QTI Metadata JSON binding (`externalMetadata`, `itemMetadata`, …) | CAT App. B | cat, metadata | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
 
 ### J: PCI
 
@@ -1111,7 +1111,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G18 | `match` on floats "should not" be used | INFO §2.11.3.28 | validate | S | OB14 |  |
 | G19 | Shuffling with choices hidden by template variables | INFO §2.7.1, INFO §5.30.1 | interactions | S | OB10 |  |
 | G20 | Item duration resolution ("at least 1 s, should be 0.1 s or smaller") | INFO §2.2.2.2 | delivery | S | OB13a |  |
-| G21 | CAT REST/JSON field names of Assessment Result are not public | CAT §4.3 | cat | S | OB9 |  |
+| G21 | CAT REST/JSON field names of Assessment Result are not public | CAT §4.3 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
 | G22 | What happens at a maximum time without late submission | INFO §2.5, INFO §2.8.5, INFO §7.40.3 | delivery | S | OB13b |  |
 | G23 | Whether time counts while the whole test session is suspended | INFO §2.2.2.2, INFO §2.8.5 | delivery | S | OB13b |  |
 | G24 | Test outcomes are reset to defaults before each outcome processing run, which would erase supplied external scores | INFO §2.9 | delivery, validate | S | OB16 |  |
