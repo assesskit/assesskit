@@ -78,7 +78,17 @@ async function listen(handler: Handler): Promise<{ readonly server: Server; read
     }
     hits.push(path);
     response.setHeader("access-control-allow-origin", "*");
-    void handler(path, response, request);
+    // A handler that fails answers with the reason. An error that escaped here would reach Vitest as an unhandled rejection
+    // of its own process, which cannot print it when a frame of the stack is in a file that Node loaded without Vite.
+    Promise.resolve(handler(path, response, request)).catch((error: unknown) => {
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
+      response.statusCode = 500;
+      response.setHeader("content-type", "text/plain");
+      response.end(error instanceof Error ? error.message : String(error));
+    });
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address();
@@ -96,7 +106,8 @@ const close = (server: Server): Promise<void> =>
  * Starts the servers of the browser tests and builds the frame's files for them; the servers stop when the tests end.
  * The asset origin serves the frame twice: under `/static/`, and under `/unrestricted/` with a script that stops the frame
  * from setting its policy. It serves MathJax and its fonts under `/mathjax/`, and validates the SSML that a test posts to
- * `/validate/ssml` against the SSML 1.1 schema, which needs `pnpm schemas` first, and answers with the issues as JSON.
+ * `/validate/ssml` against the SSML 1.1 schema, which needs `pnpm schemas` first, and answers with the issues as JSON,
+ * or with status 500 and the reason when it cannot validate.
  * Package files for the content renderer are under `/content/<token>/`.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
@@ -145,7 +156,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   project.provide("fixtures", { asset: asset.origin, other: other.origin, stranger: stranger.origin });
   return async () => {
     await Promise.all([asset, other, stranger].map(({ server }) => close(server)));
-    (await schemas)?.close();
+    await schemas?.then((set) => set.close(), () => undefined);
     await rm(built, { recursive: true, force: true });
   };
 }

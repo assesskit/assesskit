@@ -23,15 +23,19 @@ const { asset } = inject("fixtures");
 /** The SSML documents that the tests made, which the schema of SSML 1.1 validates when the test ends. */
 const produced: string[] = [];
 
+/** Asks the global setup for what the schema of SSML 1.1 finds wrong with a document. */
+async function schemaIssues(ssml: string): Promise<readonly string[]> {
+  const response = await fetch(`${asset}/validate/ssml`, {
+    method: "POST",
+    headers: { "content-type": "text/plain" },
+    body: ssml,
+  });
+  if (!response.ok) throw new Error(`The SSML validator answered ${response.status}: ${await response.text()}`);
+  return response.json();
+}
+
 afterEach(async () => {
-  for (const ssml of produced.splice(0)) {
-    const response = await fetch(`${asset}/validate/ssml`, {
-      method: "POST",
-      headers: { "content-type": "text/plain" },
-      body: ssml,
-    });
-    expect(await response.json(), ssml).toEqual([]);
-  }
+  for (const ssml of produced.splice(0)) expect(await schemaIssues(ssml), ssml).toEqual([]);
 });
 
 const READ_ALOUD: SpeechSettings = { readingType: "computer-read-aloud", restrictionTypes: [] };
@@ -93,13 +97,7 @@ describe("the SSML schema", () => {
       '<speak xmlns="http://www.w3.org/2001/10/synthesis" version="1.1" xml:lang="en"><sub>no alias</sub></speak>',
     ];
     for (const ssml of invalid) {
-      const response = await fetch(`${asset}/validate/ssml`, {
-        method: "POST",
-        headers: { "content-type": "text/plain" },
-        body: ssml,
-      });
-      const issues: readonly string[] = await response.json();
-      expect(issues.length, ssml).toBeGreaterThan(0);
+      expect((await schemaIssues(ssml)).length, ssml).toBeGreaterThan(0);
     }
   });
 });
