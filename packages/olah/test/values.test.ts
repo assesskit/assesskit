@@ -34,6 +34,7 @@ import {
   toWireValue,
   type Value,
   type ValueDeclaration,
+  type XsdPattern,
 } from "../src/values/index.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
@@ -1589,7 +1590,7 @@ describe("compileXsdRegex", () => {
   });
 
   describe("time", () => {
-    /** Returns the milliseconds that one match takes. */
+    /** Returns the milliseconds of wall-clock time that compiling a pattern and matching one text take. */
     function timeOf(pattern: string, text: string): number {
       const compiled = compileXsdRegex(pattern);
       const start = performance.now();
@@ -1628,19 +1629,29 @@ describe("compileXsdRegex", () => {
     });
 
     it("[B79][P] takes time that grows in proportion to the text, whatever the pattern", () => {
+      const runs = 7;
+      const smallLength = 125_000;
+      const largeLength = 2_000_000;
+      const microsecondsPerMillisecond = 1000;
+      // A busy machine delays a process but adds nothing to its processor time, so the growth is measured on that, not
+      // on the wall clock; and the least of several runs leaves out what a garbage collection or a cold compiler adds.
+      const processorTimeOf = (compiled: XsdPattern, text: string): number => {
+        const before = process.cpuUsage();
+        compiled.matches(text);
+        const { user, system } = process.cpuUsage(before);
+        return (user + system) / microsecondsPerMillisecond;
+      };
+      const leastTime = (compiled: XsdPattern, length: number): number => {
+        const text = "a".repeat(length);
+        compiled.matches(text);
+        return Math.min(...Array.from({ length: runs }, () => processorTimeOf(compiled, text)));
+      };
       for (const pattern of ["(a+)+$", "(a|a)*b", "\\p{L}*\\p{Nd}"]) {
         const compiled = compileXsdRegex(pattern);
-        const run = (length: number): number => {
-          const text = "a".repeat(length);
-          compiled.matches(text);
-          const start = performance.now();
-          compiled.matches(text);
-          return performance.now() - start;
-        };
-        const small = Math.max(run(250_000), 1);
-        const large = run(1_000_000);
-        // Four times the text takes about four times as long; a quadratic pattern would take sixteen times as long.
-        expect(large / small, pattern).toBeLessThan(10);
+        const growth = leastTime(compiled, largeLength) / leastTime(compiled, smallLength);
+        // Sixteen times the text takes about sixteen times as long, and a quadratic pattern 256 times as long. The
+        // limit of 64 is where the time grows with the 1.5th power of the length.
+        expect(growth, pattern).toBeLessThan(64);
       }
     });
 
