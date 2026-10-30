@@ -1,6 +1,5 @@
-import { ASI_NAMESPACE, type AssessmentItem } from "../asi/index.js";
+import type { AssessmentItem } from "../asi/index.js";
 import { checkArray, checkRecord } from "../checks.js";
-import { attributeOf, type XmlElement, type XmlNode } from "../xml/index.js";
 import {
   INTERACTION_TYPES,
   type InteractionType,
@@ -11,19 +10,18 @@ import {
 } from "./qti-metadata.js";
 import { MAX_TOOL_STRING_LENGTH } from "./text.js";
 
-/** Returns the element name of an interaction type: `choiceInteraction` is `qti-choice-interaction`. */
-function elementNameOf(type: InteractionType): string {
-  const words = type.slice(0, -"Interaction".length).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  return `qti-${words}-interaction`;
+/** Returns the kind of the model of an interaction type: `choiceInteraction` is `choice-interaction`. */
+function kindOf(type: InteractionType): string {
+  return type.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
-/** The interaction type of each interaction element (MD §2.6.2: the names of the leaf classes derived from interaction). */
-const TYPE_OF_ELEMENT: ReadonlyMap<string, InteractionType> = new Map(
-  INTERACTION_TYPES.map((type) => [elementNameOf(type), type]),
+/** The interaction type of each interaction (MD §2.6.2: the names of the leaf classes derived from interaction). */
+const TYPE_OF_KIND: ReadonlyMap<string, InteractionType> = new Map(
+  INTERACTION_TYPES.map((type) => [kindOf(type), type]),
 );
 
-const PORTABLE_CUSTOM_INTERACTION = "qti-portable-custom-interaction";
-const FEEDBACK_ELEMENTS: ReadonlySet<string> = new Set(["qti-feedback-block", "qti-feedback-inline"]);
+const PORTABLE_CUSTOM_INTERACTION = "portable-custom-interaction";
+const FEEDBACK_KINDS: ReadonlySet<string> = new Set(["feedback-block", "feedback-inline"]);
 
 /** What the body of an item holds that the metadata is about. */
 interface BodyFacts {
@@ -32,27 +30,36 @@ interface BodyFacts {
   feedback: boolean;
 }
 
-/** Records what an element of the body is: an interaction, the first portable custom interaction, or feedback. */
-function record(element: XmlElement, facts: BodyFacts): void {
-  if (element.namespace !== ASI_NAMESPACE) return;
-  const type = TYPE_OF_ELEMENT.get(element.name);
+/** Records what a node of the body is: an interaction, the first portable custom interaction, or feedback. */
+function record(kind: string, node: object, facts: BodyFacts): void {
+  const type = TYPE_OF_KIND.get(kind);
   if (type !== undefined) facts.interactions.push(type);
-  if (element.name === PORTABLE_CUSTOM_INTERACTION && facts.customTypeIdentifier === undefined) {
-    facts.customTypeIdentifier = attributeOf(element, "custom-interaction-type-identifier");
+  if (
+    kind === PORTABLE_CUSTOM_INTERACTION &&
+    facts.customTypeIdentifier === undefined &&
+    "customInteractionTypeIdentifier" in node &&
+    typeof node.customInteractionTypeIdentifier === "string"
+  ) {
+    facts.customTypeIdentifier = node.customInteractionTypeIdentifier;
   }
-  facts.feedback ||= FEEDBACK_ELEMENTS.has(element.name);
+  facts.feedback ||= FEEDBACK_KINDS.has(kind);
 }
 
-/** Walks the body in document order and collects its interactions, the type identifier of the first portable custom interaction, and whether it has feedback. */
-function inspectBody(nodes: readonly XmlNode[]): BodyFacts {
-  const facts: BodyFacts = { interactions: [], customTypeIdentifier: undefined, feedback: false };
-  const pending = [...nodes].reverse();
-  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
-    if (node.kind !== "element") continue;
-    record(node, facts);
-    pending.push(...[...node.children].reverse());
+/**
+ * Walks the body in the order of the model and collects its interactions, the type identifier of the first portable
+ * custom interaction, and whether it has feedback. MathML, SSML and includes, which the model keeps as XML, are not
+ * entered.
+ */
+function inspectBody(model: unknown, facts: BodyFacts): void {
+  if (Array.isArray(model)) {
+    for (const member of model) inspectBody(member, facts);
+  } else if (typeof model === "object" && model !== null) {
+    if ("kind" in model && typeof model.kind === "string") {
+      if (model.kind === "element") return;
+      record(model.kind, model, facts);
+    }
+    for (const member of Object.values(model)) inspectBody(member, facts);
   }
-  return facts;
 }
 
 /** Collects the identifiers that a `qti-set-correct-response` rule sets, anywhere in a model of template processing. */
@@ -105,7 +112,7 @@ function toolString(value: string | undefined): string | undefined {
  * - `itemTemplate` is true when the item has template processing.
  * - `timeDependent` is the attribute of the item.
  * - `composite` is true when the item has more than one interaction.
- * - `interactionTypes` are the types of the interactions of the body, each once, in document order. A portable custom
+ * - `interactionTypes` are the types of the interactions of the body, each once, in the order of the model: document order, except that the places of one element come in schema order. A portable custom
  *   interaction also gives `portableCustomInteractionContext` with the `customTypeIdentifier` of the first one;
  *   `interactionKind` is not in the item.
  * - `feedbackType` is `none` without feedback (`qti-modal-feedback`, `qti-feedback-block`, `qti-feedback-inline`), and
@@ -117,7 +124,7 @@ function toolString(value: string | undefined): string | undefined {
  * - `toolName` and `toolVersion` are the attributes of the item when they have at most 256 characters. The item has no
  *   vendor.
  *
- * The body of an item is the XML nodes that `readAsi` keeps; an `xi:include` that is still in the item is not followed.
+ * The body of an item is walked as the model keeps it; an `xi:include` that is still in the item is not followed.
  *
  * @param item - An item from `readAsi`.
  * @throws `DataError` when the argument is not an item model.
@@ -127,7 +134,8 @@ export function deriveQtiMetadata(item: AssessmentItem): QtiMetadata {
   checkArray(item.responseDeclarations, "The responseDeclarations of the item must be an array");
   checkArray(item.outcomeDeclarations, "The outcomeDeclarations of the item must be an array");
   checkArray(item.modalFeedback, "The modalFeedback of the item must be an array");
-  const body = inspectBody(item.body?.children ?? []);
+  const body: BodyFacts = { interactions: [], customTypeIdentifier: undefined, feedback: false };
+  inspectBody(item.body?.children ?? [], body);
   const feedback = body.feedback || item.modalFeedback.length > 0;
   const context: PciContext | undefined =
     body.customTypeIdentifier === undefined ? undefined : { customTypeIdentifier: body.customTypeIdentifier };

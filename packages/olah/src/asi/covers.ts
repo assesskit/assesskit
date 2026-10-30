@@ -1,11 +1,11 @@
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { xmlTokens } from "../values/whitespace.js";
-import type { XmlAttribute, XmlElement, XmlNode } from "../xml/index.js";
-import { isNode } from "./guards.js";
-import type { AssessmentTest, BodyNode, RubricBlock } from "./model.js";
-import { ASI_NAMESPACE } from "./namespace.js";
+import type { XmlAttribute, XmlNode } from "../xml/index.js";
+import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
+import { typeNamed } from "./type-index.js";
+import { writeElement } from "./write.js";
 
 /** The class token that marks a test-level rubric block as the covers of an outcome (olah convention, §4.16). */
 const COVERS_CLASS = "external-score-covers";
@@ -24,12 +24,17 @@ export interface ScoreCover {
   readonly label?: string;
 }
 
-function isNamed(node: XmlNode, name: string): node is XmlElement {
-  return node.kind === "element" && node.namespace === ASI_NAMESPACE && node.name === name;
-}
+/** A list entry of the convention, as the model has it. */
+type Entry = ElementModel<"LI", "li">;
 
-function attributeOf(element: { readonly attributes: readonly XmlAttribute[] }, name: string): string | undefined {
-  return element.attributes.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
+/** A list of the convention, as the model has it. */
+type List = ElementModel<"OUL", "ul">;
+
+/** A node of the content of a rubric block of a test. */
+type RubricContent = TestRubricBlock["contentBody"]["children"][number];
+
+function attributeOf(element: { readonly extensions: readonly XmlAttribute[] }, name: string): string | undefined {
+  return element.extensions.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
 }
 
 /** Returns the text of a node and its descendants. */
@@ -38,29 +43,30 @@ function textOf(node: XmlNode): string {
   return node.kind === "element" ? node.children.map(textOf).join("") : "";
 }
 
-function coverOf(entry: XmlElement): ScoreCover | undefined {
+function coverOf(entry: Entry): ScoreCover | undefined {
   const itemRef = attributeOf(entry, ITEM_ATTRIBUTE);
   const responseIdentifier = attributeOf(entry, RESPONSE_ATTRIBUTE);
   if (itemRef === undefined || responseIdentifier === undefined) return undefined;
-  const label = xmlTokens(textOf(entry)).join(" ");
+  const label = xmlTokens(textOf(writeElement(typeNamed("LI"), "li", entry))).join(" ");
   return { itemRef, responseIdentifier, ...(label === "" ? {} : { label }) };
 }
 
 /** Returns the outcome that a rubric block covers, or `undefined` when it is not a covers block. */
-function outcomeOf(block: RubricBlock): string | undefined {
+function outcomeOf(block: TestRubricBlock): string | undefined {
   if (!block.class?.includes(COVERS_CLASS)) return undefined;
-  return attributeOf({ attributes: block.extensions }, OUTCOME_ATTRIBUTE);
+  return attributeOf(block, OUTCOME_ATTRIBUTE);
 }
 
-function coversOf(block: RubricBlock): ScoreCover[] {
-  return block.contentBody.children
-    .filter((node) => isNamed(node, "ul"))
-    .flatMap((list) => (list.kind === "element" ? list.children : []))
-    .filter((node) => isNamed(node, "li"))
-    .flatMap((entry) => {
-      const cover = entry.kind === "element" ? coverOf(entry) : undefined;
-      return cover === undefined ? [] : [cover];
-    });
+function coversOf(block: TestRubricBlock): ScoreCover[] {
+  const covers: ScoreCover[] = [];
+  for (const node of block.contentBody.children) {
+    if (node.kind !== "ul") continue;
+    for (const entry of node.items) {
+      const cover = entry.kind === "li" ? coverOf(entry) : undefined;
+      if (cover !== undefined) covers.push(cover);
+    }
+  }
+  return covers;
 }
 
 /**
@@ -88,21 +94,25 @@ export function readScoreCovers(test: AssessmentTest): ReadonlyMap<string, reado
   return covers;
 }
 
+/** Returns whether a value has the field that tells the nodes of body content apart; `writeAsi` checks the rest. */
+function isNodeLike(value: unknown): boolean {
+  return isRecord(value) && typeof value.kind === "string";
+}
+
 function checkIdentifier(value: unknown, label: string): string {
   if (!isIdentifier(value)) throw new DataError(`${label} must be an identifier, found ${describe(value)}.`);
   return value;
 }
 
-function entryOf(cover: unknown): XmlElement {
+function entryOf(cover: unknown): Entry {
   checkRecord(cover, "A cover must be an object");
   const { itemRef, responseIdentifier, label } = cover;
   if (label !== undefined) checkString(label, "The label of a cover");
   const text = label === undefined ? "" : xmlTokens(label).join(" ");
   return {
-    kind: "element",
-    namespace: ASI_NAMESPACE,
-    name: "li",
-    attributes: [
+    kind: "li",
+    children: text === "" ? [] : [{ kind: "text", value: text }],
+    extensions: [
       { namespace: "", name: ITEM_ATTRIBUTE, value: checkIdentifier(itemRef, "The item reference of a cover") },
       {
         namespace: "",
@@ -110,7 +120,6 @@ function entryOf(cover: unknown): XmlElement {
         value: checkIdentifier(responseIdentifier, "The response identifier of a cover"),
       },
     ],
-    children: text === "" ? [] : [{ kind: "text", value: text }],
   };
 }
 
@@ -128,19 +137,15 @@ function entryOf(cover: unknown): XmlElement {
 export function scoreCoversBlock(
   outcomeIdentifier: string,
   covers: readonly ScoreCover[],
-  notes: readonly BodyNode[] = [],
-): RubricBlock {
+  notes: readonly RubricContent[] = [],
+): TestRubricBlock {
   checkIdentifier(outcomeIdentifier, "The outcome identifier");
   checkArray(covers, "The covers must be an array");
   checkArray(notes, "The notes must be an array");
-  if (!notes.every(isNode)) throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
-  const list: XmlElement = {
-    kind: "element",
-    namespace: ASI_NAMESPACE,
-    name: "ul",
-    attributes: [],
-    children: covers.map(entryOf),
-  };
+  if (!notes.every(isNodeLike)) {
+    throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
+  }
+  const list: List = { kind: "ul", items: covers.map(entryOf), extensions: [] };
   return {
     kind: "rubric-block",
     view: ["scorer"],

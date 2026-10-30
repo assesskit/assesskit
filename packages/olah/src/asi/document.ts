@@ -123,9 +123,10 @@ function rootOf(input: string | Uint8Array | XmlElement, options: ReadAsiOptions
 /**
  * Reads an assessment item, stimulus, test, section, outcome declaration, response processing template or outcome
  * processing document. The model has the attributes and child elements of the schema, with the defaults of the schema not
- * applied, so that writing it gives the document back. It does not check the order of child elements or the minimum of a
- * list, which the schema does, and it leaves the content of bodies (HTML, MathML, SSML, interactions and feedback) as XML
- * nodes. The model carries no source positions.
+ * applied, so that writing it gives the document back. The content of bodies is typed too: text, HTML elements,
+ * interactions, feedback, templates, rubric blocks and catalogs are nodes of their own types, and MathML, SSML and
+ * `xi:include` stay `XmlElement`s. It does not check the order of child elements or the minimum of a list, which the
+ * schema does. The model carries no source positions, and no comments or processing instructions.
  *
  * The document must be in the ASI namespace; versions 3.0.0 and 3.0.1 share it (BIND §3). An `xsi:schemaLocation` is
  * ignored. `xi:include` elements stay in the model, as the `XmlElement`s they are; resolve them first with

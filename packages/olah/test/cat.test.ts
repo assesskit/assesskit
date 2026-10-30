@@ -26,7 +26,7 @@ import {
   single,
   writeResults,
 } from "../src/index.js";
-import { qtiMetadata } from "./metadata-generators.js";
+import { qtiMetadata } from "./arbitraries/metadata.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {

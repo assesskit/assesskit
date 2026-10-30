@@ -7,6 +7,7 @@ import {
   createItemVariables,
   createRandom,
   ProcessingError,
+  ReadError,
   type ResponseProcessing,
   readAsi,
   runResponseProcessing,
@@ -25,15 +26,21 @@ function processingAt(path: string): ResponseProcessing {
   return document.processing;
 }
 
-/** The items of the examples, by path. */
+/** The items of the examples, by path, and the paths of the items that the ASI schema rejects and `readAsi` refuses. */
 const items = new Map<string, AssessmentItem>();
+const refused: string[] = [];
 for (const path of readdirSync(examples, { recursive: true, encoding: "utf8" })
   .filter((file) => file.endsWith(".xml"))
   .sort()) {
   const text = readFileSync(join(examples, path), "utf8");
   if (!text.includes("<qti-assessment-item")) continue;
-  const document = readAsi(text, { path });
-  if (document.kind === "item") items.set(path, document.item);
+  try {
+    const document = readAsi(text, { path });
+    if (document.kind === "item") items.set(path, document.item);
+  } catch (error) {
+    if (!(error instanceof ReadError)) throw error;
+    refused.push(path);
+  }
 }
 
 /** Runs template processing, then response processing with no responses or with the correct responses. */
@@ -60,10 +67,6 @@ const CONTENT_ERRORS = new Map([
   ],
   [
     "packaging/pci/src/fractions_deps.xml",
-    'The correct response of RESPONSE has the text "1", which is not a value of base type identifier.',
-  ],
-  [
-    "packaging/pci/src/fractions_deps_2.xml",
     'The correct response of RESPONSE has the text "1", which is not a value of base type identifier.',
   ],
   ["packaging/test_package_minfiles/example/adaptive.xml", "sets completion_status, which is not an outcome variable"],
@@ -102,8 +105,9 @@ describe("standard templates", () => {
 });
 
 describe("the items of the examples", () => {
-  it("[C] are read: 253 items", () => {
-    expect(items.size).toBe(253);
+  it("[C] are read: 251 items, and the 2 that the ASI schema rejects are refused", () => {
+    expect(items.size).toBe(251);
+    expect(refused).toEqual(["packaging/items/data-attributes.xml", "packaging/pci/src/fractions_deps_2.xml"]);
   });
 
   it("[B11][C] run template and response processing, with no responses and with the correct responses", () => {

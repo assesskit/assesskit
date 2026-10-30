@@ -7,6 +7,7 @@ import type {
   AttributeDef,
   AttributeType,
   ContentDef,
+  ForeignDef,
   SlotDef,
   StringFormat,
   TypeDef,
@@ -25,12 +26,32 @@ export interface XsdNode {
   readonly children: XsdNode[];
 }
 
+/** The type that another type extends, and how many of its attributes come from it, first. */
+export interface Base {
+  /** The name of the type in the schema, such as `BaseSequenceDType`. */
+  readonly name: string;
+  /** The number of attributes that the base gives. */
+  readonly count: number;
+}
+
+/** A type that other types extend: all its attributes, and the type it extends in turn. */
+export interface BaseType {
+  /** The attributes, those of the type it extends first. */
+  readonly attributes: readonly AttributeDef[];
+  /** The type it extends. */
+  readonly base?: Base;
+}
+
 /** The generated table. */
 export interface Table {
   /** The types by name, sorted. */
   readonly types: ReadonlyMap<string, TypeDef>;
   /** The elements that are documents: element name to type name. */
   readonly roots: ReadonlyMap<string, string>;
+  /** The base of each type that extends another, by the name of the type in the table. */
+  readonly extended: ReadonlyMap<string, Base>;
+  /** The types that other types extend, by name in the schema. */
+  readonly bases: ReadonlyMap<string, BaseType>;
 }
 
 const SCHEMA_FILE = "imsqti_asiv3p0p1_v1p0.xsd";
@@ -48,23 +69,50 @@ const ROOT_ELEMENTS = [
   "qti-response-processing",
 ];
 
+/** The property of an attribute when the rule (the attribute name in camel case) is not right. */
+const ATTRIBUTE_PROPERTIES: ReadonlyMap<string, string> = new Map([
+  ["xml:lang", "language"],
+  ["xml:base", "xmlBase"],
+  // `kind` names the element in a model.
+  ["kind", "trackKind"],
+]);
+
 /** The property of an element in a slot when the rule (the element name in camel case, plural for a list) is not right. */
 const ELEMENT_PROPERTIES: ReadonlyMap<string, string> = new Map([
   ["qti-assessment-stimulus-ref", "stimulusRefs"],
   ["qti-companion-materials-info", "companionMaterials"],
+  ["li", "items"],
   ["qti-item-body", "body"],
+  // The attribute `label` has the plain name.
+  ["qti-label", "labelElement"],
   ["qti-modal-feedback", "modalFeedback"],
   ["qti-rubric-block", "rubricBlocks"],
   ["qti-stimulus-body", "body"],
   ["qti-test-feedback", "testFeedback"],
+  ["tbody", "bodies"],
+  ["tr", "rows"],
 ]);
 
 /** The property of a slot that accepts several elements and that no rule names, by the type it is in and its first element. */
 const SLOT_PROPERTIES: ReadonlyMap<string, string> = new Map([
   ["AssessmentSection/qti-assessment-item-ref", "children"],
+  ["DL/dt", "items"],
+  ["DrawingInteraction/object", "image"],
+  ["GapImg/object", "image"],
+  ["GapMatchInteraction/qti-gap-text", "choices"],
+  ["GraphicAssociateInteraction/object", "image"],
+  ["GraphicGapMatchInteraction/object", "image"],
+  ["GraphicGapMatchInteraction/qti-gap-text", "choices"],
+  ["GraphicOrderInteraction/object", "image"],
+  ["HotspotInteraction/object", "image"],
+  ["MediaInteraction/object", "media"],
   ["OutcomeDeclaration/qti-match-table", "lookupTable"],
+  ["PositionObjectInteraction/object", "image"],
+  ["PositionObjectStage/object", "image"],
   ["Protractor/qti-increment-si", "increment"],
   ["Rule/qti-rule-system-si", "ruleSystem"],
+  ["SelectPointInteraction/object", "image"],
+  ["TR/td", "cells"],
   ["TestPart/qti-assessment-section", "sections"],
 ]);
 
@@ -199,6 +247,7 @@ type Particle =
       readonly min: number;
       readonly max: number;
     }
+  | { readonly kind: "foreign"; readonly foreign: ForeignDef; readonly min: number; readonly max: number }
   | {
       readonly kind: "sequence";
       readonly items: readonly Particle[];
@@ -220,6 +269,8 @@ interface Declaration {
   readonly particles: Particle[];
   text?: AttributeType;
   mixed: boolean;
+  /** The type this one extends. */
+  base?: Base;
 }
 
 /** The slots of a particle, and the wildcard it holds, if any. */
@@ -230,6 +281,9 @@ interface Collected {
 
 const XINCLUDE = "xi:include";
 
+/** The property of the slot that holds flow content: text, HTML, MathML, SSML, interactions and feedback. */
+const FLOW_PROPERTY = "children";
+
 /** Reads the schema into a table of element types. */
 class TableBuilder {
   private readonly complexTypes = new Map<string, XsdNode>();
@@ -237,10 +291,15 @@ class TableBuilder {
   private readonly attributeGroups = new Map<string, XsdNode>();
   private readonly groups = new Map<string, XsdNode>();
   private readonly elements = new Map<string, XsdNode>();
-  private readonly html = new Set<string>();
+  private readonly namespaces = new Map<string, string>();
   private readonly built = new Map<string, TypeDef>();
+  private readonly extended = new Map<string, Base>();
+  private readonly bases = new Map<string, BaseType>();
 
   constructor(schema: XsdNode) {
+    for (const [name, value] of schema.attributes) {
+      if (name.startsWith("xmlns:")) this.namespaces.set(name.slice("xmlns:".length), value);
+    }
     for (const node of schema.children) {
       const name = attribute(node, "name");
       if (name === undefined) continue;
@@ -252,7 +311,6 @@ class TableBuilder {
         element: this.elements,
       }[node.name];
       registry?.set(name, node);
-      if (node.name === "element" && !name.startsWith("qti-")) this.html.add(name);
     }
   }
 
@@ -264,7 +322,7 @@ class TableBuilder {
       rootTypes.set(root, this.typeOf(declaration));
     }
     const sorted = [...this.built].sort(([a], [b]) => (a < b ? -1 : 1));
-    return { types: new Map(sorted), roots: rootTypes };
+    return { types: new Map(sorted), roots: rootTypes, extended: this.extended, bases: this.bases };
   }
 
   /** Returns the name of the type of an element declaration, building it on first use. */
@@ -297,7 +355,7 @@ class TableBuilder {
     if (!this.built.has(key)) {
       // A placeholder, so that a type that contains itself finds it.
       this.built.set(key, { attributes: [], content: { kind: "empty" } });
-      this.built.set(key, this.complexType(key, type, complex));
+      this.built.set(key, this.complexType(key, complex));
     }
     return key;
   }
@@ -309,24 +367,25 @@ class TableBuilder {
     return key;
   }
 
-  private complexType(key: string, name: string, node: XsdNode): TypeDef {
+  private complexType(key: string, node: XsdNode): TypeDef {
     const declaration = this.readDeclaration(node);
+    if (declaration.base !== undefined) this.extended.set(key, declaration.base);
     const attributes = {
       attributes: declaration.attributes,
       ...(declaration.attributeWildcard === undefined ? {} : { attributeWildcard: declaration.attributeWildcard }),
     };
-    const type = { ...attributes, content: this.contentOf(key, name, declaration) };
+    const type = { ...attributes, content: this.contentOf(key, declaration) };
     checkProperties(key, type);
     return type;
   }
 
-  private contentOf(key: string, name: string, declaration: Declaration): ContentDef {
+  private contentOf(key: string, declaration: Declaration): ContentDef {
     if (declaration.text !== undefined) return { kind: "text", value: declaration.text };
-    if (this.isFlow(declaration)) {
-      this.checkFlow(name, declaration);
-      return { kind: "flow" };
+    if (declaration.particles.length === 0) {
+      if (declaration.mixed) throw new Error(`The mixed type ${key} contains no elements.`);
+      return { kind: "empty" };
     }
-    return declaration.particles.length === 0 ? { kind: "empty" } : this.slotsOf(key, declaration.particles);
+    return this.slotsOf(key, declaration.particles, declaration.mixed);
   }
 
   /** Returns what a complex type declares, with what the types it extends declare first. */
@@ -351,6 +410,11 @@ class TableBuilder {
     const node = this.complexTypes.get(base);
     if (node === undefined) throw new Error(`The base type ${base} is not defined.`);
     const inherited = this.readDeclaration(node);
+    declaration.base = { name: base, count: inherited.attributes.length };
+    this.bases.set(base, {
+      attributes: inherited.attributes,
+      ...(inherited.base === undefined ? {} : { base: inherited.base }),
+    });
     declaration.attributes.push(...inherited.attributes);
     declaration.particles.push(...inherited.particles);
     declaration.mixed ||= inherited.mixed;
@@ -430,35 +494,22 @@ class TableBuilder {
 
   private elementParticle(node: XsdNode, min: number, max: number): Particle {
     const reference = attribute(node, "ref");
-    if (reference === XINCLUDE || reference?.startsWith("m3:") || reference?.startsWith("ssml11:")) {
-      return { kind: "element", element: reference, declaration: undefined, min, max };
-    }
-    if (reference !== undefined && this.html.has(reference)) {
-      return { kind: "element", element: reference, declaration: undefined, min, max };
-    }
+    if (reference === XINCLUDE) return { kind: "element", element: reference, declaration: undefined, min, max };
+    if (reference?.includes(":")) return { kind: "foreign", foreign: this.foreignOf(reference), min, max };
     return { kind: "element", element: reference ?? required(node, "name"), declaration: node, min, max };
   }
 
-  /** Returns whether a type holds flow content: text mixed with HTML, MathML and SSML elements, kept as XML. */
-  private isFlow(declaration: Declaration): boolean {
-    return declaration.mixed || declaration.particles.some((particle) => this.hasForeignElement(particle));
+  /** Returns the element that a reference with a prefix names, such as `m3:math`. */
+  private foreignOf(reference: string): ForeignDef {
+    const [prefix = "", element = ""] = reference.split(":");
+    const namespace = this.namespaces.get(prefix);
+    if (namespace === undefined) throw new Error(`The prefix of ${reference} is not declared by the schema.`);
+    return { namespace, element };
   }
 
-  private hasForeignElement(particle: Particle): boolean {
-    if (particle.kind === "element") return particle.declaration === undefined && particle.element !== XINCLUDE;
-    if (particle.kind === "wildcard") return false;
-    return particle.items.some((item) => this.hasForeignElement(item));
-  }
-
-  private checkFlow(name: string, declaration: Declaration): void {
-    let [only, ...others] = declaration.particles;
-    while (only?.kind === "sequence" && only.items.length === 1 && only.max === 1) only = only.items[0];
-    if (others.length > 0 || only?.kind !== "choice" || only.max !== UNBOUNDED) {
-      throw new Error(`The flow type ${name} has content besides its repeated choice.`);
-    }
-  }
-
-  private slotsOf(type: string, particles: readonly Particle[]): ContentDef {
+  private slotsOf(type: string, particles: readonly Particle[], mixed: boolean): ContentDef {
+    // Text may stand anywhere in mixed content, so the model keeps its elements and text in one array in document order.
+    if (mixed) return { kind: "slots", slots: [this.slot(type, particles.flatMap(leavesOf), 0, UNBOUNDED, true)] };
     const found = particles.map((particle) => this.collect(type, particle, false));
     const wildcard = found.find((part) => part.wildcard !== undefined)?.wildcard;
     return {
@@ -482,6 +533,7 @@ class TableBuilder {
       case "choice":
         return { slots: this.choiceSlots(type, particle, optional) };
       case "element":
+      case "foreign":
         return { slots: [this.slot(type, [particle], optional ? 0 : particle.min, particle.max)] };
     }
   }
@@ -489,10 +541,13 @@ class TableBuilder {
   private choiceSlots(type: string, choice: Extract<Particle, { kind: "choice" }>, optional: boolean): SlotDef[] {
     const min = optional ? 0 : choice.min;
     const leaves = flattenLeaves(choice);
-    if (leaves !== undefined) return [this.slot(type, leaves, min, choice.max)];
+    // The elements of a choice that picks one of them once can repeat on their own, as the rows or the bodies of a table.
+    const repeating = choice.max === 1 && leaves?.some((leaf) => leaf.max > 1);
+    if (leaves !== undefined && !repeating) return [this.slot(type, leaves, min, choice.max)];
     if (choice.max !== 1) throw new Error(`The type ${type} repeats a choice of sequences.`);
-    // Alternatives that are sequences: the slots of each branch exclude those of the other branches.
-    const branches = choice.items.map((item) => this.collect(type, item, min === 0).slots);
+    // Alternatives: the slots of each branch exclude those of the other branches, and a branch that another can replace
+    // is optional.
+    const branches = choice.items.map((item) => this.collect(type, item, true).slots);
     return branches.flatMap((branch, index) => {
       const others = branches.flatMap((other, position) =>
         position === index ? [] : other.map((slot) => slot.property),
@@ -501,23 +556,38 @@ class TableBuilder {
     });
   }
 
-  private slot(type: string, particles: readonly Particle[], min: number, max: number): SlotDef {
+  private slot(type: string, particles: readonly Particle[], min: number, max: number, mixed = false): SlotDef {
     const accepts: AcceptDef[] = [];
+    const foreign: ForeignDef[] = [];
     let include = false;
     for (const particle of particles) {
-      if (particle.kind !== "element") throw new Error(`The type ${type} has a slot that is not made of elements.`);
-      if (particle.element === XINCLUDE) include = true;
-      else if (particle.declaration !== undefined)
-        accepts.push({ element: particle.element, type: this.typeOf(particle.declaration) });
-      else throw new Error(`The type ${type} accepts ${particle.element}, which is not flow.`);
+      if (particle.kind === "foreign") addForeign(foreign, particle.foreign);
+      else if (particle.kind !== "element")
+        throw new Error(`The type ${type} has a slot that is not made of elements.`);
+      else if (particle.element === XINCLUDE) include = true;
+      else this.addAccept(type, accepts, particle);
     }
+    // A slot that takes MathML or SSML, or text, holds flow content: the body of an item, a prompt, a paragraph.
+    const flow = mixed || foreign.length > 0;
     return {
-      property: slotProperty(type, accepts, include, max),
+      property: flow ? FLOW_PROPERTY : slotProperty(type, accepts, include, max),
       accepts,
+      ...(foreign.length > 0 ? { foreign } : {}),
       ...(include ? { include: true as const } : {}),
+      ...(mixed ? { text: true as const } : {}),
       min,
       max: max === UNBOUNDED ? "unbounded" : max,
     };
+  }
+
+  /** Adds the element of a particle to the list of the accepted ones, once, with the type that models it. */
+  private addAccept(type: string, accepts: AcceptDef[], particle: Extract<Leaf, { kind: "element" }>): void {
+    if (particle.declaration === undefined) {
+      throw new Error(`The type ${type} accepts ${particle.element}, which has no declaration.`);
+    }
+    if (!accepts.some(({ element }) => element === particle.element)) {
+      accepts.push({ element: particle.element, type: this.typeOf(particle.declaration) });
+    }
   }
 
   /** Returns the type of a simple type, by name. */
@@ -585,10 +655,13 @@ class TableBuilder {
     if (enumeration?.kind === "enum" && strings.length > 0) return { ...enumeration, extension: true };
     const number = has("integer") ?? has("double");
     if (number !== undefined && strings.length > 0 && (number.kind === "integer" || number.kind === "double")) {
+      // A string that the schema leaves unrestricted holds a reference in braces, `{identifier}` (INFO §9.3.1).
+      const braced = strings.some((member) => member.kind === "string" && member.format === undefined);
       return {
         kind: "reference",
         value: number.kind,
         ...(number.kind === "double" && number.minimum !== undefined ? { minimum: number.minimum } : {}),
+        ...(braced ? { braced: true as const } : {}),
       };
     }
     if (strings.length === members.length) return { kind: "string" };
@@ -607,23 +680,48 @@ function stripSuffix(type: string): string {
 }
 
 function attributeProperty(name: string): string {
-  if (name === "xml:lang") return "language";
-  if (name === "xml:base") return "xmlBase";
-  return camelCase(name);
+  return ATTRIBUTE_PROPERTIES.get(name) ?? camelCase(name);
 }
 
-/** Returns the leaf elements of a choice, or `undefined` when a branch is a sequence. */
-function flattenLeaves(choice: Extract<Particle, { kind: "choice" }>): Particle[] | undefined {
-  const leaves: Particle[] = [];
+/**
+ * Returns the leaf elements of a choice, or `undefined` when a branch is a sequence. A choice nested in an unbounded
+ * choice is flattened whatever its own limits are, as the outer repetition allows any number of its elements.
+ */
+function flattenLeaves(choice: Extract<Particle, { kind: "choice" }>): Leaf[] | undefined {
+  const leaves: Leaf[] = [];
   for (const item of choice.items) {
-    if (item.kind === "element") leaves.push(item);
-    else if (item.kind === "choice" && item.max === 1) {
+    if (item.kind === "element" || item.kind === "foreign") leaves.push(item);
+    else if (item.kind === "choice" && (item.max === 1 || choice.max === UNBOUNDED)) {
       const inner = flattenLeaves(item);
       if (inner === undefined) return undefined;
       leaves.push(...inner);
     } else return undefined;
   }
   return leaves;
+}
+
+/** A particle that is one element of the ASI namespace, `xi:include`, or an element of another namespace. */
+type Leaf = Extract<Particle, { kind: "element" | "foreign" }>;
+
+/** Adds an element of another namespace to a list of them, once. */
+function addForeign(list: ForeignDef[], entry: ForeignDef): void {
+  if (!list.some(({ namespace, element }) => namespace === entry.namespace && element === entry.element)) {
+    list.push(entry);
+  }
+}
+
+/** Returns the leaf elements of a particle, however deep, without looking at order or limits. */
+function leavesOf(particle: Particle): Leaf[] {
+  switch (particle.kind) {
+    case "element":
+    case "foreign":
+      return [particle];
+    case "sequence":
+    case "choice":
+      return particle.items.flatMap(leavesOf);
+    case "wildcard":
+      throw new Error("Mixed content with a wildcard is not supported.");
+  }
 }
 
 /** Returns the properties that the model of a type has besides those of its attributes and slots. */
@@ -634,7 +732,6 @@ function implicitProperties(type: TypeDef): string[] {
     ...(type.attributeWildcard === undefined ? [] : ["extensions"]),
     ...(content.kind === "slots" && content.wildcard !== undefined ? ["extensionElements"] : []),
     ...(content.kind === "text" ? ["value"] : []),
-    ...(content.kind === "flow" ? ["children"] : []),
   ];
 }
 
@@ -698,7 +795,10 @@ function literal(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** The names of the lists of elements that several slots share, by an element that only that list accepts. */
+/**
+ * The names of the lists of elements that other modules import, by an element that only that list accepts. A list
+ * without a name here is named after the first type that uses it, if two slots share it.
+ */
 const ACCEPT_LISTS: ReadonlyMap<string, string> = new Map([
   ["qti-and", "EXPRESSION"],
   ["qti-outcome-condition", "OUTCOME_RULES"],
@@ -707,42 +807,204 @@ const ACCEPT_LISTS: ReadonlyMap<string, string> = new Map([
   ["qti-template-condition", "TEMPLATE_RULES"],
 ]);
 
-/** Returns the name of a list of elements that is shared, or `undefined` for a list that belongs to one slot. */
-function sharedList(accepts: readonly AcceptDef[]): string | undefined {
-  return accepts.map(({ element }) => ACCEPT_LISTS.get(element)).find((name) => name !== undefined);
+/** The fewest attributes of a type that other types extend for the table to name the list and share it. */
+const SHARED_ATTRIBUTES_MINIMUM = 10;
+
+/** The fewest elements in a list that two slots share for the table to name it; shorter lists stay with their slot. */
+const SHARED_ELEMENTS_MINIMUM = 10;
+
+/** Returns a name in SCREAMING_SNAKE_CASE for a type of the schema, such as `BaseHTML5Flow` for `BASE_HTML5_FLOW`. */
+function screamingCase(name: string): string {
+  return stripSuffix(name)
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+    .toUpperCase();
+}
+
+/** Returns the name of the type alias for a constant: `EXPRESSION` is `Expression`, `ARIA_BASE_ATTRIBUTES` is `AriaBaseAttributes`. */
+function aliasOf(constant: string): string {
+  return constant
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join("");
+}
+
+/**
+ * Returns the source that uses a shared list: the constant, asserted to the type alias of its own type. The declaration
+ * file then names the list where it is used, and does not repeat it for every use.
+ */
+function useOf(constant: string): Source {
+  return new Source(`${constant} as ${aliasOf(constant)}`);
+}
+
+/** Returns the source of a shared list: the constant and, when the table uses the list, the alias that names its type. */
+function declarationOf(constant: string, entries: unknown, options: { exported: boolean; used: boolean }): string {
+  const list = `${options.exported ? "export " : ""}const ${constant} = ${literal(entries)} as const;`;
+  return options.used ? `${list}\ntype ${aliasOf(constant)} = typeof ${constant};` : list;
+}
+
+/** A list of elements that several slots share. */
+interface SharedList {
+  /** The name of the constant. */
+  readonly name: string;
+  /** The entries. */
+  readonly entries: readonly unknown[];
+  /** Whether other modules import it. */
+  readonly exported: boolean;
+}
+
+/** Collects the lists of elements of the slots, names those that are shared, and replaces them by their names. */
+class ListSharing {
+  private readonly users = new Map<string, { readonly first: string; count: number }>();
+  private readonly lists = new Map<string, SharedList>();
+
+  constructor(table: Table) {
+    for (const [name, type] of table.types) {
+      if (type.content.kind !== "slots") continue;
+      for (const slot of type.content.slots) {
+        for (const list of [slot.accepts, slot.foreign ?? []]) {
+          const key = JSON.stringify(list);
+          const user = this.users.get(key);
+          if (user === undefined) this.users.set(key, { first: name, count: 1 });
+          else user.count++;
+        }
+      }
+    }
+  }
+
+  /** Returns the name of the constant for a list, or `undefined` for a list that belongs to one slot. */
+  private nameOf(list: readonly AcceptDef[] | readonly ForeignDef[], suffix: string): SharedList | undefined {
+    const key = JSON.stringify(list);
+    const known = this.lists.get(key);
+    if (known !== undefined) return known;
+    const marked = list
+      .map((entry) => ("type" in entry ? ACCEPT_LISTS.get(entry.element) : undefined))
+      .find((name) => name !== undefined);
+    const user = this.users.get(key);
+    if (marked === undefined && (list.length < SHARED_ELEMENTS_MINIMUM || user === undefined || user.count < 2)) {
+      return undefined;
+    }
+    const name = marked ?? `${screamingCase(user?.first ?? "")}_${suffix}`;
+    if ([...this.lists.values()].some((other) => other.name === name)) {
+      throw new Error(`Two lists of elements share the name ${name}.`);
+    }
+    const shared = { name, entries: list, exported: marked !== undefined };
+    this.lists.set(key, shared);
+    return shared;
+  }
+
+  /** Returns a slot with its lists of elements replaced by the names of the constants that hold them. */
+  share(slot: SlotDef): unknown {
+    const accepts = this.nameOf(slot.accepts, "ACCEPTS");
+    const foreign = slot.foreign === undefined ? undefined : this.nameOf(slot.foreign, "FOREIGN");
+    return {
+      ...slot,
+      ...(accepts === undefined ? {} : { accepts: useOf(accepts.name) }),
+      ...(foreign === undefined ? {} : { foreign: useOf(foreign.name) }),
+    };
+  }
+
+  /** Returns the source of the constants, sorted by name. */
+  declarations(): string[] {
+    return [...this.lists.values()]
+      .sort((a, b) => (a.name < b.name ? -1 : 1))
+      .map(({ name, entries, exported }) => declarationOf(name, entries, { exported, used: true }));
+  }
+}
+
+/** Names the lists of attributes that types inherit, and writes a type's attributes after the list it inherits. */
+class AttributeSharing {
+  private readonly table: Table;
+  private readonly users = new Map<string, number>();
+  private readonly used = new Set<string>();
+
+  constructor(table: Table) {
+    this.table = table;
+    for (const base of [...table.extended.values(), ...[...table.bases.values()].flatMap(({ base }) => base ?? [])]) {
+      this.users.set(base.name, (this.users.get(base.name) ?? 0) + 1);
+    }
+  }
+
+  /** Returns whether a base is extended by two types, is long, and has attributes of its own besides those it extends. */
+  private isShared(name: string): boolean {
+    const base = this.table.bases.get(name);
+    return (
+      base !== undefined &&
+      (this.users.get(name) ?? 0) >= 2 &&
+      base.attributes.length >= SHARED_ATTRIBUTES_MINIMUM &&
+      base.attributes.length > (base.base?.count ?? 0)
+    );
+  }
+
+  /** Returns the nearest base, at or above a type's own, whose list is shared. */
+  private sharedBase(base: Base | undefined): Base | undefined {
+    if (base === undefined || this.isShared(base.name)) return base;
+    return this.sharedBase(this.table.bases.get(base.name)?.base);
+  }
+
+  private constantOf(name: string): string {
+    return `${screamingCase(name)}_ATTRIBUTES`;
+  }
+
+  /**
+   * Returns the attributes of a type or of a base, as the properties of its entry in the table: those it inherits from a
+   * shared base, by reference, and its own.
+   */
+  attributes(
+    attributes: readonly AttributeDef[],
+    base: Base | undefined,
+  ): { readonly inherited?: Source; readonly attributes: readonly AttributeDef[] } {
+    const shared = this.sharedBase(base);
+    if (shared === undefined) return { attributes };
+    this.used.add(shared.name);
+    return { inherited: useOf(this.constantOf(shared.name)), attributes: attributes.slice(shared.count) };
+  }
+
+  /** Returns the source of the constants for the shared lists, each after the list it extends. */
+  declarations(): string[] {
+    const declared: string[] = [];
+    const seen = new Set<string>();
+    const declare = (name: string): void => {
+      const base = this.table.bases.get(name);
+      if (seen.has(name) || base === undefined || !this.isShared(name)) return;
+      seen.add(name);
+      const parent = this.sharedBase(base.base);
+      if (parent !== undefined) declare(parent.name);
+      const list =
+        parent === undefined
+          ? base.attributes
+          : [new Source(`...${this.constantOf(parent.name)}`), ...base.attributes.slice(parent.count)];
+      declared.push(declarationOf(this.constantOf(name), list, { exported: false, used: this.used.has(name) }));
+    };
+    for (const name of [...this.table.bases.keys()].sort()) declare(name);
+    return declared;
+  }
 }
 
 /** Returns the source of the table module, before formatting. */
 export function renderTable(table: Table, schema: { readonly url: string; readonly sha256: string }): string {
-  const lists = new Map<string, readonly AcceptDef[]>();
-  const replaceAccepts = (slot: SlotDef): unknown => {
-    const name = sharedList(slot.accepts);
-    if (name === undefined) return slot;
-    const known = lists.get(name);
-    if (known !== undefined && JSON.stringify(known) !== JSON.stringify(slot.accepts)) {
-      throw new Error(`The slots that share ${name} accept different elements.`);
-    }
-    lists.set(name, slot.accepts);
-    return { ...slot, accepts: new Source(name) };
-  };
+  const lists = new ListSharing(table);
+  const attributes = new AttributeSharing(table);
   const types = Object.fromEntries(
     [...table.types].map(([name, type]) => [
       name,
-      type.content.kind === "slots"
-        ? { ...type, content: { ...type.content, slots: type.content.slots.map(replaceAccepts) } }
-        : type,
+      {
+        ...attributes.attributes(type.attributes, table.extended.get(name)),
+        ...(type.attributeWildcard === undefined ? {} : { attributeWildcard: type.attributeWildcard }),
+        ...(type.content.kind === "slots"
+          ? { content: { ...type.content, slots: type.content.slots.map((slot) => lists.share(slot)) } }
+          : { content: type.content }),
+      },
     ]),
   );
-  const declarations = [...lists]
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([name, accepts]) => `export const ${name} = ${literal(accepts)} as const;`);
   return [
     "// Generated by scripts/asi-table.ts; do not edit.",
     `// Source: ${schema.url} (SHA-256 ${schema.sha256}).`,
     "// biome-ignore-all lint/style/useNamingConvention: The types are named as the schema names them.",
     'import type { TypeDef } from "./table.js";',
     "",
-    ...declarations,
+    ...attributes.declarations(),
+    ...lists.declarations(),
     "",
     "/** The element types of the ASI schema that olah reads and writes, by name. */",
     `export const ELEMENT_TYPES = ${literal(types)} as const satisfies Readonly<Record<string, TypeDef>>;`,

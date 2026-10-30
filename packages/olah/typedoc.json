@@ -13,15 +13,19 @@
   "projectDocuments": ["docs/*.md"],
   "treatWarningsAsErrors": true,
   "intentionallyNotExported": [
-    "AttributeProperties",
-    "ContentProperties",
+    "Accepted",
+    "Accepts",
+    "ElementOf",
     "EXPRESSION",
-    "ExtensionProperties",
-    "KindOf",
+    "FlowSlots",
+    "HtmlAccept",
+    "InteractionAccept",
     "Member",
+    "ModelParts",
     "NUMERIC_EXPRESSION",
     "OUTCOME_RULES",
     "RESPONSE_RULES",
+    "SlotMember",
     "TEMPLATE_RULES",
     "Types"
   ]

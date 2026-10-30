@@ -31,7 +31,7 @@ import {
   writeManifest,
   writePackage,
 } from "../src/index.js";
-import { manifests } from "./package-generators.js";
+import { manifests } from "./arbitraries/package.js";
 import { buildZip, bytes, concat, type RawEntry } from "./zip-builder.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures/zip");

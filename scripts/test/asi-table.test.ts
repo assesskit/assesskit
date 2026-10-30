@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTable, parseSchema, renderTable } from "../asi-table.ts";
 
-const XS = 'xmlns:xs="http://www.w3.org/2001/XMLSchema"';
+const XS = 'xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:m3="urn:math"';
 
 /** A schema with the given definitions. */
 function schema(definitions: string): string {
@@ -48,7 +48,7 @@ describe("buildTable", () => {
     ]);
   });
 
-  it("reads lists, references to variables and extensible vocabularies", () => {
+  it("reads lists, references to variables, braced where the string is open, and extensible vocabularies", () => {
     const { types } = table(`${BOX}<xs:complexType name="BoxDType">
       <xs:attribute name="class"><xs:simpleType><xs:list itemType="xs:string"/></xs:simpleType></xs:attribute>
       <xs:attribute name="count"><xs:simpleType><xs:union><xs:simpleType><xs:restriction base="xs:integer"/></xs:simpleType><xs:simpleType><xs:restriction base="xs:NCName"/></xs:simpleType></xs:union></xs:simpleType></xs:attribute>
@@ -59,7 +59,7 @@ describe("buildTable", () => {
     expect(types.get("Box")?.attributes.map(({ type }) => type)).toEqual([
       { kind: "list", item: { kind: "string" } },
       { kind: "reference", value: "integer" },
-      { kind: "reference", value: "double" },
+      { kind: "reference", value: "double", braced: true },
       { kind: "enum", terms: ["a"], extension: true },
     ]);
   });
@@ -141,12 +141,83 @@ describe("buildTable", () => {
     expect(types.get("Value")).toMatchObject({ content: { kind: "text", value: { kind: "string" } } });
   });
 
-  it("keeps mixed content and content with HTML as flow, without reading what it contains", () => {
+  it("reads mixed content as one slot of elements and text, in the property children", () => {
     const { types } =
-      table(`${BOX}<xs:element name="p" type="PDType"/><xs:complexType name="BoxDType"><xs:sequence><xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element ref="p"/></xs:choice></xs:sequence><xs:attribute name="id" type="xs:ID"/></xs:complexType>
-    <xs:complexType name="PDType" mixed="true"><xs:sequence><xs:element name="qti-never-read" type="NeverDType"/></xs:sequence></xs:complexType>`);
-    expect(types.get("Box")).toMatchObject({ content: { kind: "flow" }, attributes: [{ type: { format: "id" } }] });
-    expect([...types.keys()]).toEqual(["Box"]);
+      table(`${BOX}<xs:element name="p" type="PDType"/><xs:complexType name="BoxDType" mixed="true"><xs:sequence><xs:element ref="p" minOccurs="0"/><xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element ref="p"/><xs:element ref="xi:include"/></xs:choice><xs:element name="qti-last" type="PDType"/></xs:sequence><xs:attribute name="id" type="xs:ID"/></xs:complexType>
+    <xs:complexType name="PDType"/>`);
+    expect(types.get("Box")).toMatchObject({
+      attributes: [{ type: { format: "id" } }],
+      content: {
+        kind: "slots",
+        slots: [
+          {
+            property: "children",
+            accepts: [
+              { element: "p", type: "P" },
+              { element: "qti-last", type: "P" },
+            ],
+            include: true,
+            text: true,
+            min: 0,
+            max: "unbounded",
+          },
+        ],
+      },
+    });
+  });
+
+  it("reads MathML and SSML as foreign elements of a slot, which makes it flow content", () => {
+    const { types } = table(`${BOX}<xs:complexType name="BoxDType"><xs:sequence>
+      <xs:element name="qti-head" type="HeadDType" minOccurs="0"/>
+      <xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element ref="m3:math"/><xs:element name="qti-part" type="HeadDType"/></xs:choice>
+    </xs:sequence></xs:complexType><xs:complexType name="HeadDType"/>`);
+    expect(types.get("Box")?.content).toEqual({
+      kind: "slots",
+      slots: [
+        { property: "head", accepts: [{ element: "qti-head", type: "Head" }], min: 0, max: 1 },
+        {
+          property: "children",
+          accepts: [{ element: "qti-part", type: "Head" }],
+          foreign: [{ namespace: "urn:math", element: "math" }],
+          min: 0,
+          max: "unbounded",
+        },
+      ],
+    });
+  });
+
+  it("flattens choices nested in a repeated choice, whatever their own limits", () => {
+    const { types } = table(
+      `${BOX}<xs:complexType name="BoxDType"><xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="qti-caption" type="PartDType" minOccurs="0" maxOccurs="1"/>
+      <xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element name="qti-a" type="PartDType"/><xs:element name="qti-b" type="PartDType"/></xs:choice>
+    </xs:choice></xs:complexType><xs:complexType name="PartDType"/>`.replace("qti-caption", "qti-set-template-value"),
+    );
+    expect(types.get("Box")?.content).toMatchObject({
+      slots: [{ property: "rules", min: 0, max: "unbounded" }],
+    });
+    expect(types.get("Box")).toBeDefined();
+  });
+
+  it("refuses a reference with a prefix that the schema does not declare", () => {
+    expect(() =>
+      table(
+        `${BOX}<xs:complexType name="BoxDType"><xs:sequence><xs:choice maxOccurs="unbounded"><xs:element ref="other:thing"/></xs:choice></xs:sequence></xs:complexType>`,
+      ),
+    ).toThrow("The prefix of other:thing is not declared by the schema.");
+  });
+
+  it("records the type that each type extends and the attributes it gets from it", () => {
+    const { extended, bases } =
+      table(`${BOX}<xs:complexType name="BoxDType"><xs:complexContent><xs:extension base="MiddleDType">
+      <xs:attribute name="own" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType>
+    <xs:complexType name="MiddleDType"><xs:complexContent><xs:extension base="TopDType"><xs:attribute name="middle" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType>
+    <xs:complexType name="TopDType"><xs:attribute name="top" type="xs:string"/></xs:complexType>`);
+    expect(extended.get("Box")).toEqual({ name: "MiddleDType", count: 2 });
+    expect([...bases.keys()].sort()).toEqual(["MiddleDType", "TopDType"]);
+    expect(bases.get("MiddleDType")?.base).toEqual({ name: "TopDType", count: 1 });
+    expect(bases.get("MiddleDType")?.attributes.map(({ name }) => name)).toEqual(["top", "middle"]);
+    expect(bases.get("TopDType")?.base).toBeUndefined();
   });
 
   it("reads the wildcards of attributes and elements with their processing", () => {
@@ -166,8 +237,10 @@ describe("buildTable", () => {
       ),
     ).toThrow("The type Box has the property part twice.");
     expect(() =>
-      table(`${BOX}<xs:complexType name="BoxDType"><xs:attribute name="kind" type="xs:string"/></xs:complexType>`),
-    ).toThrow("The type Box has the property kind twice.");
+      table(
+        `${BOX}<xs:complexType name="BoxDType"><xs:simpleContent><xs:extension base="xs:string"><xs:attribute name="value" type="xs:string"/></xs:extension></xs:simpleContent></xs:complexType>`,
+      ),
+    ).toThrow("The type Box has the property value twice.");
   });
 
   it("refuses what it does not read instead of leaving it out", () => {
@@ -205,6 +278,53 @@ describe("renderTable", () => {
     </xs:sequence></xs:complexType>`);
     const source = renderTable(built, { url: "u", sha256: "h" });
     expect(source.match(/export const EXPRESSION = /g)).toHaveLength(1);
-    expect(source.match(/"accepts":EXPRESSION/g)).toHaveLength(2);
+    expect(source.match(/"accepts":EXPRESSION as Expression/g)).toHaveLength(2);
+    expect(source).toContain("type Expression = typeof EXPRESSION;");
+  });
+
+  it("names a long list that two slots share after the first type that uses it, and leaves short lists in place", () => {
+    const names = Array.from({ length: 10 }, (_, index) => `qti-e${index}`);
+    const choice = `<xs:element ref="m3:math"/>${names.map((name) => `<xs:element name="${name}" type="PartDType"/>`).join("")}`;
+    const built = table(`${BOX}<xs:complexType name="BoxDType"><xs:sequence>
+      <xs:choice maxOccurs="unbounded">${choice}</xs:choice><xs:element name="qti-one" type="OtherDType"/>
+    </xs:sequence></xs:complexType><xs:complexType name="OtherDType"><xs:sequence>
+      <xs:choice maxOccurs="unbounded">${choice}</xs:choice><xs:element name="qti-one" type="PartDType"/>
+    </xs:sequence></xs:complexType><xs:complexType name="PartDType"/>`);
+    const source = renderTable(built, { url: "u", sha256: "h" });
+    expect(source.match(/\nconst BOX_ACCEPTS = /g)).toHaveLength(1);
+    expect(source).not.toContain("export const BOX_ACCEPTS");
+    expect(source.match(/"accepts":BOX_ACCEPTS as BoxAccepts/g)).toHaveLength(2);
+    expect(source).toContain("type BoxAccepts = typeof BOX_ACCEPTS;");
+    expect(source).not.toContain("ONE_ACCEPTS");
+  });
+
+  it("writes the attributes that two types inherit from a long base once, and the attributes of each type apart", () => {
+    const attributes = Array.from(
+      { length: 10 },
+      (_, index) => `<xs:attribute name="a${index}" type="xs:string"/>`,
+    ).join("");
+    const built = table(
+      `${BOX}<xs:complexType name="BoxDType"><xs:complexContent><xs:extension base="BaseDType">
+      <xs:attribute name="own" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType>
+    <xs:element name="qti-other" type="OtherDType"/>
+    <xs:complexType name="OtherDType"><xs:complexContent><xs:extension base="BaseDType"/></xs:complexContent></xs:complexType>
+    <xs:complexType name="BaseDType">${attributes}</xs:complexType>`,
+      ["qti-box", "qti-other"],
+    );
+    const source = renderTable(built, { url: "u", sha256: "h" });
+    expect(source.match(/\nconst BASE_ATTRIBUTES = /g)).toHaveLength(1);
+    expect(source.match(/"inherited":BASE_ATTRIBUTES as BaseAttributes/g)).toHaveLength(2);
+    expect(source).toContain("type BaseAttributes = typeof BASE_ATTRIBUTES;");
+    expect(source).toContain('"attributes":[{"name":"own"');
+    expect(source).toContain('"attributes":[]');
+  });
+
+  it("does not share the attributes of a short base, and keeps them with the type", () => {
+    const built = table(`${BOX}<xs:complexType name="BoxDType"><xs:complexContent><xs:extension base="BaseDType">
+      <xs:attribute name="own" type="xs:string"/></xs:extension></xs:complexContent></xs:complexType>
+    <xs:complexType name="BaseDType"><xs:attribute name="a" type="xs:string"/></xs:complexType>`);
+    const source = renderTable(built, { url: "u", sha256: "h" });
+    expect(source).not.toContain("inherited");
+    expect(source).toContain('{"name":"a"');
   });
 });

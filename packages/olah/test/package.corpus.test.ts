@@ -48,6 +48,12 @@ function bare(value: unknown): unknown {
   );
 }
 
+/** The items of the example packages that the ASI schema rejects, by archive and resource: a missing `use` and an unknown attribute. */
+const SCHEMA_INVALID = new Set([
+  "packaging/items/items.zip data-attributes",
+  "packaging/pci/pci_item_examples.zip fractions-primary-configuration",
+]);
+
 describe("the 1EdTech example packages", () => {
   it("[K1][K4][K5] include 24 manifests of the QTI profile and 26 archives, two of which use the namespace of IMS CP 1.1", () => {
     expect(manifests).toHaveLength(24);
@@ -152,17 +158,19 @@ describe("the 1EdTech example packages", () => {
     }
   });
 
-  it("[K5][K10][K12] resolve every item of every package to a document, as a QTI item or an LTI link", () => {
+  it("[K5][K10][K12] resolve every item of every package to a document, as a QTI item or an LTI link, except the two that the schema rejects", () => {
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
       const resolvers = packageResolvers(pkg);
       for (const resource of pkg.manifest.resources.filter(
         ({ type }) => type === "imsqti_item_xmlv3p0" || type === "imsbasiclti_xmlv1p3",
       )) {
-        const resolved = resolvers.items(
-          resourcePath(pkg.manifest, resource, resource.href ?? resource.files[0]?.href) ?? "",
-          "",
-        );
+        const target = resourcePath(pkg.manifest, resource, resource.href ?? resource.files[0]?.href) ?? "";
+        if (SCHEMA_INVALID.has(`${path} ${resource.identifier}`)) {
+          expect(() => resolvers.items(target, ""), `${path} ${resource.identifier}`).toThrow(ReadError);
+          continue;
+        }
+        const resolved = resolvers.items(target, "");
         expect(resolved.resource, `${path} ${resource.identifier}`).toBe(resource.identifier);
         expect(resolved.deliverable.kind).toBe(resource.type === "imsqti_item_xmlv3p0" ? "qti" : "lti");
       }
@@ -193,12 +201,16 @@ describe("the ASI documents of the example packages", () => {
         const kind = Kinds.get(resource.type);
         if (kind === undefined) continue;
         const target = resourcePath(pkg.manifest, resource, resource.href ?? resource.files[0]?.href);
+        if (SCHEMA_INVALID.has(`${path} ${resource.identifier}`)) {
+          expect(() => pkg.document(target ?? ""), `${path} ${resource.identifier}`).toThrow(ReadError);
+          continue;
+        }
         expect(pkg.document(target ?? "").kind, `${path} ${resource.identifier}`).toBe(kind);
         counts.set(kind, (counts.get(kind) ?? 0) + 1);
       }
     }
     expect([...counts].sort()).toEqual([
-      ["item", 249],
+      ["item", 247],
       ["outcome-declaration", 1],
       ["response-processing", 5],
       ["stimulus", 1],

@@ -36,8 +36,16 @@ function parseEnum(type: Extract<AttributeType, { kind: "enum" }>, text: string)
   return invalid(text, `one of ${terms}${type.extension === true ? " or an ext: term" : ""}`);
 }
 
+/** Returns the identifier inside the braces of `{identifier}`, or `undefined` for text that is not of that form. */
+function unbrace(token: string): string | undefined {
+  const name = token.startsWith("{") && token.endsWith("}") ? token.slice(1, -1) : undefined;
+  return name !== undefined && isIdentifier(name) ? name : undefined;
+}
+
 function parseReference(type: Extract<AttributeType, { kind: "reference" }>, text: string): number | string {
   const token = xmlTokens(text).join(" ");
+  const named = type.braced === true ? unbrace(token) : undefined;
+  if (named !== undefined) return named;
   const baseType = type.value === "integer" ? "integer" : "float";
   const isNumber =
     baseType === "integer"
@@ -82,6 +90,7 @@ function formatNumber(value: unknown, baseType: NumberBaseType): string {
 
 function formatReference(type: Extract<AttributeType, { kind: "reference" }>, value: unknown): string {
   if (typeof value === "number") return formatNumber(value, type.value === "integer" ? "integer" : "float");
+  if (type.braced === true && isIdentifier(value)) return `{${value}}`;
   if (isIdentifier(value) && !(type.value === "double" && NUMERIC_WORDS.has(value))) return value;
   throw new DataError(`A value must be a number or the identifier of a variable, found ${describe(value)}.`);
 }

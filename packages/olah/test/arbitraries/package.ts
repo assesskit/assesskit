@@ -1,6 +1,6 @@
 import fc from "fast-check";
-import { MANIFEST_SCHEMAS, type Manifest, RESOURCE_TYPES, type Resource } from "../src/index.js";
-import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata, uri } from "./metadata-generators.js";
+import { MANIFEST_SCHEMAS, type Manifest, RESOURCE_TYPES, type Resource } from "../../src/index.js";
+import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata, uri } from "./metadata.js";
 
 const optional = <T>(value: fc.Arbitrary<T>): fc.Arbitrary<T | undefined> => fc.option(value, { nil: undefined });
 

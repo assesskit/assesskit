@@ -34,7 +34,7 @@ export type StringFormat =
  * | `double` | a number, with `INF`, `-INF` and `NaN` |
  * | `enum` | one of `terms`, or an `ext:` term when `extension` is set |
  * | `list` | the items, separated by white space in the text |
- * | `reference` | a number, or the identifier of a variable that holds it |
+ * | `reference` | a number, or the identifier of a variable that holds it; with `braced`, the identifier is written `{identifier}` (INFO §9.3.1) and a bare identifier reads too |
  */
 export type AttributeType =
   | { readonly kind: "string"; readonly format?: StringFormat }
@@ -43,12 +43,18 @@ export type AttributeType =
   | { readonly kind: "double"; readonly minimum?: number }
   | { readonly kind: "enum"; readonly terms: readonly string[]; readonly extension?: true }
   | { readonly kind: "list"; readonly item: AttributeType }
-  | { readonly kind: "reference"; readonly value: "integer" | "double"; readonly minimum?: number };
+  | {
+      readonly kind: "reference";
+      readonly value: "integer" | "double";
+      readonly minimum?: number;
+      readonly braced?: true;
+    };
 
 /**
- * The attributes or elements beyond its own that a type allows: of `any` namespace (attributes only: those in no
- * namespace too) or of namespaces `other` than the ASI one. The reader and the writer keep them as they are. A `strict`
- * wildcard only accepts what a schema declares, so a generated document must not use it.
+ * The attributes or elements beyond its own that a type allows: of `any` namespace (for attributes, those in no
+ * namespace too; for elements, the ASI namespace too) or of namespaces `other` than the ASI one. The reader and the
+ * writer keep them as they are. A `strict` wildcard only accepts what a schema declares, so a generated document must
+ * not use it.
  */
 export interface Wildcard {
   /** Which namespaces the wildcard allows. */
@@ -79,14 +85,26 @@ export interface AcceptDef {
   readonly type: string;
 }
 
+/** An element of another namespace that a slot accepts: MathML or SSML, which the model keeps as XML. */
+export interface ForeignDef {
+  /** The namespace URI. */
+  readonly namespace: string;
+  /** The local name, such as `math`. */
+  readonly element: string;
+}
+
 /** A place in the content of an element type where child elements go. */
 export interface SlotDef {
   /** The property of the model; a slot that holds more than one element is an array. */
   readonly property: string;
-  /** The elements the slot accepts. */
+  /** The elements of the ASI namespace the slot accepts. */
   readonly accepts: readonly AcceptDef[];
+  /** The elements of other namespaces the slot accepts. */
+  readonly foreign?: readonly ForeignDef[];
   /** Whether the slot also accepts `xi:include`, which the model keeps as an `XmlElement`. */
   readonly include?: true;
+  /** Whether text may stand between the elements of the slot; otherwise only white space may. */
+  readonly text?: true;
   /** The fewest elements. */
   readonly min: number;
   /** The most elements. */
@@ -102,18 +120,21 @@ export interface SlotDef {
  * | --- | --- |
  * | `empty` | nothing |
  * | `text` | text only, of the type `value` |
- * | `flow` | text mixed with HTML, MathML and SSML elements, which the model keeps as XML nodes |
- * | `slots` | child elements in the slots; a `wildcard` also allows elements of other namespaces |
+ * | `slots` | child elements in the slots, with text in a slot that takes it; a `wildcard` also allows other elements |
  */
 export type ContentDef =
   | { readonly kind: "empty" }
   | { readonly kind: "text"; readonly value: AttributeType }
-  | { readonly kind: "flow" }
   | { readonly kind: "slots"; readonly slots: readonly SlotDef[]; readonly wildcard?: Wildcard };
 
 /** An element type of the schema: its attributes and its content. */
 export interface TypeDef {
-  /** The attributes in schema order, those of the types it extends first. */
+  /**
+   * The attributes of the types it extends, in schema order, before its own. The table gives them as one list that
+   * many types share, so that the declaration file of the table names the list instead of repeating it.
+   */
+  readonly inherited?: readonly AttributeDef[];
+  /** The attributes it adds, in schema order. */
   readonly attributes: readonly AttributeDef[];
   /** The attributes besides those of `attributes` that are allowed, if any. */
   readonly attributeWildcard?: Wildcard;

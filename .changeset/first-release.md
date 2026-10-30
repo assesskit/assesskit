@@ -13,9 +13,11 @@ Node.js (`node`): the pinned list of the official XSD schemas, `loadSchemaSet`, 
 `validateXmlFiles`.
 
 The typed model of the assessment documents (`asi`): items, stimuli, tests, sections, outcome declarations and response
-and outcome processing, with their declarations, test structure, rules and all 64 expressions, read by `readAsi` and
-written by `writeAsi`. The model, the reader, the writer and the generators of the tests all read one element table
-that `pnpm asi-table` generates from the official ASI schema. `readScoreCovers` and `scoreCoversBlock` read and build the
+and outcome processing, with their declarations, test structure, rules and all 64 expressions, and the content of items,
+stimuli and feedback (text, the 76 HTML elements, the 22 interactions with their choices and prompts, portable custom
+interactions, feedback, templates, rubric blocks, catalogs and companion materials, with MathML, SSML and `xi:include` kept
+as XML), read by `readAsi` and written by `writeAsi`. The model, the reader, the writer and the generators of the tests
+all read one element table that `pnpm asi-table` generates from the official ASI schema. `readScoreCovers` and `scoreCoversBlock` read and build the
 rubric block that names the responses an externally scored outcome of a test covers.
 
 Readers and writers for the companion specifications: Results Reporting (`results`), usage data and item statistics

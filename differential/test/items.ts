@@ -34,8 +34,7 @@ export const TEMPLATE_ITEM = `<?xml version="1.0" encoding="UTF-8"?>
     </qti-set-template-value>
   </qti-template-processing>
   <qti-item-body>
-    <p>Type <qti-printed-variable identifier="N"/>.</p>
-    <qti-text-entry-interaction response-identifier="RESPONSE"/>
+    <p>Type <qti-printed-variable identifier="N"/>: <qti-text-entry-interaction response-identifier="RESPONSE"/></p>
   </qti-item-body>
   <qti-response-processing>
     <qti-response-condition>

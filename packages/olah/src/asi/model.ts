@@ -1,4 +1,4 @@
-import type { XmlAttribute, XmlElement, XmlNode } from "../xml/index.js";
+import type { XmlAttribute, XmlElement } from "../xml/index.js";
 import type {
   ELEMENT_TYPES,
   EXPRESSION,
@@ -7,7 +7,7 @@ import type {
   RESPONSE_RULES,
   TEMPLATE_RULES,
 } from "./element-table.js";
-import type { AcceptDef, AttributeDef, AttributeType, SlotDef } from "./table.js";
+import type { AcceptDef, AttributeDef, AttributeType, ForeignDef, SlotDef } from "./table.js";
 
 type Types = typeof ELEMENT_TYPES;
 
@@ -44,10 +44,11 @@ type Member<TAccept extends AcceptDef> = TAccept extends AcceptDef
   ? ElementModel<TAccept["type"] & keyof Types, TAccept["element"]>
   : never;
 
-/** What one place in the model holds: the accepted elements, and `xi:include` kept as XML. */
-type SlotMember<TSlot extends SlotDef> = TSlot extends { include: true }
-  ? Member<TSlot["accepts"][number]> | XmlElement
-  : Member<TSlot["accepts"][number]>;
+/** What one place in the model holds: the accepted elements, `xi:include`, MathML and SSML kept as XML, and text. */
+type SlotMember<TSlot extends SlotDef> =
+  | Member<TSlot["accepts"][number]>
+  | (TSlot extends { include: true } | { foreign: readonly ForeignDef[] } ? XmlElement : never)
+  | (TSlot extends { text: true } ? TextNode : never);
 
 /** The properties that the slots of a type give. */
 type SlotProperties<TSlots extends readonly SlotDef[]> = {
@@ -64,26 +65,26 @@ type SlotProperties<TSlots extends readonly SlotDef[]> = {
     : TSlotOf["property"]]: readonly SlotMember<TSlotOf>[];
 };
 
+/** The properties that the attributes inherited from the types it extends give, when a type inherits any. */
+type InheritedProperties<TType> = TType extends { inherited: infer TInherited extends readonly AttributeDef[] }
+  ? AttributeProperties<TInherited>
+  : unknown;
+
 /** The properties that the content of a type gives. */
 type ContentProperties<TContent> = TContent extends { kind: "text"; value: infer TValue extends AttributeType }
   ? {
       /** The text of the element. */
       readonly value: ValueOf<TValue>;
     }
-  : TContent extends { kind: "flow" }
-    ? {
-        /** The content of the element, as parsed. */
-        readonly children: readonly BodyNode[];
-      }
-    : TContent extends { kind: "slots"; slots: infer TSlots extends readonly SlotDef[] }
-      ? SlotProperties<TSlots> &
-          (TContent extends { wildcard: object }
-            ? {
-                /** The child elements of other namespaces, as parsed. */
-                readonly extensionElements: readonly XmlElement[];
-              }
-            : unknown)
-      : unknown;
+  : TContent extends { kind: "slots"; slots: infer TSlots extends readonly SlotDef[] }
+    ? SlotProperties<TSlots> &
+        (TContent extends { wildcard: object }
+          ? {
+              /** The child elements that the schema allows beyond its own, as parsed. */
+              readonly extensionElements: readonly XmlElement[];
+            }
+          : unknown)
+    : unknown;
 
 /** The property for the attributes beyond the ones of the schema, when the type allows them. */
 type ExtensionProperties<TType> = TType extends { attributeWildcard: object }
@@ -96,6 +97,15 @@ type ExtensionProperties<TType> = TType extends { attributeWildcard: object }
 /** The element name without the `qti-` prefix, which is the `kind` of its model. */
 type KindOf<TElement extends string> = TElement extends `qti-${infer TKind}` ? TKind : TElement;
 
+/** The properties of the model of an element, as parts that {@link ElementModel} merges. */
+type ModelParts<T extends keyof Types, TElement extends string> = {
+  /** The name of the element without `qti-`. */
+  readonly kind: KindOf<TElement>;
+} & AttributeProperties<Types[T]["attributes"]> &
+  InheritedProperties<Types[T]> &
+  ContentProperties<Types[T]["content"]> &
+  ExtensionProperties<Types[T]>;
+
 /**
  * The model of an element: the type `T` of the element table, for the element `TElement`.
  *
@@ -104,23 +114,28 @@ type KindOf<TElement extends string> = TElement extends `qti-${infer TKind}` ? T
  *   attribute is a required property, and an attribute that a document omits is an omitted property.
  * - Each place for child elements is a property: an array when it holds more than one element, otherwise the element,
  *   omitted when there is none. Child elements are in schema order, except in an array that holds several kinds of
- *   elements, which keeps document order. An `xi:include` is kept as an `XmlElement`.
- * - `extensions` holds the attributes that the schema allows beyond its own, and `extensionElements` the elements of
- *   other namespaces.
- * - A text is `value`, and flow content is `children`, the nodes as parsed.
+ *   elements, which keeps document order. An `xi:include`, MathML and SSML are kept as an `XmlElement`.
+ * - Flow content, which mixes text with elements, is the array `children`, in document order, with a {@link TextNode}
+ *   for each run of text.
+ * - `extensions` holds the attributes that the schema allows beyond its own, and `extensionElements` the child elements
+ *   it allows beyond its own.
+ * - A text is `value`.
+ *
+ * The parameters are declared invariant: the model of one element is never the model of another. Without the
+ * declaration the compiler works out their variance by comparing instances for every type of the table, and fails with
+ * "union type too complex" on the unions of flow content.
  */
-export type ElementModel<T extends keyof Types, TElement extends string> = {
-  /** The name of the element without `qti-`. */
-  readonly kind: KindOf<TElement>;
-} & AttributeProperties<Types[T]["attributes"]> &
-  ContentProperties<Types[T]["content"]> &
-  ExtensionProperties<Types[T]>;
+export type ElementModel<in out T extends keyof Types, in out TElement extends string> = {
+  [TKey in keyof ModelParts<T, TElement>]: ModelParts<T, TElement>[TKey];
+};
 
-/**
- * A node of body content: an element, text, CDATA section, comment or processing instruction, as parsed. Flow content is
- * text mixed with HTML, MathML and SSML elements, interactions and feedback; the model keeps it as XML.
- */
-export type BodyNode = XmlNode;
+/** Text in flow content: the characters between two elements. A CDATA section is text, and comments are not kept. */
+export interface TextNode {
+  /** Tells text from the elements. */
+  readonly kind: "text";
+  /** The characters. */
+  readonly value: string;
+}
 
 /** An expression, which processing evaluates to a value or NULL: one of the 64 operators and values (INFO §2.11). */
 export type Expression = Member<(typeof EXPRESSION)[number]>;
@@ -336,4 +351,4 @@ export type TemplateIf = ElementModel<"TemplateIf", "qti-template-if">;
 export type TemplateProcessing = ElementModel<"TemplateProcessing", "qti-template-processing">;
 
 /** A `qti-rubric-block` of a test, test part or section: instructions for the people who read or score (INFO §5.160). */
-export type RubricBlock = ElementModel<"TestRubricBlock", "qti-rubric-block">;
+export type TestRubricBlock = ElementModel<"TestRubricBlock", "qti-rubric-block">;

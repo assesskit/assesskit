@@ -120,12 +120,6 @@
     "source": "INFO §2.11.3.2"
   },
   {
-    "item": "packaging/items/data-attributes.xml (no responses)",
-    "variable": "",
-    "reason": "The item's rubric block has no use, which INFO §5.120.1 requires; validate reports content, and olah runs the processing, which the rubric block does not affect.",
-    "source": "INFO §5.120.1"
-  },
-  {
     "item": "packaging/items/feedback_adaptive.xml (no responses)",
     "variable": "",
     "reason": "Longsight rejects the item because one rule sets the multiple FEEDBACK to a single value; olah checks a value when its rule runs (D5), which this case does not reach, and validate reports the rule.",

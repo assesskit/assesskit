@@ -6,6 +6,7 @@ import {
   deriveQtiMetadata,
   lomGeneral,
   parseXml,
+  ReadError,
   readManifest,
   readPackage,
   readResourceMetadata,
@@ -123,6 +124,7 @@ describe("the metadata that the example items show", () => {
   /** The fields that an author spelled in the manifest and that `deriveQtiMetadata` derives, as `field: spelled > derived`, by package and resource. */
   function differences(): string[] {
     const found: string[] = [];
+    const unreadable: string[] = [];
     let compared = 0;
     for (const path of readdirSync(packaging, { recursive: true, encoding: "utf8" }).filter((entry) =>
       entry.endsWith(".zip"),
@@ -135,10 +137,16 @@ describe("the metadata that the example items show", () => {
       }
       for (const resource of pkg.manifest.resources) {
         const spelled = resource.metadata?.qti;
-        const document =
-          spelled && resource.type === "imsqti_item_xmlv3p0"
-            ? pkg.document(resourcePath(pkg.manifest, resource) ?? "")
-            : undefined;
+        let document: ReturnType<typeof pkg.document> | undefined;
+        try {
+          document =
+            spelled && resource.type === "imsqti_item_xmlv3p0"
+              ? pkg.document(resourcePath(pkg.manifest, resource) ?? "")
+              : undefined;
+        } catch (error) {
+          if (!(error instanceof ReadError)) throw error;
+          unreadable.push(`${path} ${resource.identifier}`);
+        }
         if (spelled === undefined || document?.kind !== "item") continue;
         compared++;
         const derived = deriveQtiMetadata(document.item);
@@ -169,11 +177,13 @@ describe("the metadata that the example items show", () => {
         }
       }
     }
-    expect(compared).toBe(32);
+    // The item has an attribute that the ASI schema does not have, `fallback-configuration`, so that the reader refuses it.
+    expect(unreadable).toEqual(["pci/pci_item_examples.zip fractions-primary-configuration"]);
+    expect(compared).toBe(31);
     return found.sort();
   }
 
-  it("[Q2][Q3][Q4][Q5][Q9][Q10][Q11] agree with the metadata of the manifests in 32 items, except where an author's metadata differs from the item", () => {
+  it("[Q2][Q3][Q4][Q5][Q9][Q10][Q11] agree with the metadata of the manifests in 31 items, except where an author's metadata differs from the item", () => {
     // Each line is an item whose manifest says otherwise than the item shows: the manifest says nonadaptive for items without
     // feedback (CASE, metaData), extendedText for items with a text entry (ccPackage), no solution for items that declare
     // correct responses (hotspot-maximum, the pci fractions), and a solution for an item that declares correct responses for
@@ -190,7 +200,6 @@ describe("the metadata that the example items show", () => {
         "metaData/metaData.zip choice feedbackType: nonadaptive > none",
         "pci/pci_item_examples.zip fractions-dependencies-module-path solutionAvailable: false > true",
         "pci/pci_item_examples.zip fractions-no-dependencies solutionAvailable: false > true",
-        "pci/pci_item_examples.zip fractions-primary-configuration solutionAvailable: false > true",
         "test_package_minfiles/test_package_minfiles.zip adaptiveTemplate solutionAvailable: true > false",
       ].sort(),
     );

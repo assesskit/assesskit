@@ -21,7 +21,7 @@ import {
   SCORING_MODES,
   XMLNS_NAMESPACE,
   type XmlElement,
-} from "../src/index.js";
+} from "../../src/index.js";
 
 /** Printable ASCII text without a line end or tab, which `xs:normalizedString` would change. */
 const text = fc.string({ maxLength: 20 });

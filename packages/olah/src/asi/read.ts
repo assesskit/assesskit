@@ -1,3 +1,4 @@
+import { isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { xmlTokens } from "../values/whitespace.js";
 import {
@@ -12,7 +13,7 @@ import { parseAttributeValue } from "./attribute-value.js";
 import { ASI_NAMESPACE } from "./namespace.js";
 import { asiError, type ReadContext } from "./read-error.js";
 import type { AttributeDef } from "./table.js";
-import { kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
+import { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
 
 type Model = Record<string, unknown>;
 
@@ -87,7 +88,7 @@ function readAttributes(info: TypeInfo, element: XmlElement, model: Model, conte
       throw asiError(context, element, "olah/asi/attribute", message);
     }
   }
-  const missing = info.def.attributes.find(({ use, property }) => use === "required" && model[property] === undefined);
+  const missing = info.attributeList.find(({ use, property }) => use === "required" && model[property] === undefined);
   if (missing !== undefined) {
     const message = `The element ${element.name} must have the attribute ${missing.name}.`;
     throw asiError(context, element, "olah/asi/missing-attribute", message);
@@ -130,12 +131,20 @@ function checkEmpty(element: XmlElement, context: ReadContext): void {
 /** Returns the slot that accepts a child element, or `undefined` when the child goes to the wildcard or nowhere. */
 function slotOf(info: TypeInfo, child: XmlElement): SlotInfo | undefined {
   if (child.namespace === ASI_NAMESPACE) return info.slotOfElement.get(child.name);
-  return child.namespace === XINCLUDE_NAMESPACE && child.name === "include" ? info.includeSlot : undefined;
+  if (child.namespace === XINCLUDE_NAMESPACE && child.name === "include") return info.includeSlot;
+  return info.slotOfForeign.get(foreignName(child.namespace, child.name));
 }
 
 function readMember(slot: SlotInfo, child: XmlElement, context: ReadContext): unknown {
   const accept = child.namespace === ASI_NAMESPACE ? slot.byElement.get(child.name) : undefined;
   return accept === undefined ? modelNode(child) : readElement(typeNamed(accept.type), child, context);
+}
+
+/** Adds text to the members of a slot, to the text node that ends them when there is one. */
+function addText(members: unknown[], value: string): void {
+  const last = members.at(-1);
+  if (isRecord(last) && last.kind === "text") members[members.length - 1] = { kind: "text", value: last.value + value };
+  else members.push({ kind: "text", value });
 }
 
 /** Stores the members found for a slot in the model, checking how many there are. */
@@ -179,29 +188,44 @@ function checkExclusions(
   }
 }
 
-function readSlots(info: TypeInfo, element: XmlElement, model: Model, context: ReadContext): void {
-  const found = new Map<SlotInfo, unknown[]>();
-  const foreign: XmlElement[] = [];
-  const wildcard = info.def.content.kind === "slots" && info.def.content.wildcard !== undefined;
-  for (const child of element.children) {
-    if (child.kind !== "element") {
-      checkBlank(child, element, context);
-      continue;
-    }
-    const slot = slotOf(info, child);
-    if (slot !== undefined) found.set(slot, [...(found.get(slot) ?? []), readMember(slot, child, context)]);
-    else if (wildcard && child.namespace !== ASI_NAMESPACE) foreign.push(child);
-    else
-      throw asiError(
-        context,
-        element,
-        "olah/asi/element",
-        `The element ${element.name} cannot contain ${child.name} here.`,
-      );
+/** What the reader has found in the content of an element: the members of each slot, and the elements for the wildcard. */
+interface Found {
+  readonly slots: ReadonlyMap<SlotInfo, unknown[]>;
+  readonly extension: XmlElement[];
+}
+
+/** Reads a child that is no element: text goes to the slot that takes text, anything else must be white space. */
+function readOther(info: TypeInfo, child: XmlNode, found: Found, element: XmlElement, context: ReadContext): void {
+  // Comments and processing instructions are not part of the model.
+  if ((child.kind === "text" || child.kind === "cdata") && child.value !== "" && info.textSlot !== undefined) {
+    addText(found.slots.get(info.textSlot) ?? [], child.value);
+  } else checkBlank(child, element, context);
+}
+
+/** Reads a child element into the slot that accepts it or into the wildcard, and refuses it otherwise. */
+function readChild(info: TypeInfo, child: XmlElement, found: Found, element: XmlElement, context: ReadContext): void {
+  const slot = slotOf(info, child);
+  const wildcard = info.def.content.kind === "slots" ? info.def.content.wildcard : undefined;
+  if (slot !== undefined) found.slots.get(slot)?.push(readMember(slot, child, context));
+  else if (wildcard !== undefined && (wildcard.namespaces === "any" || child.namespace !== ASI_NAMESPACE))
+    found.extension.push(child);
+  else {
+    const message = `The element ${element.name} cannot contain ${child.name} here.`;
+    throw asiError(context, element, "olah/asi/element", message);
   }
-  for (const slot of info.slots) storeSlot(slot, found.get(slot) ?? [], element, model, context);
-  checkExclusions(info, element, found, context);
-  if (wildcard) model.extensionElements = foreign.map(modelNode);
+}
+
+function readSlots(info: TypeInfo, element: XmlElement, model: Model, context: ReadContext): void {
+  const found: Found = { slots: new Map(info.slots.map((slot) => [slot, []])), extension: [] };
+  for (const child of element.children) {
+    if (child.kind === "element") readChild(info, child, found, element, context);
+    else readOther(info, child, found, element, context);
+  }
+  for (const [slot, members] of found.slots) storeSlot(slot, members, element, model, context);
+  checkExclusions(info, element, found.slots, context);
+  if (info.def.content.kind === "slots" && info.def.content.wildcard !== undefined) {
+    model.extensionElements = found.extension.map(modelNode);
+  }
 }
 
 /**
@@ -224,9 +248,6 @@ export function readElement(info: TypeInfo, element: XmlElement, context: ReadCo
       break;
     case "text":
       readTextContent(info, element, model, context);
-      break;
-    case "flow":
-      model.children = element.children.map(modelNode);
       break;
     case "slots":
       readSlots(info, element, model, context);

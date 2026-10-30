@@ -216,6 +216,7 @@ describes how the baseline is tested.
 - Every public function has a test of input of other types, as JavaScript or JSON pass it: `null` options and
   arguments, a string for a number, an object for an array. Pass such input with `JSON.parse`, not a cast.
 - Properties that hold for any input are tested with fast-check.
+- Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.

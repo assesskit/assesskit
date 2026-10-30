@@ -2,10 +2,10 @@ import { describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { XINCLUDE_NAMESPACE, XML_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "../xml/index.js";
 import { formatAttributeValue } from "./attribute-value.js";
-import { isAttribute, isElement, isNode } from "./guards.js";
+import { isAttribute, isElement } from "./guards.js";
 import { ASI_NAMESPACE } from "./namespace.js";
-import type { AttributeDef } from "./table.js";
-import { kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
+import type { AttributeDef, Wildcard } from "./table.js";
+import { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
 
 type Properties = Readonly<Record<string, unknown>>;
 
@@ -47,7 +47,7 @@ class Writer {
 
   private writeAttributes(info: TypeInfo, name: string, model: Properties): XmlAttribute[] {
     const attributes: XmlAttribute[] = [];
-    for (const definition of info.def.attributes) {
+    for (const definition of info.attributeList) {
       const value = model[definition.property];
       if (value === undefined) {
         if (definition.use === "required")
@@ -92,16 +92,15 @@ class Writer {
     }
   }
 
-  private writeMember(slot: SlotInfo, name: string, member: unknown): XmlElement {
+  private writeMember(slot: SlotInfo, name: string, member: unknown): XmlNode {
     const properties = this.record(member, `A member of ${slot.def.property} of ${name} must be an object`);
-    if (isElement(member) && member.namespace === XINCLUDE_NAMESPACE && member.name === "include") {
-      if (slot.def.include !== true)
-        throw this.fail(`The property ${slot.def.property} of ${name} does not accept xi:include.`);
-      return member;
-    }
+    if (properties.kind === "text") return this.writeTextNode(slot, name, properties);
+    if (isElement(member)) return this.writeVerbatim(slot, name, member);
     const accept = typeof properties.kind === "string" ? slot.byKind.get(properties.kind) : undefined;
     if (accept === undefined) {
-      const kinds = [...slot.byKind.keys()].map((kind) => JSON.stringify(kind)).join(", ");
+      const kinds = [...slot.byKind.keys(), ...(slot.def.text === true ? ["text"] : [])]
+        .map((kind) => JSON.stringify(kind))
+        .join(", ");
       throw this.fail(
         `A member of ${slot.def.property} of ${name} must have the kind ${kinds}, found ${describe(properties.kind)}.`,
       );
@@ -109,7 +108,30 @@ class Writer {
     return this.writeElement(typeNamed(accept.type), accept.element, properties);
   }
 
-  private writeSlot(slot: SlotInfo, name: string, model: Properties): XmlElement[] {
+  /** Writes the text of a slot that takes text. */
+  private writeTextNode(slot: SlotInfo, name: string, member: Properties): XmlNode {
+    if (slot.def.text !== true) throw this.fail(`The property ${slot.def.property} of ${name} does not take text.`);
+    if (typeof member.value !== "string")
+      throw this.fail(
+        `The value of a text in ${slot.def.property} of ${name} must be a string, found ${describe(member.value)}.`,
+      );
+    return { kind: "text", value: member.value };
+  }
+
+  /** Writes an element that the model keeps as XML: an `xi:include`, or MathML or SSML. */
+  private writeVerbatim(slot: SlotInfo, name: string, element: XmlElement): XmlElement {
+    const isInclude = element.namespace === XINCLUDE_NAMESPACE && element.name === "include";
+    const accepted = isInclude
+      ? slot.def.include === true
+      : slot.foreign.has(foreignName(element.namespace, element.name));
+    if (!accepted) {
+      const what = isInclude ? "xi:include" : `the element ${element.name}`;
+      throw this.fail(`The property ${slot.def.property} of ${name} does not accept ${what}.`);
+    }
+    return element;
+  }
+
+  private writeSlot(slot: SlotInfo, name: string, model: Properties): XmlNode[] {
     const { property, min, max } = slot.def;
     const value = model[property];
     if (max === 1) {
@@ -133,13 +155,12 @@ class Writer {
     }
   }
 
-  private writeForeign(name: string, model: Properties): XmlElement[] {
+  private writeForeign(name: string, wildcard: Wildcard, model: Properties): XmlElement[] {
     const foreign = this.array(model.extensionElements, `The property extensionElements of ${name} must be an array`);
     return foreign.map((element) => {
-      if (!isElement(element) || element.namespace === ASI_NAMESPACE) {
-        throw this.fail(
-          `A member of extensionElements of ${name} must be an element of another namespace, found ${describe(element)}.`,
-        );
+      if (!isElement(element) || (wildcard.namespaces === "other" && element.namespace === ASI_NAMESPACE)) {
+        const expected = wildcard.namespaces === "other" ? "an element of another namespace" : "an element";
+        throw this.fail(`A member of extensionElements of ${name} must be ${expected}, found ${describe(element)}.`);
       }
       return element;
     });
@@ -155,17 +176,9 @@ class Writer {
     }
     this.checkExclusions(info, name, present);
     if (info.def.content.kind === "slots" && info.def.content.wildcard !== undefined) {
-      children.push(...this.writeForeign(name, model));
+      children.push(...this.writeForeign(name, info.def.content.wildcard, model));
     }
     return children;
-  }
-
-  private writeFlow(name: string, model: Properties): XmlNode[] {
-    const children = this.array(model.children, `The property children of ${name} must be an array`);
-    return children.map((child) => {
-      if (!isNode(child)) throw this.fail(`A child of ${name} must be an XML node, found ${describe(child)}.`);
-      return child;
-    });
   }
 
   private writeContent(info: TypeInfo, name: string, model: Properties): XmlNode[] {
@@ -174,8 +187,6 @@ class Writer {
         return [];
       case "text":
         return this.writeText(info, name, model);
-      case "flow":
-        return this.writeFlow(name, model);
       case "slots":
         return this.writeSlots(info, name, model);
     }

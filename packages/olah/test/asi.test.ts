@@ -4,7 +4,7 @@ import { formatAttributeValue, parseAttributeValue } from "../src/asi/attribute-
 import { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION } from "../src/asi/element-table.js";
 import { readElement } from "../src/asi/read.js";
 import type { TypeDef } from "../src/asi/table.js";
-import { typeNamed } from "../src/asi/type-index.js";
+import { kindOf, typeNamed } from "../src/asi/type-index.js";
 import { writeElement } from "../src/asi/write.js";
 import {
   ASI_NAMESPACE,
@@ -29,12 +29,14 @@ import {
   scoreCoversBlock,
   serializeXml,
   type TemplateRule,
+  type TestRubricBlock,
   writeAsi,
   XINCLUDE_NAMESPACE,
   type XmlElement,
 } from "../src/index.js";
-import { DOCUMENT_ARBITRARIES, modelArbitrary } from "./asi-arbitraries.js";
+import { DOCUMENT_ARBITRARIES, modelArbitrary } from "./arbitraries/asi.js";
 import { inventoryElements } from "./asi-elements.js";
+import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
@@ -245,6 +247,31 @@ describe("parseAttributeValue and formatAttributeValue", () => {
     expect(() => formatAttributeValue(tolerance, "INF")).toThrow(DataError);
   });
 
+  it("[A79] reads {identifier} where the schema leaves the string open, and writes a variable in braces (INFO §9.3.1)", () => {
+    const braced = { kind: "reference", value: "double", braced: true } as const;
+    expect(["{T}", "T", "0.1", "{INF}", "INF", "{ITEM.n}"].map((text) => parseAttributeValue(braced, text))).toEqual([
+      "T",
+      "T",
+      0.1,
+      "INF",
+      Number.POSITIVE_INFINITY,
+      "ITEM.n",
+    ]);
+    for (const text of ["{}", "{1x}", "{a b}", "{T", "T}", "{{T}}", "", "a b"]) {
+      expect(() => parseAttributeValue(braced, text), text).toThrow(DataError);
+    }
+    expect(["T", "INF", "ITEM.n"].map((value) => formatAttributeValue(braced, value))).toEqual([
+      "{T}",
+      "{INF}",
+      "{ITEM.n}",
+    ]);
+    expect([0.5, Number.POSITIVE_INFINITY].map((value) => formatAttributeValue(braced, value))).toEqual(["0.5", "INF"]);
+    expect(() => formatAttributeValue(braced, "1x")).toThrow(
+      new DataError('A value must be a number or the identifier of a variable, found "1x".'),
+    );
+    expect(() => parseAttributeValue(tolerance, "{T}")).toThrow(DataError);
+  });
+
   it("[S5] reads the terms of an enumeration and refuses any other, naming the terms", () => {
     expect(parseAttributeValue(mode, "a")).toBe("a");
     expect(() => parseAttributeValue(mode, "c")).toThrow(new DataError('The text "c" is not one of "a", "b".'));
@@ -286,6 +313,9 @@ describe("parseAttributeValue and formatAttributeValue", () => {
   });
 });
 
+/** A node of the content of a rubric block of a test. */
+type RubricContent = TestRubricBlock["contentBody"]["children"][number];
+
 describe("scoreCoversBlock and readScoreCovers", () => {
   /** The example of the convention: the markup of design §4.16, one rubric block that covers two responses. */
   const coversBlock =
@@ -298,13 +328,11 @@ describe("scoreCoversBlock and readScoreCovers", () => {
   ];
   const notes = [
     {
-      kind: "element",
-      namespace: ASI_NAMESPACE,
-      name: "p",
-      attributes: [],
+      kind: "p",
       children: [{ kind: "text", value: "Rate content once, across both writing tasks." }],
+      extensions: [],
     },
-  ] satisfies XmlElement[];
+  ] satisfies RubricContent[];
 
   it("[O1] reads the covers of the example block in document order, with the labels as text", () => {
     const read = checked(testWith(coversBlock));
@@ -381,22 +409,18 @@ describe("scoreCoversBlock and readScoreCovers", () => {
     const block = scoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "R", label: " a \n b " }]);
     expect(block.contentBody.children).toEqual([
       {
-        kind: "element",
-        namespace: ASI_NAMESPACE,
-        name: "ul",
-        attributes: [],
-        children: [
+        kind: "ul",
+        items: [
           {
-            kind: "element",
-            namespace: ASI_NAMESPACE,
-            name: "li",
-            attributes: [
+            kind: "li",
+            children: [{ kind: "text", value: "a b" }],
+            extensions: [
               { namespace: "", name: "data-item-ref", value: "Q" },
               { namespace: "", name: "data-response-identifier", value: "R" },
             ],
-            children: [{ kind: "text", value: "a b" }],
           },
         ],
+        extensions: [],
       },
     ]);
   });
@@ -503,7 +527,7 @@ describe("readAsi: documents", () => {
     ]);
   });
 
-  it("[A4] qti-item-body: keeps the content as XML nodes", () => {
+  it("[A4] qti-item-body: reads text and elements as typed nodes, and leaves comments out", () => {
     const { body } = itemOf(
       item('<qti-item-body id="b" class="x y" dir="rtl"><p>One <b>two</b></p><!--note--></qti-item-body>'),
     );
@@ -514,31 +538,22 @@ describe("readAsi: documents", () => {
       dir: "rtl",
       children: [
         {
-          kind: "element",
-          namespace: ASI_NAMESPACE,
-          name: "p",
-          attributes: [],
+          kind: "p",
           children: [
             { kind: "text", value: "One " },
-            {
-              kind: "element",
-              namespace: ASI_NAMESPACE,
-              name: "b",
-              attributes: [],
-              children: [{ kind: "text", value: "two" }],
-            },
+            { kind: "b", children: [{ kind: "text", value: "two" }], extensions: [] },
           ],
+          extensions: [],
         },
-        { kind: "comment", value: "note" },
       ],
     });
   });
 
-  it("[A5] qti-stimulus-body: keeps the content as XML nodes", () => {
+  it("[A5] qti-stimulus-body: reads the content as typed nodes", () => {
     const { body } = stimulusOf(
       `<qti-assessment-stimulus ${NAMESPACE} identifier="st" title="t"><qti-stimulus-body xml:lang="en"><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
     );
-    expect(body).toMatchObject({ kind: "stimulus-body", language: "en", children: [{ kind: "element", name: "p" }] });
+    expect(body).toMatchObject({ kind: "stimulus-body", language: "en", children: [{ kind: "p" }] });
   });
 
   it("[A6] qti-stylesheet: reads the href, the type, the media and the title", () => {
@@ -1342,6 +1357,18 @@ describe("readAsi: expressions", () => {
     expect(expressionOf(`<qti-equal>${PAIR_XML}</qti-equal>`)).toEqual({ kind: "equal", operands: PAIR });
   });
 
+  it("[A79] qti-equal: reads a tolerance that refers to a variable in braces, and writes it that way", () => {
+    const markup = `<qti-equal tolerance-mode="absolute" tolerance="{T} 0.5">${PAIR_XML}</qti-equal>`;
+    expect(expressionOf(markup)).toMatchObject({ kind: "equal", tolerance: ["T", 0.5] });
+    const written = writeAsi({
+      kind: "response-processing",
+      processing: responseProcessingOf(
+        `<qti-response-condition><qti-response-if>${markup}</qti-response-if></qti-response-condition>`,
+      ),
+    });
+    expect(written).toContain('tolerance="{T} 0.5"');
+  });
+
   it("[A80] qti-equal-rounded: reads the mode and the figures", () => {
     expect(
       expressionOf(`<qti-equal-rounded rounding-mode="decimalPlaces" figures="2">${PAIR_XML}</qti-equal-rounded>`),
@@ -1675,6 +1702,1394 @@ describe("readAsi: expressions", () => {
   });
 });
 
+/** Reads the children of an item body. */
+function bodyOf(content: string, attributes = "") {
+  return itemOf(item(`<qti-item-body${attributes}>${content}</qti-item-body>`)).body?.children ?? [];
+}
+
+/** Reads the children of the element in an item body that wraps the content: inline content sits in a `p`, flow in a `div`. */
+function wrappedBy(element: "p" | "div", content: string) {
+  const [wrapper] = bodyOf(`<${element}>${content}</${element}>`);
+  if (wrapper?.kind !== element) throw new Error(`Expected a ${element}.`);
+  return wrapper.children;
+}
+
+const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
+const SSML_NAMESPACE = "http://www.w3.org/2001/10/synthesis";
+
+describe("readAsi: flow content", () => {
+  it("[A4][A5][A175] reads text and elements in document order, with each run of text as one node", () => {
+    expect(bodyOf("<p>One <b>two</b> three<i>four</i></p>")).toEqual([
+      {
+        kind: "p",
+        children: [
+          { kind: "text", value: "One " },
+          { kind: "b", children: [{ kind: "text", value: "two" }], extensions: [] },
+          { kind: "text", value: " three" },
+          { kind: "i", children: [{ kind: "text", value: "four" }], extensions: [] },
+        ],
+        extensions: [],
+      },
+    ]);
+  });
+
+  it("[A4][A5][A175] reads a CDATA section and entities as text, joins the runs of text around a comment and leaves out comments and processing instructions", () => {
+    const [paragraph] = bodyOf("<p>a &lt; b <![CDATA[<c>]]> d<!--note--> e<?target data?></p>");
+    expect(paragraph).toMatchObject({ children: [{ kind: "text", value: "a < b <c> d e" }] });
+  });
+
+  it("[A4][A5][A175] keeps white space between the elements of mixed content and drops it between those of element-only content", () => {
+    const [list, paragraph] = bodyOf("<ul>\n  <li>a</li>\n  <li>b</li>\n</ul>\n<p><b>x</b> <i>y</i></p>");
+    expect(list).toMatchObject({ kind: "ul", items: [{ kind: "li" }, { kind: "li" }] });
+    expect(paragraph).toMatchObject({
+      children: [{ kind: "b" }, { kind: "text", value: " " }, { kind: "i" }],
+    });
+  });
+
+  it("[A4][A175] refuses text in content that takes elements only, and an element that the content does not take", () => {
+    expect(readIssue(() => readAsi(item("<qti-item-body>text</qti-item-body>")))).toMatchObject({
+      code: "olah/asi/text",
+      message: "The element qti-item-body must not contain text.",
+    });
+    expect(readIssue(() => readAsi(item("<qti-item-body><p><div>x</div></p></qti-item-body>")))).toMatchObject({
+      code: "olah/asi/element",
+      message: "The element p cannot contain div here.",
+    });
+    expect(
+      readIssue(() => readAsi(item("<qti-item-body><p><x:a xmlns:x='urn:x'/></p></qti-item-body>"))),
+    ).toMatchObject({
+      code: "olah/asi/element",
+    });
+  });
+
+  it("[M14][A4] keeps an xi:include in content as an XML element, where the content takes one", () => {
+    const [paragraph] = bodyOf('<p>a<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="part.xml"/></p>');
+    expect(paragraph).toMatchObject({
+      children: [
+        { kind: "text", value: "a" },
+        {
+          kind: "element",
+          namespace: XINCLUDE_NAMESPACE,
+          name: "include",
+          prefix: "xi",
+          attributes: [{ namespace: "", name: "href", value: "part.xml" }],
+        },
+      ],
+    });
+  });
+
+  it("[A4][A175] writes text escaped, and nothing for a text without characters", () => {
+    const paragraph = {
+      kind: "p",
+      children: [
+        { kind: "text", value: "a <b> & c" },
+        { kind: "text", value: "" },
+      ],
+      extensions: [],
+    };
+    const written = writeAsi({
+      kind: "item",
+      item: { ...itemOf(item()), body: { kind: "item-body", children: [paragraph] } } as AssessmentItem,
+    });
+    expect(written).toContain("<p>a &lt;b&gt; &amp; c</p>");
+  });
+
+  it("[A4][A175] refuses to write text where the content takes elements only, and an element that the content does not take", () => {
+    const write = (children: unknown[]) =>
+      writeAsi({ kind: "item", item: { ...itemOf(item()), body: { kind: "item-body", children } } as AssessmentItem });
+    expect(() => write([{ kind: "text", value: "x" }])).toThrow(
+      new DataError(
+        "The property children of qti-item-body does not take text. It is in qti-assessment-item/qti-item-body.",
+      ),
+    );
+    expect(() => write([{ kind: "p", children: [{ kind: "text", value: JSON.parse("5") }], extensions: [] }])).toThrow(
+      /The value of a text in children of p must be a string, found 5/,
+    );
+    expect(() => write([{ kind: "tbody", rows: [], extensions: [] }])).toThrow(
+      /A member of children of qti-item-body must have the kind "rubric-block"/,
+    );
+    expect(() => write([foreignElement("a")])).toThrow(
+      new DataError(
+        "The property children of qti-item-body does not accept the element a. It is in qti-assessment-item/qti-item-body.",
+      ),
+    );
+  });
+});
+
+describe("readAsi: HTML", () => {
+  it("[H38] img: needs the source and the alternative text, and reads the optional attributes", () => {
+    const [image] = wrappedBy("p", '<img src="fig/a.png" alt="A cat" longdesc="fig/a.html" height="40" width="50%"/>');
+    expect(image).toEqual({
+      kind: "img",
+      src: "fig/a.png",
+      alt: "A cat",
+      longdesc: "fig/a.html",
+      height: "40",
+      width: "50%",
+      extensions: [],
+    });
+    expect(readIssue(() => readAsi(item('<qti-item-body><p><img src="a.png"/></p></qti-item-body>')))).toMatchObject({
+      code: "olah/asi/missing-attribute",
+      message: expect.stringContaining("The element img must have the attribute alt."),
+    });
+  });
+
+  it("[H1] a: needs the reference and reads the type", () => {
+    const [paragraph] = bodyOf('<p><a href="https://example.com/x" type="text/html">link</a></p>');
+    expect(paragraph).toMatchObject({
+      children: [{ kind: "a", href: "https://example.com/x", type: "text/html" }],
+    });
+    expect(readIssue(() => readAsi(item("<qti-item-body><p><a>x</a></p></qti-item-body>")))).toMatchObject({
+      code: "olah/asi/missing-attribute",
+    });
+  });
+
+  it("[H43][H46] object, param: the object needs the data and the type, and holds parameters and the fallback", () => {
+    const [object] = wrappedBy(
+      "p",
+      '<object data="a.swf" type="application/x-shockwave-flash" width="100" height="50%"><param name="speed" value="fast" valuetype="DATA" type="text/plain"/><param name="src" value="b.xml" valuetype="REF"/>No plug-in.</object>',
+    );
+    expect(object).toMatchObject({
+      kind: "object",
+      data: "a.swf",
+      type: "application/x-shockwave-flash",
+      width: "100",
+      height: "50%",
+      children: [
+        { kind: "param", name: "speed", value: "fast", valuetype: "DATA", type: "text/plain" },
+        { kind: "param", name: "src", value: "b.xml", valuetype: "REF" },
+        { kind: "text", value: "No plug-in." },
+      ],
+    });
+  });
+
+  it("[H64][H65][H68][H70][H71][H66][H69][H14][H17][H18] table: reads the caption, columns, head, bodies, foot, rows and cells", () => {
+    const [table] = bodyOf(
+      '<table summary="Scores"><caption>Scores</caption><col span="2"/><colgroup span="3"><col/></colgroup><thead><tr><th scope="col" abbr="N" axis="a" headers="x y">Name</th></tr></thead><tbody><tr><td rowspan="2" colspan="3" align="center" valign="top">1</td></tr></tbody><tfoot><tr><td>sum</td></tr></tfoot></table>',
+    );
+    expect(table).toMatchObject({
+      kind: "table",
+      summary: "Scores",
+      caption: { kind: "caption", children: [{ kind: "text", value: "Scores" }] },
+      cols: [{ kind: "col", span: 2 }],
+      colgroups: [{ kind: "colgroup", span: 3, cols: [{ kind: "col" }] }],
+      thead: {
+        kind: "thead",
+        rows: [
+          {
+            kind: "tr",
+            cells: [
+              { kind: "th", scope: "col", abbr: "N", axis: "a", headers: ["x", "y"], children: [{ kind: "text" }] },
+            ],
+          },
+        ],
+      },
+      bodies: [
+        {
+          kind: "tbody",
+          rows: [{ kind: "tr", cells: [{ kind: "td", rowspan: 2, colspan: 3, align: "center", valign: "top" }] }],
+        },
+      ],
+      tfoot: { kind: "tfoot", rows: [{ kind: "tr", cells: [{ kind: "td" }] }] },
+    });
+    expect(table).toMatchObject({ rows: [] });
+  });
+
+  it("[H71][H64] table: takes rows without a body, and refuses rows together with bodies", () => {
+    const [table] = bodyOf("<table><tr><td>a</td></tr><tr><td>b</td></tr></table>");
+    expect(table).toMatchObject({ kind: "table", bodies: [], rows: [{ kind: "tr" }, { kind: "tr" }] });
+    expect(
+      readIssue(() => readAsi(item("<qti-item-body><table><tbody/><tr><td>a</td></tr></table></qti-item-body>"))),
+    ).toMatchObject({ code: "olah/asi/exclusive" });
+  });
+
+  it("[H74][H44][H41] ul, ol, li: hold their items", () => {
+    const [unordered, ordered] = bodyOf("<ul><li>a</li><li>b <b>c</b></li></ul><ol><li>one</li></ol>");
+    expect(unordered).toMatchObject({
+      kind: "ul",
+      items: [{ kind: "li" }, { kind: "li", children: [{ kind: "text", value: "b " }, { kind: "b" }] }],
+    });
+    expect(ordered).toMatchObject({ kind: "ol", items: [{ kind: "li", children: [{ kind: "text", value: "one" }] }] });
+  });
+
+  it("[H23][H24][H19] dl, dt, dd: keep terms and descriptions in one array, in document order", () => {
+    const [list] = bodyOf("<dl><dt>Term</dt><dd>One</dd><dd>Two</dd><dt>Other</dt></dl>");
+    expect(list).toMatchObject({
+      kind: "dl",
+      items: [{ kind: "dt" }, { kind: "dd" }, { kind: "dd" }, { kind: "dt" }],
+    });
+  });
+
+  it("[H76][H7][H58][H72] video, audio, source, track: read the media attributes and keep the fallback", () => {
+    const [video, audio] = bodyOf(
+      '<video src="a.mp4" poster="p.png" width="320" height="200" preload="none" controls="controls" autoplay="false" loop="true" muted="muted" crossorigin="anonymous" mediagroup="g"><source src="a.webm" type="video/webm" srcset="a.webm 1x" media="screen" sizes="100vw"/><track kind="subtitles" src="a.vtt" srclang="en" default="default"/>No video.</video><audio src="a.mp3" preload="auto"/>',
+    );
+    expect(video).toMatchObject({
+      kind: "video",
+      src: "a.mp4",
+      poster: "p.png",
+      width: 320,
+      height: 200,
+      preload: "none",
+      controls: "controls",
+      autoplay: "false",
+      loop: "true",
+      muted: "muted",
+      crossorigin: "anonymous",
+      mediagroup: "g",
+      children: [
+        { kind: "source", src: "a.webm", type: "video/webm", srcset: "a.webm 1x", media: "screen", sizes: "100vw" },
+        { kind: "track", trackKind: "subtitles", src: "a.vtt", srclang: "en", default: "default" },
+        { kind: "text", value: "No video." },
+      ],
+    });
+    expect(audio).toMatchObject({ kind: "audio", src: "a.mp3", preload: "auto" });
+  });
+
+  it("[H47][H58] picture: holds the sources and the image", () => {
+    const [picture] = wrappedBy(
+      "p",
+      '<picture><source srcset="a.webp" type="image/webp"/><img src="a.png" alt="A"/></picture>',
+    );
+    expect(picture).toMatchObject({
+      kind: "picture",
+      sources: [{ kind: "source", srcset: "a.webp", type: "image/webp" }],
+      img: { kind: "img", src: "a.png" },
+    });
+  });
+
+  it("[H54][H50][H52][H51][H53] ruby, rb, rt, rp, rtc: keep the base, the annotation and the fallback parentheses", () => {
+    const [annotated] = wrappedBy("p", "<ruby><rb>漢</rb><rp>(</rp><rt>kan</rt><rp>)</rp></ruby>");
+    expect(annotated).toMatchObject({
+      kind: "ruby",
+      children: [{ kind: "rb" }, { kind: "rp" }, { kind: "rt" }, { kind: "rp" }],
+    });
+    const [ruby] = wrappedBy("p", "<ruby>x<rtc><rt>y</rt></rtc></ruby>");
+    expect(ruby).toMatchObject({
+      kind: "ruby",
+      children: [{ kind: "text" }, { kind: "rtc", children: [{ kind: "rt" }] }],
+    });
+  });
+
+  it("[H20][H62][H27][H26][H12][H49][H10][H13][H36] details, summary, figure, figcaption, blockquote, q, bdo, br, hr: read their own attributes and content", () => {
+    const [details, figure, quote, inline, rule] = wrappedBy(
+      "div",
+      '<details open="true"><summary>More</summary><p>Text</p></details><figure><figcaption>Cap</figcaption><img src="a.png" alt=""/></figure><blockquote cite="https://example.com/q"><p>Q</p></blockquote><p>a<q cite="u.html">b</q><bdo title="t" dir="rtl">c</bdo><br/></p><hr/>',
+    );
+    expect(details).toMatchObject({ kind: "details", open: true, summary: { kind: "summary" } });
+    expect(figure).toMatchObject({ kind: "figure", children: [{ kind: "figcaption" }, { kind: "img" }] });
+    expect(quote).toMatchObject({ kind: "blockquote", cite: "https://example.com/q" });
+    expect(inline).toMatchObject({
+      children: [
+        { kind: "text" },
+        { kind: "q", cite: "u.html" },
+        { kind: "bdo", title: "t", dir: "rtl" },
+        { kind: "br" },
+      ],
+    });
+    expect(rule).toEqual({ kind: "hr", extensions: [] });
+  });
+
+  it("[H22][H59] div, span: keep the common attributes and the extension attributes", () => {
+    const [block] = bodyOf(
+      '<div id="d" class="a b" lang="id" xml:lang="id-ID" label="L" dir="rtl" data-catalog-idref="c" data-qti-suppress-tts="all" role="note" aria-label="Note" aria-hidden="true" data-x="1"><span>s</span></div>',
+    );
+    expect(block).toMatchObject({
+      kind: "div",
+      id: "d",
+      class: ["a", "b"],
+      lang: "id",
+      language: "id-ID",
+      label: "L",
+      dir: "rtl",
+      dataCatalogIdref: "c",
+      dataQtiSuppressTts: "all",
+      role: "note",
+      ariaLabel: "Note",
+      ariaHidden: true,
+      extensions: [{ namespace: "", name: "data-x", value: "1" }],
+      children: [{ kind: "span" }],
+    });
+  });
+
+  it("[H64] refuses a value that is not in the lexical form of its attribute", () => {
+    expect(
+      readIssue(() => readAsi(item('<qti-item-body><table><tr><td colspan="x">a</td></tr></table></qti-item-body>'))),
+    ).toMatchObject({
+      code: "olah/asi/invalid-value",
+    });
+  });
+
+  it("[H38][H1][H43] write the attributes in the order of the schema and the text escaped", () => {
+    const written = writeAsi({
+      kind: "item",
+      item: itemOf(item('<qti-item-body><p><a href="a?b=1&amp;c=2">x &amp; y</a></p></qti-item-body>')),
+    });
+    expect(written).toContain('<p><a href="a?b=1&amp;c=2">x &amp; y</a></p>');
+  });
+});
+
+describe("readAsi: MathML and SSML", () => {
+  const math =
+    '<m:math xmlns:m="http://www.w3.org/1998/Math/MathML" display="inline"><m:mfrac><m:mn>1</m:mn><m:mi>x</m:mi></m:mfrac><m:annotation encoding="x"> a </m:annotation></m:math>';
+
+  it("[M1] m3:math: keeps the subtree as it is, with its namespace, prefix, attributes and white space", () => {
+    const [paragraph, choices] = bodyOf(
+      `<p>Solve ${math}.</p><qti-choice-interaction response-identifier="R"><qti-simple-choice identifier="A">${math}</qti-simple-choice></qti-choice-interaction>`,
+    );
+    const expected = {
+      kind: "element",
+      namespace: MATHML_NAMESPACE,
+      prefix: "m",
+      name: "math",
+      attributes: [{ namespace: "", name: "display", value: "inline" }],
+      children: [
+        {
+          kind: "element",
+          namespace: MATHML_NAMESPACE,
+          prefix: "m",
+          name: "mfrac",
+          attributes: [],
+          children: [
+            {
+              kind: "element",
+              namespace: MATHML_NAMESPACE,
+              prefix: "m",
+              name: "mn",
+              attributes: [],
+              children: [{ kind: "text", value: "1" }],
+            },
+            {
+              kind: "element",
+              namespace: MATHML_NAMESPACE,
+              prefix: "m",
+              name: "mi",
+              attributes: [],
+              children: [{ kind: "text", value: "x" }],
+            },
+          ],
+        },
+        {
+          kind: "element",
+          namespace: MATHML_NAMESPACE,
+          prefix: "m",
+          name: "annotation",
+          attributes: [{ namespace: "", name: "encoding", value: "x" }],
+          children: [{ kind: "text", value: " a " }],
+        },
+      ],
+    };
+    expect(paragraph).toMatchObject({
+      children: [{ kind: "text", value: "Solve " }, expected, { kind: "text", value: "." }],
+    });
+    expect(choices).toMatchObject({ simpleChoices: [{ children: [expected] }] });
+  });
+
+  it("[M1] m3:math: is written back with the prefix it had", () => {
+    const written = writeAsi({ kind: "item", item: itemOf(item(`<qti-item-body><p>${math}</p></qti-item-body>`)) });
+    expect(written).toContain("<m:math");
+    expect(written).toContain('xmlns:m="http://www.w3.org/1998/Math/MathML"');
+    expect(written).toContain('<m:annotation encoding="x"> a </m:annotation></m:math>');
+  });
+
+  const ssml = (name: string, attributes = "", content = "") =>
+    `<ssml:${name} xmlns:ssml="${SSML_NAMESPACE}"${attributes}>${content}</ssml:${name}>`;
+  const embedded = (name: string, attributes = "", content = "") => {
+    const [paragraph] = bodyOf(`<p>${ssml(name, attributes, content)}</p>`);
+    if (paragraph?.kind !== "p") throw new Error("Expected a paragraph.");
+    const [node] = paragraph.children;
+    return node;
+  };
+
+  it("[M2] ssml11:speak: is kept as it is", () => {
+    expect(embedded("speak", ' version="1.1" xml:lang="en"', "Hello")).toMatchObject({
+      kind: "element",
+      namespace: SSML_NAMESPACE,
+      prefix: "ssml",
+      name: "speak",
+      attributes: [
+        { namespace: "", name: "version", value: "1.1" },
+        { namespace: "http://www.w3.org/XML/1998/namespace", prefix: "xml", name: "lang", value: "en" },
+      ],
+      children: [{ kind: "text", value: "Hello" }],
+    });
+  });
+
+  it("[M3] ssml11:audio: is kept as it is", () => {
+    expect(embedded("audio", ' src="a.mp3"', "Fallback")).toMatchObject({
+      name: "audio",
+      attributes: [{ name: "src", value: "a.mp3" }],
+      children: [{ kind: "text", value: "Fallback" }],
+    });
+  });
+
+  it("[M4] ssml11:break: is kept as it is", () => {
+    expect(embedded("break", ' time="500ms"')).toMatchObject({
+      name: "break",
+      attributes: [{ name: "time", value: "500ms" }],
+    });
+  });
+
+  it("[M5] ssml11:emphasis: is kept as it is", () => {
+    expect(embedded("emphasis", ' level="strong"', "now")).toMatchObject({
+      name: "emphasis",
+      children: [{ value: "now" }],
+    });
+  });
+
+  it("[M6] ssml11:mark: is kept as it is", () => {
+    expect(embedded("mark", ' name="here"')).toMatchObject({
+      name: "mark",
+      attributes: [{ name: "name", value: "here" }],
+    });
+  });
+
+  it("[M7] ssml11:p: is kept as it is", () => {
+    expect(embedded("p", "", "A paragraph.")).toMatchObject({ name: "p", children: [{ value: "A paragraph." }] });
+  });
+
+  it("[M8] ssml11:phoneme: is kept as it is", () => {
+    expect(embedded("phoneme", ' alphabet="x-sampa" ph="t@meIt@U"', "tomato")).toMatchObject({
+      name: "phoneme",
+      attributes: [
+        { name: "alphabet", value: "x-sampa" },
+        { name: "ph", value: "t@meIt@U" },
+      ],
+    });
+  });
+
+  it("[M9] ssml11:prosody: is kept as it is", () => {
+    expect(embedded("prosody", ' rate="slow" pitch="+2st"', "slowly")).toMatchObject({
+      name: "prosody",
+      attributes: [{ name: "rate" }, { name: "pitch" }],
+    });
+  });
+
+  it("[M10] ssml11:s: is kept as it is", () => {
+    expect(embedded("s", "", "A sentence.")).toMatchObject({ name: "s", children: [{ value: "A sentence." }] });
+  });
+
+  it("[M11] ssml11:say-as: is kept as it is", () => {
+    expect(embedded("say-as", ' interpret-as="cardinal"', "12")).toMatchObject({
+      name: "say-as",
+      attributes: [{ name: "interpret-as", value: "cardinal" }],
+    });
+  });
+
+  it("[M12] ssml11:sub: is kept as it is", () => {
+    expect(embedded("sub", ' alias="water"', "H2O")).toMatchObject({
+      name: "sub",
+      attributes: [{ name: "alias", value: "water" }],
+    });
+  });
+
+  it("[M13] ssml11:voice: is kept as it is", () => {
+    expect(embedded("voice", ' gender="female"', "Hi")).toMatchObject({
+      name: "voice",
+      attributes: [{ name: "gender", value: "female" }],
+    });
+  });
+
+  it("[M16][U] ssml11:lexicon: a speak element keeps the reference to a PLS pronunciation lexicon", () => {
+    const speak = embedded(
+      "speak",
+      ' version="1.1" xml:lang="en"',
+      `<ssml:lexicon xmlns:ssml="${SSML_NAMESPACE}" uri="lexicon/names.pls" type="application/pls+xml"/>Rama`,
+    );
+    expect(speak).toMatchObject({
+      children: [
+        {
+          name: "lexicon",
+          attributes: [
+            { name: "uri", value: "lexicon/names.pls" },
+            { name: "type", value: "application/pls+xml" },
+          ],
+        },
+        { kind: "text", value: "Rama" },
+      ],
+    });
+  });
+
+  it("[M17][U] qti-stylesheet: keeps the reference to a CSS 2.1 or 3 style sheet in an item, a stimulus and a portable custom interaction", () => {
+    const sheets = '<qti-stylesheet href="css/item.css" type="text/css" media="screen" title="Screen"/>';
+    expect(itemOf(item(sheets)).stylesheets).toEqual([
+      { kind: "stylesheet", href: "css/item.css", type: "text/css", media: "screen", title: "Screen" },
+    ]);
+    expect(
+      stimulusOf(
+        `<qti-assessment-stimulus ${NAMESPACE} identifier="st" title="t">${sheets}<qti-stimulus-body><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
+      ).stylesheets,
+    ).toHaveLength(1);
+    const [pci] = bodyOf(
+      '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:x"><qti-interaction-markup/><qti-stylesheet href="css/pci.css" type="text/css"/></qti-portable-custom-interaction>',
+    );
+    expect(pci).toMatchObject({ stylesheets: [{ kind: "stylesheet", href: "css/pci.css", type: "text/css" }] });
+  });
+});
+
+/** Reads one element of an item body, which must be of the given kind. */
+function onlyIn<TKind extends string>(content: string, kind: TKind) {
+  const [node, ...rest] = bodyOf(content);
+  if (node === undefined || rest.length > 0 || node.kind !== kind) throw new Error(`Expected one ${kind}.`);
+  return node;
+}
+
+describe("readAsi: interactions", () => {
+  it("[A132][A162][A164] qti-choice-interaction: reads the limits, the orientation, the prompt and the choices (INFO §5.30)", () => {
+    const interaction = onlyIn(
+      '<qti-choice-interaction response-identifier="RESPONSE" shuffle="true" max-choices="2" min-choices="1" orientation="horizontal" data-min-selections-message="Pick one" data-max-selections-message="Pick two at most"><qti-prompt>Which <b>two</b> are prime?</qti-prompt><qti-simple-choice identifier="A" fixed="true">2</qti-simple-choice><qti-simple-choice identifier="B" show-hide="hide" template-identifier="T">4</qti-simple-choice></qti-choice-interaction>',
+      "choice-interaction",
+    );
+    expect(interaction).toMatchObject({
+      responseIdentifier: "RESPONSE",
+      shuffle: true,
+      maxChoices: 2,
+      minChoices: 1,
+      orientation: "horizontal",
+      dataMinSelectionsMessage: "Pick one",
+      dataMaxSelectionsMessage: "Pick two at most",
+      prompt: {
+        kind: "prompt",
+        children: [{ kind: "text", value: "Which " }, { kind: "b" }, { kind: "text", value: " are prime?" }],
+      },
+      simpleChoices: [
+        { kind: "simple-choice", identifier: "A", fixed: true, children: [{ kind: "text", value: "2" }] },
+        { kind: "simple-choice", identifier: "B", showHide: "hide", templateIdentifier: "T" },
+      ],
+    });
+  });
+
+  it("[A132] qti-choice-interaction: leaves the attributes it does not read omitted, with their defaults not applied", () => {
+    const interaction = onlyIn(
+      '<qti-choice-interaction response-identifier="R"><qti-simple-choice identifier="A">a</qti-simple-choice></qti-choice-interaction>',
+      "choice-interaction",
+    );
+    expect(Object.keys(interaction).sort()).toEqual(["extensions", "kind", "responseIdentifier", "simpleChoices"]);
+  });
+
+  it("[A146] qti-order-interaction: reads the limits and the orientation, and orders simple choices (INFO §5.97)", () => {
+    const interaction = onlyIn(
+      '<qti-order-interaction response-identifier="R" shuffle="true" min-choices="2" max-choices="3" orientation="vertical" data-choices-container-width="200"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-order-interaction>',
+      "order-interaction",
+    );
+    expect(interaction).toMatchObject({
+      shuffle: true,
+      minChoices: 2,
+      maxChoices: 3,
+      orientation: "vertical",
+      dataChoicesContainerWidth: 200,
+      simpleChoices: [{ identifier: "A" }, { identifier: "B" }],
+    });
+  });
+
+  it("[A131][A163] qti-associate-interaction: reads the association limits and the choices with the number of times each takes part (INFO §5.8)", () => {
+    const interaction = onlyIn(
+      '<qti-associate-interaction response-identifier="R" shuffle="true" min-associations="1" max-associations="3"><qti-simple-associable-choice identifier="A" match-max="1" match-min="0" match-group="g1 g2">Antonio</qti-simple-associable-choice><qti-simple-associable-choice identifier="C" match-max="2" fixed="true">Capulet</qti-simple-associable-choice></qti-associate-interaction>',
+      "associate-interaction",
+    );
+    expect(interaction).toMatchObject({
+      shuffle: true,
+      minAssociations: 1,
+      maxAssociations: 3,
+      simpleAssociableChoices: [
+        { identifier: "A", matchMax: 1, matchMin: 0, matchGroup: ["g1", "g2"] },
+        { identifier: "C", matchMax: 2, fixed: true },
+      ],
+    });
+  });
+
+  it("[A144][A165] qti-match-interaction: holds two sets of choices (INFO §5.89)", () => {
+    const interaction = onlyIn(
+      '<qti-match-interaction response-identifier="R" shuffle="true" max-associations="4" min-associations="0" data-first-column-header="Hero"><qti-simple-match-set><qti-simple-associable-choice identifier="C" match-max="1">Capulet</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="D" match-max="4">Demetrius</qti-simple-associable-choice><qti-simple-associable-choice identifier="L" match-max="2">Lysander</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>',
+      "match-interaction",
+    );
+    expect(interaction).toMatchObject({
+      maxAssociations: 4,
+      dataFirstColumnHeader: "Hero",
+      simpleMatchSets: [
+        { kind: "simple-match-set", simpleAssociableChoices: [{ identifier: "C" }] },
+        {
+          simpleAssociableChoices: [
+            { identifier: "D", matchMax: 4 },
+            { identifier: "L", matchMax: 2 },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("[A137][A157][A156][A155] qti-gap-match-interaction: holds the choices, and the text with the gaps (INFO §5.57)", () => {
+    const interaction = onlyIn(
+      '<qti-gap-match-interaction response-identifier="R" shuffle="true" min-associations="1" max-associations="2" data-choices-container-width="150"><qti-gap-text identifier="W" match-max="1">winter</qti-gap-text><qti-gap-img identifier="I" match-max="1" object-label="sun" top="1" left="2"><img src="sun.png" alt="Sun"/></qti-gap-img><blockquote><p>Shall I compare thee to a <qti-gap identifier="G1" required="true"/> day?</p></blockquote></qti-gap-match-interaction>',
+      "gap-match-interaction",
+    );
+    expect(interaction).toMatchObject({
+      dataChoicesContainerWidth: 150,
+      choices: [
+        { kind: "gap-text", identifier: "W", matchMax: 1, children: [{ kind: "text", value: "winter" }] },
+        {
+          kind: "gap-img",
+          identifier: "I",
+          matchMax: 1,
+          objectLabel: "sun",
+          top: "1",
+          left: "2",
+          image: { kind: "img" },
+        },
+      ],
+      children: [
+        {
+          kind: "blockquote",
+          children: [
+            {
+              kind: "p",
+              children: [
+                { kind: "text", value: "Shall I compare thee to a " },
+                { kind: "gap", identifier: "G1", required: true },
+                { kind: "text", value: " day?" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("[A143][A160][A161] qti-inline-choice-interaction: sits in a sentence and holds the label and the choices (INFO §5.74)", () => {
+    const [paragraph] = bodyOf(
+      '<p>Cheese is <qti-inline-choice-interaction response-identifier="R" shuffle="true" required="true" min-choices="1" data-prompt="Choose" data-min-selections-message="Required"><qti-label>Color</qti-label><qti-inline-choice identifier="Y" fixed="true">yellow</qti-inline-choice><qti-inline-choice identifier="N">none</qti-inline-choice></qti-inline-choice-interaction>.</p>',
+    );
+    expect(paragraph).toMatchObject({
+      children: [
+        { kind: "text", value: "Cheese is " },
+        {
+          kind: "inline-choice-interaction",
+          shuffle: true,
+          required: true,
+          minChoices: 1,
+          dataPrompt: "Choose",
+          labelElement: { kind: "label", children: [{ kind: "text", value: "Color" }] },
+          inlineChoices: [
+            { kind: "inline-choice", identifier: "Y", fixed: true },
+            { kind: "inline-choice", identifier: "N" },
+          ],
+        },
+        { kind: "text", value: "." },
+      ],
+    });
+  });
+
+  it("[A152] qti-text-entry-interaction: sits in a sentence and reads the answer constraints (INFO §5.162)", () => {
+    const [paragraph] = bodyOf(
+      '<p>Born in <qti-text-entry-interaction response-identifier="R" base="16" string-identifier="S" expected-length="4" pattern-mask="[0-9]+" placeholder-text="year" format="digits" data-patternmask-message="Digits"/>.</p>',
+    );
+    expect(paragraph).toMatchObject({
+      children: [
+        { kind: "text" },
+        {
+          kind: "text-entry-interaction",
+          responseIdentifier: "R",
+          base: 16,
+          stringIdentifier: "S",
+          expectedLength: 4,
+          patternMask: "[0-9]+",
+          placeholderText: "year",
+          format: "digits",
+          dataPatternmaskMessage: "Digits",
+        },
+        { kind: "text" },
+      ],
+    });
+  });
+
+  it("[A136] qti-extended-text-interaction: reads the answer constraints and the format (INFO §5.48)", () => {
+    const interaction = onlyIn(
+      '<qti-extended-text-interaction response-identifier="R" base="10" string-identifier="S" expected-length="200" pattern-mask=".+" placeholder-text="Write" max-strings="2" min-strings="1" expected-lines="5" format="preformatted" data-patternmask-message="m"><qti-prompt>Describe it.</qti-prompt></qti-extended-text-interaction>',
+      "extended-text-interaction",
+    );
+    expect(interaction).toMatchObject({
+      maxStrings: 2,
+      minStrings: 1,
+      expectedLines: 5,
+      expectedLength: 200,
+      format: "preformatted",
+      prompt: { children: [{ value: "Describe it." }] },
+    });
+  });
+
+  it("[A151] qti-slider-interaction: reads the bounds, the step and the appearance (INFO §5.134)", () => {
+    const interaction = onlyIn(
+      '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="10.5" step="0.5" step-label="true" orientation="vertical" reverse="true"/>',
+      "slider-interaction",
+    );
+    expect(interaction).toMatchObject({
+      lowerBound: 0,
+      upperBound: 10.5,
+      step: 0.5,
+      stepLabel: true,
+      orientation: "vertical",
+      reverse: true,
+    });
+  });
+
+  it("[A153] qti-upload-interaction: reads the MIME types that it accepts (INFO §5.165)", () => {
+    const interaction = onlyIn(
+      '<qti-upload-interaction response-identifier="R" type="image/png application/pdf"/>',
+      "upload-interaction",
+    );
+    expect(interaction).toMatchObject({ type: ["image/png", "application/pdf"] });
+  });
+
+  it("[A135] qti-end-attempt-interaction: needs the title and reads whether the attempt counts (INFO §5.45)", () => {
+    const [interaction] = wrappedBy(
+      "p",
+      '<qti-end-attempt-interaction response-identifier="HINT" title="Show hint" count-attempt="false"/>',
+    );
+    expect(interaction).toMatchObject({ responseIdentifier: "HINT", title: "Show hint", countAttempt: false });
+    expect(
+      readIssue(() =>
+        readAsi(item('<qti-item-body><p><qti-end-attempt-interaction response-identifier="H"/></p></qti-item-body>')),
+      ),
+    ).toMatchObject({ code: "olah/asi/missing-attribute" });
+  });
+
+  it("[A145] qti-media-interaction: reads the plays and the media element (INFO §5.92)", () => {
+    const interaction = onlyIn(
+      '<qti-media-interaction response-identifier="R" autostart="true" min-plays="1" max-plays="3" loop="true" coords="0,0,100,60"><qti-prompt>Listen.</qti-prompt><audio src="a.mp3" controls="controls"/></qti-media-interaction>',
+      "media-interaction",
+    );
+    expect(interaction).toMatchObject({
+      autostart: true,
+      minPlays: 1,
+      maxPlays: 3,
+      loop: true,
+      coords: "0,0,100,60",
+      media: { kind: "audio", src: "a.mp3" },
+    });
+  });
+
+  it("[A141][A158] qti-hotspot-interaction: holds the image and the hotspots with their shapes (INFO §5.68)", () => {
+    const interaction = onlyIn(
+      '<qti-hotspot-interaction response-identifier="R" min-choices="1" max-choices="2"><qti-prompt>Where?</qti-prompt><object type="image/png" data="uk.png" width="206" height="280">UK</object><qti-hotspot-choice identifier="A" shape="circle" coords="77,115,8" hotspot-label="Edinburgh"/><qti-hotspot-choice identifier="B" shape="rect" coords="0,0,10,10"/></qti-hotspot-interaction>',
+      "hotspot-interaction",
+    );
+    expect(interaction).toMatchObject({
+      minChoices: 1,
+      maxChoices: 2,
+      image: { kind: "object", data: "uk.png", type: "image/png" },
+      hotspotChoices: [
+        { kind: "hotspot-choice", identifier: "A", shape: "circle", coords: "77,115,8", hotspotLabel: "Edinburgh" },
+        { identifier: "B", shape: "rect" },
+      ],
+    });
+  });
+
+  it("[A140] qti-graphic-order-interaction: holds the image and the hotspots to put in order (INFO §5.61)", () => {
+    const interaction = onlyIn(
+      '<qti-graphic-order-interaction response-identifier="R" min-choices="2" max-choices="4"><img src="g.png" alt="Map"/><qti-hotspot-choice identifier="A" shape="rect" coords="0,0,5,5"/></qti-graphic-order-interaction>',
+      "graphic-order-interaction",
+    );
+    expect(interaction).toMatchObject({
+      minChoices: 2,
+      maxChoices: 4,
+      image: { kind: "img" },
+      hotspotChoices: [{ identifier: "A" }],
+    });
+  });
+
+  it("[A138][A154] qti-graphic-associate-interaction: holds the image and the associable hotspots (INFO §5.59)", () => {
+    const interaction = onlyIn(
+      '<qti-graphic-associate-interaction response-identifier="R" min-associations="1" max-associations="3"><picture><source srcset="a.webp"/><img src="a.png" alt="A"/></picture><qti-associable-hotspot identifier="A" match-max="2" match-min="1" match-group="g" shape="ellipse" coords="1,2,3,4" hotspot-label="Spot"/></qti-graphic-associate-interaction>',
+      "graphic-associate-interaction",
+    );
+    expect(interaction).toMatchObject({
+      maxAssociations: 3,
+      image: { kind: "picture" },
+      associableHotspots: [
+        {
+          kind: "associable-hotspot",
+          identifier: "A",
+          matchMax: 2,
+          matchMin: 1,
+          matchGroup: ["g"],
+          shape: "ellipse",
+          hotspotLabel: "Spot",
+        },
+      ],
+    });
+  });
+
+  it("[A139] qti-graphic-gap-match-interaction: holds the image, the choices to drop and the hotspots to drop them on (INFO §5.60)", () => {
+    const interaction = onlyIn(
+      '<qti-graphic-gap-match-interaction response-identifier="R" min-associations="1" max-associations="2" data-choices-container-width="80"><img src="g.png" alt="Map"/><qti-gap-img identifier="I" match-max="1"><img src="i.png" alt="I"/></qti-gap-img><qti-gap-text identifier="T" match-max="1">T</qti-gap-text><qti-associable-hotspot identifier="H" match-max="1" shape="default" coords="0,0"/></qti-graphic-gap-match-interaction>',
+      "graphic-gap-match-interaction",
+    );
+    expect(interaction).toMatchObject({
+      dataChoicesContainerWidth: 80,
+      image: { kind: "img" },
+      choices: [{ kind: "gap-img" }, { kind: "gap-text" }],
+      associableHotspots: [{ identifier: "H", shape: "default" }],
+    });
+  });
+
+  it("[A150] qti-select-point-interaction: holds the image on which the candidate marks points (INFO §5.128)", () => {
+    const interaction = onlyIn(
+      '<qti-select-point-interaction response-identifier="R" min-choices="1" max-choices="3"><img src="g.png" alt="Map"/></qti-select-point-interaction>',
+      "select-point-interaction",
+    );
+    expect(interaction).toMatchObject({ minChoices: 1, maxChoices: 3, image: { kind: "img" } });
+  });
+
+  it("[A149][A148] qti-position-object-stage: holds the image and the position object interactions (INFO §5.107, §5.108)", () => {
+    const stage = onlyIn(
+      '<qti-position-object-stage id="stage"><img src="g.png" alt="Map"/><qti-position-object-interaction response-identifier="R1" center-point="10 20" min-choices="0" max-choices="1"><img src="pin.png" alt="Pin"/></qti-position-object-interaction></qti-position-object-stage>',
+      "position-object-stage",
+    );
+    expect(stage).toMatchObject({
+      id: "stage",
+      image: { kind: "img" },
+      positionObjectInteractions: [
+        {
+          kind: "position-object-interaction",
+          responseIdentifier: "R1",
+          centerPoint: [10, 20],
+          maxChoices: 1,
+          image: { kind: "img" },
+        },
+      ],
+    });
+  });
+
+  it("[A142][A159] qti-hottext-interaction: holds a text with the words that the candidate can select (INFO §5.66)", () => {
+    const interaction = onlyIn(
+      '<qti-hottext-interaction response-identifier="R" max-choices="2" min-choices="1" data-min-selections-message="a" data-max-selections-message="b"><qti-prompt>Find the error.</qti-prompt><p>Sing <qti-hottext identifier="A">a</qti-hottext> song</p></qti-hottext-interaction>',
+      "hottext-interaction",
+    );
+    expect(interaction).toMatchObject({
+      maxChoices: 2,
+      minChoices: 1,
+      children: [
+        {
+          kind: "p",
+          children: [
+            { kind: "text", value: "Sing " },
+            { kind: "hottext", identifier: "A", children: [{ kind: "text", value: "a" }] },
+            { kind: "text", value: " song" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("[A134] qti-drawing-interaction: holds the canvas image (INFO §5.44)", () => {
+    const interaction = onlyIn(
+      '<qti-drawing-interaction response-identifier="R"><qti-prompt>Draw.</qti-prompt><img src="canvas.png" alt="Canvas"/></qti-drawing-interaction>',
+      "drawing-interaction",
+    );
+    expect(interaction).toMatchObject({ prompt: { kind: "prompt" }, image: { kind: "img", src: "canvas.png" } });
+  });
+
+  it("[A133] qti-custom-interaction: keeps any content, in any namespace, as XML elements (INFO §5.36)", () => {
+    const interaction = onlyIn(
+      '<qti-custom-interaction xmlns:ext="urn:ext" response-identifier="R" ext:flag="1"><ext:widget xmlns:ext="urn:ext" size="3">text</ext:widget><p>in the ASI namespace</p></qti-custom-interaction>',
+      "custom-interaction",
+    );
+    expect(interaction).toMatchObject({
+      responseIdentifier: "R",
+      extensions: [{ namespace: "urn:ext", name: "flag", value: "1" }],
+      extensionElements: [
+        {
+          kind: "element",
+          namespace: "urn:ext",
+          name: "widget",
+          attributes: [{ name: "size", value: "3" }],
+          children: [{ kind: "text", value: "text" }],
+        },
+        { kind: "element", namespace: ASI_NAMESPACE, name: "p" },
+      ],
+    });
+  });
+});
+
+describe("readAsi: portable custom interactions", () => {
+  const pci =
+    '<qti-portable-custom-interaction response-identifier="RESPONSE" custom-interaction-type-identifier="urn:fdc:example.com:pci:graph" module="graph" data-min="0"><qti-prompt>Plot it.</qti-prompt><qti-interaction-modules primary-configuration="modules/primary.js" secondary-configuration="modules/secondary.js"><qti-interaction-module id="graph" primary-path="modules/graph.js" fallback-path="https://cdn.example.com/graph.js"/><qti-interaction-module id="lib"/></qti-interaction-modules><qti-interaction-markup><div class="graph" data-points="3"><p>Graph here <qti-printed-variable identifier="N"/></p></div><template><span>t</span></template></qti-interaction-markup><qti-template-variable template-identifier="N"/><qti-template-variable template-identifier="M"/><qti-context-variable identifier="CTX"/><qti-stylesheet href="css/graph.css" type="text/css"/><qti-catalog-info><qti-catalog id="c1"><qti-card support="spoken"><qti-html-content>Plot the points.</qti-html-content></qti-card></qti-catalog></qti-catalog-info></qti-portable-custom-interaction>';
+
+  it("[A147][A167][A168][A169][A170][A166] qti-portable-custom-interaction: reads the type, the modules, the markup, the variables, the style sheets and the catalogs (BPIG §3.7.12)", () => {
+    const [interaction] = bodyOf(pci);
+    expect(interaction).toMatchObject({
+      kind: "portable-custom-interaction",
+      responseIdentifier: "RESPONSE",
+      customInteractionTypeIdentifier: "urn:fdc:example.com:pci:graph",
+      module: "graph",
+      extensions: [{ name: "data-min", value: "0" }],
+      prompt: { kind: "prompt" },
+      interactionModules: {
+        kind: "interaction-modules",
+        primaryConfiguration: "modules/primary.js",
+        secondaryConfiguration: "modules/secondary.js",
+        interactionModules: [
+          {
+            kind: "interaction-module",
+            id: "graph",
+            primaryPath: "modules/graph.js",
+            fallbackPath: "https://cdn.example.com/graph.js",
+          },
+          { kind: "interaction-module", id: "lib" },
+        ],
+      },
+      interactionMarkup: {
+        kind: "interaction-markup",
+        children: [{ kind: "div", class: ["graph"], extensions: [{ name: "data-points", value: "3" }] }],
+        templates: [{ kind: "template" }],
+      },
+      templateVariables: [
+        { kind: "template-variable", templateIdentifier: "N" },
+        { kind: "template-variable", templateIdentifier: "M" },
+      ],
+      contextVariables: [{ kind: "context-variable", identifier: "CTX" }],
+      stylesheets: [{ kind: "stylesheet", href: "css/graph.css", type: "text/css" }],
+      catalogInfo: { kind: "catalog-info", catalogs: [{ kind: "catalog", id: "c1" }] },
+    });
+  });
+
+  it("[A147][A169] qti-portable-custom-interaction: needs the type and the markup, and the module list leaves its configuration files omitted", () => {
+    expect(
+      readIssue(() =>
+        readAsi(
+          item(
+            '<qti-item-body><qti-portable-custom-interaction response-identifier="R"><qti-interaction-markup/></qti-portable-custom-interaction></qti-item-body>',
+          ),
+        ),
+      ),
+    ).toMatchObject({ code: "olah/asi/missing-attribute" });
+    expect(
+      readIssue(() =>
+        readAsi(
+          item(
+            '<qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:x"/></qti-item-body>',
+          ),
+        ),
+      ),
+    ).toMatchObject({ code: "olah/asi/missing-element" });
+    const [interaction] = bodyOf(
+      '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:x"><qti-interaction-modules><qti-interaction-module id="m"/></qti-interaction-modules><qti-interaction-markup/></qti-portable-custom-interaction>',
+    );
+    expect(interaction).toMatchObject({ interactionModules: { interactionModules: [{ id: "m" }] } });
+    expect(interaction).not.toHaveProperty("interactionModules.primaryConfiguration");
+  });
+});
+
+describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
+  it("[A176][A177][A175] qti-feedback-block, qti-feedback-inline: read the outcome, the identifier and whether to show or hide (INFO §5.49, §5.52)", () => {
+    const [block, paragraph] = bodyOf(
+      '<qti-feedback-block outcome-identifier="FEEDBACK" identifier="correct" show-hide="show"><qti-content-body><p>Correct.</p></qti-content-body></qti-feedback-block><p>You <qti-feedback-inline outcome-identifier="FEEDBACK" identifier="wrong" show-hide="hide">did not</qti-feedback-inline> pass.</p>',
+    );
+    expect(block).toMatchObject({
+      kind: "feedback-block",
+      outcomeIdentifier: "FEEDBACK",
+      identifier: "correct",
+      showHide: "show",
+      contentBody: { kind: "content-body", children: [{ kind: "p" }] },
+    });
+    expect(paragraph).toMatchObject({
+      children: [
+        { kind: "text", value: "You " },
+        {
+          kind: "feedback-inline",
+          outcomeIdentifier: "FEEDBACK",
+          identifier: "wrong",
+          showHide: "hide",
+          children: [{ kind: "text", value: "did not" }],
+        },
+        { kind: "text", value: " pass." },
+      ],
+    });
+  });
+
+  it("[A183][A184] qti-template-block, qti-template-inline: read the template variable and the identifier (INFO §5.122, §5.124)", () => {
+    const [block, paragraph] = bodyOf(
+      '<qti-template-block template-identifier="T" identifier="a" show-hide="show"><qti-content-body><p>Shown.</p></qti-content-body></qti-template-block><p><qti-template-inline template-identifier="T" identifier="b" show-hide="hide">hidden</qti-template-inline></p>',
+    );
+    expect(block).toMatchObject({
+      kind: "template-block",
+      templateIdentifier: "T",
+      identifier: "a",
+      showHide: "show",
+      contentBody: { children: [{ kind: "p" }] },
+    });
+    expect(paragraph).toMatchObject({
+      children: [{ kind: "template-inline", templateIdentifier: "T", identifier: "b", showHide: "hide" }],
+    });
+  });
+
+  it("[A181] qti-printed-variable: reads the variable and the formatting attributes (INFO §7.30)", () => {
+    const [paragraph] = bodyOf(
+      '<p><qti-printed-variable identifier="SCORE" format="%.2f" base="8" index="2" power-form="true" field="f" delimiter="," mapping-indicator=":"/><qti-printed-variable identifier="N" base="B" index="I"/></p>',
+    );
+    expect(paragraph).toMatchObject({
+      children: [
+        {
+          kind: "printed-variable",
+          identifier: "SCORE",
+          format: "%.2f",
+          base: 8,
+          index: 2,
+          powerForm: true,
+          field: "f",
+          delimiter: ",",
+          mappingIndicator: ":",
+        },
+        { kind: "printed-variable", identifier: "N", base: "B", index: "I" },
+      ],
+    });
+  });
+
+  it("[A182] qti-rubric-block: reads the views and the use in an item body, and the content body after the style sheets (INFO §5.120)", () => {
+    const [block] = bodyOf(
+      '<qti-rubric-block view="author scorer" use="scoring" class="r"><qti-stylesheet href="r.css" type="text/css"/><qti-content-body><p>Give one point.</p></qti-content-body><qti-catalog-info><qti-catalog id="r1"><qti-card support="braille"><qti-card-entry xml:lang="en"/></qti-card></qti-catalog></qti-catalog-info></qti-rubric-block>',
+    );
+    expect(block).toMatchObject({
+      kind: "rubric-block",
+      view: ["author", "scorer"],
+      use: "scoring",
+      class: ["r"],
+      stylesheets: [{ kind: "stylesheet" }],
+      contentBody: { children: [{ kind: "p" }] },
+      catalogInfo: { catalogs: [{ id: "r1" }] },
+    });
+  });
+
+  it("[A185] qti-test-feedback: reads when it is shown, the outcome and whether to show or hide (INFO §5.157)", () => {
+    const test = testOf(
+      `${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/><qti-test-feedback access="during" outcome-identifier="FB" identifier="fb1" show-hide="show" title="Halfway"><qti-content-body><p>Keep going.</p></qti-content-body></qti-test-feedback></qti-test-part>`,
+    );
+    expect(test.testParts[0]?.testFeedback).toMatchObject([
+      {
+        kind: "test-feedback",
+        access: "during",
+        outcomeIdentifier: "FB",
+        identifier: "fb1",
+        showHide: "show",
+        title: "Halfway",
+      },
+    ]);
+  });
+
+  it("[A180][A175] qti-modal-feedback: needs the outcome, the identifier and the show or hide, and holds the content body (INFO §5.93)", () => {
+    const { modalFeedback } = itemOf(
+      item(
+        '<qti-modal-feedback outcome-identifier="FB" show-hide="show" identifier="m1" title="Result"><qti-stylesheet href="m.css" type="text/css"/><qti-content-body><p>Well done.</p></qti-content-body><qti-catalog-info><qti-catalog id="mc"><qti-card support="spoken"><qti-html-content>Well done.</qti-html-content></qti-card></qti-catalog></qti-catalog-info></qti-modal-feedback>',
+      ),
+    );
+    expect(modalFeedback).toMatchObject([
+      {
+        kind: "modal-feedback",
+        outcomeIdentifier: "FB",
+        showHide: "show",
+        identifier: "m1",
+        title: "Result",
+        stylesheets: [{ kind: "stylesheet" }],
+        contentBody: { children: [{ kind: "p" }] },
+        catalogInfo: { catalogs: [{ id: "mc" }] },
+      },
+    ]);
+    expect(
+      readIssue(() =>
+        readAsi(
+          item('<qti-modal-feedback outcome-identifier="FB" identifier="m"><qti-content-body/></qti-modal-feedback>'),
+        ),
+      ),
+    ).toMatchObject({ code: "olah/asi/missing-attribute" });
+  });
+
+  it("[A171][A172][A173][A174][A178][A179] catalog, card, card entry, html content, file reference: read the cards of a support by language (BPIG §3.7.10)", () => {
+    const { catalogInfo } = itemOf(
+      item(
+        '<qti-catalog-info><qti-catalog id="glossary"><qti-card support="glossary-on-screen" xml:lang="en"><qti-html-content xml:lang="en">A <b>word</b>.</qti-html-content><qti-file-href mime-type="audio/mpeg">word.mp3</qti-file-href></qti-card><qti-card support="keyword-translation"><qti-card-entry xml:lang="id" default="true"><qti-html-content>word</qti-html-content></qti-card-entry><qti-card-entry xml:lang="fr"><qti-file-href mime-type="audio/mpeg">mot.mp3</qti-file-href></qti-card-entry></qti-card><qti-card support="ext:note"/></qti-catalog></qti-catalog-info>',
+      ),
+    );
+    expect(catalogInfo).toMatchObject({
+      kind: "catalog-info",
+      catalogs: [
+        {
+          kind: "catalog",
+          id: "glossary",
+          cards: [
+            {
+              kind: "card",
+              support: "glossary-on-screen",
+              language: "en",
+              htmlContent: {
+                kind: "html-content",
+                language: "en",
+                children: [{ kind: "text", value: "A " }, { kind: "b" }, { kind: "text", value: "." }],
+              },
+              fileHrefs: [{ kind: "file-href", mimeType: "audio/mpeg", value: "word.mp3" }],
+            },
+            {
+              support: "keyword-translation",
+              cardEntries: [
+                { kind: "card-entry", language: "id", default: true, htmlContent: { children: [{ value: "word" }] } },
+                { language: "fr", fileHrefs: [{ mimeType: "audio/mpeg", value: "mot.mp3" }] },
+              ],
+            },
+            { support: "ext:note" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("[A171][A174] card, catalog: refuse a card with content and entries together", () => {
+    expect(
+      readIssue(() =>
+        readAsi(
+          item(
+            '<qti-catalog-info><qti-catalog id="c"><qti-card support="spoken"><qti-html-content>x</qti-html-content><qti-card-entry/></qti-card></qti-catalog></qti-catalog-info>',
+          ),
+        ),
+      ),
+    ).toMatchObject({ code: "olah/asi/exclusive" });
+  });
+
+  it("[S6] data-catalog-idref: stays on the element that refers to the catalog", () => {
+    const [paragraph] = bodyOf('<p data-catalog-idref="glossary">Word</p>');
+    expect(paragraph).toMatchObject({ dataCatalogIdref: "glossary" });
+  });
+});
+
+describe("readAsi: companion materials", () => {
+  const materials =
+    '<qti-companion-materials-info><qti-calculator><qti-calculator-type>scientific</qti-calculator-type><qti-description>Scientific</qti-description><qti-calculator-info mime-type="application/x-calc"><qti-file-href>calc.js</qti-file-href><qti-resource-icon>calc.png</qti-resource-icon></qti-calculator-info></qti-calculator><qti-rule><qti-description>Ruler</qti-description><qti-rule-system-si><qti-minimum-length>5</qti-minimum-length><qti-minor-increment unit="Millimeter">1</qti-minor-increment><qti-major-increment unit="Centimeter">10</qti-major-increment></qti-rule-system-si></qti-rule><qti-rule><qti-description>Yardstick</qti-description><qti-rule-system-us><qti-minimum-length>2</qti-minimum-length><qti-major-increment unit="Inch">1</qti-major-increment></qti-rule-system-us></qti-rule><qti-protractor><qti-description>Protractor</qti-description><qti-increment-si><qti-minor-increment unit="Radian">0.1</qti-minor-increment><qti-major-increment unit="Radian">1</qti-major-increment></qti-increment-si></qti-protractor><qti-protractor><qti-description>US protractor</qti-description><qti-increment-us><qti-major-increment unit="Degree">10</qti-major-increment></qti-increment-us></qti-protractor><qti-digital-material mime-type="text/html"><qti-file-href>periodic.html</qti-file-href></qti-digital-material><qti-physical-material>A compass</qti-physical-material></qti-companion-materials-info>';
+
+  it("[A189][A186][A188][A190][A187][A199] qti-companion-materials-info, qti-calculator: read the calculators of an item (INFO §5.33, §5.24)", () => {
+    const { companionMaterials } = itemOf(item(materials));
+    expect(companionMaterials?.calculators).toEqual([
+      {
+        kind: "calculator",
+        calculatorType: { kind: "calculator-type", value: "scientific" },
+        description: { kind: "description", value: "Scientific" },
+        calculatorInfo: {
+          kind: "calculator-info",
+          mimeType: "application/x-calc",
+          fileHref: { kind: "file-href", value: "calc.js" },
+          resourceIcon: { kind: "resource-icon", value: "calc.png" },
+        },
+      },
+    ]);
+  });
+
+  it("[A200][A201][A202][A195][A194][A196] qti-rule: reads a ruler in SI or US units with its lengths and increments (INFO §5.126)", () => {
+    const rules = itemOf(item(materials)).companionMaterials?.rules;
+    expect(rules).toMatchObject([
+      {
+        kind: "rule",
+        description: { value: "Ruler" },
+        ruleSystem: {
+          kind: "rule-system-si",
+          minimumLength: { kind: "minimum-length", value: 5 },
+          minorIncrement: { kind: "minor-increment", unit: "Millimeter", value: "1" },
+          majorIncrement: { kind: "major-increment", unit: "Centimeter", value: "10" },
+        },
+      },
+      {
+        ruleSystem: {
+          kind: "rule-system-us",
+          minimumLength: { value: 2 },
+          majorIncrement: { unit: "Inch", value: "1" },
+        },
+      },
+    ]);
+  });
+
+  it("[A198][A192][A193] qti-protractor: reads a protractor with SI or US increments (INFO §5.110)", () => {
+    const protractors = itemOf(item(materials)).companionMaterials?.protractors;
+    expect(protractors).toMatchObject([
+      {
+        kind: "protractor",
+        description: { value: "Protractor" },
+        increment: {
+          kind: "increment-si",
+          minorIncrement: { unit: "Radian", value: "0.1" },
+          majorIncrement: { unit: "Radian", value: "1" },
+        },
+      },
+      { increment: { kind: "increment-us", majorIncrement: { unit: "Degree", value: "10" } } },
+    ]);
+  });
+
+  it("[A191][A197] qti-digital-material, qti-physical-material: read the digital files and the physical items", () => {
+    const { companionMaterials } = itemOf(item(materials));
+    expect(companionMaterials?.digitalMaterials).toMatchObject([
+      { kind: "digital-material", mimeType: "text/html", fileHref: { value: "periodic.html" } },
+    ]);
+    expect(companionMaterials?.physicalMaterials).toEqual([{ kind: "physical-material", value: "A compass" }]);
+  });
+
+  it("[A189][A186][A200] qti-companion-materials-info: keeps the elements of other namespaces, and refuses a unit that the vocabulary does not have", () => {
+    const { companionMaterials } = itemOf(
+      item(
+        '<qti-companion-materials-info><qti-physical-material>x</qti-physical-material><ext:note xmlns:ext="urn:ext"/></qti-companion-materials-info>',
+      ),
+    );
+    expect(companionMaterials).toMatchObject({ extensionElements: [{ namespace: "urn:ext", name: "note" }] });
+    expect(
+      readIssue(() =>
+        readAsi(
+          item(
+            '<qti-companion-materials-info><qti-rule><qti-description>R</qti-description><qti-rule-system-si><qti-minimum-length>1</qti-minimum-length><qti-major-increment unit="Foot">1</qti-major-increment></qti-rule-system-si></qti-rule></qti-companion-materials-info>',
+          ),
+        ),
+      ),
+    ).toMatchObject({ code: "olah/asi/invalid-value" });
+  });
+});
+
+/** The element of the model that a path of keys leads to. */
+function dig(value: unknown, path: readonly (string | number)[]): unknown {
+  return path.reduce<unknown>(
+    (current, key) => (typeof current === "object" && current !== null ? Reflect.get(current, key) : undefined),
+    value,
+  );
+}
+
+/** Checks the vocabulary of an attribute: every term reads as itself and is written as itself, and other text is refused. */
+function checkVocabulary(row: string): void {
+  const { element, attribute, property, terms } = vocabularyOf(row);
+  const { markup, path } = PLACES[element];
+  const body = (text: string) => `<qti-item-body>${markup(` ${attribute}="${text}"`)}</qti-item-body>`;
+  for (const term of terms) {
+    const read = itemOf(item(body(term)));
+    expect(dig(read.body?.children[0], path), term).toMatchObject({ [property]: term });
+    expect(writeAsi({ kind: "item", item: read }), term).toContain(`${attribute}="${term}"`);
+  }
+  for (const text of ["", "x", `${terms[0]}x`, `x${terms[0]}`, ` ${terms[0]?.toUpperCase()}`]) {
+    expect(
+      readIssue(() => readAsi(item(body(text)))),
+      text,
+    ).toMatchObject({ code: "olah/asi/invalid-value" });
+  }
+}
+
+describe("vocabularies of the content", () => {
+  it("[W1] ARIAAutoCompleteEnum: reads 4 terms of aria-autocomplete and refuses any other text (INFO §8.1)", () => {
+    checkVocabulary("W1");
+  });
+
+  it("[W2] ARIACheckedEnum: reads 4 terms of aria-checked and refuses any other text (INFO §8.2)", () => {
+    checkVocabulary("W2");
+  });
+
+  it("[W3] ARIACurrentEnum: reads 8 terms of aria-current and refuses any other text (INFO §8.3)", () => {
+    checkVocabulary("W3");
+  });
+
+  it("[W4] ARIAExpandedEnum: reads 3 terms of aria-expanded and refuses any other text (INFO §8.4)", () => {
+    checkVocabulary("W4");
+  });
+
+  it("[W5] ARIAInvalidEnum: reads 4 terms of aria-invalid and refuses any other text (INFO §8.5)", () => {
+    checkVocabulary("W5");
+  });
+
+  it("[W6] ARIALiveValueEnum: reads 3 terms of aria-live and refuses any other text (INFO §8.6)", () => {
+    checkVocabulary("W6");
+  });
+
+  it("[W7] ARIAOrientationValueEnum: reads 2 terms of aria-orientation and refuses any other text (INFO §8.7)", () => {
+    checkVocabulary("W7");
+  });
+
+  it("[W8] ARIAPressedEnum: reads 4 terms of aria-pressed and refuses any other text (INFO §8.8)", () => {
+    checkVocabulary("W8");
+  });
+
+  it("[W9] ARIARoleValue: reads 74 terms of role and refuses any other text (INFO §8.9)", () => {
+    checkVocabulary("W9");
+  });
+
+  it("[W10] ARIASelectedEnum: reads 3 terms of aria-selected and refuses any other text (INFO §8.10)", () => {
+    checkVocabulary("W10");
+  });
+
+  it("[W11] ARIASortEnum: reads 4 terms of aria-sort and refuses any other text (INFO §8.11)", () => {
+    checkVocabulary("W11");
+  });
+
+  it("[W12] AlignEnum: reads 5 terms of align and refuses any other text (INFO §8.12)", () => {
+    checkVocabulary("W12");
+  });
+
+  it("[W14] CORSSettingsEnum: reads 2 terms of crossorigin and refuses any other text (INFO §8.14)", () => {
+    checkVocabulary("W14");
+  });
+
+  it("[W17] DIR: reads 3 terms of dir and refuses any other text (INFO §8.17)", () => {
+    checkVocabulary("W17");
+  });
+
+  it("[W19] KindValueEnum: reads 5 terms of kind and refuses any other text (INFO §8.19)", () => {
+    checkVocabulary("W19");
+  });
+
+  it("[W24] ParamTypeEnum: reads 2 terms of valuetype and refuses any other text (INFO §8.24)", () => {
+    checkVocabulary("W24");
+  });
+
+  it("[W25] PreLoadValueEnum: reads 3 terms of preload and refuses any other text (INFO §8.25)", () => {
+    checkVocabulary("W25");
+  });
+
+  it("[W34] SuppressTTSEnum: reads 3 terms of data-qti-suppress-tts and refuses any other text (INFO §8.34)", () => {
+    checkVocabulary("W34");
+  });
+
+  it("[W35] TableCellScopeEnum: reads 4 terms of scope and refuses any other text (INFO §8.35)", () => {
+    checkVocabulary("W35");
+  });
+
+  it("[W42] ValignEnum: reads 4 terms of valign and refuses any other text (INFO §8.42)", () => {
+    checkVocabulary("W42");
+  });
+});
+
+describe("vocabularies of the content: lists", () => {
+  it("[W46] StringList: reads the class as the strings separated by white space and writes them with one space", () => {
+    const read = itemOf(
+      item('<qti-item-body><div class="  a  b&#9;c&#10;d ">x</div><p class="">y</p></qti-item-body>'),
+    );
+    expect(read.body?.children).toMatchObject([{ class: ["a", "b", "c", "d"] }, { class: [] }]);
+    expect(writeAsi({ kind: "item", item: read })).toContain('<div class="a b c d">');
+    expect(writeAsi({ kind: "item", item: read })).toContain('<p class="">');
+    expect(() =>
+      writeAsi({
+        kind: "item",
+        item: {
+          ...read,
+          body: { kind: "item-body", children: [{ kind: "div", class: ["a b"], children: [], extensions: [] }] },
+        } as AssessmentItem,
+      }),
+    ).toThrow(/must be text without white space/);
+  });
+
+  it("[W48] ARIARelevantList: reads the terms additions, all, removals and text as a list and refuses any other", () => {
+    const relevant = (value: string) => bodyOf(`<div aria-relevant="${value}"/>`)[0];
+    expect(relevant("additions")).toMatchObject({ ariaRelevant: ["additions"] });
+    expect(relevant("all")).toMatchObject({ ariaRelevant: ["all"] });
+    expect(relevant("removals text")).toMatchObject({ ariaRelevant: ["removals", "text"] });
+    expect(relevant("additions removals text")).toMatchObject({ ariaRelevant: ["additions", "removals", "text"] });
+    for (const text of ["bogus", "additions bogus", "ALL"]) {
+      expect(
+        readIssue(() => readAsi(item(`<qti-item-body><div aria-relevant="${text}"/></qti-item-body>`))),
+        text,
+      ).toMatchObject({
+        code: "olah/asi/invalid-value",
+      });
+    }
+  });
+});
+
 describe("readAsi: common attributes and extension points", () => {
   const body = (attributes: string) => itemOf(item(`<qti-item-body${attributes}><p>x</p></qti-item-body>`)).body;
   const rubric = (attributes: string, content = "") =>
@@ -1744,19 +3159,15 @@ describe("readAsi: common attributes and extension points", () => {
     expect(writeAsi({ kind: "test", test })).toContain('xml:base="media/"');
   });
 
-  it("[S10] response-identifier: stays on the interactions of a body, which are kept as XML", () => {
-    const { body: read } = itemOf(
+  it("[S10] response-identifier: is a property of the interactions of a body", () => {
+    const { body } = itemOf(
       item(
         '<qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">a</qti-simple-choice></qti-choice-interaction></qti-item-body>',
       ),
     );
-    const [interaction] = read?.children ?? [];
-    expect(interaction).toMatchObject({ name: "qti-choice-interaction" });
-    expect(interaction?.kind === "element" && interaction.attributes).toContainEqual({
-      namespace: "",
-      name: "response-identifier",
-      value: "RESPONSE",
-    });
+    expect(body?.children).toMatchObject([
+      { kind: "choice-interaction", responseIdentifier: "RESPONSE", maxChoices: 1 },
+    ]);
   });
 
   it("[S11] role and aria-*: reads the attributes of a stimulus body by their types", () => {
@@ -2239,7 +3650,9 @@ describe("writeAsi", () => {
 
   it("[A4] refuses content that is no node, and a text element without its value", () => {
     const body = { kind: "item-body", children: ["x"] };
-    expect(() => write({ ...valid(), body })).toThrow(/A child of qti-item-body must be an XML node, found "x"/);
+    expect(() => write({ ...valid(), body })).toThrow(
+      /A member of children of qti-item-body must be an object, found "x"/,
+    );
     expect(() => write({ ...valid(), body: { kind: "item-body", children: {} } })).toThrow(DataError);
     expect(() =>
       write({
@@ -2254,6 +3667,38 @@ describe("writeAsi", () => {
         ],
       }),
     ).toThrow(/The property value of qti-value is required/);
+  });
+
+  it("[A4][A175] refuses a member of the content that is null or has no kind, and a text without a string", () => {
+    const withChildren = (children: unknown[]) => write({ ...valid(), body: { kind: "item-body", children } });
+    expect(() => withChildren([JSON.parse("null")])).toThrow(
+      new DataError(
+        "A member of children of qti-item-body must be an object, found null. It is in qti-assessment-item/qti-item-body.",
+      ),
+    );
+    expect(() => withChildren([JSON.parse("{}")])).toThrow(/must have the kind "rubric-block"/);
+    expect(() => withChildren([{ kind: "p", children: [JSON.parse('{"kind":"text"}')], extensions: [] }])).toThrow(
+      /The value of a text in children of p must be a string, found undefined/,
+    );
+    expect(() => withChildren([{ kind: "p", children: [{ kind: "text", value: "a" }] }])).toThrow(
+      /The property extensions of p must be an array/,
+    );
+  });
+
+  it("[A133] writes the elements of the ASI namespace among the extension elements of a custom interaction, which takes any namespace", () => {
+    const paragraph = { kind: "element", namespace: ASI_NAMESPACE, name: "p", attributes: [], children: [] };
+    const interaction = {
+      kind: "custom-interaction",
+      responseIdentifier: "R",
+      extensions: [],
+      extensionElements: [paragraph, foreignElement("a")],
+    };
+    const written = write({ ...valid(), body: { kind: "item-body", children: [interaction] } });
+    expect(written).toContain("<qti-custom-interaction");
+    expect(written).toContain("<p/>");
+    expect(readAsi(written)).toMatchObject({
+      item: { body: { children: [{ kind: "custom-interaction", extensionElements: [{ name: "p" }, { name: "a" }] }] } },
+    });
   });
 
   it("[S13] leaves the validity of names and characters to the XML writer", () => {
@@ -2282,6 +3727,25 @@ describe("the element table", () => {
     expect(inventoryElements(1, 130).filter((element) => !known.has(element))).toEqual([]);
   });
 
+  it("[A131][A132][A133][A134][A135][A136][A137][A138][A139][A140][A141][A142][A143][A144][A145][A146][A147][A148][A149][A150][A151][A152][A153][A154][A155][A156][A157][A158][A159][A160][A161][A162][A163][A164][A165][A166][A167][A168][A169][A170][A171][A172][A173][A174][A175][A176][A177][A178][A179][A180][A181][A182][A183][A184][A185][A186][A187][A188][A189][A190][A191][A192][A193][A194][A195][A196][A197][A198][A199][A200][A201][A202][H1][H2][H3][H4][H5][H6][H7][H8][H9][H10][H11][H12][H13][H14][H15][H16][H17][H18][H19][H20][H21][H22][H23][H24][H25][H26][H27][H28][H29][H30][H31][H32][H33][H34][H35][H36][H37][H38][H39][H40][H41][H42][H43][H44][H45][H46][H47][H48][H49][H50][H51][H52][H53][H54][H55][H56][H57][H58][H59][H60][H61][H62][H63][H64][H65][H66][H67][H68][H69][H70][H71][H72][H73][H74][H75][H76] has every element of the rows A131 to A202 and H1 to H76 as a child, and no other element", () => {
+    const rows = [...inventoryElements(131, 202), ...inventoryElements(1, 76, "H")];
+    expect(rows.filter((element) => !accepted.has(element))).toEqual([]);
+    const known = new Set([...inventoryElements(1, 202), ...inventoryElements(1, 76, "H")]);
+    expect([...accepted].filter((element) => !known.has(element))).toEqual([]);
+  });
+
+  it("[A4][A175] gives the elements of a slot kinds of their own, so that a member tells which element it is", () => {
+    for (const [name, type] of types) {
+      if (type.content.kind !== "slots") continue;
+      for (const slot of type.content.slots) {
+        const kinds = slot.accepts.map(({ element }) => kindOf(element));
+        expect(new Set(kinds).size, `${name} ${slot.property}`).toBe(kinds.length);
+        expect(kinds, `${name} ${slot.property}`).not.toContain("text");
+        expect(kinds, `${name} ${slot.property}`).not.toContain("element");
+      }
+    }
+  });
+
   it("has the seven documents of the schema", () => {
     expect(Object.keys(DOCUMENT_ELEMENTS).sort()).toEqual([
       "qti-assessment-item",
@@ -2294,15 +3758,24 @@ describe("the element table", () => {
     ]);
   });
 
-  it("keeps flow content as XML in the six types that mix text with HTML, MathML and SSML", () => {
-    expect(types.filter(([, type]) => type.content.kind === "flow").map(([name]) => name)).toEqual([
-      "FeedbackFlowContentBody",
-      "HTMLContent",
-      "ItemBody",
-      "StimulusBody",
-      "TestFeedbackFlowContentBody",
-      "TestRubricBlockContentBody",
-    ]);
+  it("[A4][A5][A175] holds flow content in the property children, with text only where the schema mixes it", () => {
+    const flow = types.flatMap(([name, type]) =>
+      type.content.kind === "slots"
+        ? type.content.slots
+            .filter((slot) => slot.text === true || slot.foreign !== undefined)
+            .map((slot) => ({ name, slot }))
+        : [],
+    );
+    expect(flow.length).toBeGreaterThan(40);
+    for (const { name, slot } of flow) {
+      expect(slot.property, name).toBe("children");
+      expect(slot.max, name).toBe("unbounded");
+    }
+    for (const [name, type] of types) {
+      if (type.content.kind !== "slots") continue;
+      const takesText = type.content.slots.filter((slot) => slot.text === true);
+      if (takesText.length > 0) expect(type.content.slots, name).toEqual(takesText);
+    }
   });
 
   it("refers to types it has, and every type is used", () => {
@@ -2331,29 +3804,29 @@ describe("the element table", () => {
 });
 
 describe("properties", () => {
-  /** The element each type is used by, for the types of the table. */
-  const elementOf = new Map<string, string>(
-    Object.entries(DOCUMENT_ELEMENTS).map(([element, type]) => [type, element]),
+  /** Every element of the schema with the type that gives its model: the documents and what the slots accept. */
+  const elements = new Map<string, { readonly type: string; readonly element: string }>(
+    Object.entries(DOCUMENT_ELEMENTS).map(([element, type]) => [`${element} ${type}`, { type, element }]),
   );
   for (const [, type] of Object.entries<TypeDef>(ELEMENT_TYPES)) {
     if (type.content.kind !== "slots") continue;
     for (const slot of type.content.slots)
-      for (const accept of slot.accepts) elementOf.set(accept.type, accept.element);
+      for (const { element, type: name } of slot.accepts) elements.set(`${element} ${name}`, { type: name, element });
   }
 
-  it("[A1] reads the XML of every element type back to the model it was written from", () => {
-    expect(elementOf.size).toBe(Object.keys(ELEMENT_TYPES).length);
-    for (const [name, element] of elementOf) {
-      const info = typeNamed(name);
+  it("[A1][A131][A132][A133][A134][A135][A136][A137][A138][A139][A140][A141][A142][A143][A144][A145][A146][A147][A148][A149][A150][A151][A152][A153][A154][A155][A156][A157][A158][A159][A160][A161][A162][A163][A164][A165][A166][A167][A168][A169][A170][A171][A172][A173][A174][A175][A176][A177][A178][A179][A180][A181][A182][A183][A184][A185][A186][A187][A188][A189][A190][A191][A192][A193][A194][A195][A196][A197][A198][A199][A200][A201][A202][H1][H2][H3][H4][H5][H6][H7][H8][H9][H10][H11][H12][H13][H14][H15][H16][H17][H18][H19][H20][H21][H22][H23][H24][H25][H26][H27][H28][H29][H30][H31][H32][H33][H34][H35][H36][H37][H38][H39][H40][H41][H42][H43][H44][H45][H46][H47][H48][H49][H50][H51][H52][H53][H54][H55][H56][H57][H58][H59][H60][H61][H62][H63][H64][H65][H66][H67][H68][H69][H70][H71][H72][H73][H74][H75][H76] reads every element of the schema back to the model it was written from, in the type that models it", () => {
+    expect(new Set([...elements.values()].map(({ type }) => type))).toEqual(new Set(Object.keys(ELEMENT_TYPES)));
+    for (const { type, element } of elements.values()) {
+      const info = typeNamed(type);
       fc.assert(
-        fc.property(modelArbitrary(name, element), (model) => {
+        fc.property(modelArbitrary(type, element), (model) => {
           const written = parseXml(serializeXml(writeElement(info, element, model)));
           expect(readElement(info, written, { path: undefined, trail: [] })).toEqual(model);
         }),
-        { numRuns: 25 },
+        { numRuns: 10 },
       );
     }
-  });
+  }, 120_000);
 
   it("[A1] reads every kind of document back to the model it was written from", () => {
     for (const [kind, arbitrary] of DOCUMENT_ARBITRARIES) {
@@ -2364,6 +3837,44 @@ describe("properties", () => {
           expect(writeAsi(readAsi(written)), kind).toBe(written);
         }),
         { numRuns: 100 },
+      );
+    }
+  }, 60_000);
+
+  it("[A4][A175] reads the text of a paragraph back as one text node, whatever its characters", () => {
+    const characters = fc.constantFrom(..."ab 19<>&\"'-é日😀\t\n");
+    fc.assert(
+      fc.property(fc.string({ unit: characters, minLength: 1, maxLength: 20 }), (text) => {
+        const document: AsiDocument = {
+          kind: "item",
+          item: {
+            ...itemOf(item()),
+            body: {
+              kind: "item-body",
+              children: [{ kind: "p", children: [{ kind: "text", value: text }], extensions: [] }],
+            },
+          },
+        };
+        expect(readAsi(writeAsi(document))).toEqual(document);
+      }),
+    );
+  });
+
+  it("[W1][W2][W3][W4][W5][W6][W7][W8][W9][W10][W11][W12][W14][W17][W19][W24][W25][W34][W35][W42] refuse any text that is not a term of the vocabulary", () => {
+    for (const { element, attribute, terms } of VOCABULARIES) {
+      const { markup } = PLACES[element];
+      fc.assert(
+        fc.property(
+          fc.stringMatching(/^[a-zA-Z0-9 -]{0,12}$/).filter((text) => !terms.includes(text)),
+          (text) => {
+            const body = `<qti-item-body>${markup(` ${attribute}="${text}"`)}</qti-item-body>`;
+            expect(
+              readIssue(() => readAsi(item(body))),
+              attribute,
+            ).toMatchObject({ code: "olah/asi/invalid-value" });
+          },
+        ),
+        { numRuns: 30 },
       );
     }
   });

@@ -99,16 +99,19 @@ seconds, and each schema is compiled once per set. Every test of a writer passes
 
 `packages/olah/src/asi/element-table.ts` is generated from the pinned ASI schema by `scripts/asi-table.ts` (`pnpm asi-table`).
 `asi.xsd.test.ts` generates the table again and fails when the committed file differs. The same file validates documents that
-fast-check generates from the table, and checks that they use every element of the rows A1 to A130.
+fast-check generates from the table, and checks that they use every element of the rows A1 to A202 and H1 to H76. Worked
+items, one for each family of interactions, for feedback, catalogs, companion materials, HTML, MathML and SSML, are
+written and validated too, and so is a document for every term of every vocabulary of the content (W1 to W12, W14, W17,
+W19, W24, W25, W34, W35, W42), next to the terms that the pinned schema itself lists.
 
 ## Generators
 
-`packages/olah/test/arbitraries/` holds the fast-check generators of the models that have a reader and a writer: values
-(`values.ts`), results, usage data and PNP profiles and records, with the elements of an unknown namespace for the
-extensions (`xml.ts`). A generated model is what a reader returns for the document the writer writes, so the properties
-check `read(write(m))` against `m`, and the XSD tests validate a fixed sample of the written documents. A generator with
-`extensions: false` leaves out the elements of an unknown namespace, which a schema with a strict wildcard rejects. The
-generators of `asi` are driven by its element table instead (`asi-arbitraries.ts`).
+`packages/olah/test/arbitraries/` holds the fast-check generators of the models that have a reader and a writer, one file
+for each module: values (`values.ts`), results, usage data, PNP profiles and records, metadata and packages, with the
+elements of an unknown namespace for the extensions (`xml.ts`). A generated model is what a reader returns for the
+document the writer writes, so the properties check `read(write(m))` against `m`, and the XSD tests validate a fixed
+sample of the written documents. A generator with `extensions: false` leaves out the elements of an unknown namespace,
+which a schema with a strict wildcard rejects. The generators of `asi` (`asi.ts`) are driven by its element table instead.
 
 ## Differential tests
 

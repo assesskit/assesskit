@@ -1,5 +1,5 @@
-import { type Issue, ReadError } from "../errors.js";
-import type { XmlElement } from "../xml/index.js";
+import type { ReadError } from "../errors.js";
+import { locationOf, readError, type XmlElement } from "../xml/index.js";
 
 /** The schema that defines the structure the reader and the writer keep to: the primary ASI schema (BPIG §1.1.5). */
 const ASI_SCHEMA = "imsqti_asiv3p0p1_v1p0.xsd";
@@ -13,8 +13,8 @@ export interface ReadContext {
 }
 
 /**
- * Builds the `ReadError` for one problem in an element. The issue carries the message as given and the position of the
- * element; the error's message adds the position.
+ * Builds the `ReadError` for one problem in an element, as `readError` of `xml` does for every reader: the issue carries
+ * the message as given and the position of the element; the error's message adds the position.
  *
  * @param context - Where the reader is.
  * @param element - The element the problem is in.
@@ -22,18 +22,5 @@ export interface ReadContext {
  * @param message - A full sentence that says what is wrong and what is expected.
  */
 export function asiError(context: ReadContext, element: XmlElement, code: string, message: string): ReadError {
-  const issue: Issue = {
-    severity: "error",
-    code,
-    message,
-    source: ASI_SCHEMA,
-    location: {
-      ...(context.path === undefined ? {} : { path: context.path }),
-      ...(element.line === undefined ? {} : { line: element.line }),
-      ...(element.column === undefined ? {} : { column: element.column }),
-      element: context.trail.join("/"),
-    },
-  };
-  const position = element.line === undefined ? "" : ` (line ${element.line}, column ${element.column ?? 1})`;
-  return new ReadError(`${message}${position}`, [issue]);
+  return readError(code, message, ASI_SCHEMA, locationOf(element, context.path, context.trail.join("/")));
 }

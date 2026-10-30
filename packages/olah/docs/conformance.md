@@ -31,7 +31,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB4 | merged | 149 |
 | OB5 | merged | 77 |
 | OB6 | merged | 67 |
-| OB7 | pending | 185 |
+| OB7 | merged | 185 |
 | OB8 | merged | 59 |
 | OB9 | merged | 8 |
 | OB10 | pending | 43 |
@@ -248,7 +248,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | A2 | `qti-assessment-stimulus` | INFO §4.3 | asi | R X C | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A3 | `qti-assessment-stimulus-ref` | INFO §7.6 | asi | R X C | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A4 | `qti-item-body` | INFO §5.79 | asi | R X C | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A5 | `qti-stimulus-body` | INFO §5.137 | asi | R X C | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A5 | `qti-stimulus-body` | INFO §5.137 | asi | R X C | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A6 | `qti-stylesheet` | INFO §7.36 | asi | R X C | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A7 | `qti-assessment-item-ref` | INFO §5.6 | asi, delivery | R X S P C | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A8 | `qti-assessment-section` | INFO §4.2 | asi, delivery | R X S P C | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
@@ -374,78 +374,78 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | A128 | `qti-outcome-maximum` | INFO §2.11, 6.9.64 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A129 | `qti-outcome-minimum` | INFO §2.11, 6.9.63 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A130 | `qti-test-variables` | INFO §2.11, 6.9.41 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
-| A131 | `qti-associate-interaction` | INFO §5.8 | asi, interactions | R X S P C D | OB7 |  |
-| A132 | `qti-choice-interaction` | INFO §5.30 | asi, interactions | R X S P C D | OB7 |  |
-| A133 | `qti-custom-interaction` | INFO §5.36 | asi, interactions | R X S P C D | OB7 |  |
-| A134 | `qti-drawing-interaction` | INFO §5.44 | asi, interactions | R X S P C D | OB7 |  |
-| A135 | `qti-end-attempt-interaction` | INFO §5.45 | asi, interactions | R X S P C D | OB7 |  |
-| A136 | `qti-extended-text-interaction` | INFO §5.48 | asi, interactions | R X S P C D | OB7 |  |
-| A137 | `qti-gap-match-interaction` | INFO §5.57 | asi, interactions | R X S P C D | OB7 |  |
-| A138 | `qti-graphic-associate-interaction` | INFO §5.59 | asi, interactions | R X S P C D | OB7 |  |
-| A139 | `qti-graphic-gap-match-interaction` | INFO §5.60 | asi, interactions | R X S P C D | OB7 |  |
-| A140 | `qti-graphic-order-interaction` | INFO §5.61 | asi, interactions | R X S P C D | OB7 |  |
-| A141 | `qti-hotspot-interaction` | INFO §5.68 | asi, interactions | R X S P C D | OB7 |  |
-| A142 | `qti-hottext-interaction` | INFO §5.66 | asi, interactions | R X S P C D | OB7 |  |
-| A143 | `qti-inline-choice-interaction` | INFO §5.74 | asi, interactions | R X S P C D | OB7 |  |
-| A144 | `qti-match-interaction` | INFO §5.89 | asi, interactions | R X S P C D | OB7 |  |
-| A145 | `qti-media-interaction` | INFO §5.92 | asi, interactions | R X S P C D | OB7 |  |
-| A146 | `qti-order-interaction` | INFO §5.97 | asi, interactions | R X S P C D | OB7 |  |
-| A147 | `qti-portable-custom-interaction` | INFO §5.106 | asi, interactions | R X S P C D | OB7 |  |
-| A148 | `qti-position-object-interaction` | INFO §5.107 | asi, interactions | R X S P C D | OB7 |  |
-| A149 | `qti-position-object-stage` | INFO §5.108 | asi, interactions | R X S P C D | OB7 |  |
-| A150 | `qti-select-point-interaction` | INFO §5.128 | asi, interactions | R X S P C D | OB7 |  |
-| A151 | `qti-slider-interaction` | INFO §5.134 | asi, interactions | R X S P C D | OB7 |  |
-| A152 | `qti-text-entry-interaction` | INFO §5.162 | asi, interactions | R X S P C D | OB7 |  |
-| A153 | `qti-upload-interaction` | INFO §5.165 | asi, interactions | R X S P C D | OB7 |  |
-| A154 | `qti-associable-hotspot` | INFO §5.7 | asi, interactions, content | R X S P C | OB7 |  |
-| A155 | `qti-gap` | INFO §5.55 | asi, interactions, content | R X S P C | OB7 |  |
-| A156 | `qti-gap-img` | INFO §5.56 | asi, interactions, content | R X S P C | OB7 |  |
-| A157 | `qti-gap-text` | INFO §5.58 | asi, interactions, content | R X S P C | OB7 |  |
-| A158 | `qti-hotspot-choice` | INFO §5.67 | asi, interactions, content | R X S P C | OB7 |  |
-| A159 | `qti-hottext` | INFO §5.65 | asi, interactions, content | R X S P C | OB7 |  |
-| A160 | `qti-inline-choice` | INFO §5.73 | asi, interactions, content | R X S P C | OB7 |  |
-| A161 | `qti-label` | INFO §5.82 | asi, interactions, content | R X S P C | OB7 |  |
-| A162 | `qti-prompt` | INFO §5.109 | asi, interactions, content | R X S P C | OB7 |  |
-| A163 | `qti-simple-associable-choice` | INFO §5.131 | asi, interactions, content | R X S P C | OB7 |  |
-| A164 | `qti-simple-choice` | INFO §5.132 | asi, interactions, content | R X S P C | OB7 |  |
-| A165 | `qti-simple-match-set` | INFO §5.133 | asi, interactions, content | R X S P C | OB7 |  |
-| A166 | `qti-context-variable` | INFO §7.8 | asi, pci | R X S | OB7 |  |
-| A167 | `qti-interaction-markup` | INFO §5.76 | asi, pci | R X S | OB7 |  |
-| A168 | `qti-interaction-module` | INFO §7.17 | asi, pci | R X S | OB7 |  |
-| A169 | `qti-interaction-modules` | INFO §5.77 | asi, pci | R X S | OB7 |  |
-| A170 | `qti-template-variable` | INFO §7.38 | asi, pci | R X S | OB7 |  |
-| A171 | `qti-card` | INFO §5.26 | asi, content | R X S P C | OB7 |  |
-| A172 | `qti-card-entry` | INFO §5.27 | asi, content | R X S P C | OB7 |  |
-| A173 | `qti-catalog` | INFO §5.28 | asi, content | R X S P C | OB7 |  |
-| A174 | `qti-catalog-info` | INFO §5.29 | asi, content | R X S P C | OB7 |  |
-| A175 | `qti-content-body` | INFO §5.50, 5.51, 5.121, 5.123, 5.147, 5.158, 5.161 | asi, content | R X S P C | OB7 |  |
-| A176 | `qti-feedback-block` | INFO §5.49, 5.148 | asi, content | R X S P C | OB7 |  |
-| A177 | `qti-feedback-inline` | INFO §5.52 | asi, content | R X S P C | OB7 |  |
-| A178 | `qti-file-href` | INFO §7.14, 7.15 | asi, content | R X S P C | OB7 |  |
-| A179 | `qti-html-content` | INFO §5.63 | asi, content | R X S P C | OB7 |  |
-| A180 | `qti-modal-feedback` | INFO §5.93 | asi, content | R X S P C | OB7 |  |
-| A181 | `qti-printed-variable` | INFO §7.30 | asi, content | R X S P C | OB7 |  |
-| A182 | `qti-rubric-block` | INFO §5.120, 5.160 | asi, content | R X S P C | OB7 |  |
-| A183 | `qti-template-block` | INFO §5.122, 5.145 | asi, content | R X S P C | OB7 |  |
-| A184 | `qti-template-inline` | INFO §5.124, 5.155 | asi, content | R X S P C | OB7 |  |
-| A185 | `qti-test-feedback` | INFO §5.157 | asi, content | R X S P C | OB7 |  |
-| A186 | `qti-calculator` | INFO §5.24 | asi, content | R X U | OB7 |  |
-| A187 | `qti-calculator-info` | INFO §5.80 | asi, content | R X U | OB7 |  |
-| A188 | `qti-calculator-type` | INFO §5.24 | asi, content | R X U | OB7 |  |
-| A189 | `qti-companion-materials-info` | INFO §5.33 | asi, content | R X U | OB7 |  |
-| A190 | `qti-description` | INFO §5.24, 5.110, 5.126 | asi, content | R X U | OB7 |  |
-| A191 | `qti-digital-material` | INFO §5.80 | asi, content | R X U | OB7 |  |
-| A192 | `qti-increment-si` | INFO §5.70 | asi, content | R X U | OB7 |  |
-| A193 | `qti-increment-us` | INFO §5.71 | asi, content | R X U | OB7 |  |
-| A194 | `qti-major-increment` | INFO §7.31, 7.32, 7.35, 7.42 | asi, content | R X U | OB7 |  |
-| A195 | `qti-minimum-length` | INFO §5.127, 5.164 | asi, content | R X U | OB7 |  |
-| A196 | `qti-minor-increment` | INFO §7.31, 7.32, 7.35, 7.42 | asi, content | R X U | OB7 |  |
-| A197 | `qti-physical-material` | INFO §5.33 | asi, content | R X U | OB7 |  |
-| A198 | `qti-protractor` | INFO §5.110 | asi, content | R X U | OB7 |  |
-| A199 | `qti-resource-icon` | INFO §5.80 | asi, content | R X U | OB7 |  |
-| A200 | `qti-rule` | INFO §5.126 | asi, content | R X U | OB7 |  |
-| A201 | `qti-rule-system-si` | INFO §5.127 | asi, content | R X U | OB7 |  |
-| A202 | `qti-rule-system-us` | INFO §5.164 | asi, content | R X U | OB7 |  |
+| A131 | `qti-associate-interaction` | INFO §5.8 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A132 | `qti-choice-interaction` | INFO §5.30 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A133 | `qti-custom-interaction` | INFO §5.36 | asi, interactions | R X S P C D | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A134 | `qti-drawing-interaction` | INFO §5.44 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A135 | `qti-end-attempt-interaction` | INFO §5.45 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A136 | `qti-extended-text-interaction` | INFO §5.48 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A137 | `qti-gap-match-interaction` | INFO §5.57 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A138 | `qti-graphic-associate-interaction` | INFO §5.59 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A139 | `qti-graphic-gap-match-interaction` | INFO §5.60 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A140 | `qti-graphic-order-interaction` | INFO §5.61 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A141 | `qti-hotspot-interaction` | INFO §5.68 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A142 | `qti-hottext-interaction` | INFO §5.66 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A143 | `qti-inline-choice-interaction` | INFO §5.74 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A144 | `qti-match-interaction` | INFO §5.89 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A145 | `qti-media-interaction` | INFO §5.92 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A146 | `qti-order-interaction` | INFO §5.97 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A147 | `qti-portable-custom-interaction` | INFO §5.106 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A148 | `qti-position-object-interaction` | INFO §5.107 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A149 | `qti-position-object-stage` | INFO §5.108 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A150 | `qti-select-point-interaction` | INFO §5.128 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A151 | `qti-slider-interaction` | INFO §5.134 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A152 | `qti-text-entry-interaction` | INFO §5.162 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A153 | `qti-upload-interaction` | INFO §5.165 | asi, interactions | R X S P C D | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A154 | `qti-associable-hotspot` | INFO §5.7 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A155 | `qti-gap` | INFO §5.55 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A156 | `qti-gap-img` | INFO §5.56 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A157 | `qti-gap-text` | INFO §5.58 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A158 | `qti-hotspot-choice` | INFO §5.67 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A159 | `qti-hottext` | INFO §5.65 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A160 | `qti-inline-choice` | INFO §5.73 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A161 | `qti-label` | INFO §5.82 | asi, interactions, content | R X S P C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A162 | `qti-prompt` | INFO §5.109 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A163 | `qti-simple-associable-choice` | INFO §5.131 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A164 | `qti-simple-choice` | INFO §5.132 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A165 | `qti-simple-match-set` | INFO §5.133 | asi, interactions, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A166 | `qti-context-variable` | INFO §7.8 | asi, pci | R X S | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A167 | `qti-interaction-markup` | INFO §5.76 | asi, pci | R X S | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A168 | `qti-interaction-module` | INFO §7.17 | asi, pci | R X S | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A169 | `qti-interaction-modules` | INFO §5.77 | asi, pci | R X S | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A170 | `qti-template-variable` | INFO §7.38 | asi, pci | R X S | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A171 | `qti-card` | INFO §5.26 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A172 | `qti-card-entry` | INFO §5.27 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A173 | `qti-catalog` | INFO §5.28 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A174 | `qti-catalog-info` | INFO §5.29 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A175 | `qti-content-body` | INFO §5.50, 5.51, 5.121, 5.123, 5.147, 5.158, 5.161 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A176 | `qti-feedback-block` | INFO §5.49, 5.148 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A177 | `qti-feedback-inline` | INFO §5.52 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A178 | `qti-file-href` | INFO §7.14, 7.15 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A179 | `qti-html-content` | INFO §5.63 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A180 | `qti-modal-feedback` | INFO §5.93 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A181 | `qti-printed-variable` | INFO §7.30 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A182 | `qti-rubric-block` | INFO §5.120, 5.160 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A183 | `qti-template-block` | INFO §5.122, 5.145 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A184 | `qti-template-inline` | INFO §5.124, 5.155 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A185 | `qti-test-feedback` | INFO §5.157 | asi, content | R X S P C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A186 | `qti-calculator` | INFO §5.24 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A187 | `qti-calculator-info` | INFO §5.80 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A188 | `qti-calculator-type` | INFO §5.24 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A189 | `qti-companion-materials-info` | INFO §5.33 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A190 | `qti-description` | INFO §5.24, 5.110, 5.126 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A191 | `qti-digital-material` | INFO §5.80 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A192 | `qti-increment-si` | INFO §5.70 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A193 | `qti-increment-us` | INFO §5.71 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A194 | `qti-major-increment` | INFO §7.31, 7.32, 7.35, 7.42 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A195 | `qti-minimum-length` | INFO §5.127, 5.164 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A196 | `qti-minor-increment` | INFO §7.31, 7.32, 7.35, 7.42 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A197 | `qti-physical-material` | INFO §5.33 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A198 | `qti-protractor` | INFO §5.110 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A199 | `qti-resource-icon` | INFO §5.80 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A200 | `qti-rule` | INFO §5.126 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A201 | `qti-rule-system-si` | INFO §5.127 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A202 | `qti-rule-system-us` | INFO §5.164 | asi, content | R X U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 
 ### S: Common attributes and extension points
 
@@ -471,104 +471,104 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| H1 | `a` | ASI XSD | asi | R X C | OB7 |  |
-| H2 | `abbr` | ASI XSD | asi | R X C | OB7 |  |
-| H3 | `acronym` | ASI XSD | asi | R X C | OB7 |  |
-| H4 | `address` | ASI XSD | asi | R X C | OB7 |  |
-| H5 | `article` | ASI XSD | asi | R X C | OB7 |  |
-| H6 | `aside` | ASI XSD | asi | R X C | OB7 |  |
-| H7 | `audio` | ASI XSD | asi | R X C | OB7 |  |
-| H8 | `b` | ASI XSD | asi | R X C | OB7 |  |
-| H9 | `bdi` | ASI XSD | asi | R X C | OB7 |  |
-| H10 | `bdo` | ASI XSD | asi | R X C | OB7 |  |
-| H11 | `big` | ASI XSD | asi | R X C | OB7 |  |
-| H12 | `blockquote` | ASI XSD | asi | R X C | OB7 |  |
-| H13 | `br` | ASI XSD | asi | R X C | OB7 |  |
-| H14 | `caption` | ASI XSD | asi | R X C | OB7 |  |
-| H15 | `cite` | ASI XSD | asi | R X C | OB7 |  |
-| H16 | `code` | ASI XSD | asi | R X C | OB7 |  |
-| H17 | `col` | ASI XSD | asi | R X C | OB7 |  |
-| H18 | `colgroup` | ASI XSD | asi | R X C | OB7 |  |
-| H19 | `dd` | ASI XSD | asi | R X C | OB7 |  |
-| H20 | `details` | ASI XSD | asi | R X C | OB7 |  |
-| H21 | `dfn` | ASI XSD | asi | R X C | OB7 |  |
-| H22 | `div` | ASI XSD | asi | R X C | OB7 |  |
-| H23 | `dl` | ASI XSD | asi | R X C | OB7 |  |
-| H24 | `dt` | ASI XSD | asi | R X C | OB7 |  |
-| H25 | `em` | ASI XSD | asi | R X C | OB7 |  |
-| H26 | `figcaption` | ASI XSD | asi | R X C | OB7 |  |
-| H27 | `figure` | ASI XSD | asi | R X C | OB7 |  |
-| H28 | `footer` | ASI XSD | asi | R X C | OB7 |  |
-| H29 | `h1` | ASI XSD | asi | R X C | OB7 |  |
-| H30 | `h2` | ASI XSD | asi | R X C | OB7 |  |
-| H31 | `h3` | ASI XSD | asi | R X C | OB7 |  |
-| H32 | `h4` | ASI XSD | asi | R X C | OB7 |  |
-| H33 | `h5` | ASI XSD | asi | R X C | OB7 |  |
-| H34 | `h6` | ASI XSD | asi | R X C | OB7 |  |
-| H35 | `header` | ASI XSD | asi | R X C | OB7 |  |
-| H36 | `hr` | ASI XSD | asi | R X C | OB7 |  |
-| H37 | `i` | ASI XSD | asi | R X C | OB7 |  |
-| H38 | `img` | ASI XSD | asi | R X C | OB7 |  |
-| H39 | `kbd` | ASI XSD | asi | R X C | OB7 |  |
-| H40 | `label` | ASI XSD | asi | R X C | OB7 |  |
-| H41 | `li` | ASI XSD | asi | R X C | OB7 |  |
-| H42 | `nav` | ASI XSD | asi | R X C | OB7 |  |
-| H43 | `object` | ASI XSD | asi | R X C | OB7 |  |
-| H44 | `ol` | ASI XSD | asi | R X C | OB7 |  |
-| H45 | `p` | ASI XSD | asi | R X C | OB7 |  |
-| H46 | `param` | ASI XSD | asi | R X C | OB7 |  |
-| H47 | `picture` | ASI XSD | asi | R X C | OB7 |  |
-| H48 | `pre` | ASI XSD | asi | R X C | OB7 |  |
-| H49 | `q` | ASI XSD | asi | R X C | OB7 |  |
-| H50 | `rb` | ASI XSD | asi | R X C | OB7 |  |
-| H51 | `rp` | ASI XSD | asi | R X C | OB7 |  |
-| H52 | `rt` | ASI XSD | asi | R X C | OB7 |  |
-| H53 | `rtc` | ASI XSD | asi | R X C | OB7 |  |
-| H54 | `ruby` | ASI XSD | asi | R X C | OB7 |  |
-| H55 | `samp` | ASI XSD | asi | R X C | OB7 |  |
-| H56 | `section` | ASI XSD | asi | R X C | OB7 |  |
-| H57 | `small` | ASI XSD | asi | R X C | OB7 |  |
-| H58 | `source` | ASI XSD | asi | R X C | OB7 |  |
-| H59 | `span` | ASI XSD | asi | R X C | OB7 |  |
-| H60 | `strong` | ASI XSD | asi | R X C | OB7 |  |
-| H61 | `sub` | ASI XSD | asi | R X C | OB7 |  |
-| H62 | `summary` | ASI XSD | asi | R X C | OB7 |  |
-| H63 | `sup` | ASI XSD | asi | R X C | OB7 |  |
-| H64 | `table` | ASI XSD | asi | R X C | OB7 |  |
-| H65 | `tbody` | ASI XSD | asi | R X C | OB7 |  |
-| H66 | `td` | ASI XSD | asi | R X C | OB7 |  |
-| H67 | `template` | ASI XSD | asi | R X C | OB7 |  |
-| H68 | `tfoot` | ASI XSD | asi | R X C | OB7 |  |
-| H69 | `th` | ASI XSD | asi | R X C | OB7 |  |
-| H70 | `thead` | ASI XSD | asi | R X C | OB7 |  |
-| H71 | `tr` | ASI XSD | asi | R X C | OB7 |  |
-| H72 | `track` | ASI XSD | asi | R X C | OB7 |  |
-| H73 | `tt` | ASI XSD | asi | R X C | OB7 |  |
-| H74 | `ul` | ASI XSD | asi | R X C | OB7 |  |
-| H75 | `var` | ASI XSD | asi | R X C | OB7 |  |
-| H76 | `video` | ASI XSD | asi | R X C | OB7 |  |
+| H1 | `a` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H2 | `abbr` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H3 | `acronym` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H4 | `address` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H5 | `article` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H6 | `aside` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H7 | `audio` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H8 | `b` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H9 | `bdi` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H10 | `bdo` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H11 | `big` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H12 | `blockquote` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H13 | `br` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H14 | `caption` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H15 | `cite` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H16 | `code` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H17 | `col` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H18 | `colgroup` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H19 | `dd` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H20 | `details` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H21 | `dfn` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H22 | `div` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H23 | `dl` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H24 | `dt` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H25 | `em` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H26 | `figcaption` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H27 | `figure` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H28 | `footer` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H29 | `h1` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H30 | `h2` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H31 | `h3` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H32 | `h4` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H33 | `h5` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H34 | `h6` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H35 | `header` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H36 | `hr` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H37 | `i` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H38 | `img` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H39 | `kbd` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H40 | `label` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H41 | `li` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H42 | `nav` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H43 | `object` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H44 | `ol` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H45 | `p` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H46 | `param` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H47 | `picture` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H48 | `pre` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H49 | `q` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H50 | `rb` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H51 | `rp` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H52 | `rt` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H53 | `rtc` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H54 | `ruby` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H55 | `samp` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H56 | `section` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H57 | `small` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H58 | `source` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H59 | `span` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H60 | `strong` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H61 | `sub` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H62 | `summary` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H63 | `sup` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H64 | `table` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H65 | `tbody` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H66 | `td` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H67 | `template` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H68 | `tfoot` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H69 | `th` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H70 | `thead` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H71 | `tr` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H72 | `track` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H73 | `tt` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H74 | `ul` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H75 | `var` | ASI XSD | asi | R X C | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| H76 | `video` | ASI XSD | asi | R X C | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 
 ### M: MathML, SSML, XInclude, PLS and CSS
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| M1 | `m3:math` (MathML 3 subtree) | INFO §2.3.3, INFO §9.4.2, INFO §5.151.5 | asi, content | R X S | OB7 |  |
-| M2 | `ssml11:speak` | INFO §2.13.2, INFO §9.4.3 | asi | R X | OB7 |  |
-| M3 | `ssml11:audio` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M4 | `ssml11:break` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M5 | `ssml11:emphasis` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M6 | `ssml11:mark` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M7 | `ssml11:p` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M8 | `ssml11:phoneme` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M9 | `ssml11:prosody` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M10 | `ssml11:s` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M11 | `ssml11:say-as` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M12 | `ssml11:sub` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M13 | `ssml11:voice` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M14 | `xi:include` (`href`, `parse`, `xpointer`, `encoding`, `accept`, `accept-language`) | INFO §2.12, INFO §9.4.1, XInclude.xsd | xml, asi | R X S N | OB3 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
+| M1 | `m3:math` (MathML 3 subtree) | INFO §2.3.3, INFO §9.4.2, INFO §5.151.5 | asi, content | R X S | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M2 | `ssml11:speak` | INFO §2.13.2, INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M3 | `ssml11:audio` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M4 | `ssml11:break` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M5 | `ssml11:emphasis` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M6 | `ssml11:mark` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M7 | `ssml11:p` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M8 | `ssml11:phoneme` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M9 | `ssml11:prosody` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M10 | `ssml11:s` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M11 | `ssml11:say-as` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M12 | `ssml11:sub` | INFO §9.4.3 | asi | R X | OB7 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M13 | `ssml11:voice` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M14 | `xi:include` (`href`, `parse`, `xpointer`, `encoding`, `accept`, `accept-language`) | INFO §2.12, INFO §9.4.1, XInclude.xsd | xml, asi | R X S N | OB3 | [asi.test.ts](../test/asi.test.ts), [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | M15 | `xi:fallback` | XInclude.xsd | xml | S N | OB3 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
-| M16 | PLS pronunciation lexicons (resource type `pls`) | BIND §8 | package | U | OB7 |  |
-| M17 | CSS 2.1/3 stylesheets (`qti-stylesheet`, resource types `css2`, `css3`) | INFO §2.3.5, BIND §8 | asi, package | R U | OB7 |  |
+| M16 | PLS pronunciation lexicons (resource type `pls`) | BIND §8 | package | U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M17 | CSS 2.1/3 stylesheets (`qti-stylesheet`, resource types `css2`, `css3`) | INFO §2.3.5, BIND §8 | asi, package | R U | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 
 ### T: Values, base types, cardinalities and built-in variables
 
@@ -708,31 +708,31 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| W1 | `ARIAAutoCompleteEnum` | INFO §8.1 | asi | V X | OB7 |  |
-| W2 | `ARIACheckedEnum` | INFO §8.2 | asi | V X | OB7 |  |
-| W3 | `ARIACurrentEnum` | INFO §8.3 | asi | V X | OB7 |  |
-| W4 | `ARIAExpandedEnum` | INFO §8.4 | asi | V X | OB7 |  |
-| W5 | `ARIAInvalidEnum` | INFO §8.5 | asi | V X | OB7 |  |
-| W6 | `ARIALiveValueEnum` | INFO §8.6 | asi | V X | OB7 |  |
-| W7 | `ARIAOrientationValueEnum` | INFO §8.7 | asi | V X | OB7 |  |
-| W8 | `ARIAPressedEnum` | INFO §8.8 | asi | V X | OB7 |  |
-| W9 | `ARIARoleValue` | INFO §8.9 | asi | V X | OB7 |  |
-| W10 | `ARIASelectedEnum` | INFO §8.10 | asi | V X | OB7 |  |
-| W11 | `ARIASortEnum` | INFO §8.11 | asi | V X | OB7 |  |
-| W12 | `AlignEnum` | INFO §8.12 | asi | V X | OB7 |  |
+| W1 | `ARIAAutoCompleteEnum` | INFO §8.1 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W2 | `ARIACheckedEnum` | INFO §8.2 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W3 | `ARIACurrentEnum` | INFO §8.3 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W4 | `ARIAExpandedEnum` | INFO §8.4 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W5 | `ARIAInvalidEnum` | INFO §8.5 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W6 | `ARIALiveValueEnum` | INFO §8.6 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W7 | `ARIAOrientationValueEnum` | INFO §8.7 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W8 | `ARIAPressedEnum` | INFO §8.8 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W9 | `ARIARoleValue` | INFO §8.9 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W10 | `ARIASelectedEnum` | INFO §8.10 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W11 | `ARIASortEnum` | INFO §8.11 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W12 | `AlignEnum` | INFO §8.12 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W13 | `BaseTypeEnum` | INFO §8.13 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
-| W14 | `CORSSettingsEnum` | INFO §8.14 | asi | V X | OB7 |  |
+| W14 | `CORSSettingsEnum` | INFO §8.14 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W15 | `CalculatorTypeEnum` | INFO §8.15 | content | V X | OB10 |  |
 | W16 | `CardinalityEnum` | INFO §8.16 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
-| W17 | `DIR` | INFO §8.17 | asi | V X | OB7 |  |
+| W17 | `DIR` | INFO §8.17 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W18 | `ExternalScoredEnum` | INFO §8.18 | delivery, results | V X | OB16 |  |
-| W19 | `KindValueEnum` | INFO §8.19 | asi | V X | OB7 |  |
+| W19 | `KindValueEnum` | INFO §8.19 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W20 | `MathConstantsEnum` | INFO §8.20 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W21 | `MathOperatorNameEnum` | INFO §8.21 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W22 | `NavigationModeEnum` | INFO §8.22 | delivery | V X | OB13b |  |
 | W23 | `OrientationEnum` | INFO §8.23 | interactions | V X | OB10 |  |
-| W24 | `ParamTypeEnum` | INFO §8.24 | asi | V X | OB7 |  |
-| W25 | `PreLoadValueEnum` | INFO §8.25 | asi | V X | OB7 |  |
+| W24 | `ParamTypeEnum` | INFO §8.24 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W25 | `PreLoadValueEnum` | INFO §8.25 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W26 | `RoundingModeEnum` | INFO §8.26 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W27 | `SIRadialUnitTypeEnum` | INFO §8.27 | content | V X | OB10 |  |
 | W28 | `SIUnitTypeEnum` | INFO §8.28 | content | V X | OB10 |  |
@@ -741,21 +741,21 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W31 | `StatsOperatorNameEnum` | INFO §8.31 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W32 | `SubmissionModeEnum` | INFO §8.32 | delivery | V X | OB13b |  |
 | W33 | `SupportEnum` | INFO §8.33 | content, pnp | V X | OB10 |  |
-| W34 | `SuppressTTSEnum` | INFO §8.34 | asi | V X | OB7 |  |
-| W35 | `TableCellScopeEnum` | INFO §8.35 | asi | V X | OB7 |  |
+| W34 | `SuppressTTSEnum` | INFO §8.34 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| W35 | `TableCellScopeEnum` | INFO §8.35 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W36 | `TestFeedbackAccessEnum` | INFO §8.36 | content | V X | OB10 |  |
 | W37 | `TextFormatEnum` | INFO §8.37 | interactions | V X | OB10 |  |
 | W38 | `ToleranceModeEnum` | INFO §8.38 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W39 | `USRadialUnitTypeEnum` | INFO §8.39 | content | V X | OB10 |  |
 | W40 | `USUnitTypeEnum` | INFO §8.40 | content | V X | OB10 |  |
 | W41 | `UseEnum` | INFO §8.41 | content | V X | OB10 |  |
-| W42 | `ValignEnum` | INFO §8.42 | asi | V X | OB7 |  |
+| W42 | `ValignEnum` | INFO §8.42 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W43 | `IdentifierList` | INFO §9.1.1 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W44 | `IntegerList` | INFO §9.1.2 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W45 | `MimeTypeList` | INFO §9.1.3 | interactions | V X | OB10 |  |
-| W46 | `StringList` | INFO §9.1.4 | asi | V X | OB7 |  |
+| W46 | `StringList` | INFO §9.1.4 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W47 | `ToleranceList` | INFO §9.1.5 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| W48 | `ARIARelevantList` | INFO §9.2.1 | asi | V X | OB7 |  |
+| W48 | `ARIARelevantList` | INFO §9.2.1 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W49 | `ViewEnum` | INFO §9.2.2 | content | V X | OB10 |  |
 | W50 | `FloatOrVariableRef` | INFO §9.3.1 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W51 | `IntOrIdentifier` | INFO §9.3.2 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
@@ -1186,7 +1186,6 @@ Differences between olah and Longsight qti3-core that the specification settles.
 | packaging/ccPackage/testitems/QUE_104051.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
 | packaging/BBQsTest/id-bd44a757f562/SineRule-001.xml (no responses) | (acceptance) | The item uses the custom operator org.qtitools.mathassess.CasProcess, which is not registered; olah raises a ProcessingError (G7) where Longsight goes on. | INFO §2.11.3.2 |
 | packaging/BBQsTest/id-bd44a757f562/SineRule-001.xml (correct responses) | (acceptance) | The item uses the custom operator org.qtitools.mathassess.CasProcess, which is not registered; olah raises a ProcessingError (G7) where Longsight goes on. | INFO §2.11.3.2 |
-| packaging/items/data-attributes.xml (no responses) | (acceptance) | The item's rubric block has no use, which INFO §5.120.1 requires; validate reports content, and olah runs the processing, which the rubric block does not affect. | INFO §5.120.1 |
 | packaging/items/feedback_adaptive.xml (no responses) | (acceptance) | Longsight rejects the item because one rule sets the multiple FEEDBACK to a single value; olah checks a value when its rule runs (D5), which this case does not reach, and validate reports the rule. | INFO §5.130.2 |
 | packaging/items/mc_calc3.xml (no responses) | (acceptance) | qti-index names its n with the template variable i, which IntOrIdentifier allows; Longsight rejects the reference. | INFO §5.72, §2.7.2 |
 | packaging/items/mc_stat2.xml (no responses) | (acceptance) | qti-repeat names its number-repeats with the template variable n, which IntOrIdentifier allows; Longsight rejects the reference. | INFO §5.113.1, §2.7.2 |

@@ -22,7 +22,7 @@ import {
   type XmlElement,
 } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
-import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./metadata-generators.js";
+import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
 
 let schemas: SchemaSet;
 

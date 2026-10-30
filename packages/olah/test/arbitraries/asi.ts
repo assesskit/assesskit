@@ -1,16 +1,26 @@
 import fc from "fast-check";
-import { ASI_NAMESPACE, type AsiDocument } from "../src/asi/index.js";
-import type { AttributeType, SlotDef } from "../src/asi/table.js";
-import { kindOf, type SlotInfo, type TypeInfo, typeNamed } from "../src/asi/type-index.js";
-import { XINCLUDE_NAMESPACE, type XmlElement, type XmlNode } from "../src/xml/index.js";
+import type { AsiDocument } from "../../src/asi/index.js";
+import type { AttributeType, SlotDef } from "../../src/asi/table.js";
+import { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "../../src/asi/type-index.js";
+import { isRecord } from "../../src/checks.js";
+import {
+  XINCLUDE_NAMESPACE,
+  XML_NAMESPACE,
+  type XmlAttribute,
+  type XmlElement,
+  type XmlNode,
+} from "../../src/xml/index.js";
 
 /** A model as the arbitraries build it: the properties that the element table gives a type. */
 export type GeneratedModel = Record<string, unknown>;
 
 const MATHML = "http://www.w3.org/1998/Math/MathML";
+const SSML = "http://www.w3.org/2001/10/synthesis";
 const EXTENSION_NAMESPACE = "urn:example:extension";
+/** The fewest elements a place accepts for the arbitraries to generate more members of it than of the others. */
+const FLOW_SPREAD_MINIMUM = 20;
 /** How deep expressions and sections nest in a generated document. */
-const DEFAULT_DEPTH = 3;
+const DEFAULT_DEPTH = 4;
 
 const identifier = fc.stringMatching(/^[A-Za-z_][A-Za-z0-9_-]{0,7}$/);
 /** An identifier that no other generated identifier equals in practice, for the attributes of type `xs:ID`. */
@@ -71,21 +81,31 @@ function element(
   name: string,
   prefix: string | undefined,
   children: readonly XmlNode[],
+  attributes: readonly XmlAttribute[] = [],
 ): XmlElement {
-  return { kind: "element", namespace, name, ...(prefix === undefined ? {} : { prefix }), attributes: [], children };
+  return { kind: "element", namespace, name, ...(prefix === undefined ? {} : { prefix }), attributes, children };
 }
 
-/** Block elements with inline content: the flow content that every flow type of the schema accepts. */
-const blocks: fc.Arbitrary<XmlNode[]> = fc.array(
-  fc
-    .tuple(nonEmptyText, fc.option(nonEmptyText, { nil: undefined }), fc.boolean())
-    .map(([first, second, math]): XmlNode => {
-      const inline: XmlNode[] = [{ kind: "text", value: first }];
-      if (second !== undefined) inline.push(element(ASI_NAMESPACE, "b", undefined, [{ kind: "text", value: second }]));
-      if (math) inline.push(element(MATHML, "math", "m", []));
-      return element(ASI_NAMESPACE, "p", undefined, inline);
-    }),
-  { minLength: 1, maxLength: 3 },
+const attributeOf = (name: string, value: string): XmlAttribute => ({ namespace: "", name, value });
+
+/** Valid samples of the MathML and SSML elements that flow content takes, by {@link foreignName}. */
+const EMBEDDED: ReadonlyMap<string, XmlElement> = new Map(
+  [
+    element(MATHML, "math", "m", [element(MATHML, "mi", "m", [{ kind: "text", value: "x" }])]),
+    ...["audio", "break", "emphasis", "mark", "p", "prosody", "s", "voice"].map((name) =>
+      element(SSML, name, "ssml", [], name === "mark" ? [attributeOf("name", "m")] : []),
+    ),
+    element(SSML, "phoneme", "ssml", [], [attributeOf("ph", "x")]),
+    element(SSML, "say-as", "ssml", [], [attributeOf("interpret-as", "cardinal")]),
+    element(SSML, "sub", "ssml", [], [attributeOf("alias", "a")]),
+    element(
+      SSML,
+      "speak",
+      "ssml",
+      [],
+      [attributeOf("version", "1.1"), { namespace: XML_NAMESPACE, prefix: "xml", name: "lang", value: "en" }],
+    ),
+  ].map((sample) => [foreignName(sample.namespace, sample.name), sample]),
 );
 
 const foreignElement = nonEmptyText.map((value) =>
@@ -103,6 +123,11 @@ const extensionAttribute = (namespaces: "any" | "other") =>
         ? { namespace: "", name: `data-${name}`, value }
         : { namespace: EXTENSION_NAMESPACE, prefix: "x", name, value },
     );
+
+/** Whether an attribute refers to the `id` of an element, which a generated document cannot know. */
+function refersToIdentifier(type: AttributeType): boolean {
+  return type.kind === "list" ? refersToIdentifier(type.item) : type.kind === "string" && type.format === "idref";
+}
 
 /** Whether a type can be built without any required child, which ends a recursion. */
 function isTerminal(info: TypeInfo): boolean {
@@ -128,24 +153,53 @@ class Builder {
     const terminal = accepts.filter((accept) => isTerminal(typeNamed(accept.type)));
     const pool = depth > 0 || terminal.length === 0 ? accepts : terminal;
     const members = pool.map((accept) => this.model(accept.type, accept.element, Math.max(depth - 1, 0)));
-    return fc.oneof(...members, ...(slot.def.include === true ? [includeElement] : []));
+    const embedded = [...slot.foreign].flatMap((name) => EMBEDDED.get(name) ?? []).map((sample) => fc.constant(sample));
+    return fc.oneof(...members, ...embedded, ...(slot.def.include === true ? [includeElement] : []));
+  }
+
+  /**
+   * Adds runs of text between the elements of a slot that takes text, but never two runs in a row. The elements are in the
+   * order the slot lists them: the schema orders the elements of some mixed content, such as the sources before the tracks
+   * of a video, and the slot only keeps them in one array.
+   */
+  private withText(slot: SlotInfo, members: fc.Arbitrary<unknown[]>): fc.Arbitrary<unknown[]> {
+    const order = [...slot.byKind.keys()];
+    const rank = (member: unknown) => (isRecord(member) ? order.indexOf(String(member.kind)) : -1);
+    return members.chain((unsorted) => {
+      const elements = unsorted.toSorted((a, b) => rank(a) - rank(b));
+      return fc
+        .array(fc.option(nonEmptyText, { nil: undefined }), {
+          minLength: elements.length + 1,
+          maxLength: elements.length + 1,
+        })
+        .map((runs) =>
+          runs.flatMap((run, index) => [
+            ...(run === undefined ? [] : [{ kind: "text", value: run }]),
+            ...(index < elements.length ? [elements[index]] : []),
+          ]),
+        );
+    });
   }
 
   private slot(slot: SlotInfo, depth: number): fc.Arbitrary<unknown> {
     const { min, max } = slot.def;
     if (max === 1) return this.member(slot, depth);
     // At depth 0 a list that may be empty is empty, which ends the recursion of sections and rules.
-    if (depth <= 0 && min === 0) return fc.constant([]);
-    const limit = max === "unbounded" ? min + 2 : Math.min(max, min + 2);
-    return fc.array(this.member(slot, depth), { minLength: min, maxLength: depth > 0 ? limit : min });
+    // Flow content has dozens of elements to choose from, so it gets more members for each to turn up.
+    const spread = slot.def.property === "children" && slot.def.accepts.length > FLOW_SPREAD_MINIMUM ? 5 : 2;
+    const limit = max === "unbounded" ? min + spread : Math.min(max, min + spread);
+    const members =
+      depth <= 0 && min === 0
+        ? fc.constant<unknown[]>([])
+        : fc.array(this.member(slot, depth), { minLength: min, maxLength: depth > 0 ? limit : min });
+    return slot.def.text === true ? this.withText(slot, members) : members;
   }
 
   private build(info: TypeInfo, elementName: string, depth: number): fc.Arbitrary<GeneratedModel> {
     const entries: Record<string, fc.Arbitrary<unknown>> = { kind: fc.constant(kindOf(elementName)) };
     const required = ["kind"];
-    for (const definition of info.def.attributes) {
-      const isReference = definition.type.kind === "string" && definition.type.format === "idref";
-      if (isReference && definition.use === "optional") continue;
+    for (const definition of info.attributeList) {
+      if (refersToIdentifier(definition.type) && definition.use === "optional") continue;
       entries[definition.property] = valueArbitrary(definition.type);
       if (definition.use === "required") required.push(definition.property);
     }
@@ -165,9 +219,6 @@ class Builder {
     if (content.kind === "text") {
       entries.value = valueArbitrary(content.value);
       required.push("value");
-    } else if (content.kind === "flow") {
-      entries.children = blocks;
-      required.push("children");
     } else if (content.kind === "slots") {
       this.addSlots(info, entries, required, depth);
       if (content.wildcard !== undefined) {

@@ -112,7 +112,7 @@ if (document.kind === "item") {
 | Import                          | Contents                                                                                                                                                                                                          |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@luthfanwakan/olah`            | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                                                                                |
-| `@luthfanwakan/olah/asi`        | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`                                                                  |
+| `@luthfanwakan/olah/asi`        | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment and content element, `BodyNode`, `Interaction`, `Expression`, `readScoreCovers`, `scoreCoversBlock`                                           |
 | `@luthfanwakan/olah/results`    | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                                                                       |
 | `@luthfanwakan/olah/usage`      | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                                                                               |
 | `@luthfanwakan/olah/pnp`        | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                                                                                |
@@ -131,7 +131,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 ## Documentation
 
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
-- [ASI](docs/asi.md): the model of assessment documents, the reader and the writer, the covers of external scores, and the element table.
+- [ASI](docs/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
 - [Processing](docs/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.

@@ -39,7 +39,7 @@ import {
   type XmlElement,
   type XmlNode,
 } from "../src/index.js";
-import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./metadata-generators.js";
+import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
 
 const QMD = `xmlns="${QTI_METADATA_NAMESPACE}"`;
 const CSM = `xmlns="${CSM_NAMESPACE}"`;
@@ -652,32 +652,80 @@ function derive(parts: ItemParts = {}): QtiMetadata {
 
 const response = (identifier: string, correct = false): string =>
   `<qti-response-declaration identifier="${identifier}" cardinality="single" base-type="identifier">${correct ? "<qti-correct-response><qti-value>A</qti-value></qti-correct-response>" : ""}</qti-response-declaration>`;
-const choice = '<qti-choice-interaction response-identifier="RESPONSE" max-choices="1"/>';
+const choice =
+  '<qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">a</qti-simple-choice></qti-choice-interaction>';
+const textEntry = (identifier: string): string =>
+  `<p><qti-text-entry-interaction response-identifier="${identifier}"/></p>`;
 
-/** The element of each interaction type, as the ASI schema names them. */
-const ELEMENT_OF_TYPE: readonly (readonly [string, string])[] = [
-  ["qti-associate-interaction", "associateInteraction"],
-  ["qti-choice-interaction", "choiceInteraction"],
-  ["qti-custom-interaction", "customInteraction"],
-  ["qti-drawing-interaction", "drawingInteraction"],
-  ["qti-end-attempt-interaction", "endAttemptInteraction"],
-  ["qti-extended-text-interaction", "extendedTextInteraction"],
-  ["qti-gap-match-interaction", "gapMatchInteraction"],
-  ["qti-graphic-associate-interaction", "graphicAssociateInteraction"],
-  ["qti-graphic-gap-match-interaction", "graphicGapMatchInteraction"],
-  ["qti-graphic-order-interaction", "graphicOrderInteraction"],
-  ["qti-hotspot-interaction", "hotspotInteraction"],
-  ["qti-hottext-interaction", "hottextInteraction"],
-  ["qti-inline-choice-interaction", "inlineChoiceInteraction"],
-  ["qti-match-interaction", "matchInteraction"],
-  ["qti-media-interaction", "mediaInteraction"],
-  ["qti-order-interaction", "orderInteraction"],
-  ["qti-portable-custom-interaction", "portableCustomInteraction"],
-  ["qti-position-object-interaction", "positionObjectInteraction"],
-  ["qti-select-point-interaction", "selectPointInteraction"],
-  ["qti-slider-interaction", "sliderInteraction"],
-  ["qti-text-entry-interaction", "textEntryInteraction"],
-  ["qti-upload-interaction", "uploadInteraction"],
+const IMAGE = '<img src="a.png" alt=""/>';
+const HOTSPOT = 'identifier="A" shape="rect" coords="0,0,1,1"';
+const GAP_TEXT = '<qti-gap-text identifier="A" match-max="1">a</qti-gap-text>';
+const CHOICE = '<qti-simple-choice identifier="A">a</qti-simple-choice>';
+const ASSOCIABLE = '<qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice>';
+
+/** An interaction of each type, with the content that the ASI schema requires of it, where an item body takes it. */
+const INTERACTION_OF_TYPE: readonly (readonly [string, string])[] = [
+  [
+    "associateInteraction",
+    `<qti-associate-interaction response-identifier="R">${ASSOCIABLE}</qti-associate-interaction>`,
+  ],
+  ["choiceInteraction", `<qti-choice-interaction response-identifier="R">${CHOICE}</qti-choice-interaction>`],
+  ["customInteraction", '<qti-custom-interaction response-identifier="R"/>'],
+  ["drawingInteraction", `<qti-drawing-interaction response-identifier="R">${IMAGE}</qti-drawing-interaction>`],
+  ["endAttemptInteraction", '<p><qti-end-attempt-interaction response-identifier="R" title="t"/></p>'],
+  ["extendedTextInteraction", '<qti-extended-text-interaction response-identifier="R"/>'],
+  [
+    "gapMatchInteraction",
+    `<qti-gap-match-interaction response-identifier="R">${GAP_TEXT}<p>x</p></qti-gap-match-interaction>`,
+  ],
+  [
+    "graphicAssociateInteraction",
+    `<qti-graphic-associate-interaction response-identifier="R">${IMAGE}<qti-associable-hotspot ${HOTSPOT} match-max="1"/></qti-graphic-associate-interaction>`,
+  ],
+  [
+    "graphicGapMatchInteraction",
+    `<qti-graphic-gap-match-interaction response-identifier="R">${IMAGE}${GAP_TEXT}<qti-associable-hotspot ${HOTSPOT} match-max="1"/></qti-graphic-gap-match-interaction>`,
+  ],
+  [
+    "graphicOrderInteraction",
+    `<qti-graphic-order-interaction response-identifier="R">${IMAGE}<qti-hotspot-choice ${HOTSPOT}/></qti-graphic-order-interaction>`,
+  ],
+  [
+    "hotspotInteraction",
+    `<qti-hotspot-interaction response-identifier="R">${IMAGE}<qti-hotspot-choice ${HOTSPOT}/></qti-hotspot-interaction>`,
+  ],
+  [
+    "hottextInteraction",
+    '<qti-hottext-interaction response-identifier="R"><p><qti-hottext identifier="A">a</qti-hottext></p></qti-hottext-interaction>',
+  ],
+  [
+    "inlineChoiceInteraction",
+    '<p><qti-inline-choice-interaction response-identifier="R"><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p>',
+  ],
+  [
+    "matchInteraction",
+    `<qti-match-interaction response-identifier="R"><qti-simple-match-set>${ASSOCIABLE}</qti-simple-match-set><qti-simple-match-set>${ASSOCIABLE}</qti-simple-match-set></qti-match-interaction>`,
+  ],
+  [
+    "mediaInteraction",
+    '<qti-media-interaction response-identifier="R" autostart="true"><video src="a.mp4"/></qti-media-interaction>',
+  ],
+  ["orderInteraction", `<qti-order-interaction response-identifier="R">${CHOICE}</qti-order-interaction>`],
+  [
+    "portableCustomInteraction",
+    '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:x"><qti-interaction-markup/></qti-portable-custom-interaction>',
+  ],
+  [
+    "positionObjectInteraction",
+    `<qti-position-object-stage>${IMAGE}<qti-position-object-interaction response-identifier="R">${IMAGE}</qti-position-object-interaction></qti-position-object-stage>`,
+  ],
+  [
+    "selectPointInteraction",
+    `<qti-select-point-interaction response-identifier="R">${IMAGE}</qti-select-point-interaction>`,
+  ],
+  ["sliderInteraction", '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="1"/>'],
+  ["textEntryInteraction", textEntry("R")],
+  ["uploadInteraction", '<qti-upload-interaction response-identifier="R"/>'],
 ];
 
 describe("deriveQtiMetadata", () => {
@@ -714,15 +762,15 @@ describe("deriveQtiMetadata", () => {
   });
 
   it("[Q15][Q5] derives each of the 22 interaction types from its element", () => {
-    expect(ELEMENT_OF_TYPE.map(([, type]) => type).sort()).toEqual([...INTERACTION_TYPES].sort());
-    for (const [element, type] of ELEMENT_OF_TYPE) {
-      expect(derive({ body: `<${element} response-identifier="R"/>` }).interactionTypes, element).toEqual([type]);
+    expect(INTERACTION_OF_TYPE.map(([type]) => type).sort()).toEqual([...INTERACTION_TYPES].sort());
+    for (const [type, markup] of INTERACTION_OF_TYPE) {
+      expect(derive({ body: markup }).interactionTypes, type).toEqual([type]);
     }
   });
 
   it("[Q4][Q5] finds interactions nested in the markup of the body, and lists each type once in document order", () => {
     const metadata = derive({
-      body: `<div><p><qti-text-entry-interaction response-identifier="A"/></p><table><tr><td>${choice}</td></tr></table><qti-text-entry-interaction response-identifier="B"/></div>`,
+      body: `<div>${textEntry("A")}<table><tr><td>${choice}</td></tr></table>${textEntry("B")}</div>`,
     });
     expect(metadata.interactionTypes).toEqual(["textEntryInteraction", "choiceInteraction"]);
     expect(metadata.composite).toBe(true);
@@ -731,10 +779,11 @@ describe("deriveQtiMetadata", () => {
   it("[Q4] is not composite with one interaction or none, and ignores elements of other namespaces that look like interactions", () => {
     expect(derive({ body: choice }).composite).toBe(false);
     expect(derive({ body: "<p>No interaction.</p>" })).toMatchObject({ composite: false, interactionTypes: [] });
-    expect(derive({ body: `${choice}<x:qti-choice-interaction xmlns:x="urn:x"/>` })).toMatchObject({
-      composite: false,
-      interactionTypes: ["choiceInteraction"],
-    });
+    expect(
+      derive({
+        body: '<qti-custom-interaction response-identifier="R"><x:qti-choice-interaction xmlns:x="urn:x"/></qti-custom-interaction>',
+      }),
+    ).toMatchObject({ composite: false, interactionTypes: ["customInteraction"] });
   });
 
   it("[Q9] is none without feedback, and nonadaptive or adaptive with feedback, by the attribute adaptive", () => {
@@ -746,7 +795,7 @@ describe("deriveQtiMetadata", () => {
     expect(derive({ attributes: 'adaptive="true"', body: choice }).feedbackType).toBe("none");
     expect(derive({ body: `<p>${feedback}</p>` }).feedbackType).toBe("nonadaptive");
     expect(derive({ modalFeedback: modal }).feedbackType).toBe("nonadaptive");
-    expect(derive({ attributes: 'adaptive="true"', body: feedback }).feedbackType).toBe("adaptive");
+    expect(derive({ attributes: 'adaptive="true"', body: `<p>${feedback}</p>` }).feedbackType).toBe("adaptive");
     expect(derive({ attributes: 'adaptive="true"', modalFeedback: modal }).feedbackType).toBe("adaptive");
     expect(derive({ attributes: 'adaptive="false"', modalFeedback: modal }).feedbackType).toBe("nonadaptive");
   });
@@ -796,7 +845,7 @@ describe("deriveQtiMetadata", () => {
 
   it("[Q6][Q7][Q8] gives the type identifier of the first portable custom interaction, and no interaction kind", () => {
     const pci = (identifier: string): string =>
-      `<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="${identifier}" module="m"/>`;
+      `<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="${identifier}" module="m"><qti-interaction-markup/></qti-portable-custom-interaction>`;
     expect(derive({ body: pci("urn:pci:shading") + pci("urn:pci:other") }).portableCustomInteractionContext).toEqual({
       customTypeIdentifier: "urn:pci:shading",
     });
@@ -820,7 +869,7 @@ describe("deriveQtiMetadata", () => {
     const metadata = derive({
       attributes: 'tool-name="T"',
       declarations: response("R", true),
-      body: `${choice}<qti-text-entry-interaction response-identifier="B"/>`,
+      body: `${choice}${textEntry("B")}`,
       processing: "<qti-response-processing/>",
     });
     expect(readQtiMetadata(parseXml(serializeXml(writeQtiMetadata(metadata))))).toEqual(metadata);
@@ -835,10 +884,10 @@ describe("deriveQtiMetadata", () => {
         fc.boolean(),
         fc.boolean(),
         (types, adaptive, feedback) => {
-          const element = (type: string): string =>
-            ELEMENT_OF_TYPE.find(([, candidate]) => candidate === type)?.[0] ?? "";
+          const markup = (type: string): string =>
+            INTERACTION_OF_TYPE.find(([candidate]) => candidate === type)?.[1] ?? "";
           const body =
-            types.map((type) => `<${element(type)} response-identifier="R"/>`).join("") +
+            types.map(markup).join("") +
             (feedback ? '<qti-feedback-block outcome-identifier="F" identifier="x" show-hide="show"/>' : "");
           const metadata = derive({ attributes: `adaptive="${adaptive}"`, body });
           expect(metadata.interactionTypes).toEqual([...new Set(types)]);

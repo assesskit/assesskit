@@ -6,7 +6,7 @@ import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
 import { readManifest, readPackage, writeManifest, writePackage } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
-import { manifests } from "./package-generators.js";
+import { manifests } from "./arbitraries/package.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const examples = join(requireCorpus(root), "qti-examples/qtiv3-examples");
