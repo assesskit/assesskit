@@ -1,0 +1,9 @@
+#press {
+  color: rgb(10, 20, 30);
+}
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-image: url(../images/dot.svg);
+}

@@ -5,6 +5,7 @@ packages:
   - differential
 
 allowBuilds:
+  esbuild: false
   lefthook: false
 
 minimumReleaseAgeExclude:

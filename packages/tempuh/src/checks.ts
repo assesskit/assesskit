@@ -25,6 +25,26 @@ export function checkRecord(value: unknown, message: string): asserts value is R
 }
 
 /**
+ * Checks that a value is an array, such as a list of origins.
+ *
+ * @param message - Says what the value should be, such as `The origins must be an array`.
+ * @throws `DataError` when it is not.
+ */
+export function checkArray(value: unknown, message: string): asserts value is readonly unknown[] {
+  if (!Array.isArray(value)) throw new DataError(`${message}, found ${describe(value)}.`);
+}
+
+/**
+ * Checks that a value is a function, such as a listener.
+ *
+ * @param message - Says what the value should be, such as `The listener must be a function`.
+ * @throws `DataError` when it is not.
+ */
+export function checkFunction(value: unknown, message: string): asserts value is (...args: never[]) => unknown {
+  if (typeof value !== "function") throw new DataError(`${message}, found ${describe(value)}.`);
+}
+
+/**
  * Checks that a record has no property but the given ones.
  *
  * @param label - Names the record in the error message, such as `An action envelope`.

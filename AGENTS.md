@@ -54,14 +54,16 @@ packages/olah/            the library
 packages/tempuh/          the player
   src/index.ts            re-exports the errors and the messages
   src/errors.ts           TempuhError, DataError, AccessError, LtiError, ServiceError
-  src/checks.ts           describe, and checkRecord, checkProperties, checkString, checkNonEmptyString,
-                          checkNonNegativeInteger
+  src/checks.ts           describe, and checkRecord, checkArray, checkFunction, checkProperties, checkString,
+                          checkNonEmptyString, checkNonNegativeInteger
   src/messages/           Messages, the English and Indonesian catalogs, selectMessages
   src/protocol/           Caller, ActionEnvelope and ViewEnvelope, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
   player.css              the stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation
+  scripts/                build-frame.ts writes the static files of the PCI frame to dist/pci-frame/
   test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
-                          *.browser.test.ts render in Chromium, Firefox and WebKit
+                          *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
+                          commands of the browser tests
   docs/                   guides
 differential/             olah against Longsight qti3-core
 compat/                   the browser baseline: the lint of the built code, the banned features, the pinned engines
@@ -78,7 +80,7 @@ pnpm install
 pnpm lint             # Biome and cspell; `pnpm format` fixes formatting
 pnpm typecheck        # tsc over every package and the tooling
 pnpm test             # Vitest, offline
-pnpm test:browser     # the rendering tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install` first
+pnpm test:browser     # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install` first
 pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
 pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
@@ -95,7 +97,9 @@ pnpm docs:api         # TypeDoc into docs/api; fails on undocumented exports
 
 Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `conformance/`,
 `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
-also needs Docker.
+also needs Docker. `pnpm test:browser` runs all three engines, and the Firefox of Playwright does not start on some macOS
+versions (it did not on macOS 27): run the suite in the Linux container of
+[evidence.md](packages/tempuh/docs/evidence.md#tests-in-a-browser) there.
 
 ## Releases
 
@@ -221,7 +225,7 @@ describes how the baseline is tested.
 - Properties that hold for any input are tested with fast-check.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
-- Tests that render in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
+- Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 - Test names describe behavior: `it("shares the places at a tied boundary equally")`.

@@ -31,6 +31,7 @@ export interface SmokeCase {
 
 const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
   [".css", "text/css"],
+  [".html", "text/html"],
   [".js", "text/javascript"],
   [".json", "application/json"],
   [".map", "application/json"],
@@ -42,7 +43,27 @@ const DIST = resolve(process.cwd(), "../../../packages/tempuh/dist");
 /** The stylesheet of the player, which the package ships as it is. */
 const PLAYER_CSS_FILE = resolve(process.cwd(), "../../../packages/tempuh/player.css");
 
-/** Serves `dist/` at `/dist/`, `player.css` at `/player.css` and an empty page at `/`; returns the URL of the page and a function that stops it. */
+/** The module of the portable custom interaction that the page loads into the frame: it changes its response once and tries a request. */
+const PCI_MODULE = `define(["qtiCustomInteractionContext"], function (context) {
+  context.register({
+    typeIdentifier: "urn:smoke:echo",
+    getInstance: function (dom, configuration) {
+      var instance = {
+        getResponse: function () { return { base: { integer: 1 } }; },
+        getState: function () { return "{}"; },
+      };
+      configuration.onready(instance, "{}");
+      dom.dispatchEvent(new CustomEvent("qti-interaction-changed", { bubbles: true, detail: { interaction: instance } }));
+      fetch("/pci/secret").then(
+        function () { parent.postMessage({ probe: "fetch", result: "reached" }, "*"); },
+        function () { parent.postMessage({ probe: "fetch", result: "blocked" }, "*"); },
+      );
+      return instance;
+    },
+  });
+});`;
+
+/** Serves `dist/` at `/dist/`, `player.css` at `/player.css` and `/dist/player.css`, the module of the interaction at `/pci/echo.js` and an empty page at `/`; returns the URL of the page and a function that stops it. */
 async function serve(): Promise<{ readonly url: string; readonly stop: () => Promise<void> }> {
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -51,8 +72,14 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
       response.end("<!doctype html><title>tempuh</title>");
       return;
     }
-    const file = path === "/player.css" ? PLAYER_CSS_FILE : resolve(DIST, `.${path.replace(/^\/dist/, "")}`);
-    if (!(path === "/player.css" || (path.startsWith("/dist/") && file.startsWith(`${DIST}${sep}`)))) {
+    if (path === "/pci/echo.js") {
+      response.setHeader("content-type", "text/javascript");
+      response.end(PCI_MODULE);
+      return;
+    }
+    const isPlayerCss = path === "/player.css" || path === "/dist/player.css";
+    const file = isPlayerCss ? PLAYER_CSS_FILE : resolve(DIST, `.${path.replace(/^\/dist/, "")}`);
+    if (!(isPlayerCss || (path.startsWith("/dist/") && file.startsWith(`${DIST}${sep}`)))) {
       response.statusCode = 404;
       response.end();
       return;
@@ -120,6 +147,36 @@ const PLAYER_CSS = `(async () => {
   };
 })()`;
 
+/** The check of the frame of a portable custom interaction, which runs in the page: it starts, answers, and reaches no network. */
+const PCI_FRAME = `(async () => {
+  const { mountPciFrame } = await import("/dist/player/index.js");
+  const events = [];
+  const probes = [];
+  addEventListener("message", (event) => {
+    if (event.data && event.data.probe) probes.push(event.data);
+  });
+  const frame = mountPciFrame(document.body, {
+    staticUrl: location.origin + "/dist/",
+    messages: { interactiveQuestion: "Interactive question" },
+    prompt: null,
+    language: "en",
+    stylesheets: [],
+    markup: "<p>Echo</p>",
+    modules: { baseUrl: location.origin + "/pci/", paths: new Map([["echo", [location.origin + "/pci/echo"]]]), load: ["echo"] },
+    typeIdentifier: "urn:smoke:echo",
+    responseIdentifier: "RESPONSE",
+    status: "interacting",
+    boundTo: { base: null },
+    onEvent: (event) => events.push(event.type),
+  });
+  const until = async (done) => {
+    for (let i = 0; i < 100 && !done(); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+  };
+  await until(() => events.includes("changed") && probes.length > 0);
+  await frame.destroy();
+  return { events, sandbox: frame.element.getAttribute("sandbox"), probes: probes.map((probe) => probe.result) };
+})()`;
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -170,6 +227,22 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           writingMode: "vertical-rl",
           textOrientation: "upright",
           stackedColumns: 3,
+        });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "runs a portable custom interaction in a sandboxed frame that reaches no network",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(PCI_FRAME), {
+          events: ["ready", "changed", "completed"],
+          sandbox: "allow-scripts",
+          probes: ["blocked"],
         });
       } finally {
         await stop();

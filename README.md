@@ -2,10 +2,10 @@
 
 A QTI 3.0 runtime for JavaScript and TypeScript, and the player built on it. This repository holds two packages:
 
-| Package                               | What it is                                                                                                                                                                                                                                |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`olah`](packages/olah/README.md)     | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server or practice on a device.                                                  |
-| [`tempuh`](packages/tempuh/README.md) | The player: rendering, the PCI host, accessibility in the UI and the server-side integrations. It uses olah only through its published subpaths. Under development; this version has the errors, the interface messages and the protocol. |
+| Package                               | What it is                                                                                                                                                                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`olah`](packages/olah/README.md)     | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server or practice on a device.                                                                                             |
+| [`tempuh`](packages/tempuh/README.md) | The player: rendering, the PCI host, accessibility in the UI and the server-side integrations. It uses olah only through its published subpaths. Under development; this version has the errors, the interface messages, the protocol and the frame of portable custom interactions. |
 
 olah is not certified by 1EdTech. [Conformance](packages/olah/docs/conformance.md) states how every construct of the
 specifications is evidenced.
@@ -19,6 +19,7 @@ pnpm install
 pnpm lint            # Biome and cspell
 pnpm typecheck       # every package, and the tooling at the root
 pnpm test            # Vitest; runs offline
+pnpm test:browser    # the tests of tempuh that need a browser; run pnpm exec playwright install first
 pnpm knip            # unused files, exports and dependencies
 pnpm conformance     # every row of a merged unit has a test; the matrix is current
 pnpm compat          # the built code of tempuh stays inside its browser baseline; run pnpm build first

@@ -7,7 +7,9 @@ variant, or holds an answer key outside olah's solution view.
 
 The package is under development, private and not published. This version has the foundation: the errors, the interface
 messages in English and Indonesian, the protocol between a browser and a session host, and the stylesheet of a content
-root.
+root. It also has the frame of portable custom interactions: a sandboxed frame with its own content security policy,
+RequireJS loading with fallback locations, and the communication bridge of the QTI 3.0 Best Practices and Implementation
+Guide (§3.7.12).
 
 ## Browser baseline
 
@@ -29,16 +31,19 @@ envelope.seq; // 3
 
 ## API
 
-| Import                            | Contents                                                                                                                          |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `@luthfanwakan/tempuh`            | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages` |
-| `@luthfanwakan/tempuh/protocol`   | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                          |
-| `@luthfanwakan/tempuh/player.css` | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                    |
+| Import                             | Contents                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`          |
+| `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciModules`, `PciEvent`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT` and the types of their fields |
+| `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                   |
+| `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                             |
+| `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                  |
 
 ## Documentation
 
 - [Architecture](docs/architecture.md): principles, layers and errors.
 - [Baseline](docs/baseline.md): the browser baseline, the banned features and how they are tested.
+- [Portable custom interactions](docs/pci.md): the frame, its policy, loading, events and serving the files.
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
 - [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.

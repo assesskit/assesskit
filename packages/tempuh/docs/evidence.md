@@ -31,6 +31,27 @@ has one of three kinds:
 | Manual         | `unit` and `manual` | The named manual check by a person; no test is required |
 | Not applicable | `notApplicable`     | The reason; no unit and no test                         |
 
+## Tests in a browser
+
+The browser tests of the frame use fixtures in `test/fixtures/`. The global setup `global-setup.ts` builds the files of the
+frame and starts three servers on free ports: the asset origin, a second origin that a test may allow, and a stranger that
+nothing may reach. A test asks a server for the paths it was requested for at `/__hits`, and the browsers of a run share
+the servers, so each test names its paths with a token of its own. The browser commands in `commands.ts` give a test what a
+page cannot do: run axe-core inside a frame of an opaque origin, click in it, and read the accessibility tree with its
+frames.
+
+The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame.
+
+Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
+repository. The container needs network access to install the dependencies and the browsers:
+
+```bash
+docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
+  mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
+  cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
+  pnpm exec playwright install chromium firefox webkit && pnpm test:browser'
+```
+
 ## Tests name their rows and criteria
 
 A title names what it evidences in brackets, as a string literal: `it("[T97] chooses the catalog of the language")` or

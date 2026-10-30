@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkArray,
+  checkFunction,
   checkNonEmptyString,
   checkNonNegativeInteger,
   checkProperties,
@@ -31,6 +33,25 @@ describe("checkRecord", () => {
       "The caller must be an object, found an array.",
     );
     expect(() => checkRecord(JSON.parse('"a"'), "The caller must be an object")).toThrow(DataError);
+  });
+});
+
+describe("checkArray", () => {
+  it("accepts an array, the empty one included, and rejects other values with the given message", () => {
+    expect(() => checkArray([], "The origins must be an array")).not.toThrow();
+    expect(() => checkArray(JSON.parse('{"0":"a"}'), "The origins must be an array")).toThrow(
+      new DataError("The origins must be an array, found an object."),
+    );
+    expect(() => checkArray(JSON.parse('"a"'), "The origins must be an array")).toThrow('found "a".');
+  });
+});
+
+describe("checkFunction", () => {
+  it("accepts a function and rejects other values with the given message", () => {
+    expect(() => checkFunction(() => 1, "The listener must be a function")).not.toThrow();
+    expect(() => checkFunction(JSON.parse("null"), "The listener must be a function")).toThrow(
+      new DataError("The listener must be a function, found null."),
+    );
   });
 });
 

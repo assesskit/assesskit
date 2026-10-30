@@ -28,11 +28,16 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./player": {
+      "types": "./dist/player/index.d.ts",
+      "default": "./dist/player/index.js"
+    },
     "./protocol": {
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"
     },
-    "./player.css": "./player.css"
+    "./player.css": "./player.css",
+    "./pci-frame/*": "./dist/pci-frame/*"
   },
   "files": [
     "dist",
@@ -45,12 +50,14 @@
   },
   "scripts": {
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
-    "build": "pnpm clean && tsc -b tsconfig.build.json",
+    "build": "pnpm clean && tsc -b tsconfig.build.json && node scripts/build-frame.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && tsc -p tsconfig.server.json",
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",
-    "fast-check": "^4.10.2"
+    "esbuild": "0.28.2",
+    "fast-check": "^4.10.2",
+    "requirejs": "2.3.8"
   }
 }

@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import { COMMANDS } from "./packages/tempuh/test/fixtures/commands.js";
 
 /** Resolves olah and its subpaths to their sources, so that the differential tests run the code and not a build. */
 const OLAH_SOURCES = [
@@ -27,15 +28,17 @@ export default defineConfig({
         },
       },
       {
-        // Rendering tests run in the engines of the player: the page is the fixture.
+        // Browser tests run in the engines of the player: the page is the fixture, and the global setup serves the frame.
         test: {
           name: "tempuh-browser",
           include: ["packages/tempuh/test/**/*.browser.test.ts"],
+          globalSetup: ["packages/tempuh/test/fixtures/global-setup.ts"],
           browser: {
             enabled: true,
             headless: true,
             provider: playwright(),
             instances: [{ browser: "chromium" }, { browser: "firefox" }, { browser: "webkit" }],
+            commands: COMMANDS,
           },
         },
       },

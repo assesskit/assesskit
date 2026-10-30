@@ -43,6 +43,20 @@ Points to be aware of when deploying olah:
   file outside it, are never resolved. A package directory that another process can change while olah reads it is not protected
   against a race.
 
+## tempuh: the frame of portable custom interactions
+
+A portable custom interaction is code of the package, and it runs in the candidate's browser. tempuh runs each one in an
+`iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so the code has an opaque origin: no cookie, storage or
+access to the player. The frame restricts itself with a content security policy before it loads the code: no connection,
+frame, form or `base`, no inline script and no `eval`, and scripts, styles, images, media and fonts only from the asset
+origin and the origins the host allows. The frame refuses to start where the browser does not apply the policy.
+
+- Serve `pci-frame/*` and `player.css` from the asset origin, outside the asset gate. They hold no package data.
+- Put the origin of `staticUrl` in the `frame-src` of the page that mounts the player. A module can navigate its own frame,
+  and that directive stops it from going to another site.
+- Allow other origins in `origins` only for hosts that you trust to serve scripts.
+- The code is visible to the candidate: keep answer keys in response processing, which the asset gate never serves.
+
 ## Default limits
 
 Every limit is a positive integer that a caller can replace per call with the option `limits`. The defaults are about

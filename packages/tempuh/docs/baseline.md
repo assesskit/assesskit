@@ -26,14 +26,14 @@ in the others.
 
 ## How the baseline is enforced
 
-| Check                                     | Command               | Catches                                                                                                                                                                   |
-| ----------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tsconfig.browser.json`                   | `pnpm typecheck`      | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                                                                                          |
-| `biome/baseline.grit`                     | `pnpm lint`           | The banned APIs in TypeScript, and the banned CSS and HTML in strings                                                                                                     |
-| `biome/baseline-css.grit`                 | `pnpm lint`           | The banned features in stylesheets                                                                                                                                        |
-| eslint-plugin-compat                      | `pnpm compat`         | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data                                                                                  |
-| stylelint-no-unsupported-browser-features | `pnpm compat`         | Any CSS feature that a baseline browser lacks                                                                                                                             |
-| The pinned browsers                       | `pnpm compat:engines` | The shared modules loading and running in Chromium 111, Firefox 115 and WebKit 16.4, `player.css` styling a content root there, and the banned features missing from them |
+| Check                                     | Command               | Catches                                                                                                                                                                                                  |
+| ----------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tsconfig.browser.json`                   | `pnpm typecheck`      | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                                                                                                                         |
+| `biome/baseline.grit`                     | `pnpm lint`           | The banned APIs in TypeScript, and the banned CSS and HTML in strings                                                                                                                                    |
+| `biome/baseline-css.grit`                 | `pnpm lint`           | The banned features in stylesheets                                                                                                                                                                       |
+| eslint-plugin-compat                      | `pnpm compat`         | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data                                                                                                                 |
+| stylelint-no-unsupported-browser-features | `pnpm compat`         | Any CSS feature that a baseline browser lacks                                                                                                                                                            |
+| The pinned browsers                       | `pnpm compat:engines` | The shared modules, `player.css` styling a content root, and a portable custom interaction in its frame, running in Chromium 111, Firefox 115 and WebKit 16.4, and the banned features missing from them |
 
 `pnpm compat` lints `dist/`, so it needs `pnpm build` first. It checks the shared and browser folders only, and every
 stylesheet of the package. The stylelint plugin reports `text-indent` as partial for its `each-line` and `hanging`

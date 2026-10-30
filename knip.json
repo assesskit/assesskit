@@ -5,7 +5,9 @@
       "entry": ["src/index.ts", "src/*/index.ts"]
     },
     "packages/tempuh": {
-      "entry": ["src/index.ts", "src/*/index.ts"]
+      "entry": ["src/index.ts", "src/*/index.ts", "src/player/pci/frame/bridge.ts"],
+      "ignore": ["test/fixtures/**"],
+      "ignoreDependencies": ["requirejs"]
     },
     "compat": {
       "entry": ["smoke.ts"],
