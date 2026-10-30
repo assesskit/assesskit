@@ -192,7 +192,7 @@ A request that is not a POST of a form with `id_token` and `state` is a `DataErr
 | The platform is still registered                                                                                                | `platform-unknown`                                |
 | Cookie path: the state cookie equals `state`                                                                                    | `state-cookie`                                    |
 | Storage path: the second post comes from the redirect URI's origin, with `stored_state` and `stored_nonce` equal to the login's | `origin-mismatch`, `storage-mismatch`             |
-| The token has three base64url parts, a JSON header and a JSON payload; no `crit` header                                         | `token-malformed`                                 |
+| The token has three canonical base64url parts, a JSON header and a JSON payload; no `crit` header                               | `token-malformed`                                 |
 | `alg` is `RS256`; `none` and the HMAC algorithms are refused                                                                    | `algorithm-unsupported`                           |
 | The header has a `kid` that the key set holds, as an RSA signing key of 2,048 bits or more                                      | `key-unknown`                                     |
 | The signature verifies with that key                                                                                            | `signature-invalid`                               |

@@ -852,6 +852,18 @@ describe("ltiLaunch", () => {
       }
     });
 
+    it("[T103] refuses another spelling of a signature that has the same bytes", async () => {
+      const ctx = setup();
+      const { auth, cookie } = await cookieLogin(ctx);
+      const [header = "", payload = "", signature = ""] = auth.idToken.split(".");
+      const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+      // The 256 bytes of an RS256 signature of 2,048 bits end in the middle of the last character: its lowest bit is padding.
+      const respelled = `${signature.slice(0, -1)}${alphabet[alphabet.indexOf(signature.at(-1) ?? "A") ^ 1]}`;
+      const post = formPost({ id_token: `${header}.${payload}.${respelled}`, state: auth.state }, { cookie });
+      await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ name: "LtiError", reason: "token-malformed" });
+      expect(launchOf(await ltiLaunch(auth.post({ cookie }), ctx.options)).messageType).toBe("LtiResourceLinkRequest");
+    });
+
     it("[T103] refuses a token whose signature is not the platform's", async () => {
       const ctx = setup();
       const forged = await cookieLogin(ctx, { signer: attackerKey });
@@ -1613,11 +1625,45 @@ describe("properties", () => {
     );
   });
 
-  it("decodes only text that is base64url", () => {
+  it("decodes the base64 test vectors of RFC 4648 §10, in base64url without padding", () => {
+    const vectors = [
+      ["f", "Zg"],
+      ["fo", "Zm8"],
+      ["foo", "Zm9v"],
+      ["foob", "Zm9vYg"],
+      ["fooba", "Zm9vYmE"],
+      ["foobar", "Zm9vYmFy"],
+    ] as const;
+    for (const [text, encoded] of vectors) {
+      expect(encodeBase64Url(new TextEncoder().encode(text)), text).toBe(encoded);
+      expect(new TextDecoder().decode(decodeBase64Url(encoded)), text).toBe(text);
+    }
+  });
+
+  it("decodes only the canonical spelling of bytes, in which the bits after the last byte are zero (RFC 4648 §3.5)", () => {
+    expect(decodeBase64Url("Zg")).toEqual(new Uint8Array([0x66]));
+    for (const spelling of ["Zh", "Zi", "Zj", "Zm9", "Zm-", "Zm_"]) {
+      expect(decodeBase64Url(spelling), spelling).toBeUndefined();
+    }
+    expect(decodeBase64Url("Zm8")).toEqual(new Uint8Array([0x66, 0x6f]));
+  });
+
+  it("decodes only text that is canonical base64url", () => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    /** Whether the bits of the last character that stand for no byte are zero: 4 bits after one byte, 2 after two. */
+    const canonical = (text: string): boolean => {
+      const unused = text.length % 4 === 2 ? 0b1111 : text.length % 4 === 3 ? 0b11 : 0;
+      return (alphabet.indexOf(text.at(-1) ?? "A") & unused) === 0;
+    };
     fc.assert(
       fc.property(fc.string({ maxLength: 40 }), (text) => {
-        const valid = /^[A-Za-z0-9_-]*$/u.test(text) && text.length % 4 !== 1;
+        const valid = /^[A-Za-z0-9_-]*$/u.test(text) && text.length % 4 !== 1 && canonical(text);
         expect(decodeBase64Url(text) !== undefined).toBe(valid);
+      }),
+    );
+    fc.assert(
+      fc.property(fc.stringMatching(/^[A-Za-z0-9_-]{1,40}$/u), (text) => {
+        expect(decodeBase64Url(text) !== undefined).toBe(text.length % 4 !== 1 && canonical(text));
       }),
     );
   });

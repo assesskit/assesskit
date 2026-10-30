@@ -579,7 +579,7 @@ describe("agsLineItem and agsScores", () => {
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
     const [head = "", id = ""] = url.split("/ags/");
-    const forged = `${head}/ags/${id.slice(0, -1)}${id.endsWith("A") ? "B" : "A"}`;
+    const forged = `${head}/ags/${corruptMac(id)}`;
     for (const bad of [
       forged,
       `${head}/ags/nothing`,
@@ -597,6 +597,19 @@ describe("agsLineItem and agsScores", () => {
       ctx.scoring,
     );
     expect(direct.status).toBe(404);
+  });
+
+  it("[T120] refuses another spelling of a line item identifier or an access token that has the same bytes", async () => {
+    const ctx = setup();
+    const url = await lineItemOf(ctx);
+    const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
+    const [head = "", id = ""] = url.split("/ags/");
+    expect(respell(token)).not.toBe(token);
+    expect((await agsLineItem(service(url, token), ctx.token)).status).toBe(200);
+    expect((await agsLineItem(service(`${head}/ags/${respell(id)}`, token), ctx.token)).status).toBe(404);
+    expect((await agsLineItem(service(url, respell(token)), ctx.token)).status).toBe(401);
+    expect((await postScoreWith(ctx, `${head}/ags/${respell(id)}`, token)).status).toBe(404);
+    expect(ctx.scores).toEqual([]);
   });
 
   it("[T120] answers 405 for a method that the service does not offer", async () => {
@@ -981,6 +994,21 @@ describe("ltiPlatformAuthorize", () => {
     }
   });
 
+  it("[T120] refuses another spelling of a hint that has the same bytes", async () => {
+    const ctx = setup();
+    const message = await begin(ctx);
+    message.parameters.set("lti_message_hint", respell(message.parameters.get("lti_message_hint") ?? ""));
+    await expect(
+      ltiPlatformAuthorize(authenticationRequest(endpoints.authorization, message.parameters), ctx.authorize),
+    ).rejects.toMatchObject({ name: "AccessError", reason: "hint-invalid" });
+    const login = await begin(ctx);
+    login.parameters.set("login_hint", respell(login.parameters.get("login_hint") ?? ""));
+    await expect(
+      ltiPlatformAuthorize(authenticationRequest(endpoints.authorization, login.parameters), ctx.authorize),
+    ).rejects.toMatchObject({ name: "AccessError", reason: "principal-mismatch" });
+    expect(ctx.used.size).toBe(0);
+  });
+
   it("[T120] refuses the login_hint of another candidate", async () => {
     const ctx = setup();
     const mine = await begin(ctx);
@@ -1127,6 +1155,16 @@ async function tamper(token: string): Promise<string> {
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   const changed = Buffer.from(JSON.stringify({ ...claims, principal: "candidate-8" })).toString("base64url");
   return `${changed}.${mac}`;
+}
+
+/**
+ * Spells the MAC of a sealed token another way without changing its bytes: it flips the lowest bit of the last character,
+ * which base64url ignores because the 32 bytes of the MAC end in the middle of that character.
+ */
+function respell(token: string): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  const last = token.at(-1) ?? "A";
+  return `${token.slice(0, -1)}${alphabet[alphabet.indexOf(last) ^ 1]}`;
 }
 
 /**
