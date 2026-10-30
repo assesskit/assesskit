@@ -26,6 +26,24 @@ export interface HttpResponse {
   readonly body: string;
 }
 
+/** Builds an answer with a JSON body and a media type. */
+export function jsonResponse(
+  status: number,
+  body: unknown,
+  headers: Readonly<Record<string, string>> = {},
+  type = "application/json;charset=UTF-8",
+): HttpResponse {
+  return { status, headers: { "content-type": type, ...headers }, body: JSON.stringify(body) };
+}
+
+/** Builds the body of an error answer of OAuth 2.0 (RFC 6749 §5.2) and of the services: an `error` code and a description. */
+export function errorBody(error: string, description: string): Record<string, string> {
+  return Object.fromEntries([
+    ["error", error],
+    ["error_description", description],
+  ]);
+}
+
 const FORM_TYPE = "application/x-www-form-urlencoded";
 
 /**

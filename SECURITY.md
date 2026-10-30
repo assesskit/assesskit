@@ -115,6 +115,24 @@ elements and attributes of SSML 1.1 that the ASI schema allows, with every value
 only for an `http` or `https` URL. Lexicons are parsed by olah's XML reader, with its limits, and become `sub` and `phoneme`
 in the request, so that a voice fetches no lexicon.
 
+## tempuh: the LTI platform role
+
+tempuh launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](packages/tempuh/docs/lti-platform.md)).
+A tool is code of another party, and its frame has `allow-same-origin`: it is the same origin as any page of the platform
+on the player's origin, so the platform's handlers must never share that origin.
+
+- Serve the platform's handlers from an origin of their own, which is neither the player's nor the assets', and serve
+  nothing else from it. Every handler refuses a configuration in which two of the three coincide, and a request whose URL is for
+  another origin; pass the public URL of the request.
+- The authorization binds to a signed, single-use `lti_message_hint`, not to a cookie, so it works where the browser
+  withholds third-party cookies. `once` must be atomic across the host's processes; a hint lasts five minutes.
+- The hints, the line item identifiers and the access tokens are signed with the hint key and not encrypted: the tool can read
+  the session, the item and the principal in them. Use identifiers that the tool may know. Changing the hint key ends them.
+- The page that posts the `id_token` allows its one script by hash, forms only to the origin of the redirect URI and framing
+  only by the player, and every value in it is encoded. Do not add headers that weaken the policy.
+- A score reaches the host only from the tool of its line item, for the user of its launch, through a token with the
+  `score` scope. Keep the latest score by `timestampMs`, and use only a score that is `FullyGraded`.
+
 ## Default limits
 
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;

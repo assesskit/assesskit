@@ -1,0 +1,68 @@
+import type { webcrypto } from "node:crypto";
+import { checkArray, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
+import { DataError } from "../../errors.js";
+import { MAX_IDENTIFIER_LENGTH } from "../claims.js";
+import { checkHttpsUrl } from "../http.js";
+import type { JwksCache } from "../jwks.js";
+import { isRsaKey } from "../keys.js";
+
+/** The host's record of one tool that the platform launches, as the platform's administrator and the tool agreed on it. */
+export interface ToolRegistration {
+  /** The OAuth 2.0 client identifier of the tool at this platform. */
+  readonly clientId: string;
+  /** The deployment of the tool at this platform (LTI 1.3 Core §3.1.3). */
+  readonly deploymentId: string;
+  /** The tool's login initiation URL (Security Framework §5.1.1): where the platform sends the browser first. */
+  readonly loginUrl: string;
+  /** The tool's launch URLs that the platform may post an `id_token` to: the redirect URIs of the tool. */
+  readonly redirectUris: readonly string[];
+  /** The URL of the tool's key set, which holds the keys that sign its client assertions. Exactly one of this and `keys`. */
+  readonly jwksUrl?: string;
+  /** The tool's public RSA keys by `kid`, for a tool that gives keys and not a URL. Exactly one of this and `jwksUrl`. */
+  readonly keys?: ReadonlyMap<string, webcrypto.CryptoKey>;
+}
+
+/**
+ * Checks a registration that the host's lookup returned.
+ *
+ * @throws `DataError` when it is not a registration: a field is missing or of the wrong type, a URL is not `https`, or
+ * the tool has both or neither of `jwksUrl` and `keys`.
+ */
+export function checkToolRegistration(value: unknown): asserts value is ToolRegistration {
+  checkRecord(value, "The registration of a tool must be an object");
+  checkNonEmptyString(value.clientId, "The client identifier of a tool");
+  checkNonEmptyString(value.deploymentId, "The deployment of a tool");
+  if (value.deploymentId.length > MAX_IDENTIFIER_LENGTH) {
+    throw new DataError(
+      `The deployment of a tool must have at most 255 characters (LTI 1.3 Core §5.3.3), found ${value.deploymentId.length}.`,
+    );
+  }
+  checkHttpsUrl(value.loginUrl, "The login URL of a tool");
+  checkArray(value.redirectUris, "The redirect URIs of a tool must be an array");
+  if (value.redirectUris.length === 0) {
+    throw new DataError("The redirect URIs of a tool must have at least one URI.");
+  }
+  for (const uri of value.redirectUris) checkHttpsUrl(uri, "A redirect URI of a tool");
+  if ((value.jwksUrl === undefined) === (value.keys === undefined)) {
+    throw new DataError("A tool must have exactly one of the properties jwksUrl and keys.");
+  }
+  if (value.jwksUrl !== undefined) checkHttpsUrl(value.jwksUrl, "The key set URL of a tool");
+  if (value.keys !== undefined) {
+    const keys = value.keys;
+    if (!(keys instanceof Map) || ![...keys].every(([id, key]) => typeof id === "string" && isRsaKey(key, "verify"))) {
+      throw new DataError(
+        `The keys of a tool must be a Map of public RSASSA-PKCS1-v1_5 keys with SHA-256 by kid, found ${describe(keys)}.`,
+      );
+    }
+  }
+}
+
+/** Returns the tool's public key with the given `kid`, or `undefined` when the tool has none. */
+export async function toolKey(
+  registration: ToolRegistration,
+  keyId: string,
+  jwks: JwksCache,
+): Promise<webcrypto.CryptoKey | undefined> {
+  if (registration.jwksUrl !== undefined) return jwks.key(registration.jwksUrl, keyId);
+  return registration.keys?.get(keyId);
+}

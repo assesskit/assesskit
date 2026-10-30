@@ -1,12 +1,10 @@
 import { describe } from "../checks.js";
 import { LtiError } from "../errors.js";
 import { type Claims, NUMBER, optional, required, STRING } from "./claims.js";
+import { CLOCK_SKEW_SECONDS } from "./clock.js";
 import type { JwksCache } from "./jwks.js";
 import { decodeJwt, readKeyId, verifyJwt } from "./jwt.js";
 import type { PlatformRegistration } from "./registration.js";
-
-// Security Framework §5.1.2 allows "some small leeway, usually no more than a few minutes", for clock skew.
-const CLOCK_SKEW_SECONDS = 60;
 
 /** Checks the audience of a token: only the tool's client identifier (Security Framework §5.1.3). */
 function checkAudience(claims: Claims, clientId: string): void {

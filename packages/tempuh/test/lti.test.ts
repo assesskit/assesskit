@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of OAuth 2.0 responses are snake_case.
-import { createHash, createHmac } from "node:crypto";
+import { createHmac } from "node:crypto";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError, ServiceError } from "../src/index.js";
@@ -26,31 +26,34 @@ import {
   AGS_SCOPES,
   AUTHENTICATION_URL,
   type Authenticated,
-  base64url,
   CLIENT_ID,
   cookieOf,
-  createClock,
   DEPLOYMENT_ID,
   FakePlatform,
   formPost,
-  generateKeyPair,
   ISSUER,
   type Issue,
   JWKS_URL,
   LOGIN_URL,
   MemoryStore,
-  NOW,
   REDIRECT_URI,
   RETURN_URL,
-  readToken,
   registrationOf,
+  TARGET_LINK_URI,
+  TOOL_ORIGIN,
+} from "./lti-fake-platform.js";
+import {
+  base64url,
+  createClock,
+  generateKeyPair,
+  NOW,
+  readPage,
+  readToken,
   request,
   signToken,
-  TARGET_LINK_URI,
   type TestClock,
-  TOOL_ORIGIN,
   verifyToken,
-} from "./lti-platform.js";
+} from "./lti-fixture.js";
 
 const platformKey = await generateKeyPair("platform-1");
 const rotatedKey = await generateKeyPair("platform-2");
@@ -103,43 +106,6 @@ function deepLinkingOf(result: LtiLaunch | HttpResponse): DeepLinkingLaunch {
   const launch = launchOf(result);
   if (launch.messageType === "LtiDeepLinkingRequest") return launch;
   throw new Error("The launch is not a Deep Linking request.");
-}
-
-/** Decodes the text of an HTML attribute value. */
-function unescapeHtml(text: string): string {
-  return text
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&");
-}
-
-/** What a page of the storage path holds: its configuration, its script, its inputs and its CSP. */
-function readPage(response: HttpResponse): {
-  config: Record<string, string>;
-  script: string;
-  scripts: number;
-  inputs: Map<string, string>;
-  action: string | undefined;
-  hash: string;
-} {
-  const config = /data-config="([^"]*)"/u.exec(response.body)?.[1] ?? "";
-  const script = /<script>([\s\S]*)<\/script>/u.exec(response.body)?.[1] ?? "";
-  const inputs = new Map<string, string>();
-  for (const [, name = "", value = ""] of response.body.matchAll(
-    /<input type="hidden" name="([^"]*)" value="([^"]*)">/gu,
-  )) {
-    inputs.set(name, unescapeHtml(value));
-  }
-  return {
-    config: JSON.parse(unescapeHtml(config)),
-    script,
-    scripts: response.body.split("<script").length - 1,
-    inputs,
-    action: /<form id="form" method="post" action="([^"]*)">/u.exec(response.body)?.[1],
-    hash: createHash("sha256").update(script).digest("base64"),
-  };
 }
 
 /** The login on the cookie path, and the platform's answer to it. */

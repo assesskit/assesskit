@@ -41,7 +41,7 @@ messages and nothing of the other subpaths, so that a browser bundle and a serve
 | `player`     | browser | The host of portable custom interactions ([PCI](pci.md)), the tools of an item ([tools](tools.md)), mathematics ([math](math.md)) and speech ([speech](speech.md)) |
 | `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                                                                        |
 | `cat`        | server  | The CAT engines over takar and over the REST binding of CAT 1.0, and their deployment ([CAT](cat.md))                                                              |
-| `lti`        | server  | The tool role of LTI 1.3: login, launch, Deep Linking response, access token ([lti](lti.md))                                                                       |
+| `lti`        | server  | LTI 1.3: the tool role ([lti](lti.md)) and the platform role ([lti-platform](lti-platform.md))                                                                     |
 | `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/`                                                       |
 
 The package also exports static files that a host serves: `pci-frame/*`, the frame of a portable custom interaction.

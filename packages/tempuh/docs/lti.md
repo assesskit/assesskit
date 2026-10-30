@@ -1,7 +1,8 @@
 # LTI tool role
 
 `@luthfanwakan/tempuh/lti` lets a learning platform launch tempuh as an LTI 1.3 tool. It runs on a server, uses only the Web
-Crypto API and has no runtime dependency. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on 2022-06-30) are refused.
+Crypto API and has no runtime dependency. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on 2022-06-30) are refused. The same
+subpath has the [platform role](lti-platform.md), which launches tools.
 
 | Function                                      | Does                                                                                          |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |

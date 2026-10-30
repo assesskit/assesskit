@@ -1,5 +1,11 @@
 import { checkFunction, checkNonNegativeInteger, checkRecord } from "../checks.js";
 
+/**
+ * The leeway for clock skew between the platform and the tool, in seconds. Security Framework §5.1.2 allows "some small
+ * leeway, usually no more than a few minutes".
+ */
+export const CLOCK_SKEW_SECONDS = 60;
+
 /** The source of the current time. The caller passes it, so that a host and a test control the time. */
 export interface Clock {
   /** Returns the current time in whole milliseconds since 1970-01-01T00:00:00Z, as `Date.now()` does. */

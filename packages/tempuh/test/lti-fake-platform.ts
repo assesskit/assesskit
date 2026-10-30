@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages and of OAuth 2.0 responses are snake_case.
 import { expect } from "vitest";
 import type { Fetch, HttpRequest, LoginRecord, LtiStore, PlatformRegistration } from "../src/lti/index.js";
+import { type KeyPair, readToken, request, signToken, type TestClock, verifyToken } from "./lti-fixture.js";
 
 /**
  * A conformant LTI 1.3 platform for the tests of the tool role. It is written from the specifications, not from the code
@@ -19,7 +20,6 @@ export const LOGIN_URL = `${TOOL_ORIGIN}/lti/login`;
 export const REDIRECT_URI = `${TOOL_ORIGIN}/lti/launch`;
 export const TARGET_LINK_URI = `${TOOL_ORIGIN}/lti/48320/tryout`;
 export const RETURN_URL = `${ISSUER}/deep_links`;
-export const NOW = 1_700_000_000_000;
 
 export const AGS_SCOPES = [
   "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
@@ -30,84 +30,6 @@ export const AGS_SCOPES = [
 const CLAIM = "https://purl.imsglobal.org/spec/lti/claim/";
 const DL_CLAIM = "https://purl.imsglobal.org/spec/lti-dl/claim/";
 const AGS_CLAIM = "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint";
-const encoder = new TextEncoder();
-const RSA = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" } as const;
-
-/** A time that the tests move. */
-export interface TestClock {
-  now(): number;
-  /** Moves the time forward by whole seconds. */
-  advance(seconds: number): void;
-}
-
-/** Creates a clock at `NOW`. */
-export function createClock(): TestClock {
-  let time = NOW;
-  return {
-    now: () => time,
-    advance(seconds) {
-      time += seconds * 1000;
-    },
-  };
-}
-
-/** An RSA key pair with its `kid`. */
-export interface KeyPair {
-  readonly kid: string;
-  readonly privateKey: CryptoKey;
-  readonly publicKey: CryptoKey;
-  readonly publicJwk: Record<string, unknown>;
-}
-
-/** Generates an RSA key pair for RS256. */
-export async function generateKeyPair(kid: string, modulusLength = 2048): Promise<KeyPair> {
-  const pair = await crypto.subtle.generateKey(
-    { ...RSA, modulusLength, publicExponent: new Uint8Array([1, 0, 1]) },
-    true,
-    ["sign", "verify"],
-  );
-  const jwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  return {
-    kid,
-    privateKey: pair.privateKey,
-    publicKey: pair.publicKey,
-    publicJwk: { ...jwk, kid, use: "sig", alg: "RS256" },
-  };
-}
-
-/** Encodes a string or bytes as base64url. */
-export function base64url(data: string | ArrayBuffer): string {
-  return (typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data)).toString("base64url");
-}
-
-/** Signs claims as a compact JWS; `header` replaces fields of the default header. */
-export async function signToken(
-  claims: object,
-  key: KeyPair,
-  header: Readonly<Record<string, unknown>> = {},
-): Promise<string> {
-  const part = `${base64url(JSON.stringify({ alg: "RS256", typ: "JWT", kid: key.kid, ...header }))}.${base64url(JSON.stringify(claims))}`;
-  const signature = await crypto.subtle.sign(RSA, key.privateKey, encoder.encode(part));
-  return `${part}.${base64url(signature)}`;
-}
-
-/** Reads the header and the payload of a compact JWS without checking the signature. */
-export function readToken(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
-  const [header = "", payload = ""] = token.split(".");
-  const parse = (part: string): Record<string, unknown> => JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
-  return { header: parse(header), payload: parse(payload) };
-}
-
-/** Returns whether the signature of a compact JWS verifies with the public key. */
-export async function verifyToken(token: string, key: KeyPair): Promise<boolean> {
-  const [header = "", payload = "", signature = ""] = token.split(".");
-  return crypto.subtle.verify(
-    RSA,
-    key.publicKey,
-    Buffer.from(signature, "base64url"),
-    encoder.encode(`${header}.${payload}`),
-  );
-}
 
 /** The claims of a resource link launch, as LTI 1.3 Core Appendix E gives them. */
 function resourceLinkClaims(nonce: string, nowSeconds: number): Record<string, unknown> {
@@ -184,11 +106,6 @@ export interface Issue {
   readonly header?: Readonly<Record<string, unknown>>;
   /** The key to sign with; default: the platform's. */
   readonly signer?: KeyPair;
-}
-
-/** Builds a request. */
-export function request(init: Partial<HttpRequest> & { readonly url: string }): HttpRequest {
-  return { method: "GET", headers: {}, body: "", ...init };
 }
 
 /** Builds the form post of the platform to the tool's redirect URI. */

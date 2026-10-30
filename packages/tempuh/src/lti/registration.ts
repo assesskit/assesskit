@@ -1,7 +1,8 @@
 import type { webcrypto } from "node:crypto";
-import { checkArray, checkNonEmptyString, checkRecord, describe, isRecord } from "../checks.js";
+import { checkArray, checkNonEmptyString, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { checkHttpsUrl } from "./http.js";
+import { isRsaKey } from "./keys.js";
 
 /** The host's record of one platform that the tool trusts, as the platform's administrator and the tool agreed on it. */
 export interface PlatformRegistration {
@@ -53,23 +54,9 @@ export function checkPlatformRegistration(value: unknown): asserts value is Plat
   checkHttpsUrl(value.accessTokenUrl, "The access token URL of a registration");
   checkHttpsUrl(value.redirectUri, "The redirect URI of a registration");
   checkNonEmptyString(value.keyId, "The key identifier of a registration");
-  if (!isSigningKey(value.signingKey)) {
+  if (!isRsaKey(value.signingKey, "sign")) {
     throw new DataError(
       `The signing key of a registration must be a private RSASSA-PKCS1-v1_5 key with SHA-256 for signing, found ${describe(value.signingKey)}.`,
     );
   }
-}
-
-/** Returns whether a value is a `CryptoKey` for signing with RS256. */
-function isSigningKey(key: unknown): boolean {
-  if (!isRecord(key)) return false;
-  const { algorithm, usages } = key;
-  return (
-    isRecord(algorithm) &&
-    algorithm.name === "RSASSA-PKCS1-v1_5" &&
-    isRecord(algorithm.hash) &&
-    algorithm.hash.name === "SHA-256" &&
-    Array.isArray(usages) &&
-    usages.includes("sign")
-  );
 }

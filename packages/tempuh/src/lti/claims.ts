@@ -12,8 +12,8 @@ export interface Shape<T> {
   readonly accepts: (value: unknown) => value is T;
 }
 
-// LTI 1.3 Core §5.3.3, §5.3.5, §5.3.6: an identifier of a deployment, a resource link or a user has at most 255 characters.
-const MAX_IDENTIFIER_LENGTH = 255;
+/** The most characters of an identifier of a deployment, a resource link or a user (LTI 1.3 Core §5.3.3, §5.3.5, §5.3.6). */
+export const MAX_IDENTIFIER_LENGTH = 255;
 
 /** A string. */
 export const STRING: Shape<string> = {
@@ -32,6 +32,18 @@ export const IDENTIFIER: Shape<string> = {
 export const NUMBER: Shape<number> = {
   expected: "a number",
   accepts: (value): value is number => typeof value === "number" && Number.isFinite(value),
+};
+
+/** A finite number above 0, such as a maximum score. */
+export const POSITIVE_NUMBER: Shape<number> = {
+  expected: "a number above 0",
+  accepts: (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0,
+};
+
+/** A safe integer of at least 1, such as the number of an item instance. */
+export const POSITIVE_INTEGER: Shape<number> = {
+  expected: "an integer of at least 1",
+  accepts: (value): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 1,
 };
 
 /** A boolean. */
@@ -114,6 +126,16 @@ export const CLAIM = {
   data: "https://purl.imsglobal.org/spec/lti-dl/claim/data",
   agsEndpoint: "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint",
 } as const;
+
+/** The scopes of the Assignment and Grade Services that a launch offers (LTI AGS 2.0 §3.2, §3.4.2). */
+export const AGS_SCOPE = {
+  lineitem: "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+  lineitemReadonly: "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly",
+  score: "https://purl.imsglobal.org/spec/lti-ags/scope/score",
+} as const;
+
+/** The role of a candidate in a launch: a learner (LTI 1.3 Core Appendix A.2.3). */
+export const LEARNER_ROLE = "http://purl.imsglobal.org/vocab/lis/v2/membership#Learner";
 
 /** The message types of a launch that the tool accepts. */
 export const MESSAGE_TYPE = {

@@ -1,3 +1,4 @@
+import { escapeHtml, pagePolicy } from "./html.js";
 import type { HttpResponse } from "./http.js";
 
 // How long a page waits for the platform to answer a storage message before it tells the user. A storage message is a
@@ -101,22 +102,6 @@ const GET_SCRIPT = `(function () {
 const FAILURE =
   "The launch could not continue: the platform did not store or return the launch state. Close this window and start the launch again.";
 
-/** Encodes text for an HTML attribute value or text. */
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-/** Returns the base64 SHA-256 of a script, which a CSP `script-src` names as `'sha256-...'`. */
-async function scriptHash(script: string): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script)));
-  return btoa(String.fromCharCode(...digest));
-}
-
 /** Builds a page with one script, for the browser to run in the frame of the platform. */
 async function respond(script: string, config: object, body: string): Promise<HttpResponse> {
   const html = `<!doctype html>
@@ -138,7 +123,7 @@ ${body}<p id="failure" role="alert" hidden>${FAILURE}</p>
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
-      "content-security-policy": `default-src 'none'; script-src 'sha256-${await scriptHash(script)}'; base-uri 'none'; form-action 'self'`,
+      "content-security-policy": await pagePolicy(script, "'self'"),
     },
     body: html,
   };

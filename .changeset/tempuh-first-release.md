@@ -36,3 +36,8 @@ browser. `buildSpeechRequest` reads a range of content into an SSML 1.1 document
 pronunciation lexicons (`parseLexicon`), suppression by reading type, content roles and the restriction types of the spoken
 support. `webSpeech` voices a request with the Web Speech API, `echoTyping` repeats typing as the support asks, and
 `applyReadingType` applies the reading type to the accessibility tree.
+
+The platform role of LTI 1.3 in `@luthfanwakan/tempuh/lti`, which launches the tools of LTI items: the login with a signed,
+single-use hint, the authorization that works with cookies blocked and answers with a page under a strict policy, the key set,
+the token endpoint, and the line item and the scores of the grade services. The platform's handlers refuse a configuration in
+which two of its origin, the player's and the assets' coincide.

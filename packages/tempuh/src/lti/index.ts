@@ -1,7 +1,12 @@
 /**
- * The tool role of LTI 1.3: a tool that a learning platform launches. It starts the OpenID Connect login (with a cookie, or
- * with the platform's browser storage in an iframe), validates the launch, answers a Deep Linking request and requests
- * access tokens for the platform's services.
+ * LTI 1.3 in both roles.
+ *
+ * The tool role is a tool that a learning platform launches: it starts the OpenID Connect login (with a cookie, or with the
+ * platform's browser storage in an iframe), validates the launch, answers a Deep Linking request and requests access
+ * tokens for the platform's services.
+ *
+ * The platform role launches the LTI items of a package: it starts the login of a tool, answers its authentication request
+ * with the `id_token`, publishes its key set, issues access tokens and serves the line item and the scores of an item.
  *
  * @module @luthfanwakan/tempuh/lti
  */
@@ -23,6 +28,26 @@ export type {
 } from "./launch-model.js";
 export { ltiLogin } from "./login.js";
 export type { AccessTokenOptions, LtiLaunchOptions, LtiLoginOptions, ToolOptions } from "./options.js";
+export {
+  type AgsScore,
+  type AgsScoresOptions,
+  agsLineItem,
+  agsScores,
+  LTI_HINT_TTL_SECONDS,
+  ltiPlatformAuthorize,
+  ltiPlatformLogin,
+  type PlatformAuthorizeOptions,
+  type PlatformConfig,
+  type PlatformEndpoints,
+  type PlatformLoginOptions,
+  type PlatformOptions,
+  type PlatformTokenOptions,
+  platformEndpoints,
+  platformJwks,
+  platformToken,
+  readAgsScore,
+  type ToolRegistration,
+} from "./platform/index.js";
 export type { PlatformRegistration } from "./registration.js";
 export type { Fetch } from "./service.js";
 export type { LoginRecord, LtiStore } from "./store.js";

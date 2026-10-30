@@ -10,8 +10,8 @@ messages in English and Indonesian, the protocol between a browser and a session
 root. It also has the frame of portable custom interactions: a sandboxed frame with its own content security policy,
 RequireJS loading with fallback locations, and the communication bridge of the QTI 3.0 Best Practices and Implementation
 Guide (§3.7.12). It also has the tools of an item: a rule, a protractor, basic and standard calculators, a line reader, answer
-masking, materials, and slots for the tools that the host provides. It also has the tool role of LTI 1.3: the launch of a test by a learning platform, with its login, Deep Linking
-response and access token. On the server it has the CAT engines for olah's `CatPort`:
+masking, materials, and slots for the tools that the host provides. It also has LTI 1.3: the tool role, the launch of a test by a learning platform, with its login, Deep Linking
+response and access token, and the platform role, which launches the tools of LTI items. On the server it has the CAT engines for olah's `CatPort`:
 item-level adaptive sections and multistage panels over takar, a client of the REST binding of CAT 1.0, and the deployment of a
 package's adaptive sections.
 Mathematics is typeset with MathJax 4, loaded from the host's URL when an item has an expression, and speech is read aloud from SSML, `data-ssml` and pronunciation lexicons through a voice of the host or the browser.
@@ -36,17 +36,17 @@ envelope.seq; // 3
 
 ## API
 
-| Import                             | Contents                                                                                                                                                                                                                                 |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`                                                                                                        |
-| `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciEvent`, `PciVariable`, `PciFiles`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields |
-| `@luthfanwakan/tempuh/player`      | `createMathTypesetter`, `MathTypesetter`                                                                                                                                                                                                 |
-| `@luthfanwakan/tempuh/player`      | `buildSpeechRequest`, `SpeechOptions`, `SpeechRequest`, `SpeechSettings`, `SpeechHook`, `webSpeech`, `echoTyping`, `TypingEchoOptions`, `applyReadingType`, `parseLexicon`, `Lexicon`, `Pronunciation`                                   |
-| `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                                 |
-| `@luthfanwakan/tempuh/lti`         | `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `createJwksCache` and the types of their arguments and results                                                                                                            |
-| `@luthfanwakan/tempuh/cat`         | `takarCatPort`, `takarPanelPort`, `restCatPort`, `deployCatSections`; `SectionStore`, `StoredSection`, `PanelParameters`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                                   |
-| `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                                           |
-| `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                                |
+| Import                             | Contents                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`                                                                                                                                                                  |
+| `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciEvent`, `PciVariable`, `PciFiles`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields                                                           |
+| `@luthfanwakan/tempuh/player`      | `createMathTypesetter`, `MathTypesetter`                                                                                                                                                                                                                                                           |
+| `@luthfanwakan/tempuh/player`      | `buildSpeechRequest`, `SpeechOptions`, `SpeechRequest`, `SpeechSettings`, `SpeechHook`, `webSpeech`, `echoTyping`, `TypingEchoOptions`, `applyReadingType`, `parseLexicon`, `Lexicon`, `Pronunciation`                                                                                             |
+| `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                                                                                           |
+| `@luthfanwakan/tempuh/lti`         | Tool role: `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `createJwksCache`. Platform role: `ltiPlatformLogin`, `ltiPlatformAuthorize`, `platformJwks`, `platformToken`, `agsLineItem`, `agsScores`, `readAgsScore`, `platformEndpoints`. The types of their arguments and results |
+| `@luthfanwakan/tempuh/cat`         | `takarCatPort`, `takarPanelPort`, `restCatPort`, `deployCatSections`; `SectionStore`, `StoredSection`, `PanelParameters`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                                                                                             |
+| `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                                                                                                     |
+| `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                                                                                          |
 
 ## Documentation
 
@@ -57,6 +57,7 @@ envelope.seq; // 3
 - [Speech](docs/speech.md): the speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo.
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [LTI](docs/lti.md): the tool role of LTI 1.3, its checks and its deployment.
+- [LTI platform](docs/lti-platform.md): the platform role, its three origins, the signed hints, the token endpoint and the grade services.
 - [CAT](docs/cat.md): the CAT engines over takar and over REST, the section store and the deployment of a package.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
 - [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
