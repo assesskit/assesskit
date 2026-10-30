@@ -35,10 +35,11 @@ Node.js or any server runtime, and no DOM. tempuh imports olah by package name a
 Each subpath is a folder of `src/` with an `index.ts`, listed in `exports`. The root `.` re-exports the errors and the
 messages and nothing of the other subpaths, so that a browser bundle and a server load none of each other's code.
 
-| Subpath    | Side   | Contents                                                    |
-| ---------- | ------ | ----------------------------------------------------------- |
-| `.`        | shared | The errors and the interface messages                       |
-| `protocol` | shared | The caller and the envelopes between a browser and a server |
+| Subpath      | Side    | Contents                                                                                                     |
+| ------------ | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `.`          | shared  | The errors and the interface messages                                                                        |
+| `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                  |
+| `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/` |
 
 ## TypeScript
 
@@ -46,7 +47,7 @@ Four configurations check the package, each with the libraries of its side:
 
 | File                    | Checks                                   | `lib` and types                                |
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `tsconfig.json`         | the tests                                | `ES2023`, Node.js types                        |
+| `tsconfig.json`         | the tests                                | `ES2023`, `DOM`, `DOM.Iterable`, Node.js types |
 | `tsconfig.browser.json` | shared and browser folders               | `ES2023`, `DOM`, `DOM.Iterable`                |
 | `tsconfig.server.json`  | shared and server folders                | `ES2023`, Node.js types                        |
 | `tsconfig.build.json`   | the build of `src/`, which emits `dist/` | `ES2023`, `DOM`, `DOM.Iterable`, Node.js types |

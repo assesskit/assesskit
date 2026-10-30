@@ -59,7 +59,9 @@ packages/tempuh/          the player
   src/messages/           Messages, the English and Indonesian catalogs, selectMessages
   src/protocol/           Caller, ActionEnvelope and ViewEnvelope, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
-  test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules
+  player.css              the stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation
+  test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
+                          *.browser.test.ts render in Chromium, Firefox and WebKit
   docs/                   guides
 differential/             olah against Longsight qti3-core
 compat/                   the browser baseline: the lint of the built code, the banned features, the pinned engines
@@ -76,6 +78,7 @@ pnpm install
 pnpm lint             # Biome and cspell; `pnpm format` fixes formatting
 pnpm typecheck        # tsc over every package and the tooling
 pnpm test             # Vitest, offline
+pnpm test:browser     # the rendering tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install` first
 pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
 pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
@@ -218,6 +221,7 @@ describes how the baseline is tested.
 - Properties that hold for any input are tested with fast-check.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
+- Tests that render in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 - Test names describe behavior: `it("shares the places at a tied boundary equally")`.

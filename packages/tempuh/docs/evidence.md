@@ -9,16 +9,16 @@ A row has an identifier `T1` to `T122`, the duty, the olah rows it implements (`
 `J4–J6`, which must exist in `olah-inventory.json`), the folders that implement it, its evidence and its unit. A duty that
 the host owns or that is not supported has an `owner` in place of folders, evidence and unit.
 
-| Code | Evidence                                                                                   |
-| ---- | ------------------------------------------------------------------------------------------ |
-| R    | Rendering test in Vitest browser mode on Chromium, Firefox and WebKit                      |
-| A    | axe-core at WCAG 2.2 A and AA, a keyboard-only script, and the manual checks of the matrix |
-| E    | Playwright end-to-end flow on three engines                                                |
-| X    | A 1EdTech sample renders, accepts input and logs no error                                  |
-| U    | Unit test, in Node or the browser                                                          |
-| F    | Fake service that records HTTP, compared with the cited payloads                           |
-| P    | Property of the behavior, checked by fast-check                                            |
-| L    | Live check by a person                                                                     |
+| Code | Evidence                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------- |
+| R    | Rendering test in Vitest browser mode on Chromium, Firefox and WebKit (`pnpm test:browser`) |
+| A    | axe-core at WCAG 2.2 A and AA, a keyboard-only script, and the manual checks of the matrix  |
+| E    | Playwright end-to-end flow on three engines                                                 |
+| X    | A 1EdTech sample renders, accepts input and logs no error                                   |
+| U    | Unit test, in Node or the browser                                                           |
+| F    | Fake service that records HTTP, compared with the cited payloads                            |
+| P    | Property of the behavior, checked by fast-check                                             |
+| L    | Live check by a person                                                                      |
 
 ## Criteria
 
@@ -35,7 +35,8 @@ has one of three kinds:
 
 A title names what it evidences in brackets, as a string literal: `it("[T97] chooses the catalog of the language")` or
 `it("[SC 3.2.4] gives each function one key")`. A title may name several, such as `[T97][SC 3.2.4]`. Skipped and todo tests
-do not count. tempuh's tests are the files `*.test.ts` in `packages/tempuh/test/`; an identifier is checked against the
+do not count. tempuh's tests are the files `*.test.ts` in `packages/tempuh/test/`, and those named `*.browser.test.ts`
+run in the browsers with `pnpm test:browser`, after `pnpm exec playwright install`. An identifier is checked against the
 inventory of its own package, so `[T1]` in tempuh is not olah's `T1`.
 
 ## The coverage gate

@@ -1,0 +1,1890 @@
+/*
+ * player.css: the base and the shared vocabulary of the tempuh player.
+ *
+ * It styles a content root: the shadow root of an item, which adopts it, and the document of a PCI frame, which loads it.
+ * docs/styling.md lists the markup it expects and the properties and attributes the player sets.
+ *
+ * Sources: [VOCAB] QTI 3 Standardized Shared Vocabulary and CSS Classes, [BPIG] QTI 3 Best Practices and Implementation
+ * Guide (App. B, §5). The stylesheet stays inside the browser baseline (docs/baseline.md): flat selectors, no :has().
+ * !important appears in the utility classes of [VOCAB] §2.3 and §2.4 and in the PNP rules that must win over the item's
+ * own styles; Biome's noImportantStyles is off for stylesheets.
+ */
+
+/* 1. Tokens. A theme sets the palette; the other colors derive from it, so that a color the player sets on the host
+   (a PNP color) keeps them in step. */
+
+:root,
+:host {
+  --tempuh-fg: #1a1a1a;
+  --tempuh-bg: #ffffff;
+  --tempuh-accent: #0b57d0;
+  --tempuh-on-accent: #ffffff;
+  --tempuh-invalid: #b3261e;
+  --tempuh-muted: color-mix(in srgb, var(--tempuh-fg) 78%, var(--tempuh-bg));
+  --tempuh-border: color-mix(in srgb, var(--tempuh-fg) 62%, var(--tempuh-bg));
+  --tempuh-surface: color-mix(in srgb, var(--tempuh-fg) 6%, var(--tempuh-bg));
+  --tempuh-accent-surface: color-mix(in srgb, var(--tempuh-accent) 16%, var(--tempuh-bg));
+  --tempuh-focus: var(--tempuh-accent);
+  --tempuh-border-width: 1px;
+  --tempuh-focus-width: 3px;
+  --tempuh-focus-offset: 2px;
+
+  /* WCAG 2.5.8: the smallest target. */
+  --tempuh-target-size: 24px;
+  --tempuh-gutter: 1rem;
+
+  /* The line height as a number, so that line counts in ems follow it. BPIG §5.2.9.7.6–7: the PNP line height
+     multiplies the base, and the line spacing adds to it. */
+  --tempuh-leading: calc(1.5 * var(--tempuh-line-height, 1) + var(--tempuh-line-spacing, 0));
+}
+
+/* 2. Themes: invert display polarity and high contrast (BPIG §5.2.9.1). Each pair of text and background has at least
+   7:1, and the accent at least 4.5:1 against the background. */
+
+:root[data-tempuh-polarity="inverted"],
+:host([data-tempuh-polarity="inverted"]) {
+  --tempuh-fg: #f2f2f2;
+  --tempuh-bg: #121212;
+  --tempuh-accent: #8ab4f8;
+  --tempuh-on-accent: #0a0a0a;
+  --tempuh-invalid: #f2b8b5;
+}
+
+:root[data-tempuh-contrast="high"],
+:host([data-tempuh-contrast="high"]) {
+  --tempuh-fg: #000000;
+  --tempuh-bg: #ffffff;
+  --tempuh-accent: #0000b3;
+  --tempuh-on-accent: #ffffff;
+  --tempuh-invalid: #a50000;
+  --tempuh-border: var(--tempuh-fg);
+  --tempuh-border-width: 2px;
+  --tempuh-focus-width: 4px;
+}
+
+:root[data-tempuh-contrast="high"][data-tempuh-polarity="inverted"],
+:host([data-tempuh-contrast="high"][data-tempuh-polarity="inverted"]) {
+  --tempuh-fg: #ffffff;
+  --tempuh-bg: #000000;
+  --tempuh-accent: #ffff00;
+  --tempuh-on-accent: #000000;
+  --tempuh-invalid: #ff9a9a;
+}
+
+/* 3. The content root. Paint containment clips at the border box, so the padding keeps the focus ring of an item at the
+   edge inside it. The text settings are the PNP text appearance and magnification (BPIG §5.2.9.6–7); rem keeps a
+   root in a root from compounding them. */
+
+:root,
+:host {
+  padding: calc(var(--tempuh-focus-width) + var(--tempuh-focus-offset));
+  color: var(--tempuh-fg);
+  background-color: var(--tempuh-bg);
+  font-family: var(--tempuh-font-family, system-ui, sans-serif);
+  font-size: calc(var(--tempuh-font-scale, 1) * var(--tempuh-text-zoom, 1) * 1rem);
+  line-height: var(--tempuh-leading);
+  letter-spacing: var(--tempuh-letter-spacing, normal);
+  word-spacing: var(--tempuh-word-spacing, normal);
+  overflow-wrap: break-word;
+}
+
+:host {
+  display: block;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+:where(img, video, canvas) {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+:where(svg, object, iframe) {
+  max-inline-size: 100%;
+}
+
+:where(a) {
+  color: var(--tempuh-accent);
+}
+
+/* 4. Focus and controls. WCAG 2.4.7, 2.4.11, 2.5.8, 1.4.11. The sticky chrome's height keeps a focused element out
+   from under it. */
+
+:where(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]) {
+  scroll-margin-block: var(--tempuh-sticky-top, 0px) var(--tempuh-sticky-bottom, 0px);
+}
+
+:where(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible {
+  outline: var(--tempuh-focus-width) solid var(--tempuh-focus);
+  outline-offset: var(--tempuh-focus-offset);
+}
+
+:where(input:not([type="checkbox"], [type="radio"]), textarea, select, button) {
+  box-sizing: border-box;
+  min-inline-size: var(--tempuh-target-size);
+  min-block-size: var(--tempuh-target-size);
+  max-inline-size: 100%;
+  padding: 0.25em 0.5em;
+  border: var(--tempuh-border-width) solid var(--tempuh-border);
+  border-radius: 0.25rem;
+  color: inherit;
+  background-color: var(--tempuh-bg);
+  font: inherit;
+}
+
+:where(button) {
+  background-color: var(--tempuh-surface);
+  cursor: pointer;
+}
+
+/* WebKit ignores min-block-size on a menu, and honors block-size. */
+:where(select:not([multiple])) {
+  block-size: max(var(--tempuh-target-size), 1.75em);
+}
+
+:where(input[type="checkbox"], input[type="radio"]) {
+  flex: none;
+  inline-size: max(var(--tempuh-target-size), 1.25em);
+  block-size: max(var(--tempuh-target-size), 1.25em);
+  margin: 0;
+  accent-color: var(--tempuh-accent);
+}
+
+/* WCAG 1.4.1: an invalid control also has a thicker border, and the player adds the message. */
+:where(input, textarea, select)[aria-invalid="true"] {
+  border-width: calc(var(--tempuh-border-width) * 3);
+  border-color: var(--tempuh-invalid);
+}
+
+/* 5. Shared vocabulary, [VOCAB] §1.1 and §2. */
+
+/* §1.1.1, §1.1.6.1, §2.1: hidden to everyone, and hidden to the eye only. A control that a vocabulary class hides keeps
+   its place in the accessibility tree and in the tab order (§1.2.1.7). */
+
+.qti-hidden {
+  display: none;
+}
+
+.qti-visually-hidden,
+qti-hotspot-choice > .tempuh-control,
+qti-associable-hotspot > .tempuh-control,
+.qti-input-control-hidden .tempuh-control,
+.qti-unselected-hidden .tempuh-control {
+  position: absolute !important;
+  overflow: hidden;
+  clip: rect(1px 1px 1px 1px);
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+/* §1.1.1.1: the emphasis shows only to a candidate with the keyword-emphasis support, and does not rely on color. */
+:root[data-tempuh-keyword-emphasis] .qti-keyword-emphasis,
+:host([data-tempuh-keyword-emphasis]) .qti-keyword-emphasis {
+  border-radius: 0.125em;
+  background-color: var(--tempuh-accent-surface);
+  font-weight: 700;
+}
+
+/* §1.1.2, §2.12 */
+
+.qti-underline {
+  text-decoration: underline;
+}
+
+.qti-italic {
+  font-style: italic;
+}
+
+.qti-bordered {
+  padding: 2px;
+  border: var(--tempuh-border-width) solid var(--tempuh-border);
+}
+
+.qti-well {
+  min-block-size: 20px;
+  margin-block-end: 20px;
+  padding: 19px;
+  border: var(--tempuh-border-width) solid var(--tempuh-border);
+  border-radius: 4px;
+  background-color: var(--tempuh-surface);
+}
+
+/* §1.1.3 and §2.11: a row of twelve columns. A column spans N of them, and an offset starts after N. §2.11's pixel
+   widths and Bootstrap 2 containers are replaced by a grid of fractions, which reflows (see 8). */
+
+.qti-layout-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0 var(--tempuh-gutter);
+}
+
+.qti-layout-col1 {
+  grid-column-end: span 1;
+}
+
+.qti-layout-col2 {
+  grid-column-end: span 2;
+}
+
+.qti-layout-col3 {
+  grid-column-end: span 3;
+}
+
+.qti-layout-col4 {
+  grid-column-end: span 4;
+}
+
+.qti-layout-col5 {
+  grid-column-end: span 5;
+}
+
+.qti-layout-col6 {
+  grid-column-end: span 6;
+}
+
+.qti-layout-col7 {
+  grid-column-end: span 7;
+}
+
+.qti-layout-col8 {
+  grid-column-end: span 8;
+}
+
+.qti-layout-col9 {
+  grid-column-end: span 9;
+}
+
+.qti-layout-col10 {
+  grid-column-end: span 10;
+}
+
+.qti-layout-col11 {
+  grid-column-end: span 11;
+}
+
+.qti-layout-col12 {
+  grid-column-end: span 12;
+}
+
+.qti-layout-offset1 {
+  grid-column-start: 2;
+}
+
+.qti-layout-offset2 {
+  grid-column-start: 3;
+}
+
+.qti-layout-offset3 {
+  grid-column-start: 4;
+}
+
+.qti-layout-offset4 {
+  grid-column-start: 5;
+}
+
+.qti-layout-offset5 {
+  grid-column-start: 6;
+}
+
+.qti-layout-offset6 {
+  grid-column-start: 7;
+}
+
+.qti-layout-offset7 {
+  grid-column-start: 8;
+}
+
+.qti-layout-offset8 {
+  grid-column-start: 9;
+}
+
+.qti-layout-offset9 {
+  grid-column-start: 10;
+}
+
+.qti-layout-offset10 {
+  grid-column-start: 11;
+}
+
+.qti-layout-offset11 {
+  grid-column-start: 12;
+}
+
+/* §1.1.4, §2.5, §2.6 */
+
+.qti-align-left {
+  text-align: left;
+}
+
+.qti-align-center {
+  text-align: center;
+}
+
+.qti-align-right {
+  text-align: right;
+}
+
+.qti-valign-top {
+  vertical-align: top;
+}
+
+.qti-valign-middle {
+  vertical-align: middle;
+}
+
+.qti-valign-baseline {
+  vertical-align: baseline;
+}
+
+.qti-valign-bottom {
+  vertical-align: bottom;
+}
+
+/* §2.1, §2.2 */
+
+.qti-display-inline {
+  display: inline;
+}
+
+.qti-display-inline-block {
+  display: inline-block;
+}
+
+.qti-display-block {
+  display: block;
+}
+
+.qti-display-flex {
+  display: flex;
+}
+
+.qti-display-inline-flex {
+  display: inline-flex;
+}
+
+.qti-display-grid {
+  display: grid;
+}
+
+.qti-display-inline-grid {
+  display: inline-grid;
+}
+
+.qti-display-table {
+  display: table;
+}
+
+.qti-display-table-cell {
+  display: table-cell;
+}
+
+.qti-display-table-row {
+  display: table-row;
+}
+
+.qti-display-list-item {
+  display: list-item;
+}
+
+.qti-display-inherit {
+  display: inherit;
+}
+
+.qti-flex-direction-column {
+  flex-direction: column;
+}
+
+.qti-flex-direction-row {
+  flex-direction: row;
+}
+
+.qti-flex-grow-1 {
+  flex-grow: 1;
+}
+
+.qti-flex-grow-0 {
+  flex-grow: 0;
+}
+
+/* §2.3 and §2.4: "s" and "e" are the start and the end of the line, which the sample defines for left-to-right text. */
+
+.qti-margin-0 {
+  margin: 0 !important;
+}
+.qti-margin-1 {
+  margin: 0.25rem !important;
+}
+.qti-margin-2 {
+  margin: 0.5rem !important;
+}
+.qti-margin-3 {
+  margin: 1rem !important;
+}
+.qti-margin-4 {
+  margin: 1.5rem !important;
+}
+.qti-margin-5 {
+  margin: 3rem !important;
+}
+.qti-margin-auto {
+  margin: auto !important;
+}
+.qti-margin-x-0 {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+.qti-margin-x-1 {
+  margin-right: 0.25rem !important;
+  margin-left: 0.25rem !important;
+}
+.qti-margin-x-2 {
+  margin-right: 0.5rem !important;
+  margin-left: 0.5rem !important;
+}
+.qti-margin-x-3 {
+  margin-right: 1rem !important;
+  margin-left: 1rem !important;
+}
+.qti-margin-x-4 {
+  margin-right: 1.5rem !important;
+  margin-left: 1.5rem !important;
+}
+.qti-margin-x-5 {
+  margin-right: 3rem !important;
+  margin-left: 3rem !important;
+}
+.qti-margin-x-auto {
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+.qti-margin-y-0 {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.qti-margin-y-1 {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+.qti-margin-y-2 {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+.qti-margin-y-3 {
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+.qti-margin-y-4 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+.qti-margin-y-5 {
+  margin-top: 3rem !important;
+  margin-bottom: 3rem !important;
+}
+.qti-margin-y-auto {
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+}
+.qti-margin-t-0 {
+  margin-top: 0 !important;
+}
+.qti-margin-t-1 {
+  margin-top: 0.25rem !important;
+}
+.qti-margin-t-2 {
+  margin-top: 0.5rem !important;
+}
+.qti-margin-t-3 {
+  margin-top: 1rem !important;
+}
+.qti-margin-t-4 {
+  margin-top: 1.5rem !important;
+}
+.qti-margin-t-5 {
+  margin-top: 3rem !important;
+}
+.qti-margin-t-auto {
+  margin-top: auto !important;
+}
+.qti-margin-b-0 {
+  margin-bottom: 0 !important;
+}
+.qti-margin-b-1 {
+  margin-bottom: 0.25rem !important;
+}
+.qti-margin-b-2 {
+  margin-bottom: 0.5rem !important;
+}
+.qti-margin-b-3 {
+  margin-bottom: 1rem !important;
+}
+.qti-margin-b-4 {
+  margin-bottom: 1.5rem !important;
+}
+.qti-margin-b-5 {
+  margin-bottom: 3rem !important;
+}
+.qti-margin-b-auto {
+  margin-bottom: auto !important;
+}
+.qti-margin-s-0 {
+  margin-inline-start: 0 !important;
+}
+.qti-margin-s-1 {
+  margin-inline-start: 0.25rem !important;
+}
+.qti-margin-s-2 {
+  margin-inline-start: 0.5rem !important;
+}
+.qti-margin-s-3 {
+  margin-inline-start: 1rem !important;
+}
+.qti-margin-s-4 {
+  margin-inline-start: 1.5rem !important;
+}
+.qti-margin-s-5 {
+  margin-inline-start: 3rem !important;
+}
+.qti-margin-s-auto {
+  margin-inline-start: auto !important;
+}
+.qti-margin-e-0 {
+  margin-inline-end: 0 !important;
+}
+.qti-margin-e-1 {
+  margin-inline-end: 0.25rem !important;
+}
+.qti-margin-e-2 {
+  margin-inline-end: 0.5rem !important;
+}
+.qti-margin-e-3 {
+  margin-inline-end: 1rem !important;
+}
+.qti-margin-e-4 {
+  margin-inline-end: 1.5rem !important;
+}
+.qti-margin-e-5 {
+  margin-inline-end: 3rem !important;
+}
+.qti-margin-e-auto {
+  margin-inline-end: auto !important;
+}
+
+.qti-padding-0 {
+  padding: 0 !important;
+}
+.qti-padding-1 {
+  padding: 0.25rem !important;
+}
+.qti-padding-2 {
+  padding: 0.5rem !important;
+}
+.qti-padding-3 {
+  padding: 1rem !important;
+}
+.qti-padding-4 {
+  padding: 1.5rem !important;
+}
+.qti-padding-5 {
+  padding: 3rem !important;
+}
+.qti-padding-x-0 {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+.qti-padding-x-1 {
+  padding-right: 0.25rem !important;
+  padding-left: 0.25rem !important;
+}
+.qti-padding-x-2 {
+  padding-right: 0.5rem !important;
+  padding-left: 0.5rem !important;
+}
+.qti-padding-x-3 {
+  padding-right: 1rem !important;
+  padding-left: 1rem !important;
+}
+.qti-padding-x-4 {
+  padding-right: 1.5rem !important;
+  padding-left: 1.5rem !important;
+}
+.qti-padding-x-5 {
+  padding-right: 3rem !important;
+  padding-left: 3rem !important;
+}
+.qti-padding-y-0 {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.qti-padding-y-1 {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+.qti-padding-y-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+.qti-padding-y-3 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+.qti-padding-y-4 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+.qti-padding-y-5 {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+.qti-padding-t-0 {
+  padding-top: 0 !important;
+}
+.qti-padding-t-1 {
+  padding-top: 0.25rem !important;
+}
+.qti-padding-t-2 {
+  padding-top: 0.5rem !important;
+}
+.qti-padding-t-3 {
+  padding-top: 1rem !important;
+}
+.qti-padding-t-4 {
+  padding-top: 1.5rem !important;
+}
+.qti-padding-t-5 {
+  padding-top: 3rem !important;
+}
+.qti-padding-b-0 {
+  padding-bottom: 0 !important;
+}
+.qti-padding-b-1 {
+  padding-bottom: 0.25rem !important;
+}
+.qti-padding-b-2 {
+  padding-bottom: 0.5rem !important;
+}
+.qti-padding-b-3 {
+  padding-bottom: 1rem !important;
+}
+.qti-padding-b-4 {
+  padding-bottom: 1.5rem !important;
+}
+.qti-padding-b-5 {
+  padding-bottom: 3rem !important;
+}
+.qti-padding-s-0 {
+  padding-inline-start: 0 !important;
+}
+.qti-padding-s-1 {
+  padding-inline-start: 0.25rem !important;
+}
+.qti-padding-s-2 {
+  padding-inline-start: 0.5rem !important;
+}
+.qti-padding-s-3 {
+  padding-inline-start: 1rem !important;
+}
+.qti-padding-s-4 {
+  padding-inline-start: 1.5rem !important;
+}
+.qti-padding-s-5 {
+  padding-inline-start: 3rem !important;
+}
+.qti-padding-e-0 {
+  padding-inline-end: 0 !important;
+}
+.qti-padding-e-1 {
+  padding-inline-end: 0.25rem !important;
+}
+.qti-padding-e-2 {
+  padding-inline-end: 0.5rem !important;
+}
+.qti-padding-e-3 {
+  padding-inline-end: 1rem !important;
+}
+.qti-padding-e-4 {
+  padding-inline-end: 1.5rem !important;
+}
+.qti-padding-e-5 {
+  padding-inline-end: 3rem !important;
+}
+
+/* §2.7 and §2.8. A width counts the padding and the border, and never exceeds the root, so that a wide class does not
+   overflow a narrow screen (WCAG 1.4.10). */
+
+.qti-height-0 {
+  height: 0px;
+}
+.qti-height-px {
+  height: 1px;
+}
+.qti-height-0p5 {
+  height: 0.125rem;
+}
+.qti-height-1 {
+  height: 0.25rem;
+}
+.qti-height-1p5 {
+  height: 0.375rem;
+}
+.qti-height-2 {
+  height: 0.5rem;
+}
+.qti-height-2p5 {
+  height: 0.625rem;
+}
+.qti-height-3 {
+  height: 0.75rem;
+}
+.qti-height-3p5 {
+  height: 0.875rem;
+}
+.qti-height-4 {
+  height: 1rem;
+}
+.qti-height-5 {
+  height: 1.25rem;
+}
+.qti-height-6 {
+  height: 1.5rem;
+}
+.qti-height-7 {
+  height: 1.75rem;
+}
+.qti-height-8 {
+  height: 2rem;
+}
+.qti-height-9 {
+  height: 2.25rem;
+}
+.qti-height-10 {
+  height: 2.5rem;
+}
+.qti-height-11 {
+  height: 2.75rem;
+}
+.qti-height-12 {
+  height: 3rem;
+}
+.qti-height-14 {
+  height: 3.5rem;
+}
+.qti-height-16 {
+  height: 4rem;
+}
+.qti-height-20 {
+  height: 5rem;
+}
+.qti-height-24 {
+  height: 6rem;
+}
+.qti-height-28 {
+  height: 7rem;
+}
+.qti-height-32 {
+  height: 8rem;
+}
+.qti-height-36 {
+  height: 9rem;
+}
+.qti-height-40 {
+  height: 10rem;
+}
+.qti-height-44 {
+  height: 11rem;
+}
+.qti-height-48 {
+  height: 12rem;
+}
+.qti-height-52 {
+  height: 13rem;
+}
+.qti-height-56 {
+  height: 14rem;
+}
+.qti-height-60 {
+  height: 15rem;
+}
+.qti-height-64 {
+  height: 16rem;
+}
+.qti-height-72 {
+  height: 18rem;
+}
+.qti-height-80 {
+  height: 20rem;
+}
+.qti-height-96 {
+  height: 24rem;
+}
+.qti-height-1-2 {
+  height: 50%;
+}
+.qti-height-1-3 {
+  height: 33.333333%;
+}
+.qti-height-2-3 {
+  height: 66.666667%;
+}
+.qti-height-1-4 {
+  height: 25%;
+}
+.qti-height-2-4 {
+  height: 50%;
+}
+.qti-height-3-4 {
+  height: 75%;
+}
+.qti-height-1-5 {
+  height: 20%;
+}
+.qti-height-2-5 {
+  height: 40%;
+}
+.qti-height-3-5 {
+  height: 60%;
+}
+.qti-height-4-5 {
+  height: 80%;
+}
+.qti-height-1-6 {
+  height: 16.666667%;
+}
+.qti-height-2-6 {
+  height: 33.333333%;
+}
+.qti-height-3-6 {
+  height: 50%;
+}
+.qti-height-4-6 {
+  height: 66.666667%;
+}
+.qti-height-5-6 {
+  height: 83.333333%;
+}
+.qti-height-auto {
+  height: auto;
+}
+.qti-height-full {
+  height: 100%;
+}
+
+.qti-width-0 {
+  width: 0px;
+}
+.qti-width-px {
+  width: 1px;
+}
+.qti-width-0p5 {
+  width: 0.125rem;
+}
+.qti-width-1 {
+  width: 0.25rem;
+}
+.qti-width-1p5 {
+  width: 0.375rem;
+}
+.qti-width-2 {
+  width: 0.5rem;
+}
+.qti-width-2p5 {
+  width: 0.625rem;
+}
+.qti-width-3 {
+  width: 0.75rem;
+}
+.qti-width-3p5 {
+  width: 0.875rem;
+}
+.qti-width-4 {
+  width: 1rem;
+}
+.qti-width-5 {
+  width: 1.25rem;
+}
+.qti-width-6 {
+  width: 1.5rem;
+}
+.qti-width-7 {
+  width: 1.75rem;
+}
+.qti-width-8 {
+  width: 2rem;
+}
+.qti-width-9 {
+  width: 2.25rem;
+}
+.qti-width-10 {
+  width: 2.5rem;
+}
+.qti-width-11 {
+  width: 2.75rem;
+}
+.qti-width-12 {
+  width: 3rem;
+}
+.qti-width-14 {
+  width: 3.5rem;
+}
+.qti-width-16 {
+  width: 4rem;
+}
+.qti-width-20 {
+  width: 5rem;
+}
+.qti-width-24 {
+  width: 6rem;
+}
+.qti-width-28 {
+  width: 7rem;
+}
+.qti-width-32 {
+  width: 8rem;
+}
+.qti-width-36 {
+  width: 9rem;
+}
+.qti-width-40 {
+  width: 10rem;
+}
+.qti-width-44 {
+  width: 11rem;
+}
+.qti-width-48 {
+  width: 12rem;
+}
+.qti-width-52 {
+  width: 13rem;
+}
+.qti-width-56 {
+  width: 14rem;
+}
+.qti-width-60 {
+  width: 15rem;
+}
+.qti-width-64 {
+  width: 16rem;
+}
+.qti-width-72 {
+  width: 18rem;
+}
+.qti-width-80 {
+  width: 20rem;
+}
+.qti-width-96 {
+  width: 24rem;
+}
+.qti-width-auto {
+  width: auto;
+}
+.qti-width-1-2 {
+  width: 50%;
+}
+.qti-width-1-3 {
+  width: 33.333333%;
+}
+.qti-width-2-3 {
+  width: 66.666667%;
+}
+.qti-width-1-4 {
+  width: 25%;
+}
+.qti-width-2-4 {
+  width: 50%;
+}
+.qti-width-3-4 {
+  width: 75%;
+}
+.qti-width-1-5 {
+  width: 20%;
+}
+.qti-width-2-5 {
+  width: 40%;
+}
+.qti-width-3-5 {
+  width: 60%;
+}
+.qti-width-4-5 {
+  width: 80%;
+}
+.qti-width-1-6 {
+  width: 16.666667%;
+}
+.qti-width-2-6 {
+  width: 33.333333%;
+}
+.qti-width-3-6 {
+  width: 50%;
+}
+.qti-width-4-6 {
+  width: 66.666667%;
+}
+.qti-width-5-6 {
+  width: 83.333333%;
+}
+.qti-width-1-12 {
+  width: 8.333333%;
+}
+.qti-width-2-12 {
+  width: 16.666667%;
+}
+.qti-width-3-12 {
+  width: 25%;
+}
+.qti-width-4-12 {
+  width: 33.333333%;
+}
+.qti-width-5-12 {
+  width: 41.666667%;
+}
+.qti-width-6-12 {
+  width: 50%;
+}
+.qti-width-7-12 {
+  width: 58.333333%;
+}
+.qti-width-8-12 {
+  width: 66.666667%;
+}
+.qti-width-9-12 {
+  width: 75%;
+}
+.qti-width-10-12 {
+  width: 83.333333%;
+}
+.qti-width-11-12 {
+  width: 91.666667%;
+}
+.qti-width-full,
+.qti-fullwidth {
+  width: 100%;
+}
+
+[class*="qti-width-"],
+.qti-fullwidth {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+/* §1.1.4.4 and §2.9 */
+
+.qti-text-indent-0 {
+  text-indent: 0px;
+}
+.qti-text-indent-px {
+  text-indent: 1px;
+}
+.qti-text-indent-0p5 {
+  text-indent: 0.125rem;
+}
+.qti-text-indent-1 {
+  text-indent: 0.25rem;
+}
+.qti-text-indent-1p5 {
+  text-indent: 0.375rem;
+}
+.qti-text-indent-2 {
+  text-indent: 0.5rem;
+}
+.qti-text-indent-2p5 {
+  text-indent: 0.625rem;
+}
+.qti-text-indent-3 {
+  text-indent: 0.75rem;
+}
+.qti-text-indent-3p5 {
+  text-indent: 0.875rem;
+}
+.qti-text-indent-4 {
+  text-indent: 1rem;
+}
+.qti-text-indent-5 {
+  text-indent: 1.25rem;
+}
+.qti-text-indent-6 {
+  text-indent: 1.5rem;
+}
+.qti-text-indent-7 {
+  text-indent: 1.75rem;
+}
+.qti-text-indent-8 {
+  text-indent: 2rem;
+}
+.qti-text-indent-12 {
+  text-indent: 3rem;
+}
+.qti-text-indent-16 {
+  text-indent: 4rem;
+}
+.qti-text-indent-20 {
+  text-indent: 5rem;
+}
+.qti-text-indent-24 {
+  text-indent: 6rem;
+}
+.qti-text-indent-28 {
+  text-indent: 7rem;
+}
+.qti-text-indent-32 {
+  text-indent: 8rem;
+}
+
+/* §1.1.7 and §2.10. The sample lacks kannada, katakana and katakana-iroha, which §1.1.7 has, and §1.1.7 lacks
+   ethiopic-halehame*, hangul, hangul-consonant and urdu, which the sample has. */
+
+.qti-list-style-type-none {
+  list-style-type: none;
+}
+.qti-list-style-type-arabic-indic {
+  list-style-type: arabic-indic;
+}
+.qti-list-style-type-armenian {
+  list-style-type: armenian;
+}
+.qti-list-style-type-bengali {
+  list-style-type: bengali;
+}
+.qti-list-style-type-cambodian {
+  list-style-type: cambodian;
+}
+.qti-list-style-type-circle {
+  list-style-type: circle;
+}
+.qti-list-style-type-cjk-earthly-branch {
+  list-style-type: cjk-earthly-branch;
+}
+.qti-list-style-type-cjk-heavenly-stem {
+  list-style-type: cjk-heavenly-stem;
+}
+.qti-list-style-type-cjk-ideographic {
+  list-style-type: cjk-ideographic;
+}
+.qti-list-style-type-decimal {
+  list-style-type: decimal;
+}
+.qti-list-style-type-decimal-leading-zero {
+  list-style-type: decimal-leading-zero;
+}
+.qti-list-style-type-devanagari {
+  list-style-type: devanagari;
+}
+.qti-list-style-type-disc {
+  list-style-type: disc;
+}
+.qti-list-style-type-georgian {
+  list-style-type: georgian;
+}
+.qti-list-style-type-gujarati {
+  list-style-type: gujarati;
+}
+.qti-list-style-type-gurmukhi {
+  list-style-type: gurmukhi;
+}
+.qti-list-style-type-hebrew {
+  list-style-type: hebrew;
+}
+.qti-list-style-type-hiragana {
+  list-style-type: hiragana;
+}
+.qti-list-style-type-hiragana-iroha {
+  list-style-type: hiragana-iroha;
+}
+.qti-list-style-type-kannada {
+  list-style-type: kannada;
+}
+.qti-list-style-type-katakana {
+  list-style-type: katakana;
+}
+.qti-list-style-type-katakana-iroha {
+  list-style-type: katakana-iroha;
+}
+.qti-list-style-type-khmer {
+  list-style-type: khmer;
+}
+.qti-list-style-type-korean-hangul-formal {
+  list-style-type: korean-hangul-formal;
+}
+.qti-list-style-type-korean-hanja-formal {
+  list-style-type: korean-hanja-formal;
+}
+.qti-list-style-type-korean-hanja-informal {
+  list-style-type: korean-hanja-informal;
+}
+.qti-list-style-type-lao {
+  list-style-type: lao;
+}
+.qti-list-style-type-lower-alpha {
+  list-style-type: lower-alpha;
+}
+.qti-list-style-type-lower-armenian {
+  list-style-type: lower-armenian;
+}
+.qti-list-style-type-lower-greek {
+  list-style-type: lower-greek;
+}
+.qti-list-style-type-lower-latin {
+  list-style-type: lower-latin;
+}
+.qti-list-style-type-lower-roman {
+  list-style-type: lower-roman;
+}
+.qti-list-style-type-malayalam {
+  list-style-type: malayalam;
+}
+.qti-list-style-type-mongolian {
+  list-style-type: mongolian;
+}
+.qti-list-style-type-myanmar {
+  list-style-type: myanmar;
+}
+.qti-list-style-type-oriya {
+  list-style-type: oriya;
+}
+.qti-list-style-type-persian {
+  list-style-type: persian;
+}
+.qti-list-style-type-simp-chinese-formal {
+  list-style-type: simp-chinese-formal;
+}
+.qti-list-style-type-simp-chinese-informal {
+  list-style-type: simp-chinese-informal;
+}
+.qti-list-style-type-square {
+  list-style-type: square;
+}
+.qti-list-style-type-telugu {
+  list-style-type: telugu;
+}
+.qti-list-style-type-thai {
+  list-style-type: thai;
+}
+.qti-list-style-type-tibetan {
+  list-style-type: tibetan;
+}
+.qti-list-style-type-trad-chinese-formal {
+  list-style-type: trad-chinese-formal;
+}
+.qti-list-style-type-trad-chinese-informal {
+  list-style-type: trad-chinese-informal;
+}
+.qti-list-style-type-upper-alpha {
+  list-style-type: upper-alpha;
+}
+.qti-list-style-type-upper-armenian {
+  list-style-type: upper-armenian;
+}
+.qti-list-style-type-upper-latin {
+  list-style-type: upper-latin;
+}
+.qti-list-style-type-upper-roman {
+  list-style-type: upper-roman;
+}
+.qti-list-style-type-ethiopic-halehame-ti-er {
+  list-style-type: ethiopic-halehame-ti-er;
+}
+.qti-list-style-type-ethiopic-halehame-ti-et {
+  list-style-type: ethiopic-halehame-ti-et;
+}
+.qti-list-style-type-ethiopic-halehame-am {
+  list-style-type: ethiopic-halehame-am;
+}
+.qti-list-style-type-ethiopic-halehame {
+  list-style-type: ethiopic-halehame;
+}
+.qti-list-style-type-hangul {
+  list-style-type: hangul;
+}
+.qti-list-style-type-hangul-consonant {
+  list-style-type: hangul-consonant;
+}
+.qti-list-style-type-urdu {
+  list-style-type: urdu;
+}
+
+/* §1.1.5 and §2.13–2.16: vertical writing. §1.1.5.1 names the horizontal class vertical-tb, §2.13 horizontal-tb; both
+   set the browser default. */
+
+.qti-writing-mode-vertical-rl {
+  writing-mode: vertical-rl;
+}
+
+.qti-writing-mode-vertical-lr {
+  writing-mode: vertical-lr;
+}
+
+.qti-writing-mode-horizontal-tb,
+.qti-writing-mode-vertical-tb {
+  writing-mode: horizontal-tb;
+}
+
+.qti-float-left {
+  float: left;
+}
+
+.qti-float-right {
+  float: right;
+}
+
+.qti-float-none {
+  float: none;
+}
+
+.qti-float-clearfix::after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+.qti-float-clear-left {
+  clear: left;
+}
+
+.qti-float-clear-right {
+  clear: right;
+}
+
+.qti-float-clear-both {
+  clear: both;
+}
+
+.qti-text-orientation-upright {
+  text-orientation: upright;
+}
+
+.qti-text-combine-upright-all {
+  text-combine-upright: all;
+}
+
+/* 6. Interaction classes, [VOCAB] §1.2 and [BPIG] App. B.1. The stylesheet reads the QTI element names and the parts
+   of docs/styling.md. */
+
+:where(
+  qti-prompt,
+  qti-choice-interaction,
+  qti-order-interaction,
+  qti-match-interaction,
+  qti-gap-match-interaction,
+  qti-graphic-gap-match-interaction,
+  qti-hotspot-interaction,
+  qti-hottext-interaction,
+  qti-extended-text-interaction,
+  qti-simple-choice,
+  qti-simple-match-set
+) {
+  display: block;
+}
+
+:where(qti-text-entry-interaction, qti-inline-choice-interaction, qti-gap) {
+  display: inline-block;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+/* The label of a choice or of an order target is the counter of its group, shown before the text (§1.2.1.1–3,
+   §1.2.9.1–2). Without a class there is no label. */
+
+.qti-labels-decimal {
+  --tempuh-label-style: decimal;
+}
+
+.qti-labels-lower-alpha {
+  --tempuh-label-style: lower-alpha;
+}
+
+.qti-labels-upper-alpha {
+  --tempuh-label-style: upper-alpha;
+}
+
+.qti-labels-cjk-ideographic {
+  --tempuh-label-style: cjk-ideographic;
+}
+
+.qti-labels-suffix-none {
+  --tempuh-label-suffix: "";
+}
+
+.qti-labels-suffix-period {
+  --tempuh-label-suffix: ".";
+}
+
+.qti-labels-suffix-parenthesis {
+  --tempuh-label-suffix: ")";
+}
+
+:is(.qti-labels-decimal, .qti-labels-lower-alpha, .qti-labels-upper-alpha, .qti-labels-cjk-ideographic)
+  :is(qti-simple-choice > .tempuh-face, .tempuh-target)::before {
+  content: counter(tempuh-label, var(--tempuh-label-style)) var(--tempuh-label-suffix, "");
+  margin-inline-end: 0.5ch;
+}
+
+/* 6.1 Choice, §1.2.1. A grid of N columns, read across (§1.2.1.6, the Z); a horizontal row wraps after five choices
+   (§1.2.1.4). A vertical stack of several columns reads down each column (the reverse N), which needs the number of
+   rows: the player sets --tempuh-rows, since CSS cannot count the choices. */
+
+qti-choice-interaction {
+  display: grid;
+  grid-template-columns: repeat(var(--tempuh-columns, 1), minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--tempuh-rows, 1), auto);
+  grid-auto-flow: var(--tempuh-flow, row);
+  gap: 0.5rem var(--tempuh-gutter);
+  counter-reset: tempuh-label;
+}
+
+qti-choice-interaction > :not(qti-simple-choice) {
+  grid-area: 1 / 1 / auto / -1;
+}
+
+qti-simple-choice {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  min-block-size: var(--tempuh-target-size);
+  counter-increment: tempuh-label;
+}
+
+.qti-choices-stacking-1 {
+  --tempuh-columns: 1;
+}
+
+.qti-choices-stacking-2 {
+  --tempuh-columns: 2;
+  --tempuh-flow: column;
+}
+
+.qti-choices-stacking-3 {
+  --tempuh-columns: 3;
+  --tempuh-flow: column;
+}
+
+.qti-choices-stacking-4 {
+  --tempuh-columns: 4;
+  --tempuh-flow: column;
+}
+
+.qti-choices-stacking-5 {
+  --tempuh-columns: 5;
+  --tempuh-flow: column;
+}
+
+.qti-orientation-horizontal,
+[class*="qti-writing-orientation-vertical"] {
+  --tempuh-flow: row;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > :not(qti-simple-choice) {
+  flex-basis: 100%;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > qti-simple-choice {
+  flex: 1 1 calc(20% - var(--tempuh-gutter));
+}
+
+.tempuh-face {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* §1.2.1.7 and §1.2.6.1: the text of a choice or of a hot text is the control, seen. Hidden is visually hidden: the
+   control stays in the tab order, and its face shows the focus. */
+
+.qti-input-control-hidden :is(qti-simple-choice, qti-hottext) > .tempuh-face {
+  box-shadow: inset 0 0 0 var(--tempuh-border-width) var(--tempuh-border);
+  background-color: var(--tempuh-surface);
+}
+
+/* A selected choice has a border besides the control's mark. With the control hidden its face reverses and the border
+   thickens, so that selection never relies on color alone (WCAG 1.4.1). */
+
+.tempuh-control:checked + .tempuh-face {
+  box-shadow: inset 0 0 0 var(--tempuh-border-width) var(--tempuh-accent);
+}
+
+:is(.qti-input-control-hidden, .qti-unselected-hidden)
+  :is(qti-simple-choice, qti-hottext)
+  > .tempuh-control:checked
+  + .tempuh-face {
+  box-shadow: inset 0 0 0 calc(var(--tempuh-border-width) * 3) var(--tempuh-on-accent);
+  color: var(--tempuh-on-accent);
+  background-color: var(--tempuh-accent);
+}
+
+qti-hotspot-choice > .tempuh-control:focus-visible + .tempuh-face,
+qti-associable-hotspot > .tempuh-control:focus-visible + .tempuh-face,
+:is(.qti-input-control-hidden, .qti-unselected-hidden) .tempuh-control:focus-visible + .tempuh-face {
+  outline: var(--tempuh-focus-width) solid var(--tempuh-focus);
+  outline-offset: var(--tempuh-focus-offset);
+}
+
+/* §1.2.1.9, §1.2.2.3, §1.2.3.4, §1.2.7.3: vertical writing of choice, text entry, extended text and inline choice. A
+   choice's label stands upright. */
+
+.qti-writing-orientation-vertical-rl {
+  writing-mode: vertical-rl;
+}
+
+.qti-writing-orientation-vertical-lr {
+  writing-mode: vertical-lr;
+}
+
+[class*="qti-writing-orientation-vertical"] :is(input, textarea, select) {
+  writing-mode: inherit;
+}
+
+[class*="qti-writing-orientation-vertical"] qti-simple-choice > .tempuh-face::before {
+  text-combine-upright: all;
+  text-orientation: upright;
+}
+
+/* 6.2 Text entry, inline choice and gap: at least N characters wide, §1.2.2.1, §1.2.4.3, §1.2.7.1. */
+
+.qti-input-width-1 {
+  --tempuh-input-chars: 1;
+}
+
+.qti-input-width-2 {
+  --tempuh-input-chars: 2;
+}
+
+.qti-input-width-3 {
+  --tempuh-input-chars: 3;
+}
+
+.qti-input-width-4 {
+  --tempuh-input-chars: 4;
+}
+
+.qti-input-width-6 {
+  --tempuh-input-chars: 6;
+}
+
+.qti-input-width-10 {
+  --tempuh-input-chars: 10;
+}
+
+.qti-input-width-15 {
+  --tempuh-input-chars: 15;
+}
+
+.qti-input-width-20 {
+  --tempuh-input-chars: 20;
+}
+
+.qti-input-width-25 {
+  --tempuh-input-chars: 25;
+}
+
+.qti-input-width-30 {
+  --tempuh-input-chars: 30;
+}
+
+.qti-input-width-35 {
+  --tempuh-input-chars: 35;
+}
+
+.qti-input-width-40 {
+  --tempuh-input-chars: 40;
+}
+
+.qti-input-width-45 {
+  --tempuh-input-chars: 45;
+}
+
+.qti-input-width-50 {
+  --tempuh-input-chars: 50;
+}
+
+.qti-input-width-72 {
+  --tempuh-input-chars: 72;
+}
+
+[class*="qti-input-width-"] {
+  inline-size: calc(var(--tempuh-input-chars) * 1ch + 1em + 2 * var(--tempuh-border-width));
+}
+
+[class*="qti-input-width-"] > :is(input, select) {
+  inline-size: 100%;
+}
+
+qti-gap {
+  min-block-size: var(--tempuh-target-size);
+  min-inline-size: var(--tempuh-target-size);
+  border: var(--tempuh-border-width) dashed var(--tempuh-border);
+  vertical-align: middle;
+}
+
+/* 6.3 Extended text: the height in lines, §1.2.3.1. The block size is the width of the lines in vertical writing. */
+
+.qti-height-lines-3 {
+  --tempuh-input-lines: 3;
+}
+
+.qti-height-lines-6 {
+  --tempuh-input-lines: 6;
+}
+
+.qti-height-lines-15 {
+  --tempuh-input-lines: 15;
+}
+
+qti-extended-text-interaction :is(textarea, [role="textbox"]) {
+  inline-size: 100%;
+}
+
+[class*="qti-height-lines-"] :is(textarea, [role="textbox"]) {
+  min-block-size: calc(var(--tempuh-input-lines) * var(--tempuh-leading) * 1em + 0.5em);
+}
+
+/* 6.4 Match, gap match, graphic gap match and order: where the choices stand against the targets (§1.2.8.1, §1.2.4.1,
+   §1.2.10.1, §1.2.9.3), and the order's own direction (§1.2.9). The choices come first in the markup, for a screen
+   reader; only the eye sees them elsewhere. The player gives the two sets of a match the classes of the two
+   containers. */
+
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction) {
+  --tempuh-columns-track: minmax(0, 1fr);
+  --tempuh-choices-area: 2 / 1;
+  --tempuh-targets-area: 3 / 1;
+
+  display: grid;
+  grid-template-columns: var(--tempuh-columns-track);
+  gap: var(--tempuh-gutter);
+  align-items: start;
+}
+
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction)
+  > :not(.tempuh-choices, .tempuh-targets) {
+  grid-area: 1 / 1 / auto / -1;
+}
+
+.qti-choices-bottom {
+  --tempuh-choices-area: 3 / 1;
+  --tempuh-targets-area: 2 / 1;
+}
+
+.qti-choices-left {
+  --tempuh-columns-track: var(--tempuh-choices-width, fit-content(40%)) minmax(0, 1fr);
+  --tempuh-choices-area: 2 / 1;
+  --tempuh-targets-area: 2 / 2;
+}
+
+.qti-choices-right {
+  --tempuh-columns-track: minmax(0, 1fr) var(--tempuh-choices-width, fit-content(40%));
+  --tempuh-choices-area: 2 / 2;
+  --tempuh-targets-area: 2 / 1;
+}
+
+.tempuh-choices {
+  grid-area: var(--tempuh-choices-area);
+  inline-size: var(--tempuh-choices-width, auto);
+  max-inline-size: 100%;
+}
+
+.tempuh-targets {
+  grid-area: var(--tempuh-targets-area);
+  counter-reset: tempuh-label;
+}
+
+.tempuh-choices,
+.tempuh-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-content: flex-start;
+}
+
+qti-order-interaction:not(.qti-orientation-horizontal) :is(.tempuh-choices, .tempuh-targets) {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.tempuh-choices > *,
+.tempuh-target {
+  box-sizing: border-box;
+  min-block-size: var(--tempuh-target-size);
+  padding: 0.25rem 0.5rem;
+  border: var(--tempuh-border-width) solid var(--tempuh-border);
+  border-radius: 0.25rem;
+  background-color: var(--tempuh-surface);
+}
+
+.tempuh-target {
+  min-block-size: 4rem;
+  border-style: dashed;
+  text-align: center;
+  counter-increment: tempuh-label;
+}
+
+/* §1.2.8.2: a match as a table, the choices of the first set as rows. A hidden header row stays for a screen reader. */
+
+.qti-match-tabular table {
+  border-collapse: collapse;
+}
+
+.qti-match-tabular :is(th, td) {
+  padding: 0.25rem 0.5rem;
+  border: var(--tempuh-border-width) solid var(--tempuh-border);
+  text-align: center;
+}
+
+.qti-match-tabular.qti-header-hidden thead {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(1px 1px 1px 1px);
+  inline-size: 1px;
+  block-size: 1px;
+}
+
+/* 6.5 Selections on graphics and in text: hotspot and graphic gap match themes (§1.2.5.1, §1.2.10.3) and hot text
+   (§1.2.6.3). A selection is a line and a fill: the light theme suits a dark image, the dark theme a light one. An
+   unselected hidden choice shows when it has focus or is selected; in a graphic gap match also while the candidate
+   places a choice (the player sets data-tempuh-placing). */
+
+:is(qti-hotspot-interaction, qti-graphic-gap-match-interaction) {
+  --tempuh-hotspot-line: var(--tempuh-accent);
+  --tempuh-hotspot-halo: var(--tempuh-bg);
+}
+
+.qti-selections-light {
+  --tempuh-hotspot-line: #ffffff;
+  --tempuh-hotspot-halo: #000000;
+}
+
+.qti-selections-dark {
+  --tempuh-hotspot-line: #000000;
+  --tempuh-hotspot-halo: #ffffff;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot) > .tempuh-face {
+  display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: 0;
+  border: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-line);
+  outline: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-halo);
+  background-color: transparent;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot) > .tempuh-control:checked + .tempuh-face {
+  border-width: calc(var(--tempuh-border-width) * 4);
+  background-color: color-mix(in srgb, var(--tempuh-hotspot-line) 35%, transparent);
+}
+
+qti-hotspot-interaction.qti-unselected-hidden
+  qti-hotspot-choice
+  > .tempuh-control:not(:checked, :focus-visible)
+  + .tempuh-face,
+qti-graphic-gap-match-interaction.qti-unselected-hidden:not([data-tempuh-placing])
+  qti-associable-hotspot
+  > .tempuh-control:not(:checked, :focus-visible)
+  + .tempuh-face {
+  border-color: transparent;
+  outline-color: transparent;
+}
+
+qti-hottext {
+  display: inline;
+}
+
+qti-hottext > .tempuh-face {
+  display: inline;
+  padding-inline: 0.125em;
+  border-radius: 0.25em;
+}
+
+.qti-unselected-hidden qti-hottext > .tempuh-control:not(:checked) + .tempuh-face {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+/* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping (BPIG §5.2.9.7.9,
+   §5.2.9.7.11). The other settings are properties of 1 to 3. */
+
+:root[data-tempuh-uniform-font] *,
+:host([data-tempuh-uniform-font]) * {
+  font-size: 1em !important;
+}
+
+:root[data-tempuh-wrapping] :not(pre),
+:host([data-tempuh-wrapping]) :not(pre) {
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+:root[data-tempuh-wrapping] pre,
+:host([data-tempuh-wrapping]) pre {
+  white-space: pre-wrap !important;
+}
+
+/* 8. Folding. Below 48rem, about the 767px of §2.11, and for a candidate who wants a single column (BPIG §5.2.9.5),
+   the rows, the stacks and the containers become one column. */
+
+@media (max-width: 48rem) {
+  .qti-layout-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]) {
+    grid-column: 1;
+  }
+
+  [class*="qti-choices-stacking"] {
+    --tempuh-columns: 1;
+    --tempuh-flow: row;
+  }
+
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > qti-simple-choice {
+    flex-basis: 100%;
+  }
+
+  .qti-choices-left,
+  .qti-choices-right {
+    --tempuh-columns-track: minmax(0, 1fr);
+    --tempuh-choices-area: 2 / 1;
+    --tempuh-targets-area: 3 / 1;
+  }
+}
+
+:root[data-tempuh-single-column] .qti-layout-row,
+:host([data-tempuh-single-column]) .qti-layout-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:root[data-tempuh-single-column] .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]),
+:host([data-tempuh-single-column]) .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]) {
+  grid-column: 1;
+}
+
+:root[data-tempuh-single-column] [class*="qti-choices-stacking"],
+:host([data-tempuh-single-column]) [class*="qti-choices-stacking"] {
+  --tempuh-columns: 1;
+  --tempuh-flow: row;
+}
+
+:root[data-tempuh-single-column]
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"])
+  > qti-simple-choice,
+:host([data-tempuh-single-column])
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"])
+  > qti-simple-choice {
+  flex-basis: 100%;
+}
+
+:root[data-tempuh-single-column] .qti-choices-left,
+:root[data-tempuh-single-column] .qti-choices-right,
+:host([data-tempuh-single-column]) .qti-choices-left,
+:host([data-tempuh-single-column]) .qti-choices-right {
+  --tempuh-columns-track: minmax(0, 1fr);
+  --tempuh-choices-area: 2 / 1;
+  --tempuh-targets-area: 3 / 1;
+}

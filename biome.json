@@ -896,6 +896,12 @@
     },
     {
       "includes": ["packages/tempuh/**/*.css"],
+      "linter": {
+        "rules": {
+          "complexity": { "noImportantStyles": "off" },
+          "style": { "noDescendingSpecificity": "off" }
+        }
+      },
       "plugins": ["./biome/baseline-css.grit"]
     },
     {

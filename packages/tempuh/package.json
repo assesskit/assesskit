@@ -31,11 +31,13 @@
     "./protocol": {
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"
-    }
+    },
+    "./player.css": "./player.css"
   },
   "files": [
     "dist",
     "src",
+    "player.css",
     "NOTICE"
   ],
   "engines": {
@@ -45,9 +47,10 @@
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
     "build": "pnpm clean && tsc -b tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && tsc -p tsconfig.server.json",
-    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
+    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css"
   },
   "devDependencies": {
+    "axe-core": "^4.14.0",
     "fast-check": "^4.10.2"
   }
 }

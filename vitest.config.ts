@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 /** Resolves olah and its subpaths to their sources, so that the differential tests run the code and not a build. */
@@ -22,6 +23,20 @@ export default defineConfig({
         test: {
           name: "tempuh",
           include: ["packages/tempuh/test/**/*.test.ts"],
+          exclude: ["**/*.browser.test.ts"],
+        },
+      },
+      {
+        // Rendering tests run in the engines of the player: the page is the fixture.
+        test: {
+          name: "tempuh-browser",
+          include: ["packages/tempuh/test/**/*.browser.test.ts"],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: "chromium" }, { browser: "firefox" }, { browser: "webkit" }],
+          },
         },
       },
       {

@@ -41,6 +41,13 @@ describe("lintBaseline", () => {
     expect(problems[0]?.message).toContain('"css-has" is not supported by Firefox 115-120');
   });
 
+  it("passes a text indent in lengths, whose keywords are the partial part of the feature", async () => {
+    const { problems } = await lintBaseline(
+      packageWith({ "dist/index.js": "export {};\n", "player.css": ".indent { text-indent: 0.25rem; }\n" }),
+    );
+    expect(problems).toEqual([]);
+  });
+
   it("passes code that stays inside the baseline", async () => {
     const { problems, scripts } = await lintBaseline(
       packageWith({

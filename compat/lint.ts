@@ -6,6 +6,12 @@ import stylelint from "stylelint";
 /** The baseline of docs/baseline.md as browserslist queries. */
 const BROWSERS = ["chrome >= 111", "firefox >= 115", "safari >= 16.4"];
 
+/**
+ * The CSS features that the stylelint plugin reports as partial although the baseline browsers have what the stylesheet
+ * uses of them. `text-indent` is partial for its `each-line` and `hanging` keywords; a length works everywhere.
+ */
+const PARTIAL_BUT_USABLE = ["css-text-indent"];
+
 /** The folders of the package whose code runs on a server, which the baseline does not cover. */
 const SERVER_FOLDERS = ["server", "scoring", "cat", "lti", "caliper"];
 
@@ -48,7 +54,12 @@ export async function lintBaseline(
     configBasedir: import.meta.dirname,
     config: {
       plugins: ["stylelint-no-unsupported-browser-features"],
-      rules: { "plugin/no-unsupported-browser-features": [true, { browsers: BROWSERS, severity: "error" }] },
+      rules: {
+        "plugin/no-unsupported-browser-features": [
+          true,
+          { browsers: BROWSERS, ignore: PARTIAL_BUT_USABLE, severity: "error" },
+        ],
+      },
     },
   });
   const problems = [

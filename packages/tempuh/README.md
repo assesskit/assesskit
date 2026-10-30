@@ -6,7 +6,8 @@ owns the interface and the network, so tempuh never evaluates an expression, dec
 variant, or holds an answer key outside olah's solution view.
 
 The package is under development, private and not published. This version has the foundation: the errors, the interface
-messages in English and Indonesian, and the protocol between a browser and a session host.
+messages in English and Indonesian, the protocol between a browser and a session host, and the stylesheet of a content
+root.
 
 ## Browser baseline
 
@@ -28,10 +29,11 @@ envelope.seq; // 3
 
 ## API
 
-| Import                          | Contents                                                                                                                          |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `@luthfanwakan/tempuh`          | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages` |
-| `@luthfanwakan/tempuh/protocol` | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                          |
+| Import                            | Contents                                                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `@luthfanwakan/tempuh`            | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages` |
+| `@luthfanwakan/tempuh/protocol`   | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                          |
+| `@luthfanwakan/tempuh/player.css` | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                    |
 
 ## Documentation
 
@@ -39,4 +41,5 @@ envelope.seq; // 3
 - [Baseline](docs/baseline.md): the browser baseline, the banned features and how they are tested.
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
+- [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
 - [Evidence](docs/evidence.md): the inventory of rows and WCAG criteria, and the coverage gate.

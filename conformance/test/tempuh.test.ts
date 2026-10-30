@@ -62,10 +62,12 @@ describe("the shipped inventory", () => {
     expect(shipped.criteria.map(({ id }) => id)).not.toContain("4.1.1");
   });
 
-  it("has merged TB1 only, with T97 as its row", () => {
-    expect(shipped.inventory.merged).toEqual(["TB1"]);
-    const rows = shipped.inventory.rows.filter((r) => "unit" in r && r.unit === "TB1");
-    expect(rows.map((r) => r.id)).toEqual(["T97"]);
+  it("has merged TB1 and TB2, with their rows", () => {
+    expect(shipped.inventory.merged).toEqual(["TB1", "TB2"]);
+    const rowsOf = (unit: string): string[] =>
+      shipped.inventory.rows.filter((r) => "unit" in r && r.unit === unit).map((r) => r.id);
+    expect(rowsOf("TB1")).toEqual(["T97"]);
+    expect(rowsOf("TB2")).toEqual(["T13", "T87", "T88", "T89", "T90", "T91", "T116", "T117", "T118"]);
   });
 });
 

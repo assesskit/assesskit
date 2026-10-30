@@ -3,3 +3,7 @@ Copyright Fariz Wakan
 
 QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc. This product implements the QTI 3.0 specifications;
 it is not certified by 1EdTech and includes no 1EdTech files.
+
+player.css implements the class names and the acceptance criteria of the QTI 3 Standardized Shared Vocabulary and CSS
+Classes, and takes the values of its scales from the shared CSS of that document, which 1EdTech provides for implementers
+to use.

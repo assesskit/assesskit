@@ -30,6 +30,7 @@ export interface SmokeCase {
 }
 
 const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
+  [".css", "text/css"],
   [".js", "text/javascript"],
   [".json", "application/json"],
   [".map", "application/json"],
@@ -38,7 +39,10 @@ const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
 /** The built package, which engines/<name>/ runs in: `playwright test` starts there. */
 const DIST = resolve(process.cwd(), "../../../packages/tempuh/dist");
 
-/** Serves `dist/` at `/dist/` and an empty page at `/`; returns the URL of the page and a function that stops it. */
+/** The stylesheet of the player, which the package ships as it is. */
+const PLAYER_CSS_FILE = resolve(process.cwd(), "../../../packages/tempuh/player.css");
+
+/** Serves `dist/` at `/dist/`, `player.css` at `/player.css` and an empty page at `/`; returns the URL of the page and a function that stops it. */
 async function serve(): Promise<{ readonly url: string; readonly stop: () => Promise<void> }> {
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -47,8 +51,8 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
       response.end("<!doctype html><title>tempuh</title>");
       return;
     }
-    const file = resolve(DIST, `.${path.replace(/^\/dist/, "")}`);
-    if (!(path.startsWith("/dist/") && file.startsWith(`${DIST}${sep}`))) {
+    const file = path === "/player.css" ? PLAYER_CSS_FILE : resolve(DIST, `.${path.replace(/^\/dist/, "")}`);
+    if (!(path === "/player.css" || (path.startsWith("/dist/") && file.startsWith(`${DIST}${sep}`)))) {
       response.statusCode = 404;
       response.end();
       return;
@@ -91,6 +95,31 @@ const SHARED_MODULES = `(async () => {
   return { rule: selectMessages("id-ID").toolRule, refused };
 })()`;
 
+/** The check of the stylesheet, which runs in the page: a content root that adopts it, as the player makes one. */
+const PLAYER_CSS = `(async () => {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(await (await fetch("/player.css")).text());
+  const host = document.createElement("div");
+  host.setAttribute("data-tempuh-contrast", "high");
+  const root = host.attachShadow({ mode: "open" });
+  root.adoptedStyleSheets = [sheet];
+  const choices = [1, 2, 3, 4, 5, 6].map((n) => "<qti-simple-choice>" + n + "</qti-simple-choice>").join("");
+  root.innerHTML = "<div class='qti-layout-row'><div class='qti-layout-col6'>a</div><div class='qti-layout-col6'>b</div></div>" +
+    "<input aria-label='x'><p class='qti-writing-mode-vertical-rl qti-text-orientation-upright'>y</p>" +
+    "<qti-choice-interaction class='qti-choices-stacking-3 qti-orientation-horizontal'>" + choices + "</qti-choice-interaction>";
+  document.body.append(host);
+  const style = (selector) => getComputedStyle(root.querySelector(selector));
+  return {
+    contain: getComputedStyle(host).contain,
+    color: getComputedStyle(host).color,
+    columns: style(".qti-layout-row").gridTemplateColumns.split(" ").length,
+    border: style("input").borderTopColor,
+    writingMode: style("p").writingMode,
+    textOrientation: style("p").textOrientation,
+    stackedColumns: new Set([...root.querySelectorAll("qti-simple-choice")].map((choice) => choice.getBoundingClientRect().left)).size,
+  };
+})()`;
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -122,6 +151,26 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
       try {
         await page.goto(url);
         assert.deepEqual(await page.evaluate(SHARED_MODULES), { rule: "Penggaris", refused: "DataError" });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "styles a content root with player.css",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(PLAYER_CSS), {
+          contain: "layout paint",
+          color: "rgb(0, 0, 0)",
+          columns: 12,
+          border: "rgb(0, 0, 0)",
+          writingMode: "vertical-rl",
+          textOrientation: "upright",
+          stackedColumns: 3,
+        });
       } finally {
         await stop();
       }
