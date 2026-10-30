@@ -1,10 +1,11 @@
 olah
 Copyright Fariz Wakan
 
-QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc. This product implements the QTI 3.0 specifications;
-it is not certified by 1EdTech and includes no 1EdTech files. The six standard response processing templates are
-encoded as program constants from the published template files.
+QTI and 1EdTech are trademarks of 1EdTech Consortium, Inc. This product implements the QTI 3.0 specifications; it is not
+certified by 1EdTech and includes no 1EdTech files. The six standard response processing templates are encoded as program
+constants from the published template files. Unicode block ranges are generated from the Unicode Character Database
+(`Blocks.txt`), under the Unicode License.
 
-The Unicode block ranges and general categories of the regular expressions are generated from the Unicode Character
-Database (Blocks-4.txt of Unicode 3.1 and UnicodeData.txt of Unicode 17.0.0). Copyright (c) 1991-2025 Unicode, Inc.
-Distributed under the Unicode License v3, https://www.unicode.org/license.txt.
+The Unicode data of the regular expressions: the block ranges are those of Blocks-4.txt of Unicode 3.1, and the general
+categories those of UnicodeData.txt of Unicode 17.0.0. Copyright (c) 1991-2025 Unicode, Inc. Distributed under the Unicode
+License v3, https://www.unicode.org/license.txt.

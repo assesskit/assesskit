@@ -40,8 +40,9 @@ const document = readAsi(`<qti-assessment-section xmlns="http://www.imsglobal.or
   <qti-assessment-item-ref identifier="item065" href="item065.xml"/>
 </qti-assessment-section>`);
 
-if (document.kind === "section" && document.section.adaptiveSelection) {
+if (document.kind === "section") {
   const { section } = document;
+  const { adaptiveSelection } = section;
   const metadata = catMetadata([
     {
       identifier: "item434",
@@ -54,11 +55,13 @@ if (document.kind === "section" && document.section.adaptiveSelection) {
   //   {"identifier":"item065","interactionType":[]}]}
 
   const encoder = new TextEncoder();
-  sectionData(section.adaptiveSelection, {
-    settings: encoder.encode("{}"),
-    metadata: encoder.encode(JSON.stringify(metadata)),
-  });
-  // { sectionConfiguration: "e30=", qtiMetadata: "eyJpdGVtTWV0YWRhdGEi..." }
+  if (adaptiveSelection !== undefined) {
+    sectionData(adaptiveSelection, {
+      settings: encoder.encode("{}"),
+      metadata: encoder.encode(JSON.stringify(metadata)),
+    });
+    // { sectionConfiguration: "e30=", qtiMetadata: "eyJpdGVtTWV0YWRhdGEi..." }
+  }
 
   checkPool(section, { itemIdentifiers: ["item434", "item999"] }).map(({ code }) => code);
   // ["olah/cat/item-not-in-pool", "olah/cat/item-not-in-section"]

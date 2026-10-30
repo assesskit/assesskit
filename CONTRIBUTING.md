@@ -9,6 +9,13 @@ Node.js 22.18+ and pnpm 12 are required. `pnpm install` also installs the Leftho
 lists the commands and the conventions for layout, naming, code, docs and tests;
 [architecture.md](packages/olah/docs/architecture.md) states the design principles.
 
+## Issues
+
+Open a bug report with the document or the sequence of actions that fails, as the smallest code that runs as pasted, and the
+section of the specification that defines the behavior you expected. Open a feature request only for something that belongs
+to a section of the specifications, an extension point or an olah convention ([conventions.md](packages/olah/docs/conventions.md)),
+and name it. Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes.
+
 ## Semantics and evidence
 
 A change to semantics cites the specification section in the pull request, updates the inventory row and its test, and
@@ -16,7 +23,9 @@ names the row in the test's title ([evidence.md](packages/olah/docs/evidence.md)
 hand except for edge cases derivable exactly: extend the script in `validation/` and regenerate the fixtures as
 [validation/README.md](validation/README.md) describes. Commit the regenerated fixtures; CI runs only the TypeScript
 tests. A difference from Longsight `qti3-core` that the specification settles goes into
-`conformance/accepted-differences.json` with its reason.
+`conformance/accepted-differences.json` with its reason. A place where the specifications contradict themselves or are silent
+is a gap: it gets a row, a resolution in [spec-gaps.md](packages/olah/docs/spec-gaps.md) and a test, and changing a resolution
+is a breaking change.
 
 ## Before opening a pull request
 
@@ -27,6 +36,11 @@ Docker ([baseline](packages/tempuh/docs/baseline.md)). The tests that read the c
 and the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`.
 A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with
 `pnpm changeset` when none is pending ([AGENTS.md](AGENTS.md#releases)).
+
+A change to behavior also changes the TSDoc of what it touches and the guide of the module in `packages/olah/docs/`. The
+matrix `packages/olah/docs/conformance.md` is generated: run `pnpm conformance:render` and commit the result. The Example of
+`packages/olah/README.md` is the file `packages/olah/test/readme-example.ts`; change the README and the file together, and
+`pnpm test` fails until they agree.
 
 The pre-commit hook formats staged code, JSON, Markdown and YAML with Biome; the pre-push hook runs the type check,
 tests, Knip and the coverage check.

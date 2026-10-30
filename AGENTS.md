@@ -50,7 +50,8 @@ packages/olah/            the library
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
-  docs/                   guides, one per module; TypeDoc publishes them with the API reference
+  docs/                   guides, one per module, and architecture, conventions, spec-gaps, evidence and the generated
+                          conformance matrix; TypeDoc publishes them with the API reference
 packages/tempuh/          the player
   src/index.ts            re-exports the errors and the messages
   src/errors.ts           TempuhError, DataError, AccessError, LtiError, ServiceError
@@ -110,6 +111,22 @@ runs `pnpm changeset version`, which bumps the versions, writes `CHANGELOG.md` a
 merged, the maintainer runs the Release workflow by hand: it builds and publishes the versions not yet on npm. No
 workflow opens pull requests, and Dependabot version updates are off. Changesets, docs and TSDoc describe current
 behavior only, without "now", "no longer", "renamed" or "previously".
+
+## Boundary between olah and tempuh
+
+olah owns everything QTI defines that is not presentation or platform; tempuh owns presentation and the platform
+([architecture.md](packages/olah/docs/architecture.md#boundary-with-tempuh) lists who owns what).
+
+- Semantics belong to olah: validity, visibility, the choice of a variant, processing, the rules of a session, time limits,
+  the flow of scoring and the view without answer keys. tempuh asks olah and never evaluates an expression, decides what is
+  visible or valid, chooses a variant, or holds an answer key outside olah's solution view.
+- Presentation and the platform belong to tempuh: rendering, the host of portable custom interactions, accessibility in the
+  interface, URLs, clocks and timers, storage, and the network (LTI, CAT adapters, Caliper). olah never renders, reads a
+  clock, builds a URL or fetches, apart from `olah schemas fetch`. The policy about which actions a client may send is
+  tempuh's.
+- A rule that tempuh needs and olah lacks is a change in olah, with its inventory row and test, and not a workaround in
+  tempuh.
+- The packages meet in JSON: views, actions and state, with values as `WireValue`. They have their own versions.
 
 ## Dependencies
 
@@ -207,7 +224,9 @@ describes how the baseline is tested.
  `@throws`.
 - `//` comments only explain why something non-obvious is done, or cite a source. No commented-out code.
 - US English. Docs state facts in short sentences; prefer a table or list to prose. Code samples are complete: they
-  show their imports. Values shown in samples come from running them. No marketing language, emojis or filler.
+  show their imports. Values shown in samples come from running them. No marketing language, emojis or filler. The Example
+  of `packages/olah/README.md` is the file `packages/olah/test/readme-example.ts`, and `readme.test.ts` fails when the README
+  shows other code or other output.
 - Each document has one purpose: `README.md` for users, `docs/` for guides, `CONTRIBUTING.md` for the contribution
   process, `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for running the
   fixture scripts.
@@ -252,4 +271,8 @@ describes how the baseline is tested.
   overrides and its entry in `lint.test.ts` when it is not one of the folders there, a subpath in `package.json`
   `exports` and `typedoc.json` when the host imports it, a test file and a guide in `docs/`.
 - Checks shared by modules: of one value in `checks.ts`; otherwise with the data they check.
+- A place where the specifications contradict themselves or are silent: its row `G<n>` in `conformance/olah-inventory.json`,
+  the resolution in [spec-gaps.md](packages/olah/docs/spec-gaps.md), a test, and a mention in the guide of the module.
+- Something olah defines because QTI does not: [conventions.md](packages/olah/docs/conventions.md), built from QTI's own
+  elements so that documents stay valid.
 - A difference from Longsight `qti3-core` that the specification settles: `conformance/accepted-differences.json`.

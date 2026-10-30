@@ -29,7 +29,7 @@ const profile = readPnp(`<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd
   <prohibit-set><magnification/></prohibit-set>
 </access-for-all-pnp>`);
 
-if (!Array.isArray(profile)) {
+if ("supports" in profile) {
   profile.supports.get("additional-testing-time");
   // { name: "additional-testing-time", replaceAccessModes: [], time: { kind: "time-multiplier", multiplier: 1.5 } }
 
@@ -50,7 +50,7 @@ if (!Array.isArray(profile)) {
 
 A setting has the `name` of its support, which is also its key in `supports`, and the parameters of that support.
 `readPnp` returns a profile for `access-for-all-pnp` and an array of records for `access-for-all-pnp-records`;
-`Array.isArray` tells them apart.
+`"supports" in result` tells them apart.
 
 ## Supports
 

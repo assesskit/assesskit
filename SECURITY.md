@@ -1,6 +1,11 @@
 # Security
 
-Report vulnerabilities privately through the repository's security advisory form rather than a public issue.
+Report vulnerabilities privately through the repository's security advisory form rather than a public issue. Include the
+version, the document or the sequence of actions that shows the problem, and what it lets an attacker do.
+
+Every input is untrusted: packages, documents, personal needs profiles, results, candidate responses, client actions and what
+callbacks and resolvers return. The sections below state the controls of olah and what a deployment adds; the sections that
+start with tempuh state those of the player.
 
 Points to be aware of when deploying olah:
 
@@ -56,6 +61,23 @@ Points to be aware of when deploying olah:
   link after the listing is not followed. A reference in a document that leaves the package, and an `xi:include` that names a
   file outside it, are never resolved; a file that many includes of a document name is read and parsed once. A package
   directory that another process can change while olah reads it is not protected against a race.
+- **Server mode.** The answer keys and the seed of an exam session must not reach the candidate's device. Run the engine on
+  the server and send the client views only: the view is built field by field from an allowlist, with no correct response
+  (outside the solution state the item session control allows), processing, mapping, outcome or template value, hidden
+  content or metadata but the hazards, and a property test searches every view of random sessions for marked key material.
+  In device mode the engine, the items with their keys and the seed are in the client, which is fit for practice only.
+  `createRandom` is not cryptographic: selections and shuffles are reproducible from the seed.
+- **Client actions.** `parseCandidateAction` checks the shape, the types and the size of an action from a client (see
+  **Default limits**) and refuses the actions of the host (`time`, `supply-scores`, `cat-response`) and any `at`; the server
+  stamps the time. The engine checks every action against the rules and answers a refusal, never a state change, and an
+  out-of-range integer response is a refusal. The engine does not decide which candidate actions a client may send: it
+  applies `suspend` and `resume`, which stop the clock, from whoever sends them, so a deployment that must not let candidates
+  pause filters them before it applies them (the exam default of tempuh does).
+- **Resolvers and callbacks.** The functions a host passes in (`resolvers`, `resolveTemplate`, `customOperators`, the file
+  callbacks of PCI values, `CatPort`) are the host's code and run with its authority. What they return is data and is checked
+  where it is used. A resolver returns its value synchronously.
+- **Scoring.** `scorerView` holds the correct responses, so it belongs on the server. `supply-scores` is a host action: accept
+  a score only from the scorer or the tool it belongs to.
 
 ## tempuh: the frame of portable custom interactions
 
@@ -180,8 +202,9 @@ on the player's origin, so the platform's handlers must never share that origin.
 
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;
 a limit left out keeps its default. Input over a limit is a `SecurityError` whose `limit` is the limit's name, except a
-regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing. Each default is a
-safety factor over the largest value among the 1EdTech QTI 3.0 examples, where the examples have one.
+regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing, and an action of a
+client, which is a `DataError` from `parseCandidateAction`. Each default is a safety factor over the largest value among the
+1EdTech QTI 3.0 examples, where the examples have one.
 
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
 `xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
@@ -205,17 +228,24 @@ Archives and package directories (`ZipLimits`; option `limits` of `readPackage` 
 
 The ratio 27.9 is that of a 7.5 KB entry; the entries above the exemption reach 3.6.
 
-Processing (`ProcessingLimits`; option `limits` of the processing context):
+Processing (`ProcessingLimits`; option `limits` of the processing context and of `createEngine`):
 
 | Limit              | Default | Unit   | Largest example | Applies to                                                     |
 | ------------------ | ------- | ------ | --------------- | -------------------------------------------------------------- |
 | `maxContainerSize` | 10,000  | values | 9               | The values of a container that a processing expression builds. |
 
-Test plans (`PlanLimits`; option `limits` of `planTest`):
+Test plans (`PlanLimits`; option `limits` of `planTest` and of `createEngine`, which takes both kinds of limits):
 
 | Limit          | Default | Unit  | Largest example | Applies to                                                                                         |
 | -------------- | ------- | ----- | --------------- | -------------------------------------------------------------------------------------------------- |
 | `maxPlanNodes` | 10,000  | nodes | 24              | The sections and items of a test plan, so that a selection with replacement cannot exhaust memory. |
+
+Actions of a client (`ActionLimits`; option `limits` of `parseCandidateAction`):
+
+| Limit               | Default   | Unit       | Largest example | Applies to                                                                                                                                    |
+| ------------------- | --------- | ---------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxActionSize`     | 4,194,304 | JSON nodes | none            | One action: each string, number, boolean, `null`, array and object counts 1, and each string and property name adds its length in code units. |
+| `maxPciStateLength` | 1,048,576 | characters | none            | The state of one portable custom interaction, in code units.                                                                                  |
 
 Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, whose defaults `qti-pattern-match` uses):
 
@@ -224,8 +254,14 @@ Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, who
 | `maxStates` | 100,000 | states | none            | The automaton of a pattern, once its counted repeats are expanded.   |
 | `maxDepth`  | 100     | levels | none            | The nesting of groups and character class subtractions in a pattern. |
 
-Template processing runs at most 100 times for its constraints (INFO §5.150); that number is fixed by the specification, not a
-limit to replace.
+These numbers are fixed and cannot be replaced:
+
+| Number    | Applies to                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 100       | Runs of template processing for its constraints (INFO §5.150), fixed by the specification.                                          |
+| 256       | Levels of the JSON content of a view that `viewFromJson` reads, the depth that the XML reader allows.                               |
+| 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                  |
+| 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again. |
 
 Measured on Node.js 26 with documents built to reach each XML limit, a document at the limits takes under 2.5 seconds and
 250 MB of heap to read. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of

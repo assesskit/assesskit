@@ -115,3 +115,8 @@ Results when the first `stageLength` items are submitted or the candidate leaves
 results that changed, and End Session when the candidate leaves before the engine ends the session. `cat-response` gives the
 answers, which add the stages and merge the outcomes the engine reports, and `drainCat` makes the requests through a
 `CatPort`. `results` assembles the Results Reporting report of a session, with datestamps in RFC 3339 with an offset.
+
+Documentation: a guide for every module, the architecture with the boundary to tempuh, the convention for the covers of
+externally scored outcomes, the spec gaps with olah's resolution of each, and the evidence behind every construct. The README
+has an example that a test runs, the supported versions of the specifications, and the scoped claim: items differentially
+tested; test sessions specification-tested. SECURITY.md lists the threat model, every default limit and the deployment advice.

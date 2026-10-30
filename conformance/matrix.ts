@@ -107,6 +107,10 @@ export function renderMatrix(input: MatrixInput): string {
 olah is not certified by 1EdTech. It implements the QTI 3.0 specifications and the companion specifications they
 reference; this matrix states, for every construct, how it is evidenced. Evidence uses public material only.
 
+The claim is scoped: items differentially tested; test sessions specification-tested. Items are compared with Longsight
+qti3-core (D). No independent implementation of a QTI 3 test session was found, so the rows of test sessions carry no D and
+rest on S, P and C.
+
 ## Evidence
 
 ${legend}

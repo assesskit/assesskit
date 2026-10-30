@@ -757,7 +757,14 @@
       }
     },
     {
-      "includes": ["packages/olah/src/cli/**", "scripts/**", "conformance/**", "differential/**", "compat/**"],
+      "includes": [
+        "packages/olah/src/cli/**",
+        "packages/olah/test/readme-example.ts",
+        "scripts/**",
+        "conformance/**",
+        "differential/**",
+        "compat/**"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

@@ -5,6 +5,10 @@
 olah is not certified by 1EdTech. It implements the QTI 3.0 specifications and the companion specifications they
 reference; this matrix states, for every construct, how it is evidenced. Evidence uses public material only.
 
+The claim is scoped: items differentially tested; test sessions specification-tested. Items are compared with Longsight
+qti3-core (D). No independent implementation of a QTI 3 test session was found, so the rows of test sessions carry no D and
+rest on S, P and C.
+
 ## Evidence
 
 | Code | Evidence |
@@ -43,7 +47,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB18 | merged | 3 |
 | OB16 | merged | 26 |
 | OB17 | merged | 5 |
-| OB19 | pending | 0 |
+| OB19 | merged | 0 |
 | OB20 | pending | 0 |
 | OB21 | pending | 0 |
 

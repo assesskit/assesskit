@@ -5,6 +5,32 @@ Every construct of the QTI 3.0 specifications has a row in `conformance/olah-inv
 completes it. A construct that olah leaves to another system has an owner instead. [Conformance](conformance.md) renders
 all rows with their tests.
 
+## Citations
+
+A rule cites its source by an ID and a section, such as `INFO §2.11.3.37`.
+
+| ID   | Document                                                    | Version                                           | Address                                                                      |
+| ---- | ----------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| OVW  | QTI 3.0 Overview                                            | Final Release, 1 May 2022                         | https://www.imsglobal.org/spec/qti/v3p0/oview/                               |
+| INFO | QTI 3.0 ASI Information Model                               | Final Release v1.0, 1 May 2022                    | https://www.imsglobal.org/spec/qti/v3p0/info/                                |
+| BIND | QTI 3.0 ASI XML Binding                                     | Final Release, May 2022                           | https://www.imsglobal.org/spec/qti/v3p0/bind/                                |
+| BPIG | QTI 3.0 Best Practices and Implementation Guide             | specification 3.0.1, document 2.0, 1 October 2024 | https://www.imsglobal.org/spec/qti/v3p0/impl/                                |
+| MD   | QTI 3.0 Metadata Information Model and XSD Binding          | Final Release v1.0, 1 May 2022                    | https://www.imsglobal.org/spec/qti/v3p0/md-bind/                             |
+| RR   | QTI 3.0 Results Reporting Information Model and XSD Binding | Candidate Final Public v1.0, 1 November 2022      | https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html |
+| UD   | QTI 3.0 Usage Data and Item Statistics                      | Candidate Final Public v1.0, 2 February 2022      | https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html |
+| CERT | QTI 3.0 Conformance and Certification                       | Final Release, document 2.0, 15 March 2022        | https://www.imsglobal.org/node/199101                                        |
+| TERM | QTI 3.0 Terms and Definitions                               | Final Release, 1 May 2022                         | https://www.imsglobal.org/node/199091                                        |
+| CAT  | 1EdTech Computer Adaptive Testing (CAT) 1.0                 | Candidate Final Public, 9 November 2020           | https://www.imsglobal.org/spec/cat/v1p0/impl/                                |
+| PCI  | Portable Custom Interactions 1.0, cited by INFO §1.1        | Candidate Final, March 2020                       | not retrievable                                                              |
+| RPT  | The six standard response processing templates              | QTI 3.0                                           | https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/                        |
+| XSD  | The schemas of the specifications                           | ASI 3.0.1 and 3.0.0                               | https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/                         |
+| EX   | The examples of 1EdTech, `qtiv3-examples/`                  | public repository, no license file                | https://github.com/1EdTech/qti-examples                                      |
+| LS   | Longsight `qti3-core`, the differential oracle for items    | `@longsightgroup/qti3-core` 0.13.3, MIT           | https://github.com/LongsightGroup/qti3                                       |
+
+The overview gives addresses for RR, UD, CERT and TERM that return 404; the table gives the addresses that serve them. PCI 1.0
+itself is not retrievable: the requirements of olah's `pci` module come from BPIG §3.7.12 and its Appendices C and D, which
+restate them.
+
 ## Evidence codes
 
 | Code | Evidence                                                                                                                     |

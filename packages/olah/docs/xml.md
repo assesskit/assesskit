@@ -147,7 +147,7 @@ import { ElementReader } from "@luthfanwakan/olah/xml";
 const rules = { module: "demo", source: "DEMO XSD", namespaces: ["urn:demo"] };
 const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b/></a>', rules, "The demo");
 reader.attribute("n", Number); // 12
-reader.done(); // ReadError: The element b is not allowed in a at this place. (line 1, column 25)
+reader.done(); // ReadError: The element b is not allowed in a at this place. (line 1, column 28)
 ```
 
 | Member                                              | Purpose                                                                                                                                          |

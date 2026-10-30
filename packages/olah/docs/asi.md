@@ -312,71 +312,9 @@ read back as one.
 
 ## Covers
 
-QTI has no element that says which responses an externally scored outcome of a test rates. olah records it with a rubric
-block of the test, which the schema accepts and other tools show to scorers (an olah convention, not part of QTI):
-
-```xml
-<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="CONTENT">
-  <qti-content-body>
-    <p>Rate content once, across both writing tasks.</p>
-    <ul>
-      <li data-item-ref="W1" data-response-identifier="RESPONSE">Task 1: essay</li>
-      <li data-item-ref="W2" data-response-identifier="RESPONSE">Task 2: letter</li>
-    </ul>
-  </qti-content-body>
-</qti-rubric-block>
-```
-
-The block stays an ordinary `RubricBlock` in `test.rubricBlocks`; `readScoreCovers` derives the covers from it and nothing is
-copied into the model.
-
-```ts
-import { readAsi, readScoreCovers } from "@luthfanwakan/olah/asi";
-
-const document =
-  readAsi(`<qti-assessment-test xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essays" title="Essays">
-  <qti-outcome-declaration identifier="CONTENT" cardinality="single" base-type="float" external-scored="human"/>
-  <qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="CONTENT">
-    <qti-content-body>
-      <p>Rate content once, across both writing tasks.</p>
-      <ul>
-        <li data-item-ref="W1" data-response-identifier="RESPONSE">Task 1: essay</li>
-        <li data-item-ref="W2" data-response-identifier="RESPONSE">Task 2: letter</li>
-      </ul>
-    </qti-content-body>
-  </qti-rubric-block>
-  <qti-test-part identifier="P1" navigation-mode="linear" submission-mode="individual">
-    <qti-assessment-section identifier="S1" title="Writing" visible="true">
-      <qti-assessment-item-ref identifier="W1" href="w1.xml"/>
-      <qti-assessment-item-ref identifier="W2" href="w2.xml"/>
-    </qti-assessment-section>
-  </qti-test-part>
-</qti-assessment-test>`);
-
-if (document.kind === "test") {
-  readScoreCovers(document.test);
-  // Map { "CONTENT" => [
-  //   { itemRef: "W1", responseIdentifier: "RESPONSE", label: "Task 1: essay" },
-  //   { itemRef: "W2", responseIdentifier: "RESPONSE", label: "Task 2: letter" },
-  // ] }
-}
-```
-
-| Rule                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------ |
-| A block covers when it is a rubric block of the test and its class has the token `external-score-covers`.                      |
-| It names the outcome in `data-outcome-identifier`; blocks without it, and rubric blocks of parts and sections, are not covers. |
-| A cover is a `li` of a `ul` that is a child of the content body, with `data-item-ref` and `data-response-identifier`.          |
-| The label is the text of the `li` with white space normalized, and absent when empty.                                          |
-| Several blocks for one outcome add their covers in document order.                                                             |
-
-`scoreCoverBlocks(test)` returns the blocks that carry the class token (`SCORE_COVERS_CLASS`) as they are written: a block
-without `data-outcome-identifier` and an entry without `data-item-ref` or `data-response-identifier` stay, with the field
-absent, so that [validate](validate.md) can report them; `readScoreCovers` is derived from it.
-
-`scoreCoversBlock(outcome, covers, notes?)` builds the block: `view="scorer"`, `use="scoring"`, the class token, the
-attribute, the notes (nodes of the content of a rubric block), then the list. Identifiers must be identifiers; labels are
-written with white space normalized. The entries carry `data-item-ref` and `data-response-identifier` in `extensions`.
+`readScoreCovers`, `scoreCoverBlocks` and `scoreCoversBlock` read and build the rubric block that names the responses an
+externally scored outcome of a test rates. The block is an olah convention, not part of QTI; [Conventions](conventions.md)
+describes it. In the model it is an ordinary `RubricBlock` in `test.rubricBlocks`, and nothing is copied out of it.
 
 ## The element table
 

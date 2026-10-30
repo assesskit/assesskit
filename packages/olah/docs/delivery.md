@@ -178,16 +178,33 @@ references and every item reference with its variants, once. An item reference t
 without response variables and with the outcomes `SCORE` and `MAXSCORE`, single floats scored by the tool
 (`external-scored="externalMachine"`, E25, G42).
 
+### Resolvers
+
+`resolvers` are three synchronous functions. Each takes the `href` as the document writes it and the path of the document
+that holds it.
+
+| Resolver               | Returns                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `items(href, base)`    | A `ResolvedItem`: the resource, the deliverable (a QTI item or an LTI link), its DRD hazards and its variants. |
+| `sections(href, base)` | The `AssessmentSection` that a `qti-assessment-section-ref` names.                                             |
+| `stimuli(href, base)`  | The `AssessmentStimulus` that a `qti-assessment-stimulus-ref` names.                                           |
+
+`packageResolvers(pkg)` builds them from a `QtiPackage`. A resolver reports a reference it cannot resolve by throwing, and
+the error leaves `createEngine`. A resolver returns its value and never a promise. `createEngine` calls each resolver while
+it builds the engine and the engine never calls one again, so a host whose documents are in a store loads those the test can
+reach, a pool of an adaptive section included, before it calls `createEngine`, and returns them from memory. One engine
+serves every session of a test, and a session does no I/O.
+
 ### Start
 
-| `StartOptions`      | Default | Meaning                                                                                                    |
-| ------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
-| `seed`              | —       | The seed of the generator of the session: selection, ordering, template values, shuffles.                  |
-| `at`                | —       | The time of the start, in epoch milliseconds.                                                              |
-| `pnp`               | none    | The candidate's profile: supports, extra time, hazards avoided, item translation.                          |
-| `universalSupports` | none    | Supports the program gives every candidate; options unless the profile names them.                         |
-| `context`           | none    | Values of context variables, `QTI_CONTEXT` included, for the test and every item that declares them (B50). |
-| `resultContext`     | none    | Who took the test, for the results `context`: `sourcedId` and delivery system sessions (E24).              |
+| `StartOptions`      | Default                      | Meaning                                                                                                    |
+| ------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `seed`              | —                            | The seed of the generator of the session: selection, ordering, template values, shuffles.                  |
+| `at`                | —                            | The time of the start, in epoch milliseconds.                                                              |
+| `pnp`               | none                         | The candidate's profile: supports, extra time, hazards avoided, item translation.                          |
+| `universalSupports` | none                         | Supports the program gives every candidate; options unless the profile names them.                         |
+| `context`           | none                         | Values of context variables, `QTI_CONTEXT` included, for the test and every item that declares them (B50). |
+| `resultContext`     | `{ sessionIdentifiers: [] }` | Who took the test, for the results `context`: `sourcedId` and delivery system sessions (E24).              |
 
 `start` plans the session with `planTest` and `createRandom(seed)`, and presents the first item that the walk of
 pre-conditions and branch rules gives; a test with nothing to present ends at once. A context value must fit every
@@ -321,6 +338,58 @@ submission (E12): the test is named as the item, the part `<identifier>-part`, i
 item reference has the identifier of the item. Its control is `standaloneSessionControl(control)`. The definition may give
 `resolvers` with `stimuli`, to present the stimuli the item names.
 
+## Modes
+
+The same engine serves an exam on a server and practice on a device. Only the placement of the answer keys differs.
+
+| Mode   | Where the engine runs | What the client holds                         | Use                                        |
+| ------ | --------------------- | --------------------------------------------- | ------------------------------------------ |
+| Server | On the server         | Views, and the actions it sends               | Exams: the keys and the seed never leave.  |
+| Device | In the client         | The engine, the items, the keys and the state | Practice: nothing needs to be kept secret. |
+
+**Server mode.** The server owns the engine, the states and the clock. A request is handled in four steps, and the answer is
+the view:
+
+1. `parseCandidateAction(json, limits?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
+   malformed, too large or an action of the host.
+2. `stamp(state, action, now)` sets the time of the action to the clock of the server.
+3. `engine.apply(state, action)` gives the next state, or a refusal, which the server reports to the client.
+4. `viewToJson(engine.view(state, now))` is what the client receives.
+
+The server keeps the state between requests with `serializeState`, fires `{ type: "time", at }` at the `deadlines` of the
+state, and supplies the other actions of the host, `supply-scores` and `cat-response`. A client holds only views, which
+`viewFromJson` reads, and sends actions, which `actionToJson` writes; neither imports engine code, so a bundle of them holds
+no answer key. The seed of a session stays on the server too: selection and shuffles are reproducible from it
+([SECURITY](https://github.com/luthfanwakan/olah/blob/main/SECURITY.md)).
+
+**Device mode.** The engine and `engine.view` run in the client, with actions passed to `apply` directly and nothing
+converted. The client holds the items with their correct responses, processing and the seed, so the mode is for practice,
+and a candidate who wants the answers can read them. The core uses no platform API, so the engine runs in a browser.
+
+**Client actions.** The engine applies every action that its rules allow, whoever sends it. Among the actions of a candidate
+are `suspend` and `resume`, and suspended time counts nowhere (G23), so a client that may send them can stop its own clock.
+The policy about which candidate actions a client may send belongs to the player, not to olah. tempuh's exam default allows
+every candidate action except `suspend` and `resume`, and breaks go through the proctor, on the host's authority. A host that
+uses olah without tempuh filters the actions of its clients before it applies them.
+
+## Time
+
+olah reads no clock. Every time is epoch milliseconds, between the year 1 and the year 9999, that the caller supplies:
+
+| Where                                        | The time is                                                                                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `start({ at })` and the `at` of every action | When the step happened. An action before the latest step is refused `clock-regression` (E5, G27).                             |
+| `stamp(state, action, now)`                  | Sets `at` to the greater of `now` and the time of the latest step, so a server's clock stepping back never refuses an action. |
+| `engine.view(state, now)`                    | The moment of the view. The maximum times that passed by `now` apply to the view; the state is not changed (E7).              |
+| `engine.deadlines(state)`                    | Absolute times at which the host sends `{ type: "time", at }`, with the candidate's extra time (E6, G41).                     |
+| `drainCat(engine, state, port, now)`         | A function that gives the time of each answer of a CAT engine.                                                                |
+
+Time runs in the test, the test part, the sections and the item presented, and stops while the session is suspended (G23).
+Every duration and datestamp of a results report derives from these times, so replaying the actions from the seed gives the
+same states and events (E3). The extra time of a candidate comes from the PNP given to `start`; the engine has no action that
+extends a limit during a session. [Time limits](#time-limits) describes what happens when a maximum time passes, and
+[Time limits of the plan](#time-limits-of-the-plan) the arithmetic of the limits.
+
 ## Candidate view
 
 `engine.view(state, now)` gives what the candidate sees of a state (E19). It first applies the maximum times that passed up
@@ -419,11 +488,17 @@ parseCandidateAction({ type: "time" });
 // DataError: The type "time" is an action of the host, and a candidate does not send it; the type of an action of a candidate is "set-responses", "submit", ...
 ```
 
-In server mode the client holds only views, which `viewFromJson` reads, and sends actions, which `actionToJson` writes;
-the server owns the engine, the state and the clock. Host actions (`time`, `supply-scores`, `cat-response`) never come from
-a client, and the time of an action is the server's `stamp`. In device mode the same engine and `engine.view` run on the
-device, and nothing is converted. `viewFromJson` and `actionToJson` import no engine code, so a browser bundle of them holds
-none of the answer keys.
+Host actions (`time`, `supply-scores`, `cat-response`) never come from a client, and the time of an action is the server's
+`stamp`. `viewFromJson` and `actionToJson` import no engine code, so a browser bundle of them holds none of the answer keys.
+[Modes](#modes) says how a server and a device use these forms.
+
+## Pending work
+
+`engine.pending(state)` lists what the session waits on the host for: `scoring`, the scoring requests whose value has not
+been supplied, and `cat`, the requests that wait for the answer of a CAT engine. Nothing in the session blocks on it, apart
+from an adaptive section that cannot present an item until its engine has answered. The host answers with an action of its
+own: `supply-scores` for a score, `cat-response` for a CAT engine. Both are accepted in any state, after the test ended too,
+as long as their request exists.
 
 ### Scoring requests
 
@@ -544,7 +619,7 @@ host deployed the section (C1). The host answers the engine's requests; `drainCa
 A test part that holds an adaptive section should be linear (CAT §2.3); the engine waits for the first stage where the walk
 reaches the section, in a nonlinear part too.
 
-### Results
+## Results
 
 `results(state)` assembles the report of RR (E24): the `context` given at `start`; the result of the test, with its
 `duration`, `PART.duration` and `SECTION.duration`, its context variables and outcomes, and the supports used; and an item
@@ -729,7 +804,7 @@ ordering mixes into its parent still passes its control to its items.
 | `allow-skipping`     | `true`                                                              |
 | `validate-responses` | `false`                                                             |
 
-## Time limits
+## Time limits of the plan
 
 `timeLimits(node, extra?)` returns `minTime`, `maxTime` (seconds, absent when undeclared) and `allowLateSubmission`
 (default `false`) of the scope. Each scope declares its own limits; nothing is inherited (INFO §2.8.5, §7.40). The minimum
@@ -826,6 +901,13 @@ if (document.kind === "item") {
   // { ok: false, refusal: { code: "item-closed", message: "The item session is closed, so its responses are fixed.", source: "INFO §2.2.1" } }
 }
 ```
+
+`startItemSession(key, at, context, options?)` takes these options:
+
+| Option             | Default | Meaning                                                                                                                                                                                                                                                  |
+| ------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contextValues`    | none    | The values of context variables, `QTI_CONTEXT` included, set before any processing; one left out has its default, else NULL (INFO §2.2.2.1).                                                                                                             |
+| `templateDefaults` | none    | The defaults that the test gives template variables in place of their declared ones, from the `qti-template-default` of the item reference (INFO §5.152); an identifier that names no template variable, or a value that does not fit, is a `DataError`. |
 
 ### States
 
