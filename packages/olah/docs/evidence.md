@@ -83,6 +83,20 @@ string are left out.
 To move a source to another commit, run `pnpm corpus:pin <source> [commit]`: it downloads the commit (the head of the
 default branch when none is given), hashes the files that the source's `include` list selects and writes the lock.
 
+## Tests that validate against the schemas
+
+The XSDs of QTI 3.0 are 1EdTech and W3C files with their own license, so the repository does not contain them.
+`packages/olah/src/node/schema-files.json` pins each schema to its address and SHA-256 (it is `SCHEMA_FILES` of
+the `node` module). `pnpm schemas` downloads the files into `.cache/schemas` unless the files there already match their
+hashes, and fails without writing a file whose hash differs. `pnpm schemas:pin` downloads every file and writes the hashes
+that it finds, for the day a schema changes.
+
+Tests that validate against the schemas are in files named `*.xsd.test.ts`, which `pnpm test` leaves out so that it runs
+offline. `pnpm test:xsd` runs them: it needs `pnpm schemas`, and `pnpm corpus` when a test reads the examples. A file loads
+one `SchemaSet` with `loadSchemaSet` in `beforeAll` and closes it in `afterAll`; compiling the ASI schema takes about 2
+seconds, and each schema is compiled once per set. Every test of a writer passes the output to `validateXmlFiles`
+([node](node.md) lists the evidence on the schemas).
+
 ## Differential tests
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`

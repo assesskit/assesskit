@@ -33,6 +33,14 @@
     "./values": {
       "types": "./dist/values/index.d.ts",
       "default": "./dist/values/index.js"
+    },
+    "./xml": {
+      "types": "./dist/xml/index.d.ts",
+      "default": "./dist/xml/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
     }
   },
   "files": [
@@ -55,5 +63,10 @@
   "devDependencies": {
     "@luthfanwakan/takar": "^1.0.0",
     "fast-check": "^4.10.2"
+  },
+  "dependencies": {
+    "libxml2-wasm": "0.7.2",
+    "saxes": "6.0.0",
+    "xmlchars": "2.2.0"
   }
 }

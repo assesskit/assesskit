@@ -8,7 +8,7 @@ export default defineConfig({
         test: {
           name: "olah",
           include: ["packages/olah/test/**/*.test.ts"],
-          exclude: ["**/*.corpus.test.ts"],
+          exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
         },
       },
       {
@@ -40,6 +40,15 @@ export default defineConfig({
         test: {
           name: "olah-corpus",
           include: ["packages/olah/test/**/*.corpus.test.ts"],
+        },
+      },
+      {
+        // Compiling the 18.8 MB ASI schema takes seconds.
+        test: {
+          name: "olah-xsd",
+          include: ["packages/olah/test/**/*.xsd.test.ts"],
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
         },
       },
     ],

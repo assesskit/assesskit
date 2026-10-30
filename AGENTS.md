@@ -47,12 +47,13 @@ packages/olah/            the library
                           checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
                           checkPositiveInteger, checkSeed
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
+  src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
-  docs/                   guides; TypeDoc publishes them with the API reference
+  docs/                   guides, one per module; TypeDoc publishes them with the API reference
 packages/tempuh/          the player
 differential/             olah against Longsight qti3-core
 conformance/              the inventory and its tooling
-scripts/                  corpus download, Unicode table generator
+scripts/                  corpus and schema downloads, Unicode table generator
 validation/               Python scripts that write fixtures
 biome/                    Biome GritQL plugins
 ```
@@ -65,6 +66,8 @@ pnpm lint             # Biome and cspell; `pnpm format` fixes formatting
 pnpm typecheck        # tsc over every package and the tooling
 pnpm test             # Vitest, offline
 pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
+pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
+pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
 pnpm unicode          # regenerates the Unicode tables of `values` from the pinned files
 pnpm knip             # unused files, exports and dependencies
 pnpm conformance      # every row of a merged unit has a test; docs/conformance.md is current
@@ -154,6 +157,8 @@ behavior only, without "now", "no longer", "renamed" or "previously".
   arguments, a string for a number, an object for an array. Pass such input with `JSON.parse`, not a cast.
 - Properties that hold for any input are tested with fast-check.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
+- Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
+  writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 - Test names describe behavior: `it("shares the places at a tied boundary equally")`.
 
 ## Where things go
@@ -163,5 +168,6 @@ behavior only, without "now", "no longer", "renamed" or "previously".
 - A module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts`
   unless it is `node` or `cli`, a test file, a guide in `docs/`, import rules in `biome.json` and the table in
   [architecture.md](packages/olah/docs/architecture.md#layers), and a row in the API table of `packages/olah/README.md`.
+  `node` and `cli`, which the root does not re-export, also get an entry point in `packages/olah/typedoc.json`.
 - Checks shared by modules: of one value in `checks.ts`; otherwise with the data they check.
 - A difference from Longsight `qti3-core` that the specification settles: `conformance/accepted-differences.json`.

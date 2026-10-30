@@ -27,7 +27,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | --- | --- | --- |
 | OB1 | merged | 0 |
 | OB2 | merged | 26 |
-| OB3 | pending | 3 |
+| OB3 | merged | 3 |
 | OB4 | pending | 149 |
 | OB5 | pending | 77 |
 | OB6 | pending | 67 |
@@ -463,7 +463,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | S10 | `response-identifier` | INFO §2.2.2.2 | interactions, validate | S N | OB4 |  |
 | S11 | `role` and 46 `aria-*` attributes of `ARIABase` | INFO §2.13.3, INFO §5.2 | asi, validate | R X N | OB4 |  |
 | S12 | `data-*` attributes on the classes of §10.1.7 | INFO §10.1.7, BIND §6.7, BPIG §3.7.12 | asi, pci | R X S | OB4 |  |
-| S13 | Namespaces, `xsi:schemaLocation` | BIND §3, INFO §7, BPIG §5 | xml, asi, pnp | R X N | OB4 |  |
+| S13 | Namespaces, `xsi:schemaLocation` | BIND §3, INFO §7, BPIG §5 | xml, asi, pnp | R X N | OB4 | [xml.corpus.test.ts](../test/xml.corpus.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | S14 | Extension elements and attributes in other namespaces (`Selection`, `Ordering`, `CustomOperator`, `CustomInteraction`, `CompanionMaterialsInfo`; strict or lax) | INFO §10.1.1–10.1.5, BIND §6.1–6.5 | asi | R X | OB4 |  |
 | S15 | Vocabulary extension terms `ext:…` for `support` and `use` | INFO §10.1.6, BIND §6.6 | asi, content | R X V | OB4 |  |
 
@@ -565,8 +565,8 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | M11 | `ssml11:say-as` | INFO §9.4.3 | asi | R X | OB7 |  |
 | M12 | `ssml11:sub` | INFO §9.4.3 | asi | R X | OB7 |  |
 | M13 | `ssml11:voice` | INFO §9.4.3 | asi | R X | OB7 |  |
-| M14 | `xi:include` (`href`, `parse`, `xpointer`, `encoding`, `accept`, `accept-language`) | INFO §2.12, INFO §9.4.1, XInclude.xsd | xml, asi | R X S N | OB3 |  |
-| M15 | `xi:fallback` | XInclude.xsd | xml | S N | OB3 |  |
+| M14 | `xi:include` (`href`, `parse`, `xpointer`, `encoding`, `accept`, `accept-language`) | INFO §2.12, INFO §9.4.1, XInclude.xsd | xml, asi | R X S N | OB3 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
+| M15 | `xi:fallback` | XInclude.xsd | xml | S N | OB3 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | M16 | PLS pronunciation lexicons (resource type `pls`) | BIND §8 | package | U | OB7 |  |
 | M17 | CSS 2.1/3 stylesheets (`qti-stylesheet`, resource types `css2`, `css3`) | INFO §2.3.5, BIND §8 | asi, package | R U | OB7 |  |
 
@@ -662,7 +662,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B57 | Choice shuffling: `shuffle` randomizes initial order, `fixed` choices keep their positions, each match set shuffles separately | INFO §5.30.1, INFO §5.132.2, INFO §5.89.1 | interactions | S P | OB10 |  |
 | B58 | Solution state replaces responses with correct responses, or NULL | INFO §2.2.1 | delivery | S | OB13a |  |
 | B59 | Clones: a clone gets its own identifier and records template values; reports convert back to the template | INFO §2.7 | delivery, results | S | OB13a |  |
-| B60 | Item and test fragments through XInclude where the XSD allows `xi:include` (42 types), as parsed XML, without xpointer | INFO §2.12 | xml, asi | S N | OB3 |  |
+| B60 | Item and test fragments through XInclude where the XSD allows `xi:include` (42 types), as parsed XML, without xpointer | INFO §2.12 | xml, asi | S N | OB3 | [xml.test.ts](../test/xml.test.ts) |
 | B61 | External scoring: `external-scored` (human, externalMachine), `variable-identifier-ref`; session waits in pendingExternalScoring until scores applied | INFO §4.5.10–11, BPIG §3.4.5, RR §2.7.7 | delivery, results | S | OB16 |  |
 | B62 | Shared stimulus through `qti-assessment-stimulus-ref` and package dependencies | BPIG §3.7.7, BIND §8.5 | asi, package | C | OB6 |  |
 | B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 |  |
@@ -696,7 +696,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B91 | Separate outcome declaration and response processing template resources, linked by dependencies | BIND §8.6–8.7 | package, asi | S C | OB6 |  |
 | B92 | CAT configuration files listed in the manifest when package-relative | CAT §2.6 | package, validate | S N | OB14 |  |
 | B93 | Relative hrefs resolve against the referencing file and `xml:base`; references outside the package are reported | BIND §8, BPIG §6.7 | package | S P N | OB6 |  |
-| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 |  |
+| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 | [node.xsd.test.ts](../test/node.xsd.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | B95 | Adaptive items in review: final outcomes decide integrated feedback; `show-feedback` ignored when `allow-review` is true | INFO §7.19.3 | delivery, content | S | OB13a |  |
 | B96 | Draft and submitted responses are kept apart: expressions, outcome processing and results `final` read the last submitted values; RR `pendingSubmission` snapshots the drafts | INFO §2.11.1.2, RR §2.7.7 | delivery | S P | OB13a |  |
 | B97 | A branch rule must not target an item that selection with replacement can repeat | INFO §5.98 (Ordering class) | validate | N | OB14 |  |

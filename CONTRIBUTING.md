@@ -21,7 +21,8 @@ tests. A difference from Longsight `qti3-core` that the specification settles go
 ## Before opening a pull request
 
 Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip` and `pnpm conformance`, then `pnpm build`,
-`pnpm check:packages` and `pnpm docs:api`. The tests that read the corpus run with `pnpm corpus` and `pnpm test:corpus`.
+`pnpm check:packages` and `pnpm docs:api`. The tests that read the corpus run with `pnpm corpus` and `pnpm test:corpus`,
+and the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`.
 A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with
 `pnpm changeset` when none is pending ([AGENTS.md](AGENTS.md#releases)).
 

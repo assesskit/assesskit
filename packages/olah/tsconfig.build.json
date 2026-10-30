@@ -3,7 +3,9 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"],
+    "resolveJsonModule": true
   },
-  "include": ["src"]
+  "include": ["src", "src/**/*.json"]
 }

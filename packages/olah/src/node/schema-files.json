@@ -1,0 +1,167 @@
+[
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd",
+    "file": "imsqti_asiv3p0p1_v1p0.xsd",
+    "sha256": "bd82f6df3c7acec951fffc78548325a01e9e9bc91d5768d7415bdcbdc018341d"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0_v1p0.xsd",
+    "file": "imsqti_asiv3p0_v1p0.xsd",
+    "sha256": "01290bee61a090fa83d2d313f6821156eac9364a7a1f99caa21b1e8fbe0e8bac"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_itemv3p0p1_v1p0.xsd",
+    "file": "imsqti_itemv3p0p1_v1p0.xsd",
+    "sha256": "eddc7e78d16cd077deb60b182cf40a326523070b126610bad854868d0e6a8c8c"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_itemv3p0_v1p0.xsd",
+    "file": "imsqti_itemv3p0_v1p0.xsd",
+    "sha256": "a12e8f9767180c644c48e6a29948de7204e0d597bd1b598718d54e95a98c3184"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_testv3p0p1_v1p0.xsd",
+    "file": "imsqti_testv3p0p1_v1p0.xsd",
+    "sha256": "4bf00ed6e72c2ac81b249722fa7d71f1ff44bee0bd211308a188c46e745b2401"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_testv3p0_v1p0.xsd",
+    "file": "imsqti_testv3p0_v1p0.xsd",
+    "sha256": "681b266bb33029cd2c851a3265789acd5b181cad91e7ad2b39096ece4b4f085d"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_sectionv3p0p1_v1p0.xsd",
+    "file": "imsqti_sectionv3p0p1_v1p0.xsd",
+    "sha256": "4b2cdc8ef7b822f02240acda52ba30d0f42556a5ddef9211ce3d4931d136922f"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_sectionv3p0_v1p0.xsd",
+    "file": "imsqti_sectionv3p0_v1p0.xsd",
+    "sha256": "0654abe25df1031a9b98bc99fa88ff54f5a76ed69b24b2e9efdb954d1811b639"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_stimulusv3p0p1_v1p0.xsd",
+    "file": "imsqti_stimulusv3p0p1_v1p0.xsd",
+    "sha256": "7ed6a76c01bbb1cc174085973a3f846f7aaa655d4089359ad397ad5b7dbf906e"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_stimulusv3p0_v1p0.xsd",
+    "file": "imsqti_stimulusv3p0_v1p0.xsd",
+    "sha256": "64f75366ea532b2cbe56893bafaa696e2cfb3c471047207dbb3c94dd75838212"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_outcomev3p0p1_v1p0.xsd",
+    "file": "imsqti_outcomev3p0p1_v1p0.xsd",
+    "sha256": "355c6882a8d67c2a2e65ca2645cd1561aa4efd52e0012593ec32e4900866ff5c"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_outcomev3p0_v1p0.xsd",
+    "file": "imsqti_outcomev3p0_v1p0.xsd",
+    "sha256": "d9b69d40a599a2d38236588b46ba096b133bc536629a846e66fec1c11615f324"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_responseprocessingv3p0p1_v1p0.xsd",
+    "file": "imsqti_responseprocessingv3p0p1_v1p0.xsd",
+    "sha256": "1905bf775d2404d47034caa6ddcf07c359f29d244f98b682d3ce3e1c8066d606"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_responseprocessingv3p0_v1p0.xsd",
+    "file": "imsqti_responseprocessingv3p0_v1p0.xsd",
+    "sha256": "812c73747cf21e007e6129d1b9e19306475c82e19eebf8c81e1caf85c5e0da6d"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_resultv3p0_v1p0.xsd",
+    "file": "imsqti_resultv3p0_v1p0.xsd",
+    "sha256": "8cf1d3c89cbb1f198691410598ac4f8755a3b3ee6c1459747c3548fa6ccdc509"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_usagedatav3p0_v1p0.xsd",
+    "file": "imsqti_usagedatav3p0_v1p0.xsd",
+    "sha256": "7d32e1aca4dc8cc681b87c97588a3bd6321e0a841504870b060b0da89c468d32"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_metadatav3p0_v1p0.xsd",
+    "file": "imsqti_metadatav3p0_v1p0.xsd",
+    "sha256": "448c18d65607695d2a60ce96c42003df98f28630fb044ca14ccc609bad384c8b"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/md/v1p3/schema/xsd/imsmd_loose_v1p3p2.xsd",
+    "file": "imsmd_loose_v1p3p2.xsd",
+    "sha256": "1ae9e77aba63b6789574631213c97fd00a3d43aeffb58050ac7befb665fba9f6"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_imscpv1p2_v1p0.xsd",
+    "file": "imsqtiv3p0_imscpv1p2_v1p0.xsd",
+    "sha256": "30be3dad4fe0ee103295268317ee0ff2b1826b8b55023db974a993edf3ce9101"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_cpextv1p2_v1p0.xsd",
+    "file": "imsqtiv3p0_cpextv1p2_v1p0.xsd",
+    "sha256": "3f8deb01dd5ac3ad4b81522e159650c01b3dfe199cae6a6be7e87487e790ad85"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_csmv1p1_v1p0.xsd",
+    "file": "imsqtiv3p0_csmv1p1_v1p0.xsd",
+    "sha256": "caa7ddf900afa66fd5efb212a8834b42480f675de092ae927ce0c95b74443d2e"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_afa3p0drd_v1p0.xsd",
+    "file": "imsqtiv3p0_afa3p0drd_v1p0.xsd",
+    "sha256": "dd3822a3fe0f42af9a25b33be56d11d1a1f3c54ea791bcc355965ceb8f41b064"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_afa3p0pnp_v1p0.xsd",
+    "file": "imsqtiv3p0_afa3p0pnp_v1p0.xsd",
+    "sha256": "e2d11a25a31142acdbbc831853a16bf51b7c7e0ba1b68d61d0b9a0eb7e32840e"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/w3/2001/schema/xsd/xml.xsd",
+    "file": "xml.xsd",
+    "sha256": "4c637d0381d988dbf24b680becde6e1c8301b4c4ceef8bfa45a1ee130e77a682"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/w3/2001/schema/xsd/XInclude.xsd",
+    "file": "XInclude.xsd",
+    "sha256": "b72e1d2a0ab90aca502b827ce12572bfb4ef787fee89b4dcc1ce474dd3c00df0"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/w3/1999/schema/xsd/xlink.xsd",
+    "file": "xlink.xsd",
+    "sha256": "e49074eafa608cbf3bc01c2de3406781d466f6ae6adbb90f26cc450d5bf02a1c"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/mathml/v3p0/schema/xsd/mathml3.xsd",
+    "file": "mathml3.xsd",
+    "sha256": "af49edc2c29c4976d6a9d8860388c026b94ca75edfbd67bbaf67448da9990656"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/mathml/v3p0/schema/xsd/mathml3-content.xsd",
+    "file": "mathml3-content.xsd",
+    "sha256": "922b4082d00559df86b0389842b1d1ba9537db0050ab229d64ad313ddfb44098"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/mathml/v3p0/schema/xsd/mathml3-presentation.xsd",
+    "file": "mathml3-presentation.xsd",
+    "sha256": "74d605b09528b7c55a4ae803debc429c27a2afa6cd34607d28df79bcc7f3575b"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/mathml/v3p0/schema/xsd/mathml3-common.xsd",
+    "file": "mathml3-common.xsd",
+    "sha256": "94007301de9c8ed29ffed4a5eba6ca6b1e2e7511eda8d2b39e01b97d7d7e5d06"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/mathml/v3p0/schema/xsd/mathml3-strict-content.xsd",
+    "file": "mathml3-strict-content.xsd",
+    "sha256": "cd0da554afbe2d1570c4e548a29ee5eb0b25aea1d6455bacf664080cb5982640"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/ssml/v1p1/schema/xsd/ssmlv1p1-core.xsd",
+    "file": "ssmlv1p1-core.xsd",
+    "sha256": "f5e6d5ca575722c5ee1de50aefbe483bb8c88d2c46e65f4d7eecb713b8c1f485"
+  },
+  {
+    "url": "https://purl.imsglobal.org/spec/ssml/v1p1/schema/xsd/synthesis-nonamespace.xsd",
+    "file": "synthesis-nonamespace.xsd",
+    "sha256": "10608b0b9ad809f78be41e84c655d210fcf27ccc84996ef97cd6dc80b00ace5c"
+  }
+]

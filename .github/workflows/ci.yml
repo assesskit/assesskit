@@ -63,3 +63,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm corpus
       - run: pnpm test:corpus
+
+  # Tests that validate against the official XSDs, downloaded at the hashes that
+  # packages/olah/src/node/schema-files.json pins, and that read the 1EdTech examples.
+  xsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm schemas
+      - run: pnpm corpus
+      - run: pnpm test:xsd
