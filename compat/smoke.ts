@@ -314,6 +314,60 @@ const SPEECH_REQUEST = `(async () => {
   return { text: request.text, lang: request.lang, keepsSub: request.ssml.includes("<sub alias=\\"World Wide Web\\">WWW</sub>") };
 })()`;
 
+/** The check of the supports, which runs in the page: the look, a card in place of the content, a popup, and the panel. */
+const SUPPORTS = `(async () => {
+  const { createContentRoot, mountContentSupports, mountSupportPanel, presentationOf, applyPresentation } = await import("/dist/player/index.js");
+  const { EN_MESSAGES } = await import("/dist/index.js");
+  const player = new CSSStyleSheet();
+  player.replaceSync(await (await fetch("/player.css")).text());
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createContentRoot(host, {
+    messages: EN_MESSAGES,
+    assets: (path) => location.origin + "/g/" + path,
+    fetch: async () => ({ ok: true, status: 200, text: async () => "" }),
+    stylesheet: player,
+  });
+  const text = (value) => ({ kind: "text", value });
+  const node = (kind, children, more) => Object.assign({ kind, children }, more);
+  const card = (support, content) => ({
+    kind: "card", support, cardEntries: [], fileHrefs: [],
+    htmlContent: node("html-content", [node("p", [text(content)], {})], {}),
+  });
+  await root.show({
+    body: { base: "items/q1/item.xml", nodes: [node("p", [text("Term")], { dataCatalogIdref: "term" })] },
+    catalogs: [{ kind: "catalog", id: "term", cards: [card("glossary-on-screen", "A definition"), card("high-contrast", "Plain")] }],
+  });
+  const supports = [
+    { name: "glossary-on-screen", state: "active", active: true },
+    { name: "high-contrast", state: "option", active: true },
+  ];
+  mountContentSupports(root, { messages: EN_MESSAGES }).update(supports);
+  applyPresentation(host, presentationOf(supports));
+  const shadow = root.root;
+  const paragraph = shadow.querySelector("p");
+  shadow.querySelector(".tempuh-card-trigger").click();
+  const popup = shadow.querySelector(".tempuh-popup");
+  const inside = popup.getBoundingClientRect();
+  const box = host.getBoundingClientRect();
+  const opened = !popup.hidden && inside.left >= box.left - 1 && inside.right <= box.right + 1;
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  const chrome = document.createElement("div");
+  document.body.append(chrome);
+  const requests = [];
+  mountSupportPanel(chrome, { messages: EN_MESSAGES, onSupport: (name, active) => requests.push(name + " " + active) })
+    .update([{ name: "captions", state: "option", active: false }]);
+  chrome.querySelector("button").click();
+  return {
+    replaced: paragraph.firstChild.textContent,
+    opened,
+    dismissed: popup.hidden,
+    contrast: host.getAttribute("data-tempuh-contrast"),
+    color: getComputedStyle(paragraph).color,
+    requests,
+  };
+})()`;
+
 /** The check of MathJax, which runs in the page: it loads from the host, typesets in a shadow root and gives braille. */
 const MATHJAX = `(async () => {
   const { createMathTypesetter } = await import("/dist/player/index.js");
@@ -672,6 +726,25 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           text: "Read World Wide Web and World Wide Web Consortium. Froyd",
           lang: "en",
           keepsSub: true,
+        });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "applies the supports of a candidate: the look, a card in place of the content, a popup and the panel",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(SUPPORTS), {
+          replaced: "Plain",
+          opened: true,
+          dismissed: true,
+          contrast: "high",
+          color: "rgb(0, 0, 0)",
+          requests: ["captions true"],
         });
       } finally {
         await stop();

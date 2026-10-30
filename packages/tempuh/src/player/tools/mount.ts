@@ -1,10 +1,13 @@
+import type { SupportView } from "@luthfanwakan/olah/delivery";
+import type { SupportName } from "@luthfanwakan/olah/pnp";
 import { checkFunction, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
-import { EN_MESSAGES, type Messages } from "../../messages/index.js";
+import type { Messages } from "../../messages/index.js";
+import { checkMessages } from "../content/options.js";
 import { deepActiveElement, html } from "../dom.js";
 import { checkToolsInput } from "./check-input.js";
 import type { OpenTool, ToolContext, ToolSlots } from "./context.js";
-import { SLOT_TOOLS, type ToolEntry, type ToolSupportName, type ToolsInput } from "./model.js";
+import { SLOT_TOOLS, type ToolEntry, type ToolsInput } from "./model.js";
 import { toolName } from "./names.js";
 import { openTool } from "./open.js";
 import { isAbsoluteUrl } from "./package-path.js";
@@ -31,7 +34,7 @@ export interface ToolsOptions {
    * Called when the candidate turns on or off a tool that a support of the profile puts on the screen. The tool follows
    * the `active` flag of the next input, not the candidate's request.
    */
-  readonly onSupport: (name: ToolSupportName, active: boolean) => void;
+  readonly onSupport: (name: SupportName, active: boolean) => void;
 }
 
 /** The tools of an item and a candidate, mounted. */
@@ -63,9 +66,7 @@ function checkToolsOptions(host: unknown, options: unknown): asserts options is 
   }
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", ["messages", "language", "stage", "assets", "slots", "onSupport"]);
-  checkRecord(options.messages, "The option messages must be an object");
-  for (const key of Object.keys(EN_MESSAGES))
-    checkString(options.messages[key], `The message ${key} of the option messages`);
+  checkMessages(options.messages);
   checkString(options.language, "The option language");
   const { stage } = options;
   if (!(stage instanceof HTMLElement && stage.isConnected)) {
@@ -82,6 +83,14 @@ function checkToolsOptions(host: unknown, options: unknown): asserts options is 
     for (const [name, build] of Object.entries(options.slots))
       checkFunction(build, `The slot ${name} of the option slots must be a function`);
   }
+}
+
+/**
+ * Returns the support that a `support` action turns on and off for the tool: only an option can be (BPIG §5.3), and
+ * olah refuses the action for any other state.
+ */
+function turnable({ support }: ToolEntry): SupportView | null {
+  return support?.state === "option" ? support : null;
 }
 
 /** Names the tools for their buttons: a number follows the name of each tool that shares it with another. */
@@ -135,12 +144,12 @@ export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
   };
   const closeFromPanel = (instance: Instance): void => {
     instance.button.focus();
-    const { support } = instance.entry;
+    const support = turnable(instance.entry);
     if (support === null) setOpen(instance, false, false);
     else onSupport(support.name, false);
   };
   const toggle = (instance: Instance): void => {
-    const { support } = instance.entry;
+    const support = turnable(instance.entry);
     if (support === null) {
       setOpen(instance, instance.opened === null, true);
     } else {
@@ -178,11 +187,16 @@ export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
       // A tool of the host that fails does not keep the others from showing; its error is thrown at the end.
       let failure: unknown;
       const buttons = tools.map((entry, index) => {
-        const instance = instances.get(entry.key) ?? create(entry);
+        const known = instances.get(entry.key);
+        const fresh = known === undefined;
+        const instance = known ?? create(entry);
         instances.set(entry.key, instance);
         instance.entry = entry;
         label(instance, names[index] ?? "");
-        const open = entry.support === null ? instance.opened !== null : entry.support.active;
+        const support = turnable(entry);
+        // A tool that no `support` action can turn on starts open when its support is on, and then the candidate decides.
+        const open =
+          support === null ? (fresh ? (entry.support?.active ?? false) : instance.opened !== null) : support.active;
         try {
           setOpen(instance, open, open && instance.focusNext);
         } catch (error) {

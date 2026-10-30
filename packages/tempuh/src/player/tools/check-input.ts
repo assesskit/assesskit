@@ -1,6 +1,5 @@
 import {
   checkArray,
-  checkBoolean,
   checkChoice,
   checkNonEmptyString,
   checkPositive,
@@ -10,17 +9,8 @@ import {
   describe,
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
-import {
-  ANGLE_UNITS,
-  CALCULATOR_TYPES,
-  LENGTH_UNITS,
-  SUPPORT_STATES,
-  TOOL_SUPPORT_NAMES,
-  type ToolsInput,
-} from "./model.js";
-
-/** The colors of the profile are `#RGB` or `#RRGGBB` (PNP XSD `HexDType`). */
-const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/iu;
+import { checkSupportViews } from "../supports/check.js";
+import { ANGLE_UNITS, CALCULATOR_TYPES, LENGTH_UNITS, type ToolsInput } from "./model.js";
 
 function checkOptionalString(value: unknown, label: string): void {
   if (value !== undefined) checkString(value, label);
@@ -116,22 +106,6 @@ function checkCompanion(value: unknown): void {
   );
 }
 
-function checkSupport(value: unknown, label: string): void {
-  checkRecord(value, `${label} must be an object`);
-  checkProperties(value, label, ["name", "state", "active", "highlightColor", "calculatorType"]);
-  checkChoice(value.name, `${label} property name`, TOOL_SUPPORT_NAMES);
-  checkChoice(value.state, `${label} property state`, SUPPORT_STATES);
-  checkBoolean(value.active, `${label} property active`);
-  checkOptionalString(value.calculatorType, `${label} property calculatorType`);
-  if (value.highlightColor === undefined) return;
-  checkString(value.highlightColor, `${label} property highlightColor`);
-  if (!HEX_COLOR.test(value.highlightColor)) {
-    throw new DataError(
-      `${label} property highlightColor must be a color as #RGB or #RRGGBB, found ${describe(value.highlightColor)}.`,
-    );
-  }
-}
-
 /**
  * Checks the input of the tools: the companion materials of an item, or `null`, and the supports of the candidate.
  *
@@ -141,5 +115,5 @@ export function checkToolsInput(value: unknown): asserts value is ToolsInput {
   checkRecord(value, "The tools input must be an object");
   checkProperties(value, "The tools input", ["companion", "supports"]);
   if (value.companion !== null) checkCompanion(value.companion);
-  checkEach(value.supports, "The property supports", checkSupport);
+  checkSupportViews(value.supports, "The property supports");
 }

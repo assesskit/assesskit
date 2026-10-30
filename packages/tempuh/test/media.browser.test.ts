@@ -1,6 +1,7 @@
 import { single } from "@luthfanwakan/olah/values";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
+import { followPlayback } from "../src/player/media/companion.js";
 import { audioPlaysToEnd } from "./audio.js";
 import { ASSETS, mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
@@ -230,5 +231,77 @@ describe("media", () => {
     const scene = mountScene(DECLARATION, BODY(""), { withholdMedia: true });
     expect(scene.root.querySelector("audio, .tempuh-media-bar")).toBeNull();
     expect(scene.find("qti-prompt").textContent).toBe("Listen to the tone.");
+  });
+});
+
+describe("followPlayback", () => {
+  const elements: HTMLElement[] = [];
+  afterEach(() => {
+    for (const element of elements.splice(0)) element.remove();
+  });
+
+  /** Makes an audio element over the tone of the fixtures, which lasts two seconds, with the controls of the browser. */
+  async function recording(): Promise<HTMLAudioElement> {
+    const audio = document.createElement("audio");
+    // The fixture server does not answer range requests, and a recording it serves cannot be sought in; a blob can.
+    const bytes = await (await fetch(`${ASSETS}items/q1/media/tone.wav`)).blob();
+    audio.src = URL.createObjectURL(bytes);
+    audio.setAttribute("controls", "");
+    document.body.append(audio);
+    elements.push(audio);
+    audio.preload = "auto";
+    if (audio.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
+      await new Promise((done) => audio.addEventListener("canplaythrough", done, { once: true }));
+    }
+    return audio;
+  }
+
+  it("[T82] plays, pauses and seeks the companion with the recording", async (context) => {
+    await needsPlaybackToEnd(context);
+    const [primary, companion] = [await recording(), await recording()];
+    followPlayback(primary, companion);
+    await userEvent.click(document.body);
+    await primary.play();
+    await vi.waitFor(() => expect(companion.paused).toBe(false));
+    primary.pause();
+    await vi.waitFor(() => expect(companion.paused).toBe(true));
+    primary.currentTime = 1.5;
+    await vi.waitFor(() => expect(Math.abs(companion.currentTime - 1.5)).toBeLessThan(0.35));
+  });
+
+  it("[T82] changes the speed of the companion with the recording", async () => {
+    const [primary, companion] = [await recording(), await recording()];
+    followPlayback(primary, companion);
+    primary.playbackRate = 1.5;
+    await vi.waitFor(() => expect(companion.playbackRate).toBe(1.5));
+  });
+
+  it("[T82] takes the controls and the sound from the companion while it follows, and gives them back", async () => {
+    const [primary, companion] = [await recording(), await recording()];
+    companion.muted = false;
+    const release = followPlayback(primary, companion);
+    expect([companion.hasAttribute("controls"), companion.muted]).toEqual([false, true]);
+    release();
+    expect([companion.hasAttribute("controls"), companion.muted]).toEqual([true, false]);
+  });
+
+  it("[T82] leaves a companion that was muted muted, and one without controls without them", async () => {
+    const [primary, companion] = [await recording(), await recording()];
+    companion.muted = true;
+    companion.removeAttribute("controls");
+    followPlayback(primary, companion)();
+    expect([companion.hasAttribute("controls"), companion.muted]).toEqual([false, true]);
+  });
+
+  it("[T82] stops following when it is let go", async (context) => {
+    await needsPlaybackToEnd(context);
+    const [primary, companion] = [await recording(), await recording()];
+    const release = followPlayback(primary, companion);
+    release();
+    await userEvent.click(document.body);
+    await primary.play();
+    await new Promise((done) => setTimeout(done, 300));
+    expect(companion.paused).toBe(true);
+    primary.pause();
   });
 });

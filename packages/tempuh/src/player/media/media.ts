@@ -10,12 +10,7 @@ import { elementsNamed, nameByPrompt, renderPrompt } from "../elements/parts.js"
 import { primitivesOf } from "../elements/values.js";
 import { Playback, type PlaybackNotice, type PlaybackRules } from "./playback.js";
 import { type MediaSettings, readMediaSettings } from "./settings.js";
-
-/** The kinds of text track that show what is said as text (HTML Standard §4.8.11.12.1). */
-const CAPTION_KINDS = ["captions", "subtitles"];
-
-/** The kind of text track that describes what is shown (HTML Standard §4.8.11.12.1). */
-const DESCRIPTION_KINDS = ["descriptions"];
+import { CAPTION_KINDS, DESCRIPTION_KINDS, isShowing, tracksOf } from "./tracks.js";
 
 const SECONDS_PER_MINUTE = 60;
 
@@ -36,10 +31,6 @@ interface Bar {
   readonly time: HTMLElement;
   readonly notice: HTMLElement;
 }
-
-/** Returns the text tracks of the recording of the given kinds. */
-const tracksOf = (media: HTMLMediaElement, kinds: readonly string[]): TextTrack[] =>
-  [...media.textTracks].filter((track) => kinds.includes(track.kind));
 
 /**
  * The element of `qti-media-interaction` (INFO §5.92): an audio or video object that the candidate plays, and the number
@@ -71,6 +62,8 @@ export class MediaInteractionElement extends InteractionElement {
       // The player draws the controls, so that the rules of the item hold.
       media.removeAttribute("controls");
       this.#media = media;
+      // Other parts change the tracks too, such as the captions of a candidate's supports: the buttons show the mode.
+      media.textTracks.addEventListener("change", () => this.#refresh());
     }
     this.#settings = readMediaSettings(node);
     this.notes = new Notes();
@@ -146,7 +139,7 @@ export class MediaInteractionElement extends InteractionElement {
         for (const track of tracks) track.mode = showing ? "showing" : "hidden";
         control.setAttribute("aria-pressed", String(showing));
       });
-      control.setAttribute("aria-pressed", String(tracks.some((track) => track.mode === "showing")));
+      control.setAttribute("aria-pressed", String(isShowing(tracks)));
       return control;
     };
     const play = button(messages.mediaPlay, () => {
@@ -187,6 +180,8 @@ export class MediaInteractionElement extends InteractionElement {
     for (const control of [bar.play, bar.rewind, bar.captions, bar.description]) {
       if (control !== undefined) control.disabled = this.disabled;
     }
+    bar.captions?.setAttribute("aria-pressed", String(isShowing(tracksOf(media, CAPTION_KINDS))));
+    bar.description?.setAttribute("aria-pressed", String(isShowing(tracksOf(media, DESCRIPTION_KINDS))));
     const max = descriptor?.constraints.maxPlays;
     const left = playback.exhausted && !busy ? ` ${messages.mediaNoPlaysLeft}` : "";
     bar.status.textContent = `${messages.mediaPlays} ${this.#plays()}${max === undefined ? "" : ` / ${max}`}.${left}`;

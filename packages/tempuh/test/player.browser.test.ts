@@ -1,6 +1,7 @@
 import { container, single, type Value } from "@luthfanwakan/olah/values";
 import { describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
+import { DataError } from "../src/errors.js";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/messages/index.js";
 import {
   MAX_PCI_HEIGHT,
@@ -9,7 +10,9 @@ import {
   type PciEvent,
   type PciFiles,
   type PciFrameOptions,
+  presentationOf,
 } from "../src/player/index.js";
+import type { FrameTheme } from "./fixtures/commands.js";
 import {
   asset,
   assets,
@@ -30,6 +33,7 @@ import {
   stranger,
   tokenOf,
 } from "./pci-fixture.js";
+import { onSupport } from "./supports-fixture.js";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const TITLE = "Press the button.";
@@ -476,6 +480,76 @@ describe("mountPciFrame", () => {
       expect(small.frame.element.getBoundingClientRect().height).toBe(MIN_PCI_HEIGHT);
       const tall = mount({ markup: '<div style="height: 6000px"></div>' });
       await vi.waitFor(() => expect(tall.frame.element.getBoundingClientRect().height).toBe(MAX_PCI_HEIGHT));
+    });
+  });
+
+  describe("the presentation", () => {
+    const highContrast = presentationOf([onSupport("high-contrast")]);
+
+    /** The attributes of the player's look that the frame has. */
+    const look = ({ attributes }: FrameTheme) =>
+      Object.fromEntries(Object.entries(attributes).filter(([name]) => name.startsWith("data-tempuh-")));
+
+    it("[T79][T87] starts with the look that the supports ask for, set on the html of the frame before anything is drawn", async () => {
+      const mounted = mount({ presentation: highContrast });
+      await ready(mounted);
+      const theme = await commands.frameTheme(TITLE);
+      expect(theme.attributes["data-tempuh-contrast"]).toBe("high");
+      // docs/styling.md: high contrast is black on white.
+      expect(theme.properties).toEqual({ "--tempuh-fg": "#000000", "--tempuh-bg": "#ffffff" });
+      expect(theme.color).toBe("rgb(0, 0, 0)");
+    });
+
+    it("[T79][T87][T88] changes the look of a running interaction when a setting changes", async () => {
+      const mounted = mount({ presentation: highContrast });
+      await ready(mounted);
+      mounted.frame.setPresentation(presentationOf([onSupport("invert-display-polarity"), onSupport("magnification")]));
+      await vi.waitFor(async () =>
+        expect((await commands.frameTheme(TITLE)).attributes).toEqual({
+          lang: "en",
+          "data-tempuh-polarity": "inverted",
+          style: "--tempuh-text-zoom: 2;",
+        }),
+      );
+      const theme = await commands.frameTheme(TITLE);
+      // docs/styling.md: inverted polarity is #f2f2f2 on #121212, and 200 percent of the 16 pixels of the base size.
+      expect(theme.properties).toEqual({ "--tempuh-fg": "#f2f2f2", "--tempuh-bg": "#121212" });
+      expect(theme.color).toBe("rgb(242, 242, 242)");
+      expect(theme.fontSize).toBe("32px");
+      mounted.frame.setPresentation(presentationOf([]));
+      await vi.waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
+      // The defaults of the stylesheet are back.
+      expect((await commands.frameTheme(TITLE)).properties).toEqual({
+        "--tempuh-fg": "#1a1a1a",
+        "--tempuh-bg": "#ffffff",
+      });
+    });
+
+    it("[T79] keeps the look it was given before the frame started", async () => {
+      const mounted = mount();
+      mounted.frame.setPresentation(highContrast);
+      await ready(mounted);
+      expect((await commands.frameTheme(TITLE)).attributes["data-tempuh-contrast"]).toBe("high");
+    });
+
+    it("[T79] does not change the interaction, which is told nothing of the look", async () => {
+      const mounted = mount({ presentation: highContrast });
+      await ready(mounted);
+      mounted.frame.setPresentation(presentationOf([]));
+      await vi.waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
+      expect(mounted.events.map(({ type }) => type)).toEqual(["ready"]);
+    });
+
+    it("rejects a presentation that is not one, and takes one after the frame is gone", async () => {
+      const mounted = mount();
+      expect(() => mounted.frame.setPresentation(JSON.parse('{"attributes": {}}'))).toThrow(
+        new DataError("The presentation property attributes must be a Map, found an object."),
+      );
+      expect(() => mount({ presentation: JSON.parse("null") })).toThrow(
+        new DataError("The option presentation must be an object with the maps attributes and properties, found null."),
+      );
+      await mounted.frame.destroy();
+      expect(() => mounted.frame.setPresentation(highContrast)).not.toThrow();
     });
   });
 

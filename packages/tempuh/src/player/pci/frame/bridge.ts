@@ -4,6 +4,7 @@
  * §3.7.12.7), and it reports to the player with messages. `pnpm build` bundles it with its imports into the classic
  * script `bridge.js`, because a module script of an opaque origin needs CORS headers on the static files.
  */
+import { applyPresentation } from "../../supports/presentation.js";
 import {
   buildFrameCsp,
   isRequestedStatus,
@@ -221,6 +222,7 @@ async function start(command: PciStart): Promise<void> {
   }
   document.documentElement.lang = command.language;
   document.title = command.title;
+  applyPresentation(document.documentElement, command.presentation);
   const styled = addStylesheets(command.stylesheets);
   const dom = buildDocument(command);
   new ResizeObserver(reportHeight).observe(document.documentElement);
@@ -263,6 +265,8 @@ window.addEventListener("message", (event: MessageEvent<PciCommand>) => {
   if (command.type === "start" && !started && !completing) {
     started = true;
     void start(command);
+  } else if (command.type === "presentation") {
+    applyPresentation(document.documentElement, command.presentation);
   } else if (command.type === "validity") {
     answer(command);
   } else if (command.type === "complete") {

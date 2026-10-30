@@ -1,6 +1,7 @@
 import type { PciJson } from "@luthfanwakan/olah/pci";
 import { checkNonNegativeInteger, checkRecord, checkString, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
+import type { Presentation } from "../supports/presentation.js";
 
 /**
  * The status that the player tells a portable custom interaction, from the item session ([BPIG] §3.7.12.7.1). An
@@ -93,6 +94,8 @@ export interface PciStart {
   readonly contextVariables: ReadonlyMap<string, PciJson>;
   /** The value of the response variable, as JSON ([BPIG] App. C). */
   readonly boundTo: PciJson;
+  /** The look that the candidate's supports ask for, which the frame sets on its `html` element. */
+  readonly presentation: Presentation;
   /** The state to restore, or `null` for a new interaction. */
   readonly state: string | null;
 }
@@ -110,6 +113,8 @@ export type PciCommand =
       /** The argument of `setCustomValidity`. */
       readonly message?: string;
     }
+  /** Sets the look that the candidate's supports ask for on the frame's `html` element, in place of the earlier one. */
+  | { readonly type: "presentation"; readonly presentation: Presentation }
   /** Asks the frame to hand over the response and state and to call `oncompleted`. */
   | { readonly type: "complete" };
 

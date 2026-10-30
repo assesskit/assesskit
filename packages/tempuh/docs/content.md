@@ -264,7 +264,7 @@ A catalog is not drawn with the item. `root.card(idref, support, language)` rend
 first with the same primary language; else the entry marked `default`. The result is a `DocumentFragment` of the card's HTML
 content, rendered like any content with its `lang`, and of its files, each embedded like an `object` of the file's media
 type. It is `undefined` when no catalog has the id, or its card has no entry that fits. The element that asks keeps
-`data-catalog-idref`, which the accessibility support reads to find the cards on demand.
+`data-catalog-idref`, which `mountContentSupports` reads to show the cards of the supports that are on ([supports](supports.md#cards)).
 
 ## Feedback
 

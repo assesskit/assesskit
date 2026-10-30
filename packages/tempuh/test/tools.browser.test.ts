@@ -1,3 +1,5 @@
+import type { SupportView } from "@luthfanwakan/olah/delivery";
+import type { CalculatorType, SupportName, SupportState } from "@luthfanwakan/olah/pnp";
 import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -7,12 +9,12 @@ import {
   mountTools,
   type ToolOptions,
   type ToolSlots,
-  type ToolSupport,
   type ToolSupportName,
   type Tools,
   type ToolsInput,
 } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
+import { supportView } from "./supports-fixture.js";
 import {
   calculatorXml,
   companion,
@@ -28,12 +30,26 @@ import {
 
 // --- Fixtures ----------------------------------------------------------------------------------------------------
 
-const support = (name: ToolSupportName, overrides: Partial<ToolSupport> = {}): ToolSupport => ({
-  name,
-  state: "assigned",
-  active: false,
-  ...overrides,
-});
+/** What a test says of a tool support: the settings the tools read are given as fields. */
+interface ToolSupportFields {
+  readonly state?: SupportState;
+  readonly active?: boolean;
+  readonly highlightColor?: string;
+  readonly calculatorType?: CalculatorType;
+}
+
+const support = (
+  name: ToolSupportName,
+  { highlightColor, calculatorType, ...fields }: ToolSupportFields = {},
+): SupportView => {
+  if (name === "line-reader" && highlightColor !== undefined) {
+    return supportView(name, { ...fields, settings: { name, replaceAccessModes: [], highlightColor } });
+  }
+  if (name === "calculator-on-screen" && calculatorType !== undefined) {
+    return supportView(name, { ...fields, settings: { name, calculatorType } });
+  }
+  return supportView(name, fields);
+};
 
 /** An input with only companion materials. */
 const items = (materials: Materials): ToolsInput => ({
@@ -42,7 +58,7 @@ const items = (materials: Materials): ToolsInput => ({
 });
 
 /** An input with only supports. */
-const profile = (...supports: ToolSupport[]): ToolsInput => ({ companion: null, supports });
+const profile = (...supports: SupportView[]): ToolsInput => ({ companion: null, supports });
 
 /**
  * The content of a stage: three lines of text of 24 pixels each, a choice interaction, and two controls where the rule
@@ -71,7 +87,7 @@ interface Scene {
   readonly before: HTMLButtonElement;
   readonly tools: Tools;
   /** The requests of the tools to turn a tool of the profile on or off. */
-  readonly requests: (readonly [ToolSupportName, boolean])[];
+  readonly requests: (readonly [SupportName, boolean])[];
   /** Shows the tools for an input. */
   show(input: ToolsInput): void;
 }
@@ -118,7 +134,7 @@ function createScene({
   stage.innerHTML = CONTENT;
   shadow.append(stage);
   document.body.append(before, host, container);
-  const requests: (readonly [ToolSupportName, boolean])[] = [];
+  const requests: (readonly [SupportName, boolean])[] = [];
   let input: ToolsInput = { companion: null, supports: [] };
   const tools = mountTools(host, {
     messages,
@@ -548,7 +564,7 @@ describe("the protractor", () => {
 });
 
 describe("the line reader", () => {
-  const optional = (overrides: Partial<ToolSupport> = {}): ToolsInput =>
+  const optional = (overrides: ToolSupportFields = {}): ToolsInput =>
     profile(support("line-reader", { state: "option", ...overrides }));
 
   it("[T86] asks to turn it on from the button, and follows the next input, not the request", async () => {

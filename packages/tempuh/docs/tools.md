@@ -49,7 +49,14 @@ if (document.kind !== "item") throw new Error("The document is not an item.");
 
 tools.update({
   companion: document.item.companionMaterials ?? null,
-  supports: [{ name: "line-reader", state: "option", active: false, highlightColor: "#336699" }],
+  supports: [
+    {
+      name: "line-reader",
+      state: "option",
+      active: false,
+      settings: { name: "line-reader", replaceAccessModes: [], highlightColor: "#336699" },
+    },
+  ],
 });
 
 tools.destroy();
@@ -67,7 +74,7 @@ on `destroy`.
 | `stage`     | `HTMLElement`                                              | The element that holds the rendered item, in a document or a shadow root. Its `position` must not be `static`.                              |
 | `assets`    | `(path: string) => string`                                 | Turns the path of a file in the package into the URL to load it from.                                                                       |
 | `slots`     | `Partial<Record<SlotTool, (host, options) => () => void>>` | The tools that the host provides, by name. A function builds the tool in `host` and returns the function that takes it down. Default: `{}`. |
-| `onSupport` | `(name: ToolSupportName, active: boolean) => void`         | Called when the candidate turns a tool of the profile on or off.                                                                            |
+| `onSupport` | `(name: SupportName, active: boolean) => void`             | Called when the candidate turns a tool of the profile that is an option on or off: the host sends the `support` action.                     |
 
 `tools.update(input)` shows the tools for an item and a candidate. Call it with every new view. A tool that stays in force
 stays open, where the candidate put it; the others go, and the focus goes to the button of a tool that took it down.
@@ -79,16 +86,16 @@ panel is taken down.
 
 ### Input
 
-`update` takes the companion materials of the item, or `null`, and the supports of the candidate.
+`update` takes the companion materials of the item, or `null`, and the supports of the view: the `supports` of olah's
+`CandidateView`, as they are. The supports that put no tool on the screen are ignored.
 
-| Field                       | Meaning                                                                                                                                                                                                                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `companion`                 | The `CompanionMaterialsInfo` of olah's `asi` module, which `readAsi` gives as `item.companionMaterials`, or `null`                                                                                                                                                            |
-| `supports[].name`           | `line-reader`, `answer-masking`, `calculator-on-screen`, `dictionary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen` or `spell-checker-on-screen` |
-| `supports[].state`          | `prohibited`, `active`, `option` or `assigned` (BPIG §5.3), the `SupportState` of olah's `pnp` module                                                                                                                                                                         |
-| `supports[].active`         | Whether the tool is on now                                                                                                                                                                                                                                                    |
-| `supports[].highlightColor` | `#RGB` or `#RRGGBB`, for `line-reader`. Default: the player's own.                                                                                                                                                                                                            |
-| `supports[].calculatorType` | A calculator type or an extension term, for `calculator-on-screen`. Default: `basic`.                                                                                                                                                                                         |
+| Field                 | Meaning                                                                                                                                                                                                                                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `companion`           | The `CompanionMaterialsInfo` of olah's `asi` module, which `readAsi` gives as `item.companionMaterials`, or `null`                                                                                                                                                                                                                  |
+| `supports[].name`     | The support. Those that put a tool on the screen are `line-reader`, `answer-masking`, `calculator-on-screen`, `dictionary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen` and `spell-checker-on-screen` |
+| `supports[].state`    | `prohibited`, `active`, `option` or `assigned` (BPIG §5.3), the `SupportState` of olah's `pnp` module                                                                                                                                                                                                                               |
+| `supports[].active`   | Whether the tool is on now                                                                                                                                                                                                                                                                                                          |
+| `supports[].settings` | The settings of the profile: `highlightColor` (`#RGB` or `#RRGGBB`) of `line-reader`, default the player's own; `calculatorType` of `calculator-on-screen`, a calculator type or an extension term, default `basic`                                                                                                                 |
 
 The tools read these parts of the companion materials; olah keeps a decimal as the text that the document has, and tempuh
 reads it as a number.
@@ -117,9 +124,11 @@ and `Mile` (INFO §8.28, §8.40); units of angle are `Radian`, `Degree`, `Minute
 - The toolbar lists the item's tools in the order rule, protractor, calculator, digital material, then the profile's tools.
   Tools of one name are numbered: Ruler 1, Ruler 2.
 
-A tool that the profile puts on the screen follows the `active` flag of the input, never the candidate's own request:
-pressing its button calls `onSupport(name, !active)`, and the tool opens or closes when the next input says so. The focus
-then moves into a tool that the candidate opened. A tool that only the item asks for opens and closes at once.
+A tool whose support is an `option` follows the `active` flag of the input, never the candidate's own request: pressing its
+button calls `onSupport(name, !active)`, and the tool opens or closes when the next input says so. The focus then moves into
+a tool that the candidate opened. olah turns only an option on and off (BPIG §5.3, `support-not-available`), so a tool whose
+support is `active` or `assigned` is open at first when its `active` flag is on, and then the candidate opens and closes it
+like a tool that only the item asks for, which opens and closes at once.
 
 ## The tools
 

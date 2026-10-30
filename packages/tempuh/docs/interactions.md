@@ -182,7 +182,7 @@ in XHTML only the text counts (VOCAB §1.2.3.2). `expected-length` is a hint and
 The player draws its own controls, not those of the browser, so that the rules of the item hold: play and pause, and, from
 `data-qti-media-player-controls`, going back to the start, captions and audio description. The attribute is read as a list
 of words: `default` or none gives all of them, `none` gives only play and pause, because a recording that no one can start
-or stop would break WCAG 1.4.2. Captions and audio description appear when the recording has a text track of that kind.
+or stop would break WCAG 1.4.2. Captions and audio description appear when the recording has a text track of that kind. The buttons show the mode of the tracks, whoever set it, such as the supports of the candidate ([supports](supports.md#media)).
 
 | Rule           | Behavior                                                                                                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

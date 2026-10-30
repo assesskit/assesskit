@@ -255,7 +255,7 @@ describe("createRemoteSession", () => {
     expect(() => createRemoteSession(transport, JSON.parse('{"seq":1}'))).toThrow("A view envelope");
     expect(() => createRemoteSession(transport, initial, options("null"))).toThrow("The options must be an object");
     expect(() => createRemoteSession(transport, initial, options('{"timers":1}'))).toThrow(
-      "The options has the properties",
+      'The options has the property "clock", found "timers".',
     );
     expect(() => createRemoteSession(transport, initial, options('{"clock":{}}'))).toThrow(
       "The function now of the option clock",

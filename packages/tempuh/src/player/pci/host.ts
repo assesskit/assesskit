@@ -1,5 +1,6 @@
 import { checkString, describe } from "../../checks.js";
 import { DataError, isDataError } from "../../errors.js";
+import { checkPresentation, type Presentation } from "../supports/presentation.js";
 import { createResponseDecoder } from "./files.js";
 import { checkPciFrameOptions, describeFrame, type PciEvent, type PciFrameOptions } from "./options.js";
 import {
@@ -44,6 +45,14 @@ export interface PciFrame {
   setCustomValidity(message: string): Promise<void>;
   /** Reads the custom validity message of the interaction, or `undefined` when it gives none. */
   getCustomValidity(): Promise<string | undefined>;
+  /**
+   * Sets the look that the candidate's supports ask for on the `html` element of the frame, in place of the earlier one,
+   * so that a setting that changes while the interaction runs reaches it. A look set before the frame starts is the one
+   * it starts with.
+   *
+   * @throws `DataError` when `presentation` is not one.
+   */
+  setPresentation(presentation: Presentation): void;
   /**
    * Hands over the final response and state as a `completed` event, lets the interaction call `oncompleted`, and
    * removes the frame ([BPIG] §3.7.12.7.4). It waits at most two seconds for a frozen module, and it resolves when every
@@ -103,6 +112,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     return undefined;
   });
   const asked = new Map<number, (value: PciValidityResult) => void>();
+  let presentation: Presentation = options.presentation ?? { attributes: new Map(), properties: new Map() };
   let phase: Phase = "waiting";
   let nextId = 0;
   let finishClosing: (() => void) | undefined;
@@ -145,7 +155,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
         if (phase === "waiting") {
           phase = "started";
           void starting.then((start) =>
-            start === undefined ? deliver({ type: "failed", reason: "files" }) : post(start),
+            start === undefined ? deliver({ type: "failed", reason: "files" }) : post({ ...start, presentation }),
           );
         }
         break;
@@ -232,6 +242,11 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     getCustomValidity: async () => {
       const message = await ask("getCustomValidity");
       return typeof message === "string" ? message : undefined;
+    },
+    setPresentation: (next) => {
+      checkPresentation(next, "The presentation");
+      presentation = next;
+      if (phase === "started") post({ type: "presentation", presentation });
     },
     destroy: () => {
       closing ??= close();

@@ -1,3 +1,5 @@
+import type { SupportView } from "@luthfanwakan/olah/delivery";
+import type { CalculatorType, SupportName, SupportState } from "@luthfanwakan/olah/pnp";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError } from "../src/index.js";
@@ -17,7 +19,6 @@ import {
   LENGTH_UNITS,
   type ProtractorSpec,
   type RuleSpec,
-  type ToolSupport,
   type ToolsInput,
 } from "../src/player/tools/model.js";
 import { formatNumber } from "../src/player/tools/numbers.js";
@@ -32,6 +33,7 @@ import {
   ruleScale,
   unitSymbol,
 } from "../src/player/tools/scale.js";
+import { supportView } from "./supports-fixture.js";
 import {
   calculatorXml,
   companion,
@@ -265,11 +267,25 @@ const PROTRACTOR_SPEC: ProtractorSpec = {
   majorIncrement: { value: 5, unit: "Degree" },
 };
 
-const support = (overrides: Partial<ToolSupport> & Pick<ToolSupport, "name">): ToolSupport => ({
-  state: "assigned",
-  active: false,
-  ...overrides,
-});
+/** What a test says of a tool support: the settings the tools read are given as fields. */
+interface ToolSupportFields {
+  readonly name: SupportName;
+  readonly state?: SupportState;
+  readonly active?: boolean;
+  readonly highlightColor?: string;
+  readonly calculatorType?: CalculatorType;
+}
+
+const support = ({ name, state, active, highlightColor, calculatorType }: ToolSupportFields): SupportView => {
+  const fields = { ...(state === undefined ? {} : { state }), ...(active === undefined ? {} : { active }) };
+  if (name === "line-reader" && highlightColor !== undefined) {
+    return supportView(name, { ...fields, settings: { name, replaceAccessModes: [], highlightColor } });
+  }
+  if (name === "calculator-on-screen" && calculatorType !== undefined) {
+    return supportView(name, { ...fields, settings: { name, calculatorType } });
+  }
+  return supportView(name, fields);
+};
 
 describe("check-input", () => {
   const valid: ToolsInput = {
@@ -460,13 +476,19 @@ describe("check-input", () => {
     rejects({}, ["digitalMaterials"], {}, "The property companion.digitalMaterials must be an array, found an object.");
   });
 
-  it("rejects a support that is not one the tools handle", () => {
+  it("[T75] accepts any support of the view and ignores the ones that put no tool on the screen", () => {
+    const supports = [supportView("spoken", { state: "active", active: true }), support({ name: "line-reader" })];
+    expect(() => checkToolsInput({ companion: null, supports })).not.toThrow();
+    expect(resolveTools({ companion: null, supports }).tools.map(({ spec }) => spec.kind)).toEqual(["line-reader"]);
+  });
+
+  it("rejects a support that is not a support view of olah", () => {
     const rejects = (supports: unknown, message: string): void => {
       expect(() => checkToolsInput(json({ companion: null, supports }))).toThrow(new DataError(message));
     };
     rejects(
-      [{ name: "spoken", state: "assigned", active: true }],
-      'The property supports[0] property name must be "line-reader", "answer-masking", "calculator-on-screen", "dictionary-on-screen", "thesaurus-on-screen", "homophone-checker-on-screen", "note-taking-on-screen", "visual-organizer-on-screen", "outliner-on-screen", "peer-interaction-on-screen" or "spell-checker-on-screen", found "spoken".',
+      [{ name: "bogus", state: "assigned", active: true }],
+      'The property supports[0] property name must be the name of a support, found "bogus".',
     );
     rejects(
       [{ name: "line-reader", state: "on", active: true }],
@@ -477,12 +499,19 @@ describe("check-input", () => {
       'The property supports[0] property active must be true or false, found "yes".',
     );
     rejects(
-      [{ name: "line-reader", state: "active", active: true, highlightColor: "red" }],
-      'The property supports[0] property highlightColor must be a color as #RGB or #RRGGBB, found "red".',
+      [
+        {
+          name: "line-reader",
+          state: "active",
+          active: true,
+          settings: { name: "line-reader", highlightColor: "red" },
+        },
+      ],
+      'The property supports[0] property settings property highlightColor must be a color as #RGB or #RRGGBB, found "red".',
     );
     rejects(
-      [{ name: "line-reader", state: "active", active: true, highlightColor: 5 }],
-      "The property supports[0] property highlightColor must be a string, found 5.",
+      [{ name: "line-reader", state: "active", active: true, settings: { name: "line-reader", highlightColor: 5 } }],
+      "The property supports[0] property settings property highlightColor must be a string, found 5.",
     );
     rejects([null], "The property supports[0] must be an object, found null.");
   });
@@ -606,9 +635,9 @@ describe("resolve", () => {
       resolveTools({ companion: null, supports: [support({ name: "line-reader", state: "active", active: true })] }),
     ];
     expect(colored.tools[0]?.spec).toEqual({ kind: "line-reader", highlightColor: "#336699" });
-    expect(colored.tools[0]?.support).toEqual({ name: "line-reader", active: false });
+    expect(colored.tools[0]?.support).toMatchObject({ name: "line-reader", active: false });
     expect(plain.tools[0]?.spec).toEqual({ kind: "line-reader", highlightColor: null });
-    expect(plain.tools[0]?.support).toEqual({ name: "line-reader", active: true });
+    expect(plain.tools[0]?.support).toMatchObject({ name: "line-reader", active: true });
   });
 
   it("[T92] puts answer masking on the screen", () => {
@@ -619,7 +648,7 @@ describe("resolve", () => {
         spec: { kind: "answer-masking" },
         description: null,
         file: null,
-        support: { name: "answer-masking", active: true },
+        support: { name: "answer-masking", state: "assigned", active: true },
       },
     ]);
   });
@@ -633,7 +662,7 @@ describe("resolve", () => {
     });
     expect(set.tools).toHaveLength(1);
     expect(set.tools[0]?.spec).toEqual({ kind: "slot", tool: "scientific-calculator" });
-    expect(set.tools[0]?.support).toEqual({ name: "calculator-on-screen", active: true });
+    expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
   it("[T93] gives a profile that names no calculator type a basic calculator, and one that names an extension term none", () => {
@@ -653,7 +682,7 @@ describe("resolve", () => {
     });
     expect(set.tools).toHaveLength(1);
     expect(set.tools[0]?.description).toBe("Standard calculator");
-    expect(set.tools[0]?.support).toEqual({ name: "calculator-on-screen", active: true });
+    expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
   it("[T93] keeps the calculator of the item and adds the one of the profile when their types differ", () => {
@@ -707,7 +736,7 @@ describe("resolve", () => {
     });
     expect(set.tools).toHaveLength(1);
     expect(set.tools[0]?.file).toMatchObject({ fileHref: { value: "tools/standard.pdf" } });
-    expect(set.tools[0]?.support).toEqual({ name: "calculator-on-screen", active: true });
+    expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
   it("[T93] has no file for the calculator of a profile", () => {

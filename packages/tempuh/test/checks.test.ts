@@ -84,6 +84,12 @@ describe("checkProperties", () => {
     );
   });
 
+  it("names the one property that a record may have in the singular", () => {
+    expect(() => checkProperties({ b: 1 }, "The options", ["a"])).toThrow(
+      new DataError('The options has the property "a", found "b".'),
+    );
+  });
+
   it("treats a property named __proto__ as data", () => {
     const record: Readonly<Record<string, unknown>> = JSON.parse('{"__proto__": 1}');
     expect(() => checkProperties(record, "An envelope", ["a", "b"])).toThrow('found "__proto__".');

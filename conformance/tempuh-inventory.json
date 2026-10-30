@@ -18,7 +18,23 @@
     "TB13b",
     "TB15"
   ],
-  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6", "TB14", "TB12", "TB7", "TB9", "TB11", "TB8"],
+  "merged": [
+    "TB1",
+    "TB2",
+    "TB3",
+    "TB13a",
+    "TB5",
+    "TB4",
+    "TB13c",
+    "TB6",
+    "TB14",
+    "TB12",
+    "TB7",
+    "TB9",
+    "TB11",
+    "TB8",
+    "TB10"
+  ],
   "rows": [
     {
       "id": "T1",
@@ -608,7 +624,7 @@
       "id": "T74",
       "construct": "The delivered variant shown (`CandidateItem.variant`, its language); olah chooses it",
       "olah": ["B90", "B100", "P9"],
-      "modules": ["client", "server"],
+      "modules": ["player/supports"],
       "evidence": ["R"],
       "unit": "TB10"
     },
@@ -616,7 +632,7 @@
       "id": "T75",
       "construct": "`SupportView`s applied with their settings; option supports as controls sending the `support` action; prohibited supports absent",
       "olah": ["P41–P43", "B69", "E28"],
-      "modules": ["player"],
+      "modules": ["player/supports", "player/tools"],
       "evidence": ["R", "A", "E"],
       "unit": "TB10"
     },
@@ -624,7 +640,7 @@
       "id": "T76",
       "construct": "Glossary popover",
       "olah": ["P33"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -632,7 +648,7 @@
       "id": "T77",
       "construct": "Keyword-translation popover by language",
       "olah": ["P6"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -640,7 +656,7 @@
       "id": "T78",
       "construct": "Linguistic guidance, additional directions, keyboard directions on demand",
       "olah": ["P4", "P21", "P20"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -648,7 +664,7 @@
       "id": "T79",
       "construct": "High contrast: cards replace content; high-contrast theme",
       "olah": ["P28"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -656,7 +672,7 @@
       "id": "T80",
       "construct": "Simplified graphics and simplified language portions replace content",
       "olah": ["P8", "P7"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R"],
       "unit": "TB10"
     },
@@ -664,7 +680,7 @@
       "id": "T81",
       "construct": "Sign-language video, entry by language",
       "olah": ["P10"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R"],
       "unit": "TB10"
     },
@@ -672,7 +688,7 @@
       "id": "T82",
       "construct": "Audio description, captions, transcript",
       "olah": ["P27", "P23", "P25"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -680,7 +696,7 @@
       "id": "T83",
       "construct": "Braille and tactile cards: text for refreshable braille through the screen reader, files offered for embossing",
       "olah": ["P18", "P17"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R"],
       "unit": "TB10"
     },
@@ -688,7 +704,7 @@
       "id": "T84",
       "construct": "Long description (`hide-visually`); alternative text shown",
       "olah": ["P22", "P26"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["R", "A"],
       "unit": "TB10"
     },
@@ -784,7 +800,7 @@
       "id": "T96",
       "construct": "Input requirements: everything by keyboard or by pointer",
       "olah": ["P2"],
-      "modules": ["player"],
+      "modules": ["player/supports"],
       "evidence": ["A", "E"],
       "unit": "TB10"
     },

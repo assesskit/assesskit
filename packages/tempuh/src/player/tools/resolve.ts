@@ -1,4 +1,6 @@
 import type { CalculatorInfo, CompanionMaterialsInfo } from "@luthfanwakan/olah/asi";
+import type { SupportView } from "@luthfanwakan/olah/delivery";
+import type { SupportName } from "@luthfanwakan/olah/pnp";
 import {
   type AngleIncrement,
   type AngleUnit,
@@ -10,13 +12,11 @@ import {
   type ToolEntry,
   type ToolSet,
   type ToolSpec,
-  type ToolSupport,
-  type ToolSupportName,
   type ToolsInput,
 } from "./model.js";
 
 /** The tools that the host provides, by the support that asks for them (BPIG §5.2.9). */
-const SLOT_OF_SUPPORT: ReadonlyMap<ToolSupportName, SlotTool> = new Map([
+const SLOT_OF_SUPPORT: ReadonlyMap<SupportName, SlotTool> = new Map([
   ["dictionary-on-screen", "dictionary"],
   ["thesaurus-on-screen", "thesaurus"],
   ["homophone-checker-on-screen", "homophone-checker"],
@@ -42,7 +42,7 @@ function calculatorSpec(type: CalculatorType): ToolSpec {
 }
 
 /** Adds a tool; a tool that is in force already keeps its place and takes the support when it had none. */
-type Add = (spec: ToolSpec, description: string | null, support: ToolSupport | null, file?: CalculatorInfo) => void;
+type Add = (spec: ToolSpec, description: string | null, support: SupportView | null, file?: CalculatorInfo) => void;
 
 /** Reads an increment of a rule: olah keeps the decimal as written, which is text. */
 function lengthIncrement({ value, unit }: { readonly value: string; readonly unit: LengthUnit }): LengthIncrement {
@@ -80,16 +80,25 @@ function addCompanion(add: Add, companion: CompanionMaterialsInfo, prohibitsCalc
   for (const material of companion.digitalMaterials) add({ kind: "digital", material }, null, null);
 }
 
-function addSupport(add: Add, support: ToolSupport): void {
+function addSupport(add: Add, support: SupportView): void {
+  const { settings } = support;
   switch (support.name) {
     case "line-reader":
-      add({ kind: "line-reader", highlightColor: support.highlightColor ?? null }, null, support);
+      add(
+        {
+          kind: "line-reader",
+          highlightColor: settings?.name === "line-reader" ? (settings.highlightColor ?? null) : null,
+        },
+        null,
+        support,
+      );
       break;
     case "answer-masking":
       add({ kind: "answer-masking" }, null, support);
       break;
     case "calculator-on-screen": {
-      const type = support.calculatorType ?? DEFAULT_CALCULATOR_TYPE;
+      const type =
+        (settings?.name === "calculator-on-screen" ? settings.calculatorType : undefined) ?? DEFAULT_CALCULATOR_TYPE;
       // An extension term names a calculator that tempuh knows nothing of.
       if (isCalculatorType(type)) add(calculatorSpec(type), null, support);
       break;
@@ -113,10 +122,9 @@ export function resolveTools({ companion, supports }: ToolsInput): ToolSet {
   const tools = new Map<string, ToolEntry>();
   const add: Add = (spec, description, support, file) => {
     const key = JSON.stringify(spec);
-    const binding = support === null ? null : { name: support.name, active: support.active };
     const earlier = tools.get(key);
-    if (earlier === undefined) tools.set(key, { key, spec, description, file: file ?? null, support: binding });
-    else if (earlier.support === null) tools.set(key, { ...earlier, support: binding });
+    if (earlier === undefined) tools.set(key, { key, spec, description, file: file ?? null, support });
+    else if (earlier.support === null) tools.set(key, { ...earlier, support });
   };
   const prohibitsCalculators = supports.some(
     ({ name, state }) => name === "calculator-on-screen" && state === "prohibited",

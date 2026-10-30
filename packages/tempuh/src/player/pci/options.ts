@@ -12,6 +12,7 @@ import {
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import type { Messages } from "../../messages/index.js";
+import { checkPresentation, type Presentation } from "../supports/presentation.js";
 import { checkVariable, encodeVariable, type PciFiles, type PciVariable } from "./files.js";
 import { pciModules } from "./modules.js";
 import type { PciFailure, PciRequestedStatus, PciStart, PciStatus } from "./protocol.js";
@@ -107,6 +108,8 @@ export interface PciFrameOptions {
   readonly status: PciStatus;
   /** The state that `getState` gave before, to restore, or `null` for a new interaction. Default: `null`. */
   readonly state?: string | null;
+  /** The look that the candidate's supports ask for, from `presentationOf`; `setPresentation` changes it later. Default: none. */
+  readonly presentation?: Presentation;
   /** The response variable the interaction is bound to, with its value. */
   readonly response: PciVariable;
   /** The template variables bound to the interaction, by identifier. Default: empty. */
@@ -202,6 +205,7 @@ export function checkPciFrameOptions(options: unknown): asserts options is PciFr
     "stylesheets",
     "status",
     "state",
+    "presentation",
     "response",
     "templateVariables",
     "contextVariables",
@@ -229,6 +233,7 @@ export function checkPciFrameOptions(options: unknown): asserts options is PciFr
     );
   }
   if (state !== null) checkString(state, "The option state");
+  if (options.presentation !== undefined) checkPresentation(options.presentation, "The option presentation");
   checkVariable(options.response);
   checkVariables(templateVariables, "The option templateVariables");
   checkVariables(contextVariables, "The option contextVariables");
@@ -245,8 +250,8 @@ const oneLine = (text: string): string => text.split(/\s+/u).filter(Boolean).joi
 export interface FrameDescription {
   /** The name of the frame: the prompt with its white space collapsed, else the message `interactiveQuestion`. */
   readonly title: string;
-  /** Reads the files that go to the interaction and builds the message that starts the frame. */
-  readonly prepare: () => Promise<PciStart>;
+  /** Reads the files that go to the interaction and builds the message that starts the frame, but for the look, which the host adds when it sends it. */
+  readonly prepare: () => Promise<Omit<PciStart, "presentation">>;
 }
 
 async function encodeAll(

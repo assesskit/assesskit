@@ -93,3 +93,12 @@ measured in the pixels the author declared for the image. A graphic associate di
 for, and a hotspot with a maximum of one choice clears when it is chosen again. Every interaction is answered with single clicks or
 the keyboard alone, a drag has a choose-then-place form, and targets smaller than 24 pixels are enlarged. The drawing stores the
 picture, in the media type of the image, through the host's `files`, and `settled()` of its element tells the host when it has.
+
+The supports of a candidate (`player`), applied from the `SupportView`s of olah's view: `presentationOf` and
+`applyPresentation` set the themes, colors, text appearance, zoom, single column and keyword emphasis that `player.css`
+reads, on a content root and, through `PciFrame.setPresentation`, inside the frame of a portable custom interaction while it
+runs. `mountSupportPanel` shows the supports that are options as toggle buttons that ask the host for the `support` action.
+`mountContentSupports` shows the cards of the catalogs in popups that meet WCAG 1.4.13, in place of the content or beside
+it, shows caption and description tracks, and shows the alternative text of images. `mountSpoken` has the controls of
+reading aloud, a word-by-word cursor and the typing echo, and `mountVariantNotice` shows the variant that olah delivered with
+its language. The tools take the supports of the view as they are.

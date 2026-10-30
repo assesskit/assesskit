@@ -45,7 +45,9 @@ borders, the focus ring and the selection lines at least 3:1 (WCAG 1.4.3, 1.4.11
 ## What the player sets
 
 The player sets these on the host of the root, as inline custom properties on the same element as the attributes. A
-property that is not set has its default.
+property that is not set has its default. `presentationOf` builds them from a candidate's supports and `applyPresentation`
+sets them ([supports](supports.md)); a frame of a portable custom interaction gets them on its `html` element
+([PCI](pci.md)).
 
 | PNP support                            | Property or attribute                                | Value, default                                               |
 | -------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
@@ -92,18 +94,22 @@ interaction, which are classes of the player and not of the item:
 
 The content root ([content](content.md)) builds these parts around the content, which the stylesheet lays out:
 
-| Class or attribute                  | What it is                                                                                                             |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `tempuh-content`                    | The container of everything the root shows; it carries `lang`.                                                         |
-| `tempuh-hazards`                    | The notice of a hazard that remains: a border and text, so that it does not rely on color.                             |
-| `tempuh-rubric`                     | The rubric of the test, above the stimuli.                                                                             |
-| `tempuh-main`                       | Holds the stimuli and the item. With `data-tempuh-stimuli` it is two columns from 48rem, and one with a single column. |
-| `tempuh-stimuli`, `tempuh-stimulus` | The column of the stimuli, and one stimulus.                                                                           |
-| `tempuh-body`                       | The item.                                                                                                              |
-| `tempuh-test-feedback`              | The region of the test feedback, after the item.                                                                       |
-| `tempuh-dialog`                     | The dialog of modal feedback, with a backdrop of its own.                                                              |
-| `data-tempuh-placeholder`           | An interaction that no renderer has drawn.                                                                             |
-| `data-use` on `qti-rubric-block`    | `instructions`, `scoring` or `navigation`.                                                                             |
+| Class or attribute                  | What it is                                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `tempuh-content`                    | The container of everything the root shows; it carries `lang`.                                                           |
+| `tempuh-hazards`                    | The notice of a hazard that remains: a border and text, so that it does not rely on color.                               |
+| `tempuh-rubric`                     | The rubric of the test, above the stimuli.                                                                               |
+| `tempuh-main`                       | Holds the stimuli and the item. With `data-tempuh-stimuli` it is two columns from 48rem, and one with a single column.   |
+| `tempuh-stimuli`, `tempuh-stimulus` | The column of the stimuli, and one stimulus.                                                                             |
+| `tempuh-body`                       | The item.                                                                                                                |
+| `tempuh-test-feedback`              | The region of the test feedback, after the item.                                                                         |
+| `tempuh-dialog`                     | The dialog of modal feedback, with a backdrop of its own.                                                                |
+| `tempuh-card`                       | A card of a support beside the content, in a group named after the support ([supports](supports.md)).                    |
+| `tempuh-card-anchor`                | Holds the button of a card and its popup. The popup is `tempuh-popup`, with `tempuh-card-close` and `tempuh-popup-body`. |
+| `tempuh-card-trigger`               | The button that opens the popup of a card.                                                                               |
+| `tempuh-alternative-text`           | The `alt` of an image shown as text.                                                                                     |
+| `data-tempuh-placeholder`           | An interaction that no renderer has drawn.                                                                               |
+| `data-use` on `qti-rubric-block`    | `instructions`, `scoring` or `navigation`.                                                                               |
 
 ```html
 <qti-choice-interaction class="qti-labels-upper-alpha qti-labels-suffix-period qti-input-control-hidden">

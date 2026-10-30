@@ -1,3 +1,5 @@
+import { createStyleAdopter } from "../adopt.js";
+
 /**
  * The stylesheet of the tools. It uses the system colors, so that the tools follow the color scheme and the forced
  * colors of the browser, and sizes in `rem`, so that they follow the text size. Every control is at least 2.75rem, more
@@ -67,45 +69,9 @@ qti-choice-interaction[data-tempuh-masked] qti-simple-choice { display: none !im
   clip-path: inset(50%); white-space: nowrap; }
 `;
 
-/** The stylesheet, built when the first mount needs it. */
-let sheet: CSSStyleSheet | undefined;
-
-/** How many mounts use the stylesheet in each root, so that the last one to go takes it away. */
-const users = new Map<Document | ShadowRoot, number>();
-
-function toolSheet(): CSSStyleSheet {
-  if (sheet === undefined) {
-    sheet = new CSSStyleSheet();
-    sheet.replaceSync(TOOLS_CSS);
-  }
-  return sheet;
-}
-
-/** Returns the root a node is in, which holds the stylesheets that apply to it, or `null` for a node outside a document. */
-function styleRoot(node: Node): Document | ShadowRoot | null {
-  const root = node.getRootNode();
-  return root instanceof Document || root instanceof ShadowRoot ? root : null;
-}
-
 /**
  * Adopts the stylesheet of the tools into the document or shadow root that holds `node`.
  *
  * @returns a function that releases it; the root drops the stylesheet when no mount uses it any more.
  */
-export function adoptToolStyles(node: Node): () => void {
-  const root = styleRoot(node);
-  if (root === null) return () => undefined;
-  const adopted = toolSheet();
-  const count = users.get(root) ?? 0;
-  users.set(root, count + 1);
-  if (count === 0) root.adoptedStyleSheets = [...root.adoptedStyleSheets, adopted];
-  return () => {
-    const remaining = (users.get(root) ?? 1) - 1;
-    if (remaining > 0) {
-      users.set(root, remaining);
-      return;
-    }
-    users.delete(root);
-    root.adoptedStyleSheets = root.adoptedStyleSheets.filter((other) => other !== adopted);
-  };
-}
+export const adoptToolStyles = createStyleAdopter(TOOLS_CSS);

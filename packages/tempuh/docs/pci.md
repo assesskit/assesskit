@@ -92,6 +92,7 @@ also keeps a module from navigating its own frame to another site.
 | `stylesheets`       | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
 | `status`            | `PciStatus`                       | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
 | `state`             | `string \| null`                  | The state that `getState` gave before, to restore. Default: `null`                                                                         |
+| `presentation`      | `Presentation`                    | The look that the candidate's supports ask for, from `presentationOf` ([supports](supports.md)). Default: none                             |
 | `response`          | `PciVariable`                     | The response variable the interaction is bound to, with its value                                                                          |
 | `templateVariables` | `Map<string, PciVariable>`        | The template variables bound to the interaction, by identifier. Default: empty                                                             |
 | `contextVariables`  | `Map<string, PciVariable>`        | The context variables bound to it, by identifier. Default: empty                                                                           |
@@ -199,14 +200,15 @@ may honor. A `failed` reason is one of:
 
 ## The `PciFrame`
 
-| Member                    | Meaning                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------- |
-| `element`                 | The `iframe`                                                                                |
-| `checkValidity()`         | Resolves with the verdict of the interaction's `checkValidity`, or `undefined` for none     |
-| `reportValidity()`        | The same with `reportValidity`                                                              |
-| `setCustomValidity(text)` | Sets the custom validity message; `""` clears it                                            |
-| `getCustomValidity()`     | Resolves with the message, or `undefined`                                                   |
-| `destroy()`               | Sends the event `completed`, lets the interaction call `oncompleted`, and removes the frame |
+| Member                    | Meaning                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `element`                 | The `iframe`                                                                                  |
+| `checkValidity()`         | Resolves with the verdict of the interaction's `checkValidity`, or `undefined` for none       |
+| `reportValidity()`        | The same with `reportValidity`                                                                |
+| `setCustomValidity(text)` | Sets the custom validity message; `""` clears it                                              |
+| `getCustomValidity()`     | Resolves with the message, or `undefined`                                                     |
+| `setPresentation(look)`   | Sets the look on the `html` of the frame, in place of the earlier one ([The look](#the-look)) |
+| `destroy()`               | Sends the event `completed`, lets the interaction call `oncompleted`, and removes the frame   |
 
 A validity method resolves with `undefined` when the interaction is not running, lacks the method, throws, or does not
 answer within two seconds. `destroy` waits at most two seconds for a frozen module and returns the same promise when
@@ -243,6 +245,15 @@ the table above, and a response only as a value of its declaration. It sets the 
 reports, between 48 and 4096 CSS pixels (`MIN_PCI_HEIGHT` and `MAX_PCI_HEIGHT`); taller content scrolls in the frame.
 
 A module is code of the package and its source is visible to the candidate, so it must not hold an answer key.
+
+## The look
+
+The frame loads `player.css`, which reads the attributes and custom properties of its `html` element
+([styling](styling.md#themes)). The `presentation` option is set there before anything is drawn, and
+`frame.setPresentation(presentation)` replaces it while the interaction runs, so that a candidate who turns high contrast
+on, or whose zoom changes, sees it in the frame too. A presentation set before the frame starts is the one it starts with.
+Only the names of `presentationOf` are touched. The interaction is told nothing; it sees the CSS change. `setPresentation`
+throws `DataError` for a value that is not a presentation, and does nothing once the frame is gone.
 
 ## The name and the focus
 

@@ -515,4 +515,78 @@ export interface Messages {
   readonly submissionNoValue: string;
   /** The name of a file that the candidate submitted, when it has no name of its own. */
   readonly submissionFile: string;
+  /** The name of the region that holds the supports the candidate can turn on and off. */
+  readonly supportsLabel: string;
+  /** The name of the support that keeps content with a hazard away from the candidate. */
+  readonly supportHazardAvoidance: string;
+  /** The name of the support for the way the candidate operates the interface. */
+  readonly supportInputRequirements: string;
+  /** The name of the support that chooses the language of the interface. */
+  readonly supportLanguageOfInterface: string;
+  /** The name of the support that explains how language works in the content. */
+  readonly supportLinguisticGuidance: string;
+  /** The name of the support that emphasizes the keywords of the content. */
+  readonly supportKeywordEmphasis: string;
+  /** The name of the support that translates the keywords of the content. */
+  readonly supportKeywordTranslation: string;
+  /** The name of the support that replaces portions of the content with simpler language. */
+  readonly supportSimplifiedLanguage: string;
+  /** The name of the support that replaces graphics with simpler ones. */
+  readonly supportSimplifiedGraphics: string;
+  /** The name of the support that shows the question in another language. */
+  readonly supportItemTranslation: string;
+  /** The name of the support that shows the content in sign language. */
+  readonly supportSignLanguage: string;
+  /** The name of the support that encourages the candidate. */
+  readonly supportEncouragement: string;
+  /** The name of the support that gives the candidate more time. */
+  readonly supportAdditionalTestingTime: string;
+  /** The name of the support that swaps the light and dark colors of the display. */
+  readonly supportInvertDisplayPolarity: string;
+  /** The name of the support that enlarges the content. */
+  readonly supportMagnification: string;
+  /** The name of the support that reads the content aloud. */
+  readonly supportSpoken: string;
+  /** The name of the support that gives the content in a form that can be felt. */
+  readonly supportTactile: string;
+  /** The name of the support that gives the content in braille. */
+  readonly supportBraille: string;
+  /** The name of the support that explains how to use the keyboard. */
+  readonly supportKeyboardDirections: string;
+  /** The name of the support that gives further directions. */
+  readonly supportAdditionalDirections: string;
+  /** The name of the support that describes images at length. */
+  readonly supportLongDescription: string;
+  /** The name of the support for the place where the candidate sits the test. */
+  readonly supportEnvironment: string;
+  /** The name of the support that gives the words of audio and video as text. */
+  readonly supportTranscript: string;
+  /** The name of the support that gives images a text alternative. */
+  readonly supportAlternativeText: string;
+  /** The name of the support that shows the content with the strongest contrast. */
+  readonly supportHighContrast: string;
+  /** The name of the support that shows the content in one column. */
+  readonly supportLayoutSingleColumn: string;
+  /** The name of the support that sets the look of the text. */
+  readonly supportTextAppearance: string;
+  /** The name of the support that explains terms of the content; also the name of the button that opens the explanation of a term. */
+  readonly supportGlossaryOnScreen: string;
+  /** The action that reads the content aloud. */
+  readonly readAloud: string;
+  /** The action that stops the reading. */
+  readonly readAloudStop: string;
+  /** The action that reads the word before the one read last. */
+  readonly readAloudPreviousWord: string;
+  /** The action that reads the word after the one read last. */
+  readonly readAloudNextWord: string;
+  /** The name of the word that was read last. */
+  readonly readAloudWord: string;
+  /** The notice that there is nothing to read. */
+  readonly readAloudNothing: string;
+  /** The notice that the voice could not read. */
+  readonly readAloudFailed: string;
+  /** The name of the language of the version of a question that is shown; the language follows it. */
+  readonly variantLanguage: string;
+  /** The notice that a version of a question that is adapted for the candidate is shown. */
+  readonly variantAdapted: string;
 }

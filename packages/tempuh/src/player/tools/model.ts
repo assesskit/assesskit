@@ -4,7 +4,8 @@ import type {
   CompanionMaterialsInfo,
   DigitalMaterial,
 } from "@luthfanwakan/olah/asi";
-import type { CalculatorType as PnpCalculatorType, SupportName, SupportState } from "@luthfanwakan/olah/pnp";
+import type { SupportView } from "@luthfanwakan/olah/delivery";
+import type { SupportName } from "@luthfanwakan/olah/pnp";
 
 /** The calculator types of QTI (INFO §8.15), as olah's `qti-calculator-type` has them. */
 export const CALCULATOR_TYPES = [
@@ -87,29 +88,12 @@ export const TOOL_SUPPORT_NAMES = [
 /** The name of a support that puts a tool on the screen. */
 export type ToolSupportName = (typeof TOOL_SUPPORT_NAMES)[number];
 
-/** The states of a support for a candidate (BPIG §5.3), as olah's `resolveSupports` gives them. */
-export const SUPPORT_STATES = ["prohibited", "active", "option", "assigned"] as const satisfies readonly SupportState[];
-
-/** A support of the candidate's profile that puts a tool on the screen. */
-export interface ToolSupport {
-  /** The support. */
-  readonly name: ToolSupportName;
-  /** The state of the support for the candidate. A prohibited support puts no tool on the screen. */
-  readonly state: SupportState;
-  /** Whether the tool is on now. The candidate's use of the tool asks to change it and the next input says. */
-  readonly active: boolean;
-  /** The color of the line reader as `#RGB` or `#RRGGBB`, for `line-reader`. Default: the player's own. */
-  readonly highlightColor?: string;
-  /** The type of calculator, for `calculator-on-screen`: `basic`, `standard`, `scientific`, `graphing` or an extension term. Default: `basic`. */
-  readonly calculatorType?: PnpCalculatorType;
-}
-
 /** What decides the tools in force for an item: its companion materials and the candidate's supports. */
 export interface ToolsInput {
   /** The companion materials of the item (INFO §5.33) as olah reads them, or `null` for an item without them. */
   readonly companion: CompanionMaterialsInfo | null;
-  /** The supports of the candidate; those that put no tool on the screen are not in the list. */
-  readonly supports: readonly ToolSupport[];
+  /** The supports of the view; those that put no tool on the screen are ignored. */
+  readonly supports: readonly SupportView[];
 }
 
 /** The tools that the host provides in place of built-in ones (tempuh design §2.8), by name. */
@@ -139,14 +123,6 @@ export type ToolSpec =
   | { readonly kind: "slot"; readonly tool: SlotTool }
   | { readonly kind: "digital"; readonly material: DigitalMaterial };
 
-/** The tie between a tool and the support of the candidate's profile that puts it on the screen. */
-interface SupportBinding {
-  /** The support. */
-  readonly name: ToolSupportName;
-  /** Whether the tool is on now. */
-  readonly active: boolean;
-}
-
 /** A tool in force. */
 export interface ToolEntry {
   /** Identifies the tool among the tools of the item: equal keys are the same tool, whichever input they came from. */
@@ -157,8 +133,11 @@ export interface ToolEntry {
   readonly description: string | null;
   /** The file at which the item says that a calculator is available (INFO §5.24.3), or `null`. */
   readonly file: CalculatorInfo | null;
-  /** The support that puts the tool on the screen, or `null` for a tool that only the item asks for. */
-  readonly support: SupportBinding | null;
+  /**
+   * The support that puts the tool on the screen, or `null` for a tool that only the item asks for. The tool follows its
+   * `active` flag when its state is `option`, because only an option can be turned on and off with a `support` action.
+   */
+  readonly support: SupportView | null;
 }
 
 /** The tools in force for an item and the candidate. */

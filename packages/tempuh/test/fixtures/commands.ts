@@ -11,6 +11,17 @@ export interface FrameViolation {
   readonly nodes: readonly string[];
 }
 
+/** What the document of a frame has of the player's presentation: the attributes of its `html` and the colors that apply. */
+export interface FrameTheme {
+  /** The attributes of the `html` element, by name. */
+  readonly attributes: Readonly<Record<string, string>>;
+  /** The custom properties `--tempuh-fg` and `--tempuh-bg`, as the stylesheet resolves them. */
+  readonly properties: Readonly<Record<string, string>>;
+  /** The computed `color` and `font-size` of the body. */
+  readonly color: string;
+  readonly fontSize: string;
+}
+
 /** An XML or CSS file of the 1EdTech examples: its path below the examples, and its text. */
 export interface CorpusFile {
   readonly path: string;
@@ -23,6 +34,7 @@ declare module "vitest/browser" {
     axeInFrame: (title: string, tags: readonly string[]) => Promise<readonly FrameViolation[]>;
     ariaSnapshot: () => Promise<string>;
     clickInFrame: (title: string, selector: string) => Promise<void>;
+    frameTheme: (title: string) => Promise<FrameTheme>;
     watchConsole: () => Promise<void>;
     consoleErrors: () => Promise<readonly string[]>;
   }
@@ -61,6 +73,20 @@ const clickInFrame: BrowserCommand<[title: string, selector: string], void> = as
   await (await frameTitled(context, title)).locator(selector).click();
 };
 
+/** Reads the presentation that applies in the frame of an interaction, which the test page cannot read: its origin is opaque. */
+const frameTheme: BrowserCommand<[title: string], FrameTheme> = async (context, title) => {
+  const frame = await frameTitled(context, title);
+  return frame.evaluate(`(() => {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      attributes: Object.fromEntries([...document.documentElement.attributes].map(({ name, value }) => [name, value])),
+      properties: { "--tempuh-fg": style.getPropertyValue("--tempuh-fg").trim(), "--tempuh-bg": style.getPropertyValue("--tempuh-bg").trim() },
+      color: getComputedStyle(document.body).color,
+      fontSize: getComputedStyle(document.body).fontSize,
+    };
+  })()`);
+};
+
 /** Returns the accessibility tree of the test page, frames included, as Playwright writes it. */
 const ariaSnapshot: BrowserCommand<[], string> = async (context) => {
   const tester = await context.frame();
@@ -95,4 +121,4 @@ const corpusFiles: BrowserCommand<[], readonly CorpusFile[]> = () => {
 };
 
 /** The browser commands of the tests of tempuh. */
-export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, watchConsole, consoleErrors, corpusFiles };
+export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, frameTheme, watchConsole, consoleErrors, corpusFiles };

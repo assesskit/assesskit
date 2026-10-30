@@ -62,9 +62,11 @@ export function checkProperties(
   const unexpected = Object.keys(value).find((key) => !known.includes(key));
   if (unexpected === undefined) return;
   const quoted = known.map((key) => JSON.stringify(key));
-  throw new DataError(
-    `${label} has the properties ${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}, found ${describe(unexpected)}.`,
-  );
+  const names =
+    quoted.length === 1
+      ? `the property ${quoted[0]}`
+      : `the properties ${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+  throw new DataError(`${label} has ${names}, found ${describe(unexpected)}.`);
 }
 
 /**

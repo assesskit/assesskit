@@ -1,3 +1,5 @@
+import { lazyStyleSheet } from "../adopt.js";
+
 /**
  * The stylesheet of the chrome. Like the tools it uses the system colors, so that the chrome follows the color scheme and
  * the forced colors of the browser, and sizes in `rem`, so that it follows the text size. Every control is at least 2.75rem
@@ -44,14 +46,5 @@ const CHROME_CSS = `
 .tempuh-confirm::backdrop { background: color-mix(in srgb, CanvasText 55%, transparent); }
 `;
 
-/** The stylesheet, built when the first mount needs it. */
-let sheet: CSSStyleSheet | undefined;
-
 /** Returns the stylesheet of the chrome, the same one for every mount. */
-export function chromeStyles(): CSSStyleSheet {
-  if (sheet === undefined) {
-    sheet = new CSSStyleSheet();
-    sheet.replaceSync(CHROME_CSS);
-  }
-  return sheet;
-}
+export const chromeStyles = lazyStyleSheet(CHROME_CSS);

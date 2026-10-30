@@ -60,7 +60,8 @@ server also serves MathJax and its fonts from the `mathjax` package that the tes
 
 The cases are: the engine is the baseline; the banned features are present or absent as the table says; the shared modules
 run; `player.css` styles a content root; a portable custom interaction runs in its frame and reaches no network; a speech
-request is built from a content root; MathJax typesets MathML in a shadow root, gives braille and leaves elementary
+request is built from a content root; the supports of a candidate set the look, put a card in place of the content, open a
+popup that stays inside the root and is dismissed by Escape, and turn a button of the panel into a request; MathJax typesets MathML in a shadow root, gives braille and leaves elementary
 math to the browser; a content root renders nodes with the URLs of the package, sanitizes a hostile stylesheet and opens
 modal feedback in the top layer; and the graphic interactions are answered by keyboard and the drawing stores its picture.
 

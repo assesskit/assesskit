@@ -81,6 +81,13 @@ the player lays them out. `tools-fixture.ts` reads the companion materials of BP
 tools get what the player gets. The tests run axe-core with the rules of WCAG 2.2 A and AA and `label-content-name-mismatch`,
 which axe leaves off by default, and press real keys and pointer buttons.
 
+The browser tests of the supports (`supports.browser.test.ts`) read the catalogs of an item with olah's `readAsi`, show it in a
+content root and mount each part on it. They run axe-core with the same rules, press real keys and pointer buttons (a
+test sets the focus and presses the key, because Safari does not Tab to a button), and drive the parts with olah's engine,
+so that the `support` action, its refusals and the next view are olah's. A running frame of a portable custom interaction
+takes a new look in `player.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
+origin.
+
 The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
 operates the tools by keyboard.
 
