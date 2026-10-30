@@ -91,7 +91,7 @@ export function checkVariables(variables: ItemVariables): void {
 }
 
 /** Checks a value that the caller gives a context variable and returns it as the variable holds it. */
-function givenContext(identifier: string, value: unknown, type: VariableType): Value | null {
+export function givenContext(identifier: string, value: unknown, type: VariableType): Value | null {
   if (value === null) return null;
   const checked = normalizeValue(value);
   const fitted = fitValue(checked, type);

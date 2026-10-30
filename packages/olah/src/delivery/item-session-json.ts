@@ -18,7 +18,7 @@ import { checkKey } from "./plan.js";
 type VariableKind = keyof ItemVariables;
 
 /** A value in the JSON form of a session: its wire value, or `null` for NULL. */
-type ValueJson = WireValue | null;
+export type ValueJson = WireValue | null;
 
 /** The JSON form of an item session: plain data, with maps as entry arrays and values as wire values. */
 export interface ItemSessionJson {
@@ -48,7 +48,8 @@ function valueToJson(value: Value | null): ValueJson {
   );
 }
 
-function valuesToJson(values: ReadonlyMap<string, Value | null>): (readonly [string, ValueJson])[] {
+/** Writes values by identifier as entries `[identifier, value]`. */
+export function valuesToJson(values: ReadonlyMap<string, Value | null>): (readonly [string, ValueJson])[] {
   return [...values].map(([identifier, value]) => [identifier, valueToJson(value)]);
 }
 
@@ -82,8 +83,16 @@ export function itemSessionToJson(session: ItemSession): ItemSessionJson {
   };
 }
 
-/** Reads an array of entries `[identifier, value]` into a map, each identifier once. */
-function readEntries<T>(json: unknown, label: string, read: (value: unknown, identifier: string) => T): Map<string, T> {
+/**
+ * Reads an array of entries `[identifier, value]` into a map, each identifier once.
+ *
+ * @throws `DataError` when the data is not such an array, or an identifier repeats.
+ */
+export function readEntries<T>(
+  json: unknown,
+  label: string,
+  read: (value: unknown, identifier: string) => T,
+): Map<string, T> {
   checkArray(json, `${label} must be an array of entries`);
   const entries = new Map<string, T>();
   for (const entry of json) {
@@ -97,7 +106,12 @@ function readEntries<T>(json: unknown, label: string, read: (value: unknown, ide
   return entries;
 }
 
-function readValues(json: unknown, label: string): Map<string, Value | null> {
+/**
+ * Reads entries that {@link valuesToJson} wrote.
+ *
+ * @throws `DataError` when the data is not such entries.
+ */
+export function readValues(json: unknown, label: string): Map<string, Value | null> {
   return readEntries(json, label, (value) => (value === null ? null : fromWireValue(value)));
 }
 

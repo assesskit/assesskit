@@ -6,9 +6,13 @@ import {
   type AssessmentItem,
   type AssessmentTest,
   applyItemAction,
+  type CandidateAction,
   container,
+  createEngine,
   createItemVariables,
   createRandom,
+  type DeliveryState,
+  type Engine,
   type ItemAction,
   type ItemKey,
   type ItemSession,
@@ -17,6 +21,7 @@ import {
   type ItemStep,
   itemFeedback,
   nextItem,
+  packageResolvers,
   planItems,
   planTest,
   presentItem,
@@ -31,8 +36,11 @@ import {
   type TestStructure,
   timeLimits,
   type Value,
+  validateAsi,
   visibleModalFeedback,
 } from "../src/index.js";
+import { readPackageFile } from "../src/node/index.js";
+import { exampleItems } from "./corpus-items.js";
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 
@@ -364,5 +372,103 @@ describe("the tests of the examples", () => {
     expect(timeLimits(structure.test, { kind: "fixed-minutes", minutes: 15 }).maxTime).toBe(4500);
     expect(timeLimits(part, { kind: "fixed-minutes", minutes: 15 }).maxTime).toBe(3600);
     expect(timeLimits(structure.test, { kind: "unlimited" })).toEqual({ minTime: 600, allowLateSubmission: false });
+  });
+});
+
+describe("the engine on the examples", () => {
+  /** The engine of a test of a package of the examples, with the item that each item reference names. */
+  async function deliveryOf(directory: string, path: string) {
+    const pkg = await readPackageFile(join(examples, "packaging", directory));
+    const document = pkg.document(path);
+    if (document.kind !== "test") throw new Error(`${path} is not a test.`);
+    const resolvers = packageResolvers(pkg);
+    const engine = createEngine({ kind: "test", test: document.test, base: path, resolvers });
+    const items = new Map<string, AssessmentItem>();
+    const structure = resolveStructure(document.test, path, resolvers);
+    for (const key of planItems(planTest(structure, { random: createRandom(1) }))) {
+      const node = structure.itemRef(key.ref);
+      const resolved = node === undefined ? undefined : resolvers.items(node.model.href, node.base).deliverable;
+      if (resolved?.kind === "qti") items.set(key.ref, resolved.item);
+    }
+    return { engine, items };
+  }
+
+  /** Plays a test to its end: each item presented gets its correct responses, and is submitted in an individual part. */
+  function answerAll(engine: Engine, items: ReadonlyMap<string, AssessmentItem>, individual: boolean): DeliveryState {
+    const started = engine.start({ seed: 1, at: 0 });
+    if (!started.ok) throw new Error(started.refusal.message);
+    let { state } = started;
+    let at = 0;
+    const apply = (action: CandidateAction): void => {
+      at += 1000;
+      const step = engine.apply(state, { ...action, at });
+      if (!step.ok) throw new Error(`${action.type} was refused: ${step.refusal.message}`);
+      state = step.state;
+    };
+    for (let current = state.current; current !== undefined; current = state.current) {
+      const item = items.get(current.ref);
+      if (item === undefined) throw new Error(`No item ${current.ref}.`);
+      const correct = [...createItemVariables(item).correctResponses].filter(([, value]) => value !== null);
+      apply({ type: "set-responses", item: current, responses: new Map(correct) });
+      if (individual) apply({ type: "submit", item: current });
+      apply({ type: "move", to: "next" });
+    }
+    return state;
+  }
+
+  it("[E26][C] refuses the example tests that the static checks find errors in", async () => {
+    await expect(deliveryOf("basicFeedbackTest", "assessment.xml")).rejects.toThrow(
+      /olah\/validate\/adaptive-simultaneous in assessment\.xml/,
+    );
+    await expect(deliveryOf("BBQsTest", "assessment.xml")).rejects.toThrow(/olah\/validate\/custom-operator/);
+  });
+
+  it("[E9][W22][W32][B37][C] scores the correct answers of englishBasicLevelV2, submitted together, at its MAXSCORE", async () => {
+    const { engine, items } = await deliveryOf("englishBasicLevelV2", "Test_258641331.xml");
+    const state = answerAll(engine, items, false);
+    expect(state.status).toBe("ended");
+    expect(state.outcomes.get("SCORE")).toEqual(single("float", 24));
+    expect(state.outcomes.get("MAXSCORE")).toEqual(single("float", 24));
+  });
+
+  it("[E9][W22][W32][B37][C] scores the correct answers of interactionMixSaxonyV3, submitted one by one", async () => {
+    const { engine, items } = await deliveryOf("interactionMixSaxonyV3", "InteractionMixSachsen_1901710679.xml");
+    const state = answerAll(engine, items, true);
+    expect(state.status).toBe("ended");
+    // Of its MAXSCORE of 18, the 3 points of the item with three text entries come from a mapping, and that item
+    // declares no correct response, so the correct responses score 15.
+    expect(state.outcomes.get("MAXSCORE")).toEqual(single("float", 18));
+    expect(state.outcomes.get("SCORE")).toEqual(single("float", 15));
+  });
+
+  it("[E9][E25][C] delivers the links to tools of testWithLti as items with the outcomes SCORE and MAXSCORE", async () => {
+    const { engine } = await deliveryOf("testWithLti", "assessment.xml");
+    const started = engine.start({ seed: 1, at: 0 });
+    if (!started.ok) throw new Error(started.refusal.message);
+    const ended = engine.apply(started.state, { type: "end-test", at: 1000 });
+    if (!ended.ok) throw new Error(ended.refusal.message);
+    const link = ended.state.items[0]?.session;
+    expect(link?.key).toEqual({ ref: "i853928446", instance: 1 });
+    expect([...(link?.variables.outcomes.keys() ?? [])]).toEqual(["completionStatus", "SCORE", "MAXSCORE"]);
+    expect(ended.state.outcomes.get("TEST_total")).toEqual(single("float", 0));
+  });
+
+  it("[E12][E26][C] delivers alone every example item that the static checks accept, and plays it without throwing", () => {
+    let delivered = 0;
+    for (const { path, item } of exampleItems()) {
+      const issues = validateAsi({ kind: "item", item }, { customOperators: new Map() });
+      if (issues.some((issue) => issue.severity === "error")) continue;
+      const engine = createEngine({ kind: "item", item, base: path });
+      const started = engine.start({ seed: 1, at: 0 });
+      if (!started.ok) throw new Error(`${path}: ${started.refusal.message}`);
+      const key = started.state.current;
+      if (key === undefined) throw new Error(`${path} presents no item.`);
+      const skipped = engine.apply(started.state, { type: "skip", item: key, at: 1 });
+      const after = skipped.ok ? skipped.state : started.state;
+      const ended = engine.apply(after, { type: "end-test", at: 2 });
+      expect(ended.ok && ended.state.status, path).toBe("ended");
+      delivered += 1;
+    }
+    expect(delivered).toBeGreaterThan(40);
   });
 });

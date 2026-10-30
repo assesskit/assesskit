@@ -2,6 +2,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { itemSessionFromJson, itemSessionToJson } from "../src/delivery/item-session-json.js";
 import {
+  type AccessForAllResource,
+  type Action,
   ASI_NAMESPACE,
   type AssessmentItem,
   type AssessmentSection,
@@ -9,17 +11,26 @@ import {
   additionalTestingTime,
   ancestry,
   applyItemAction,
+  type CandidateAction,
   closeItem,
   container,
+  createEngine,
   createRandom,
   DataError,
   DEFAULT_PLAN_LIMITS,
   type DeliveryEvent,
+  type DeliveryEventType,
+  type DeliveryState,
+  deserializeState,
   type EffectiveSessionControl,
+  type Engine,
+  type EngineOptions,
+  type HostAction,
   type ItemAction,
   type ItemKey,
   type ItemSession,
   type ItemSessionContext,
+  type ItemSessionControl,
   type ItemSessionView,
   type ItemStep,
   itemFeedback,
@@ -36,6 +47,7 @@ import {
   previousItem,
   type Random,
   type Refusal,
+  type ResolvedItem,
   type RuleContext,
   readAsi,
   readPnp,
@@ -46,8 +58,13 @@ import {
   runOutcomeProcessing,
   SecurityError,
   type SingleValue,
+  type StartOptions,
+  type Step,
+  type SupportName,
+  serializeState,
   sessionControl,
   single,
+  stamp,
   standaloneSessionControl,
   startItemSession,
   suspendItem,
@@ -333,6 +350,1069 @@ const attempts = (session: ItemSession): Value | null => response(session, "numA
 const integer = (value: number): SingleValue => single("integer", value);
 const float = (value: number): SingleValue => single("float", value);
 const text = (value: string): SingleValue => single("string", value) ?? fail("A string value cannot be empty.");
+
+/** A test from its content: declarations, time limits, parts, outcome processing, in the order of the schema. */
+function testDocument(content: string): AssessmentTest {
+  const document = readAsi(
+    `<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="T" title="T">${content}</qti-assessment-test>`,
+  );
+  return document.kind === "test" ? document.test : fail(`Expected a test, found ${document.kind}.`);
+}
+
+/** A test part with its modes; `head` holds its pre-conditions, branch rules, item session control and time limits. */
+const testPart = (
+  id: string,
+  sections: string,
+  navigation: "linear" | "nonlinear",
+  submission: "individual" | "simultaneous" = "individual",
+  head = "",
+): string =>
+  `<qti-test-part identifier="${id}" navigation-mode="${navigation}" submission-mode="${submission}">${head}${sections}</qti-test-part>`;
+
+const outcomeDeclaration = (id: string, baseType: string, defaultValue?: string): string =>
+  `<qti-outcome-declaration identifier="${id}" cardinality="single" base-type="${baseType}">${defaultValue === undefined ? "" : `<qti-default-value><qti-value>${defaultValue}</qti-value></qti-default-value>`}</qti-outcome-declaration>`;
+const variable = (id: string, attributes = ""): string => `<qti-variable identifier="${id}"${attributes}/>`;
+const setOutcome = (id: string, expression: string): string =>
+  `<qti-set-outcome-value identifier="${id}">${expression}</qti-set-outcome-value>`;
+const outcomeProcessing = (...rules: string[]): string =>
+  `<qti-outcome-processing>${rules.join("")}</qti-outcome-processing>`;
+
+/** `TOTAL`, the sum of the `SCORE`s of the items, which outcome processing sets. */
+const TOTAL = outcomeDeclaration("TOTAL", "float");
+const SUM_SCORES = setOutcome("TOTAL", '<qti-sum><qti-test-variables variable-identifier="SCORE"/></qti-sum>');
+
+/** The resolution of an item reference to an item, without variants. */
+const resolution = (item: AssessmentItem, resource = item.identifier): ResolvedItem => ({
+  resource,
+  deliverable: { kind: "qti", item },
+  hazards: [],
+  variants: [],
+});
+
+/** An engine of a test whose item references name the items given by href; any other href names `counterItem()`. */
+function engineOf(
+  content: string,
+  items: Readonly<Record<string, AssessmentItem | ResolvedItem>> = {},
+  options: EngineOptions = {},
+): Engine {
+  return createEngine(
+    {
+      kind: "test",
+      test: testDocument(content),
+      base: "test.xml",
+      resolvers: {
+        items: (href) => {
+          const named = items[href] ?? counterItem();
+          return "deliverable" in named ? named : resolution(named);
+        },
+        sections: NO_SECTIONS.sections,
+        stimuli: () => fail("The test has no stimulus."),
+      },
+    },
+    options,
+  );
+}
+
+const key = (ref: string, instance = 1): ItemKey => ({ ref, instance });
+
+/** A state and the events of the steps that led to it. */
+interface Played {
+  readonly state: DeliveryState;
+  readonly events: readonly DeliveryEvent[];
+}
+
+/** Starts a session with the seed 1 at the time 0, unless the options say otherwise. */
+function begun(engine: Engine, options: Partial<StartOptions> = {}): Played {
+  const step = engine.start({ seed: 1, at: 0, ...options });
+  return step.ok ? step : fail(`The start was refused: ${step.refusal.code}.`);
+}
+
+/** Applies actions in order, each of which must be accepted; returns the last state and the events of every step. */
+function played(engine: Engine, state: DeliveryState, ...actions: Action[]): Played {
+  const events: DeliveryEvent[] = [];
+  let current = state;
+  for (const action of actions) {
+    const step = engine.apply(current, action);
+    if (!step.ok)
+      fail(`The action ${action.type} at ${action.at} was refused: ${step.refusal.code}: ${step.refusal.message}`);
+    current = step.state;
+    events.push(...step.events);
+  }
+  return { state: current, events };
+}
+
+/** The refusal of an action, which must be refused. */
+function refusalOf(engine: Engine, state: DeliveryState, action: Action): Refusal {
+  const step = engine.apply(state, action);
+  return step.ok ? fail(`The action ${action.type} was accepted.`) : step.refusal;
+}
+
+const answer = (ref: string, choice: string, at: number, instance = 1): Action => ({
+  type: "set-responses",
+  item: key(ref, instance),
+  responses: new Map([["RESPONSE", identifier(choice)]]),
+  at,
+});
+const on = (type: "submit" | "skip", ref: string, at: number, instance = 1): Action => ({
+  type,
+  item: key(ref, instance),
+  at,
+});
+const moveTo = (to: "next" | "previous" | ItemKey, at: number): Action => ({ type: "move", to, at });
+
+/** The events as text: the type, the item or scope, the detail and the time, such as `time-out S1@10000`. */
+const described = (events: readonly DeliveryEvent[]): string[] =>
+  events.map((event) => {
+    const words = [event.type, event.item === undefined ? event.scope : shown(event.item), event.detail];
+    return `${words.filter((word) => word !== undefined).join(" ")}@${event.at}`;
+  });
+
+const sessionOf = (state: DeliveryState, ref: string, instance = 1): ItemSession =>
+  state.items.find((item) => item.session.key.ref === ref && item.session.key.instance === instance)?.session ??
+  fail(`${ref} was not presented.`);
+const testOutcome = (state: DeliveryState, name: string): Value | null => state.outcomes.get(name) ?? null;
+
+/** The model of a `qti-item-session-control` with the attributes given. */
+const controlModel = (attributes: string): ItemSessionControl =>
+  structureOf(part("P", section("S", refs("a")), "linear", `<qti-item-session-control ${attributes}/>`)).part("P")
+    ?.model.itemSessionControl ?? fail("The part has no item session control.");
+
+/** A profile from its supports and sets. */
+function pnpOf(children: string): PersonalNeedsProfile {
+  const read = readPnp(`<access-for-all-pnp xmlns="${PNP_NAMESPACE}">${children}</access-for-all-pnp>`);
+  return "supports" in read ? read : fail("The document is a bulk file.");
+}
+
+/** An item that declares a template variable `T`, 7 by default, and sets `U` to `T` + 1 in template processing. */
+const templated = (): AssessmentItem =>
+  itemOf(
+    'time-dependent="false"',
+    `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+    <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+    <qti-template-declaration identifier="T" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+    <qti-template-declaration identifier="U" cardinality="single" base-type="integer"/>
+    <qti-template-processing><qti-set-template-value identifier="U"><qti-sum>${variable("T")}<qti-base-value base-type="integer">1</qti-base-value></qti-sum></qti-set-template-value></qti-template-processing>
+    <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>`,
+  );
+
+/** The accessibility description of a variant: its hazards and the languages of its adaptation. */
+const drd = (hazard: readonly string[], languageOfAdaptation: readonly string[] = []): AccessForAllResource => ({
+  accessMode: [],
+  accessModeAdapted: [],
+  adaptationType: [],
+  controlFlexibility: [],
+  displayTransformability: [],
+  hasAdaptation: [],
+  hazard: json(JSON.stringify(hazard)),
+  isAdaptationOf: [],
+  languageOfAdaptation,
+  adaptationDetail: [],
+  adaptationMediaType: [],
+  apiInteroperable: [],
+  educationalLevelOfAdaptation: [],
+  isFullAdaptationOf: [],
+  isPartialAdaptationOf: [],
+  extensions: [],
+});
+
+/** An item reference `a` resolved to the item `core` with the hazards given and its variants. */
+function withVariants(
+  hazards: readonly ("flashing" | "sound")[],
+  variants: readonly { readonly resource: string; readonly drd: AccessForAllResource }[],
+): ResolvedItem {
+  return {
+    resource: "core",
+    deliverable: { kind: "qti", item: counterItem() },
+    hazards,
+    variants: variants.map((variant) => ({ ...variant, deliverable: { kind: "qti", item: counterItem() } })),
+  };
+}
+
+describe("createEngine", () => {
+  it("[E26] refuses content that the static checks find an error in, and lists the errors", () => {
+    const adaptive = counterItem({ adaptive: true });
+    const simultaneous = testPart("P", section("S", refs("a")), "nonlinear", "simultaneous");
+    expect(() => engineOf(simultaneous, { "a.xml": adaptive })).toThrow(
+      'The test cannot be delivered: the static checks found an error. olah/validate/adaptive-simultaneous in test.xml: The item reference "a" names an adaptive item in the test part "P", which submits simultaneously; adaptive items need several attempts and so are not compatible with simultaneous submission.',
+    );
+    const custom = itemOf(
+      'time-dependent="false"',
+      `<qti-outcome-declaration identifier="X" cardinality="single" base-type="integer"/>
+      <qti-response-processing><qti-set-outcome-value identifier="X"><qti-custom-operator definition="urn:x:count"/></qti-set-outcome-value></qti-response-processing>`,
+    );
+    const individual = testPart("P", section("S", refs("a")), "nonlinear");
+    expect(() => engineOf(individual, { "a.xml": custom })).toThrow(/olah\/validate\/custom-operator/);
+    const registered = new Map([["urn:x:count", () => integer(1)]]);
+    expect(() => engineOf(individual, { "a.xml": custom }, { customOperators: registered })).not.toThrow();
+    expect(() => createEngine({ kind: "item", item: custom, base: "x.xml" })).toThrow(
+      /^The item cannot be delivered: the static checks found an error\. olah\/validate\/custom-operator in x\.xml/,
+    );
+  });
+
+  it("[E12] delivers an item alone as one item of a nonlinear part, with its feedback and review shown", () => {
+    const engine = createEngine({ kind: "item", item: counterItem(), base: "item.xml" });
+    const { state, events } = begun(engine);
+    expect(described(events)).toEqual(["section-entered item-section@0", "presented item@0"]);
+    const done = played(engine, state, answer("item", "A", 10), on("submit", "item", 20));
+    // One attempt for a non-adaptive item, as no control sets max-attempts (INFO §7.19.1); review is allowed.
+    expect(sessionOf(done.state, "item").status).toBe("closed");
+    const reviewed = played(engine, done.state, { type: "review", item: key("item"), at: 30 });
+    expect(sessionOf(reviewed.state, "item").status).toBe("review");
+    expect(described(played(engine, reviewed.state, { type: "end-test", at: 40 }).events)).toEqual([
+      "part-ended item-part@40",
+      "test-ended item@40",
+    ]);
+    // The control given applies, and an adaptive item closes at completion.
+    const twice = createEngine({
+      kind: "item",
+      item: counterItem(),
+      base: "item.xml",
+      control: controlModel('max-attempts="2"'),
+    });
+    const first = played(twice, begun(twice).state, answer("item", "A", 10), on("submit", "item", 20));
+    expect(sessionOf(first.state, "item").status).toBe("interacting");
+    const adaptive = createEngine({ kind: "item", item: counterItem({ adaptive: true }), base: "item.xml" });
+    const completed = played(adaptive, begun(adaptive).state, answer("item", "A", 1), on("submit", "item", 2));
+    expect(sessionOf(completed.state, "item").status).toBe("interacting");
+    const right = played(adaptive, completed.state, answer("item", "B", 3), on("submit", "item", 4));
+    expect(sessionOf(right.state, "item").status).toBe("closed");
+  });
+
+  it("refuses definitions and options of other types", () => {
+    const test = testDocument(testPart("P", section("S", refs("a")), "nonlinear"));
+    const resolvers = {
+      items: () => resolution(counterItem()),
+      sections: NO_SECTIONS.sections,
+      stimuli: () => fail("No."),
+    };
+    expect(() => createEngine(json("null"))).toThrow("The definition must be an object with a kind, found null.");
+    expect(() => createEngine(json('{"kind":"exam"}'))).toThrow(
+      'The kind of the definition must be "test" or "item", found "exam".',
+    );
+    expect(() => createEngine({ kind: "test", test: json("{}"), base: "t.xml", resolvers })).toThrow(
+      "The test must be the model of a qti-assessment-test, found the kind undefined.",
+    );
+    expect(() => createEngine({ kind: "test", test, base: json("1"), resolvers })).toThrow(
+      "The base must be a string, found 1.",
+    );
+    expect(() => createEngine({ kind: "test", test, base: "t.xml", resolvers }, json("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
+    expect(() =>
+      createEngine({ kind: "test", test, base: "t.xml", resolvers }, { customOperators: json("{}") }),
+    ).toThrow("The option customOperators must be a Map from a definition or class to a function, found an object.");
+    expect(() =>
+      createEngine({ kind: "test", test, base: "t.xml", resolvers }, { limits: json('{"maxPlanNodes":"9"}') }),
+    ).toThrow('The limit maxPlanNodes must be a positive integer, found "9".');
+    expect(() => createEngine({ kind: "item", item: json("[]"), base: "i.xml" })).toThrow(
+      "The item must be an object of the model of qti-assessment-item, found an array.",
+    );
+  });
+});
+
+describe("Engine.start", () => {
+  const simple = testPart("P", section("S", refs("a", "b")), "linear");
+
+  it("[E1][E9] plans the session and presents its first item; a test with no item to present ends at once", () => {
+    const engine = engineOf(simple);
+    const { state, events } = begun(engine, { at: 5 });
+    expect(described(events)).toEqual(["section-entered S@5", "presented a@5"]);
+    expect(state.status).toBe("in-progress");
+    expect(state.current).toEqual(key("a"));
+    expect(planItems(state.plan).map(shown)).toEqual(["a", "b"]);
+    const skipped = engineOf(`${OUTCOMES}${testPart("P", section("S", itemRef("a", pre(GO))), "linear")}`);
+    const ended = begun(skipped);
+    expect(described(ended.events)).toEqual(["test-ended T@0"]);
+    expect(ended.state.status).toBe("ended");
+    expect(ended.state.current).toBeUndefined();
+  });
+
+  it("[E3] plans from the seed as planTest does, and stores the generator after the draws of the start", () => {
+    const shuffled = testPart(
+      "P",
+      section("S", `<qti-ordering shuffle="true"/>${refs("a", "b", "c", "d")}`),
+      "nonlinear",
+    );
+    const engine = engineOf(shuffled);
+    const structure = resolveStructure(testDocument(shuffled), "test.xml", NO_SECTIONS);
+    const orders = new Set<string>();
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const random = createRandom(seed);
+      const plan = planTest(structure, { random });
+      const { state } = begun(engine, { seed });
+      expect(state.plan).toEqual(plan);
+      // The first item shuffles no choices, so the start draws only the plan.
+      expect(state.random).toEqual(random.state());
+      expect(begun(engine, { seed }).state).toEqual(state);
+      orders.add(planItems(state.plan).map(shown).join(" "));
+    }
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it("[B50][T21] gives the context values to the test and to the items that declare them, and the defaults otherwise", () => {
+    const city =
+      '<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"><qti-default-value><qti-value>Bandung</qti-value></qti-default-value></qti-context-declaration>';
+    const reader = itemOf(
+      'time-dependent="false"',
+      `<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"/>
+      <qti-template-declaration identifier="C" cardinality="single" base-type="string"/>
+      <qti-template-processing><qti-set-template-value identifier="C">${variable("CITY")}</qti-set-template-value></qti-template-processing>`,
+    );
+    const engine = engineOf(
+      `${city}${outcomeDeclaration("WHERE", "string")}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(setOutcome("WHERE", variable("CITY")))}`,
+      { "a.xml": reader },
+    );
+    const given = begun(engine, { context: new Map([["CITY", text("Jakarta")]]) });
+    expect(sessionOf(given.state, "a").variables.templates.get("C")).toEqual(text("Jakarta"));
+    const submitted = played(engine, given.state, on("submit", "a", 1));
+    expect(testOutcome(submitted.state, "WHERE")).toEqual(text("Jakarta"));
+    // Without a value, the test reads its default, and the item its own, which it does not declare: NULL.
+    const plain = begun(engine);
+    expect(sessionOf(plain.state, "a").variables.templates.get("C")).toBeNull();
+    expect(testOutcome(played(engine, plain.state, on("submit", "a", 1)).state, "WHERE")).toEqual(text("Bandung"));
+    expect(() => engine.start({ seed: 1, at: 0, context: new Map([["TOWN", text("Bogor")]]) })).toThrow(
+      'The option context gives "TOWN", which neither the test nor its items declare as a context variable.',
+    );
+    expect(() => engine.start({ seed: 1, at: 0, context: new Map([["CITY", integer(1)]]) })).toThrow(
+      "The context variable CITY is a single string, found a single integer.",
+    );
+  });
+
+  it("[E28] takes the supports of the profile, on from the start when active, and the universal ones as options", () => {
+    const engine = engineOf(simple);
+    const pnp = pnpOf(
+      "<line-reader/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><spell-checker-on-screen/></prohibit-set>",
+    );
+    const { state } = begun(engine, { pnp, universalSupports: ["calculator-on-screen", "spell-checker-on-screen"] });
+    expect([...state.supports]).toEqual([
+      ["line-reader", { state: "active", active: true }],
+      ["dictionary-on-screen", { state: "option", active: false }],
+      ["spell-checker-on-screen", { state: "prohibited", active: false }],
+      ["calculator-on-screen", { state: "option", active: false }],
+    ]);
+    expect(state.items[0]?.supports).toEqual(["line-reader"]);
+  });
+
+  it("refuses options of other types", () => {
+    const engine = engineOf(simple);
+    expect(() => engine.start(json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => engine.start({ seed: 1.5, at: 0 })).toThrow("A seed must be a safe integer, found 1.5.");
+    expect(() => engine.start({ seed: 1, at: json('"0"') })).toThrow(
+      'The option at must be a finite number, found "0".',
+    );
+    expect(() => engine.start({ seed: 1, at: 0, universalSupports: json('["chocolate"]') })).toThrow(
+      'A universal support must be a support name, found "chocolate".',
+    );
+    expect(() => engine.start({ seed: 1, at: 0, context: json("{}") })).toThrow(
+      "The option context must be a Map from identifier to value, found an object.",
+    );
+    expect(() => engine.start({ seed: 1, at: 0, pnp: json("null") })).toThrow(
+      "The option pnp must be an object of the model of a PNP, found null.",
+    );
+  });
+});
+
+describe("Engine.apply", () => {
+  const linearAbc = `${TOTAL}${testPart("P", section("S", refs("a", "b", "c")), "linear")}${outcomeProcessing(SUM_SCORES)}`;
+  const nonlinearAb = `${TOTAL}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
+
+  it("[E9][W22][B26][B88] moves forward only in a linear part, submitting and closing the item it leaves", () => {
+    const engine = engineOf(linearAbc);
+    const { state } = begun(engine);
+    const left = played(engine, state, answer("a", "B", 10), moveTo("next", 20));
+    expect(described(left.events)).toEqual([
+      "responses-set a@10",
+      "attempt-ended a submit@20",
+      "response-processed a@20",
+      "outcome-processed T@20",
+      "moved b@20",
+      "presented b@20",
+    ]);
+    expect(sessionOf(left.state, "a").status).toBe("closed");
+    expect(testOutcome(left.state, "TOTAL")).toEqual(float(1));
+    expect(refusalOf(engine, left.state, moveTo("previous", 30)).code).toBe("linear-backward");
+    expect(refusalOf(engine, left.state, moveTo(key("a"), 30)).code).toBe("linear-backward");
+    expect(refusalOf(engine, state, moveTo(key("c"), 30))).toEqual({
+      code: "not-current",
+      message: "In a linear test part the candidate moves to the next item only.",
+      source: "INFO §2.8.2",
+    });
+    const atC = played(engine, left.state, moveTo(key("c"), 30));
+    expect(atC.state.current).toEqual(key("c"));
+    const ended = played(engine, atC.state, moveTo("next", 40));
+    expect(described(ended.events)).toEqual([
+      "attempt-ended c submit@40",
+      "response-processed c@40",
+      "outcome-processed T@40",
+      "part-ended P@40",
+      "test-ended T@40",
+    ]);
+    expect([ended.state.status, ended.state.current]).toEqual(["ended", undefined]);
+    expect(refusalOf(engine, ended.state, moveTo("next", 50))).toEqual({
+      code: "ended",
+      message: "The test has ended.",
+      source: "INFO §2.8",
+    });
+  });
+
+  it("[E9][W22][B26][B88] moves freely in a nonlinear part, suspending the item it leaves with its attempt open", () => {
+    const engine = engineOf(nonlinearAb);
+    const away = played(engine, begun(engine).state, answer("a", "B", 10), moveTo(key("b"), 20));
+    expect(described(away.events)).toEqual(["responses-set a@10", "moved b@20", "presented b@20"]);
+    const suspended = sessionOf(away.state, "a");
+    expect([suspended.status, suspended.attempting, suspended.drafts.get("RESPONSE")]).toEqual([
+      "suspended",
+      true,
+      identifier("B"),
+    ]);
+    const back = played(engine, away.state, moveTo("previous", 30), on("submit", "a", 40));
+    expect(described(back.events).slice(0, 2)).toEqual(["moved a@30", "presented a@30"]);
+    expect(testOutcome(back.state, "TOTAL")).toEqual(float(1));
+    expect(played(engine, back.state, moveTo(key("a"), 50)).events).toEqual([]);
+    expect(refusalOf(engine, back.state, moveTo("previous", 50)).code).toBe("unknown-item");
+    expect(refusalOf(engine, back.state, moveTo(key("x"), 50)).code).toBe("unknown-item");
+    expect(refusalOf(engine, back.state, answer("b", "A", 50)).code).toBe("not-current");
+  });
+
+  it("[E9][B28][B29] applies pre-conditions and branch rules as the candidate moves, after outcome processing", () => {
+    const content = `${OUTCOMES}${testPart(
+      "P",
+      section("S", itemRef("a", branch("c", answered("B"))) + refs("b") + itemRef("c", pre(GO)) + refs("d")),
+      "linear",
+    )}${outcomeProcessing(setOutcome("ANSWER", variable("a.RESPONSE")))}`;
+    const engine = engineOf(content);
+    const right = played(engine, begun(engine).state, answer("a", "B", 1), moveTo("next", 2));
+    // The branch rule reads ANSWER as outcome processing set it after a was submitted, and c's pre-condition is NULL.
+    expect(right.state.current).toEqual(key("d"));
+    const wrong = played(engine, begun(engine).state, answer("a", "A", 1), moveTo("next", 2));
+    expect(wrong.state.current).toEqual(key("b"));
+  });
+
+  it("[W32][B27][B37] submits the items of a simultaneous part together at its end, then runs outcome processing once", () => {
+    const engine = engineOf(
+      `${TOTAL}${testPart("P", section("S", refs("a", "b")), "nonlinear", "simultaneous")}${outcomeProcessing(SUM_SCORES)}`,
+    );
+    const { state } = begun(engine);
+    for (const action of [
+      on("submit", "a", 1),
+      on("skip", "a", 1),
+      { type: "end-attempt", item: key("a"), interaction: "HINT", at: 1 } as const,
+    ]) {
+      expect(refusalOf(engine, state, action)).toEqual({
+        code: "wrong-submission-mode",
+        message: "The test part submits its items together at its end, so an item is not submitted alone.",
+        source: "INFO §2.8.2",
+      });
+    }
+    const ended = played(engine, state, answer("a", "B", 10), moveTo(key("b"), 20), answer("b", "A", 30), {
+      type: "end-part",
+      at: 40,
+    });
+    expect(described(ended.events).slice(-7)).toEqual([
+      "attempt-ended a close@40",
+      "response-processed a@40",
+      "attempt-ended b close@40",
+      "response-processed b@40",
+      "outcome-processed T@40",
+      "part-ended P@40",
+      "test-ended T@40",
+    ]);
+    expect(testOutcome(ended.state, "TOTAL")).toEqual(float(1));
+  });
+
+  it("[B27] submits the items of an adaptive section one by one in a part that submits simultaneously (CAT §2.4)", () => {
+    const adaptive =
+      '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
+    const engine = engineOf(
+      `${TOTAL}${testPart("P", section("A", adaptive + refs("c")) + section("S", refs("b")), "nonlinear", "simultaneous")}${outcomeProcessing(SUM_SCORES)}`,
+    );
+    // The section A has no items until a stage of its CAT engine is appended to the plan; here c is appended by hand.
+    const { state } = begun(engine);
+    expect(state.current).toEqual(key("b"));
+    const written = JSON.parse(serializeState(state));
+    written.plan.parts[0].children[0].children = [{ kind: "item", key: key("c") }];
+    const staged = deserializeState(JSON.stringify(written));
+    const atC = played(engine, staged, moveTo(key("c"), 1), answer("c", "B", 2));
+    expect(described(played(engine, atC.state, on("submit", "c", 3)).events)).toEqual([
+      "attempt-ended c submit@3",
+      "response-processed c@3",
+      "outcome-processed T@3",
+    ]);
+    expect(refusalOf(engine, staged, on("submit", "b", 1)).code).toBe("wrong-submission-mode");
+  });
+
+  it("[W32][B37] runs outcome processing after each submission in an individual part, from the outcomes' defaults", () => {
+    const count = setOutcome(
+      "COUNT",
+      `<qti-sum>${variable("COUNT")}<qti-base-value base-type="integer">1</qti-base-value></qti-sum>`,
+    );
+    const engine = engineOf(
+      `${outcomeDeclaration("COUNT", "integer", "10")}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(count)}`,
+    );
+    const first = played(engine, begun(engine).state, on("submit", "a", 1));
+    expect(testOutcome(first.state, "COUNT")).toEqual(integer(11));
+    // INFO §2.9: the outcomes are reset to their defaults before each run, so COUNT does not reach 12.
+    const second = played(engine, first.state, moveTo(key("b"), 2), on("submit", "b", 3));
+    expect(testOutcome(second.state, "COUNT")).toEqual(integer(11));
+    expect(described(second.events).filter((event) => event.startsWith("outcome"))).toEqual(["outcome-processed T@3"]);
+  });
+
+  it("[B38][G9][B96] reads ITEM.VAR from the instance submitted last, ITEM.n.VAR from the instance n, and never a draft", () => {
+    const read = outcomeProcessing(
+      setOutcome("ANSWER", variable("q.RESPONSE")),
+      setOutcome("FIRST", variable("q.1.RESPONSE")),
+      setOutcome("SECOND", variable("q.2.RESPONSE")),
+    );
+    const engine = engineOf(
+      `${OUTCOMES}${outcomeDeclaration("FIRST", "identifier")}${outcomeDeclaration("SECOND", "identifier")}${testPart(
+        "P",
+        section("S", `<qti-selection select="2" with-replacement="true"/>${refs("q")}`) + section("R", refs("r")),
+        "nonlinear",
+      )}${read}`,
+    );
+    const values = (state: DeliveryState): (Value | null)[] =>
+      ["ANSWER", "FIRST", "SECOND"].map((name) => testOutcome(state, name));
+    const drafted = played(engine, begun(engine).state, answer("q", "A", 1), moveTo(key("r"), 2), on("submit", "r", 3));
+    expect(values(drafted.state)).toEqual([null, null, null]);
+    const second = played(
+      engine,
+      drafted.state,
+      moveTo(key("q", 2), 4),
+      answer("q", "C", 5, 2),
+      on("submit", "q", 6, 2),
+    );
+    expect(values(second.state)).toEqual([identifier("C"), null, identifier("C")]);
+    const first = played(engine, second.state, moveTo(key("q", 1), 7), on("submit", "q", 8));
+    expect(values(first.state)).toEqual([identifier("A"), identifier("A"), identifier("C")]);
+  });
+
+  it("[B39][B40] weighs and renames the item variables through the item reference", () => {
+    const ref = itemRef(
+      "a",
+      '<qti-variable-mapping source-identifier="SCORE" target-identifier="POINTS"/><qti-weight identifier="W" value="2"/>',
+    );
+    const engine = engineOf(
+      `${outcomeDeclaration("WEIGHED", "float")}${outcomeDeclaration("MAPPED", "float")}${outcomeDeclaration("SUMMED", "float")}${testPart(
+        "P",
+        section("S", ref + refs("b")),
+        "nonlinear",
+      )}${outcomeProcessing(
+        setOutcome("WEIGHED", variable("a.POINTS", ' weight-identifier="W"')),
+        setOutcome("MAPPED", variable("a.POINTS")),
+        setOutcome(
+          "SUMMED",
+          '<qti-sum><qti-test-variables variable-identifier="POINTS" weight-identifier="W"/></qti-sum>',
+        ),
+      )}`,
+    );
+    const { state } = played(engine, begun(engine).state, answer("a", "B", 1), on("submit", "a", 2));
+    // SCORE of a is 1 and of b 0; b has no weight W, which is 1 (INFO §7.47.2), and no mapping, so its POINTS is not read.
+    expect(["WEIGHED", "MAPPED", "SUMMED"].map((name) => testOutcome(state, name))).toEqual([
+      float(2),
+      float(1),
+      float(2),
+    ]);
+  });
+
+  it("[B41] evaluates the template defaults of an item reference when the item is first presented", () => {
+    const ref = itemRef(
+      "b",
+      `<qti-template-default template-identifier="T">${variable("LEVEL")}</qti-template-default>`,
+    );
+    const engine = engineOf(
+      `${outcomeDeclaration("LEVEL", "integer")}${testPart("P", section("S", refs("a") + ref + refs("c")), "linear")}${outcomeProcessing(
+        setOutcome("LEVEL", `<qti-round>${variable("a.SCORE")}</qti-round>`),
+      )}`,
+      { "b.xml": templated(), "c.xml": templated() },
+    );
+    const templates = (state: DeliveryState, ref: string): (Value | null)[] =>
+      ["T", "U"].map((name) => sessionOf(state, ref).variables.templates.get(name) ?? null);
+    const right = played(engine, begun(engine).state, answer("a", "B", 1), moveTo("next", 2));
+    expect(templates(right.state, "b")).toEqual([integer(1), integer(2)]);
+    const wrong = played(engine, begun(engine).state, answer("a", "A", 1), moveTo("next", 2));
+    expect(templates(wrong.state, "b")).toEqual([integer(0), integer(1)]);
+    // c has no template default, so T keeps the default of its declaration.
+    expect(templates(played(engine, wrong.state, moveTo("next", 3)).state, "c")).toEqual([integer(7), integer(8)]);
+  });
+
+  it("[T22][G23] keeps the durations of the test, its parts and sections, without suspended time", () => {
+    const durations = ["TD", "PD", "S1D", "S2D"];
+    const engine = engineOf(
+      `${durations.map((name) => outcomeDeclaration(name, "duration")).join("")}${testPart(
+        "P",
+        section("S1", refs("a")) + section("S2", refs("b")),
+        "linear",
+      )}${outcomeProcessing(
+        setOutcome("TD", variable("duration")),
+        setOutcome("PD", variable("P.duration")),
+        setOutcome("S1D", variable("S1.duration")),
+        setOutcome("S2D", variable("S2.duration")),
+      )}`,
+    );
+    const seconds = (state: DeliveryState): (Value | null)[] => durations.map((name) => testOutcome(state, name));
+    const left = played(engine, begun(engine).state, answer("a", "B", 1_000), moveTo("next", 3_000));
+    expect(seconds(left.state)).toEqual([3, 3, 3, 0].map((value) => single("duration", value)));
+    const paused = played(engine, left.state, { type: "suspend", at: 4_000 }, { type: "resume", at: 10_000 });
+    const ended = played(engine, paused.state, moveTo("next", 12_000));
+    // The test ran from 0 to 4 s and from 10 to 12 s; S2 from 3 to 4 s and from 10 to 12 s (INFO §2.8.5).
+    expect(seconds(ended.state)).toEqual([6, 6, 3, 3].map((value) => single("duration", value)));
+    expect(response(sessionOf(ended.state, "b"), "duration")).toEqual(single("duration", 3));
+  });
+
+  it("[B88] ends an attempt only on an action of the candidate or the end of the test part", () => {
+    const engine = engineOf(nonlinearAb);
+    const away = played(engine, begun(engine).state, answer("a", "B", 10), moveTo(key("b"), 20));
+    expect(away.events.some((event) => event.type === "attempt-ended")).toBe(false);
+    const ended = played(engine, away.state, { type: "end-test", at: 30 });
+    expect(described(ended.events)).toEqual([
+      "attempt-ended a close@30",
+      "response-processed a@30",
+      "attempt-ended b close@30",
+      "response-processed b@30",
+      "outcome-processed T@30",
+      "part-ended P@30",
+      "test-ended T@30",
+    ]);
+    expect(testOutcome(ended.state, "TOTAL")).toEqual(float(1));
+  });
+
+  it("[E4] refuses with a code, a message and a source, and returns no state", () => {
+    const engine = engineOf(nonlinearAb);
+    const { state } = begun(engine);
+    const before = serializeState(state);
+    const step = engine.apply(state, answer("b", "A", 1));
+    expect(step).toEqual({
+      ok: false,
+      refusal: {
+        code: "not-current",
+        message: "The action names an item that is not the one presented.",
+        source: "INFO §2.2.1",
+      },
+    });
+    expect(refusalOf(engine, state, answer("x", "A", 1))).toEqual({
+      code: "unknown-item",
+      message: 'The test has no item instance "x" 1.',
+      source: "INFO §2.8",
+    });
+    expect(refusalOf(engine, state, { type: "comment", item: key("a"), text: "Hm.", at: 1 }).code).toBe(
+      "comment-not-allowed",
+    );
+    expect(serializeState(state)).toBe(before);
+  });
+
+  it("[E5][G27] refuses an action stamped before the latest step, and accepts one at the same time", () => {
+    const engine = engineOf(nonlinearAb);
+    const { state } = played(engine, begun(engine).state, answer("a", "B", 5));
+    expect(refusalOf(engine, state, answer("a", "C", 4))).toEqual({
+      code: "clock-regression",
+      message: "The action at 4 is earlier than the latest step of the session at 5.",
+      source: "INFO §2.2.2.2",
+    });
+    expect(played(engine, state, answer("a", "C", 5)).state.at).toBe(5);
+  });
+
+  /** An engine of a test with `TOTAL`, its own time limits, and the parts given. */
+  const timedEngine = (parts: string, testLimits = ""): Engine =>
+    engineOf(`${TOTAL}${testLimits}${parts}${outcomeProcessing(SUM_SCORES)}`);
+
+  it("[E7][G22] closes an item at its maximum time with the drafts received before it, and moves on (D9)", () => {
+    const engine = timedEngine(
+      testPart("P", section("S", itemRef("a", limits('max-time="10"')) + refs("b")), "linear"),
+    );
+    const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
+    // Any action at or after the deadline applies it first, so the answer at 12 s finds a closed.
+    expect(refusalOf(engine, state, answer("a", "C", 12_000))).toEqual({
+      code: "time-over",
+      message: 'The item instance "a" 1 was closed when a maximum time passed.',
+      source: "INFO §7.40.3",
+    });
+    const out = played(engine, state, { type: "time", at: 12_000 });
+    expect(described(out.events)).toEqual([
+      "time-out a@10000",
+      "attempt-ended a close@10000",
+      "response-processed a@10000",
+      "outcome-processed T@10000",
+      "moved b@10000",
+      "presented b@10000",
+    ]);
+    expect([testOutcome(out.state, "TOTAL"), out.state.at, out.state.current]).toEqual([float(1), 12_000, key("b")]);
+    expect(refusalOf(engine, out.state, answer("a", "C", 13_000)).code).toBe("time-over");
+    // The deadline applies at its time exactly.
+    expect(described(played(engine, state, { type: "time", at: 10_000 }).events)[0]).toBe("time-out a@10000");
+    expect(played(engine, state, { type: "time", at: 9_999 }).events).toEqual([]);
+  });
+
+  it("[E7][G22] closes a section, a test part and the test at their maximum times, and goes on after them", () => {
+    const sectionOut = timedEngine(
+      testPart("P", section("S1", limits('max-time="10"') + refs("a", "b")) + section("S2", refs("c")), "linear"),
+    );
+    const section1 = played(sectionOut, begun(sectionOut).state, answer("a", "B", 1_000), { type: "time", at: 10_000 });
+    expect(described(section1.events)).toEqual([
+      "responses-set a@1000",
+      "time-out S1@10000",
+      "attempt-ended a close@10000",
+      "response-processed a@10000",
+      "outcome-processed T@10000",
+      "section-entered S2@10000",
+      "moved c@10000",
+      "presented c@10000",
+    ]);
+    expect(refusalOf(sectionOut, section1.state, answer("b", "B", 11_000)).code).toBe("time-over");
+    const partOut = timedEngine(
+      testPart("P", section("S", refs("a", "b")), "linear", "individual", limits('max-time="10"')),
+    );
+    expect(described(played(partOut, begun(partOut).state, { type: "time", at: 10_000 }).events)).toEqual([
+      "time-out P@10000",
+      "attempt-ended a close@10000",
+      "response-processed a@10000",
+      "outcome-processed T@10000",
+      "part-ended P@10000",
+      "test-ended T@10000",
+    ]);
+    const testOut = timedEngine(testPart("P", section("S", refs("a", "b")), "linear"), limits('max-time="10"'));
+    const late = refusalOf(testOut, begun(testOut).state, answer("a", "B", 11_000));
+    expect(late).toEqual({
+      code: "time-over",
+      message: "The test ended when a maximum time passed.",
+      source: "INFO §7.40.3",
+    });
+    const ended = played(testOut, begun(testOut).state, { type: "time", at: 11_000 });
+    expect(described(ended.events)[0]).toBe("time-out T@10000");
+    expect(refusalOf(testOut, ended.state, answer("a", "B", 12_000)).code).toBe("ended");
+  });
+
+  it("[E7] leaves a scope open after a maximum time that allows late submission, and marks later submissions (D9)", () => {
+    const engine = timedEngine(
+      testPart(
+        "P",
+        section("S", itemRef("a", limits('max-time="10" allow-late-submission="true"')) + refs("b")),
+        "linear",
+      ),
+    );
+    const passed = played(engine, begun(engine).state, { type: "time", at: 10_000 });
+    expect(described(passed.events)).toEqual(["time-limit-passed a@10000"]);
+    expect(engine.deadlines(passed.state)).toEqual([]);
+    const late = played(engine, passed.state, answer("a", "B", 15_000), moveTo("next", 16_000));
+    expect(described(late.events).slice(1, 4)).toEqual([
+      "attempt-ended a submit@16000",
+      "response-processed a@16000",
+      "late-submission a@16000",
+    ]);
+    expect(testOutcome(late.state, "TOTAL")).toEqual(float(1));
+  });
+
+  it("[B35] refuses to leave an item, a section, a part or the test before its minimum time", () => {
+    const engine = timedEngine(
+      testPart(
+        "P",
+        section("S1", limits('min-time="10"') + itemRef("a", limits('min-time="5"')) + refs("b")) +
+          section("S2", refs("c")),
+        "linear",
+      ),
+      limits('min-time="20"'),
+    );
+    const { state } = begun(engine);
+    expect(refusalOf(engine, state, moveTo("next", 3_000))).toEqual({
+      code: "min-time-not-reached",
+      message: 'The item "a" has a minimum time of 5 s, of which 3 s are spent.',
+      source: "INFO §7.40",
+    });
+    const atB = played(engine, state, moveTo("next", 5_000));
+    expect(refusalOf(engine, atB.state, moveTo("next", 8_000)).message).toBe(
+      'The section "S1" has a minimum time of 10 s, of which 8 s are spent.',
+    );
+    const atC = played(engine, atB.state, moveTo("next", 10_000));
+    expect(refusalOf(engine, atC.state, { type: "end-test", at: 15_000 }).message).toBe(
+      'The test "T" has a minimum time of 20 s, of which 15 s are spent.',
+    );
+    expect(played(engine, atC.state, { type: "end-test", at: 20_000 }).state.status).toBe("ended");
+    // In a nonlinear part, items and sections have no minimum time (INFO §2.8.5).
+    const free = timedEngine(
+      testPart("P", section("S", itemRef("a", limits('min-time="5"')) + refs("b")), "nonlinear"),
+    );
+    expect(played(free, begun(free).state, moveTo("next", 1_000)).state.current).toEqual(key("b"));
+  });
+
+  it("[E8][G23] suspends the whole session: its item, its time and every action but resume", () => {
+    const engine = engineOf(nonlinearAb);
+    const paused = played(engine, begun(engine).state, answer("a", "B", 1_000), { type: "suspend", at: 2_000 });
+    expect(described(paused.events)).toEqual(["responses-set a@1000", "suspended@2000"]);
+    expect([paused.state.status, sessionOf(paused.state, "a").status]).toEqual(["suspended", "suspended"]);
+    for (const action of [
+      answer("a", "C", 3_000),
+      { type: "time", at: 3_000 } as const,
+      { type: "suspend", at: 3_000 } as const,
+    ]) {
+      expect(refusalOf(engine, paused.state, action)).toEqual({
+        code: "suspended",
+        message: "The candidate session is suspended; it goes on when it is resumed.",
+        source: "INFO §2.2.1",
+      });
+    }
+    const resumed = played(engine, paused.state, { type: "resume", at: 9_000 });
+    expect(described(resumed.events)).toEqual(["resumed@9000", "presented a@9000"]);
+    expect(played(engine, resumed.state, { type: "resume", at: 9_500 }).events).toEqual([]);
+    const submitted = played(engine, resumed.state, on("submit", "a", 10_000));
+    expect(response(sessionOf(submitted.state, "a"), "duration")).toEqual(single("duration", 3));
+  });
+
+  it("[E28] turns a support that is an option on and off, and records the supports on while an item is presented", () => {
+    const engine = engineOf(nonlinearAb);
+    const pnp = pnpOf(
+      "<line-reader/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><spell-checker-on-screen/></prohibit-set>",
+    );
+    const { state } = begun(engine, { pnp, universalSupports: ["calculator-on-screen"] });
+    const toggle = (name: SupportName, active: boolean, at: number): Action => ({ type: "support", name, active, at });
+    const used = played(
+      engine,
+      state,
+      toggle("dictionary-on-screen", true, 1),
+      toggle("dictionary-on-screen", true, 2),
+    );
+    expect(described(used.events)).toEqual(["support-changed dictionary-on-screen on@1"]);
+    expect(used.state.items[0]?.supports).toEqual(["line-reader", "dictionary-on-screen"]);
+    const moved = played(
+      engine,
+      used.state,
+      toggle("dictionary-on-screen", false, 3),
+      toggle("calculator-on-screen", true, 4),
+      moveTo(key("b"), 5),
+    );
+    expect(described(moved.events).slice(0, 2)).toEqual([
+      "support-changed dictionary-on-screen off@3",
+      "support-changed calculator-on-screen on@4",
+    ]);
+    expect(moved.state.items[1]?.supports).toEqual(["line-reader", "calculator-on-screen"]);
+    expect(refusalOf(engine, state, toggle("spell-checker-on-screen", true, 1))).toEqual({
+      code: "support-not-available",
+      message: "The support spell-checker-on-screen is prohibited, so the candidate cannot turn it on or off.",
+      source: "BPIG §5.3",
+    });
+    expect(refusalOf(engine, state, toggle("line-reader", false, 1)).message).toBe(
+      "The support line-reader is active, so the candidate cannot turn it on or off.",
+    );
+    expect(refusalOf(engine, state, toggle("glossary-on-screen", true, 1)).message).toBe(
+      "The support glossary-on-screen is not offered, so the candidate cannot turn it on or off.",
+    );
+  });
+
+  it("[B100] presents the variant that avoids the candidate's hazards and is in the candidate's language", () => {
+    const variants = withVariants(
+      ["flashing"],
+      [
+        { resource: "v-id-ID", drd: drd([], ["id-ID"]) },
+        { resource: "v-id", drd: drd([], ["id"]) },
+        { resource: "v-sound", drd: drd(["sound"], ["en"]) },
+      ],
+    );
+    const engine = engineOf(nonlinearAb, { "a.xml": variants });
+    const chosen = (pnp?: PersonalNeedsProfile): (string | undefined)[] => {
+      const { state, events } = begun(engine, pnp === undefined ? {} : { pnp });
+      return [state.items[0]?.variant, events.find((event) => event.type === "variant-selected")?.detail];
+    };
+    expect(chosen()).toEqual([undefined, "core"]);
+    // The item itself flashes, so the first variant without the hazard is presented.
+    expect(chosen(pnpOf("<hazard-avoidance>flashing</hazard-avoidance>"))).toEqual(["v-id-ID", "v-id-ID"]);
+    expect(chosen(pnpOf('<item-translation xml:lang="id"/>'))).toEqual(["v-id", "v-id"]);
+    expect(chosen(pnpOf('<item-translation xml:lang="ID-id"/>'))).toEqual(["v-id-ID", "v-id-ID"]);
+    expect(chosen(pnpOf('<item-translation xml:lang="id-BN"/>'))).toEqual(["v-id-ID", "v-id-ID"]);
+    expect(chosen(pnpOf('<item-translation xml:lang="en"/><prohibit-set><item-translation/></prohibit-set>'))).toEqual([
+      undefined,
+      "core",
+    ]);
+    const unavoidable = withVariants(["flashing"], [{ resource: "v-flash", drd: drd(["flashing"]) }]);
+    const flashing = engineOf(nonlinearAb, { "a.xml": unavoidable });
+    const { state, events } = begun(flashing, { pnp: pnpOf("<hazard-avoidance>flashing</hazard-avoidance>") });
+    expect(state.items[0]?.variant).toBeUndefined();
+    expect(described(events)).toEqual([
+      "section-entered S@0",
+      "variant-selected a core@0",
+      "hazard-unavoidable a flashing@0",
+      "presented a@0",
+    ]);
+  });
+
+  it("[E26] turns a failure of outcome processing, of a rule or of a template default into data", () => {
+    const small = { limits: { maxContainerSize: 1 } };
+    const summed = engineOf(nonlinearAb, {}, small);
+    const failed = played(summed, begun(summed).state, answer("a", "B", 1), on("submit", "a", 2));
+    expect(described(failed.events).slice(-1)).toEqual([
+      "processing-failed T The operator qti-test-variables builds a container of 2 values, more than the limit maxContainerSize of 1.@2",
+    ]);
+    expect(testOutcome(failed.state, "TOTAL")).toEqual(float(0));
+    const blowUp = `<qti-gt><qti-container-size><qti-repeat number-repeats="2"><qti-base-value base-type="integer">1</qti-base-value></qti-repeat></qti-container-size><qti-base-value base-type="integer">0</qti-base-value></qti-gt>`;
+    const ruled = engineOf(
+      testPart("P", section("S", itemRef("a", branch("EXIT_TEST", blowUp)) + refs("b")), "linear"),
+      {},
+      small,
+    );
+    const ended = played(ruled, begun(ruled).state, moveTo("next", 1));
+    expect(described(ended.events).slice(-3)).toEqual([
+      "processing-failed T The operator qti-repeat builds a container of 2 values, more than the limit maxContainerSize of 1.@1",
+      "part-ended P@1",
+      "test-ended T@1",
+    ]);
+    const defaulted = engineOf(
+      testPart(
+        "P",
+        section(
+          "S",
+          itemRef(
+            "a",
+            `<qti-template-default template-identifier="T"><qti-container-size><qti-repeat number-repeats="2"><qti-base-value base-type="integer">1</qti-base-value></qti-repeat></qti-container-size></qti-template-default>`,
+          ),
+        ),
+        "linear",
+      ),
+      { "a.xml": templated() },
+      small,
+    );
+    const { state, events } = begun(defaulted);
+    expect(described(events)[1]).toBe(
+      "processing-failed a The operator qti-repeat builds a container of 2 values, more than the limit maxContainerSize of 1.@0",
+    );
+    expect(sessionOf(state, "a").variables.templates.get("T")).toEqual(integer(7));
+  });
+
+  it("[E23] reports every type of event of a test session, with its time and its item or scope", () => {
+    const seen = new Set<string>();
+    const note = (events: readonly DeliveryEvent[]): void => {
+      for (const event of events) {
+        seen.add(event.type);
+        expect(
+          event.item !== undefined ||
+            event.scope !== undefined ||
+            ["suspended", "resumed", "support-changed"].includes(event.type),
+        ).toBe(true);
+      }
+    };
+    const engine = timedEngine(
+      testPart(
+        "P",
+        section("S", refs("a") + itemRef("b", limits('max-time="10" allow-late-submission="true"')) + refs("c")),
+        "linear",
+      ),
+    );
+    const flashing = withVariants(["flashing"], [{ resource: "v", drd: drd(["flashing"]) }]);
+    const rich = engineOf(linearAbc, { "a.xml": flashing, "c.xml": templated() }, { limits: { maxContainerSize: 1 } });
+    const pnp = pnpOf(
+      "<hazard-avoidance>flashing</hazard-avoidance><activate-as-option-set><line-reader/></activate-as-option-set>",
+    );
+    const start = begun(rich, { pnp });
+    note(start.events);
+    note(
+      played(
+        rich,
+        start.state,
+        { type: "support", name: "line-reader", active: true, at: 1 },
+        answer("a", "B", 2),
+        { type: "suspend", at: 3 },
+        { type: "resume", at: 4 },
+        moveTo("next", 5),
+      ).events,
+    );
+    const timedStart = begun(engine);
+    note(
+      played(
+        engine,
+        timedStart.state,
+        moveTo("next", 1),
+        { type: "time", at: 20_000 },
+        moveTo("next", 21_000),
+        moveTo("next", 22_000),
+      ).events,
+    );
+    const out = timedEngine(testPart("P", section("S", itemRef("a", limits('max-time="1"')) + refs("b")), "linear"));
+    note(played(out, begun(out).state, { type: "time", at: 1_000 }).events);
+    const all: DeliveryEventType[] = [
+      "presented",
+      "responses-set",
+      "attempt-ended",
+      "response-processed",
+      "processing-failed",
+      "outcome-processed",
+      "moved",
+      "section-entered",
+      "part-ended",
+      "test-ended",
+      "time-limit-passed",
+      "time-out",
+      "late-submission",
+      "suspended",
+      "resumed",
+      "support-changed",
+      "variant-selected",
+      "hazard-unavoidable",
+    ];
+    expect([...seen].sort()).toEqual([...all].sort());
+  });
+
+  it("refuses states and actions of other types", () => {
+    const engine = engineOf(nonlinearAb);
+    const { state } = begun(engine);
+    expect(() => engine.apply(json("null"), moveTo("next", 1))).toThrow(
+      "The state must be an object from Engine.start or deserializeState, found null.",
+    );
+    expect(() => engine.apply(json('{"version":2}'), moveTo("next", 1))).toThrow(
+      "The state must have the version 1, found 2.",
+    );
+    expect(() => engine.apply(state, json("null"))).toThrow(
+      "The action must be an object with a type and a time, found null.",
+    );
+    expect(() => engine.apply(state, json('{"type":"time","at":"1"}'))).toThrow(
+      'The time of the action must be a finite number, found "1".',
+    );
+    expect(() => engine.apply(state, json('{"type":"move","to":"up","at":1}'))).toThrow(
+      'The place of move must be "next", "previous" or an item instance, found "up".',
+    );
+    expect(() => engine.apply(state, json('{"type":"move","to":{"ref":"a"},"at":1}'))).toThrow(
+      "The instance of the item instance must be a positive integer, found undefined.",
+    );
+    expect(() => engine.apply(state, json('{"type":"support","name":"chocolate","active":true,"at":1}'))).toThrow(
+      'The name of support must be the name of a support of a PNP, found "chocolate".',
+    );
+    expect(() => engine.apply(state, json('{"type":"support","name":"spoken","active":"yes","at":1}'))).toThrow(
+      'The active of support must be a boolean, found "yes".',
+    );
+    expect(() =>
+      engine.apply(state, json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{},"at":1}')),
+    ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
+    expect(() => engine.apply(state, json('{"type":"jump","at":1}'))).toThrow(
+      /^The type of the action must be "set-responses", /,
+    );
+  });
+});
+
+describe("Engine.deadlines", () => {
+  it("[E6] gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
+    const content = `<qti-time-limits max-time="60"/>${testPart(
+      "P",
+      section("S", itemRef("a", '<qti-time-limits max-time="20"/>') + refs("b")),
+      "linear",
+      "individual",
+      '<qti-time-limits min-time="10"/>',
+    )}`;
+    const engine = engineOf(content);
+    const { state } = begun(engine, { at: 1_000 });
+    expect(engine.deadlines(state)).toEqual([
+      { scope: "test", identifier: "T", kind: "max-time", at: 61_000, lateSubmission: false },
+      { scope: "part", identifier: "P", kind: "min-time", at: 11_000, lateSubmission: false },
+      { scope: "item", identifier: "a", kind: "max-time", at: 21_000, lateSubmission: false },
+    ]);
+    const extended = begun(engine, {
+      at: 1_000,
+      pnp: pnpOf("<additional-testing-time><time-multiplier>1.5</time-multiplier></additional-testing-time>"),
+    });
+    expect(engine.deadlines(extended.state).map((deadline) => deadline.at)).toEqual([91_000, 11_000, 31_000]);
+    const paused = played(engine, state, { type: "suspend", at: 5_000 });
+    expect(engine.deadlines(paused.state)).toEqual([]);
+    const resumed = played(engine, paused.state, { type: "resume", at: 9_000 });
+    expect(engine.deadlines(resumed.state).map((deadline) => deadline.at)).toEqual([65_000, 15_000, 25_000]);
+    expect(() => engine.deadlines(json("null"))).toThrow(
+      "The state must be an object from Engine.start or deserializeState, found null.",
+    );
+  });
+});
 
 describe("applyItemAction", () => {
   const DefaultA = "<qti-default-value><qti-value>A</qti-value></qti-default-value>";
@@ -2012,6 +3092,120 @@ describe("sessionControl", () => {
   });
 });
 
+describe("stamp", () => {
+  const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
+
+  it("[E5][G27] stamps an action with the time now, never before the latest step, so the engine never refuses its time", () => {
+    const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
+    const submit = { type: "submit", item: key("a") } as const;
+    expect(stamp(state, submit, 3_000)).toEqual({ ...submit, at: 5_000 });
+    expect(stamp(state, submit, 7_000)).toEqual({ ...submit, at: 7_000 });
+    expect(engine.apply(state, stamp(state, submit, 3_000)).ok).toBe(true);
+    expect(refusalOf(engine, state, { ...submit, at: 3_000 }).code).toBe("clock-regression");
+  });
+
+  it("refuses arguments of other types", () => {
+    const { state } = begun(engine);
+    expect(() => stamp(json("null"), { type: "time" }, 1)).toThrow(
+      "The state must be an object from Engine.start or deserializeState, found null.",
+    );
+    expect(() => stamp(state, json("null"), 1)).toThrow("The action must be an object with a type, found null.");
+    expect(() => stamp(state, { type: "time" }, json('"1"'))).toThrow(
+      'The time now must be a finite number, found "1".',
+    );
+  });
+});
+
+describe("serializeState", () => {
+  const variants = withVariants(["flashing"], [{ resource: "v", drd: drd([]) }]);
+  const pci = itemOf(
+    'time-dependent="false"',
+    `<qti-response-declaration identifier="__proto__" cardinality="single" base-type="string"/>
+    <qti-item-body><qti-portable-custom-interaction response-identifier="__proto__" custom-interaction-type-identifier="urn:fdc:example.com:pci:any" module="any"><qti-interaction-markup><p>Any</p></qti-interaction-markup></qti-portable-custom-interaction></qti-item-body>`,
+  );
+  const city = '<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"/>';
+  const engine = engineOf(
+    `${city}${TOTAL}<qti-time-limits max-time="10" allow-late-submission="true"/>${testPart(
+      "P",
+      section("S", refs("a", "b", "c")),
+      "nonlinear",
+    )}${outcomeProcessing(SUM_SCORES)}`,
+    { "a.xml": variants, "b.xml": pci },
+  );
+
+  /** A state with a variant, a PCI state, supports, a context value, an expired clock and a suspended session. */
+  function rich(): DeliveryState {
+    const pnp = pnpOf(
+      '<hazard-avoidance>flashing</hazard-avoidance><additional-testing-time><time-multiplier>2</time-multiplier></additional-testing-time><item-translation xml:lang="id"/><activate-as-option-set><line-reader/></activate-as-option-set>',
+    );
+    const { state } = begun(engine, { pnp, context: new Map([["CITY", text("Jakarta")]]) });
+    return played(
+      engine,
+      state,
+      { type: "support", name: "line-reader", active: true, at: 1 },
+      answer("a", "B", 2),
+      on("submit", "a", 3),
+      moveTo(key("b"), 4),
+      {
+        type: "set-responses",
+        item: key("b"),
+        responses: new Map([["__proto__", text("x")]]),
+        pciStates: new Map([["__proto__", '{"step":2}']]),
+        at: 5,
+      },
+      { type: "time", at: 25_000 },
+      { type: "suspend", at: 26_000 },
+    ).state;
+  }
+
+  it("[E2][E29] writes a state as JSON that reads back equal, with its variants, PCI states, supports and clocks", () => {
+    const state = rich();
+    const text = serializeState(state);
+    const read = deserializeState(text);
+    expect(read).toEqual(state);
+    expect(JSON.parse(text).version).toBe(1);
+    expect(read.items[0]?.variant).toBe("v");
+    expect(read.clocks[0]).toEqual({ scope: "test", identifier: "T", spent: 26_000, expired: "late" });
+    // The engine goes on from the state read back as from the state itself.
+    const resume = { type: "resume", at: 30_000 } as const;
+    expect(engine.apply(read, resume)).toEqual(engine.apply(state, resume));
+  });
+
+  it("[E2] refuses text that is not a state, or a state of another version of the format", () => {
+    const written = JSON.parse(serializeState(rich()));
+    const text = (changes: Record<string, unknown>): string => JSON.stringify({ ...written, ...changes });
+    expect(() => deserializeState("{")).toThrow(
+      "The state must be the JSON text that serializeState writes, found text that is not JSON.",
+    );
+    expect(() => deserializeState("null")).toThrow("The state must be a JSON object, found null.");
+    expect(() => deserializeState(text({ version: 2 }))).toThrow(
+      "The state has the format version 2, and this version of olah reads version 1.",
+    );
+    expect(() => deserializeState(text({ status: "paused" }))).toThrow(
+      'The status of the state must be "in-progress", "suspended" or "ended", found "paused".',
+    );
+    expect(() => deserializeState(text({ random: [0, 0, 0, 0] }))).toThrow(
+      "A random state must be four integers from 0 to 4294967295, not all 0, found an array.",
+    );
+    expect(() => deserializeState(text({ plan: { parts: [{ kind: "section" }] } }))).toThrow(
+      'A test part of the plan must have the kind "part", found "section".',
+    );
+    expect(() => deserializeState(text({ supports: [["chocolate", { state: "option", active: true }]] }))).toThrow(
+      'A support of the state must have a support name, found "chocolate".',
+    );
+    expect(() => deserializeState(text({ clocks: [{ scope: "test", identifier: "T", spent: -1 }] }))).toThrow(
+      "The spent of a clock of the state must be a non-negative number, found -1.",
+    );
+    expect(() => deserializeState(text({ needs: { avoidedHazards: ["glare"] } }))).toThrow(
+      'An avoided hazard of the state must be "flashing", "sound", "olfactory-hazard" or "motion-simulation", found "glare".',
+    );
+    expect(() => deserializeState(json("1"))).toThrow("The state must be a string, found 1.");
+    expect(() => serializeState(json("null"))).toThrow(
+      "The state must be an object from Engine.start or deserializeState, found null.",
+    );
+  });
+});
+
 describe("resolveStructure", () => {
   const SectionOne = section(
     "S1",
@@ -2944,6 +4138,273 @@ describe("properties", () => {
         expect(read.pciStates.get("__proto__")).toBe(state);
         expect(read).toEqual(session);
       }),
+    );
+  });
+
+  /** A generated test: parts with their modes and maximum times, sections with their limits, items. */
+  const flows = fc.record({
+    parts: fc.array(
+      fc.record({
+        navigation: fc.constantFrom("linear" as const, "nonlinear" as const),
+        submission: fc.constantFrom("individual" as const, "simultaneous" as const),
+        maxTime: fc.option(fc.integer({ min: 1, max: 30 }), { nil: undefined }),
+        late: fc.boolean(),
+        sections: fc.array(
+          fc.record({
+            items: fc.integer({ min: 1, max: 3 }),
+            maxTime: fc.option(fc.integer({ min: 1, max: 20 }), { nil: undefined }),
+            minTime: fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }),
+            itemTime: fc.option(fc.integer({ min: 1, max: 10 }), { nil: undefined }),
+            late: fc.boolean(),
+          }),
+          { minLength: 1, maxLength: 2 },
+        ),
+      }),
+      { minLength: 1, maxLength: 2 },
+    ),
+    testTime: fc.option(fc.integer({ min: 5, max: 60 }), { nil: undefined }),
+  });
+
+  type Flow = typeof flows extends fc.Arbitrary<infer T> ? T : never;
+
+  const lateIf = (allowed: boolean): string => (allowed ? ' allow-late-submission="true"' : "");
+
+  function flowEngine(flow: Flow): Engine {
+    const parts = flow.parts.map((entry, p) => {
+      const sections = entry.sections.map((shape, s) => {
+        const id = `p${p}s${s}`;
+        const bounds = [
+          shape.maxTime === undefined ? "" : `max-time="${shape.maxTime}"`,
+          shape.minTime === undefined ? "" : `min-time="${shape.minTime}"`,
+        ].join(" ");
+        const own =
+          shape.maxTime === undefined && shape.minTime === undefined ? "" : limits(`${bounds}${lateIf(shape.late)}`);
+        const items = Array.from({ length: shape.items }, (_, i) =>
+          i === 0 && shape.itemTime !== undefined
+            ? itemRef(`${id}i${i}`, limits(`max-time="${shape.itemTime}"${lateIf(shape.late)}`))
+            : itemRef(`${id}i${i}`),
+        );
+        return section(id, own + items.join(""));
+      });
+      const head = entry.maxTime === undefined ? "" : limits(`max-time="${entry.maxTime}"${lateIf(entry.late)}`);
+      return testPart(`p${p}`, sections.join(""), entry.navigation, entry.submission, head);
+    });
+    const own = flow.testTime === undefined ? "" : limits(`max-time="${flow.testTime}"`);
+    return engineOf(`${TOTAL}${own}${parts.join("")}${outcomeProcessing(SUM_SCORES)}`);
+  }
+
+  /** A move of the candidate or the host, with a target among the instances and the milliseconds since the move before. */
+  const engineMoves = fc.array(
+    fc.record({
+      move: fc.constantFrom(
+        "answer",
+        "submit",
+        "skip",
+        "hint",
+        "review",
+        "next",
+        "previous",
+        "goto",
+        "end-part",
+        "end-test",
+        "suspend",
+        "resume",
+        "time",
+        "support",
+      ),
+      choice: fc.constantFrom("A", "B", "C"),
+      target: fc.nat(),
+      gap: fc.integer({ min: 0, max: 4_000 }),
+    }),
+    { maxLength: 30 },
+  );
+
+  type EngineMove = typeof engineMoves extends fc.Arbitrary<(infer T)[]> ? T : never;
+
+  /** The action of a move in a state: an action on an item names the current item, or now and then another. */
+  function actionOf(state: DeliveryState, { move, choice, target }: EngineMove): CandidateAction | HostAction {
+    const planned = planItems(state.plan);
+    const other = planned[target % planned.length] ?? key("none");
+    const item = state.current === undefined || target % 3 === 0 ? other : state.current;
+    switch (move) {
+      case "answer":
+        return { type: "set-responses", item, responses: new Map([["RESPONSE", identifier(choice)]]) };
+      case "submit":
+      case "skip":
+      case "review":
+        return { type: move, item };
+      case "hint":
+        return { type: "end-attempt", item, interaction: "HINT" };
+      case "next":
+      case "previous":
+        return { type: "move", to: move };
+      case "goto":
+        return { type: "move", to: other };
+      case "support":
+        return { type: "support", name: "line-reader", active: target % 2 === 0 };
+      default:
+        return { type: move };
+    }
+  }
+
+  const Profile = "<line-reader/><activate-as-option-set><line-reader/></activate-as-option-set>";
+
+  /** Runs moves from a start at 0, each stamped at the time of the moves before it; returns the accepted actions. */
+  function session(
+    engine: Engine,
+    seed: number,
+    moves: readonly EngineMove[],
+    check: (before: DeliveryState, action: Action, step: Step) => void = () => undefined,
+  ): { state: DeliveryState; events: DeliveryEvent[]; actions: Action[] } {
+    const start = begun(engine, { seed, pnp: pnpOf(Profile) });
+    let { state } = start;
+    const events = [...start.events];
+    const actions: Action[] = [];
+    let now = 0;
+    for (const move of moves) {
+      now += move.gap;
+      const action = stamp(state, actionOf(state, move), now);
+      const step = engine.apply(state, action);
+      check(state, action, step);
+      if (!step.ok) continue;
+      actions.push(action);
+      events.push(...step.events);
+      state = step.state;
+    }
+    return { state, events, actions };
+  }
+
+  const attemptsOf = (state: DeliveryState, ref: ItemKey): number => {
+    const value = state.items
+      .find((item) => item.session.key.ref === ref.ref && item.session.key.instance === ref.instance)
+      ?.session.variables.responses.get("numAttempts");
+    return value?.cardinality === "single" ? Number(value.value) : 0;
+  };
+
+  const partOf = (state: DeliveryState, at: ItemKey): string | undefined =>
+    state.plan.parts.find((entry) => planItems(state.plan, entry.identifier).some((each) => shown(each) === shown(at)))
+      ?.identifier;
+
+  it("[E1][E2][E4][E5][E7][E8][E26][B26] keeps the rules of a test session over any actions and time, and never throws", () => {
+    fc.assert(
+      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+        const engine = flowEngine(flow);
+        const linear = new Set(flow.parts.flatMap((entry, p) => (entry.navigation === "linear" ? [`p${p}`] : [])));
+        session(engine, seed, moves, (before, action, step) => {
+          const written = serializeState(before);
+          // The reducer never changes the state it is given, and a refusal gives no state (E1, E4).
+          expect(serializeState(before)).toBe(written);
+          if (!step.ok) {
+            expect(step.refusal.code).not.toBe("clock-regression");
+            return;
+          }
+          const after = step.state;
+          for (const item of before.items) {
+            expect(attemptsOf(after, item.session.key)).toBeGreaterThanOrEqual(attemptsOf(before, item.session.key));
+          }
+          if (action.type === "set-responses") {
+            const target = before.items.find((item) => shown(item.session.key) === shown(action.item));
+            expect(["closed", "review", "solution"]).not.toContain(target?.session.status);
+            const touched = after.items.find((item) => shown(item.session.key) === shown(action.item));
+            expect(touched?.expired).not.toBe("closed");
+          }
+          const { current } = after;
+          if (before.current !== undefined && current !== undefined) {
+            const part = partOf(before, before.current);
+            if (part !== undefined && part === partOf(after, current) && linear.has(part)) {
+              const order = planItems(after.plan).map(shown);
+              expect(order.indexOf(shown(current))).toBeGreaterThanOrEqual(order.indexOf(shown(before.current)));
+            }
+          }
+          const spent = (state: DeliveryState): number => state.clocks[0]?.spent ?? 0;
+          if (before.status === "in-progress" && after.status === "in-progress") {
+            expect(spent(after) - spent(before)).toBe(after.at - before.at);
+          }
+          if (before.status === "suspended") expect(spent(after)).toBe(spent(before));
+          for (const deadline of engine.deadlines(after)) {
+            if (deadline.kind === "max-time") expect(deadline.at).toBeGreaterThan(after.at);
+          }
+          if (after.status === "ended") expect(after.current).toBeUndefined();
+          expect(deserializeState(serializeState(after))).toEqual(after);
+        });
+      }),
+    );
+  });
+
+  it("[E3] replays a session exactly from the seed and the accepted actions, also through its JSON form", () => {
+    fc.assert(
+      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+        const engine = flowEngine(flow);
+        const played = session(engine, seed, moves);
+        const start = begun(engine, { seed, pnp: pnpOf(Profile) });
+        let state = start.state;
+        let written = start.state;
+        const events = [...start.events];
+        for (const action of played.actions) {
+          const step = engine.apply(state, action);
+          const through = engine.apply(deserializeState(serializeState(written)), action);
+          if (!step.ok || !through.ok) return fail("A replayed action was refused.");
+          expect(through.events).toEqual(step.events);
+          events.push(...step.events);
+          state = step.state;
+          written = through.state;
+        }
+        expect(state).toEqual(played.state);
+        expect(written).toEqual(played.state);
+        expect(events).toEqual(played.events);
+      }),
+    );
+  });
+
+  it("[B100] presents a variant free of the avoided hazards when there is one, in the language asked for, for the whole session", () => {
+    const hazardSets = fc.subarray(["flashing", "sound"] as const);
+    fc.assert(
+      fc.property(
+        hazardSets,
+        fc.array(fc.record({ hazards: hazardSets, language: fc.constantFrom("id", "id-ID", "en", "ko") }), {
+          maxLength: 3,
+        }),
+        hazardSets,
+        fc.option(fc.constantFrom("id", "ID-id", "en"), { nil: undefined }),
+        (core, variants, avoided, language) => {
+          const resolved = withVariants(
+            core,
+            variants.map((variant, at) => ({ resource: `v${at}`, drd: drd(variant.hazards, [variant.language]) })),
+          );
+          const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"), { "a.xml": resolved });
+          const avoids = avoided.map((hazard) => `<hazard-avoidance>${hazard}</hazard-avoidance>`).join("");
+          const asks = language === undefined ? "" : `<item-translation xml:lang="${language}"/>`;
+          const { state } = begun(engine, { pnp: pnpOf(avoids + asks) });
+          const candidates = [
+            { resource: undefined, hazards: core, languages: [] as string[] },
+            ...variants.map((variant, at) => ({
+              resource: `v${at}`,
+              hazards: variant.hazards,
+              languages: [variant.language],
+            })),
+          ];
+          const chosen = state.items[0]?.variant;
+          const presented = candidates.find((candidate) => candidate.resource === chosen);
+          const free = candidates.filter((candidate) => !candidate.hazards.some((hazard) => avoided.includes(hazard)));
+          if (free.length === 0) expect(chosen).toBeUndefined();
+          else expect(free).toContain(presented);
+          const exact = free.filter(
+            (candidate) =>
+              candidate.resource !== undefined &&
+              candidate.languages.some((tag) => tag.toLowerCase() === language?.toLowerCase()),
+          );
+          if (exact.length > 0) expect(exact).toContain(presented);
+          const later = played(
+            engine,
+            state,
+            moveTo(key("b"), 1),
+            { type: "suspend", at: 2 },
+            { type: "resume", at: 3 },
+            moveTo(key("a"), 4),
+          );
+          expect(later.state.items[0]?.variant).toBe(chosen);
+        },
+      ),
     );
   });
 });

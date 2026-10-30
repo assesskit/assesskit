@@ -86,3 +86,12 @@ kept apart from submitted responses, skipping and validity, review, solution and
 interactions, the item duration, and template and response processing failures reported as events. `itemFeedback`,
 `itemResponses` and `resultStatus` give the feedback, the responses and the Results Reporting status of a session, and
 `standaloneSessionControl` the control of an item delivered alone.
+
+The delivery engine (`delivery`): `createEngine` runs the static checks over everything a session of a test, or of an item
+delivered alone, can reach, and gives an engine whose `start` and `apply` are a pure reducer of candidate sessions as plain
+data: actions with their times, refusals as values, navigation in linear and nonlinear parts, individual and simultaneous
+submission, outcome processing after each submission, pre-conditions and branch rules, template defaults, context values,
+time limits with `deadlines`, time-outs and late submission, suspension, supports, variants chosen by hazards and language,
+events, and processing failures reported as events. `stamp` stamps actions monotonically, and `serializeState` and
+`deserializeState` write and read states in a versioned JSON format. `startItemSession` takes the template defaults of a
+test.

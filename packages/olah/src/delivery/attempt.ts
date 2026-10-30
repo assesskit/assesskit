@@ -14,8 +14,8 @@ const UNKNOWN = "unknown";
 /** The value of `completionStatus` with which an adaptive item ends its session (INFO §2.2.2.3, §2.5). */
 const COMPLETED = "completed";
 
-/** The milliseconds in a second, the unit of `duration`. */
-const MILLISECONDS_PER_SECOND = 1000;
+/** The milliseconds in a second, the unit of `duration` and of time limits. */
+export const MILLISECONDS_PER_SECOND = 1000;
 
 /** The maximum number of attempts of a non-adaptive item when no control sets one (INFO §7.19.1). */
 const DEFAULT_MAX_ATTEMPTS = 1;

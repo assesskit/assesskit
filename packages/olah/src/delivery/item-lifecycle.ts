@@ -1,8 +1,9 @@
-import { checkOptions } from "../checks.js";
-import { OlahError } from "../errors.js";
+import { checkOptions, checkString, describe } from "../checks.js";
+import { DataError, OlahError } from "../errors.js";
 import { describeInteractions, initialResponse, shuffleChoices } from "../interactions/index.js";
-import { createItemVariables, runTemplateProcessing } from "../processing/index.js";
-import type { Value } from "../values/index.js";
+import { describeType, fitValue } from "../processing/assign.js";
+import { createItemVariables, type ItemVariables, runTemplateProcessing } from "../processing/index.js";
+import { normalizeValue, type Value } from "../values/index.js";
 import { endAttempt, itemEvent, startAttempt, timed } from "./attempt.js";
 import {
   applied,
@@ -23,13 +24,58 @@ export interface StartItemSessionOptions {
    * context variable left out has its default value, else NULL. Default: none.
    */
   readonly contextValues?: ReadonlyMap<string, Value | null>;
+  /**
+   * The default values that the test gives template variables in place of their declared ones, by identifier: the
+   * values of the `qti-template-default`s of the item reference (INFO §5.6.14, §5.152). Default: none.
+   */
+  readonly templateDefaults?: ReadonlyMap<string, Value | null>;
+}
+
+/**
+ * Returns the variables with the default values of template variables replaced, before template processing starts
+ * from them (INFO §5.152).
+ *
+ * @throws `DataError` when a value names no template variable of the item, or does not fit its declaration.
+ */
+function withTemplateDefaults(
+  variables: ItemVariables,
+  given: ReadonlyMap<string, Value | null>,
+  item: ItemSessionContext["item"],
+): ItemVariables {
+  if (!(given instanceof Map)) {
+    throw new DataError(
+      `The option templateDefaults must be a Map from identifier to value, found ${describe(given)}.`,
+    );
+  }
+  const defaults = new Map(variables.defaults);
+  const templates = new Map(variables.templates);
+  for (const [identifier, value] of given) {
+    checkString(identifier, "An identifier of the option templateDefaults");
+    const declaration = item.templateDeclarations.find((each) => each.identifier === identifier);
+    if (declaration === undefined) {
+      throw new DataError(
+        `The option templateDefaults gives ${describe(identifier)}, which the item declares no template variable for.`,
+      );
+    }
+    const checked = value === null ? null : normalizeValue(value);
+    const fitted = checked === null ? null : fitValue(checked, declaration);
+    if (fitted === undefined) {
+      throw new DataError(
+        `The template variable ${identifier} is ${describeType(declaration)}, found ${describe(value)}.`,
+      );
+    }
+    defaults.set(identifier, fitted);
+    templates.set(identifier, fitted);
+  }
+  return { ...variables, defaults, templates };
 }
 
 /**
  * Starts the session of an item instance, in the state `initial` (INFO §2.2.1). The variables start as
- * `createItemVariables` gives them, with the context values set (B6, B7, T21), and template processing runs once, so
- * that the session records the template values of its clone (INFO §2.7, B11, B59). When template processing fails, the
- * template variables keep their default values and the step reports `processing-failed` (E26).
+ * `createItemVariables` gives them, with the context values set (B6, B7, T21) and the template defaults of the test in
+ * place of the declared ones (B41), and template processing runs once, so that the session records the template values
+ * of its clone (INFO §2.7, B11, B59). When template processing fails, the template variables keep their default values
+ * and the step reports `processing-failed` (E26).
  *
  * @param key - The item instance: the identifier of its item reference and its instance; for an item delivered alone,
  * such as `{ ref: item.identifier, instance: 1 }`.
@@ -37,7 +83,8 @@ export interface StartItemSessionOptions {
  * @param context - The item, its control, and the source of the draws of template processing.
  * @param options - See {@link StartItemSessionOptions}.
  * @returns An accepted step.
- * @throws `DataError` when an argument has the wrong type, or a context value does not fit its declaration.
+ * @throws `DataError` when an argument has the wrong type, or a context value or template default names no variable of
+ * the item or does not fit its declaration.
  * @throws `ProcessingError` when a declared value is not in the lexical form of its base type.
  */
 export function startItemSession(
@@ -50,9 +97,10 @@ export function startItemSession(
   checkTime(at);
   checkSessionContext(context);
   checkOptions(options);
-  const { contextValues = new Map<string, Value | null>() } = options;
+  const { contextValues = new Map<string, Value | null>(), templateDefaults = new Map<string, Value | null>() } =
+    options;
   const { item } = context;
-  const variables = createItemVariables(item, { context: contextValues });
+  const variables = withTemplateDefaults(createItemVariables(item, { context: contextValues }), templateDefaults, item);
   const session: ItemSession = {
     key: { ref: key.ref, instance: key.instance },
     status: "initial",

@@ -67,7 +67,8 @@ export type ItemAction =
       readonly text: string;
     };
 
-const ACTION_TYPES: readonly ItemAction["type"][] = [
+/** The types of the actions on an item. */
+export const ITEM_ACTION_TYPES: readonly ItemAction["type"][] = [
   "set-responses",
   "submit",
   "skip",
@@ -102,10 +103,14 @@ function holdsUnsafeInteger(value: unknown): boolean {
   return isUnsafe(value.baseType, value.value);
 }
 
-/** Checks the fields of an action that its type has. */
-function checkAction(action: unknown): asserts action is ItemAction & { readonly at: number } {
+/**
+ * Checks the fields of an action on an item that its type has.
+ *
+ * @throws `DataError` when it is not such an action.
+ */
+export function checkItemAction(action: unknown): asserts action is ItemAction & { readonly at: number } {
   checkRecord(action, "The action must be an object with a type, an item and a time");
-  checkChoice(action.type, "The type of the action", ACTION_TYPES);
+  checkChoice(action.type, "The type of the action", ITEM_ACTION_TYPES);
   checkKey(action.item);
   checkTime(action.at);
   if (action.type === "set-responses") {
@@ -355,7 +360,7 @@ export function applyItemAction(
   context: ItemSessionContext,
 ): ItemStep {
   checkSession(session);
-  checkAction(action);
+  checkItemAction(action);
   checkSessionContext(context);
   const { at } = action;
   if (!sameKey(action.item, session.key)) {

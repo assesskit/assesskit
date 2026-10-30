@@ -54,6 +54,22 @@ type Move =
 
 const END: Move = { to: "end" };
 
+/**
+ * Where the candidate goes on leaving an item or a section: an item, of the same test part or of another that a branch
+ * rule leads to; the end of the test part, after which the walk goes on from the part once it has ended; or the end of
+ * the test, at `EXIT_TEST` or after the last part.
+ */
+export type Destination =
+  | { readonly to: "item"; readonly key: ItemKey }
+  | { readonly to: "part-end" }
+  | { readonly to: "test-end" };
+
+/** The destination at the end of the test part. */
+export const PART_END: Destination = { to: "part-end" };
+
+/** The destination at the end of the test. */
+export const TEST_END: Destination = { to: "test-end" };
+
 /** The nodes of a plan with their places in it, and the frames by the identifier of their nodes. */
 interface Frames {
   readonly roots: readonly Frame[];
@@ -131,7 +147,7 @@ class Walk {
   /** Returns the first item to present, `undefined` when the test has none. */
   start(): ItemKey | undefined {
     const [first] = this.frames.roots;
-    return this.run(first === undefined ? END : { to: "enter", frame: first });
+    return keyOf(this.run(first === undefined ? END : { to: "enter", frame: first }));
   }
 
   /**
@@ -140,27 +156,61 @@ class Walk {
    * @throws `DataError` when the plan has no such item instance.
    */
   after(key: ItemKey): ItemKey | undefined {
+    return keyOf(this.run({ to: "complete", frame: this.itemFrame(key) }));
+  }
+
+  /**
+   * Returns where the candidate goes on leaving a node that holds an item: the item itself, or one of the sections it
+   * lies in. The walk stops where the test part of the item would be completed.
+   *
+   * @throws `DataError` when the plan has no such item instance, or the node does not hold it.
+   */
+  depart(key: ItemKey, node: string): Destination {
+    const item = this.itemFrame(key);
+    let frame: Frame | undefined = item;
+    while (frame !== undefined && identifierOf(frame.node) !== node) frame = frame.parent;
+    if (frame === undefined) {
+      throw new DataError(`The item instance ${describe(key.ref)} ${key.instance} does not lie in ${describe(node)}.`);
+    }
+    return this.run({ to: "complete", frame }, rootOf(item));
+  }
+
+  /**
+   * Returns the item to present once a test part has ended, `undefined` when the test ends: the part is completed, so
+   * that its branch rules follow.
+   *
+   * @throws `DataError` when the plan has no such test part.
+   */
+  afterPart(part: string): ItemKey | undefined {
+    const frame = this.frames.roots.find((root) => identifierOf(root.node) === part);
+    if (frame === undefined) throw new DataError(`The plan has no test part ${describe(part)}.`);
+    return keyOf(this.run({ to: "complete", frame }));
+  }
+
+  private itemFrame(key: ItemKey): Frame {
     const frame = this.frames.named
       .get(key.ref)
       ?.find((candidate) => candidate.node.kind === "item" && sameKey(candidate.node.key, key));
     if (frame === undefined) {
       throw new DataError(`The plan has no item instance ${describe(key.ref)} ${key.instance}.`);
     }
-    return this.run({ to: "complete", frame });
+    return frame;
   }
 
-  private run(first: Move): ItemKey | undefined {
+  /** Walks from a move until an item or the end of the test, or until it would complete the part `stop`. */
+  private run(first: Move, stop?: Frame): Destination {
     let move = first;
     for (;;) {
       switch (move.to) {
         case "present":
-          return move.key;
+          return { to: "item", key: move.key };
         case "end":
-          return undefined;
+          return TEST_END;
         case "enter":
           move = this.enter(move.frame);
           break;
         case "complete":
+          if (move.frame === stop) return PART_END;
           move = this.complete(move.frame);
           break;
         case "after":
@@ -289,6 +339,11 @@ class Walk {
   }
 }
 
+/** Returns the item of a destination of a walk that stops at nothing but an item or the end of the test. */
+function keyOf(destination: Destination): ItemKey | undefined {
+  return destination.to === "item" ? destination.key : undefined;
+}
+
 /** Checks the arguments that every navigation function takes. */
 function checkArguments(structure: TestStructure, plan: TestPlan): void {
   checkRecord(structure, "The structure must be an object from resolveStructure");
@@ -338,6 +393,43 @@ export function nextItem(
   checkRecord(rules, "The rule context must be an object");
   const walk = new Walk(structure, plan, rules);
   return from === undefined ? walk.start() : walk.after(from);
+}
+
+/**
+ * Returns where the candidate goes on leaving an item, or a section it lies in, as {@link nextItem} decides, except that
+ * the walk stops at the end of the test part of the item: the engine ends the part, so that its submissions and outcome
+ * processing come first, then calls {@link itemAfterPart} (INFO §2.8.2–3). Its callers pass a structure, a plan and an
+ * instance of the session, so the arguments are not checked.
+ *
+ * @param node - The identifier of the item reference of `from`, or of a section that `from` lies in.
+ * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
+ * @throws `SecurityError` when an expression builds a container above the limit.
+ */
+export function destinationAfter(
+  structure: TestStructure,
+  plan: TestPlan,
+  from: ItemKey,
+  node: string,
+  rules: RuleContext,
+): Destination {
+  return new Walk(structure, plan, rules).depart(from, node);
+}
+
+/**
+ * Returns the item to present after a test part ended, as {@link nextItem} decides: the branch rules of the part, in a
+ * linear part, follow, then the walk goes on; `undefined` when the test ends. Its callers pass a structure and a plan of
+ * the session, so the arguments are not checked.
+ *
+ * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
+ * @throws `SecurityError` when an expression builds a container above the limit.
+ */
+export function itemAfterPart(
+  structure: TestStructure,
+  plan: TestPlan,
+  part: string,
+  rules: RuleContext,
+): ItemKey | undefined {
+  return new Walk(structure, plan, rules).afterPart(part);
 }
 
 /**

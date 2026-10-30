@@ -144,6 +144,24 @@ FUZZ_SEED=7 FUZZ_RUNS=50000 pnpm exec vitest run --project olah --testTimeout=60
 
 A defect that fuzzing finds is fixed with a test that names the input that exposed it.
 
+## Test sessions
+
+No independent implementation of a QTI 3 test session was found, so the rows of test sessions carry no D: their evidence is
+S, P and C. The properties in `delivery.test.ts` generate tests (linear and nonlinear parts, individual and simultaneous
+submission, time limits with and without late submission) and sequences of actions stamped by `stamp`, and check after
+every step:
+
+- the state given is unchanged, and a refusal is never `clock-regression`;
+- `numAttempts` never decreases, a closed item takes no responses, and an item closed at a time limit takes none either;
+- the current item never goes back in a linear part;
+- the time of the test is the time the session ran, without suspended time, and no maximum time is left behind the step;
+- `deserializeState(serializeState(state))` equals the state;
+- the accepted actions replayed from the seed, also through the JSON form, give the same states and events.
+
+`delivery.corpus.test.ts` plays tests of the examples to their end with the correct responses and compares the scores
+with the `MAXSCORE` their authors declared, delivers the links to tools of `testWithLti`, and delivers alone every
+example item that the static checks accept.
+
 ## Differential tests
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`
