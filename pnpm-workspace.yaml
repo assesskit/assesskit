@@ -1,5 +1,7 @@
 packages:
   - packages/*
+  - compat
+  - compat/engines/*
   - differential
 
 allowBuilds:

@@ -752,7 +752,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/cli/**", "scripts/**", "conformance/**", "differential/**"],
+      "includes": ["packages/olah/src/cli/**", "scripts/**", "conformance/**", "differential/**", "compat/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -802,7 +802,7 @@
       }
     },
     {
-      "includes": ["conformance/**", "scripts/**", "differential/**"],
+      "includes": ["conformance/**", "scripts/**", "differential/**", "compat/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -812,6 +812,553 @@
                 "extensionMappings": {
                   "ts": "ts"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noGlobalEval": "error"
+          }
+        }
+      },
+      "plugins": ["./biome/no-math-random.grit"]
+    },
+    {
+      "includes": [
+        "packages/tempuh/src/**",
+        "!packages/tempuh/src/client/clock.ts",
+        "!packages/tempuh/src/server/clock.ts"
+      ],
+      "plugins": ["./biome/no-clock.grit"]
+    },
+    {
+      "includes": [
+        "packages/tempuh/src/index.ts",
+        "packages/tempuh/src/errors.ts",
+        "packages/tempuh/src/checks.ts",
+        "packages/tempuh/src/messages/**",
+        "packages/tempuh/src/protocol/**"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noProcessEnv": "error",
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "fetch appears only as an option parameter, so that a caller can replace it.",
+                  "window": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "document": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "process": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "setTimeout": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "setInterval": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "XMLHttpRequest": "The shared modules use no platform API: no DOM, no Node, no timers and no network.",
+                  "WebSocket": "The shared modules use no platform API: no DOM, no Node, no timers and no network."
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": ["./biome/baseline.grit"]
+    },
+    {
+      "includes": ["packages/tempuh/src/player/**", "packages/tempuh/src/client/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noProcessEnv": "error",
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "fetch appears only as an option parameter, so that a caller can replace it."
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": ["./biome/baseline.grit", "./biome/browser-delivery-imports.grit"]
+    },
+    {
+      "includes": ["packages/tempuh/**/*.css"],
+      "plugins": ["./biome/baseline-css.grit"]
+    },
+    {
+      "includes": [
+        "packages/tempuh/src/scoring/**",
+        "packages/tempuh/src/caliper/**",
+        "packages/tempuh/src/cat/**",
+        "packages/tempuh/src/lti/**",
+        "packages/tempuh/src/server/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "fetch appears only as an option parameter, so that a caller can replace it.",
+                  "window": "Server code has no DOM.",
+                  "document": "Server code has no DOM."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/errors.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**"],
+                    "message": "errors.ts depends on nothing."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/index.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**", "!./errors.js", "!./messages/**"],
+                    "message": "index.ts re-exports errors.ts and messages/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/checks.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**", "!./errors.js"],
+                    "message": "checks.ts depends only on errors.ts."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/messages/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/protocol",
+                      "**/protocol/**",
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "messages/ builds on errors.ts and checks.ts only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/protocol/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "protocol/ builds on errors.ts, checks.ts and messages/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/player/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "player/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/client/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "client/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/scoring/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "scoring/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/caliper/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "caliper/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/cat/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/lti/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "lti/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tempuh/src/server/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/player", "**/player/**", "**/client", "**/client/**"],
+                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, caliper/, cat/ and lti/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
+                    "message": "Only cat/ imports takar."
+                  }
+                ]
               }
             }
           }

@@ -3,6 +3,17 @@
   "workspaces": {
     "packages/olah": {
       "entry": ["src/index.ts", "src/*/index.ts"]
+    },
+    "packages/tempuh": {
+      "entry": ["src/index.ts", "src/*/index.ts"]
+    },
+    "compat": {
+      "entry": ["smoke.ts"],
+      "ignoreDependencies": ["stylelint-no-unsupported-browser-features", "playwright-core"]
+    },
+    "compat/engines/*": {
+      "entry": ["playwright.config.ts"],
+      "playwright": false
     }
   }
 }

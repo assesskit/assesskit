@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkCoverage, rowTags, testTitles } from "../coverage.ts";
+import { checkCoverage, criterionTags, rowTags, testTitles } from "../coverage.ts";
 import { parseInventory } from "../inventory.ts";
 
 const scoped = (id: string, unit: string): object => ({ id, construct: id, modules: ["asi"], evidence: ["S"], unit });
@@ -49,20 +49,32 @@ describe("rowTags", () => {
 
 describe("checkCoverage", () => {
   it("requires a test for every row of a merged unit", () => {
-    expect(checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1"] }]).missing).toEqual(["A2"]);
+    expect(checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1"], criteria: [] }]).missing).toEqual(["A2"]);
   });
 
   it("does not require tests for rows of units that are not merged or for out-of-scope rows", () => {
-    expect(checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2"] }]).missing).toEqual([]);
+    expect(checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2"], criteria: [] }]).missing).toEqual([]);
   });
 
   it("accepts tests that name rows of units that are not merged", () => {
-    const coverage = checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2", "A3"] }]);
+    const coverage = checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2", "A3"], criteria: [] }]);
     expect(coverage).toEqual({ missing: [], unknown: [] });
   });
 
   it("reports identifiers that the inventory does not have", () => {
-    const coverage = checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2", "A99"] }]);
+    const coverage = checkCoverage(inventory, [{ file: "t.test.ts", ids: ["A1", "A2", "A99"], criteria: [] }]);
     expect(coverage.unknown).toEqual([{ id: "A99", file: "t.test.ts" }]);
+  });
+});
+
+describe("criterionTags", () => {
+  it("returns the criteria in brackets", () => {
+    expect(criterionTags("[SC 1.4.3] contrast")).toEqual(["1.4.3"]);
+    expect(criterionTags("[T97][SC 3.2.4][SC 2.5.8] both")).toEqual(["3.2.4", "2.5.8"]);
+    expect(criterionTags("[SC 1.4] [SC 1.4.3.1] [sc 1.4.3] [1.4.3] SC 1.4.3")).toEqual([]);
+  });
+
+  it("is not read as a row", () => {
+    expect(rowTags("[SC 3.2.4] a catalog")).toEqual([]);
   });
 });

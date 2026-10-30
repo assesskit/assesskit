@@ -1,0 +1,18 @@
+or {
+  JsImport() as $import where {
+    $import <: r"(?s)^import\b.*[\"']@luthfanwakan/olah/delivery[\"'].*",
+    not $import <: r"(?s)^import\s+type\b.*",
+    not $import <: r"(?s)^import\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson)(?:\s+as\s+\w+)?)(?:\s*,\s*(?:type\s+\w+(?:\s+as\s+\w+)?|(?:viewFromJson|actionToJson)(?:\s+as\s+\w+)?))*\s*,?\s*\}\s*from\b.*",
+    register_diagnostic(span=$import, message="Browser code imports from olah/delivery only viewFromJson, actionToJson and types: the engine holds the answer keys and never ships to a candidate.", severity="error")
+  },
+  JsExport() as $export where {
+    $export <: r"(?s)^export\b[^;=]*\bfrom\s*[\"']@luthfanwakan/olah/delivery[\"'].*",
+    not $export <: r"(?s)^export\s+type\b.*",
+    register_diagnostic(span=$export, message="Browser code re-exports from olah/delivery only types: the engine holds the answer keys and never ships to a candidate.", severity="error")
+  },
+  JsImportCallExpression() as $call where {
+    $call <: r"(?s).*@luthfanwakan/olah/delivery.*",
+    not $filename <: r".*client/local\.ts$",
+    register_diagnostic(span=$call, message="Only client/local.ts loads olah/delivery with import(): practice mode is the one place where the engine reaches a device.", severity="error")
+  }
+}

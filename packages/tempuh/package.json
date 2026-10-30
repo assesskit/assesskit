@@ -2,7 +2,16 @@
   "name": "@luthfanwakan/tempuh",
   "version": "0.0.0",
   "private": true,
-  "description": "The player for QTI 3.0 content built on olah: rendering, the PCI host, accessibility in the UI and the server-side integrations. Designed separately.",
+  "description": "The player for QTI 3.0 content built on olah: rendering, the PCI host, accessibility in the UI and the server-side integrations.",
+  "keywords": [
+    "qti",
+    "qti3",
+    "1edtech",
+    "assessment",
+    "player",
+    "lti",
+    "accessibility"
+  ],
   "author": "Fariz Wakan (https://github.com/luthfanwakan)",
   "license": "Apache-2.0",
   "repository": {
@@ -10,5 +19,35 @@
     "url": "git+https://github.com/luthfanwakan/olah.git",
     "directory": "packages/tempuh"
   },
-  "type": "module"
+  "homepage": "https://github.com/luthfanwakan/olah#readme",
+  "bugs": "https://github.com/luthfanwakan/olah/issues",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol/index.d.ts",
+      "default": "./dist/protocol/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
+    "build": "pnpm clean && tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && tsc -p tsconfig.server.json",
+    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
+  }
 }

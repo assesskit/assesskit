@@ -13,6 +13,18 @@ export default defineConfig({
       },
       {
         test: {
+          name: "tempuh",
+          include: ["packages/tempuh/test/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
+          name: "compat",
+          include: ["compat/test/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "differential",
           include: ["differential/test/**/*.test.ts"],
           exclude: ["**/*.corpus.test.ts"],

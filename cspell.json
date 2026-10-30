@@ -16,7 +16,10 @@
     "CONTRIBUTING.md",
     "SECURITY.md",
     "conformance/*.ts",
-    "conformance/test/*.ts"
+    "conformance/test/*.ts",
+    "compat/*.ts",
+    "compat/test/*.ts",
+    "compat/engines/*/*.ts"
   ],
   "words": [
     "aeiou",
@@ -110,7 +113,9 @@
     "rtest",
     "scaleb",
     "schemaversion",
+    "shadowrootmode",
     "SSML",
+    "subgrid",
     "subpaths",
     "subtags",
     "takar",
@@ -123,7 +128,9 @@
     "URLD",
     "usagedata",
     "Vigna",
+    "WCAG",
     "webcontent",
+    "Worklet",
     "xinclude",
     "xlink",
     "xmlchars",
@@ -140,5 +147,34 @@
     "packages/olah/src/values/unicode-blocks.ts",
     "packages/olah/src/values/unicode-categories.ts"
   ],
-  "ignoreRegExpList": ["[A-Za-z0-9_-]+\\.xsd\\b"]
+  "ignoreRegExpList": ["[A-Za-z0-9_-]+\\.xsd\\b"],
+  "overrides": [
+    {
+      "filename": [
+        "packages/tempuh/src/messages/id.ts",
+        "packages/tempuh/test/messages.test.ts",
+        "packages/tempuh/docs/messages.md",
+        "packages/tempuh/README.md",
+        "compat/smoke.ts"
+      ],
+      "words": [
+        "baris",
+        "Busur",
+        "dasar",
+        "derajat",
+        "interaktif",
+        "jawaban",
+        "Jawa",
+        "Kalkulator",
+        "kelas",
+        "Mistar",
+        "Penggaris",
+        "Penutup",
+        "Penyorot",
+        "pilihan",
+        "Soal",
+        "standar"
+      ]
+    }
+  ]
 }

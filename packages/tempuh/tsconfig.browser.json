@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": [
+    "src/index.ts",
+    "src/errors.ts",
+    "src/checks.ts",
+    "src/messages",
+    "src/protocol",
+    "src/player",
+    "src/client"
+  ]
+}

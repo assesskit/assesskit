@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/index.ts",
+    "src/errors.ts",
+    "src/checks.ts",
+    "src/messages",
+    "src/protocol",
+    "src/server",
+    "src/scoring",
+    "src/cat",
+    "src/lti",
+    "src/caliper"
+  ]
+}

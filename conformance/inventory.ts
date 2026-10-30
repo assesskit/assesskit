@@ -18,9 +18,6 @@ export const EVIDENCE = [
   { code: "U", meaning: "Unit test of data access only, where the specification has no semantics" },
 ] as const;
 
-/** What evidences a row: one of the codes of `EVIDENCE`. */
-type Evidence = (typeof EVIDENCE)[number]["code"];
-
 /** The tables of the inventory by the letter of their row identifiers. */
 export const TABLES = [
   { letter: "A", title: "ASI elements" },
@@ -59,8 +56,8 @@ interface RowBase {
 export interface ScopedRow extends RowBase {
   /** The olah modules that implement it. */
   readonly modules: readonly string[];
-  /** How it is evidenced. */
-  readonly evidence: readonly Evidence[];
+  /** How it is evidenced: codes of the scheme of the inventory. */
+  readonly evidence: readonly string[];
   /** The build unit whose merge completes the evidence. */
   readonly unit: string;
 }
@@ -89,22 +86,41 @@ export function isScoped(row: InventoryRow): row is ScopedRow {
   return "unit" in row;
 }
 
+/** What an inventory file may use: the letters that start its row identifiers and the codes of its evidence. */
+export interface InventoryScheme {
+  /** The letters of the tables. */
+  readonly letters: readonly string[];
+  /** The codes of the evidence a row may name. */
+  readonly evidence: readonly string[];
+}
+
+/** The scheme of `olah-inventory.json`. */
+const OLAH_SCHEME: InventoryScheme = {
+  letters: TABLES.map(({ letter }) => letter),
+  evidence: EVIDENCE.map(({ code }) => code),
+};
+
 const ROW_ID = /^([A-Z])[1-9]\d*$/;
 
-const isRowId: Guard<string> = (value): value is string =>
-  typeof value === "string" && TABLES.some((table) => table.letter === ROW_ID.exec(value)?.[1]);
-const isEvidence = oneOf(EVIDENCE.map(({ code }) => code));
-const isEvidenceList: Guard<readonly Evidence[]> = (value): value is readonly Evidence[] =>
-  listOf(isEvidence)(value) && value.length > 0;
 const isTextList: Guard<readonly string[]> = (value): value is readonly string[] =>
   listOf(isText)(value) && value.length > 0;
 
 /** Reads one row, adding what is wrong with it to `problems`. */
-function parseRow(value: unknown, index: number, isUnit: Guard<string>, problems: string[]): InventoryRow | undefined {
+function parseRow(
+  value: unknown,
+  index: number,
+  scheme: InventoryScheme,
+  isUnit: Guard<string>,
+  problems: string[],
+): InventoryRow | undefined {
   if (!isRecord(value)) {
     problems.push(`rows[${index}] is not an object.`);
     return undefined;
   }
+  const isRowId: Guard<string> = (candidate): candidate is string =>
+    typeof candidate === "string" && scheme.letters.includes(ROW_ID.exec(candidate)?.[1] ?? "");
+  const isEvidenceList: Guard<readonly string[]> = (candidate): candidate is readonly string[] =>
+    listOf(oneOf(scheme.evidence))(candidate) && candidate.length > 0;
   const read = fieldReader(typeof value.id === "string" ? value.id : `rows[${index}]`, value, problems);
   const id = read.required("id", isRowId, "the letter of a table and a number");
   const construct = read.required("construct", isText, "a non-empty string");
@@ -117,17 +133,13 @@ function parseRow(value: unknown, index: number, isUnit: Guard<string>, problems
     return base && owner ? { ...base, owner } : undefined;
   }
   const modules = read.required("modules", isTextList, "a non-empty array of strings");
-  const evidence = read.required(
-    "evidence",
-    isEvidenceList,
-    `a non-empty array of ${EVIDENCE.map(({ code }) => code).join(", ")}`,
-  );
+  const evidence = read.required("evidence", isEvidenceList, `a non-empty array of ${scheme.evidence.join(", ")}`);
   const unit = read.required("unit", isUnit, "one of the units");
   return base && modules && evidence && unit ? { ...base, modules, evidence, unit } : undefined;
 }
 
-/** Checks the shape of the inventory and returns it typed. */
-export function parseInventory(data: unknown): Inventory {
+/** Checks the shape of the inventory and returns it typed; its rows use the letters and evidence of the scheme. */
+export function parseInventory(data: unknown, scheme: InventoryScheme = OLAH_SCHEME): Inventory {
   const isStrings = listOf(isText);
   if (!(isRecord(data) && isStrings(data.units) && isStrings(data.merged) && Array.isArray(data.rows))) {
     throw new Error("The inventory must be an object with the arrays units, merged and rows.");
@@ -139,7 +151,7 @@ export function parseInventory(data: unknown): Inventory {
   const rows: InventoryRow[] = [];
   const ids = new Set<string>();
   data.rows.forEach((value: unknown, index) => {
-    const row = parseRow(value, index, isUnit, problems);
+    const row = parseRow(value, index, scheme, isUnit, problems);
     if (row === undefined) return;
     if (ids.has(row.id)) problems.push(`${row.id}: the id occurs twice.`);
     ids.add(row.id);
@@ -150,6 +162,6 @@ export function parseInventory(data: unknown): Inventory {
 }
 
 /** Reads and checks the inventory file. */
-export function loadInventory(path: string): Inventory {
-  return parseInventory(JSON.parse(readFileSync(path, "utf8")));
+export function loadInventory(path: string, scheme: InventoryScheme = OLAH_SCHEME): Inventory {
+  return parseInventory(JSON.parse(readFileSync(path, "utf8")), scheme);
 }

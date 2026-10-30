@@ -25,6 +25,7 @@ jobs:
       - run: pnpm knip
       - run: pnpm conformance
       - run: pnpm check:packages
+      - run: pnpm compat
       - run: pnpm docs:api
       # Version and Dependabot pull requests change package files without a changeset of their own.
       - if: >-
@@ -48,6 +49,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+
+  # The built code of tempuh in the oldest browsers of its baseline, in the container images of the Playwright
+  # releases that ship them (docs/baseline.md).
+  engines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm compat:engines
 
   # Tests that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
   # that conformance/corpus.lock.json pins.

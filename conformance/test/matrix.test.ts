@@ -18,8 +18,8 @@ const input = {
   ],
   accepted: [],
   references: [
-    { file: "packages/olah/test/values.test.ts", ids: ["T1"] },
-    { file: "differential/test/items.test.ts", ids: ["T1"] },
+    { file: "packages/olah/test/values.test.ts", ids: ["T1"], criteria: [] },
+    { file: "differential/test/items.test.ts", ids: ["T1"], criteria: [] },
   ],
   directory: "packages/olah/docs",
 } as const;

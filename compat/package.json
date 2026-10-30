@@ -1,0 +1,18 @@
+{
+  "name": "@luthfanwakan/tempuh-compat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Checks that tempuh stays inside its browser baseline. Never published; not a dependency of tempuh.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@mdn/browser-compat-data": "^8.1.7",
+    "eslint": "^10.13.0",
+    "eslint-plugin-compat": "^7.0.2",
+    "stylelint": "^17.16.0",
+    "stylelint-no-unsupported-browser-features": "^8.1.2"
+  }
+}

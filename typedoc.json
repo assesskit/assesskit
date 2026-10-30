@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "name": "olah",
   "entryPointStrategy": "packages",
-  "entryPoints": ["packages/olah"],
+  "entryPoints": ["packages/olah", "packages/tempuh"],
   "readme": "README.md",
   "out": "docs/api",
   "treatWarningsAsErrors": true,

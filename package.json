@@ -19,6 +19,8 @@
     "check:packages": "pnpm -r check:packages",
     "conformance": "node conformance/check.ts",
     "conformance:render": "node conformance/render.ts",
+    "compat": "node compat/check.ts",
+    "compat:engines": "node compat/run-engines.ts",
     "corpus": "node scripts/corpus.ts fetch",
     "corpus:pin": "node scripts/corpus.ts pin",
     "schemas": "node scripts/schemas.ts fetch",
