@@ -102,7 +102,8 @@ function createScene({
 }: SceneOptions = {}): Scene {
   const before = document.createElement("button");
   before.textContent = "Before";
-  before.style.minHeight = "44px";
+  // The colors of the stage: the button of the page is the harness's, and its default colors are not a pair in every engine.
+  before.style.cssText = "min-height: 44px; color: CanvasText; background: Canvas; border: 2px solid CanvasText;";
   const host = document.createElement("div");
   const container = document.createElement("div");
   const shadow = container.attachShadow({ mode: "open" });

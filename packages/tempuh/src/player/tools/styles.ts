@@ -2,6 +2,10 @@
  * The stylesheet of the tools. It uses the system colors, so that the tools follow the color scheme and the forced
  * colors of the browser, and sizes in `rem`, so that they follow the text size. Every control is at least 2.75rem, more
  * than the 24 CSS pixels of WCAG 2.5.8.
+ *
+ * Text and background always come from the pair `CanvasText` and `Canvas`, or from a mix of the two. `ButtonText` and
+ * `ButtonFace` are no pair: in a dark color scheme the WebKit of Linux gives white text on a light gray face, 1.8:1
+ * (WCAG 1.4.3), so the controls do not use them, and neither do the fields.
  */
 const TOOLS_CSS = `
 .tempuh-tools { display: grid; gap: 0.75rem; color: CanvasText; background: Canvas; }
@@ -10,7 +14,8 @@ const TOOLS_CSS = `
 .tempuh-tray { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem; }
 .tempuh-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
   box-sizing: border-box; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.75rem; font: inherit;
-  color: ButtonText; background: ButtonFace; border: 2px solid ButtonText; border-radius: 0.375rem; cursor: pointer; }
+  color: CanvasText; background: color-mix(in srgb, CanvasText 10%, Canvas); border: 2px solid CanvasText;
+  border-radius: 0.375rem; cursor: pointer; }
 .tempuh-button[aria-pressed="true"] { color: Canvas; background: CanvasText; font-weight: 700;
   box-shadow: inset 0 -0.25rem 0 currentColor; }
 .tempuh-button img { width: 1.5rem; height: 1.5rem; }
@@ -31,7 +36,8 @@ const TOOLS_CSS = `
 .tempuh-move-right { grid-area: 2 / 3; }
 .tempuh-move-down { grid-area: 3 / 2; }
 .tempuh-field { display: flex; align-items: center; gap: 0.5rem; }
-.tempuh-field input { box-sizing: border-box; width: 5rem; min-height: 2.75rem; font: inherit; }
+.tempuh-field input { box-sizing: border-box; width: 5rem; min-height: 2.75rem; font: inherit; color: CanvasText;
+  background: Canvas; border: 2px solid CanvasText; border-radius: 0.375rem; }
 .tempuh-viewer img, .tempuh-viewer video, .tempuh-viewer iframe { display: block; max-width: 100%; }
 .tempuh-viewer iframe { width: 100%; height: 24rem; border: 1px solid CanvasText; }
 .tempuh-viewer audio { width: 100%; }
