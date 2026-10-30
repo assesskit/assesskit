@@ -1,9 +1,18 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 import type { AdaptiveSelection } from "@luthfanwakan/olah/asi";
 import { type CatPort, isSessionEnd, type SectionData } from "@luthfanwakan/olah/cat";
+import {
+  createEngine,
+  type DeliveryState,
+  deserializeState,
+  drainCat,
+  type Engine,
+  serializeState,
+  stamp,
+} from "@luthfanwakan/olah/delivery";
 import { CP_NAMESPACE } from "@luthfanwakan/olah/metadata";
-import { openPackage, type QtiPackage } from "@luthfanwakan/olah/package";
-import type { AssessmentResult } from "@luthfanwakan/olah/results";
+import { openPackage, packageResolvers, type QtiPackage } from "@luthfanwakan/olah/package";
+import type { AssessmentResult, ResultVariable } from "@luthfanwakan/olah/results";
 import { container, record, single, type Value } from "@luthfanwakan/olah/values";
 import { createRandom, DataError as TakarDataError } from "@luthfanwakan/takar";
 import {
@@ -27,6 +36,7 @@ import { decodeBase64, readJson, toHex } from "../src/cat/encoding.js";
 import {
   type CatFetch,
   type CatFetchRequest,
+  type DeployedCatSection,
   deployCatSections,
   type OAuthClientCredentials,
   restCatPort,
@@ -83,6 +93,20 @@ const itemsOf = (state: TestState): readonly string[] => state.items;
 
 /** Answers of a candidate that alternate, so that the estimate moves both ways. */
 const alternating = (_item: string, position: number): number => (position % 2 === 0 ? 1 : 0);
+
+/** The items that takar administers for the same bank and answers, with the seeds of the steps as the port documents them. */
+function takarItems(length: number, answers: (item: string, position: number) => number, seed = 12345): string[] {
+  const test = adaptiveTest({ pool: takarPool, stopping: testLength(length) });
+  let state = test.start(createRandom(seed * 2 ** 21));
+  while (state.next !== null) {
+    state = test.answer(
+      state,
+      answers(state.next, state.items.length),
+      createRandom(seed * 2 ** 21 + state.items.length + 1),
+    );
+  }
+  return [...itemsOf(state)];
+}
 
 describe("encoding", () => {
   it("[T99] writes bytes as two lowercase hexadecimal digits each", () => {
@@ -264,6 +288,29 @@ describe("response", () => {
     expect(responseTo(item, result, (id, outcomes) => (outcomes.has("SCORE") && id === "q" ? 2 : 0))).toBe(2);
   });
 
+  it("[T99] takes an item submitted without a response, with the status initial and no SCORE, as category 0", () => {
+    const blank: AssessmentResult = {
+      context: { sessionIdentifiers: [] },
+      itemResults: [
+        {
+          ...resultsOf(new Map([["q", 1]])).itemResults[0],
+          identifier: "q",
+          sessionStatus: "initial",
+          variables: [],
+        } as never,
+      ],
+    };
+    let asked = false;
+    expect(
+      responseTo(item, blank, () => {
+        asked = true;
+        return 2;
+      }),
+    ).toBe(0);
+    expect(asked).toBe(false);
+    expect(() => responseTo(item, resultsOf(new Map([["q", 1]])), () => 0)).not.toThrow();
+  });
+
   it("[T99] rejects a score that is no number, a category that is no category of the model, and a missing result", () => {
     const withScore = (value: Value | null): AssessmentResult => ({
       context: { sessionIdentifiers: [] },
@@ -400,20 +447,6 @@ describe("takarCatPort", () => {
   const settings = { length: 4 };
   const data = sectionDataOf(settings, BANK);
   const seeds = (): number => 12345;
-
-  /** The items that takar administers for the same bank and answers, with the seeds of the steps as the port documents them. */
-  function takarItems(length: number, answers: (item: string, position: number) => number, seed = 12345): string[] {
-    const test = adaptiveTest({ pool: takarPool, stopping: testLength(length) });
-    let state = test.start(createRandom(seed * 2 ** 21));
-    while (state.next !== null) {
-      state = test.answer(
-        state,
-        answers(state.next, state.items.length),
-        createRandom(seed * 2 ** 21 + state.items.length + 1),
-      );
-    }
-    return [...itemsOf(state)];
-  }
 
   it("[T99] presents the items that takar's adaptive test selects, one item to a stage", async () => {
     const sections = memoryStore();
@@ -684,67 +717,67 @@ describe("takarCatPort", () => {
   });
 });
 
-describe("takarPanelPort", () => {
-  // A routing module of four items, then an easy, a medium and a hard module of three.
-  const bank: readonly Bank[] = [
-    ...["r1", "r2", "r3", "r4"].map((id, index) => ({ id, a: 1.2, b: -1 + index * 0.66 })),
-    ...["e1", "e2", "e3"].map((id, index) => ({ id, a: 1.1, b: -1.5 + index * 0.5 })),
-    ...["m1", "m2", "m3"].map((id, index) => ({ id, a: 1.1, b: -0.5 + index * 0.5 })),
-    ...["h1", "h2", "h3"].map((id, index) => ({ id, a: 1.1, b: 0.5 + index * 0.5 })),
-  ];
-  const settings = {
-    stages: [
-      { modules: [{ id: "routing", items: ["r1", "r2", "r3", "r4"] }] },
-      {
-        modules: [
-          { id: "easy", items: ["e1", "e2", "e3"] },
-          { id: "medium", items: ["m1", "m2", "m3"] },
-          { id: "hard", items: ["h1", "h2", "h3"] },
-        ],
-      },
-    ],
-  };
-  const cuts = new Map([["routing", [-0.4, 0.4]]]);
-  const data = sectionDataOf(settings, bank);
-
-  /** takar's multistage test of the same panel, built with takar's own models. */
-  function takarModules(scale = 1, answers: (item: string) => number): string[] {
-    const items = (ids: string[]): TestItem<LogisticParameters>[] =>
-      ids.map((id) => {
-        const item = bank.find((candidate) => candidate.id === id) ?? { id, b: 0 };
-        return { id, model: twoParameterLogistic, parameters: { a: (item.a ?? 1) * scale, b: item.b, c: 0, d: 1 } };
-      });
-    const test = multistageTest({
-      stages: [
-        [{ id: "routing", items: items(["r1", "r2", "r3", "r4"]), cuts: [-0.4, 0.4] }],
-        [
-          { id: "easy", items: items(["e1", "e2", "e3"]) },
-          { id: "medium", items: items(["m1", "m2", "m3"]) },
-          { id: "hard", items: items(["h1", "h2", "h3"]) },
-        ],
+// A routing module of four items, then an easy, a medium and a hard module of three.
+const PANEL_BANK: readonly Bank[] = [
+  ...["r1", "r2", "r3", "r4"].map((id, index) => ({ id, a: 1.2, b: -1 + index * 0.66 })),
+  ...["e1", "e2", "e3"].map((id, index) => ({ id, a: 1.1, b: -1.5 + index * 0.5 })),
+  ...["m1", "m2", "m3"].map((id, index) => ({ id, a: 1.1, b: -0.5 + index * 0.5 })),
+  ...["h1", "h2", "h3"].map((id, index) => ({ id, a: 1.1, b: 0.5 + index * 0.5 })),
+];
+const PANEL_SETTINGS = {
+  stages: [
+    { modules: [{ id: "routing", items: ["r1", "r2", "r3", "r4"] }] },
+    {
+      modules: [
+        { id: "easy", items: ["e1", "e2", "e3"] },
+        { id: "medium", items: ["m1", "m2", "m3"] },
+        { id: "hard", items: ["h1", "h2", "h3"] },
       ],
-      routing: "theta",
+    },
+  ],
+};
+const PANEL_CUTS = new Map([["routing", [-0.4, 0.4]]]);
+const PANEL_DATA = sectionDataOf(PANEL_SETTINGS, PANEL_BANK);
+
+/** takar's multistage test of the same panel, built with takar's own models. */
+function takarModules(scale = 1, answers: (item: string) => number): string[] {
+  const items = (ids: string[]): TestItem<LogisticParameters>[] =>
+    ids.map((id) => {
+      const item = PANEL_BANK.find((candidate) => candidate.id === id) ?? { id, b: 0 };
+      return { id, model: twoParameterLogistic, parameters: { a: (item.a ?? 1) * scale, b: item.b, c: 0, d: 1 } };
     });
-    let state = test.start();
-    while (state.next !== null) {
-      const module = test.stages.flat().find(({ id }) => id === state.next);
-      state = test.answer(
-        state,
-        (module?.items ?? []).map(({ id }) => answers(id)),
-      );
-    }
-    return [...state.modules];
-  }
-
-  /** The modules of a run: the stage of a module has all its items, which the first of them names. */
-  const modulesOf = (run: { readonly stages: readonly (readonly string[])[] }): string[] =>
-    run.stages.map(([first]) =>
-      first?.startsWith("r") ? "routing" : first?.startsWith("e") ? "easy" : first?.startsWith("m") ? "medium" : "hard",
+  const test = multistageTest({
+    stages: [
+      [{ id: "routing", items: items(["r1", "r2", "r3", "r4"]), cuts: [-0.4, 0.4] }],
+      [
+        { id: "easy", items: items(["e1", "e2", "e3"]) },
+        { id: "medium", items: items(["m1", "m2", "m3"]) },
+        { id: "hard", items: items(["h1", "h2", "h3"]) },
+      ],
+    ],
+    routing: "theta",
+  });
+  let state = test.start();
+  while (state.next !== null) {
+    const module = test.stages.flat().find(({ id }) => id === state.next);
+    state = test.answer(
+      state,
+      (module?.items ?? []).map(({ id }) => answers(id)),
     );
+  }
+  return [...state.modules];
+}
 
+/** The modules of a run: the stage of a module has all its items, which the first of them names. */
+const modulesOf = (run: { readonly stages: readonly (readonly string[])[] }): string[] =>
+  run.stages.map(([first]) =>
+    first?.startsWith("r") ? "routing" : first?.startsWith("e") ? "easy" : first?.startsWith("m") ? "medium" : "hard",
+  );
+
+describe("takarPanelPort", () => {
   it("[T100] routes a candidate by the estimate of theta, as takar's multistage test does", async () => {
-    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts }) });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
+    const section = await deployed(port, PANEL_DATA);
     for (const answers of [() => 1, () => 0, (item: string) => (item.startsWith("r") ? 1 : 0)]) {
       const run = await drive(port, section, answers);
       expect(modulesOf(run)).toEqual(takarModules(1, answers));
@@ -755,8 +788,8 @@ describe("takarPanelPort", () => {
 
   it("[T100] presents a module as one stage with all its items, in order, and keeps no session", async () => {
     const sections = memoryStore();
-    const port = takarPanelPort({ sections, panels: () => ({ cuts }) });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) });
+    const section = await deployed(port, PANEL_DATA);
     const created = await port.createSession(PREFIX, section, {});
     expect(created.sessionIdentifier).toBe(section);
     expect(created.nextItems).toEqual({ itemIdentifiers: ["r1", "r2", "r3", "r4"], stageLength: 4 });
@@ -764,15 +797,15 @@ describe("takarPanelPort", () => {
       assessmentResult: resultsOf(new Map(["r1", "r2", "r3", "r4"].map((id) => [id, 1]))),
       ...(created.sessionState === undefined ? {} : { sessionState: created.sessionState }),
     };
-    const other = takarPanelPort({ sections, panels: () => ({ cuts }) });
+    const other = takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) });
     const answered = await other.submitResults(PREFIX, section, section, request);
     expect(answered.nextItems).toEqual({ itemIdentifiers: ["h1", "h2", "h3"], stageLength: 3 });
     expect(await other.submitResults(PREFIX, section, section, request)).toEqual(answered);
   });
 
   it("[T100] ends the session with the empty stage after the last stage", async () => {
-    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts }) });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
+    const section = await deployed(port, PANEL_DATA);
     const run = await drive(port, section, () => 1);
     const last = JSON.parse(run.sessionState ?? "null");
     expect(last.next).toBeNull();
@@ -780,19 +813,23 @@ describe("takarPanelPort", () => {
   });
 
   it("[T100] returns the section data and every item of the panel from Get Section", async () => {
-    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts }) });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
+    const section = await deployed(port, PANEL_DATA);
     expect(await port.getSection(PREFIX, section)).toEqual({
-      sectionData: data,
-      items: { itemIdentifiers: bank.map(({ id }) => id) },
+      sectionData: PANEL_DATA,
+      items: { itemIdentifiers: PANEL_BANK.map(({ id }) => id) },
     });
     await expect(port.endSession(PREFIX, section, section)).resolves.toBeUndefined();
     await expect(port.endSection(PREFIX, section)).resolves.toBeUndefined();
   });
 
   it("[T100] multiplies the discrimination with scalingConstant", async () => {
-    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts }), scalingConstant: 1.702 });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({
+      sections: memoryStore(),
+      panels: () => ({ cuts: PANEL_CUTS }),
+      scalingConstant: 1.702,
+    });
+    const section = await deployed(port, PANEL_DATA);
     const answers = (item: string): number => (item.startsWith("r") ? (item === "r1" ? 0 : 1) : 1);
     expect(modulesOf(await drive(port, section, answers))).toEqual(takarModules(1.702, answers));
   });
@@ -802,7 +839,7 @@ describe("takarPanelPort", () => {
       sections: memoryStore(),
       panels: () => ({ cuts: new Map([["routing", [0]]]) }),
     });
-    await expect(wrongCuts.createSection(PREFIX, data)).rejects.toThrow(TakarDataError);
+    await expect(wrongCuts.createSection(PREFIX, PANEL_DATA)).rejects.toThrow(TakarDataError);
     const repeated = sectionDataOf(
       {
         stages: [
@@ -814,16 +851,16 @@ describe("takarPanelPort", () => {
           },
         ],
       },
-      bank,
+      PANEL_BANK,
     );
-    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts }) });
+    const port = takarPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
     await expect(port.createSection(PREFIX, repeated)).rejects.toThrow();
   });
 
   it("[T100] refuses requests it cannot answer and checks its options", async () => {
     const sections = memoryStore();
-    const port = takarPanelPort({ sections, panels: () => ({ cuts }) });
-    const section = await deployed(port, data);
+    const port = takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) });
+    const section = await deployed(port, PANEL_DATA);
     const created = await port.createSession(PREFIX, section, {});
     const submit = (request: unknown): Promise<unknown> =>
       port.submitResults(PREFIX, section, section, viaJson(request));
@@ -840,8 +877,12 @@ describe("takarPanelPort", () => {
     expect(await rejection(noPanel.getSection(PREFIX, section))).toMatch(/^The option panels must return an object/);
     expect(() => takarPanelPort(json("null"))).toThrow(DataError);
     expect(() => takarPanelPort({ sections, panels: 3 as never })).toThrow(/^The option panels must be a function/);
-    expect(() => takarPanelPort({ sections, panels: () => ({ cuts }), scalingConstant: -1 })).toThrow(DataError);
-    expect(() => takarPanelPort({ sections, panels: () => ({ cuts }), seeds: () => 1 } as never)).toThrow(DataError);
+    expect(() => takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }), scalingConstant: -1 })).toThrow(
+      DataError,
+    );
+    expect(() => takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }), seeds: () => 1 } as never)).toThrow(
+      DataError,
+    );
     const adaptive = takarCatPort({ sections, seeds: () => 1 });
     const adaptiveSection = await deployed(adaptive, sectionDataOf({ length: 2 }, BANK));
     expect(await rejection(port.getSection(PREFIX, adaptiveSection))).toMatch(/is a "adaptive" section/);
@@ -1714,6 +1755,7 @@ const resource = (identifier: string, type: string, href: string): string =>
 const DOCUMENT_TYPES: readonly (readonly [root: string, type: string])[] = [
   ["<qti-assessment-test", "imsqti_test_xmlv3p0"],
   ["<qti-assessment-section", "imsqti_section_xmlv3p0"],
+  ["<qti-assessment-item", "imsqti_item_xmlv3p0"],
 ];
 
 /** A package in memory: its files, and a manifest that lists the QTI documents among them. */
@@ -1911,6 +1953,248 @@ describe("deployCatSections", () => {
     await expect(deployCatSections(deployable, json("5"))).rejects.toThrow(
       new DataError("The port must be a function of an adaptive selection, found 5."),
     );
+  });
+});
+
+/** A choice item whose answer `B` the standard template scores 1 (INFO §5.4, `match_correct`). */
+const examItemXml = (id: string): string =>
+  `<qti-assessment-item xmlns="${ASI}" identifier="${id}" title="Item ${id}" adaptive="false" time-dependent="false"><qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>B</qti-value></qti-correct-response></qti-response-declaration><qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/><qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice></qti-choice-interaction></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/></qti-assessment-item>`;
+
+/** A linear test of one adaptive section whose pool is the items given, and a test outcome that sums their scores. */
+const examTestXml = (ids: readonly string[]): string =>
+  `<qti-assessment-test xmlns="${ASI}" identifier="exam" title="Exam"><qti-outcome-declaration identifier="TOTAL" cardinality="single" base-type="float"/><qti-test-part identifier="part" navigation-mode="linear" submission-mode="individual">${adaptiveSection(
+    selectionXml(SETTINGS_REF, USAGE_REF),
+    ids,
+  )}</qti-test-part><qti-outcome-processing><qti-set-outcome-value identifier="TOTAL"><qti-sum><qti-test-variables variable-identifier="SCORE"/></qti-sum></qti-set-outcome-value></qti-outcome-processing></qti-assessment-test>`;
+
+/** A package of an exam with an adaptive section: the items, the settings and the usage data of the bank. */
+function examPackage(bank: readonly Bank[], settings: unknown): QtiPackage {
+  const ids = bank.map(({ id }) => id);
+  return packageOf({
+    "test.xml": examTestXml(ids),
+    "cat/settings.json": JSON.stringify(settings),
+    "cat/usage.xml": usageXml(bank),
+    ...Object.fromEntries(ids.map((id) => [`items/${id}.xml`, examItemXml(id)])),
+  });
+}
+
+/** Deploys the adaptive sections of a package and creates the engine of its test. */
+async function examEngine(
+  pkg: QtiPackage,
+  port: CatPort,
+): Promise<{ engine: Engine; catSections: ReadonlyMap<string, DeployedCatSection> }> {
+  const catSections = await deployCatSections(pkg, () => port);
+  const document = pkg.document("test.xml");
+  if (document.kind !== "test") throw new Error(`Expected a test, found ${document.kind}.`);
+  const engine = createEngine({
+    kind: "test",
+    test: document.test,
+    base: "test.xml",
+    resolvers: packageResolvers(pkg),
+    catSections,
+  });
+  return { engine, catSections };
+}
+
+/** A port that records the requests it serves, as `name method`. */
+function spied(name: string, port: CatPort, log: string[]): CatPort {
+  const through =
+    <TArgs extends unknown[], TResult>(method: string, call: (...args: TArgs) => TResult) =>
+    (...args: TArgs): TResult => {
+      log.push(`${name} ${method}`);
+      return call(...args);
+    };
+  return {
+    createSection: through("createSection", port.createSection.bind(port)),
+    getSection: through("getSection", port.getSection.bind(port)),
+    createSession: through("createSession", port.createSession.bind(port)),
+    submitResults: through("submitResults", port.submitResults.bind(port)),
+    endSession: through("endSession", port.endSession.bind(port)),
+    endSection: through("endSection", port.endSection.bind(port)),
+  };
+}
+
+/** What a candidate did in a sitting. */
+interface Sitting {
+  /** The state at the end. */
+  readonly state: DeliveryState;
+  /** The item references in the order the candidate was presented them. */
+  readonly refs: readonly string[];
+}
+
+/**
+ * Plays a candidate through the engine and a CAT engine. The host stores the state between steps as JSON, and answers the
+ * requests of the CAT engine with `ports` in turn, so that no step can rely on what an earlier port held. The candidate
+ * answers with the identifier of a choice, or `null` to skip, and leaves the test after `leaveAfter` items.
+ */
+async function sit(
+  engine: Engine,
+  ports: readonly CatPort[],
+  answer: (ref: string, position: number) => string | null,
+  leaveAfter = Number.POSITIVE_INFINITY,
+): Promise<Sitting> {
+  let clock = 0;
+  const tick = (): number => (clock += 10);
+  const act = (state: DeliveryState, action: Parameters<typeof stamp>[1]): DeliveryState => {
+    const step = engine.apply(state, stamp(state, action, tick()));
+    if (!step.ok)
+      throw new Error(`The action ${action.type} was refused: ${step.refusal.code}: ${step.refusal.message}`);
+    return step.state;
+  };
+  const started = engine.start({ seed: 1, at: 0 });
+  if (!started.ok) throw new Error(`The start was refused: ${started.refusal.code}.`);
+  let state = started.state;
+  let turn = 0;
+  const drain = async (): Promise<void> => {
+    const port = ports[turn++ % ports.length] ?? fail("A sitting needs a port.");
+    state = deserializeState(serializeState(await drainCat(engine, state, port, tick)));
+  };
+  await drain();
+  const refs: string[] = [];
+  while (state.current !== undefined) {
+    const item = state.current;
+    refs.push(item.ref);
+    const choice = answer(item.ref, refs.length - 1);
+    if (choice === null) {
+      state = act(state, { type: "skip", item });
+    } else {
+      state = act(state, {
+        type: "set-responses",
+        item,
+        responses: new Map([["RESPONSE", single("identifier", choice)]]),
+      });
+      state = act(state, { type: "submit", item });
+    }
+    await drain();
+    if (refs.length >= leaveAfter) break;
+    state = act(state, { type: "move", to: "next" });
+  }
+  if (state.status !== "ended") {
+    state = act(state, { type: "end-test" });
+    await drain();
+  }
+  return { state, refs };
+}
+
+const fail = (message: string): never => {
+  throw new Error(message);
+};
+
+/** The `SCORE` of each item result, by item reference, and the `TOTAL` of the test. */
+function scoresOf(engine: Engine, state: DeliveryState): { scores: Map<string, number>; total: number | undefined } {
+  const results = engine.results(state);
+  const numberOf = (variables: readonly ResultVariable[], identifier: string): number | undefined => {
+    const variable = variables.find((candidate) => candidate.identifier === identifier);
+    return variable?.kind === "outcome" &&
+      variable.value?.cardinality === "single" &&
+      typeof variable.value.value === "number"
+      ? variable.value.value
+      : undefined;
+  };
+  return {
+    scores: new Map(
+      results.itemResults.map(({ identifier, variables }) => [identifier, numberOf(variables, "SCORE") ?? Number.NaN]),
+    ),
+    total: numberOf(results.testResult?.variables ?? [], "TOTAL"),
+  };
+}
+
+describe("an adaptive section through olah's engine", () => {
+  const EXAM_LENGTH = 4;
+  const settings = { length: EXAM_LENGTH };
+  /** The candidate answers right at the even positions of the test and wrong at the odd ones. */
+  const alternatingChoice = (_ref: string, position: number): string => (position % 2 === 0 ? "B" : "A");
+
+  /** Two ports of two host processes over one store: the first deploys, and the sittings alternate between them. */
+  async function twoProcesses(pkg: QtiPackage, log: string[] = []) {
+    const sections = memoryStore();
+    const first = spied("first", takarCatPort({ sections, seeds: () => 12345 }), log);
+    const second = spied("second", takarCatPort({ sections, seeds: () => 999 }), log);
+    const { engine, catSections } = await examEngine(pkg, first);
+    return { engine, catSections, sections, ports: [first, second] as const, log };
+  }
+
+  it("[T99] deploys the section, and presents the items that takar selects, the ports of two processes taking turns", async () => {
+    const { engine, catSections, sections, ports, log } = await twoProcesses(examPackage(BANK, settings));
+    expect(catSections).toEqual(
+      new Map([["cat", { prefix: PREFIX, sectionIdentifier: await sectionIdentifier(sectionDataOf(settings, BANK)) }]]),
+    );
+    expect(sections.kept.size).toBe(1);
+
+    const { state, refs } = await sit(engine, ports, alternatingChoice);
+    expect(refs).toEqual(takarItems(EXAM_LENGTH, (_item, position) => (position % 2 === 0 ? 1 : 0)));
+    expect(refs).toHaveLength(EXAM_LENGTH);
+    expect(state.status).toBe("ended");
+
+    // Create Session once, then Submit Results after each item, each request to the other process; the engine of olah
+    // ends the session on the empty stage, so it never asks for End Session.
+    expect(log).toEqual([
+      "first createSection",
+      "first getSection",
+      "first createSession",
+      "second submitResults",
+      "first submitResults",
+      "second submitResults",
+      "first submitResults",
+    ]);
+  });
+
+  it("[T99] reports the items in the order they were presented, scored by response processing, and sums them", async () => {
+    const { engine, ports } = await twoProcesses(examPackage(BANK, settings));
+    const { state, refs } = await sit(engine, ports, alternatingChoice);
+    const { scores, total } = scoresOf(engine, state);
+    expect([...scores.keys()]).toEqual(refs);
+    expect([...scores.values()]).toEqual([1, 0, 1, 0]);
+    expect(total).toBe(2);
+  });
+
+  it("[T99] keeps the session of the candidate in the state of the engine, and the port keeps none", async () => {
+    const { engine, ports, sections } = await twoProcesses(examPackage(BANK, settings));
+    const { state } = await sit(engine, ports, alternatingChoice);
+    const [session] = state.cat;
+    expect(session).toMatchObject({ section: "cat", status: "ended", sessionIdentifier: "12345" });
+    expect(JSON.parse(session?.sessionState ?? "null")).toMatchObject({ seed: 12345, state: { next: null } });
+    expect([...sections.kept.keys()]).toHaveLength(1);
+  });
+
+  it("[T99] takes an item that the candidate skipped as category 0, as the report without a SCORE says", async () => {
+    const { engine, ports } = await twoProcesses(examPackage(BANK, settings));
+    const answers = (_ref: string, position: number): string | null => (position === 1 ? null : "B");
+    const { state, refs } = await sit(engine, ports, answers);
+    expect(refs).toEqual(takarItems(EXAM_LENGTH, (_item, position) => (position === 1 ? 0 : 1)));
+    expect(scoresOf(engine, state).total).toBe(3);
+  });
+
+  it("[T99] ends the session at the engine when the candidate leaves before the CAT engine ended it", async () => {
+    const { engine, ports, log } = await twoProcesses(examPackage(BANK, settings));
+    const { state, refs } = await sit(engine, ports, () => "B", 2);
+    expect(refs).toEqual(takarItems(EXAM_LENGTH, () => 1).slice(0, 2));
+    expect(state.status).toBe("ended");
+    expect(log.at(-1)).toMatch(/ endSession$/);
+    expect(log.filter((entry) => entry.endsWith("endSession"))).toHaveLength(1);
+    expect(scoresOf(engine, state).scores.size).toBe(2);
+  });
+
+  it("[T99] presents a module of a panel as a stage of its length, and routes by the estimate", async () => {
+    const sections = memoryStore();
+    const log: string[] = [];
+    const panel = (name: string) =>
+      spied(name, takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) }), log);
+    const first = panel("first");
+    const second = panel("second");
+    const { engine } = await examEngine(examPackage(PANEL_BANK, PANEL_SETTINGS), first);
+    const { state, refs } = await sit(engine, [first, second], () => "B");
+    expect(refs).toEqual(["r1", "r2", "r3", "r4", "h1", "h2", "h3"]);
+    expect(refs).toEqual(
+      takarModules(1, () => 1).flatMap(
+        (id) => PANEL_SETTINGS.stages.flatMap(({ modules }) => modules).find((module) => module.id === id)?.items ?? [],
+      ),
+    );
+    expect(scoresOf(engine, state).total).toBe(7);
+    // The module is the stage: Submit Results is made when its last item is submitted, not after each item.
+    expect(log.filter((entry) => entry.endsWith("submitResults"))).toHaveLength(2);
+    const wrong = await sit(engine, [first, second], () => "A");
+    expect(wrong.refs).toEqual(["r1", "r2", "r3", "r4", "e1", "e2", "e3"]);
   });
 });
 

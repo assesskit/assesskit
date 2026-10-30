@@ -1,4 +1,4 @@
-import type { AssessmentResult } from "@luthfanwakan/olah/results";
+import type { AssessmentResult, ItemResult } from "@luthfanwakan/olah/results";
 import type { Value } from "@luthfanwakan/olah/values";
 import type { TestItem } from "@luthfanwakan/takar/irt";
 import { checkArray, checkRecord, describe } from "../checks.js";
@@ -30,8 +30,14 @@ export const scoreCategory: CategoryOfOutcomes = (item, outcomes) => {
   );
 };
 
-/** Returns the outcome variables of the last result for an item, by identifier. */
-function outcomesOf(result: AssessmentResult, item: string): ReadonlyMap<string, Value | null> {
+/** The category of an item that the candidate submitted without a response: no credit, the lowest category of any model. */
+const NO_CREDIT = 0;
+
+/** The `sessionStatus` of an item that the candidate submitted without a response (CAT §4.3.1). */
+const SUBMITTED_BLANK = "initial";
+
+/** Returns the last result for an item. */
+function resultOf(result: AssessmentResult, item: string): ItemResult {
   checkRecord(result, "The assessmentResult must be an object");
   checkArray(result.itemResults, "The itemResults of the assessmentResult must be an array");
   const itemResult = result.itemResults.findLast((candidate) => candidate.identifier === item);
@@ -41,22 +47,28 @@ function outcomesOf(result: AssessmentResult, item: string): ReadonlyMap<string,
     );
   }
   checkArray(itemResult.variables, `The variables of the result for the item ${describe(item)} must be an array`);
-  return new Map(
-    itemResult.variables.flatMap((variable) =>
+  return itemResult;
+}
+
+/** Returns the outcome variables of an item result, by identifier. */
+const outcomesOf = ({ variables }: ItemResult): ReadonlyMap<string, Value | null> =>
+  new Map(
+    variables.flatMap((variable) =>
       variable.kind === "outcome" ? [[variable.identifier, variable.value] as const] : [],
     ),
   );
-}
 
 /**
- * Returns the response of the candidate to an item as a category of the item's model.
+ * Returns the response of the candidate to an item as a category of the item's model. An item with the status `initial`
+ * was submitted without a response and has no `SCORE` (CAT §4.3.1): it is category 0, without asking `category`.
  *
  * @param category - Maps the outcomes of the item to its category.
  * @throws `DataError` when the results have none for the item, or the category is not a whole number from 0 to one less
  * than the item's categories.
  */
 export function responseTo(item: TestItem, result: AssessmentResult, category: CategoryOfOutcomes): number {
-  const response = category(item.id, outcomesOf(result, item.id));
+  const itemResult = resultOf(result, item.id);
+  const response = itemResult.sessionStatus === SUBMITTED_BLANK ? NO_CREDIT : category(item.id, outcomesOf(itemResult));
   const count = item.model.categoryCount(item.parameters);
   if (!(Number.isSafeInteger(response) && response >= 0 && response < count)) {
     throw new DataError(

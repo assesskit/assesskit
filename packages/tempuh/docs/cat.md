@@ -144,10 +144,46 @@ travel in the `sessionState` (CAT §3.3, §3.4) as the JSON `{ seed, state }`, w
   data cannot state, such as the generalized partial credit model, and the attributes only takar has: `contentArea` for
   `contentTargets` and `exposure` for Sympson-Hetter control. Items of the usage data have neither.
 - **Response.** By default the `SCORE` of the item's result is its category. The category must be a whole number from 0 to one
-  less than the categories of the item's model, else `DataError`. Results of earlier items in the same request are ignored.
+  less than the categories of the item's model, else `DataError`. An item that the candidate submitted or skipped without a
+  response is reported with the status `initial` and no `SCORE` (CAT §4.3.1); it is category 0, and `category` is not asked.
+  Results of earlier items in the same request are ignored.
 - **Selection.** takar's defaults: maximum information, and the posterior mean of theta as the estimate.
 - **Outcomes.** The port returns no `assessmentResult`; the estimate is in the state.
 - **PNP.** The port reads none of the personal data of Create Session.
+
+## With olah's engine
+
+A deployment creates the sections once, and the delivery engine takes their identifiers in `catSections`. Any process that
+shares the `SectionStore` can then answer the requests of any session, because the engine keeps the session in its state and
+hands the `sessionState` back with each request:
+
+```ts
+import { createEngine, drainCat } from "@luthfanwakan/olah/delivery";
+import { packageResolvers, type QtiPackage } from "@luthfanwakan/olah/package";
+import { deployCatSections, type SectionStore, takarCatPort } from "@luthfanwakan/tempuh/cat";
+
+async function begin(pkg: QtiPackage, sections: SectionStore) {
+  const port = takarCatPort({ sections, seeds: () => crypto.getRandomValues(new Uint32Array(1))[0] ?? 0 });
+  const catSections = await deployCatSections(pkg, () => port); // once, when the test is deployed
+  const document = pkg.document("test.xml");
+  if (document.kind !== "test") throw new Error("test.xml is not a test.");
+  const engine = createEngine({
+    kind: "test",
+    test: document.test,
+    base: "test.xml",
+    resolvers: packageResolvers(pkg),
+    catSections,
+  });
+  const started = engine.start({ seed: 1, at: Date.now() });
+  if (!started.ok) throw new Error(started.refusal.message);
+  // Create Session: the engine presents the first item once the port has answered.
+  return { engine, state: await drainCat(engine, started.state, port, Date.now) };
+}
+```
+
+After each submitted item the engine waits for Submit Results (olah C4): call `drainCat` again, with the port of any process,
+and then let the candidate move on. The engine asks for End Session only when the candidate leaves before the port ended the
+session with the empty stage.
 
 ## takarPanelPort
 
