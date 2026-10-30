@@ -1,4 +1,6 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
 import type {} from "@vitest/browser-playwright";
 import type { Frame, Page } from "playwright";
 import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
@@ -9,8 +11,15 @@ export interface FrameViolation {
   readonly nodes: readonly string[];
 }
 
+/** An XML or CSS file of the 1EdTech examples: its path below the examples, and its text. */
+export interface CorpusFile {
+  readonly path: string;
+  readonly text: string;
+}
+
 declare module "vitest/browser" {
   interface BrowserCommands {
+    corpusFiles: () => Promise<readonly CorpusFile[]>;
     axeInFrame: (title: string, tags: readonly string[]) => Promise<readonly FrameViolation[]>;
     ariaSnapshot: () => Promise<string>;
     clickInFrame: (title: string, selector: string) => Promise<void>;
@@ -73,5 +82,17 @@ const watchConsole: BrowserCommand<[], void> = (context) => {
 /** Returns the errors that the page logged since `watchConsole`. */
 const consoleErrors: BrowserCommand<[], readonly string[]> = (context) => consoleErrorsOf.get(context.page) ?? [];
 
+/** Returns the XML and CSS files of the 1EdTech examples, which a browser test cannot read: the page has no file system. */
+const corpusFiles: BrowserCommand<[], readonly CorpusFile[]> = () => {
+  const root = resolve(import.meta.dirname, "../../../..");
+  const lock: { readonly directory: string } = JSON.parse(readFileSync(join(root, "conformance/corpus.lock.json"), "utf8"));
+  const examples = join(root, lock.directory, "qti-examples/qtiv3-examples");
+  if (!existsSync(examples)) throw new Error(`The corpus is not downloaded to ${examples}: run pnpm corpus first.`);
+  return readdirSync(examples, { recursive: true, encoding: "utf8" })
+    .filter((path) => path.endsWith(".xml") || path.endsWith(".css"))
+    .sort()
+    .map((path) => ({ path, text: readFileSync(join(examples, path), "utf8") }));
+};
+
 /** The browser commands of the tests of tempuh. */
-export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, watchConsole, consoleErrors };
+export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, watchConsole, consoleErrors, corpusFiles };

@@ -1807,6 +1807,80 @@ qti-hottext > .tempuh-face {
   background-color: transparent;
 }
 
+/* 6.6 The content of a root, which the renderer builds: the notice of a hazard, the rubric, the stimuli beside the item,
+   feedback and the dialog of modal feedback. The elements of QTI that hold blocks are blocks; a stimulus stands beside
+   the item when the viewport is wide, as in BPIG §3.7.7, and folds above it otherwise (WCAG 1.4.10). */
+
+:where(
+  qti-rubric-block,
+  qti-feedback-block,
+  qti-template-block,
+  qti-content-body,
+  qti-modal-feedback,
+  qti-test-feedback,
+  qti-html-content
+) {
+  display: block;
+}
+
+.tempuh-hazards {
+  margin-block: 0 1rem;
+  padding: 0.75rem 1rem;
+  border: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-border);
+  background-color: var(--tempuh-surface);
+}
+
+.tempuh-hazards > p {
+  margin-block: 0 0.5rem;
+}
+
+.tempuh-hazards > ul {
+  margin: 0;
+  padding-inline-start: 1.5rem;
+}
+
+.tempuh-rubric {
+  margin-block: 0 1rem;
+}
+
+.tempuh-test-feedback {
+  margin-block: 1rem 0;
+}
+
+@media (min-width: 48rem) {
+  .tempuh-main[data-tempuh-stimuli] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--tempuh-gutter);
+    align-items: start;
+  }
+
+  :root[data-tempuh-single-column] .tempuh-main[data-tempuh-stimuli],
+  :host([data-tempuh-single-column]) .tempuh-main[data-tempuh-stimuli] {
+    display: block;
+  }
+}
+
+.tempuh-dialog {
+  box-sizing: border-box;
+  max-inline-size: min(40rem, calc(100% - 2rem));
+  max-block-size: calc(100% - 2rem);
+  padding: 1rem;
+  border: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-border);
+  color: var(--tempuh-fg);
+  background-color: var(--tempuh-bg);
+  overflow: auto;
+}
+
+/* ::backdrop does not inherit custom properties in the oldest engines of the baseline, so it has a color of its own. */
+.tempuh-dialog::backdrop {
+  background-color: rgb(0 0 0 / 50%);
+}
+
+.tempuh-dialog form {
+  margin-block-start: 1rem;
+}
+
 /* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping (BPIG §5.2.9.7.9,
    §5.2.9.7.11). The other settings are properties of 1 to 3. */
 

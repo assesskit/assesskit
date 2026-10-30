@@ -1,0 +1,23 @@
+.accent {
+  color: rgb(200, 0, 0);
+}
+
+.picture {
+  background-image: url(../images/dot.png);
+}
+
+@media (min-width: 1px) {
+  .wide {
+    color: rgb(0, 128, 0);
+  }
+}
+
+@layer base {
+  .layered {
+    color: rgb(0, 0, 200);
+  }
+}
+
+p {
+  letter-spacing: 3px;
+}

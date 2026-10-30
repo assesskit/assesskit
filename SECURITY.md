@@ -102,6 +102,28 @@ place only.
 olah keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
 parameters of the items and the settings of the test: keep it on the server. takar is a runtime dependency of tempuh, and
 only `cat/` imports it.
+
+## tempuh: content
+
+The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from olah's typed
+nodes and never with `innerHTML`, and keeps only the attributes listed in
+[content](packages/tempuh/docs/content.md#attributes): no event handler, no `style`, no attribute of another namespace.
+An element of any namespace but MathML, SSML and CML is left out with what it holds, so a script, an SVG or a frame in
+the content is not built, even from a view that a reader of olah would have refused. A reference goes through one policy:
+a path in the package is resolved and given to `assets`, an origin must be listed in `origins`, and `javascript:`, `vbscript:`,
+`blob:` and every `data:` URL but a raster image are refused. A file embedded by an `object` runs nothing: a page is in a
+frame with an empty `sandbox`, and a file of another type is a link.
+
+Item stylesheets are fetched with no credentials and no referrer and are cleaned on their parsed rules (`@import`, rules
+for `:host`, and every `url()` and loader outside the stylesheet's origin and `origins` go), and they are adopted into the
+shadow root of the item only. Because the root's host has `contain: layout paint` and `isolation: isolate`, the
+fixed-position CSS of an item cannot cover the page.
+
+Serve the files of a package from an origin of their own and put it, and the origins in `origins`, in the `img-src`,
+`media-src`, `font-src`, `frame-src` and `connect-src` of the page (the last for the stylesheets), and answer the
+stylesheets with CORS headers. A page with a strict `style-src` needs nothing for item stylesheets: they are constructed
+sheets, not `<style>` elements or attributes.
+
 ## tempuh: MathJax and speech
 
 MathJax is code that the host chooses and serves: tempuh loads the script from the URL it is given and bundles none. Serve

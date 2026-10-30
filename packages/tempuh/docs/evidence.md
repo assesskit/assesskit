@@ -38,9 +38,11 @@ starts three servers on free ports: the asset origin, a second origin that a tes
 may reach. A test asks a server for the paths it was requested for at `/__hits`, and the browsers of a run share the
 servers, so each test names its paths with a token of its own. The asset origin also serves MathJax and its fonts from the
 `mathjax` package under `/mathjax/`, and validates SSML: a test posts a document to `/validate/ssml` and gets the issues
-that the SSML 1.1 schema finds, as JSON. That needs the schemas, so run `pnpm schemas` before `pnpm test:browser`. The
+that the SSML 1.1 schema finds, as JSON. That needs the schemas, so run `pnpm schemas` and `pnpm corpus` before `pnpm test:browser`. The
 browser commands in `commands.ts` give a test what a page cannot do: run axe-core inside a frame of an opaque origin,
-click in it, and read the accessibility tree with its frames. `test/content-fixture.ts` mounts content written as XML,
+click in it, read the accessibility tree with its frames, and read the XML and CSS files of the 1EdTech examples (`corpusFiles`,
+which needs `pnpm corpus`). The asset origin also serves the package files of the content renderer from
+`test/fixtures/content/` under `/content/<token>/`. `test/content-fixture.ts` mounts content written as XML,
 with SSML and MathML in their namespaces, in a content root.
 
 The 1EdTech examples that run in the frame are tests of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads the
@@ -49,6 +51,13 @@ examples, and `pnpm test:corpus` runs them in the three engines. The global setu
 
 MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
 failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.
+
+The tests of the content renderer read items with olah's `readAsi` and render their nodes in a content root of `css-fixture.ts`
+(`renderer-fixture.ts`), so that the nodes are the ones the engine gives. `content.corpus.browser.test.ts` renders every item and
+stimulus of the examples, adopts every stylesheet they reference and opens every modal feedback, and compares the HTML elements
+of each body with the XML it came from. The hostile cases are markup that olah's reader accepts, nodes that only a forged view
+could carry, and stylesheets with every way to load a resource; the asset server's record of requests shows that the
+browser asked no other origin.
 
 The browser tests of the tools build their page in the test: the toolbar in the document and the item in a shadow root, as
 the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG §3.7.8 with olah's `readAsi`, so that the

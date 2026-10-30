@@ -1,6 +1,6 @@
 /** The origins of the three servers that browser tests talk to. */
 export interface FixtureOrigins {
-  /** The asset origin: tempuh's static files under `/static/`, package files under `/g/<token>/`, and `/hang/<token>/`, which never answers. */
+  /** The asset origin: tempuh's static files under `/static/`, package files under `/g/<token>/`, the files of the content renderer under `/content/<token>/`, and `/hang/<token>/`, which never answers. */
   readonly asset: string;
   /** Another origin that a test may allow, with a module under `/cdn/<token>/`. */
   readonly other: string;

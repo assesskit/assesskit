@@ -81,7 +81,7 @@ pnpm install
 pnpm lint             # Biome and cspell; `pnpm format` fixes formatting
 pnpm typecheck        # tsc over every package and the tooling
 pnpm test             # Vitest, offline
-pnpm test:browser     # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install` and `pnpm schemas` first
+pnpm test:browser     # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
 pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
 pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes

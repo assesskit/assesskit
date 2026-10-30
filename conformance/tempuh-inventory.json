@@ -18,7 +18,7 @@
     "TB13b",
     "TB15"
   ],
-  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c"],
+  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6"],
   "rows": [
     {
       "id": "T1",
@@ -56,7 +56,7 @@
       "id": "T5",
       "construct": "`audio`, `video`, `track` (captions, descriptions, subtitles, chapters)",
       "olah": ["H7", "H72", "H76", "W19"],
-      "modules": ["player/media"],
+      "modules": ["player/content"],
       "evidence": ["R", "A"],
       "unit": "TB6"
     },
@@ -208,7 +208,7 @@
       "id": "T24",
       "construct": "Test feedback during and at the end",
       "olah": ["A185", "B18", "W36"],
-      "modules": ["player/chrome"],
+      "modules": ["player/roots", "player/feedback"],
       "evidence": ["R", "E"],
       "unit": "TB6"
     },
@@ -776,7 +776,7 @@
       "id": "T95",
       "construct": "Hazard fallback: when an avoided hazard remains after olah's variant choice (`hazard-unavoidable`), no media, animation or sound, and a notice",
       "olah": ["P1", "B99", "B100", "E19"],
-      "modules": ["player"],
+      "modules": ["player/roots"],
       "evidence": ["R"],
       "unit": "TB6"
     },

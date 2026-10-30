@@ -15,6 +15,7 @@ response and access token, and the platform role, which launches the tools of LT
 item-level adaptive sections and multistage panels over takar, a client of the REST binding of CAT 1.0, and the deployment of a
 package's adaptive sections.
 Mathematics is typeset with MathJax 4, loaded from the host's URL when an item has an expression, and speech is read aloud from SSML, `data-ssml` and pronunciation lexicons through a voice of the host or the browser.
+Content is drawn by a renderer from olah's typed nodes, with a policy for attributes and references that keeps script out, and a content root that shows an item with its stimuli in a shadow root, with sanitized stylesheets, cards on demand, a hazard notice and modal feedback.
 
 ## Browser baseline
 
@@ -40,6 +41,7 @@ envelope.seq; // 3
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`                                                                                                                                                                  |
 | `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciEvent`, `PciVariable`, `PciFiles`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields                                                           |
+| `@luthfanwakan/tempuh/player`      | `createContentRoot`, `ContentRoot`, `ContentRootOptions`, `RootContent`, `ContentPart`, `StylesheetFetch`; `createBodyRenderer`, `BodyRenderer`, `BodyRendererOptions`, `InteractionRenderer`, `InteractionRenderers`                                                                              |
 | `@luthfanwakan/tempuh/player`      | `createMathTypesetter`, `MathTypesetter`                                                                                                                                                                                                                                                           |
 | `@luthfanwakan/tempuh/player`      | `buildSpeechRequest`, `SpeechOptions`, `SpeechRequest`, `SpeechSettings`, `SpeechHook`, `webSpeech`, `echoTyping`, `TypingEchoOptions`, `applyReadingType`, `parseLexicon`, `Lexicon`, `Pronunciation`                                                                                             |
 | `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                                                                                           |
@@ -52,6 +54,7 @@ envelope.seq; // 3
 
 - [Architecture](docs/architecture.md): principles, layers and errors.
 - [Baseline](docs/baseline.md): the browser baseline, the banned features and how they are tested.
+- [Content](docs/content.md): the renderer, the content root, references, stylesheets, cards and feedback.
 - [Portable custom interactions](docs/pci.md): the frame, its policy, loading, events and serving the files.
 - [Mathematics](docs/math.md): MathJax by URL, shadow roots, elementary math and braille.
 - [Speech](docs/speech.md): the speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo.

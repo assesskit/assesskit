@@ -41,3 +41,10 @@ The platform role of LTI 1.3 in `@luthfanwakan/tempuh/lti`, which launches the t
 single-use hint, the authorization that works with cookies blocked and answers with a page under a strict policy, the key set,
 the token endpoint, and the line item and the scores of the grade services. The platform's handlers refuse a configuration in
 which two of its origin, the player's and the assets' coincide.
+
+The renderer of content (`player`): `createBodyRenderer` builds the DOM for olah's typed content nodes with `createElementNS`,
+keeping the attributes of the model, ARIA and `data-*` attributes, resolving every reference through the package's `assets`
+and the allowed origins, drawing an `object` by its type, and handing interactions to renderers that other units register.
+`createContentRoot` shows an item with its stimuli, rubric and test feedback in a contained shadow root, with its sanitized
+stylesheets, MathJax typesetting, a notice that withholds media where a hazard remains, cards on demand
+(`ContentRoot.card`) and modal feedback in a dialog (`ContentRoot.showFeedback`).

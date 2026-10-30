@@ -60,7 +60,8 @@ server also serves MathJax and its fonts from the `mathjax` package that the tes
 
 The cases are: the engine is the baseline; the banned features are present or absent as the table says; the shared modules
 run; `player.css` styles a content root; a portable custom interaction runs in its frame and reaches no network; a speech
-request is built from a content root; and MathJax typesets MathML in a shadow root, gives braille and leaves elementary
-math to the browser.
+request is built from a content root; MathJax typesets MathML in a shadow root, gives braille and leaves elementary
+math to the browser; and a content root renders nodes with the URLs of the package, sanitizes a hostile stylesheet and opens
+modal feedback in the top layer.
 
 Playwright's WebKit is not Safari. A person checks the player in Safari 16.4 before the first release.

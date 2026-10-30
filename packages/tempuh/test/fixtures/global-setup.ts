@@ -18,6 +18,7 @@ const EXAMPLE_FILES: ReadonlyMap<string, string> = new Map([
   ["pci", resolve(EXAMPLES, "pci/src")],
 ]);
 const CDN_FILES = resolve(import.meta.dirname, "cdn");
+const CONTENT_FILES = resolve(import.meta.dirname, "content");
 const ROOT = resolve(import.meta.dirname, "../../../..");
 
 const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
@@ -25,6 +26,7 @@ const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
   [".js", "text/javascript"],
   [".css", "text/css"],
   [".svg", "image/svg+xml"],
+  [".png", "image/png"],
   [".json", "application/json"],
   [".woff2", "font/woff2"],
 ]);
@@ -50,9 +52,9 @@ async function serveFile(directory: string, path: string, response: ServerRespon
   const file = resolve(directory, `.${path}`);
   try {
     if (!file.startsWith(`${directory}${sep}`)) throw new Error("outside");
-    const content = await readFile(file, "utf8");
+    const content = await readFile(file);
     response.setHeader("content-type", MEDIA_TYPES.get(extname(file)) ?? "application/octet-stream");
-    response.end(patch ? patch(content) : content);
+    response.end(patch ? patch(content.toString("utf8")) : content);
   } catch {
     response.statusCode = 404;
     response.end();
@@ -95,6 +97,7 @@ const close = (server: Server): Promise<void> =>
  * The asset origin serves the frame twice: under `/static/`, and under `/unrestricted/` with a script that stops the frame
  * from setting its policy. It serves MathJax and its fonts under `/mathjax/`, and validates the SSML that a test posts to
  * `/validate/ssml` against the SSML 1.1 schema, which needs `pnpm schemas` first, and answers with the issues as JSON.
+ * Package files for the content renderer are under `/content/<token>/`.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const built = await mkdtemp(join(tmpdir(), "tempuh-frame-"));
@@ -120,6 +123,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
       // /c/<token>/<example>/<path>: a file of an example package, as the asset gate would serve it.
       const [, , example = "", ...path] = rest.split("/");
       await serveFile(EXAMPLE_FILES.get(example) ?? "/nowhere", `/${path.join("/")}`, response);
+    } else if (area === "content") {
+      await serveFile(CONTENT_FILES, `/${rest.split("/").slice(2).join("/")}`, response);
     } else if (area === "validate" && request.method === "POST") {
       schemas ??= loadSchemaSet(requireSchemas(ROOT));
       const document = (await readBody(request)).replace("<speak ", `<speak ${SSML_SCHEMA_HINT} `);

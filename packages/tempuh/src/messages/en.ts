@@ -59,4 +59,11 @@ export const EN_MESSAGES: Messages = {
   calculatorMemorySubtract: "M−, subtract from memory",
   speechLink: "link",
   typingSpace: "space",
+  feedbackTitle: "Feedback",
+  hazardNotice:
+    "This question has content that you asked to avoid, and it could not be left out. Its media and animations are not shown. The content is:",
+  hazardFlashing: "Flashing",
+  hazardSound: "Sound",
+  hazardOlfactory: "Smell",
+  hazardMotionSimulation: "Simulated motion",
 };

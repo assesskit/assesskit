@@ -62,6 +62,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm schemas
+      - run: pnpm corpus
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:browser
 

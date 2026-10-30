@@ -39,13 +39,13 @@ export interface Messages {
   readonly toolSpellChecker: string;
   /** The name of the region that holds the tools. */
   readonly toolsLabel: string;
-  /** The action that closes a tool. */
+  /** The action that closes a tool or a dialog. */
   readonly toolClose: string;
   /** The notice of a tool that the host did not provide, or whose file cannot be shown. */
   readonly toolUnavailable: string;
   /** The heading of the physical materials that the candidate supplies. */
   readonly toolPhysicalMaterials: string;
-  /** The link to a file of a digital material that the viewer cannot show. */
+  /** The link to a file that the player cannot show in the page: a digital material, or an object of another type. */
   readonly toolOpenFile: string;
   /** The action that moves the ruler or the protractor up. */
   readonly toolMoveUp: string;
@@ -117,4 +117,16 @@ export interface Messages {
   readonly speechLink: string;
   /** The word that the typing echo says for the space character. */
   readonly typingSpace: string;
+  /** The heading of the feedback that the candidate gets after an attempt or during a test. */
+  readonly feedbackTitle: string;
+  /** The notice of a question with content that the candidate asked to avoid and that could not be left out; a list of the hazards follows it. */
+  readonly hazardNotice: string;
+  /** The name of flashing content, a hazard that the candidate can avoid. */
+  readonly hazardFlashing: string;
+  /** The name of sound, a hazard that the candidate can avoid. */
+  readonly hazardSound: string;
+  /** The name of smell, a hazard that the candidate can avoid. */
+  readonly hazardOlfactory: string;
+  /** The name of simulated motion, a hazard that the candidate can avoid. */
+  readonly hazardMotionSimulation: string;
 }

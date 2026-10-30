@@ -65,7 +65,8 @@ property that is not set has its default.
 | `keyword-emphasis`                     | `data-tempuh-keyword-emphasis`                       | Present: `.qti-keyword-emphasis` shows. Default: absent      |
 
 The base size is `1rem`, so a root inside a root does not multiply a zoom twice. Magnification of non-text content has no
-form in CSS inside the baseline, because `zoom` needs Firefox 126: the renderer multiplies the sizes it gives media.
+form in CSS inside the baseline, because `zoom` needs Firefox 126: the renderer multiplies the pixel sizes it gives media by its
+`mediaScale` option ([content](content.md)).
 
 These values are not PNP and complete the markup:
 
@@ -88,6 +89,21 @@ interaction, which are classes of the player and not of the item:
 | `tempuh-choices` | The container of the choices of an order, gap match or graphic gap match, and the first set of a match |
 | `tempuh-targets` | The container of the targets, and the second set of a match                                            |
 | `tempuh-target`  | One target of an order                                                                                 |
+
+The content root ([content](content.md)) builds these parts around the content, which the stylesheet lays out:
+
+| Class or attribute                  | What it is                                                                                                             |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `tempuh-content`                    | The container of everything the root shows; it carries `lang`.                                                         |
+| `tempuh-hazards`                    | The notice of a hazard that remains: a border and text, so that it does not rely on color.                             |
+| `tempuh-rubric`                     | The rubric of the test, above the stimuli.                                                                             |
+| `tempuh-main`                       | Holds the stimuli and the item. With `data-tempuh-stimuli` it is two columns from 48rem, and one with a single column. |
+| `tempuh-stimuli`, `tempuh-stimulus` | The column of the stimuli, and one stimulus.                                                                           |
+| `tempuh-body`                       | The item.                                                                                                              |
+| `tempuh-test-feedback`              | The region of the test feedback, after the item.                                                                       |
+| `tempuh-dialog`                     | The dialog of modal feedback, with a backdrop of its own.                                                              |
+| `data-tempuh-placeholder`           | An interaction that no renderer has drawn.                                                                             |
+| `data-use` on `qti-rubric-block`    | `instructions`, `scoring` or `navigation`.                                                                             |
 
 ```html
 <qti-choice-interaction class="qti-labels-upper-alpha qti-labels-suffix-period qti-input-control-hidden">

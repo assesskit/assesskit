@@ -330,6 +330,70 @@ const MATHJAX = `(async () => {
   };
 })()`;
 
+/**
+ * The check of the content root, which runs in the page: nodes become DOM with the URLs of the package, a stylesheet that is
+ * hostile loses what it must, and modal feedback opens in the top layer.
+ */
+const CONTENT_ROOT = `(async () => {
+  const { createContentRoot } = await import("/dist/player/index.js");
+  const { EN_MESSAGES } = await import("/dist/index.js");
+  const player = new CSSStyleSheet();
+  player.replaceSync(await (await fetch("/player.css")).text());
+  const host = document.createElement("div");
+  document.body.append(host);
+  const hostile = ".keep { color: rgb(1, 2, 3); } .picture { background-image: url(img/a.png); } " +
+    ".outside { background-image: url(https://stranger.invalid/x.png); } :host { position: fixed; } " +
+    "@import url(https://stranger.invalid/i.css); .hidden { background: var(--n, u\\\\72l(https://stranger.invalid/e.png)); }";
+  const root = createContentRoot(host, {
+    messages: EN_MESSAGES,
+    assets: (path) => location.origin + "/g/" + path,
+    fetch: async () => ({ ok: true, status: 200, text: async () => hostile }),
+    stylesheet: player,
+  });
+  const text = (value) => ({ kind: "text", value });
+  const node = (kind, children, more) => Object.assign({ kind, children }, more);
+  await root.show({
+    body: {
+      base: "items/q1/item.xml",
+      nodes: [
+        node("p", [
+          text("One "), node("em", [text("two")]), text(" "),
+          node("a", [text("link")], { href: "files/a.pdf" }),
+          node("img", [], { src: "img/a.png", alt: "A", width: "10" }),
+          node("a", [text("away")], { href: "https://stranger.invalid/" }),
+        ], { class: ["keep"], onclick: "alert(1)" }),
+        node("p", [{ kind: "element", namespace: "http://www.w3.org/1998/Math/MathML", name: "math", attributes: [], children: [] }], {}),
+      ],
+    },
+    stylesheets: ["style/hostile.css"],
+  });
+  const shadow = root.root;
+  const query = (selector) => shadow.querySelector(selector);
+  const rules = [...shadow.adoptedStyleSheets[1].cssRules].map((rule) => rule.cssText).join(" ");
+  const closed = root.showFeedback([{ kind: "modal-feedback", title: "Title", contentBody: { children: [node("p", [text("Feedback")], {})] } }]);
+  const dialog = shadow.querySelector("dialog");
+  const modal = dialog.open && dialog.matches(":modal");
+  dialog.close();
+  await closed;
+  return {
+    tags: [...shadow.querySelectorAll(".tempuh-body *")].map((element) => element.localName),
+    image: query("img").getAttribute("src"),
+    width: query("img").getAttribute("width"),
+    link: query("a").getAttribute("href"),
+    rel: query("a").getAttribute("rel"),
+    away: query("a:last-of-type").hasAttribute("href"),
+    handler: query("p").hasAttribute("onclick"),
+    math: query("math").namespaceURI,
+    sheets: shadow.adoptedStyleSheets.length,
+    keeps: rules.includes("rgb(1, 2, 3)") && getComputedStyle(query(".keep")).color === "rgb(1, 2, 3)",
+    absolute: rules.includes(location.origin + "/g/style/img/a.png"),
+    removes: !/stranger|:host|@import/.test(rules),
+    hostKept: getComputedStyle(host).position !== "fixed" && getComputedStyle(host).contain === "layout paint",
+    modal,
+    removed: shadow.querySelector("dialog") === null,
+  };
+})()`;
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -467,6 +531,34 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           elementary: 1,
           adopted: 1,
           braille: true,
+        });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "renders content in a content root, sanitizes its stylesheet and opens modal feedback in the top layer",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(CONTENT_ROOT), {
+          tags: ["p", "em", "a", "img", "a", "p", "math"],
+          image: `${url}g/items/q1/img/a.png`,
+          width: "10",
+          link: `${url}g/items/q1/files/a.pdf`,
+          rel: "noopener noreferrer",
+          away: false,
+          handler: false,
+          math: "http://www.w3.org/1998/Math/MathML",
+          sheets: 2,
+          keeps: true,
+          absolute: true,
+          removes: true,
+          hostKept: true,
+          modal: true,
+          removed: true,
         });
       } finally {
         await stop();

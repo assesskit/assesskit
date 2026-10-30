@@ -59,4 +59,11 @@ export const ID_MESSAGES: Messages = {
   calculatorMemorySubtract: "M−, kurangi dari memori",
   speechLink: "tautan",
   typingSpace: "spasi",
+  feedbackTitle: "Umpan balik",
+  hazardNotice:
+    "Soal ini memuat konten yang Anda minta untuk dihindari, dan konten itu tidak dapat dihilangkan. Media dan animasinya tidak ditampilkan. Kontennya:",
+  hazardFlashing: "Cahaya berkedip",
+  hazardSound: "Suara",
+  hazardOlfactory: "Bau",
+  hazardMotionSimulation: "Simulasi gerak",
 };
