@@ -1,0 +1,55 @@
+{
+  "name": "@luthfanwakan/olah",
+  "version": "0.0.0",
+  "description": "A QTI 3.0 runtime for JavaScript and TypeScript: reads, writes, validates and executes assessment items, tests, packages and results, with a headless delivery engine.",
+  "keywords": [
+    "qti",
+    "qti3",
+    "1edtech",
+    "assessment",
+    "assessment-items",
+    "assessment-tests",
+    "item-response-processing",
+    "content-package",
+    "results-reporting",
+    "validator"
+  ],
+  "author": "Fariz Wakan (https://github.com/luthfanwakan)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luthfanwakan/olah.git",
+    "directory": "packages/olah"
+  },
+  "homepage": "https://github.com/luthfanwakan/olah#readme",
+  "bugs": "https://github.com/luthfanwakan/olah/issues",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
+    "build": "pnpm clean && tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
+  },
+  "devDependencies": {
+    "@luthfanwakan/takar": "^1.0.0",
+    "fast-check": "^4.10.2"
+  }
+}

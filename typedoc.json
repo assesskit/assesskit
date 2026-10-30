@@ -1,0 +1,9 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "olah",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["packages/olah"],
+  "readme": "README.md",
+  "out": "docs/api",
+  "treatWarningsAsErrors": true
+}

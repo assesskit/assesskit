@@ -1,0 +1,3 @@
+`Math.random` as $random where {
+  register_diagnostic(span=$random, message="olah is deterministic: take a Random from the caller instead of using Math.random.", severity="error")
+}

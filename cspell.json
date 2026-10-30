@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en-US",
+  "useGitignore": true,
+  "files": [
+    "packages/*/src/**",
+    "packages/*/test/*.ts",
+    "packages/*/README.md",
+    "packages/*/docs/*.md",
+    "differential/**",
+    "scripts/*",
+    "validation/*",
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "conformance/*.ts",
+    "conformance/test/*.ts"
+  ],
+  "words": [
+    "Bahasa",
+    "Blackman",
+    "finalizer",
+    "Longsight",
+    "longsightgroup",
+    "luthfanwakan",
+    "olah",
+    "prec",
+    "qtiv",
+    "scaleb",
+    "SSML",
+    "subpaths",
+    "takar",
+    "tempuh",
+    "Vigna",
+    "xoshiro",
+    "xsdtests"
+  ],
+  "ignorePaths": ["packages/olah/docs/conformance.md"]
+}

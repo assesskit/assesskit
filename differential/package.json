@@ -1,0 +1,14 @@
+{
+  "name": "@luthfanwakan/olah-differential",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Differential tests of olah against the Longsight qti3-core item engine. Never published; not a dependency of olah.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@longsightgroup/qti3-core": "0.13.3"
+  }
+}

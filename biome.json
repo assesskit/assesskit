@@ -1,0 +1,853 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!**/CHANGELOG.md",
+      "!docs/api",
+      "!**/test/fixtures",
+      "!conformance/corpus.lock.json",
+      "!packages/olah/docs/conformance.md"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "error"
+      },
+      "correctness": {
+        "noUndeclaredDependencies": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "extensionMappings": {
+              "ts": "js"
+            }
+          }
+        }
+      },
+      "style": {
+        "noDefaultExport": "error",
+        "noParameterProperties": "error",
+        "noNonNullAssertion": "error",
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": {
+            "style": "interface"
+          }
+        },
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case"],
+            "requireAscii": true
+          }
+        },
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": true,
+            "requireAscii": true,
+            "conventions": [
+              {
+                "selector": {
+                  "kind": "typeParameter"
+                },
+                "match": "T(?:[A-Z][a-zA-Z]*)?",
+                "formats": ["PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase", "CONSTANT_CASE"]
+              }
+            ]
+          }
+        }
+      },
+      "suspicious": {
+        "noConsole": "error",
+        "noImportCycles": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/olah/src/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noGlobalEval": "error"
+          }
+        }
+      },
+      "plugins": ["./biome/no-math-random.grit", "./biome/no-clock.grit", "./biome/no-regexp-constructor.grit"]
+    },
+    {
+      "includes": ["packages/olah/src/**", "!packages/olah/src/node/**", "!packages/olah/src/cli/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noProcessEnv": "error",
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "XMLHttpRequest": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "WebSocket": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "window": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "document": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "process": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "setTimeout": "The olah core uses no platform API; only node/ and cli/ may.",
+                  "setInterval": "The olah core uses no platform API; only node/ and cli/ may."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/errors.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**"],
+                    "message": "errors.ts depends on nothing."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/checks.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**", "!./errors.js"],
+                    "message": "checks.ts depends only on errors.ts."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/random.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./*", "./*/**", "!./errors.js", "!./checks.js"],
+                    "message": "random.ts depends only on errors.ts and checks.ts."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/xml/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js"],
+                    "message": "xml/ depends only on errors.ts, checks.ts and random.ts."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/values/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js"],
+                    "message": "values/ depends only on errors.ts, checks.ts and random.ts."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/asi/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../values/**"
+                    ],
+                    "message": "asi/ builds on xml/ and values/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/results/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../values/**"
+                    ],
+                    "message": "results/ builds on xml/ and values/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/usage/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../values/**"
+                    ],
+                    "message": "usage/ builds on xml/ and values/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/pnp/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../*", "../*/**", "!../errors.js", "!../checks.js", "!../random.js", "!../xml/**"],
+                    "message": "pnp/ builds on xml/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/metadata/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../asi/**"
+                    ],
+                    "message": "metadata/ builds on xml/ and asi/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/processing/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**"
+                    ],
+                    "message": "processing/ builds on values/ and asi/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/interactions/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**"
+                    ],
+                    "message": "interactions/ builds on values/ and asi/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/pci/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**"
+                    ],
+                    "message": "pci/ builds on values/ and asi/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/content/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../pnp/**"
+                    ],
+                    "message": "content/ builds on values/, asi/ and pnp/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/cat/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../results/**",
+                      "!../metadata/**"
+                    ],
+                    "message": "cat/ builds on values/, asi/, results/ and metadata/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/package/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../asi/**",
+                      "!../metadata/**",
+                      "!../usage/**"
+                    ],
+                    "message": "package/ builds on xml/, asi/, metadata/ and usage/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/validate/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../results/**",
+                      "!../usage/**",
+                      "!../pnp/**",
+                      "!../metadata/**",
+                      "!../processing/**",
+                      "!../interactions/**",
+                      "!../pci/**",
+                      "!../content/**",
+                      "!../cat/**",
+                      "!../package/**"
+                    ],
+                    "message": "validate/ builds on xml/, values/, asi/, results/, usage/, pnp/, metadata/, processing/, interactions/, pci/, content/, cat/ and package/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/delivery/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../values/**",
+                      "!../asi/**",
+                      "!../results/**",
+                      "!../pnp/**",
+                      "!../processing/**",
+                      "!../interactions/**",
+                      "!../pci/**",
+                      "!../content/**",
+                      "!../cat/**",
+                      "!../package/**",
+                      "!../validate/**"
+                    ],
+                    "message": "delivery/ builds on values/, asi/, results/, pnp/, processing/, interactions/, pci/, content/, cat/, package/ and validate/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/node/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../xml/**",
+                      "!../package/**",
+                      "!../validate/**"
+                    ],
+                    "message": "node/ builds on xml/, package/ and validate/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/cli/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../*",
+                      "../*/**",
+                      "!../errors.js",
+                      "!../checks.js",
+                      "!../random.js",
+                      "!../node/**",
+                      "!../validate/**",
+                      "!../package/**"
+                    ],
+                    "message": "cli/ builds on node/, validate/ and package/ only."
+                  },
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/cli/**", "scripts/**", "conformance/**", "differential/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/olah/src/index.ts", "packages/olah/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
+                    "message": "olah is the lower package: it never imports tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**", "!packages/olah/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["conformance/**", "scripts/**", "differential/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useImportExtensions": {
+              "level": "error",
+              "options": {
+                "extensionMappings": {
+                  "ts": "ts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/test/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          },
+          "correctness": {
+            "noUndeclaredDependencies": "off"
+          }
+        }
+      }
+    }
+  ],
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "markdown": {
+    "parser": {
+      "frontmatter": true
+    }
+  }
+}

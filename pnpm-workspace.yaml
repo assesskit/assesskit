@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - differential
+
+allowBuilds:
+  lefthook: false
+
+minimumReleaseAgeExclude:
+  - "@luthfanwakan/takar@1.0.0"

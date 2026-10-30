@@ -1,0 +1,14 @@
+{
+  "name": "@luthfanwakan/tempuh",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The player for QTI 3.0 content built on olah: rendering, the PCI host, accessibility in the UI and the server-side integrations. Designed separately.",
+  "author": "Fariz Wakan (https://github.com/luthfanwakan)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luthfanwakan/olah.git",
+    "directory": "packages/tempuh"
+  },
+  "type": "module"
+}

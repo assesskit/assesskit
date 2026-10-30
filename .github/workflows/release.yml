@@ -1,0 +1,25 @@
+name: Release
+
+on: workflow_dispatch
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+# npm trusted publishing: the id token authenticates the publish and adds provenance, so no npm token is stored.
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release

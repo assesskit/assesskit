@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a result or behavior of olah that is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report vulnerabilities privately, as the [security policy](https://github.com/luthfanwakan/olah/security/policy)
+        describes, not here.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The olah version from `npm ls @luthfanwakan/olah`, or the commit if you build from source.
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - Node.js
+        - Deno
+        - Bun
+        - Browser
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: runtime-version
+    attributes:
+      label: Runtime version
+      description: The output of `node --version`, or the browser and its version.
+      placeholder: v22.18.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The document or the sequence of actions that fails, with the smallest code that runs as pasted.
+      render: typescript
+    validations:
+      required: true
+  - type: input
+    id: section
+    attributes:
+      label: Specification section
+      description: The section of the QTI 3.0 specifications that defines the behavior you expected, such as INFO §5.150.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead, with the full error message if there is one.
+    validations:
+      required: true

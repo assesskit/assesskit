@@ -1,0 +1,18 @@
+pre-commit:
+  commands:
+    biome:
+      glob: "*.{ts,js,json,jsonc,md,yaml,yml}"
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    test:
+      run: pnpm test
+    knip:
+      run: pnpm knip
+    conformance:
+      run: pnpm conformance
