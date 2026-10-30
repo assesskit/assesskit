@@ -5,7 +5,8 @@ content packages and results, and runs a test session without presentation. It i
 the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the typed
 model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
 and preferences, QTI content packages with their metadata, the port to computer adaptive testing engines, template,
-response and outcome processing, and the planning of a test session.
+response and outcome processing, the planning of a test session, the interactions with their rules of validity, portable
+custom interactions, and the content an item shows.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -109,21 +110,24 @@ if (document.kind === "item") {
 
 ## API
 
-| Import                          | Contents                                                                                                                                                                                                          |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@luthfanwakan/olah`            | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                                                                                |
-| `@luthfanwakan/olah/asi`        | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment and content element, `BodyNode`, `Interaction`, `Expression`, `readScoreCovers`, `scoreCoversBlock`                                           |
-| `@luthfanwakan/olah/results`    | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                                                                       |
-| `@luthfanwakan/olah/usage`      | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                                                                               |
-| `@luthfanwakan/olah/pnp`        | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                                                                                |
-| `@luthfanwakan/olah/metadata`   | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant                                                      |
-| `@luthfanwakan/olah/package`    | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                                                                       |
-| `@luthfanwakan/olah/cat`        | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                                                                                 |
-| `@luthfanwakan/olah/processing` | `createItemVariables`, `runTemplateProcessing`, `runResponseProcessing`, `runOutcomeProcessing`, `evaluate`, `evaluateTestExpression`, `TestScope`, `STANDARD_TEMPLATES`, `OPERATOR_SIGNATURES`, custom operators |
-| `@luthfanwakan/olah/delivery`   | `resolveStructure`, `planTest`, `planItems`, `nextItem`, `previousItem`, `sessionControl`, `timeLimits`, `additionalTestingTime` and the types of the structure and the plan                                      |
-| `@luthfanwakan/olah/values`     | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
-| `@luthfanwakan/olah/xml`        | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
-| `@luthfanwakan/olah/node`       | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                                                                          |
+| Import                            | Contents                                                                                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@luthfanwakan/olah`              | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                                                                                |
+| `@luthfanwakan/olah/asi`          | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment and content element, `BodyNode`, `Interaction`, `Expression`, `readScoreCovers`, `scoreCoversBlock`                                           |
+| `@luthfanwakan/olah/results`      | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                                                                       |
+| `@luthfanwakan/olah/usage`        | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                                                                               |
+| `@luthfanwakan/olah/pnp`          | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                                                                                |
+| `@luthfanwakan/olah/metadata`     | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant                                                      |
+| `@luthfanwakan/olah/package`      | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                                                                       |
+| `@luthfanwakan/olah/cat`          | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                                                                                 |
+| `@luthfanwakan/olah/interactions` | `describeInteractions`, `checkBindings`, `checkResponse`, `answeredStatus`, `shuffleChoices`, `presentChoices`, `numericRecord` and the descriptors of the 22 interactions                                        |
+| `@luthfanwakan/olah/pci`          | `encodePciValue`, `decodePciValue` with file callbacks, `parseModuleResolution`, `resolvePciModules`, `pciProperties`, `checkPortableInteraction`                                                                 |
+| `@luthfanwakan/olah/content`      | `resolveContent`, `formatPrintedVariable`, `isShown`, feedback, rubric, `selectCard`, `catalogsFor` and `hazardExposure`                                                                                          |
+| `@luthfanwakan/olah/processing`   | `createItemVariables`, `runTemplateProcessing`, `runResponseProcessing`, `runOutcomeProcessing`, `evaluate`, `evaluateTestExpression`, `TestScope`, `STANDARD_TEMPLATES`, `OPERATOR_SIGNATURES`, custom operators |
+| `@luthfanwakan/olah/delivery`     | `resolveStructure`, `planTest`, `planItems`, `nextItem`, `previousItem`, `sessionControl`, `timeLimits`, `additionalTestingTime` and the types of the structure and the plan                                      |
+| `@luthfanwakan/olah/values`       | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
+| `@luthfanwakan/olah/xml`          | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
+| `@luthfanwakan/olah/node`         | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                                                                          |
 
 The errors are `DataError` for a wrong argument, `ReadError` for a document that cannot be read, `SecurityError` for
 input that breaks a limit and `ProcessingError` for a condition that processing does not define as NULL. Validation does
@@ -139,6 +143,9 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
 - [Results](docs/results.md): the model of a Results Reporting document, its values and its rules.
 - [Usage data](docs/usage.md): item statistics, their values and mappings.
+- [Interactions](docs/interactions.md): the descriptors of the 22 interactions, their bindings, the rules of validity, shuffling and numeric text.
+- [PCI](docs/pci.md): the JSON of variables with file callbacks, module resolution, properties and checks of a portable custom interaction.
+- [Content](docs/content.md): visibility, printed variables and their number formats, rubric views, catalogs and cards, and hazards.
 - [PNP](docs/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
 - [Metadata](docs/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
 - [Package](docs/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.

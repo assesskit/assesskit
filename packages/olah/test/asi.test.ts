@@ -13,8 +13,13 @@ import {
   type AssessmentSection,
   type AssessmentStimulus,
   type AssessmentTest,
+  childNodes,
   DataError,
+  descendantNodes,
   type Expression,
+  isBodyNode,
+  isModelNode,
+  type ModelNode,
   type OutcomeDeclaration,
   type OutcomeProcessing,
   type OutcomeRule,
@@ -3459,6 +3464,52 @@ describe("readAsi: input and errors", () => {
     );
     expect(() => readAsi(item(), JSON.parse('{"limits":null}'))).toThrow(DataError);
     expect(() => readAsi(item(), JSON.parse('{"limits":{"maxBytes":"x"}}'))).toThrow(DataError);
+  });
+});
+
+describe("the nodes of the content", () => {
+  const body = (content: string): readonly ModelNode[] =>
+    itemOf(item(`<qti-item-body>${content}</qti-item-body>`)).body?.children ?? [];
+  const kindsOf = (nodes: readonly ModelNode[]): string[] => nodes.map(({ kind }) => kind);
+
+  it("lists the nodes directly below a node in every place the model keeps them: prompt, choices, content body", () => {
+    const [interaction] = body(
+      '<qti-choice-interaction response-identifier="R"><qti-prompt>Pick</qti-prompt><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-choice-interaction>',
+    );
+    expect(interaction && kindsOf(childNodes(interaction))).toEqual(["prompt", "simple-choice", "simple-choice"]);
+    const [feedback] = body(
+      '<qti-feedback-block outcome-identifier="O" identifier="x" show-hide="show"><qti-content-body><p>x</p></qti-content-body></qti-feedback-block>',
+    );
+    expect(feedback && kindsOf(childNodes(feedback))).toEqual(["content-body"]);
+  });
+
+  it("lists the nodes at any depth in document order, text included, without the node itself", () => {
+    const [paragraph] = body("<p>One <em>two <strong>three</strong></em> four</p>");
+    expect(paragraph && kindsOf(descendantNodes(paragraph))).toEqual(["text", "em", "text", "strong", "text", "text"]);
+    const [text] = body("<p>x</p>").flatMap((node) => childNodes(node));
+    expect(text && descendantNodes(text)).toEqual([]);
+  });
+
+  it("takes MathML as a leaf, because the model keeps it as XML", () => {
+    const [paragraph] = body('<p><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p>');
+    const [math] = paragraph ? childNodes(paragraph) : [];
+    expect(math?.kind).toBe("element");
+    expect(math && childNodes(math)).toEqual([]);
+    expect(paragraph && kindsOf(descendantNodes(paragraph))).toEqual(["element"]);
+  });
+
+  it("does not take the attributes or the lists of strings for nodes", () => {
+    const [paragraph] = body('<p class="a b" data-x="1">x</p>');
+    expect(paragraph && kindsOf(childNodes(paragraph))).toEqual(["text"]);
+  });
+
+  it("tells a node from other values by the string kind", () => {
+    expect(isModelNode({ kind: "p" })).toBe(true);
+    expect(isBodyNode({ kind: "text", value: "x" })).toBe(true);
+    for (const value of [null, undefined, "p", 1, [], { kind: 1 }, { name: "p" }]) {
+      expect(isModelNode(value)).toBe(false);
+      expect(isBodyNode(value)).toBe(false);
+    }
   });
 });
 

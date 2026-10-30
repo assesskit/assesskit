@@ -245,6 +245,21 @@ Each vocabulary below is the type of an attribute; the reader refuses any other 
 
 The lists (W46, W48) are arrays of their items; `aria-relevant` takes `additions`, `all`, `removals` and `text`.
 
+### Walking the content
+
+The model is plain data, and `ModelNode` is what every node of it has: the `kind` that names its element. The functions
+below find nodes without knowing which place of which element holds them.
+
+| Function                | Returns                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `childNodes(node)`      | The nodes directly below a node, in every place the model keeps them: `children`, a prompt, choices, a content body, and so on. |
+| `descendantNodes(node)` | The nodes at any depth in document order, without the node itself.                                                              |
+| `isModelNode(value)`    | Whether a value is an object with a string `kind`; the check is shallow.                                                        |
+| `isBodyNode(value)`     | The same check, as a guard for a `BodyNode`.                                                                                    |
+
+MathML, SSML and `xi:include` are leaves: the model keeps them as XML, and their children are not walked. Narrow a node by
+its `kind` with a guard of your own, such as `(node): node is HotText => node.kind === "hottext"`.
+
 ### Extensions and includes
 
 Where the schema has a wildcard, attributes and elements of other namespaces are kept as written. Where the schema allows

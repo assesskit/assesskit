@@ -38,9 +38,21 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./content": {
+      "types": "./dist/content/index.d.ts",
+      "default": "./dist/content/index.js"
+    },
     "./delivery": {
       "types": "./dist/delivery/index.d.ts",
       "default": "./dist/delivery/index.js"
+    },
+    "./interactions": {
+      "types": "./dist/interactions/index.d.ts",
+      "default": "./dist/interactions/index.js"
+    },
+    "./pci": {
+      "types": "./dist/pci/index.d.ts",
+      "default": "./dist/pci/index.js"
     },
     "./pnp": {
       "types": "./dist/pnp/index.d.ts",

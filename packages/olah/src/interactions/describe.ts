@@ -1,0 +1,390 @@
+import {
+  type AssessmentItem,
+  descendantNodes,
+  type Gap,
+  type HotText,
+  type Interaction,
+  type ModelNode,
+} from "../asi/index.js";
+import { checkArray, checkRecord } from "../checks.js";
+import type { BaseType, ValueDeclaration } from "../values/index.js";
+import { anyBindings, bind, containerBindings, TEXT_BASE_TYPES } from "./bindings.js";
+import type { ChoiceDescriptor, InteractionConstraints, InteractionDescriptor, InteractionKind } from "./descriptor.js";
+
+/** A maximum of 0 means no restriction (INFO §5.30.2, §5.57.3, §5.92.3). */
+const UNLIMITED = 0;
+
+/** The maximum of choices and associations when the attribute is absent (INFO §5.30.2, §5.8, §5.89.2). */
+const DEFAULT_MAXIMUM = 1;
+
+/** The number base of a text interaction when `base` is absent (INFO §5.162.2). */
+const DEFAULT_BASE = 10;
+
+/** The step of a slider bound to an integer when `step` is absent (INFO §5.134.3). */
+const INTEGER_STEP = 1;
+
+/** The attributes of the elements that count as choices of an interaction, as the model has them. */
+interface ChoiceElement {
+  readonly identifier: string;
+  readonly fixed?: boolean;
+  readonly templateIdentifier?: string;
+  readonly showHide?: "show" | "hide";
+  readonly matchGroup?: readonly string[];
+  readonly matchMax?: number;
+  readonly matchMin?: number;
+  readonly required?: boolean;
+}
+
+/** What each kind of interaction adds to the identity and the declaration that every descriptor has. */
+type Parts = Pick<InteractionDescriptor, "bindings" | "choices" | "constraints" | "shuffle"> &
+  Partial<Pick<InteractionDescriptor, "matchSets" | "stringIdentifier">>;
+
+/** Returns `value` as a minimum, or `undefined` for 0, which demands nothing. */
+function minimumOf(value: number | undefined): number | undefined {
+  return value === undefined || value === 0 ? undefined : value;
+}
+
+/** Returns `value`, or the default when it is absent, as a maximum; `undefined` for 0, which is no restriction. */
+function maximumOf(value: number | undefined, fallback: number): number | undefined {
+  const maximum = value ?? fallback;
+  return maximum === UNLIMITED ? undefined : maximum;
+}
+
+function choiceLimits(
+  min: number | undefined,
+  max: number | undefined,
+  fallback: number,
+): Pick<InteractionConstraints, "maxChoices" | "minChoices"> {
+  const lower = minimumOf(min);
+  const upper = maximumOf(max, fallback);
+  return {
+    ...(lower === undefined ? {} : { minChoices: lower }),
+    ...(upper === undefined ? {} : { maxChoices: upper }),
+  };
+}
+
+function associationLimits(
+  min: number | undefined,
+  max: number | undefined,
+  fallback: number,
+): Pick<InteractionConstraints, "maxAssociations" | "minAssociations"> {
+  const lower = minimumOf(min);
+  const upper = maximumOf(max, fallback);
+  return {
+    ...(lower === undefined ? {} : { minAssociations: lower }),
+    ...(upper === undefined ? {} : { maxAssociations: upper }),
+  };
+}
+
+/**
+ * Returns the limits of an order interaction: without `min-choices` every choice must be ordered and `max-choices` is
+ * ignored; with it the candidate orders between `min-choices` and `max-choices` of the choices (INFO §5.97.2, §5.97.3).
+ */
+function orderLimits(
+  min: number | undefined,
+  max: number | undefined,
+): Pick<InteractionConstraints, "maxChoices" | "minChoices"> {
+  if (min === undefined) return {};
+  const upper = maximumOf(max, UNLIMITED);
+  return { minChoices: min, ...(upper === undefined ? {} : { maxChoices: upper }) };
+}
+
+/** Returns the descriptor of a choice, a gap, a hotspot or a hot text. */
+function choiceOf(element: ChoiceElement): ChoiceDescriptor {
+  const {
+    identifier,
+    fixed = false,
+    templateIdentifier,
+    showHide = "show",
+    matchGroup = [],
+    required = false,
+  } = element;
+  const matchMax = maximumOf(element.matchMax, UNLIMITED);
+  const matchMin = minimumOf(element.matchMin);
+  return {
+    identifier,
+    fixed,
+    ...(templateIdentifier === undefined ? {} : { templateIdentifier }),
+    showHide,
+    ...(matchMax === undefined ? {} : { matchMax }),
+    ...(matchMin === undefined ? {} : { matchMin }),
+    ...(matchGroup.length === 0 ? {} : { matchGroup }),
+    ...(required ? { required } : {}),
+  };
+}
+
+type InteractionOf<TKind extends InteractionKind> = Extract<Interaction, { kind: TKind }>;
+
+/** Returns the parts of an interaction whose response is a selection of identifiers or points. */
+function selectionParts(
+  baseType: BaseType,
+  maxChoices: number | undefined,
+  fallback: number,
+  min: number | undefined,
+  choices: readonly ChoiceDescriptor[],
+  shuffle: boolean | undefined,
+): Parts {
+  return {
+    bindings: containerBindings(baseType, (maxChoices ?? fallback) === 1),
+    choices,
+    constraints: choiceLimits(min, maxChoices, fallback),
+    shuffle: shuffle ?? false,
+  };
+}
+
+/**
+ * Returns the parts of an interaction whose response is a set of pairs. `fallback` is the maximum of associations when
+ * the attribute is absent.
+ */
+function pairParts(
+  baseType: BaseType,
+  mayBeSingle: boolean,
+  interaction: {
+    readonly minAssociations?: number;
+    readonly maxAssociations?: number;
+    readonly shuffle?: boolean;
+  },
+  sets: readonly (readonly ChoiceDescriptor[])[],
+  fallback = DEFAULT_MAXIMUM,
+): Parts {
+  return {
+    bindings: containerBindings(baseType, mayBeSingle && (interaction.maxAssociations ?? DEFAULT_MAXIMUM) === 1),
+    choices: sets.flat(),
+    ...(baseType === "directedPair" ? { matchSets: sets } : {}),
+    constraints: associationLimits(interaction.minAssociations, interaction.maxAssociations, fallback),
+    shuffle: interaction.shuffle ?? false,
+  };
+}
+
+function orderParts(
+  interaction: InteractionOf<"graphic-order-interaction" | "order-interaction">,
+  choices: readonly ChoiceDescriptor[],
+): Parts {
+  return {
+    bindings: [bind("ordered", "identifier")],
+    choices,
+    constraints: orderLimits(interaction.minChoices, interaction.maxChoices),
+    shuffle: interaction.kind === "order-interaction" ? (interaction.shuffle ?? false) : false,
+  };
+}
+
+function textParts(interaction: InteractionOf<"extended-text-interaction" | "text-entry-interaction">): Parts {
+  const extended = interaction.kind === "extended-text-interaction";
+  // INFO §5.48.6: max-strings is required when the interaction is bound to a container.
+  const containers = extended && interaction.maxStrings !== undefined;
+  const minStrings = extended ? minimumOf(interaction.minStrings) : undefined;
+  const maxStrings = extended ? maximumOf(interaction.maxStrings, UNLIMITED) : undefined;
+  return {
+    bindings: [
+      bind("single", ...TEXT_BASE_TYPES),
+      ...(containers ? [bind("multiple", ...TEXT_BASE_TYPES), bind("ordered", ...TEXT_BASE_TYPES)] : []),
+      bind("record"),
+    ],
+    choices: [],
+    constraints: {
+      base: interaction.base ?? DEFAULT_BASE,
+      ...(interaction.patternMask === undefined ? {} : { patternMask: interaction.patternMask }),
+      ...(minStrings === undefined ? {} : { minStrings }),
+      ...(maxStrings === undefined ? {} : { maxStrings }),
+    },
+    shuffle: false,
+    ...(interaction.stringIdentifier === undefined ? {} : { stringIdentifier: interaction.stringIdentifier }),
+  };
+}
+
+/** Returns the parts of a slider: its bounds and step, read against the declared base type (INFO §5.134.1–3). */
+function sliderParts(
+  interaction: InteractionOf<"slider-interaction">,
+  declaration: ValueDeclaration | undefined,
+): Parts {
+  const integer = declaration?.baseType === "integer";
+  const step = interaction.step ?? (integer ? INTEGER_STEP : undefined);
+  return {
+    bindings: [bind("single", "float", "integer")],
+    choices: [],
+    constraints: {
+      lowerBound: integer ? Math.floor(interaction.lowerBound) : interaction.lowerBound,
+      upperBound: integer ? Math.ceil(interaction.upperBound) : interaction.upperBound,
+      ...(step === undefined ? {} : { step }),
+    },
+    shuffle: false,
+  };
+}
+
+function mediaParts(interaction: InteractionOf<"media-interaction">): Parts {
+  const minPlays = minimumOf(interaction.minPlays);
+  const maxPlays = maximumOf(interaction.maxPlays, UNLIMITED);
+  return {
+    bindings: [bind("single", "integer")],
+    choices: [],
+    constraints: {
+      ...(minPlays === undefined ? {} : { minPlays }),
+      ...(maxPlays === undefined ? {} : { maxPlays }),
+    },
+    shuffle: false,
+  };
+}
+
+function fileParts(mimeTypes: readonly string[]): Parts {
+  return {
+    bindings: [bind("single", "file")],
+    choices: [],
+    constraints: mimeTypes.length === 0 ? {} : { mimeTypes },
+    shuffle: false,
+  };
+}
+
+function inlineChoiceParts(interaction: InteractionOf<"inline-choice-interaction">): Parts {
+  return {
+    bindings: [bind("single", "identifier")],
+    choices: interaction.inlineChoices.map(choiceOf),
+    constraints: {
+      ...choiceLimits(interaction.minChoices, undefined, UNLIMITED),
+      ...(interaction.required === true ? { required: true } : {}),
+    },
+    shuffle: interaction.shuffle ?? false,
+  };
+}
+
+/** Returns what an interaction of the item adds to the descriptor (INFO §2.4, §5). */
+function partsOf(interaction: Interaction, declaration: ValueDeclaration | undefined): Parts {
+  switch (interaction.kind) {
+    case "associate-interaction":
+      return pairParts("pair", true, interaction, [interaction.simpleAssociableChoices.map(choiceOf)]);
+    case "choice-interaction":
+      return selectionParts(
+        "identifier",
+        interaction.maxChoices,
+        DEFAULT_MAXIMUM,
+        interaction.minChoices,
+        interaction.simpleChoices.map(choiceOf),
+        interaction.shuffle,
+      );
+    case "custom-interaction":
+    case "portable-custom-interaction":
+      return { bindings: anyBindings(), choices: [], constraints: {}, shuffle: false };
+    case "drawing-interaction":
+      return fileParts([]);
+    case "end-attempt-interaction":
+      return { bindings: [bind("single", "boolean")], choices: [], constraints: {}, shuffle: false };
+    case "extended-text-interaction":
+    case "text-entry-interaction":
+      return textParts(interaction);
+    case "gap-match-interaction": {
+      const gaps = descendantNodes(interaction).flatMap((node) => (isGap(node) ? [choiceOf(node)] : []));
+      // The schema defaults max-associations to 1, but a text with several gaps takes several associations (INFO §5.57.8,
+      // §2.4.1.5) and the examples of 1EdTech leave the attribute out: an absent attribute is no limit, since each gap
+      // takes one choice.
+      return pairParts(
+        "directedPair",
+        gaps.length <= 1,
+        interaction,
+        [interaction.choices.map(choiceOf), gaps],
+        UNLIMITED,
+      );
+    }
+    case "graphic-associate-interaction":
+      return pairParts("pair", true, interaction, [interaction.associableHotspots.map(choiceOf)]);
+    case "graphic-gap-match-interaction":
+      // As for the gap match interaction: an absent max-associations is no limit, and match-max limits each hotspot.
+      return pairParts(
+        "directedPair",
+        false,
+        interaction,
+        [interaction.choices.map(choiceOf), interaction.associableHotspots.map(choiceOf)],
+        UNLIMITED,
+      );
+    case "graphic-order-interaction":
+      return orderParts(interaction, interaction.hotspotChoices.map(choiceOf));
+    case "hotspot-interaction":
+      return selectionParts(
+        "identifier",
+        interaction.maxChoices,
+        DEFAULT_MAXIMUM,
+        interaction.minChoices,
+        interaction.hotspotChoices.map(choiceOf),
+        undefined,
+      );
+    case "hottext-interaction":
+      return selectionParts(
+        "identifier",
+        interaction.maxChoices,
+        DEFAULT_MAXIMUM,
+        interaction.minChoices,
+        descendantNodes(interaction).flatMap((node) => (isHotText(node) ? [choiceOf(node)] : [])),
+        undefined,
+      );
+    case "inline-choice-interaction":
+      return inlineChoiceParts(interaction);
+    case "match-interaction":
+      return pairParts(
+        "directedPair",
+        true,
+        interaction,
+        interaction.simpleMatchSets.map((set) => set.simpleAssociableChoices.map(choiceOf)),
+      );
+    case "media-interaction":
+      return mediaParts(interaction);
+    case "order-interaction":
+      return orderParts(interaction, interaction.simpleChoices.map(choiceOf));
+    case "position-object-interaction":
+      return selectionParts("point", interaction.maxChoices, DEFAULT_MAXIMUM, interaction.minChoices, [], undefined);
+    case "select-point-interaction":
+      return selectionParts("point", interaction.maxChoices, UNLIMITED, interaction.minChoices, [], undefined);
+    case "slider-interaction":
+      return sliderParts(interaction, declaration);
+    case "upload-interaction":
+      return fileParts(interaction.type ?? []);
+  }
+}
+
+/** Returns whether a node is an interaction: the elements named `qti-…-interaction` are the 22 interactions (INFO §2.4). */
+function isInteraction(node: ModelNode): node is Interaction {
+  return node.kind.endsWith("-interaction");
+}
+
+const isGap = (node: ModelNode): node is Gap => node.kind === "gap";
+
+const isHotText = (node: ModelNode): node is HotText => node.kind === "hottext";
+
+/**
+ * Describes the interactions of an item in document order: the response variable each binds, the bindings it accepts,
+ * its choices, what a valid response needs and whether the choices shuffle. The descriptors hold the item as authored,
+ * with every choice, hidden or not, so that shuffling can draw over all of them; {@link presentChoices} drops the hidden
+ * ones.
+ *
+ * Attributes that a document omits have the defaults of the schema, and a maximum of 0, which means no restriction
+ * (INFO §5.30.2), is left out of the constraints.
+ *
+ * @param item - The item, as `readAsi` reads it.
+ * @returns One descriptor for each interaction in the body of the item, including those inside feedback and template
+ * content and the position object interactions of a stage; none for an item without a body.
+ * @throws `DataError` when `item` is not an object of the model of `qti-assessment-item`.
+ */
+export function describeInteractions(item: AssessmentItem): readonly InteractionDescriptor[] {
+  const input: unknown = item;
+  checkRecord(input, "The item must be an object of the model of qti-assessment-item");
+  checkArray(input.responseDeclarations, "The response declarations of the item must be an array");
+  if (item.body === undefined) return [];
+  checkArray(item.body.children, "The children of the item body must be an array");
+  const declarations = new Map(item.responseDeclarations.map((declaration) => [declaration.identifier, declaration]));
+  return item.body.children
+    .flatMap((node) => [node, ...descendantNodes(node)])
+    .filter(isInteraction)
+    .map((interaction): InteractionDescriptor => {
+      const declared = declarations.get(interaction.responseIdentifier);
+      const declaration: ValueDeclaration | undefined =
+        declared === undefined
+          ? undefined
+          : {
+              cardinality: declared.cardinality,
+              ...(declared.baseType === undefined ? {} : { baseType: declared.baseType }),
+            };
+      return {
+        kind: interaction.kind,
+        responseIdentifier: interaction.responseIdentifier,
+        ...(declaration === undefined ? {} : { declaration }),
+        ...partsOf(interaction, declaration),
+      };
+    });
+}

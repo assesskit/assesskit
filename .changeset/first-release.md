@@ -55,3 +55,12 @@ declaration with white space at its start or end, and a qualified name whose par
 every tree it returns can be written; a package reads and parses a file that many `xi:include` elements name once;
 `dependencyClosure` follows chains of any length; `qti-repeat` of NULL is NULL however many repeats it names; and the
 compiler of patterns builds a repeat of an empty group at once. Each limit has its default in its TSDoc and in SECURITY.md.
+
+The interactions (`interactions`): the descriptors of the 22 interactions with their bindings, `checkBindings`,
+`checkResponse` with the rules of validity of INFO §5 and the answered status of Results Reporting, the initial order of
+the choices with the fixed draw procedure, and the numeric record of a text entry. Portable custom interactions (`pci`):
+the JSON binding of BPIG Appendix C with callbacks for file values, module resolution, properties and checks. What an item
+shows (`content`): visibility of feedback, template content and choices, printed variables with the C `printf`
+conversions, the substitution of template values in parameters and MathML, rubric views and their order, catalogs and
+cards, and the mapping of the hazards of a resource to the terms of a PNP. `asi` has `childNodes` and `descendantNodes`
+for walking content.

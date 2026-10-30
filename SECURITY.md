@@ -26,6 +26,13 @@ Points to be aware of when deploying olah:
   and a container that an expression builds, such as the result of `qti-repeat`, is limited by `maxContainerSize`; a
   larger one is a `SecurityError`. Expressions are no deeper than the document they were read from, which `maxDepth`
   limits.
+- **Portable custom interactions.** The core runs no PCI code: module locations are data, and loading and sandboxing the
+  modules is the player's. `parseModuleResolution` reads JSON only, and a module id such as `__proto__` stays data in a
+  `Map`. `decodePciValue` checks everything a module returns before it becomes a value, and refuses a file that is not
+  `{ data, mime, name }` and a duration with years or months; the bytes of a file go to a callback of the host and never
+  into a value. A package path from a configuration file is still untrusted: the host serves only paths of the package.
+- **Printed variables.** A `format` runs on olah's own arithmetic, over the exact value of the number, and a width or
+  precision above 1,100 is ignored, so that a document cannot make the formatter allocate gigabytes.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
   entity expansion, BPIG §6.7). It reads only the five predefined entities and character references. It also limits the
   document before and while it builds the tree, and refuses what the parser lets through and a tree could not keep: a lone

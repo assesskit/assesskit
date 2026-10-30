@@ -34,7 +34,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB7 | merged | 185 |
 | OB8 | merged | 59 |
 | OB9 | merged | 8 |
-| OB10 | pending | 43 |
+| OB10 | merged | 43 |
 | OB11 | merged | 15 |
 | OB15 | merged | 1 |
 | OB13a | pending | 26 |
@@ -552,7 +552,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| M1 | `m3:math` (MathML 3 subtree) | INFO §2.3.3, INFO §9.4.2, INFO §5.151.5 | asi, content | R X S | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| M1 | `m3:math` (MathML 3 subtree) | INFO §2.3.3, INFO §9.4.2, INFO §5.151.5 | asi, content | R X S | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [content.test.ts](../test/content.test.ts) |
 | M2 | `ssml11:speak` | INFO §2.13.2, INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | M3 | `ssml11:audio` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | M4 | `ssml11:break` | INFO §9.4.3 | asi | R X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
@@ -612,17 +612,17 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B7 | Outcome initial value: declared default, else 0 for integer and float, else NULL | INFO §2.2.2.3 | processing, delivery | S P | OB13a | [processing.test.ts](../test/processing.test.ts) |
 | B8 | Non-adaptive items: outcomes reset to defaults before each response processing; with one attempt the first outcomes are reported; when item session control allows more attempts, the last outcomes are reported | INFO §2.5 | delivery | S | OB13a |  |
 | B9 | Adaptive items: outcomes kept between attempts; last outcomes reported; `max-attempts` ignored | INFO §2.5, INFO §7.19.1 | delivery | S | OB13a |  |
-| B10 | End attempt interaction: its response is true when it ended the attempt, false otherwise; its default is ignored; with `count-attempt="false"` the attempt it ends is left out of the `max-attempts` budget while `numAttempts` still increments; absent means true (D8) | INFO §2.4.5, INFO §5.45.3, INFO §2.2.2.2 | delivery, interactions | S | OB13a |  |
+| B10 | End attempt interaction: its response is true when it ended the attempt, false otherwise; its default is ignored; with `count-attempt="false"` the attempt it ends is left out of the `max-attempts` budget while `numAttempts` still increments; absent means true (D8) | INFO §2.4.5, INFO §5.45.3, INFO §2.2.2.2 | delivery, interactions | S | OB13a | [interactions.test.ts](../test/interactions.test.ts) |
 | B11 | Template processing once at session start; `qti-template-constraint` restarts processing with defaults until true, at most 100 times, then keeps defaults | INFO §2.7.3, INFO §5.150 | processing, delivery | S P | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | B12 | Operator attributes as variable references: integer and float unions take a bare identifier; `pattern` takes `{identifier}` and is literal when no such variable exists; `n` and `number-repeats` take an identifier | INFO §2.7.2, INFO §9.3, XSD unions | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
-| B13 | `param-variable` substitutes `object/param` values; `math-variable` substitutes MathML identifiers | INFO §5.151.4–5 | content | S | OB10 |  |
-| B14 | Choice visibility through `template-identifier` and `show-hide` on choices, hotspots, gaps, hottext | INFO §2.7.1, INFO §5.132.2 | content, interactions | S P | OB10 |  |
-| B15 | Feedback, template block and inline visibility: shown when `show-hide="show"` and the variable matches or contains the identifier; inverted for `hide` | INFO §5.93.2, INFO §2.3.4 | content | S P | OB10 |  |
-| B16 | Integrated feedback and review: feedback after the last attempt only when `show-feedback`; review state only when `allow-review`; for non-adaptive items the review shows the body as at attempt start; for adaptive items `show-feedback` is ignored when `allow-review` is true and review uses the final outcomes | INFO §7.19.2–3 | delivery, content | S | OB10 |  |
-| B17 | Modal feedback shown directly after response processing | INFO §2.6 | content, delivery | S | OB10 |  |
-| B18 | Test feedback `during` after outcome processing, `atEnd` at the end of its part or test | INFO §2.10, INFO §5.157.1 | content, delivery | S | OB10 |  |
-| B19 | Rubric blocks by `view`; section rubric concatenated from the top section down; no interactions; no nesting | INFO §2.8.6, INFO §4.2.14, INFO §5.159.11, BIND §5.3.47 | content, delivery, validate | S N | OB10 |  |
-| B20 | Printed variable: C `printf` conversions `E e f G g r R i o X x` with flags, width, precision; `i` in `base`; `index`, `field`, `delimiter` (`;`), `mapping-indicator` (`=`), `power-form`; response variables not printable | INFO §2.3.4, INFO §7.30, BPIG App. E | content | S P | OB10 |  |
+| B13 | `param-variable` substitutes `object/param` values; `math-variable` substitutes MathML identifiers | INFO §5.151.4–5 | content | S | OB10 | [content.corpus.test.ts](../test/content.corpus.test.ts), [content.test.ts](../test/content.test.ts) |
+| B14 | Choice visibility through `template-identifier` and `show-hide` on choices, hotspots, gaps, hottext | INFO §2.7.1, INFO §5.132.2 | content, interactions | S P | OB10 | [content.test.ts](../test/content.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
+| B15 | Feedback, template block and inline visibility: shown when `show-hide="show"` and the variable matches or contains the identifier; inverted for `hide` | INFO §5.93.2, INFO §2.3.4 | content | S P | OB10 | [content.corpus.test.ts](../test/content.corpus.test.ts), [content.test.ts](../test/content.test.ts) |
+| B16 | Integrated feedback and review: feedback after the last attempt only when `show-feedback`; review state only when `allow-review`; for non-adaptive items the review shows the body as at attempt start; for adaptive items `show-feedback` is ignored when `allow-review` is true and review uses the final outcomes | INFO §7.19.2–3 | delivery, content | S | OB10 | [content.test.ts](../test/content.test.ts) |
+| B17 | Modal feedback shown directly after response processing | INFO §2.6 | content, delivery | S | OB10 | [content.test.ts](../test/content.test.ts) |
+| B18 | Test feedback `during` after outcome processing, `atEnd` at the end of its part or test | INFO §2.10, INFO §5.157.1 | content, delivery | S | OB10 | [content.test.ts](../test/content.test.ts) |
+| B19 | Rubric blocks by `view`; section rubric concatenated from the top section down; no interactions; no nesting | INFO §2.8.6, INFO §4.2.14, INFO §5.159.11, BIND §5.3.47 | content, delivery, validate | S N | OB10 | [content.test.ts](../test/content.test.ts) |
+| B20 | Printed variable: C `printf` conversions `E e f G g r R i o X x` with flags, width, precision; `i` in `base`; `index`, `field`, `delimiter` (`;`), `mapping-indicator` (`=`), `power-form`; response variables not printable | INFO §2.3.4, INFO §7.30, BPIG App. E | content | S P | OB10 | [content.corpus.test.ts](../test/content.corpus.test.ts), [content.test.ts](../test/content.test.ts) |
 | B21 | Selection without replacement: `select` children, every `required` child included, a sub-section counts as one; fewer than required is an error | INFO §5.129.1, INFO §4.2.2 | delivery, validate | S P N | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | B22 | Selection with replacement: children eligible more than once; `select` may exceed the child count | INFO §5.129.2 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
 | B23 | Ordering: `shuffle` permutes children; `fixed` children keep their positions, fixed after selection | INFO §5.98.1, INFO §4.2.3 | delivery | S P | OB11 | [delivery.corpus.test.ts](../test/delivery.corpus.test.ts), [delivery.test.ts](../test/delivery.test.ts) |
@@ -654,25 +654,25 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B49 | `lookup-outcome-value`: interpolation table takes the first entry whose `source-value` ≤ value (strict when `include-boundary` is false); match table takes the exact integer; otherwise `default-value` or NULL | INFO §5.78, INFO §5.90, INFO §5.87, INFO §7.18 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | B50 | Context declarations in items and tests; delivery engine supplies values before processing | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
 | B51 | Identifier syntax: letter or `_` first; letters, digits, `_`, `-`, `.`; period reserved for prefixes; case-sensitive; 32 characters recommended | INFO §4.1.1 | values, validate | P N | OB2 | [values.test.ts](../test/values.test.ts) |
-| B52 | Response binding per interaction: base type and cardinality allowed for each of the 23 interactions | INFO §2.4.1–2.4.5 | interactions, validate | S N | OB10 |  |
-| B53 | Text and extended text: record fields `stringValue`, `floatValue`, `integerValue`, `leftDigits`, `rightDigits`, `ndp`, `nsf`, `exponent`; `string-identifier` keeps the raw text; `base` | INFO §2.4.2.2–3 | interactions | S P | OB10 |  |
-| B54 | Order interaction: a default value overrides the initial order | INFO §2.4.1.2 | interactions | S | OB10 |  |
-| B55 | Choice interaction starts with nothing selected; hottext starts from the default value | INFO §2.4.1.1, INFO §2.4.2.4 | interactions, delivery | S | OB10 |  |
-| B56 | Interaction constraints for validity: min/max choices, associations, strings, `match-min`/`match-max` (0 is unlimited), `required`, `pattern-mask`, slider bounds and step, media plays, upload MIME types | INFO §5.30–5.165 | interactions | S P | OB10 |  |
-| B57 | Choice shuffling: `shuffle` randomizes initial order, `fixed` choices keep their positions, each match set shuffles separately | INFO §5.30.1, INFO §5.132.2, INFO §5.89.1 | interactions | S P | OB10 |  |
+| B52 | Response binding per interaction: base type and cardinality allowed for each of the 23 interactions | INFO §2.4.1–2.4.5 | interactions, validate | S N | OB10 | [interactions.corpus.test.ts](../../../differential/test/interactions.corpus.test.ts), [interactions.corpus.test.ts](../test/interactions.corpus.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
+| B53 | Text and extended text: record fields `stringValue`, `floatValue`, `integerValue`, `leftDigits`, `rightDigits`, `ndp`, `nsf`, `exponent`; `string-identifier` keeps the raw text; `base` | INFO §2.4.2.2–3 | interactions | S P | OB10 | [interactions.test.ts](../../../differential/test/interactions.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
+| B54 | Order interaction: a default value overrides the initial order | INFO §2.4.1.2 | interactions | S | OB10 | [interactions.test.ts](../test/interactions.test.ts) |
+| B55 | Choice interaction starts with nothing selected; hottext starts from the default value | INFO §2.4.1.1, INFO §2.4.2.4 | interactions, delivery | S | OB10 | [interactions.test.ts](../test/interactions.test.ts) |
+| B56 | Interaction constraints for validity: min/max choices, associations, strings, `match-min`/`match-max` (0 is unlimited), `required`, `pattern-mask`, slider bounds and step, media plays, upload MIME types | INFO §5.30–5.165 | interactions | S P | OB10 | [interactions.test.ts](../../../differential/test/interactions.test.ts), [interactions.corpus.test.ts](../test/interactions.corpus.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
+| B57 | Choice shuffling: `shuffle` randomizes initial order, `fixed` choices keep their positions, each match set shuffles separately | INFO §5.30.1, INFO §5.132.2, INFO §5.89.1 | interactions | S P | OB10 | [interactions.corpus.test.ts](../../../differential/test/interactions.corpus.test.ts), [interactions.corpus.test.ts](../test/interactions.corpus.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
 | B58 | Solution state replaces responses with correct responses, or NULL | INFO §2.2.1 | delivery | S | OB13a |  |
 | B59 | Clones: a clone gets its own identifier and records template values; reports convert back to the template | INFO §2.7 | delivery, results | S | OB13a |  |
 | B60 | Item and test fragments through XInclude where the XSD allows `xi:include` (42 types), as parsed XML, without xpointer | INFO §2.12 | xml, asi | S N | OB3 | [package.test.ts](../test/package.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | B61 | External scoring: `external-scored` (human, externalMachine), `variable-identifier-ref`; session waits in pendingExternalScoring until scores applied | INFO §4.5.10–11, BPIG §3.4.5, RR §2.7.7 | delivery, results | S | OB16 |  |
 | B62 | Shared stimulus through `qti-assessment-stimulus-ref` and package dependencies | BPIG §3.7.7, BIND §8.5 | asi, package | C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
-| B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 |  |
+| B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 | [content.test.ts](../test/content.test.ts) |
 | B64 | Custom operators: dispatch to a registered function by `definition`, else `class`; unregistered is a ProcessingError (G7) | INFO §2.11.3.2, INFO §10.1.5 | processing | S N | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| B65 | Custom interaction (deprecated): data kept; response binding unchecked | INFO §2.4.4.5, INFO §10.1.4 | asi, interactions | R | OB10 |  |
+| B65 | Custom interaction (deprecated): data kept; response binding unchecked | INFO §2.4.4.5, INFO §10.1.4 | asi, interactions | R | OB10 | [interactions.corpus.test.ts](../test/interactions.corpus.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
 | B66 | Adaptive section (CAT): `qti-adaptive-selection` excludes `qti-selection` and `qti-ordering`; no nested sections; top-level only; branch rules and pre-conditions on its items, and branch rules targeting its items, are ignored; stages appended in order | CAT §2.1, INFO §2.3, INFO §4.2 | delivery, validate | S N | OB16 | [delivery.test.ts](../test/delivery.test.ts) |
 | B67 | CAT item flow: response and outcome processing before Submit Results; CAT outcome values merged into results; results per presented item with `sequenceIndex`, skipped items `initial` | CAT §2.4, INFO §4.3.1 | delivery, cat | S | OB16 |  |
-| B68 | Catalogs: one card per support in a catalog; card or card entry has HTML content or file references; card entry chosen by `xml:lang`, else `default` | BPIG §3.7.10 | content, validate | S N | OB10 |  |
+| B68 | Catalogs: one card per support in a catalog; card or card entry has HTML content or file references; card entry chosen by `xml:lang`, else `default` | BPIG §3.7.10 | content, validate | S N | OB10 | [content.test.ts](../test/content.test.ts) |
 | B69 | PNP sets: activate as option, activate at initialization, prohibit; a prohibited support is not assigned | BPIG §5.3 | pnp | S N | OB5 | [pnp.test.ts](../test/pnp.test.ts) |
-| B70 | Answered status from validity: answered, attempted, presented, notpresented | RR §2.7.1 | interactions, delivery | S | OB10 |  |
+| B70 | Answered status from validity: answered, attempted, presented, notpresented | RR §2.7.1 | interactions, delivery | S | OB10 | [interactions.corpus.test.ts](../test/interactions.corpus.test.ts), [interactions.test.ts](../test/interactions.test.ts) |
 | B71 | Math operators: domains give NULL; reciprocal and `atan2` rules; `signum`, `floor`, `ceil` integer results | INFO §2.11.3.39, INFO §8.21 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | B72 | Rounding: `round` to n for [n − 0.5, n + 0.5); `truncate` toward zero; NaN gives NULL; `round`, `truncate`, `floor`, `ceil` of ±INF give NULL (D4) | INFO §2.11.3.37–38, INFO §8.21 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | B73 | `round-to` and `equal-rounded` by the deciding digit of the decimal representation, significant figures ≥ 1, decimal places ≥ 0 | INFO §2.11.3.43, INFO §5.47.2, INFO §5.119.2 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
@@ -701,7 +701,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B96 | Draft and submitted responses are kept apart: expressions, outcome processing and results `final` read the last submitted values; RR `pendingSubmission` snapshots the drafts | INFO §2.11.1.2, RR §2.7.7 | delivery | S P | OB13a |  |
 | B97 | A branch rule must not target an item that selection with replacement can repeat | INFO §5.98 (Ordering class) | validate | N | OB14 |  |
 | B98 | In non-linear parts with adaptive sections, results for earlier items may be sent again in a later Submit Results | CAT §2.3 | delivery | S | OB16 |  |
-| B99 | Hazard terms: DRD `flashing`, `sound`, `olfactoryHazard`, `motionSimulation` map to PNP `hazard-avoidance` `flashing`, `sound`, `olfactory-hazard`, `motion-simulation`; candidates who avoid a hazard should not be exposed to content with it | BPIG §5.2.5, DRD XSD, PNP XSD | pnp, content | V S | OB10 |  |
+| B99 | Hazard terms: DRD `flashing`, `sound`, `olfactoryHazard`, `motionSimulation` map to PNP `hazard-avoidance` `flashing`, `sound`, `olfactory-hazard`, `motion-simulation`; candidates who avoid a hazard should not be exposed to content with it | BPIG §5.2.5, DRD XSD, PNP XSD | pnp, content | V S | OB10 | [content.test.ts](../test/content.test.ts) |
 | B100 | Variant selection, by the engine at the first presentation of an item instance, fixed for the session: candidates are the core item and its `cpx:variant`s; drop every candidate whose DRD hazards the PNP avoids (B99); among the rest prefer the variant whose DRD `languageOfAdaptation` matches the PNP `item-translation` language (exact tag, then primary subtag), else the core item; if every candidate is dropped, deliver the core item with its hazards flagged `avoided` and emit `hazard-unavoidable`. The choice is stored and emitted as `variant-selected`; results keep the item ref identifier (RR §2.4.5). Switching variants during a session is out of scope for 1.0 | BPIG §6.6, INFO §5.2.5, BIND §8.1.1 | delivery | S P | OB13b |  |
 
 ### W: Vocabularies
@@ -722,7 +722,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W12 | `AlignEnum` | INFO §8.12 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W13 | `BaseTypeEnum` | INFO §8.13 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W14 | `CORSSettingsEnum` | INFO §8.14 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| W15 | `CalculatorTypeEnum` | INFO §8.15 | content | V X | OB10 |  |
+| W15 | `CalculatorTypeEnum` | INFO §8.15 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W16 | `CardinalityEnum` | INFO §8.16 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W17 | `DIR` | INFO §8.17 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W18 | `ExternalScoredEnum` | INFO §8.18 | delivery, results | V X | OB16 |  |
@@ -730,39 +730,39 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W20 | `MathConstantsEnum` | INFO §8.20 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W21 | `MathOperatorNameEnum` | INFO §8.21 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W22 | `NavigationModeEnum` | INFO §8.22 | delivery | V X | OB13b |  |
-| W23 | `OrientationEnum` | INFO §8.23 | interactions | V X | OB10 |  |
+| W23 | `OrientationEnum` | INFO §8.23 | interactions | V X | OB10 | [interactions.test.ts](../test/interactions.test.ts), [interactions.xsd.test.ts](../test/interactions.xsd.test.ts) |
 | W24 | `ParamTypeEnum` | INFO §8.24 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W25 | `PreLoadValueEnum` | INFO §8.25 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W26 | `RoundingModeEnum` | INFO §8.26 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| W27 | `SIRadialUnitTypeEnum` | INFO §8.27 | content | V X | OB10 |  |
-| W28 | `SIUnitTypeEnum` | INFO §8.28 | content | V X | OB10 |  |
+| W27 | `SIRadialUnitTypeEnum` | INFO §8.27 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
+| W28 | `SIUnitTypeEnum` | INFO §8.28 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W29 | `ShapeEnum` | INFO §8.29 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| W30 | `ShowHideEnum` | INFO §8.30 | content | V X | OB10 |  |
+| W30 | `ShowHideEnum` | INFO §8.30 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W31 | `StatsOperatorNameEnum` | INFO §8.31 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W32 | `SubmissionModeEnum` | INFO §8.32 | delivery | V X | OB13b |  |
-| W33 | `SupportEnum` | INFO §8.33 | content, pnp | V X | OB10 |  |
+| W33 | `SupportEnum` | INFO §8.33 | content, pnp | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W34 | `SuppressTTSEnum` | INFO §8.34 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W35 | `TableCellScopeEnum` | INFO §8.35 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| W36 | `TestFeedbackAccessEnum` | INFO §8.36 | content | V X | OB10 |  |
-| W37 | `TextFormatEnum` | INFO §8.37 | interactions | V X | OB10 |  |
+| W36 | `TestFeedbackAccessEnum` | INFO §8.36 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
+| W37 | `TextFormatEnum` | INFO §8.37 | interactions | V X | OB10 | [interactions.test.ts](../test/interactions.test.ts), [interactions.xsd.test.ts](../test/interactions.xsd.test.ts) |
 | W38 | `ToleranceModeEnum` | INFO §8.38 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| W39 | `USRadialUnitTypeEnum` | INFO §8.39 | content | V X | OB10 |  |
-| W40 | `USUnitTypeEnum` | INFO §8.40 | content | V X | OB10 |  |
-| W41 | `UseEnum` | INFO §8.41 | content | V X | OB10 |  |
+| W39 | `USRadialUnitTypeEnum` | INFO §8.39 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
+| W40 | `USUnitTypeEnum` | INFO §8.40 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
+| W41 | `UseEnum` | INFO §8.41 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W42 | `ValignEnum` | INFO §8.42 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W43 | `IdentifierList` | INFO §9.1.1 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W44 | `IntegerList` | INFO §9.1.2 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
-| W45 | `MimeTypeList` | INFO §9.1.3 | interactions | V X | OB10 |  |
+| W45 | `MimeTypeList` | INFO §9.1.3 | interactions | V X | OB10 | [interactions.test.ts](../test/interactions.test.ts), [interactions.xsd.test.ts](../test/interactions.xsd.test.ts) |
 | W46 | `StringList` | INFO §9.1.4 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | W47 | `ToleranceList` | INFO §9.1.5 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W48 | `ARIARelevantList` | INFO §9.2.1 | asi | V X | OB7 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| W49 | `ViewEnum` | INFO §9.2.2 | content | V X | OB10 |  |
+| W49 | `ViewEnum` | INFO §9.2.2 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 | W50 | `FloatOrVariableRef` | INFO §9.3.1 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W51 | `IntOrIdentifier` | INFO §9.3.2 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W52 | `IntegerOrVariableRef` | INFO §9.3.3 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W53 | `StringOrVariableRef` | INFO §9.3.4 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
-| W54 | `SupportEnumExt` | INFO §9.3.5 | content, pnp | V X | OB10 |  |
-| W55 | `UseEnumExt` | INFO §9.3.6 | content | V X | OB10 |  |
+| W54 | `SupportEnumExt` | INFO §9.3.5 | content, pnp | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
+| W55 | `UseEnumExt` | INFO §9.3.6 | content | V X | OB10 | [content.test.ts](../test/content.test.ts), [content.xsd.test.ts](../test/content.xsd.test.ts) |
 
 ### V: Rule sets of BIND §5
 
@@ -1005,14 +1005,14 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| J1 | JSON binding of single values `{ "base":  { "<type>":  … } }`, NULL `{ "base":  null }`; duration as ISO 8601; file `{ data, mime, name }` converted to and from references through host callbacks; `intOrIdentifier` (G38) | BPIG App. C.1 | pci, values | S P | OB10 | [values.test.ts](../test/values.test.ts) |
-| J2 | JSON binding of multiple and ordered values `{ "list":  { "<type>":  […] } }` | BPIG App. C.2 | pci | S P | OB10 |  |
-| J3 | JSON binding of records `{ "record":  [ { "name", "base" } ] }`; a field may be `"base":  null` (G37) | BPIG App. C.3 | pci, values | S P | OB10 | [values.test.ts](../test/values.test.ts) |
-| J4 | Module resolution file: JSON with `waitSeconds` (default 7, 0 = no timeout) and `paths` (no `.js` extension; protocol means absolute, else package-relative) | BPIG §3.7.12.2, App. D | pci | S | OB10 |  |
-| J5 | Default configuration files `modules/module_resolution.js` and `modules/fallback_module_resolution.js` | BPIG §3.7.12.1–3, A169 | pci | S | OB10 |  |
-| J6 | `module` attribute or `qti-interaction-modules` must name a configured module; per-module `primary-path` and `fallback-path` | BPIG §3.7.12.4 | pci, validate | S N | OB10 |  |
-| J7 | `custom-interaction-type-identifier` (Federated Content URN recommended) | BPIG §3.7.12 | pci, validate | N | OB10 |  |
-| J8 | `data-*` attributes passed as properties; template and context variables passed through `qti-template-variable`, `qti-context-variable`; `qti-interaction-markup`; the PCI's opaque state stored with the session and returned for `getInstance` (E29) | BPIG §3.7.12, BIND §5.3.42 | pci, delivery | S | OB10 |  |
+| J1 | JSON binding of single values `{ "base":  { "<type>":  … } }`, NULL `{ "base":  null }`; duration as ISO 8601; file `{ data, mime, name }` converted to and from references through host callbacks; `intOrIdentifier` (G38) | BPIG App. C.1 | pci, values | S P | OB10 | [pci.test.ts](../test/pci.test.ts), [values.test.ts](../test/values.test.ts) |
+| J2 | JSON binding of multiple and ordered values `{ "list":  { "<type>":  […] } }` | BPIG App. C.2 | pci | S P | OB10 | [pci.test.ts](../test/pci.test.ts) |
+| J3 | JSON binding of records `{ "record":  [ { "name", "base" } ] }`; a field may be `"base":  null` (G37) | BPIG App. C.3 | pci, values | S P | OB10 | [pci.test.ts](../test/pci.test.ts), [values.test.ts](../test/values.test.ts) |
+| J4 | Module resolution file: JSON with `waitSeconds` (default 7, 0 = no timeout) and `paths` (no `.js` extension; protocol means absolute, else package-relative) | BPIG §3.7.12.2, App. D | pci | S | OB10 | [pci.corpus.test.ts](../test/pci.corpus.test.ts), [pci.test.ts](../test/pci.test.ts) |
+| J5 | Default configuration files `modules/module_resolution.js` and `modules/fallback_module_resolution.js` | BPIG §3.7.12.1–3, A169 | pci | S | OB10 | [pci.corpus.test.ts](../test/pci.corpus.test.ts), [pci.test.ts](../test/pci.test.ts) |
+| J6 | `module` attribute or `qti-interaction-modules` must name a configured module; per-module `primary-path` and `fallback-path` | BPIG §3.7.12.4 | pci, validate | S N | OB10 | [pci.corpus.test.ts](../test/pci.corpus.test.ts), [pci.test.ts](../test/pci.test.ts) |
+| J7 | `custom-interaction-type-identifier` (Federated Content URN recommended) | BPIG §3.7.12 | pci, validate | N | OB10 | [pci.corpus.test.ts](../test/pci.corpus.test.ts), [pci.test.ts](../test/pci.test.ts) |
+| J8 | `data-*` attributes passed as properties; template and context variables passed through `qti-template-variable`, `qti-context-variable`; `qti-interaction-markup`; the PCI's opaque state stored with the session and returned for `getInstance` (E29) | BPIG §3.7.12, BIND §5.3.42 | pci, delivery | S | OB10 | [pci.corpus.test.ts](../test/pci.corpus.test.ts), [pci.test.ts](../test/pci.test.ts) |
 | J9 | Package-relative module files listed in the manifest | BPIG §3.7.12.2 | validate | N | OB14 |  |
 
 ### E: Headless delivery engine
@@ -1109,7 +1109,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G16 | `count-attempt` is boolean but described as a number of attempts | INFO §5.45.3 | delivery | S | OB13a |  |
 | G17 | Unknown template URI with no internal rules and no resolver | INFO §4.6.1–2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G18 | `match` on floats "should not" be used | INFO §2.11.3.28 | validate | S | OB14 |  |
-| G19 | Shuffling with choices hidden by template variables | INFO §2.7.1, INFO §5.30.1 | interactions | S | OB10 |  |
+| G19 | Shuffling with choices hidden by template variables | INFO §2.7.1, INFO §5.30.1 | interactions | S | OB10 | [interactions.test.ts](../test/interactions.test.ts) |
 | G20 | Item duration resolution ("at least 1 s, should be 0.1 s or smaller") | INFO §2.2.2.2 | delivery | S | OB13a |  |
 | G21 | CAT REST/JSON field names of Assessment Result are not public | CAT §4.3 | cat | S | OB9 | [cat.test.ts](../test/cat.test.ts) |
 | G22 | What happens at a maximum time without late submission | INFO §2.5, INFO §2.8.5, INFO §7.40.3 | delivery | S | OB13b |  |

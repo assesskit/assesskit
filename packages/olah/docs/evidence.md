@@ -161,6 +161,11 @@ difference that the specification settles goes into `conformance/accepted-differ
 (empty when only one implementation accepts the item), the reason and the source; it shows in the matrix as accepted and
 not as a difference.
 
+The oracle also reads interactions. `differential/test/interactions.test.ts` compares the validity of generated responses
+(choices, order, associations, inline choices) and the record of numeric text, and `interactions.corpus.test.ts` the
+interactions of the corpus items: response variables, shuffling and choices. They agree, apart from the integer value of a
+number that ends in its point (`5.`), which INFO §2.4.2.2 gives and the oracle does not; the test states it.
+
 ## Fixtures from oracles
 
 Expected values come from an oracle, never from the code under test. The scripts that write them are in `validation/` of
@@ -168,7 +173,7 @@ the repository and use the standard library of Python 3.12 or later:
 
 | Script        | Fixture                                     | Oracle                                                                                                                                                                                                                                                                                     |
 | ------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `printf.py`   | `packages/olah/test/fixtures/printf.json`   | Python's `%` operator, for `e E f g G d i o x X` with flags, width and precision                                                                                                                                                                                                           |
+| `printf.py`   | `packages/olah/test/fixtures/printf.json`   | Python's `%` operator, for `e E f g G d i o x X` with flags, width and precision; `content` formats every case                                                                                                                                                                             |
 | `rounding.py` | `packages/olah/test/fixtures/rounding.json` | Python's `decimal` module with `ROUND_HALF_UP`, for `qti-round-to` and `qti-equal-rounded`                                                                                                                                                                                                 |
 | `zip.py`      | `packages/olah/test/fixtures/zip/`          | Python's `zipfile`, which writes the archives (stored and deflated entries, UTF-8 names, directories, data descriptors, a zip-slip, an absolute path, a backslash, a symbolic link, two names that normalize alike, a zip bomb) and reads back the ZIP64 archive that the script assembles |
 
