@@ -118,6 +118,37 @@ describe("createContentRoot", () => {
     await resize(1280);
   });
 
+  it("[T12] folds the columns of a layout row for the viewport of the moment when the host mounts the root again after a resize, with a sheet built from the same text", async () => {
+    const columns = itemBody(
+      "<div class='qti-layout-row'><div class='qti-layout-col6' id='a'>a</div><div class='qti-layout-col6' id='b'>b</div></div>",
+    );
+    // A host builds the sheet from the text of `player.css`, as the content guide shows, and the sheets of the earlier mounts
+    // stay in memory. The fixture's `stylesheet` makes the text of each sheet its own, because WebKit gave the sheets of the
+    // fixture's mounts the media queries of an earlier sheet in some runs; this test builds the sheets as a host does.
+    const sheets: CSSStyleSheet[] = [];
+    for (const [width, folded] of [
+      [1280, false],
+      [600, true],
+      [1280, false],
+      [400, true],
+      [600, true],
+      [1280, false],
+      [767, true],
+      [1280, false],
+    ] as const) {
+      await resize(width);
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(PLAYER_CSS);
+      sheets.push(sheet);
+      const { host, root } = createRoot({ stylesheet: sheet });
+      await root.show({ body: { nodes: columns } });
+      const [a, b] = ["#a", "#b"].map((selector) => el(root.root, selector).getBoundingClientRect());
+      expect(b?.left === a?.left, `${width} wide`).toBe(folded);
+      root.destroy();
+      host.remove();
+    }
+  });
+
   it("[T1] keeps the stimulus above the item when the candidate asks for a single column", async () => {
     const { host, root } = createRoot();
     host.setAttribute("data-tempuh-single-column", "");

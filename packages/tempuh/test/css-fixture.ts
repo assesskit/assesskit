@@ -67,10 +67,15 @@ export function nth<T>(items: readonly T[], index: number): T {
   return item;
 }
 
-/** Builds a stylesheet from text. */
+/**
+ * Builds a stylesheet from text. Each sheet ends with a comment of its own: in some runs WebKit gave every sheet made from
+ * the text of an earlier sheet the media queries of that sheet as they were, so that a sheet made after a resize laid out
+ * for the old width and kept doing so (the viewport tests failed in those runs, all or none of their mounts). Text that is
+ * not equal to any other keeps a sheet's media queries its own.
+ */
 export function stylesheet(text: string): CSSStyleSheet {
   const result = new CSSStyleSheet();
-  result.replaceSync(text);
+  result.replaceSync(`${text}\n/* ${crypto.randomUUID()} */`);
   return result;
 }
 
