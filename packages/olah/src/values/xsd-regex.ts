@@ -5,9 +5,12 @@ import { PatternParser } from "./xsd-regex-parser.js";
 
 /** The limits on compiling a pattern. */
 export interface XsdRegexLimits {
-  /** The most states the automaton of a pattern may have once its counted repeats are expanded. */
+  /** The most states the automaton of a pattern may have once its counted repeats are expanded. Default: `100000`. */
   readonly maxStates: number;
-  /** The most levels that groups and character class subtractions may be nested. */
+  /**
+   * The most levels that groups and character class subtractions may be nested. It bounds the recursion of the parser.
+   * Default: `100`.
+   */
   readonly maxDepth: number;
 }
 
@@ -38,8 +41,8 @@ export function compileXsdRegex(pattern: string, options: CompileXsdRegexOptions
   const { limits = {} } = options;
   checkRecord(limits, "The option limits must be an object");
   const { maxStates = DEFAULT_XSD_REGEX_LIMITS.maxStates, maxDepth = DEFAULT_XSD_REGEX_LIMITS.maxDepth } = limits;
-  checkPositiveInteger(maxStates, "The option limits.maxStates");
-  checkPositiveInteger(maxDepth, "The option limits.maxDepth");
+  checkPositiveInteger(maxStates, "The limit maxStates");
+  checkPositiveInteger(maxDepth, "The limit maxDepth");
   const tree = new PatternParser(pattern, maxDepth).parse();
   if (countStates(tree, maxStates) > maxStates) {
     throw new DataError(

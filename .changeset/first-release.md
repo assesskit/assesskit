@@ -49,3 +49,9 @@ and ordering of sections and items from a seeded generator and the numbering of 
 `previousItem` for the order of presentation under pre-conditions and branch rules, `sessionControl` for the inheritance of
 item session control, and `timeLimits` with `additionalTestingTime` for time limits with a candidate's extra time.
 `package` has `resolveReference`.
+
+Hardening of the readers and the interpreter against hostile input: `parseXml` refuses a lone surrogate, a namespace
+declaration with white space at its start or end, and a qualified name whose parts are not names without a colon, so that
+every tree it returns can be written; a package reads and parses a file that many `xi:include` elements name once;
+`dependencyClosure` follows chains of any length; `qti-repeat` of NULL is NULL however many repeats it names; and the
+compiler of patterns builds a repeat of an empty group at once. Each limit has its default in its TSDoc and in SECURITY.md.

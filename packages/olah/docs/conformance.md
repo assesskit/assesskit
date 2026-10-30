@@ -36,7 +36,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB9 | merged | 8 |
 | OB10 | pending | 43 |
 | OB11 | merged | 15 |
-| OB15 | pending | 1 |
+| OB15 | merged | 1 |
 | OB13a | pending | 26 |
 | OB14 | pending | 79 |
 | OB13b | pending | 28 |
@@ -696,7 +696,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B91 | Separate outcome declaration and response processing template resources, linked by dependencies | BIND §8.6–8.7 | package, asi | S C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
 | B92 | CAT configuration files listed in the manifest when package-relative | CAT §2.6 | package, validate | S N | OB14 |  |
 | B93 | Relative hrefs resolve against the referencing file and `xml:base`; references outside the package are reported | BIND §8, BPIG §6.7 | package | S P N | OB6 | [package.test.ts](../test/package.test.ts) |
-| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 | [node.test.ts](../test/node.test.ts), [node.xsd.test.ts](../test/node.xsd.test.ts), [package.test.ts](../test/package.test.ts), [xml.test.ts](../test/xml.test.ts) |
+| B94 | XXE, SSRF and path traversal controls of §2.6 | BPIG §6.7 | xml, package, node | N P | OB15 | [asi.test.ts](../test/asi.test.ts), [node.test.ts](../test/node.test.ts), [node.xsd.test.ts](../test/node.xsd.test.ts), [package.test.ts](../test/package.test.ts), [pnp.test.ts](../test/pnp.test.ts), [processing.test.ts](../test/processing.test.ts), [results.test.ts](../test/results.test.ts), [usage.test.ts](../test/usage.test.ts), [values.test.ts](../test/values.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | B95 | Adaptive items in review: final outcomes decide integrated feedback; `show-feedback` ignored when `allow-review` is true | INFO §7.19.3 | delivery, content | S | OB13a |  |
 | B96 | Draft and submitted responses are kept apart: expressions, outcome processing and results `final` read the last submitted values; RR `pendingSubmission` snapshots the drafts | INFO §2.11.1.2, RR §2.7.7 | delivery | S P | OB13a |  |
 | B97 | A branch rule must not target an item that selection with replacement can repeat | INFO §5.98 (Ordering class) | validate | N | OB14 |  |

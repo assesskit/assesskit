@@ -1,11 +1,12 @@
 import { SaxesParser, type SaxesTagNS } from "saxes";
+import { NC_NAME_RE } from "xmlchars/xmlns/1.0/ed3.js";
 import { checkOptions, checkString, describe } from "../checks.js";
 import { DataError, OlahError, type ReadError, SecurityError } from "../errors.js";
 import { decodeXml } from "./encoding.js";
-import { resolveLimits, type XmlLimits } from "./limits.js";
+import { resolveXmlLimits, type XmlLimits } from "./limits.js";
 import { Locator } from "./locator.js";
 import { documentName, readError } from "./read-error.js";
-import type { XmlAttribute, XmlElement, XmlNode } from "./tree.js";
+import { XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, type XmlNode } from "./tree.js";
 
 /** Options of {@link parseXml}. */
 export interface ParseXmlOptions {
@@ -19,6 +20,14 @@ export interface ParseXmlOptions {
 const WELL_FORMED = "XML 1.0 §2.1";
 /** The rule for the XML declaration (XML 1.0 §2.8). */
 const XML_DECLARATION = "XML 1.0 §2.8";
+/** The rule for the characters of a document (XML 1.0 §2.2). */
+const CHARACTERS = "XML 1.0 §2.2";
+/** The rule for qualified names (Namespaces in XML 1.0 §3). */
+const QUALIFIED_NAMES = "Namespaces in XML 1.0 §3";
+/** The rule for the names of namespaces (Namespaces in XML 1.0 §2.2, which makes them URI references). */
+const NAMESPACE_NAMES = "Namespaces in XML 1.0 §2.2";
+/** A surrogate that is not half of a pair, which is no character, so that no text that has one is a document. */
+const LONE_SURROGATE = /\p{Cs}/u;
 
 /** An element that is still open: its tag, the children so far and the text not yet made a node. */
 interface Frame {
@@ -35,13 +44,15 @@ function toAttribute({ uri: namespace, local: name, prefix, value }: SaxesTagNS[
 class TreeBuilder {
   private readonly frames: Frame[] = [];
   private readonly limits: XmlLimits;
+  private readonly path: string | undefined;
   private readonly name: string;
   private nodes = 0;
   private result: XmlElement | undefined;
 
-  constructor(limits: XmlLimits, name: string) {
+  constructor(limits: XmlLimits, path: string | undefined) {
     this.limits = limits;
-    this.name = name;
+    this.path = path;
+    this.name = documentName(path);
   }
 
   /** The root element, once it is closed. */
@@ -73,6 +84,37 @@ class TreeBuilder {
     frame.text = "";
   }
 
+  /**
+   * Checks that the prefix and the local part of each name of the tag are names without a colon, which the parser does
+   * not: it takes `p:1` for a qualified name, and a tree with it cannot be written.
+   */
+  private checkNames(
+    tag: SaxesTagNS,
+    attributes: readonly SaxesTagNS["attributes"][string][],
+    line: number,
+    column: number,
+  ): void {
+    const unqualified = [tag, ...attributes].find(
+      ({ prefix, local }) => !NC_NAME_RE.test(local) || (prefix !== "" && !NC_NAME_RE.test(prefix)),
+    );
+    if (unqualified === undefined) return;
+    const written = unqualified.prefix === "" ? unqualified.local : `${unqualified.prefix}:${unqualified.local}`;
+    const message = `${this.name} has the name ${JSON.stringify(written)}, which is not a qualified name: the parts around its colon must be names without a colon.`;
+    throw readError("olah/xml/not-well-formed", message, QUALIFIED_NAMES, { path: this.path, line, column });
+  }
+
+  /**
+   * Checks that no namespace declaration has white space at its start or end. The parser strips it from the namespace of
+   * the elements and keeps it in the declaration, so that the two would differ.
+   */
+  private checkNamespaces(attributes: readonly SaxesTagNS["attributes"][string][], line: number, column: number): void {
+    const padded = attributes.find(({ uri, value }) => uri === XMLNS_NAMESPACE && value !== value.trim());
+    if (padded === undefined) return;
+    const declaration = padded.prefix === "" ? padded.local : `${padded.prefix}:${padded.local}`;
+    const message = `${this.name} declares the namespace ${JSON.stringify(padded.value)} in ${declaration}, which has white space at its start or end; a namespace name is a URI reference and has none.`;
+    throw readError("olah/xml/namespace", message, NAMESPACE_NAMES, { path: this.path, line, column });
+  }
+
   /** Opens an element at the position of its start tag. */
   open(tag: SaxesTagNS, line: number, column: number): void {
     this.flush();
@@ -81,6 +123,8 @@ class TreeBuilder {
     if (attributes.length > this.limits.maxAttributes) {
       throw this.exceeded("maxAttributes", "has an element with more attributes than");
     }
+    this.checkNames(tag, attributes, line, column);
+    this.checkNamespaces(attributes, line, column);
     this.count();
     const head: Frame["head"] = {
       kind: "element",
@@ -145,9 +189,16 @@ function notWellFormed(error: Error, parser: Position, path: string | undefined)
 /** Feeds the text to a parser whose events build the tree, and returns the root. */
 function parseText(text: string, limits: XmlLimits, path: string | undefined): XmlElement {
   const name = documentName(path);
-  const builder = new TreeBuilder(limits, name);
+  const builder = new TreeBuilder(limits, path);
   const parser = new SaxesParser({ xmlns: true, position: true });
   const locator = new Locator(text);
+  // The parser takes a high surrogate for half of a pair without looking at what follows it.
+  const lone = text.search(LONE_SURROGATE);
+  if (lone >= 0) {
+    const code = (text.codePointAt(lone) ?? 0).toString(16).toUpperCase();
+    const message = `${name} is not well-formed: it has the lone surrogate U+${code}, which is not a character.`;
+    throw readError("olah/xml/not-well-formed", message, CHARACTERS, { path, ...locator.at(lone) });
+  }
   let start = { line: 1, column: 1 };
   parser.on("xmldecl", ({ version }) => {
     if (version !== "1.0") {
@@ -193,8 +244,9 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
  * @param options - See {@link ParseXmlOptions}.
  * @returns The root element.
  * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
- * @throws `ReadError` when the document is not well-formed, declares XML 1.1, or is in an unsupported or contradicting
- * encoding.
+ * @throws `ReadError` when the document is not well-formed, has a lone surrogate, a namespace declaration with white
+ * space at its start or end, or a qualified name whose parts are not names without a colon, declares XML 1.1, or is in
+ * an unsupported or contradicting encoding.
  * @throws `SecurityError` when the document has a DOCTYPE or exceeds `maxBytes`, `maxDepth`, `maxAttributes` or `maxNodes`.
  */
 export function parseXml(input: string | Uint8Array, options: ParseXmlOptions = {}): XmlElement {
@@ -204,7 +256,7 @@ export function parseXml(input: string | Uint8Array, options: ParseXmlOptions = 
   if (!(typeof input === "string" || input instanceof Uint8Array)) {
     throw new DataError(`The XML input must be a string or a Uint8Array, found ${describe(input)}.`);
   }
-  const resolved = resolveLimits(limits);
+  const resolved = resolveXmlLimits(limits);
   const { maxBytes } = resolved;
   if (typeof input === "string" ? exceedsBytes(input, maxBytes) : input.byteLength > maxBytes) {
     throw new SecurityError(

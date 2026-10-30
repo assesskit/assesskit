@@ -25,7 +25,6 @@ import {
   readAsi,
   readScoreCovers,
   type ScoreCover,
-  SecurityError,
   scoreCoversBlock,
   serializeXml,
   type TemplateRule,
@@ -37,6 +36,7 @@ import {
 import { DOCUMENT_ARBITRARIES, modelArbitrary } from "./arbitraries/asi.js";
 import { inventoryElements } from "./asi-elements.js";
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
+import { fuzzReader } from "./fuzz.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
@@ -3879,25 +3879,10 @@ describe("properties", () => {
     }
   });
 
-  it("[S13] reads a mutated document into a model or fails with a ReadError or a SecurityError", () => {
-    const documents = [...DOCUMENT_ARBITRARIES.values()];
-    fc.assert(
-      fc.property(
-        fc.constantFrom(...documents).chain((arbitrary) => arbitrary),
-        fc.nat(),
-        fc.string({ maxLength: 3 }),
-        (document, at, insert) => {
-          const written = writeAsi(document);
-          const index = at % written.length;
-          const mutated = written.slice(0, index) + insert + written.slice(index + (insert === "" ? 1 : 0));
-          try {
-            readAsi(mutated);
-          } catch (error) {
-            expect(error instanceof ReadError || error instanceof SecurityError, String(error)).toBe(true);
-          }
-        },
-      ),
-      { numRuns: 300 },
+  it("[S13][B94] reads a mutated document into a model or refuses it with a ReadError or a SecurityError", () => {
+    fuzzReader(
+      fc.constantFrom(...DOCUMENT_ARBITRARIES.values()).chain((arbitrary) => arbitrary.map(writeAsi)),
+      readAsi,
     );
   });
 });

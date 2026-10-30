@@ -1,6 +1,6 @@
 import { type AsiDocument, readAsi } from "../asi/index.js";
 import { checkArray, checkFunction, checkOptions, checkRecord, checkString, describe } from "../checks.js";
-import { DataError, SecurityError } from "../errors.js";
+import { DataError, OlahError, SecurityError } from "../errors.js";
 import { parseXml, readError, resolveIncludes, type XmlElement, type XmlLimits } from "../xml/index.js";
 import type { Manifest } from "./manifest.js";
 import type { PackageFiles } from "./package-files.js";
@@ -29,7 +29,7 @@ export interface QtiPackage {
   file(path: string): Uint8Array | undefined;
   /**
    * Returns the ASI document at a path, with its `xi:include` elements resolved inside the package. The document is parsed
-   * on the first call and kept.
+   * on the first call and kept. A file that several includes name is read and parsed once for the document.
    *
    * @throws `DataError` when the path is not a string.
    * @throws `ReadError` when the package has no file at the path, or the file cannot be read as an ASI document.
@@ -89,8 +89,30 @@ class OpenedPackage implements QtiPackage {
     return this.listed.has(path) ? this.files.read(path) : undefined;
   }
 
-  /** Reads the target of an `xi:include`; a target outside the package is a security error, so that no fallback hides it. */
-  private include(href: string, base: string): XmlElement {
+  /**
+   * Reads and parses a file that an `xi:include` names. A file that cannot be read gives its error back instead of
+   * throwing it, so that the failure is kept like a tree.
+   */
+  private parseIncluded(target: string, base: string): XmlElement | OlahError {
+    try {
+      const bytes = this.file(target);
+      if (bytes === undefined) {
+        const message = `The package has no file ${describe(target)}.`;
+        return readError("olah/package/missing-file", message, "BIND §8.4", { path: base });
+      }
+      return parseXml(bytes, { path: target, limits: this.xmlLimits });
+    } catch (error) {
+      if (error instanceof OlahError) return error;
+      throw error;
+    }
+  }
+
+  /**
+   * Reads the target of an `xi:include`; a target outside the package is a security error, so that no fallback hides it.
+   * A file is read and parsed once for a document, whatever the number of includes of it, so that a document cannot make
+   * the reader repeat the work of a large file.
+   */
+  private include(href: string, base: string, outcomes: Map<string, XmlElement | OlahError>): XmlElement {
     const target = resolveReference(base, href);
     if (target === undefined) {
       throw new SecurityError(
@@ -99,13 +121,13 @@ class OpenedPackage implements QtiPackage {
         0,
       );
     }
-    const bytes = this.file(target);
-    if (bytes === undefined) {
-      throw readError("olah/package/missing-file", `The package has no file ${describe(target)}.`, "BIND §8.4", {
-        path: base,
-      });
+    let outcome = outcomes.get(target);
+    if (outcome === undefined) {
+      outcome = this.parseIncluded(target, base);
+      outcomes.set(target, outcome);
     }
-    return parseXml(bytes, { path: target, limits: this.xmlLimits });
+    if (outcome instanceof OlahError) throw outcome;
+    return outcome;
   }
 
   document(path: string): AsiDocument {
@@ -117,7 +139,10 @@ class OpenedPackage implements QtiPackage {
       throw readError("olah/package/missing-file", `The package has no file ${describe(path)}.`, "BIND §8", { path });
     }
     const root = parseXml(bytes, { path, limits: this.xmlLimits });
-    const resolved = resolveIncludes(root, path, (href, base) => this.include(href, base), { limits: this.xmlLimits });
+    const outcomes = new Map<string, XmlElement | OlahError>();
+    const resolved = resolveIncludes(root, path, (href, base) => this.include(href, base, outcomes), {
+      limits: this.xmlLimits,
+    });
     const document = readAsi(resolved, { path, limits: this.xmlLimits });
     this.documents.set(path, document);
     return document;

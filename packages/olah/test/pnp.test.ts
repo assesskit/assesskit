@@ -19,7 +19,8 @@ import {
 } from "../src/index.js";
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";
-import { damage, failsOnlyAsRead, issueOf } from "./read-failure.js";
+import { fuzzReader } from "./fuzz.js";
+import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${PNP_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_afa3p0pnp_v1p0.xsd`;
 const DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -993,16 +994,8 @@ describe("properties", () => {
     );
   });
 
-  it("[P44][N] reads a damaged document or refuses it with a ReadError, and throws nothing else", () => {
-    fc.assert(
-      fc.property(
-        personalNeedsProfile({ extensions: true }).chain((model) => damage(writePnp(model))),
-        (text) => {
-          expect(failsOnlyAsRead(readPnp, text)).toBe(true);
-        },
-      ),
-      { numRuns: 300 },
-    );
+  it("[P44][N][B94] reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
+    fuzzReader(personalNeedsProfile({ extensions: true }).map(writePnp), readPnp);
   });
 
   it("[P44] writes the same text for a profile that it has read as for the profile it was read from", () => {

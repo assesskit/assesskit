@@ -18,7 +18,9 @@ export function dependencyClosure(manifest: Manifest, resourceIdentifier: string
   checkString(resourceIdentifier, "The resource identifier");
   const byIdentifier = indexResources(manifest.resources);
   const closure = new Map<string, Resource>();
-  const visit = (identifier: string, dependent: string | undefined): void => {
+  // The walk keeps its own stack, because a manifest can chain as many resources as its limits allow.
+  const walk: { readonly identifier: string; readonly dependencies: Iterator<string> }[] = [];
+  const enter = (identifier: string, dependent: string | undefined): void => {
     if (closure.has(identifier)) return;
     const resource = byIdentifier.get(identifier);
     if (resource === undefined) {
@@ -29,8 +31,13 @@ export function dependencyClosure(manifest: Manifest, resourceIdentifier: string
       );
     }
     closure.set(identifier, resource);
-    for (const dependency of resource.dependencies) visit(dependency, identifier);
+    walk.push({ identifier, dependencies: resource.dependencies.values() });
   };
-  visit(resourceIdentifier, undefined);
+  enter(resourceIdentifier, undefined);
+  for (let step = walk.at(-1); step !== undefined; step = walk.at(-1)) {
+    const next = step.dependencies.next();
+    if (next.done) walk.pop();
+    else enter(next.value, step.identifier);
+  }
   return [...closure.values()];
 }

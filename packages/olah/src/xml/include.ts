@@ -1,6 +1,6 @@
 import { checkFunction, checkOptions, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError, type IssueLocation, type ReadError, SecurityError } from "../errors.js";
-import { resolveLimits, type XmlLimits } from "./limits.js";
+import { resolveXmlLimits, type XmlLimits } from "./limits.js";
 import { attributeOf } from "./query.js";
 import { locationOf, readError } from "./read-error.js";
 import { XINCLUDE_NAMESPACE, type XmlElement, type XmlNode } from "./tree.js";
@@ -213,7 +213,7 @@ export function resolveIncludes(
   checkFunction(resolve, "The resolver must be a function of an href and a base");
   checkOptions(options);
   const { limits = {} } = options;
-  const expander = new Expander(resolveLimits(limits), resolve);
+  const expander = new Expander(resolveXmlLimits(limits), resolve);
   const key = joinReference("", base);
   const [expanded, ...others] = expander.expandNode(root, { base: key, chain: [key], depth: 1 });
   if (expanded?.kind !== "element" || others.length > 0) {

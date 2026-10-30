@@ -2,15 +2,21 @@ import { checkPositiveInteger, checkRecord } from "../checks.js";
 
 /** The limits that keep a document from using more memory or time than a caller allows. */
 export interface XmlLimits {
-  /** The most bytes of UTF-8 a document may have. */
+  /** The most bytes of UTF-8 a document may have. Default: `33554432` (32 MiB). */
   readonly maxBytes: number;
-  /** The deepest nesting of elements, counting the root as depth 1. */
+  /**
+   * The deepest nesting of elements, counting the root as depth 1. It bounds the recursion of every reader, writer and
+   * interpreter that walks a tree, expressions included. Default: `256`.
+   */
   readonly maxDepth: number;
-  /** The most attributes one element may have, namespace declarations included. */
+  /** The most attributes one element may have, namespace declarations included. Default: `256`. */
   readonly maxAttributes: number;
-  /** The most nodes a tree may have: elements, text, CDATA sections, comments and processing instructions. */
+  /**
+   * The most nodes a tree may have: elements, text, CDATA sections, comments and processing instructions. Default:
+   * `1000000`.
+   */
   readonly maxNodes: number;
-  /** The deepest nesting of XInclude: a document that includes a document that includes another is depth 2. */
+  /** The deepest nesting of XInclude: a document that includes a document that includes another is depth 2. Default: `8`. */
   readonly maxIncludeDepth: number;
 }
 
@@ -32,7 +38,7 @@ export const DEFAULT_XML_LIMITS: XmlLimits = {
  *
  * @throws `DataError` when `limits` is not an object or a limit is not a positive integer.
  */
-export function resolveLimits(limits: Partial<XmlLimits>): XmlLimits {
+export function resolveXmlLimits(limits: Partial<XmlLimits>): XmlLimits {
   checkRecord(limits, "The option limits must be an object");
   const {
     maxBytes = DEFAULT_XML_LIMITS.maxBytes,

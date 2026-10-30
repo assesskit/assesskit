@@ -24,11 +24,14 @@ Points to be aware of when deploying olah:
 - **Processing.** Processing runs no code it is given: a custom operator is a function the caller registers, and what it
   returns is checked like any input. `qti-template-constraint` runs template processing at most 100 times (INFO §5.150),
   and a container that an expression builds, such as the result of `qti-repeat`, is limited by `maxContainerSize`; a
-  larger one is a `SecurityError`.
+  larger one is a `SecurityError`. Expressions are no deeper than the document they were read from, which `maxDepth`
+  limits.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
   entity expansion, BPIG §6.7). It reads only the five predefined entities and character references. It also limits the
-  document before and while it builds the tree. `resolveIncludes` calls only the resolver the caller passes, rejects
-  `xpointer`, detects loops and counts the nodes of the result.
+  document before and while it builds the tree, and refuses what the parser lets through and a tree could not keep: a lone
+  surrogate, a namespace declaration with white space at its start or end, and a qualified name that is not made of two
+  names. `resolveIncludes` calls only the resolver the caller passes, rejects `xpointer`, detects loops and counts the nodes
+  of the result.
 - **Schemas.** olah ships no schema. `loadSchemaSet` checks the SHA-256 of every file it reads against the list in
   `SCHEMA_FILES`, and again when it compiles a file. `validateXmlFiles` parses every document with `parseXml` first and
   runs libxml2 with network access and external entities off. A document has no way to name another schema file than the
@@ -40,8 +43,8 @@ Points to be aware of when deploying olah:
   again while an entry inflates, so that a header that understates a size cannot make the output larger. A package directory is
   read with `lstat` and `realpath`: a symbolic link or a file that is not a regular file rejects it, and a file replaced by a
   link after the listing is not followed. A reference in a document that leaves the package, and an `xi:include` that names a
-  file outside it, are never resolved. A package directory that another process can change while olah reads it is not protected
-  against a race.
+  file outside it, are never resolved; a file that many includes of a document name is read and parsed once. A package
+  directory that another process can change while olah reads it is not protected against a race.
 
 ## tempuh: the frame of portable custom interactions
 
@@ -59,30 +62,58 @@ origin and the origins the host allows. The frame refuses to start where the bro
 
 ## Default limits
 
-Every limit is a positive integer that a caller can replace per call with the option `limits`. The defaults are about
-1,000 times the largest document of the 1EdTech QTI 3.0 examples for size and node count, 16 times its depth and 20 times
-its attributes on an element, and about 1,000 times the largest container of the examples, a mapping of 9 entries.
+Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;
+a limit left out keeps its default. Input over a limit is a `SecurityError` whose `limit` is the limit's name, except a
+regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing. Each default is a
+safety factor over the largest value among the 1EdTech QTI 3.0 examples, where the examples have one.
 
-| Limit              | Default    | Applies to                                                                                                                               |
-| ------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `maxBytes`         | 33,554,432 | The bytes of one XML document.                                                                                                           |
-| `maxDepth`         | 256        | The nesting of elements in a document, and in a document with its includes.                                                              |
-| `maxAttributes`    | 256        | The attributes on one element.                                                                                                           |
-| `maxNodes`         | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.                                                                           |
-| `maxIncludeDepth`  | 8          | The nesting of `xi:include`.                                                                                                             |
-| `maxContainerSize` | 10,000     | The values of a container that a processing expression builds.                                                                           |
-| `maxPlanNodes`     | 10,000     | The sections and items of a test plan, about 400 times the 24 items of the largest example test; it bounds a selection with replacement. |
+XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and
+`xmlLimits` of `readPackage`, `openPackage` and `readPackageFile`):
 
-The limits of archives and package directories, `ZipLimits`, are about 1,000 times the entries of the largest package of the
-examples (99), 100 times its largest entry (5.0 MiB), 200 times its size (11.0 MB) and 9 times its largest compression ratio
-(27.9, on a 7.5 KB entry; 3.6 on the entries above the exemption).
+| Limit             | Default    | Unit       | Largest example | Applies to                                                                  |
+| ----------------- | ---------- | ---------- | --------------- | --------------------------------------------------------------------------- |
+| `maxBytes`        | 33,554,432 | bytes      | 32 KiB          | One XML document.                                                           |
+| `maxDepth`        | 256        | levels     | 16              | The nesting of elements in a document, and in a document with its includes. |
+| `maxAttributes`   | 256        | attributes | 12              | One element.                                                                |
+| `maxNodes`        | 1,000,000  | nodes      | 1,126           | A tree, and a tree with its includes resolved.                              |
+| `maxIncludeDepth` | 8          | levels     | none            | The nesting of `xi:include`.                                                |
 
-| Limit           | Default       | Applies to                                                                                               |
-| --------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
-| `maxEntries`    | 100,000       | Entries of an archive, directories included; files and directories of a package directory.               |
-| `maxEntryBytes` | 536,870,912   | The uncompressed bytes of one file.                                                                      |
-| `maxTotalBytes` | 2,147,483,648 | The uncompressed bytes of all files.                                                                     |
-| `maxRatio`      | 250           | The uncompressed size of an entry over its compressed size; entries of 102,400 bytes or less are exempt. |
+Archives and package directories (`ZipLimits`; option `limits` of `readPackage` and `readPackageFile`):
+
+| Limit           | Default       | Unit    | Largest example | Applies to                                                                                               |
+| --------------- | ------------- | ------- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| `maxEntries`    | 100,000       | entries | 99              | Entries of an archive, directories included; files and directories of a package directory.               |
+| `maxEntryBytes` | 536,870,912   | bytes   | 5.0 MiB         | The uncompressed bytes of one file.                                                                      |
+| `maxTotalBytes` | 2,147,483,648 | bytes   | 11.0 MB         | The uncompressed bytes of all files.                                                                     |
+| `maxRatio`      | 250           | ratio   | 27.9            | The uncompressed size of an entry over its compressed size; entries of 102,400 bytes or less are exempt. |
+
+The ratio 27.9 is that of a 7.5 KB entry; the entries above the exemption reach 3.6.
+
+Processing (`ProcessingLimits`; option `limits` of the processing context):
+
+| Limit              | Default | Unit   | Largest example | Applies to                                                     |
+| ------------------ | ------- | ------ | --------------- | -------------------------------------------------------------- |
+| `maxContainerSize` | 10,000  | values | 9               | The values of a container that a processing expression builds. |
+
+Test plans (`PlanLimits`; option `limits` of `planTest`):
+
+| Limit          | Default | Unit  | Largest example | Applies to                                                                                         |
+| -------------- | ------- | ----- | --------------- | -------------------------------------------------------------------------------------------------- |
+| `maxPlanNodes` | 10,000  | nodes | 24              | The sections and items of a test plan, so that a selection with replacement cannot exhaust memory. |
+
+Regular expressions (`XsdRegexLimits`; option `limits` of `compileXsdRegex`, whose defaults `qti-pattern-match` uses):
+
+| Limit       | Default | Unit   | Largest example | Applies to                                                           |
+| ----------- | ------- | ------ | --------------- | -------------------------------------------------------------------- |
+| `maxStates` | 100,000 | states | none            | The automaton of a pattern, once its counted repeats are expanded.   |
+| `maxDepth`  | 100     | levels | none            | The nesting of groups and character class subtractions in a pattern. |
+
+Template processing runs at most 100 times for its constraints (INFO §5.150); that number is fixed by the specification, not a
+limit to replace.
+
+Measured on Node.js 26 with documents built to reach each XML limit, a document at the limits takes under 2.5 seconds and
+250 MB of heap to read. An archive or a container at the limits is bounded by its size: an entry is inflated in steps of
+8 KiB of input and never beyond the size its header declares.
 
 ## Runtime dependencies
 

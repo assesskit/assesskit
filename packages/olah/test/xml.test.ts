@@ -27,6 +27,8 @@ import {
   type XmlNode,
   XSI_NAMESPACE,
 } from "../src/index.js";
+import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
+import { expectOutcome, FUZZ } from "./fuzz.js";
 
 const XSI = "http://www.w3.org/2001/XMLSchema-instance";
 const DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -328,6 +330,29 @@ describe("parseXml", () => {
       );
     });
 
+    it("[B94] rejects a DOCTYPE in bytes of every encoding it can arrive in, and reads one inside a comment or a CDATA section as data", () => {
+      const doctype = '<!DOCTYPE a [<!ENTITY x "y">]><a/>';
+      const utf16 = (text: string, order: readonly [number, number]): Uint8Array =>
+        Uint8Array.from([
+          ...order,
+          ...[...text].flatMap((char) => {
+            const unit = char.charCodeAt(0);
+            return order[0] === 0xff ? [unit & 0xff, unit >> 8] : [unit >> 8, unit & 0xff];
+          }),
+        ]);
+      const encoder = new TextEncoder();
+      for (const bytes of [
+        utf16(doctype, [0xff, 0xfe]),
+        utf16(doctype, [0xfe, 0xff]),
+        Uint8Array.from([0xef, 0xbb, 0xbf, ...encoder.encode(doctype)]),
+        encoder.encode(`<?xml version="1.0" encoding="ISO-8859-1"?>${doctype}`),
+      ]) {
+        expect(thrown(() => parseXml(bytes))).toMatchObject({ limit: "doctype" });
+      }
+      expect(parseXml("<a><!-- <!DOCTYPE a> --><![CDATA[<!DOCTYPE a>]]></a>").children).toHaveLength(2);
+      expect(issueOf(thrown(() => parseXml("<!doctype a><a/>")))).toMatchObject({ code: "olah/xml/not-well-formed" });
+    });
+
     it("[B94] reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
       expect(issueOf(thrown(() => parseXml("<a>&xxe;</a>")))).toMatchObject({ code: "olah/xml/not-well-formed" });
     });
@@ -379,6 +404,47 @@ describe("parseXml", () => {
       expect(issue.location?.column).toBeGreaterThanOrEqual(1);
       expect(issue.message).toMatch(/^The document "bad\.xml" is not well-formed: .+\.$/);
       expect(error.message).toBe(`${issue.message} (line ${line}, column ${issue.location?.column})`);
+    });
+
+    it.each([
+      ["a lone high surrogate in text", "<a>\ud800</a>", 1, 4],
+      ["a high surrogate that no low surrogate follows", "<a b='x'>a\ud800b</a>", 1, 11],
+      ["a lone low surrogate in an attribute value", '<a\n b="\udc00"/>', 2, 5],
+      ["a lone surrogate in a comment", "<a><!--\ud83d--></a>", 1, 8],
+    ])("[S13] rejects %s, which is no character (XML 1.0 §2.2)", (_name, xml, line, column) => {
+      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+        code: "olah/xml/not-well-formed",
+        source: "XML 1.0 §2.2",
+        location: { path: "bad.xml", line, column },
+      });
+      expect(parseXml("<a>\ud83d\ude00</a>").children).toEqual([text("😀")]);
+    });
+
+    it.each([
+      ["a trailing space", '<a xmlns="urn:a "/>'],
+      ["a no-break space", '<p:a xmlns:p="\u00a0urn:a"/>'],
+      ["a byte order mark", '<a xmlns="urn:a\ufeff"/>'],
+    ])(
+      "[S13][B94] rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
+      (_name, xml) => {
+        expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+          code: "olah/xml/namespace",
+          source: "Namespaces in XML 1.0 §2.2",
+          location: { path: "bad.xml", line: 1, column: 1 },
+        });
+      },
+    );
+
+    it.each([
+      ["an element whose local name starts with a digit", '<p:1 xmlns:p="urn:p"/>'],
+      ["an attribute whose local name starts with a hyphen", '<a xmlns:p="urn:p" p:-x="1"/>'],
+      ["a declaration of a prefix that starts with a digit", '<a xmlns:1p="urn:p"/>'],
+    ])("[S13] rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
+      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+        code: "olah/xml/not-well-formed",
+        source: "Namespaces in XML 1.0 §3",
+        location: { path: "bad.xml", line: 1, column: 1 },
+      });
     });
 
     it("reports the column of the character that ends a malformed construct", () => {
@@ -1322,6 +1388,129 @@ describe("properties", () => {
         ).not.toThrow();
       }),
       { numRuns: 100 },
+    );
+  });
+
+  /** Mutated text and mutated bytes of documents that the writer wrote. */
+  const hostileInputs = fc
+    .tuple(tree.map(serializeXml), mutations, fc.boolean())
+    .map(([document, changes, asBytes]) =>
+      asBytes ? mutateBytes(new TextEncoder().encode(document), changes) : mutateText(document, changes),
+    );
+
+  it("[B94][N] parseXml reads a mutated document into a tree that serializeXml writes back, or refuses it with a ReadError or a SecurityError", () => {
+    fc.assert(
+      fc.property(hostileInputs, (input) => {
+        let root: XmlElement;
+        try {
+          root = parseXml(input);
+        } catch (error) {
+          expectOutcome(() => {
+            throw error;
+          });
+          return;
+        }
+        const written = serializeXml(root);
+        expect(serializeXml(parseXml(written))).toBe(written);
+      }),
+      FUZZ,
+    );
+  });
+
+  it("[B94][N] parseXml under small limits reads a document or refuses it with a SecurityError, and never builds a tree beyond a limit", () => {
+    const small = fc.record(
+      {
+        maxBytes: fc.integer({ min: 1, max: 400 }),
+        maxDepth: fc.integer({ min: 1, max: 6 }),
+        maxAttributes: fc.integer({ min: 1, max: 4 }),
+        maxNodes: fc.integer({ min: 1, max: 12 }),
+      },
+      { requiredKeys: [] },
+    );
+    const sizeOf = (node: XmlNode): { depth: number; nodes: number } => {
+      if (node.kind !== "element") return { depth: 0, nodes: 1 };
+      const inner = node.children.map(sizeOf);
+      return {
+        depth: 1 + Math.max(0, ...inner.map(({ depth }) => depth)),
+        nodes: 1 + inner.reduce((sum, { nodes }) => sum + nodes, 0),
+      };
+    };
+    fc.assert(
+      fc.property(tree.map(serializeXml), small, (document, limits) => {
+        const { maxDepth = DEFAULT_XML_LIMITS.maxDepth, maxNodes = DEFAULT_XML_LIMITS.maxNodes } = limits;
+        try {
+          const { depth, nodes } = sizeOf(parseXml(document, { limits }));
+          expect(depth).toBeLessThanOrEqual(maxDepth);
+          expect(nodes).toBeLessThanOrEqual(maxNodes);
+        } catch (error) {
+          expect(error).toBeInstanceOf(SecurityError);
+        }
+      }),
+      FUZZ,
+    );
+  });
+
+  it("[B94][N] resolveIncludes expands hostile includes within the limits, or refuses them with a ReadError or a SecurityError", () => {
+    const hrefs = fc.constantFrom(
+      "a.xml",
+      "b.xml",
+      "c.xml",
+      "../a.xml",
+      "",
+      "b.xml#x",
+      "http://example.com/a.xml",
+      "/b.xml",
+      "missing.xml",
+    );
+    const include = fc
+      .tuple(hrefs, fc.boolean(), fc.constantFrom("", ' xpointer="x"', ' parse="text"'))
+      .map(
+        ([href, fallback, extra]) =>
+          `<xi:include href="${href}"${extra}>${fallback ? "<xi:fallback><f/></xi:fallback>" : ""}</xi:include>`,
+      );
+    const document = fc
+      .array(fc.oneof(include, include, fc.constant("<e/>"), fc.constant("<xi:fallback/>")), { maxLength: 4 })
+      .map((children) => parseXml(`<r xmlns:xi="${XINCLUDE_NAMESPACE}">${children.join("")}</r>`));
+    const limits = fc.record(
+      {
+        maxDepth: fc.integer({ min: 1, max: 6 }),
+        maxNodes: fc.integer({ min: 1, max: 60 }),
+        maxIncludeDepth: fc.integer({ min: 1, max: 4 }),
+      },
+      { requiredKeys: [] },
+    );
+    const sizeOf = (node: XmlNode): { depth: number; nodes: number; includes: number } => {
+      if (node.kind !== "element") return { depth: 0, nodes: 1, includes: 0 };
+      const inner = node.children.map(sizeOf);
+      return {
+        depth: 1 + Math.max(0, ...inner.map(({ depth }) => depth)),
+        nodes: 1 + inner.reduce((sum, { nodes }) => sum + nodes, 0),
+        includes:
+          (node.namespace === XINCLUDE_NAMESPACE && node.name === "include" ? 1 : 0) +
+          inner.reduce((sum, { includes }) => sum + includes, 0),
+      };
+    };
+    fc.assert(
+      fc.property(fc.tuple(document, document, document), limits, (world, limited) => {
+        const documents = new Map(["a.xml", "b.xml", "c.xml"].map((href, index) => [href, world[index]]));
+        const resolve = (href: string): XmlElement => {
+          const found = documents.get(href);
+          if (found === undefined) throw new Error(`${href} is missing`);
+          return found;
+        };
+        const { maxDepth = DEFAULT_XML_LIMITS.maxDepth, maxNodes = DEFAULT_XML_LIMITS.maxNodes } = limited;
+        try {
+          const { depth, nodes, includes } = sizeOf(resolveIncludes(world[0], "a.xml", resolve, { limits: limited }));
+          expect(includes).toBe(0);
+          expect(depth).toBeLessThanOrEqual(maxDepth);
+          expect(nodes).toBeLessThanOrEqual(maxNodes);
+        } catch (error) {
+          expectOutcome(() => {
+            throw error;
+          });
+        }
+      }),
+      FUZZ,
     );
   });
 

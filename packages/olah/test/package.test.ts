@@ -31,7 +31,9 @@ import {
   writeManifest,
   writePackage,
 } from "../src/index.js";
-import { manifests } from "./arbitraries/package.js";
+import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
+import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
+import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
 import { buildZip, bytes, concat, type RawEntry } from "./zip-builder.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures/zip");
@@ -139,6 +141,23 @@ describe("dependencyClosure", () => {
       resources: [{ ...(manifest.resources[0] as Resource), dependencies: ["nowhere"] }],
     };
     expect(() => dependencyClosure(dangling, "test")).toThrow(/depends on "nowhere"/);
+  });
+
+  it("[K8][B94] follows a chain of dependencies as long as a manifest within the default limits can make it", () => {
+    const length = 30_000;
+    const [first] = manifest.resources;
+    if (first === undefined) throw new Error("The test manifest has no resource.");
+    const chain: Manifest = {
+      ...manifest,
+      resources: Array.from({ length: length + 1 }, (_, index) => ({
+        ...first,
+        identifier: `r${index}`,
+        dependencies: [`r${index === length ? 0 : index + 1}`],
+      })),
+    };
+    const closure = dependencyClosure(chain, "r0");
+    expect(closure).toHaveLength(length + 1);
+    expect(closure.at(-1)?.identifier).toBe(`r${length}`);
   });
 
   it("throws a DataError for an argument of another type", () => {
@@ -928,6 +947,49 @@ describe("openPackage", () => {
     expect(issueCode(() => pkg.document("items/c.xml"))).toBe("olah/xml/xinclude-cycle");
   });
 
+  it("[B60][B94] reads and parses a file once for a document, however many includes name it", () => {
+    const includes = (href: string): string => `<xi:include href="${href}"/>`.repeat(2_000);
+    const files = memoryFiles({
+      "imsmanifest.xml": manifest,
+      "items/a.xml": item("a", `<qti-item-body>${includes("p.xml")}</qti-item-body>`),
+      "items/p.xml": `<p xmlns="${ASI}">x</p>`,
+    });
+    const body = openPackage(files).document("items/a.xml");
+    expect(body.kind === "item" && body.item.body?.children).toHaveLength(2_000);
+    expect(files.reads.filter((path) => path === "items/p.xml")).toHaveLength(1);
+  });
+
+  it("[B60][B94] reads a file that fails once for a document, however many includes with a fallback name it", () => {
+    const failing = memoryFiles({
+      "imsmanifest.xml": manifest,
+      "items/a.xml": item(
+        "a",
+        `<qti-item-body>${'<xi:include href="bad.xml"><xi:fallback><p>x</p></xi:fallback></xi:include>'.repeat(500)}</qti-item-body>`,
+      ),
+      "items/bad.xml": "<p>",
+    });
+    const document = openPackage(failing).document("items/a.xml");
+    expect(document.kind === "item" && document.item.body?.children).toHaveLength(500);
+    expect(failing.reads.filter((path) => path === "items/bad.xml")).toHaveLength(1);
+  });
+
+  it("[B94] never lets a fallback hide a DOCTYPE in the document, in an included file or in the manifest", () => {
+    const doctype = '<!DOCTYPE a [<!ENTITY x "y">]>';
+    const pkg = openPackage(
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": `${doctype}${item("a")}`,
+        "items/b.xml": item("b", '<xi:include href="f.xml"><xi:fallback><qti-item-body/></xi:fallback></xi:include>'),
+        "items/f.xml": `${doctype}<qti-item-body xmlns="${ASI}"/>`,
+      }),
+    );
+    expect(securityLimit(() => pkg.document("items/a.xml"))).toBe("doctype");
+    expect(securityLimit(() => pkg.document("items/b.xml"))).toBe("doctype");
+    expect(securityLimit(() => openPackage(memoryFiles({ "imsmanifest.xml": `${doctype}${manifest}` })))).toBe(
+      "doctype",
+    );
+  });
+
   it("applies the xml limits to the manifest and the documents", () => {
     const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
     expect(securityLimit(() => openPackage(files, { xmlLimits: { maxNodes: 5 } }))).toBe("maxNodes");
@@ -1423,20 +1485,81 @@ describe("properties", () => {
     );
   });
 
-  it("[K30][B94] readPackage never throws anything but a ReadError or a SecurityError on bytes that are damaged", () => {
-    const valid = fixture("valid.zip");
+  /** Checks that what a package returns is within the limits and that every path stays inside it. */
+  function expectContained(zip: Uint8Array, limits: Partial<typeof DEFAULT_ZIP_LIMITS>): void {
+    const { maxEntryBytes = DEFAULT_ZIP_LIMITS.maxEntryBytes, maxTotalBytes = DEFAULT_ZIP_LIMITS.maxTotalBytes } =
+      limits;
+    let total = 0;
+    const pkg = readPackage(zip, { limits });
+    for (const path of pkg.paths) {
+      expect(path.startsWith("/") || path.includes("\\") || /^[A-Za-z]:|\p{Cc}/u.test(path), path).toBe(false);
+      expect(
+        path.split("/").every((segment) => segment !== ".." && segment !== "." && segment !== ""),
+        path,
+      ).toBe(true);
+      expectOutcome(() => {
+        const data = pkg.file(path);
+        expect(data?.length ?? 0).toBeLessThanOrEqual(maxEntryBytes);
+        total += data?.length ?? 0;
+      });
+    }
+    expect(total).toBeLessThanOrEqual(maxTotalBytes);
+  }
+
+  it("[K30][B94][N] readPackage reads an archive with hostile headers within its limits, or refuses it with a ReadError or a SecurityError", () => {
     fc.assert(
-      fc.property(fc.nat(valid.length - 1), fc.integer({ min: 0, max: 255 }), (index, value) => {
-        const damaged = valid.slice();
-        damaged[index] = value;
-        try {
-          const pkg = readPackage(damaged);
-          for (const path of pkg.paths) pkg.file(path);
-        } catch (error) {
-          expect(error instanceof ReadError || error instanceof SecurityError, String(error)).toBe(true);
-        }
+      fc.property(hostileArchives, smallZipLimits, (zip, limits) => {
+        expectOutcome(() => expectContained(zip, limits));
       }),
-      { numRuns: 500 },
+      FUZZ,
     );
+  });
+
+  it("[K30][B94][N] readPackage reads an archive with damaged bytes within its limits, or refuses it with a ReadError or a SecurityError", () => {
+    const written = writePackage(
+      readManifest(manifestXml(resources(resourceXml("r", "imsqti_item_xmlv3p0", "items/a.xml")))),
+      new Map([["items/a.xml", bytes(item("a"))]]),
+    );
+    const archives = ["valid.zip", "streamed.zip", "zip64.zip", "bomb.zip"].map(fixture).concat(written);
+    fc.assert(
+      fc.property(fc.constantFrom(...archives), mutations, smallZipLimits, (archive, changes, limits) => {
+        expectOutcome(() => expectContained(mutateBytes(archive, changes), limits));
+      }),
+      FUZZ,
+    );
+  });
+
+  it("[B60][B94][N] reads an item and the file it includes when either is mutated, or refuses them with a ReadError or a SecurityError", () => {
+    const base = item(
+      "a",
+      '<qti-item-body><xi:include href="p.xml"><xi:fallback><p>x</p></xi:fallback></xi:include><xi:include href="../a.xml"/></qti-item-body>',
+    );
+    const included = `<p xmlns="${ASI}">x</p>`;
+    const manifestText = manifestXml(resources(resourceXml("a", "imsqti_item_xmlv3p0", "items/a.xml")));
+    fc.assert(
+      fc.property(mutations, mutations, (itemChanges, includedChanges) => {
+        expectOutcome(() => {
+          const pkg = packageOf(manifestText, {
+            "items/a.xml": mutateText(base, itemChanges),
+            "items/p.xml": mutateText(included, includedChanges),
+          });
+          pkg.document("items/a.xml");
+          packageResolvers(pkg).items("a.xml", "items/test.xml");
+        });
+      }),
+      FUZZ,
+    );
+  });
+
+  it("[K20][B94][N] readLtiLink reads a mutated link or refuses it with a ReadError or a SecurityError", () => {
+    const link = lti(`<blti:title>t</blti:title><blti:custom><lticm:property name="k">v</lticm:property></blti:custom>
+      <blti:extensions platform="p"><lticm:property name="e">x</lticm:property></blti:extensions>
+      <blti:launch_url>http://localhost/provider</blti:launch_url>
+      <blti:vendor><lticp:code>c</lticp:code><lticp:name>n</lticp:name></blti:vendor>`);
+    fuzzReader(fc.constant(link), readLtiLink);
+  });
+
+  it("[K5][B94][N] readManifest reads a mutated manifest or refuses it with a ReadError or a SecurityError", () => {
+    fuzzReader(manifests.map(writeManifest), readManifest);
   });
 });

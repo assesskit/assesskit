@@ -1,6 +1,9 @@
 /** The limits on what processing builds. */
 export interface ProcessingLimits {
-  /** The most values that a container built by an expression may hold, such as the result of `qti-repeat`. */
+  /**
+   * The most values that a container built by an expression may hold, such as the result of `qti-repeat`. Default:
+   * `10000`.
+   */
   readonly maxContainerSize: number;
 }
 

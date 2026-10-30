@@ -149,7 +149,24 @@ standardTemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_
 | `random`          | The source of draws, such as `createRandom(seed)`: equal seeds give equal template values.                                                                                                                   |
 | `customOperators` | Functions by the `definition` of a `qti-custom-operator`, else by its `class`. Default: none. An operator that is not registered is a `ProcessingError`; what an operator returns is checked like any input. |
 | `resolveTemplate` | Returns the response processing of a template that is not standard. Default: none.                                                                                                                           |
-| `limits`          | `maxContainerSize`: the most values a container that an expression builds may hold. Default: `10000`. A larger container is a `SecurityError`.                                                               |
+| `limits`          | `maxContainerSize`: the most values a container that an expression builds may hold. Default: `10000`. See [Limits](#limits).                                                                                 |
+
+## Limits
+
+Processing runs documents that authors wrote and values that candidates supplied, so each way it can grow has a bound.
+
+| What                                            | Bound                                                         | Default | When exceeded                                                                                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Values in a container that an expression builds | `limits.maxContainerSize`, in values                          | 10,000  | `SecurityError` with `limit` `maxContainerSize`: `qti-multiple`, `qti-ordered`, `qti-repeat`, `qti-custom-operator`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` |
+| Runs of template processing for its constraints | fixed (INFO §5.150)                                           | 100     | None: after the last run the template variables keep their defaults and processing goes on                                                                                                 |
+| Nesting of expressions and rules                | `maxDepth` of [xml](xml.md#limits), when the document is read | 256     | `SecurityError` with `limit` `maxDepth`, from the reader; the interpreter recurses no deeper than the document                                                                             |
+| Automaton of a `qti-pattern-match` pattern      | `maxStates` of [`compileXsdRegex`](values.md#limits)          | 100,000 | `ProcessingError` with the message of the compiler                                                                                                                                         |
+| Nesting of a `qti-pattern-match` pattern        | `maxDepth` of `compileXsdRegex`                               | 100     | `ProcessingError` with the message of the compiler                                                                                                                                         |
+
+`maxContainerSize` counts the values an expression builds, not the values it reads: the containers of variables are as large as the
+caller made them, and the delivery engine bounds those when it accepts a response. A `qti-repeat` of NULL is NULL however many
+repeats it names, and `qti-repeat` checks its size before it builds anything. The regular expressions run in time linear in the
+text (see [values](values.md#limits)), so no pattern is a limit on the text.
 
 ## Test scope
 

@@ -757,7 +757,7 @@ describe("planTest", () => {
       "The option limits must be an object, found null.",
     );
     expect(() => planTest(structure, { random, limits: json('{"maxPlanNodes":"3"}') })).toThrow(
-      'The option limits.maxPlanNodes must be a positive integer, found "3".',
+      'The limit maxPlanNodes must be a positive integer, found "3".',
     );
     expect(() => planTest(structure, { random, limits: { maxPlanNodes: 0 } })).toThrow(DataError);
     expect(() => planItems(json("null"))).toThrow(DataError);

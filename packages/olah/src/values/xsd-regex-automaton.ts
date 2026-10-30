@@ -95,7 +95,12 @@ class NfaBuilder {
         tail = this.add({ set: undefined, out: this.build(node.node, tail), alternative: next });
       }
     }
-    for (let required = 0; required < node.min; required++) tail = this.build(node.node, tail);
+    for (let required = 0; required < node.min; required++) {
+      const built = this.build(node.node, tail);
+      // A node that adds no state, such as an empty group, repeats to itself however many times the pattern says.
+      if (built === tail) break;
+      tail = built;
+    }
     return tail;
   }
 }

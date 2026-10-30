@@ -223,6 +223,10 @@ describes how the baseline is tested.
 - Every public function has a test of input of other types, as JavaScript or JSON pass it: `null` options and
   arguments, a string for a number, an object for an array. Pass such input with `JSON.parse`, not a cast.
 - Properties that hold for any input are tested with fast-check.
+- Fuzz tests of readers use `FUZZ` of `test/fuzz.ts`: a fixed seed and a bounded number of runs, so that CI runs the
+  inputs a laptop does. A reader of documents is tested with `fuzzReader`, which mutates valid documents (`mutations` of
+  `test/arbitraries/xml.ts`) and accepts a result or a `ReadError` or `SecurityError`, nothing else. A defect that fuzzing
+  finds gets a regression test with the input that exposed it.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.

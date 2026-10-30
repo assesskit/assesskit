@@ -12,7 +12,8 @@ import {
   XSI_NAMESPACE,
 } from "../src/index.js";
 import { usageData } from "./arbitraries/usage.js";
-import { damage, failsOnlyAsRead, issueOf } from "./read-failure.js";
+import { fuzzReader } from "./fuzz.js";
+import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${USAGE_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_usagedatav3p0_v1p0.xsd`;
 const DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -411,16 +412,8 @@ describe("properties", () => {
     );
   });
 
-  it("[U1][N] reads a damaged document or refuses it with a ReadError, and throws nothing else", () => {
-    fc.assert(
-      fc.property(
-        usageData.chain((model) => damage(writeUsageData(model))),
-        (text) => {
-          expect(failsOnlyAsRead(readUsageData, text)).toBe(true);
-        },
-      ),
-      { numRuns: 300 },
-    );
+  it("[U1][N][B94] reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
+    fuzzReader(usageData.map(writeUsageData), readUsageData);
   });
 
   it("[U1] writes the same text for a model that it has read as for the model it was read from", () => {

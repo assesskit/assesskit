@@ -55,6 +55,8 @@ export function repeat(
 ): Value | null {
   if (times === null || times < 1) return null;
   const once = operands.flatMap((operand) => (operand === null ? [] : primitivesOf(operand)));
+  // Without a value, any number of repeats is NULL, and must not be built.
+  if (once.length === 0) return null;
   checkContainerSize(environment, once.length * times, "qti-repeat");
   const values = Array.from({ length: times }, () => once).flat();
   return containerOf("ordered", sharedBaseType(operands), values, environment, "qti-repeat");

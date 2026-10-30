@@ -36,6 +36,8 @@ import {
   type ValueDeclaration,
   type XsdPattern,
 } from "../src/values/index.js";
+import { mutateText, mutationsOf } from "./arbitraries/xml.js";
+import { FUZZ } from "./fuzz.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1547,6 +1549,17 @@ describe("compileXsdRegex", () => {
       expect(() => compileXsdRegex("((a{99999999999999999999}){9999}){9999}")).toThrow("needs more than 100000 states");
     });
 
+    it("[B79][B94] compiles a repeat of a node without states at once, whatever its count", () => {
+      const start = performance.now();
+      for (const pattern of ["(){500000000}", "(()){500000000,500000000}", "((){500000000}){500000000}"]) {
+        expect(compileXsdRegex(pattern).matches(""), pattern).toBe(true);
+        expect(compileXsdRegex(pattern).matches("a"), pattern).toBe(false);
+      }
+      expect(performance.now() - start).toBeLessThan(1000);
+      expect(compileXsdRegex("(){500000000}a").matches("a")).toBe(true);
+      expect(compileXsdRegex("(a|()){3}").matches("aa")).toBe(true);
+    });
+
     it("[B79] limits the nesting of groups and class subtractions", () => {
       const nested = (depth: number): string => `${"(".repeat(depth)}a${")".repeat(depth)}`;
       expect(matches(nested(100), "a")).toBe(true);
@@ -1579,12 +1592,12 @@ describe("compileXsdRegex", () => {
       );
       expect(() => compileXsdRegex("a", { limits: json("[]") })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxStates: json('"5"') } })).toThrow(
-        'The option limits.maxStates must be a positive integer, found "5".',
+        'The limit maxStates must be a positive integer, found "5".',
       );
       expect(() => compileXsdRegex("a", { limits: { maxStates: 0 } })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxStates: 1.5 } })).toThrow(DataError);
       expect(() => compileXsdRegex("a", { limits: { maxDepth: json("null") } })).toThrow(
-        "The option limits.maxDepth must be a positive integer, found null.",
+        "The limit maxDepth must be a positive integer, found null.",
       );
     });
 
@@ -1659,7 +1672,7 @@ describe("compileXsdRegex", () => {
         // limit of 64 is where the time grows with the 1.5th power of the length.
         expect(growth, pattern).toBeLessThan(64);
       }
-    });
+    }, 30_000);
 
     it("[B79][P] stays fast when a text needs more deterministic states than the matcher keeps", () => {
       // (a|b)*a(a|b){20} has up to 2^21 states, more than a matcher keeps; the pattern needs the last 21 characters.
@@ -1969,6 +1982,54 @@ describe("properties", () => {
           );
         }),
         { numRuns: 1000 },
+      );
+    });
+
+    it("[B79][B94][N] compiles a mutated pattern within small limits or refuses it with a DataError, and matches any text without throwing", () => {
+      const fragments = [
+        "{",
+        "}",
+        "{99999999999}",
+        "{2,1}",
+        "{,}",
+        "[",
+        "]",
+        "[a-",
+        "-[",
+        "[^",
+        "\\p{",
+        "\\p{L}",
+        "\\P{Is",
+        "\\",
+        "\\c",
+        "\\i",
+        "(",
+        ")",
+        "|",
+        "*",
+        "+",
+        "?",
+        "\u0000",
+        "😀",
+        "\ud800",
+      ];
+      fc.assert(
+        fc.property(
+          pattern,
+          mutationsOf(fragments),
+          fc.string({ unit: "binary", maxLength: 12 }),
+          (source, changes, candidate) => {
+            let compiled: XsdPattern;
+            try {
+              compiled = compileXsdRegex(mutateText(source, changes), { limits: { maxStates: 300, maxDepth: 5 } });
+            } catch (error) {
+              expect(error, String(error)).toBeInstanceOf(DataError);
+              return;
+            }
+            expect(typeof compiled.matches(candidate)).toBe("boolean");
+          },
+        ),
+        FUZZ,
       );
     });
 

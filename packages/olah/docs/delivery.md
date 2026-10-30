@@ -151,9 +151,9 @@ draws of its own, and numbered the same way.
 
 ### Limits
 
-| Limit          | Default | Meaning                                                                                                                            |
-| -------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `maxPlanNodes` | 10000   | The most sections and items a plan may hold. A larger plan is a `SecurityError`, raised before a selection with replacement draws. |
+| Limit          | Default | Unit  | Meaning                                                                                                                            |
+| -------------- | ------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `maxPlanNodes` | 10,000  | nodes | The most sections and items a plan may hold. A larger plan is a `SecurityError`, raised before a selection with replacement draws. |
 
 ## Navigation
 

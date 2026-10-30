@@ -86,23 +86,32 @@ A string is taken as it is: the encoding it declares is ignored. Bytes are decod
 | no mark, and `encoding="x"` declared | `x`, when `TextDecoder` supports it; otherwise a `ReadError`. UTF-16 without a mark is a `ReadError`. |
 | no mark and no declaration           | UTF-8. Bytes that are not valid UTF-8 are a `ReadError`.                                              |
 
-A document that declares XML 1.1 is a `ReadError`.
+A document that declares XML 1.1 is a `ReadError`. So is one that has what the parser lets through and a tree could not
+keep or write: a lone surrogate in a string (it is no character, XML 1.0 §2.2), a namespace declaration with white space at
+its start or end (the parser strips it from the namespace of the elements but keeps it in the declaration), and a qualified
+name whose prefix or local part is not an `NCName`, such as `p:1` (Namespaces in XML 1.0 §3).
 
 ## Limits
 
 Every limit is a positive integer, and the defaults are about 1,000 times the largest document of the 1EdTech QTI 3.0
 examples for size and node count (32 KiB, 1,126 nodes), 16 times its depth (16) and 20 times its attributes on an element (12).
 
-| Limit             | Default    | Applies to                                                            |
-| ----------------- | ---------- | --------------------------------------------------------------------- |
-| `maxBytes`        | 33,554,432 | The bytes of a document (UTF-8 for a string).                         |
-| `maxDepth`        | 256        | Nesting of elements; the root is depth 1.                             |
-| `maxAttributes`   | 256        | Attributes on one element, namespace declarations included.           |
-| `maxNodes`        | 1,000,000  | Elements, text, CDATA sections, comments and processing instructions. |
-| `maxIncludeDepth` | 8          | Nesting of includes (`resolveIncludes`).                              |
+| Limit             | Default    | Unit       | Applies to                                                            |
+| ----------------- | ---------- | ---------- | --------------------------------------------------------------------- |
+| `maxBytes`        | 33,554,432 | bytes      | The bytes of a document (UTF-8 for a string).                         |
+| `maxDepth`        | 256        | levels     | Nesting of elements; the root is depth 1.                             |
+| `maxAttributes`   | 256        | attributes | Attributes on one element, namespace declarations included.           |
+| `maxNodes`        | 1,000,000  | nodes      | Elements, text, CDATA sections, comments and processing instructions. |
+| `maxIncludeDepth` | 8          | levels     | Nesting of includes (`resolveIncludes`).                              |
 
 A limit that a document exceeds throws a `SecurityError` whose `limit` is the limit's name and `value` its value. The
-limits are checked while the tree grows: the reader never builds a tree larger than a limit allows.
+limits are checked while the tree grows: the reader never builds a tree larger than a limit allows. A limit that is not a
+positive integer is a `DataError` whose message begins `The limit maxBytes`, and so on for each name.
+
+`maxDepth` also bounds the recursion of everything that walks a tree: the readers of [asi](asi.md), the writers,
+`resolveIncludes` and the interpreter of [processing](processing.md), whose expressions are as deep as the document they were
+read from. Node.js with its default stack reads, writes and evaluates trees of 1,000 levels, four times the default; raise
+`maxDepth` only with a stack to match.
 
 ## Security
 
@@ -191,14 +200,15 @@ fail: an attribute or a child that is not there is `undefined` or left out. A re
 
 ## Errors
 
-| Code                          | Class       | Meaning                                                                            | Source                        |
-| ----------------------------- | ----------- | ---------------------------------------------------------------------------------- | ----------------------------- |
-| `olah/xml/not-well-formed`    | `ReadError` | The document is not well-formed.                                                   | XML 1.0 §2.1                  |
-| `olah/xml/version`            | `ReadError` | The document declares XML 1.1.                                                     | XML 1.0 §2.8                  |
-| `olah/xml/encoding`           | `ReadError` | Bytes in an unsupported, contradicting or invalid encoding.                        | XML 1.0 §4.3.3                |
-| `olah/xml/xinclude-attribute` | `ReadError` | An include has an `xpointer`, a `parse` other than `xml`, or a bad `href`.         | INFO §2.12, XInclude 1.0 §3.1 |
-| `olah/xml/xinclude-structure` | `ReadError` | Misplaced or repeated `xi:fallback`, or a root replaced by other than one element. | XInclude 1.0 §3.1, §3.2       |
-| `olah/xml/xinclude-cycle`     | `ReadError` | Includes form a loop.                                                              | XInclude 1.0 §4.2.7           |
-| `olah/xml/xinclude-resource`  | `ReadError` | The resolver failed and the include has no fallback.                               | XInclude 1.0 §4.4             |
+| Code                          | Class       | Meaning                                                                            | Source                                       |
+| ----------------------------- | ----------- | ---------------------------------------------------------------------------------- | -------------------------------------------- |
+| `olah/xml/not-well-formed`    | `ReadError` | The document is not well-formed, has a lone surrogate or a bad qualified name.     | XML 1.0 §2.1, §2.2, Namespaces in XML 1.0 §3 |
+| `olah/xml/version`            | `ReadError` | The document declares XML 1.1.                                                     | XML 1.0 §2.8                                 |
+| `olah/xml/encoding`           | `ReadError` | Bytes in an unsupported, contradicting or invalid encoding.                        | XML 1.0 §4.3.3                               |
+| `olah/xml/namespace`          | `ReadError` | A namespace declaration with white space at its start or end.                      | Namespaces in XML 1.0 §2.2                   |
+| `olah/xml/xinclude-attribute` | `ReadError` | An include has an `xpointer`, a `parse` other than `xml`, or a bad `href`.         | INFO §2.12, XInclude 1.0 §3.1                |
+| `olah/xml/xinclude-structure` | `ReadError` | Misplaced or repeated `xi:fallback`, or a root replaced by other than one element. | XInclude 1.0 §3.1, §3.2                      |
+| `olah/xml/xinclude-cycle`     | `ReadError` | Includes form a loop.                                                              | XInclude 1.0 §4.2.7                          |
+| `olah/xml/xinclude-resource`  | `ReadError` | The resolver failed and the include has no fallback.                               | XInclude 1.0 §4.4                            |
 
 `ReadError.issues` has one issue with the code, the path, and the line and column where the parser stopped.

@@ -67,7 +67,7 @@ export function checkContext(context: ProcessingContext): Environment {
   if (resolveTemplate !== undefined) checkFunction(resolveTemplate, "The option resolveTemplate must be a function");
   checkRecord(limits, "The option limits must be an object");
   const { maxContainerSize = DEFAULT_PROCESSING_LIMITS.maxContainerSize } = limits;
-  checkPositiveInteger(maxContainerSize, "The option limits.maxContainerSize");
+  checkPositiveInteger(maxContainerSize, "The limit maxContainerSize");
   return { random, customOperators, resolveTemplate, limits: { maxContainerSize } };
 }
 

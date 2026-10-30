@@ -2,16 +2,19 @@ import { checkPositiveInteger, checkRecord } from "../checks.js";
 
 /** The limits that keep an archive or a directory from using more memory or time than a caller allows (§2.6). */
 export interface ZipLimits {
-  /** The most entries an archive may have, directories included, or the most files and directories a package directory may have. */
+  /**
+   * The most entries an archive may have, directories included, or the most files and directories a package directory
+   * may have. Default: `100000`.
+   */
   readonly maxEntries: number;
-  /** The most bytes one file may have when uncompressed. */
+  /** The most bytes one file may have when uncompressed. Default: `536870912` (512 MiB). */
   readonly maxEntryBytes: number;
-  /** The most bytes all files together may have when uncompressed. */
+  /** The most bytes all files together may have when uncompressed. Default: `2147483648` (2 GiB). */
   readonly maxTotalBytes: number;
   /**
    * The most that an entry's uncompressed size may exceed its compressed size, as a ratio. Entries of up to 102,400
    * bytes (the grace of Apache POI's `ZipSecureFile`) are exempt, because a small file of repeated bytes compresses to
-   * very little.
+   * very little. Default: `250`.
    */
   readonly maxRatio: number;
 }

@@ -13,12 +13,14 @@ import {
   createRandom,
   DataError,
   DEFAULT_PROCESSING_LIMITS,
+  DEFAULT_XML_LIMITS,
   type Expression,
   evaluate,
   evaluateTestExpression,
   type ItemSessionFilter,
   type ItemSessionView,
   type ItemVariables,
+  normalizeValue,
   OPERATOR_SIGNATURES,
   type Primitive,
   type ProcessingContext,
@@ -37,8 +39,11 @@ import {
   standardTemplateUri,
   type TestScope,
   type Value,
+  writeAsi,
 } from "../src/index.js";
+import { expressions } from "./arbitraries/processing.js";
 import rounding from "./fixtures/rounding.json" with { type: "json" };
+import { FUZZ } from "./fuzz.js";
 
 // Helpers ---------------------------------------------------------------------------------------------------------------
 
@@ -507,6 +512,33 @@ describe("containers", () => {
     expect(run(`<qti-random>${NULL}</qti-random>`)).toBeNull();
   });
 
+  it.each([
+    ["qti-multiple", `<qti-multiple>${bv("integer", 1)}${bv("integer", 2)}${bv("integer", 3)}</qti-multiple>`],
+    ["qti-ordered", `<qti-ordered>${bv("integer", 1)}${bv("integer", 2)}${bv("integer", 3)}</qti-ordered>`],
+    ["qti-repeat", `<qti-repeat number-repeats="3">${bv("integer", 1)}</qti-repeat>`],
+  ])(
+    "[B84][B94][N] builds a container of exactly maxContainerSize values with %s, and refuses one more",
+    (name, xml) => {
+      const limits = (maxContainerSize: number): ProcessingContext => ({
+        random: createRandom(1),
+        limits: { maxContainerSize },
+      });
+      expect(run(xml, limits(3))).toMatchObject({ values: [1, expect.anything(), expect.anything()] });
+      expect(() => run(xml, limits(2))).toThrow(expect.objectContaining({ limit: "maxContainerSize", value: 2 }));
+      expect(() => run(xml, limits(2))).toThrow(`The operator ${name} builds a container of 3 values`);
+    },
+  );
+
+  it("[B84][B94] gives NULL for qti-repeat of NULL, however many repeats, without building anything", () => {
+    for (const times of ["3", "4294967296", "9007199254740991"]) {
+      expect(run(`<qti-repeat number-repeats="${times}">${NULL}${NULL}</qti-repeat>`)).toBeNull();
+    }
+    const refused = (times: string) => () =>
+      run(`<qti-repeat number-repeats="${times}">${bv("integer", 1)}</qti-repeat>`);
+    expect(refused("9007199254740991")).toThrow(SecurityError);
+    expect(refused("4294967296")).toThrow(SecurityError);
+  });
+
   it("[B84] refuses a container above maxContainerSize with a SecurityError", () => {
     const repeat = `<qti-repeat number-repeats="3">${bv("integer", 1)}${bv("integer", 2)}</qti-repeat>`;
     const limited = { random: createRandom(1), limits: { maxContainerSize: 5 } };
@@ -553,7 +585,7 @@ describe("processing context", () => {
     );
     expect(() =>
       evaluate(sum, createItemVariables(ITEM), ITEM, { random: uniform, limits: { maxContainerSize: 0 } }),
-    ).toThrow("The option limits.maxContainerSize must be a positive integer, found 0.");
+    ).toThrow("The limit maxContainerSize must be a positive integer, found 0.");
   });
 
   it("refuses a random source that returns anything but a number in [0, 1)", () => {
@@ -734,6 +766,37 @@ describe("evaluate", () => {
       evaluateModel({ kind: "math-operator", name: "atan2", operands: [{ kind: "null" }] }),
       "The function atan2 of qti-math-operator takes two operands, found 1.",
     );
+  });
+
+  it("[B94][N] evaluates an expression nested to the default depth of a document, and refuses a deeper one when it is read", () => {
+    const nested = (levels: number): string =>
+      `${"<qti-not>".repeat(levels)}${bv("boolean", "true")}${"</qti-not>".repeat(levels)}`;
+    // The rule, its set-outcome-value and the base value take three of the 256 levels.
+    const deepest = DEFAULT_XML_LIMITS.maxDepth - 3;
+    expect(runPrimitive(nested(deepest))).toBe(deepest % 2 === 0);
+    const document = readAsi(
+      `<qti-response-processing ${NS}><qti-set-outcome-value identifier="X">${nested(deepest)}</qti-set-outcome-value></qti-response-processing>`,
+    );
+    expect(readAsi(writeAsi(document))).toEqual(document);
+    expect(() => run(nested(deepest + 1))).toThrow(expect.objectContaining({ limit: "maxDepth", value: 256 }));
+  });
+
+  it("[B94] keeps variables named like members of Object as data, and reads none that the item does not declare", () => {
+    const item = itemOf(
+      ["__proto__", "constructor", "toString"]
+        .map(
+          (name, index) =>
+            `<qti-outcome-declaration identifier="${name}" cardinality="single" base-type="integer"><qti-default-value><qti-value>${index + 1}</qti-value></qti-default-value></qti-outcome-declaration>`,
+        )
+        .join(""),
+    );
+    expect(["__proto__", "constructor", "toString"].map((name) => primitive(run(v(name), CONTEXT, item)))).toEqual([
+      1, 2, 3,
+    ]);
+    for (const name of ["__proto__", "hasOwnProperty", "valueOf", "__defineGetter__"]) {
+      expectProcessingError(() => run(v(name)), `The item declares no variable ${name}.`);
+    }
+    expect(Reflect.get({}, "polluted")).toBeUndefined();
   });
 
   it("refuses arguments of other types with a DataError", () => {
@@ -1332,6 +1395,21 @@ describe("outcome processing", () => {
     expect(testExpression(`<qti-test-variables variable-identifier="OPEN"/>`)).toBeNull();
   });
 
+  it("[B44][B94][N] refuses a container that qti-test-variables or qti-outcome-maximum builds above maxContainerSize", () => {
+    const evaluated = (xml: string, maxContainerSize: number) =>
+      evaluateTestExpression(expressionOf(xml), Test, new Map(), Scope, {
+        random: createRandom(1),
+        limits: { maxContainerSize },
+      });
+    for (const xml of [
+      `<qti-test-variables variable-identifier="SCORE"/>`,
+      `<qti-outcome-maximum outcome-identifier="SCORE" exclude-category="extra"/>`,
+    ]) {
+      expect(evaluated(xml, 3)).toMatchObject({ values: [expect.anything(), expect.anything(), expect.anything()] });
+      expect(() => evaluated(xml, 2)).toThrow(expect.objectContaining({ limit: "maxContainerSize", value: 2 }));
+    }
+  });
+
   it("[B44][G35] ignores a weight with base-type integer", () => {
     expect(
       testExpression(`<qti-test-variables variable-identifier="RAW" base-type="integer" weight-identifier="W"/>`),
@@ -1852,6 +1930,25 @@ describe("template processing", () => {
     expect(variables.templates.get("B")).toEqual(int(7));
   });
 
+  it("[B11][B94] shares the 100 runs among all constraints, in a condition or not, so that none can make processing loop", () => {
+    const source = counting(0.5);
+    const variables = instance(
+      `<qti-set-template-value identifier="A"><qti-random-integer max="9"/></qti-set-template-value>
+       <qti-template-constraint>${bv("boolean", "false")}</qti-template-constraint>
+       <qti-template-condition>
+         <qti-template-if>${bv("boolean", "true")}
+           <qti-template-constraint>${bv("boolean", "false")}</qti-template-constraint>
+           <qti-template-constraint>${bv("boolean", "false")}</qti-template-constraint>
+         </qti-template-if>
+       </qti-template-condition>
+       <qti-set-template-value identifier="B">${bv("integer", 7)}</qti-set-template-value>`,
+      source,
+    );
+    expect(source.draws()).toBe(100);
+    expect(variables.templates.get("A")).toEqual(int(-1));
+    expect(variables.templates.get("B")).toEqual(int(7));
+  });
+
   it("[B11][B41] starts template variables from the defaults given, as a test's template defaults set them (INFO §5.152)", () => {
     const variables = instance(
       `<qti-set-template-value identifier="B">${v("A")}</qti-set-template-value>`,
@@ -2020,6 +2117,25 @@ describe("properties", () => {
   const safeInteger = fc.integer({ min: -(2 ** 40), max: 2 ** 40 });
   const nonZero = safeInteger.filter((y) => y !== 0);
   const truths = fc.array(fc.constantFrom<boolean | null>(true, false, null), { minLength: 1, maxLength: 6 });
+
+  it("[B84][B94][N] evaluate returns a value that normalizeValue accepts unchanged, or refuses with a ProcessingError or a SecurityError", () => {
+    fc.assert(
+      fc.property(expressions, fc.integer({ min: 1, max: 30 }), (xml, maxContainerSize) => {
+        let value: Value | null = null;
+        try {
+          value = run(xml, { random: createRandom(1), limits: { maxContainerSize } });
+        } catch (error) {
+          expect(
+            error instanceof ReadError || error instanceof ProcessingError || error instanceof SecurityError,
+            String(error),
+          ).toBe(true);
+          return;
+        }
+        if (value !== null) expect(normalizeValue(value)).toEqual(value);
+      }),
+      FUZZ,
+    );
+  });
 
   it("[B83][T16] and, or and not follow Kleene's three-valued logic", () => {
     fc.assert(

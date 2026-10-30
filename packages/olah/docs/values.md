@@ -188,13 +188,15 @@ No pattern can make a text expensive: the pattern becomes a Thompson automaton o
 deterministic automaton that it builds as the text needs it, in time linear in the text. Only the size of the pattern is
 limited, at compile time, with `options.limits`; a limit left out keeps its default.
 
-| Limit       | Default  | Meaning                                                                                                        |
-| ----------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `maxStates` | `100000` | The most states of the automaton once counted repeats are expanded: `a{100000}` is allowed, `a{100001}` is not |
-| `maxDepth`  | `100`    | The most levels that groups and class subtractions may be nested                                               |
+| Limit       | Default | Unit   | Meaning                                                                                                        |
+| ----------- | ------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| `maxStates` | 100,000 | states | The most states of the automaton once counted repeats are expanded: `a{100000}` is allowed, `a{100001}` is not |
+| `maxDepth`  | 100     | levels | The most levels that groups and class subtractions may be nested; it bounds the recursion of the parser        |
 
-`DEFAULT_XSD_REGEX_LIMITS` holds the defaults. A pattern that is not in the dialect, or is above a limit, is a
-`DataError` that names the problem and its position in characters. The test suite runs the regular expression tests of the
+`DEFAULT_XSD_REGEX_LIMITS` holds the defaults. A limit that is not a positive integer is a `DataError` whose message begins
+`The limit maxStates`, and so on for each name. A pattern that is not in the dialect, or is above a limit, is a `DataError`
+that names the problem and its position in characters. A repeat of a node that has no state, such as `(){500000000}`,
+compiles at once, whatever its count. The test suite runs the regular expression tests of the
 W3C XML Schema test suite and ReDoS fixtures such as `(a+)+$` on 100,000 characters.
 
 ## Unicode tables

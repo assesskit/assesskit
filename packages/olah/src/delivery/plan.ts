@@ -69,7 +69,10 @@ export interface TestPlan {
 
 /** The limits of {@link planTest}. */
 export interface PlanLimits {
-  /** The most sections and items a plan may hold, so that a selection with replacement cannot exhaust memory. */
+  /**
+   * The most sections and items a plan may hold, so that a selection with replacement cannot exhaust memory. Default:
+   * `10000`.
+   */
   readonly maxPlanNodes: number;
 }
 
@@ -213,7 +216,7 @@ export function planTest(structure: TestStructure, options: PlanOptions): TestPl
   checkFunction(random.uniform, "The option random must be an object with a function uniform");
   checkRecord(limits, "The option limits must be an object");
   const { maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes } = limits;
-  checkPositiveInteger(maxPlanNodes, "The option limits.maxPlanNodes");
+  checkPositiveInteger(maxPlanNodes, "The limit maxPlanNodes");
   const drafting: Drafting = { random, maxPlanNodes, remaining: maxPlanNodes };
   const occurrences = new Map<string, number>();
   const parts = structure.test.parts.map((part): PlannedPart => {

@@ -113,6 +113,33 @@ document the writer writes, so the properties check `read(write(m))` against `m`
 sample of the written documents. A generator with `extensions: false` leaves out the elements of an unknown namespace,
 which a schema with a strict wildcard rejects. The generators of `asi` (`asi.ts`) are driven by its element table instead.
 
+## Fuzzing
+
+The readers of documents and archives, the compiler of patterns and the interpreter of expressions are fuzzed with fast-check
+for the row B94 and the security controls of the module (SECURITY.md). The result of a run is one of these, and anything
+else is a defect: an uncaught exception, a result that breaks an invariant, or a run that does not end.
+
+| Target                                                                              | Input                                                                                         | Allowed result                                                               |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `parseXml`                                                                          | Text and bytes of written trees, mutated; small limits                                        | A tree that `serializeXml` writes back, `ReadError`, `SecurityError`         |
+| `resolveIncludes`                                                                   | Documents of hostile includes: loops, outside paths, missing targets, fallbacks, small limits | A tree without includes within the limits, `ReadError`, `SecurityError`      |
+| `readAsi`, `readManifest`, `readLtiLink`, `readResults`, `readUsageData`, `readPnp` | Text and bytes of written documents, mutated; a DOCTYPE before the root                       | A model, `ReadError`, `SecurityError` (`doctype` for the DOCTYPE)            |
+| `readPackage`, `file`                                                               | Archives with hostile headers; archives of the fixtures and of `writePackage`, mutated        | Files within the limits and inside the package, `ReadError`, `SecurityError` |
+| `document`, `packageResolvers`                                                      | An item and a file it includes, mutated                                                       | A document, `ReadError`, `SecurityError`                                     |
+| `compileXsdRegex`                                                                   | Patterns, mutated, with the delimiters of the dialect; small limits                           | A pattern that matches any text, `DataError`                                 |
+| `evaluate`                                                                          | Expressions over operators, literals at the edges of each base type and small limits          | A value that `normalizeValue` keeps, `ProcessingError`, `SecurityError`      |
+
+`mutations` of `test/arbitraries/xml.ts` deletes, inserts, overwrites, duplicates and truncates, and inserts fragments that
+break the rules of XML (a DOCTYPE, entities, forbidden characters, namespace declarations, includes). The runs are
+deterministic: `FUZZ` of `test/fuzz.ts` sets the seed and 300 runs. `FUZZ_SEED` and `FUZZ_RUNS` set more, with a longer
+test timeout:
+
+```bash
+FUZZ_SEED=7 FUZZ_RUNS=50000 pnpm exec vitest run --project olah --testTimeout=600000 -t "B94"
+```
+
+A defect that fuzzing finds is fixed with a test that names the input that exposed it.
+
 ## Differential tests
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`

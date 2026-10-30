@@ -154,12 +154,12 @@ time stamp, so that equal input gives equal bytes.
 
 `file(path)` returns a copy of the bytes. `ZipLimits`:
 
-| Limit           | Default       | Applies to                                                                                 |
-| --------------- | ------------- | ------------------------------------------------------------------------------------------ |
-| `maxEntries`    | 100,000       | Entries of an archive, directories included; files and directories of a package directory. |
-| `maxEntryBytes` | 536,870,912   | The uncompressed bytes of one file.                                                        |
-| `maxTotalBytes` | 2,147,483,648 | The uncompressed bytes of all files.                                                       |
-| `maxRatio`      | 250           | Uncompressed over compressed size of an entry above 102,400 bytes.                         |
+| Limit           | Default       | Unit    | Applies to                                                                                 |
+| --------------- | ------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `maxEntries`    | 100,000       | entries | Entries of an archive, directories included; files and directories of a package directory. |
+| `maxEntryBytes` | 536,870,912   | bytes   | The uncompressed bytes of one file.                                                        |
+| `maxTotalBytes` | 2,147,483,648 | bytes   | The uncompressed bytes of all files.                                                       |
+| `maxRatio`      | 250           | ratio   | Uncompressed over compressed size of an entry above 102,400 bytes.                         |
 
 The largest package of the 1EdTech QTI 3.0 examples has 99 entries, an entry of 5.0 MiB and 11.0 MB uncompressed; its largest ratio
 is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defaults are about 1,000, 100, 200 and 9 times those.
@@ -168,8 +168,9 @@ is 27.9, on a 7.5 KB entry, and 3.6 on the entries above 102,400 bytes. The defa
 
 `pkg.document(path)` parses the file at the path once and keeps the result. It resolves `xi:include` elements with `resolveIncludes`:
 a target is read from the package only; a target outside it is a `SecurityError` (`limit` `"path"`) that no `xi:fallback`
-hides; a missing target uses its fallback or is a `ReadError`. Then it reads the tree with `readAsi` of [asi](asi.md). The
-manifest and the documents use the `xmlLimits`.
+hides; a missing target uses its fallback or is a `ReadError`. A file that several includes name is read and parsed once for
+the document, or fails once, so that a document cannot make the reader repeat the work of a large file. Then it reads the tree
+with `readAsi` of [asi](asi.md). The manifest and the documents use the `xmlLimits`.
 
 ## Resolvers
 
