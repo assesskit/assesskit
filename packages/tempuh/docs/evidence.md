@@ -121,7 +121,11 @@ other files are `200`.
 engine has code in it, and a bundle that makes a local session has (so the check can see it).
 
 The browser tests of the shell and the clients (`delivery.browser.test.ts`, `client.browser.test.ts`) run a session host in the
-page with the wire between them: every envelope goes through JSON. `exam.browser.test.ts` is the end-to-end test: the global
+page with the wire between them: every envelope goes through JSON. The shell tests with a profile press the panel and read the next view, so that the `support` action goes through the session
+host and its policy and the support is applied to the content, the frame of a portable custom interaction and the reading
+controls. The tests of a pending drawing hold the upload of the picture until the test lets it go, press Submit, Next, a
+question in the map and End the test, and read the order of the actions that reach the session: `set-responses` with the
+stored file comes first, and the action that follows is not sent before. `exam.browser.test.ts` is the end-to-end test: the global
 setup `exam-setup.ts` starts an HTTP server (`exam-server.ts`) that runs session hosts and the asset gate, and the tests act as
 a candidate through `fetch`. The server takes the authentication from the headers `x-session` and `x-principal`, picks the exam
 from `x-exam` and moves its clock by `x-offset`, so that a test makes time pass for its own session only. It covers the

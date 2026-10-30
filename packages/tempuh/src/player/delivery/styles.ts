@@ -28,6 +28,7 @@ const CHROME_CSS = `
 .tempuh-heading { margin: 0 0 0.5rem; font-size: 1.5rem; }
 .tempuh-heading:focus-visible { outline: 3px solid CanvasText; outline-offset: 2px; }
 .tempuh-notice { margin: 0 0 0.5rem; padding: 0.5rem 0.75rem; border: 2px solid CanvasText; border-radius: 0.375rem; }
+.tempuh-supports-slot > :not([hidden]) { margin: 0 0 0.5rem; }
 .tempuh-attempts { margin: 0.5rem 0 0; }
 .tempuh-content-host { display: block; }
 .tempuh-actions { display: grid; gap: 0.5rem; }

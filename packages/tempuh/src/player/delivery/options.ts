@@ -15,6 +15,7 @@ import type { SessionClient } from "../../protocol/index.js";
 import { readOrigins } from "../content/urls.js";
 import type { CustomInteractionHook } from "../elements/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
+import type { SpeechHook } from "../speech/index.js";
 
 /** The host's storage of files, which interactions and the review of an upload use: file values are references to it (olah D7). */
 export interface MountFiles {
@@ -52,6 +53,8 @@ export interface MountOptions {
     readonly customInteraction?: CustomInteractionHook;
     /** Whether an upload of audio offers a recording. Default: `true`. */
     readonly record?: boolean;
+    /** The voice that reads aloud for the candidates whose supports ask for it. Default: the voice of the browser, `webSpeech()`. */
+    readonly voice?: SpeechHook;
   };
 }
 
@@ -65,6 +68,12 @@ export interface DeliveryOptions extends MountOptions {
 export interface Mounted {
   /** Shows a view in place of the one before. A mount with a session client follows the client by itself. */
   update(view: CandidateView): void;
+  /**
+   * Resolves when the interactions of the item shown have handed over what the candidate gave, such as a drawing that is
+   * still being stored. The player waits for it before an action that submits or leaves the item; a host that draws its own
+   * actions (`chrome: false`) waits for it before it sends them.
+   */
+  settled(): Promise<void>;
   /** Takes the content, the timers and the listeners away. The host element keeps its shadow root, so mount into a new element. */
   destroy(): void;
 }
@@ -86,11 +95,16 @@ const OPTION_NAMES = [
 /** Checks the hooks of the host. */
 function checkHooks(hooks: unknown): void {
   checkRecord(hooks, "The option hooks must be an object");
-  checkProperties(hooks, "The option hooks", ["customInteraction", "record"]);
+  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice"]);
   if (hooks.customInteraction !== undefined) {
     checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
   }
   if (hooks.record !== undefined) checkBoolean(hooks.record, "The hook record");
+  if (hooks.voice !== undefined) {
+    checkRecord(hooks.voice, "The hook voice must be an object");
+    checkFunction(hooks.voice.speak, "The method speak of the hook voice must be a function");
+    checkFunction(hooks.voice.stop, "The method stop of the hook voice must be a function");
+  }
 }
 
 /**

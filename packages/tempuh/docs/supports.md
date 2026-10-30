@@ -15,7 +15,7 @@ decide which candidate has which support, and it does not choose the variant: ol
 | `mountTools`                          | The tools that supports put on the screen ([tools](tools.md))                                |
 
 The parts do not navigate and do not build the chrome. The chrome mounts them, calls `update` with `view.supports` for every
-view, and sends the `support` action when a part asks for one.
+view, and sends the `support` action when a part asks for one ([in the player](#in-the-player)).
 
 ```ts
 import { selectMessages } from "@luthfanwakan/tempuh";
@@ -53,6 +53,32 @@ presentationOf([
 ]);
 // attributes: Map { "data-tempuh-contrast" => "high" }, properties: Map { "--tempuh-text-zoom" => "2" }
 ```
+
+## In the player
+
+`mountDelivery` ([delivery](delivery.md)) is a chrome that mounts the parts and feeds them `view.supports` of every view. A
+host that draws its own chrome (`chrome: false`) keeps the parts that act on the content and mounts the panel itself.
+
+| Part                   | Where it is                                      | When it is updated                                                                       |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `applyPresentation`    | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                |
+| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false`                                          |
+| `mountVariantNotice`   | Above the content                                | With every view                                                                          |
+| `mountContentSupports` | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's |
+| `mountSpoken`          | Above the content, and the content root          | Together with `mountContentSupports`                                                     |
+
+- **Options** are the supports whose state is `option`. A button sends `{ type: "support", name, active }` through the session
+  client, so in an exam the host receives it like any other action (the default client-action policy allows it). The button
+  follows the next view, and a refusal such as `support-not-available` is said in the status region.
+- **Other supports** have no control. A support that is `active` or `assigned` shows by what it changes, and a prohibited one
+  changes nothing.
+- **Answers do not undo the supports.** A view that carries only an answer has the supports of the view before, so the cards,
+  text tracks and reading controls stay as they are, and a popup that the candidate opened stays open.
+- **The voice** of reading aloud is `hooks.voice`, by default the voice of the browser ([speech](speech.md)). The shell gives
+  it no pronunciation lexicons.
+- **Not mounted by the shell:** the tools ([tools](tools.md)), which a host mounts with `mountTools`, and the scale of the
+  pixel sizes of media (`mediaScale` is fixed when a content root is created), so that a magnification enlarges the text and
+  not the media that state their size in pixels.
 
 ## The support action
 

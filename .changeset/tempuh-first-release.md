@@ -72,7 +72,7 @@ through the audio worklet that the package exports as `recorder-worklet.js`.
 
 The player shell (`player`): `mountDelivery` shows a session with a navigation map, timers with warnings 300 and 60 seconds
 before a limit, actions with refusal messages and confirmations, review, solution, comments and attempts, in status regions that
-never take the focus, and runs portable custom interactions with their state. The session clients (`client`):
+never take the focus, and runs portable custom interactions with their state. It mounts the supports of the candidate: the panel of options, which sends the `support` action, the look, the cards, reading aloud and the notice of the variant. Before a request that submits or leaves the item it waits for the interactions to hand over their responses (`settled`), so that a drawing that is still being stored is not missed; `Mounted.settled()` lets a host with its own chrome do the same. The session clients (`client`):
 `createRemoteSession` sends envelopes with autosave and resends a request whose answer was lost, and `createLocalSession` runs
 olah's engine on the device for practice and previews. The session host of exam mode (`server`): `createSessionHost` binds a
 session to the principal that started it, applies a client-action policy that leaves `suspend` and `resume` to the proctor,

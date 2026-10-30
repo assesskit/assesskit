@@ -15,6 +15,7 @@ import {
   type PciVariable,
 } from "../pci/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
+import type { Presentation } from "../supports/index.js";
 
 /** What the PCI host needs of the player. */
 export interface PciContext {
@@ -42,6 +43,8 @@ export interface PciContext {
 export interface PciHost {
   /** Draws a `qti-portable-custom-interaction` as a container whose frame starts when its configuration is loaded. */
   readonly render: InteractionRenderer;
+  /** Sets the look that the candidate's supports ask for in the frames that run and in those that start later. Default: none. */
+  setPresentation(presentation: Presentation): void;
   /** Closes the frames: each one hands over its final response and state first. Called before the content changes. */
   reset(): Promise<void>;
 }
@@ -104,6 +107,7 @@ function promptOf(interaction: PortableCustomInteraction, renderer: BodyRenderer
 export function createPciHost(context: PciContext): PciHost {
   let frames: Promise<PciFrame | undefined>[] = [];
   let generation = 0;
+  let presentation: Presentation = { attributes: new Map(), properties: new Map() };
 
   const start = async (
     container: Element,
@@ -140,6 +144,7 @@ export function createPciHost(context: PciContext): PciHost {
       stylesheets: item.stylesheets.map((path) => new URL(context.assets(path), document.baseURI).href),
       status: statusOf(item),
       state: view?.state ?? null,
+      presentation,
       response: { value: item.responses.get(identifier) ?? null, declaration },
       templateVariables: variablesOf(view?.templateValues ?? new Map()),
       contextVariables: variablesOf(view?.contextValues ?? new Map()),
@@ -170,6 +175,10 @@ export function createPciHost(context: PciContext): PciHost {
       });
       frames.push(frame);
       return container;
+    },
+    setPresentation: (next) => {
+      presentation = next;
+      for (const frame of frames) void frame.then((open) => open?.setPresentation(next));
     },
     reset: async () => {
       generation += 1;

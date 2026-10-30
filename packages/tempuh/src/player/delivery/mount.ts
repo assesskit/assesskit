@@ -11,6 +11,7 @@ import {
 } from "../elements/index.js";
 import { createMathTypesetter } from "../math/index.js";
 import { createContentRoot } from "../roots/index.js";
+import { webSpeech } from "../speech/index.js";
 import { confirmationText, type PlannedAction, planActions } from "./actions.js";
 import { createAnnouncer } from "./announcer.js";
 import { createCommentBox } from "./comment.js";
@@ -21,6 +22,7 @@ import { checkDeliveryOptions, type DeliveryOptions, type Mounted } from "./opti
 import { createPciHost } from "./pci.js";
 import { REFUSAL_MESSAGES } from "./refusals.js";
 import { chromeStyles } from "./styles.js";
+import { type DeliverySupports, mountDeliverySupports } from "./supports.js";
 import { createTimerBar } from "./timers.js";
 
 /** How often the timers count down on screen, in milliseconds. */
@@ -35,13 +37,15 @@ const itemId = (key: ItemKey | undefined): string => (key === undefined ? "" : `
 /**
  * Mounts the player on a session (tempuh design §2.5): the chrome and the content of the view the session client holds,
  * following it as it changes. The chrome is the navigation map, the timers with their warnings, the actions with their
- * confirmations, the comment box, the attempts, and a status line that tells what the engine refused (T54 to T64).
- * The content is a content root; portable custom interactions run in their frames. The player decides nothing of QTI: it
+ * confirmations, the comment box, the attempts, the panel of the supports that are options, and a status line that tells
+ * what the engine refused (T54 to T64). The content is a content root, which takes the supports that are on; portable
+ * custom interactions run in their frames. The player decides nothing of QTI: it
  * sends the actions that the engine lists and shows what the engine answers.
  *
  * - **Status messages** go to `role="status"` regions and never move the focus (WCAG 4.1.3).
  * - **Focus** moves to the heading of the item when the item changes, and when the control that had it is gone (WCAG 2.4.3).
  * - **Confirmations** are modal dialogs that start on the answer that goes back (WCAG 3.3.4).
+ * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being stored.
  *
  * @param host - An element that has no shadow root. The player attaches one and draws in it.
  * @param options - See {@link DeliveryOptions}.
@@ -61,6 +65,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     chrome = true,
     hooks = {},
   } = options;
+  const { voice = webSpeech() } = hooks;
   const messages = selectMessages(language, options.messages);
   const shadow = host.attachShadow({ mode: "open" });
   shadow.adoptedStyleSheets = [chromeStyles()];
@@ -73,6 +78,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const attempts = html("p", { class: "tempuh-attempts" });
   const mapSlot = html("div", { class: "tempuh-map" });
   const actionsSlot = html("div", { class: "tempuh-actions", role: "group", "aria-label": messages.actionsLabel });
+  const supportsSlot = html("div", { class: "tempuh-supports-slot" });
   const contentHost = html("div", { class: "tempuh-content-host" });
   let view: CandidateView = client.view;
   let destroyed = false;
@@ -135,12 +141,29 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     fileUrl: (file) => files.url(file),
     ...(mathjax === undefined ? {} : { typesetter: createMathTypesetter(mathjax) }),
   });
+  /** Returns the interaction elements of the content now shown. */
+  const interactionElements = (): InteractionElement[] =>
+    [...content.root.querySelectorAll("*")].filter((element) => element instanceof InteractionElement);
+
+  /** Resolves when the interactions have handed over what the candidate gave, and the responses are on their way to the session. */
+  const settled = async (): Promise<void> => {
+    await Promise.all(interactionElements().map((element) => element.settled()));
+  };
+
+  /** Sends an action that submits or leaves the item once its interactions have settled, so that a pending drawing is in what goes. */
+  const sendSettled = async (action: CandidateAction): Promise<void> => {
+    await settled();
+    if (!destroyed) await send(action);
+  };
+
   content.root.addEventListener(RESPONSE_EVENT, (event) => {
     respond(event.detail.responseIdentifier, event.detail.value);
   });
   content.root.addEventListener(END_ATTEMPT_EVENT, (event) => {
     const item = view.current?.key;
-    if (item !== undefined) void send({ type: "end-attempt", item, interaction: event.detail.responseIdentifier });
+    if (item !== undefined) {
+      void sendSettled({ type: "end-attempt", item, interaction: event.detail.responseIdentifier });
+    }
   });
   const comment = createCommentBox(messages, (text) => {
     const item = view.current?.key;
@@ -151,7 +174,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     if (planned.confirm !== undefined) {
       if (!(await confirmAction(shadow, messages, confirmationText(planned.confirm, view, messages)))) return;
     }
-    await send(planned.action);
+    await sendSettled(planned.action);
   };
 
   const renderActions = (planned: readonly PlannedAction[]): void => {
@@ -199,7 +222,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   /** Draws the chrome of a view; the control that had the focus keeps it, and the heading gets it when that control is gone (WCAG 2.4.3). */
   const renderChrome = (next: CandidateView): void => {
     const focused = shadow.activeElement?.getAttribute("data-focus-id") ?? undefined;
-    const map = renderNavigation(next, messages, (to) => void send({ type: "move", to }));
+    const map = renderNavigation(next, messages, (to) => void sendSettled({ type: "move", to }));
     mapSlot.replaceChildren(...(map === undefined ? [] : [map]));
     layout.toggleAttribute("data-tempuh-map", map !== undefined);
     renderActions(planActions(next));
@@ -221,8 +244,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
    */
   const bindInteractions = (item: CandidateItem, drawn: boolean): void => {
     const interacting = item.status === "interacting";
-    for (const element of content.root.querySelectorAll("*")) {
-      if (!(element instanceof InteractionElement)) continue;
+    for (const element of interactionElements()) {
       const descriptor = item.interactions.find(
         ({ responseIdentifier }) => responseIdentifier === element.responseIdentifier,
       );
@@ -252,6 +274,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       }
     }
     if (current !== undefined) bindInteractions(current, drawn);
+    supports.applyToContent(next, drawn);
   };
 
   /** Shows the modal feedback of a view once, when the item or the attempt or the feedback is new. */
@@ -270,7 +293,17 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     "div",
     { class: "tempuh-layout" },
     mapSlot,
-    html("main", { class: "tempuh-main" }, heading, notices, contentHost, attempts, comment.element, actionsSlot),
+    html(
+      "main",
+      { class: "tempuh-main" },
+      heading,
+      notices,
+      supportsSlot,
+      contentHost,
+      attempts,
+      comment.element,
+      actionsSlot,
+    ),
   );
   const app = html(
     "div",
@@ -281,6 +314,16 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     status.element,
   );
   shadow.append(app);
+  const supports: DeliverySupports = mountDeliverySupports({
+    messages,
+    language,
+    slot: supportsSlot,
+    contentHost,
+    content,
+    pci,
+    voice,
+    ...(chrome ? { request: (name, active) => void send({ type: "support", name, active }) } : {}),
+  });
 
   let chain: Promise<void> = Promise.resolve();
   const update = (next: CandidateView): void => {
@@ -289,6 +332,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     view = next;
     heading.textContent = next.current?.title ?? next.test.title;
     renderNotices(next);
+    supports.update(next);
     if (chrome) renderChrome(next);
     if (!first && changed && chrome) heading.focus();
     shown = { ...shown, item: itemId(next.current?.key) };
@@ -303,11 +347,13 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
 
   return {
     update,
+    settled,
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
       unsubscribe();
       clearInterval(ticker);
+      supports.destroy();
       status.stop();
       timerStatus.stop();
       void pci.reset().then(() => content.destroy());

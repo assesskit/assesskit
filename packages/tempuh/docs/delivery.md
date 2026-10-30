@@ -35,18 +35,19 @@ const mounted = mountDelivery(document.querySelector("#player") as HTMLElement, 
 
 ## Options
 
-| Option       | Type                                | Meaning                                                                                                                                      |
-| ------------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `client`     | `SessionClient`                     | The session the player shows, sends its actions to, and resolves package paths through.                                                      |
-| `files`      | `MountFiles`                        | The host's storage of files: `upload`, `read` and `url`. A file value is a reference to it everywhere (olah D7).                             |
-| `staticUrl`  | `string`                            | The base URL of tempuh's static files, ending in `/`: `pci-frame/frame.html` and `player.css` are under it.                                  |
-| `stylesheet` | `CSSStyleSheet`                     | The stylesheet of the content, built from `player.css` ([styling](styling.md)).                                                              |
-| `fetch`      | `StylesheetFetch`                   | Loads item stylesheets and the module resolution files of portable custom interactions from the gate. `fetch` of the page fits.              |
-| `language`   | `string`                            | The language of the interface, a BCP 47 tag, which chooses the catalog of [messages](messages.md). Default: `"en"`.                          |
-| `messages`   | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag. Default: none.                                                                      |
-| `origins`    | `readonly string[]`                 | The origins besides the package's that content and portable custom interactions may load from. Default: none.                                |
-| `mathjax`    | `string`                            | The URL of MathJax 4's `mml-chtml` component ([math](math.md)). Default: none, so that the browser renders MathML.                           |
-| `chrome`     | `boolean`                           | Whether the player draws the navigation, timers, actions, attempts and comment box. A host that draws its own sets `false`. Default: `true`. |
+| Option       | Type                                | Meaning                                                                                                                                                                                                                                                                    |
+| ------------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client`     | `SessionClient`                     | The session the player shows, sends its actions to, and resolves package paths through.                                                                                                                                                                                    |
+| `files`      | `MountFiles`                        | The host's storage of files: `upload`, `read` and `url`. A file value is a reference to it everywhere (olah D7).                                                                                                                                                           |
+| `staticUrl`  | `string`                            | The base URL of tempuh's static files, ending in `/`: `pci-frame/frame.html` and `player.css` are under it.                                                                                                                                                                |
+| `stylesheet` | `CSSStyleSheet`                     | The stylesheet of the content, built from `player.css` ([styling](styling.md)).                                                                                                                                                                                            |
+| `fetch`      | `StylesheetFetch`                   | Loads item stylesheets and the module resolution files of portable custom interactions from the gate. `fetch` of the page fits.                                                                                                                                            |
+| `language`   | `string`                            | The language of the interface, a BCP 47 tag, which chooses the catalog of [messages](messages.md). Default: `"en"`.                                                                                                                                                        |
+| `messages`   | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag. Default: none.                                                                                                                                                                                                    |
+| `origins`    | `readonly string[]`                 | The origins besides the package's that content and portable custom interactions may load from. Default: none.                                                                                                                                                              |
+| `mathjax`    | `string`                            | The URL of MathJax 4's `mml-chtml` component ([math](math.md)). Default: none, so that the browser renders MathML.                                                                                                                                                         |
+| `chrome`     | `boolean`                           | Whether the player draws the navigation, timers, actions, attempts, comment box and panel of supports. A host that draws its own sets `false`. Default: `true`.                                                                                                            |
+| `hooks`      | `object`                            | The hooks of the host: `customInteraction` mounts `qti-custom-interaction`, `record` says whether an upload of audio offers a recording (Default: `true`), and `voice` reads aloud (Default: the voice of the browser, `webSpeech()`, [speech](speech.md)). Default: none. |
 
 `mountDelivery(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or an
 option is not of its type. It attaches an open shadow root to `host` and draws in it, so the page's styles do not reach the
@@ -55,10 +56,11 @@ A host element mounts once: after `destroy`, mount into a new element.
 
 It returns a `Mounted`:
 
-| Member         | Meaning                                                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `update(view)` | Shows a view in place of the one before. The player follows the client by itself, so a host calls it only to feed its own view. |
-| `destroy()`    | Takes the content, the timers and the listeners away. The session client stays open: it belongs to the host.                    |
+| Member         | Meaning                                                                                                                                                                                        |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update(view)` | Shows a view in place of the one before. The player follows the client by itself, so a host calls it only to feed its own view.                                                                |
+| `settled()`    | Resolves when the interactions of the item shown have handed over what the candidate gave. A host with `chrome: false` waits for it before it sends an action that submits or leaves the item. |
+| `destroy()`    | Takes the content, the timers and the listeners away. The session client stays open: it belongs to the host.                                                                                   |
 
 ## What the player draws
 
@@ -76,9 +78,10 @@ It returns a `Mounted`:
 | Suspension            | A note that the test is paused, and no action but the one the view lists. In an exam only the proctor suspends and resumes ([server](server.md#the-proctor)).                                                                                                                                | T61 |
 | Attempts              | The attempts used and, for an item with a limit, the attempts left.                                                                                                                                                                                                                          | T62 |
 | Rubric                | The candidate rubric of the test, its part and its sections, in the content of every item (INFO §2.10).                                                                                                                                                                                      | T64 |
+| Supports              | The panel of the supports that are options, and what the supports that are on change: the look, the cards, the reading aloud and the notice of the variant ([supports](supports.md#in-the-player)).                                                                                          | T75 |
 
-The map is hidden where the test part has fewer than two items. Controls for supports, tools, the line reader and the like
-belong to [accessibility](tools.md) and are not drawn here.
+The map is hidden where the test part has fewer than two items. The tools, the line reader and the like belong to
+[tools](tools.md) and are not drawn here.
 
 ## Refusals and status messages
 
@@ -117,6 +120,12 @@ candidate can respond (only while the item is interacting), and the response; it
 drawn and when the item is not interacting, as in review and in the solution, where the response is the engine's. While the
 candidate interacts the element holds the response, so a view that answers an earlier request never takes back what was typed
 since.
+
+A request that submits or leaves the item (`submit`, `skip`, `next-attempt`, `end-attempt`, `end-part`, `end-test` and every
+`move`) waits first for `settled()` of each interaction element, after the candidate has confirmed it. An interaction that
+stores its response in the background, such as a drawing whose picture is being uploaded, hands it over by then, and the
+`set-responses` that carries it goes before the request. Without this the request would reach the engine first, and the
+drawing would be missing from what is submitted or lost with the item.
 
 Each portable custom interaction runs in its frame ([PCI](pci.md)). The player loads its module resolution files from the
 gate, mounts the frame with the response, the state `getState` gave before, the template and context values and the status

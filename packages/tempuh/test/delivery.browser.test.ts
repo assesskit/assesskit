@@ -1,14 +1,17 @@
+import { ASI_NAMESPACE } from "@luthfanwakan/olah/asi";
 import type { CandidateAction } from "@luthfanwakan/olah/delivery";
-import { single } from "@luthfanwakan/olah/values";
+import { readPnp } from "@luthfanwakan/olah/pnp";
+import { type FileValue, single } from "@luthfanwakan/olah/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
-import { DataError } from "../src/index.js";
-import type { StylesheetFetch } from "../src/player/index.js";
+import { DataError, ID_MESSAGES } from "../src/index.js";
+import type { SpeechRequest, StylesheetFetch } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
+import { picture } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 
 const ALICE = { session: "exam-1", principal: "alice" };
@@ -41,11 +44,19 @@ async function shell(
     readonly practice?: boolean;
     readonly chrome?: boolean;
     readonly wrap?: (client: SessionClient) => SessionClient;
+    /** The PNP of the candidate, as a document. */
+    readonly profile?: string;
+    readonly upload?: (bytes: Blob, mimeType: string) => Promise<FileValue>;
+    readonly url?: (file: FileValue) => string;
+    readonly voice?: { speak(request: SpeechRequest): Promise<void>; stop(): void };
   } = {},
 ) {
   const origin = inject("fixtures").asset;
   const setup = await examHost({}, options.files, origin);
   const definition = examDefinition(packageOf(options.files ?? examFiles()));
+  const pnp = options.profile === undefined ? undefined : readPnp(options.profile);
+  if (pnp !== undefined && !("supports" in pnp)) throw new Error("The fixture profile must be one profile.");
+  const profile = pnp === undefined ? {} : { pnp };
   let client: SessionClient;
   let started: unknown;
   if (options.practice === true) {
@@ -58,13 +69,14 @@ async function shell(
       },
       session: "practice-1",
       seed: 1,
+      start: profile,
       assets: (path) => `${origin}${PRACTICE_PATH}${path}`,
       clock: setup.clock,
     });
   } else {
     const transport: Transport = async (envelope) =>
       JSON.parse(JSON.stringify(await setup.host.handle(ALICE, JSON.parse(JSON.stringify(envelope)))));
-    started = JSON.parse(JSON.stringify(await setup.host.start(ALICE, { seed: 1 })));
+    started = JSON.parse(JSON.stringify(await setup.host.start(ALICE, { seed: 1, ...profile })));
     client = createRemoteSession(transport, started as never, { clock: setup.clock });
   }
   const shown = options.wrap === undefined ? client : options.wrap(client);
@@ -89,13 +101,14 @@ async function shell(
   const mounted = mountDelivery(host, {
     client: shown,
     files: {
-      upload: async () => ({ reference: "f", mimeType: "image/png" }),
+      upload: options.upload ?? (async () => ({ reference: "f", mimeType: "image/png" })),
       read: async () => new Uint8Array(),
-      url: () => "",
+      url: options.url ?? (() => ""),
     },
     staticUrl: `${origin}/static/`,
     stylesheet: player,
     fetch: fetcher,
+    ...(options.voice === undefined ? {} : { hooks: { voice: options.voice } }),
     ...(options.language === undefined ? {} : { language: options.language }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
   });
@@ -597,6 +610,8 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { language: "" })).toThrow("The option language must be a non-empty string");
     expect(() => mount(fresh(), { origins: ["ftp://x"] })).toThrow("An origin of the option origins");
     expect(() => mount(fresh(), { chrome: "yes" })).toThrow("The option chrome must be true or false");
+    expect(() => mount(fresh(), { hooks: { voice: {} } })).toThrow("The method speak of the hook voice");
+    expect(() => mount(fresh(), { hooks: { voice: "robot" } })).toThrow("The hook voice must be an object");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { other: 1 })).toThrow("The options has the properties");
   });
@@ -777,5 +792,334 @@ describe("accessibility of the chrome", () => {
     await userEvent.keyboard("{Enter}");
     await vi.waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+  });
+});
+
+const PNP_NAMESPACE = "http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0pnp_v1p0";
+
+/** A profile with two supports the candidate turns on and off, one that is on from the start, one that is on and read aloud, and one prohibited. */
+const PROFILE = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}">
+  <high-contrast/><alternative-text/><layout-single-column/><magnification/>
+  <spoken><reading-type>computer-read-aloud</reading-type></spoken>
+  <activate-as-option-set><high-contrast/><alternative-text/></activate-as-option-set>
+  <activate-at-initialization-set><layout-single-column/><spoken/></activate-at-initialization-set>
+  <prohibit-set><magnification/></prohibit-set>
+</access-for-all-pnp>`;
+
+const panelButtons = (ui: ShadowRoot): HTMLButtonElement[] => [
+  ...ui.querySelectorAll<HTMLButtonElement>(".tempuh-supports button"),
+];
+const contentHostOf = (ui: ShadowRoot): HTMLElement => ui.querySelector(".tempuh-content-host") as HTMLElement;
+
+/** A session client that records the actions it is sent. */
+function recording(): { readonly sent: CandidateAction[]; readonly wrap: (client: SessionClient) => SessionClient } {
+  const sent: CandidateAction[] = [];
+  return {
+    sent,
+    wrap: (client) =>
+      withDispatch(client, (action) => {
+        sent.push(action);
+        return client.dispatch(action);
+      }),
+  };
+}
+
+describe("the supports in the player", () => {
+  it("[T75] draws a toggle button for each support that is an option, and none for a support that is on from the start or prohibited", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    const region = s.ui.querySelector(".tempuh-supports");
+    expect(region?.getAttribute("aria-label")).toBe("Supports");
+    expect(panelButtons(s.ui).map((button) => [button.textContent, button.getAttribute("aria-pressed")])).toEqual([
+      ["High contrast", "false"],
+      ["Alternative text", "false"],
+    ]);
+  });
+
+  it("[T75] has no panel for a candidate whose profile gives no option", async () => {
+    const s = await shell();
+    await shown(s);
+    expect(s.ui.querySelector(".tempuh-supports")?.hasAttribute("hidden")).toBe(true);
+    expect(panelButtons(s.ui).filter((button) => button.offsetParent !== null)).toEqual([]);
+  });
+
+  it("[T75][T79] sends the support action through the session, applies the support to the next view and takes it off when pressed again", async () => {
+    const { sent, wrap } = recording();
+    const s = await shell({ profile: PROFILE, wrap });
+    await shown(s);
+    const host = contentHostOf(s.ui);
+    expect(host.hasAttribute("data-tempuh-contrast")).toBe(false);
+    buttonNamed(s.ui, "High contrast").click();
+    await vi.waitFor(() => expect(host.getAttribute("data-tempuh-contrast")).toBe("high"));
+    expect(sent).toContainEqual({ type: "support", name: "high-contrast", active: true });
+    expect(buttonNamed(s.ui, "High contrast").getAttribute("aria-pressed")).toBe("true");
+    buttonNamed(s.ui, "High contrast").click();
+    await vi.waitFor(() => expect(host.hasAttribute("data-tempuh-contrast")).toBe(false));
+    expect(sent).toContainEqual({ type: "support", name: "high-contrast", active: false });
+    expect(buttonNamed(s.ui, "High contrast").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("[T75][SC 2.4.3] keeps the focus on the button that turned a support, and says nothing in the status region", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    const button = buttonNamed(s.ui, "High contrast");
+    button.focus();
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() => expect(button.getAttribute("aria-pressed")).toBe("true"));
+    expect(s.ui.activeElement).toBe(button);
+    expect(statusOf(s.ui)).toBe("");
+  });
+
+  it("[T84] shows the alternative text of an image after the support is turned on, without drawing the content again", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    const body = contentOf(s.ui).querySelector(".tempuh-body");
+    expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).not.toContain("A map");
+    buttonNamed(s.ui, "Alternative text").click();
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
+    expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
+    buttonNamed(s.ui, "Alternative text").click();
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).not.toContain("A map"));
+  });
+
+  it("[T84] leaves what the supports added alone while the answers are saved, and applies them again to the next item", async () => {
+    const s = await shell({ profile: PROFILE });
+    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    buttonNamed(s.ui, "Alternative text").click();
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
+    const after = [...contentOf(s.ui).querySelectorAll("img + *")].find((node) => node.textContent === "A map");
+    expect(after).toBeDefined();
+    choices(s.ui)[1]?.click();
+    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 5000 });
+    expect(after?.isConnected).toBe(true);
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    expect(buttonNamed(s.ui, "Alternative text").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("[T79] applies a support that is on from the start, and draws no control for it", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    expect(contentHostOf(s.ui).hasAttribute("data-tempuh-single-column")).toBe(true);
+    expect(panelButtons(s.ui).map((button) => button.textContent)).not.toContain("Single column");
+  });
+
+  it("[T75][T79] applies the supports to the content when the host draws the chrome, and draws no panel", async () => {
+    const s = await shell({ profile: PROFILE, chrome: false });
+    await shown(s);
+    expect(contentHostOf(s.ui).hasAttribute("data-tempuh-single-column")).toBe(true);
+    expect(s.ui.querySelector(".tempuh-supports")).toBeNull();
+  });
+
+  it("[T75][T97] names the supports in the language of the interface", async () => {
+    const s = await shell({ profile: PROFILE, language: "id" });
+    await vi.waitFor(() => expect(panelButtons(s.ui)).toHaveLength(2));
+    expect(s.ui.querySelector(".tempuh-supports")?.getAttribute("aria-label")).toBe(ID_MESSAGES.supportsLabel);
+  });
+
+  it("[T85] reads the content with the voice of the host when the profile asks for it", async () => {
+    const requests: SpeechRequest[] = [];
+    const voice = {
+      speak: async (request: SpeechRequest): Promise<void> => void requests.push(request),
+      stop: () => undefined,
+    };
+    const s = await shell({ profile: PROFILE, voice });
+    await shown(s);
+    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
+    buttonNamed(s.ui, "Read aloud").click();
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.text).toContain("Look at");
+    expect(requests[0]?.lang).toBe("en");
+  });
+
+  it("[T79][T87] changes the look inside the frame of a portable custom interaction when a support is turned on and off", async () => {
+    const s = await shell({
+      files: pciFiles(),
+      profile: PROFILE,
+      wrap: (client) =>
+        Object.create(client, { assets: { value: (path: string) => `${inject("fixtures").asset}/g/pci/${path}` } }),
+    });
+    await shown(s);
+    await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
+    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
+    const look = async () => (await commands.frameTheme("Press the button")).attributes["data-tempuh-contrast"];
+    await vi.waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+    buttonNamed(s.ui, "High contrast").click();
+    await vi.waitFor(async () => expect(await look()).toBe("high"), { timeout: 15_000 });
+    buttonNamed(s.ui, "High contrast").click();
+    await vi.waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+  });
+
+  it("[T74] says which version of the question was delivered", async () => {
+    const s = await shell();
+    await shown(s);
+    const current = s.client.view.current;
+    if (current === undefined) throw new Error("The fixture shows an item.");
+    const notice = (): HTMLElement => s.ui.querySelector(".tempuh-variant") as HTMLElement;
+    expect(notice().hidden).toBe(true);
+    s.mounted.update({ ...s.client.view, current: { ...current, variant: { resource: "q1-id", language: "id" } } });
+    await vi.waitFor(() => expect(notice().textContent).toBe("Language of this version: Indonesian"));
+    expect(notice().querySelector("span")?.getAttribute("lang")).toBe("id");
+    s.mounted.update({ ...s.client.view, current });
+    await vi.waitFor(() => expect(notice().hidden).toBe(true));
+  });
+
+  it("[T75][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the panel and the controls of reading aloud", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
+    expect(await axeViolations(s.page)).toEqual([]);
+  });
+
+  it("takes the panel and the controls away at destroy", async () => {
+    const s = await shell({ profile: PROFILE });
+    await shown(s);
+    s.mounted.destroy();
+    expect(s.ui.childElementCount).toBe(0);
+  });
+});
+
+/** The item q1 as a drawing on a white picture: its response is a file that the host stores. */
+function drawingFiles(): Readonly<Record<string, string | Uint8Array>> {
+  return {
+    ...examFiles(),
+    "items/q1/item.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="q1" title="Item q1" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="file"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>0</qti-value></qti-default-value></qti-outcome-declaration>
+  <qti-item-body>
+    <p>Look at the picture.</p>
+    <qti-drawing-interaction response-identifier="RESPONSE"><qti-prompt>Draw.</qti-prompt><object type="image/png" width="200" height="100" data="${picture(200, 100, "#ffffff")}">A canvas</object></qti-drawing-interaction>
+  </qti-item-body>
+</qti-assessment-item>`,
+  };
+}
+
+/** A storage of drawings that keeps the upload pending until the test lets it go; a stored drawing plays back as a white picture. */
+function slowUpload(): {
+  readonly files: Pick<Parameters<typeof shell>[0] & object, "upload" | "url">;
+  readonly uploads: () => number;
+  readonly finish: () => void;
+} {
+  const pending: (() => void)[] = [];
+  const stored = picture(200, 100, "#ffffff");
+  let count = 0;
+  return {
+    files: {
+      upload: (_bytes, mimeType) =>
+        new Promise((resolve) => {
+          count += 1;
+          const reference = `drawing-${count}`;
+          pending.push(() => resolve({ reference, mimeType }));
+        }),
+      url: () => stored,
+    },
+    uploads: () => count,
+    finish: () => {
+      for (const release of pending.splice(0)) release();
+    },
+  };
+}
+
+/** Draws a line, and waits until the drawing has started to store it. */
+async function draw(s: Shell, storage: ReturnType<typeof slowUpload>): Promise<void> {
+  const surface = (): HTMLElement | null => contentOf(s.ui).querySelector<HTMLElement>(".tempuh-surface");
+  await vi.waitFor(() => expect(surface()?.getBoundingClientRect().width).toBeGreaterThan(0));
+  const target = surface() as HTMLElement;
+  await userEvent.dragAndDrop(target, target, { sourcePosition: { x: 20, y: 20 }, targetPosition: { x: 120, y: 20 } });
+  await vi.waitFor(() => expect(storage.uploads()).toBe(1));
+}
+
+describe("a drawing that is still being stored", () => {
+  const types = (sent: readonly CandidateAction[]): string[] => sent.map(({ type }) => type);
+
+  it.each([
+    ["submit", async (s: Shell) => buttonNamed(s.ui, "Submit answer").click(), "submit"],
+    ["move to the next question", async (s: Shell) => buttonNamed(s.ui, "Next").click(), "move"],
+    [
+      "choose another question in the map",
+      async (s: Shell) => (s.ui.querySelectorAll(".tempuh-nav-item")[1] as HTMLElement).click(),
+      "move",
+    ],
+  ] as const)(
+    "sends the drawing before the candidate's request to %s, and not before it is stored",
+    async (_name, act, type) => {
+      const { sent, wrap } = recording();
+      const storage = slowUpload();
+      const s = await shell({ files: drawingFiles(), wrap, ...storage.files });
+      await shown(s);
+      await draw(s, storage);
+      await act(s);
+      await real(200);
+      expect(types(sent)).not.toContain(type);
+      expect(types(sent)).not.toContain("set-responses");
+      storage.finish();
+      await vi.waitFor(() => expect(types(sent)).toContain(type));
+      expect(types(sent).filter((each) => each === "set-responses" || each === type)).toEqual(["set-responses", type]);
+      const response = sent.find((action) => action.type === "set-responses");
+      expect(response?.type === "set-responses" && response.responses.get("RESPONSE")).toMatchObject({
+        cardinality: "single",
+        baseType: "file",
+        value: { reference: "drawing-1" },
+      });
+    },
+  );
+
+  it("[SC 3.3.4] sends the drawing before the end of the test, once the candidate has confirmed", async () => {
+    const { sent, wrap } = recording();
+    const storage = slowUpload();
+    const s = await shell({ files: drawingFiles(), wrap, ...storage.files });
+    await shown(s);
+    await draw(s, storage);
+    buttonNamed(s.ui, "End the test").click();
+    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    buttonNamed(s.ui, "Yes, continue").click();
+    await real(200);
+    expect(types(sent)).not.toContain("end-test");
+    storage.finish();
+    await vi.waitFor(() => expect(types(sent)).toContain("end-test"));
+    expect(types(sent).filter((each) => each === "set-responses" || each === "end-test")).toEqual([
+      "set-responses",
+      "end-test",
+    ]);
+    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+  });
+
+  it("keeps the stored drawing in the answer the engine submitted", async () => {
+    const storage = slowUpload();
+    const s = await shell({ files: drawingFiles(), ...storage.files });
+    await shown(s);
+    await draw(s, storage);
+    buttonNamed(s.ui, "Submit answer").click();
+    storage.finish();
+    await vi.waitFor(() => expect(s.client.view.current?.status).toBe("closed"));
+    expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } });
+  });
+
+  it("lets a host that draws its own actions wait for the drawing", async () => {
+    const storage = slowUpload();
+    const s = await shell({ files: drawingFiles(), ...storage.files, chrome: false });
+    await shown(s);
+    await draw(s, storage);
+    let settled = false;
+    void s.mounted.settled().then(() => {
+      settled = true;
+    });
+    await real(200);
+    expect(settled).toBe(false);
+    storage.finish();
+    await vi.waitFor(() => expect(settled).toBe(true));
+    await vi.waitFor(() =>
+      expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } }),
+    );
+  });
+
+  it("sends a request at once when no interaction has work to finish", async () => {
+    const { sent, wrap } = recording();
+    const s = await shell({ wrap });
+    await shown(s);
+    buttonNamed(s.ui, "Next").click();
+    await vi.waitFor(() => expect(types(sent)).toEqual(["move"]));
   });
 });
