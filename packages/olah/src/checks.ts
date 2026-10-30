@@ -119,6 +119,18 @@ export function checkNonNegative(value: unknown, label: string): asserts value i
 }
 
 /**
+ * Checks that a value is a safe integer of at least 0, such as a count.
+ *
+ * @param label - Names the value in the error message, such as `The option maxAttempts`.
+ * @throws `DataError` when it is not.
+ */
+export function checkNonNegativeInteger(value: unknown, label: string): asserts value is number {
+  if (!(typeof value === "number" && Number.isSafeInteger(value) && value >= 0)) {
+    throw new DataError(`${label} must be a non-negative integer, found ${describe(value)}.`);
+  }
+}
+
+/**
  * Checks that a value is a safe integer of at least 1, such as a size limit.
  *
  * @param label - Names the value in the error message, such as `The option maxBytes`.

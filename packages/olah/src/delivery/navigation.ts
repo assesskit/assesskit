@@ -1,9 +1,17 @@
 import type { Expression } from "../asi/index.js";
-import { checkArray, checkFunction, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkFunction, checkRecord, describe } from "../checks.js";
 import { DataError, ProcessingError } from "../errors.js";
 import { evaluateTestExpression, type ProcessingContext, type TestScope } from "../processing/index.js";
 import type { Value } from "../values/index.js";
-import { type ItemKey, type PlannedChild, type PlannedPart, planItems, type TestPlan } from "./plan.js";
+import {
+  checkKey,
+  type ItemKey,
+  type PlannedChild,
+  type PlannedPart,
+  planItems,
+  sameKey,
+  type TestPlan,
+} from "./plan.js";
 import type { TestStructure } from "./structure.js";
 
 /**
@@ -102,11 +110,6 @@ function pathTo(frame: Frame): Frame[] {
 
 function rootOf(frame: Frame): Frame {
   return frame.parent === undefined ? frame : rootOf(frame.parent);
-}
-
-/** Whether two keys name the same item instance. */
-function sameKey(first: ItemKey, second: ItemKey): boolean {
-  return first.ref === second.ref && first.instance === second.instance;
 }
 
 /**
@@ -294,12 +297,6 @@ function checkArguments(structure: TestStructure, plan: TestPlan): void {
   }
   checkRecord(plan, "The plan must be an object from planTest");
   checkArray(plan.parts, "The plan must be an object from planTest, with an array parts");
-}
-
-function checkKey(key: unknown): asserts key is ItemKey {
-  checkRecord(key, "The item instance must be an object with a ref and an instance");
-  checkString(key.ref, "The ref of the item instance");
-  checkPositiveInteger(key.instance, "The instance of the item instance");
 }
 
 /**

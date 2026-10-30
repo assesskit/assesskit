@@ -1,15 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { compare, type Implementation, type ItemCase, type Observation, type Run, sameValue } from "../src/index.ts";
+import {
+  compare,
+  compareSessions,
+  type Implementation,
+  type ItemCase,
+  type Observation,
+  type Play,
+  type Run,
+  type SessionCase,
+  sameValue,
+  type TurnObservation,
+} from "../src/index.ts";
 
 const testCase = (name: string): ItemCase => ({ name, xml: "<qti-assessment-item/>", responses: {}, seed: 1 });
 const accepts = (observation: Partial<Observation>): Run => ({
   accepted: true,
   observation: { outcomes: {}, templateValues: {}, ...observation },
 });
-const rejects = (reason: string): Run => ({ accepted: false, reason });
-const implementation = (name: string, runs: Record<string, Run>): Implementation => ({
+const rejects = (reason: string): Run & Play => ({ accepted: false, reason });
+const implementation = (name: string, runs: Record<string, Run>, plays: Record<string, Play> = {}): Implementation => ({
   name,
   run: (item) => runs[item.name] ?? rejects("unknown"),
+  play: (session) => plays[session.name] ?? rejects("unknown"),
+});
+const sessionCase = (name: string): SessionCase => ({ name, xml: "<qti-assessment-item/>", turns: [], seed: 1 });
+const turn = (observation: Partial<TurnObservation>): TurnObservation => ({
+  accepted: true,
+  outcomes: {},
+  numAttempts: 1,
+  closed: false,
+  ...observation,
 });
 
 describe("sameValue", () => {
@@ -62,5 +82,43 @@ describe("compare", () => {
     const report = compare([testCase("a")], reference, subject, accepted);
     expect(report.differences).toEqual([]);
     expect(report.accepted).toHaveLength(1);
+  });
+});
+
+describe("compareSessions", () => {
+  it("reports what differs turn by turn: acceptance, outcomes, numAttempts and closing", () => {
+    const reference = implementation(
+      "ref",
+      {},
+      {
+        a: { accepted: true, turns: [turn({ outcomes: { SCORE: 0 } }), turn({ numAttempts: 2, closed: true })] },
+        b: { accepted: true, turns: [turn({}), turn({ accepted: false })] },
+      },
+    );
+    const subject = implementation(
+      "sub",
+      {},
+      {
+        a: { accepted: true, turns: [turn({ outcomes: { SCORE: 1 } }), turn({ numAttempts: 3, closed: true })] },
+        b: { accepted: true, turns: [turn({}), turn({})] },
+      },
+    );
+    const report = compareSessions([sessionCase("a"), sessionCase("b")], reference, subject, []);
+    expect(report.compared).toBe(2);
+    expect(report.differences).toEqual([
+      { item: "a turn 1", kind: "outcome", variable: "SCORE", reference: 0, subject: 1 },
+      { item: "a turn 2", kind: "session", variable: "numAttempts", reference: 2, subject: 3 },
+      { item: "b turn 2", kind: "acceptance", variable: "", reference: false, subject: true },
+    ]);
+  });
+
+  it("reports a session that only one implementation plays, and lists those both reject", () => {
+    const reference = implementation("ref", {}, { a: { accepted: true, turns: [] }, b: rejects("not an item") });
+    const subject = implementation("sub", {}, { a: rejects("processing failed"), b: rejects("no") });
+    const report = compareSessions([sessionCase("a"), sessionCase("b")], reference, subject, []);
+    expect(report.rejected).toEqual([{ item: "b", reason: "not an item" }]);
+    expect(report.differences).toEqual([
+      { item: "a", kind: "acceptance", variable: "", reference: true, subject: false },
+    ]);
   });
 });

@@ -13,7 +13,7 @@ all rows with their tests.
 | X    | Written output validates against the official XSD                                                                            |
 | S    | Unit test whose expected value is a statement or worked example of the cited section                                         |
 | P    | Property of the semantics, checked by fast-check                                                                             |
-| D    | Differential test against Longsight `qti3-core` on items                                                                     |
+| D    | Differential test against Longsight `qti3-core` on items and item sessions                                                   |
 | C    | Corpus document read, validated and, where it has processing, executed                                                       |
 | N    | Negative fixture that must produce the named issue or error                                                                  |
 | V    | Exhaustive vocabulary test: every term accepted, any other term rejected                                                     |
@@ -159,7 +159,16 @@ implementations on a list of cases and reports
 - the differences, including an item that only one accepts.
 
 `corpusCases` builds cases from the item documents below a directory of the corpus, named by their paths: each item
-without responses, and with the correct responses the oracle reads from it. `differential/test/generated.test.ts` compares
+without responses, and with the correct responses the oracle reads from it.
+
+An `Implementation` also plays item sessions. A session case is an item, its turns and a seed; a turn gives responses
+and submits them, or ends the attempt with an end attempt interaction. olah plays it with `startItemSession`,
+`presentItem` and `applyItemAction` for an item delivered alone without a limit on attempts, as the oracle has none, and a
+processing failure, which olah reports as data, makes the case one that olah does not accept. `compareSessions` compares
+the turns: whether each is accepted, the outcome values, `numAttempts`, and whether the session closed. `sessionCases`
+gives four turns to each corpus item with interactions that choose identifiers, with choices from the oracle's generator
+and a hint in the second turn when the item has an end attempt interaction; `generated.test.ts` plays adaptive and
+non-adaptive items with generated turns. `differential/test/generated.test.ts` compares
 items that fast-check generates for arithmetic, rounding, tolerances, logic, containers, mapping and random draws. A
 difference that the specification settles goes into `conformance/accepted-differences.json` with the item, the variable
 (empty when only one implementation accepts the item), the reason and the source; it shows in the matrix as accepted and

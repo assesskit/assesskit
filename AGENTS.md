@@ -46,7 +46,7 @@ packages/olah/            the library
   src/errors.ts           OlahError, DataError, ReadError, SecurityError, ProcessingError; Issue
   src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
                           checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
-                          checkPositiveInteger, checkSeed
+                          checkNonNegativeInteger, checkPositiveInteger, checkSeed
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
@@ -149,10 +149,11 @@ behavior only, without "now", "no longer", "renamed" or "previously".
   expected, e.g. `A seed must be a safe integer, found 1.5.` Input may come from plain JavaScript or JSON, so every
   argument is checked for its type before it is read, once, where the public function reads it, with a `check` function of
   `checks.ts`: options with `checkOptions`, arrays with `checkArray`, objects with `checkRecord`, a function with
-  `checkFunction`, a string with `checkString`, a number with `checkFinite`, `checkNonNegative` or
-  `checkPositiveInteger`, a seed with `checkSeed`, a boolean with `checkBoolean` and a string option with `checkChoice`:
-  `<Label> must be a positive integer, found <value>.` An option's label is `The option <name>`. Inner functions validate
-  shallowly, so that a call does not cost the size of the model. Other messages show values with `describe`.
+  `checkFunction`, a string with `checkString`, a number with `checkFinite`, `checkNonNegative`,
+  `checkNonNegativeInteger` or `checkPositiveInteger`, a seed with `checkSeed`, a boolean with `checkBoolean` and a
+  string option with `checkChoice`: `<Label> must be a positive integer, found <value>.` An option's label is
+  `The option <name>`. Inner functions validate shallowly, so that a call does not cost the size of the model. Other
+  messages show values with `describe`.
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected,
   never taken as absent.
 - Validation returns `Issue`s and does not throw; each issue cites the rule that defines it.

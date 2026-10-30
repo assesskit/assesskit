@@ -1,6 +1,9 @@
+import { resolve } from "node:path";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { compare, type ItemCase, longsight, olah } from "../src/index.ts";
+import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
+import { compare, compareSessions, type ItemCase, longsight, olah, type Turn } from "../src/index.ts";
+import { sessionItem } from "./items.ts";
 
 const NAMESPACE = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
 /** The oracle needs an item body. */
@@ -222,5 +225,48 @@ describe("olah against the oracle on generated items", () => {
           return { name: "random", xml, responses: {}, seed };
         }),
     );
+  });
+
+  it("[E10][B3][B8][B9][B10][D] agree turn by turn on sessions of adaptive and non-adaptive items, hints included", () => {
+    const turns = fc.array(
+      fc
+        .record({ choice: fc.constantFrom("A", "B", "C"), hint: fc.boolean() })
+        .map(
+          ({ choice, hint }): Turn =>
+            hint ? { responses: { RESPONSE: choice }, endAttempt: "HINT" } : { responses: { RESPONSE: choice } },
+        ),
+      { minLength: 1, maxLength: 6 },
+    );
+    fc.assert(
+      fc.property(fc.boolean(), turns, (adaptive, played) => {
+        const report = compareSessions(
+          [{ name: "session", xml: sessionItem(adaptive), turns: played, seed: 1 }],
+          longsight,
+          olah,
+          [],
+        );
+        expect(report.differences).toEqual([]);
+        expect(report.compared).toBe(1);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("[B3][D] counts every attempt of a non-adaptive item that completed, which the oracle stops counting", () => {
+    const accepted = loadAcceptedDifferences(
+      resolve(import.meta.dirname, "../../conformance/accepted-differences.json"),
+    );
+    const turns: Turn[] = [{ responses: { RESPONSE: "B" } }, { responses: { RESPONSE: "A" } }];
+    const testCase = {
+      name: "a non-adaptive item that completes (turns)",
+      xml: sessionItem(false, true),
+      turns,
+      seed: 1,
+    };
+    const report = compareSessions([testCase], longsight, olah, accepted);
+    expect(report.differences).toEqual([]);
+    expect(report.accepted).toEqual([
+      { item: `${testCase.name} turn 2`, kind: "session", variable: "numAttempts", reference: 1, subject: 2 },
+    ]);
   });
 });

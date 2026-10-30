@@ -1,6 +1,6 @@
 import { createItemSession, parseQtiXml, type QtiDiagnostic, type QtiDocument } from "@longsightgroup/qti3-core";
 import type { Random } from "@luthfanwakan/olah";
-import type { Implementation, ItemCase, Observed } from "./model.ts";
+import type { Implementation, ItemCase, Observed, SessionCase, TurnObservation } from "./model.ts";
 
 /** The multiplier and increment of the oracle's generator, a linear congruential generator (Numerical Recipes). */
 const LCG_MULTIPLIER = 1664525;
@@ -43,6 +43,9 @@ export function correctResponses(xml: string, seed: number): Record<string, Obse
     : createItemSession(document, undefined, { randomSeed: seed }).correctResponses();
 }
 
+/** The code of the oracle's diagnostic for an action on an adaptive item that completed. */
+const COMPLETED_CODE = "session.completed";
+
 /** Longsight `qti3-core`: the oracle that olah's item processing is compared with. */
 export const longsight: Implementation = {
   name: "Longsight qti3-core",
@@ -53,5 +56,28 @@ export const longsight: Implementation = {
     for (const [identifier, value] of Object.entries(responses)) session.respond(identifier, value);
     const { outcomes, state } = session.score();
     return { accepted: true, observation: { outcomes, templateValues: state.templateValues ?? {} } };
+  },
+  play: ({ xml, turns, seed }: SessionCase) => {
+    const document = parse(xml);
+    if (typeof document === "string") return { accepted: false, reason: document };
+    const session = createItemSession(document, undefined, { randomSeed: seed });
+    const { adaptive } = document.item;
+    return {
+      accepted: true,
+      turns: turns.map(({ responses, endAttempt }): TurnObservation => {
+        const responded = Object.entries(responses).flatMap(([identifier, value]) =>
+          session.respond(identifier, value),
+        );
+        const { outcomes, state, diagnostics } = session.score(
+          endAttempt === undefined ? {} : { endAttemptResponseIdentifier: endAttempt },
+        );
+        return {
+          accepted: ![...responded, ...diagnostics].some(({ code }) => code === COMPLETED_CODE),
+          outcomes,
+          numAttempts: state.builtInVariables?.numAttempts ?? 0,
+          closed: adaptive && state.status === "completed",
+        };
+      }),
+    };
   },
 };

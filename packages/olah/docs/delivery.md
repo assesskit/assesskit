@@ -1,29 +1,43 @@
 # delivery
 
-`@luthfanwakan/olah/delivery` plans a test session: which sections and items a candidate meets, in which order, under which
-rules. It resolves the section references of a test, selects and orders the children of every section from a seeded
-generator, numbers the item instances, decides what follows an item in a linear test part under pre-conditions and branch
-rules, inherits item session control, and computes time limits with a candidate's extra time. It imports `values`, `asi`,
-`pnp`, `processing` and `package` and runs in any JavaScript runtime. It holds no session state and runs no processing of its
-own: the expressions of pre-conditions and branch rules go to `processing`.
+`@luthfanwakan/olah/delivery` is the headless delivery engine. It plans a test session: which sections and items a
+candidate meets, in which order, under which rules. It resolves the section references of a test, selects and orders the
+children of every section from a seeded generator, numbers the item instances, decides what follows an item in a linear
+test part under pre-conditions and branch rules, inherits item session control, and computes time limits with a
+candidate's extra time. It runs the session of each item instance: attempts, adaptive items, end attempt interactions,
+drafts and submitted responses, review and solution, comments, the states of portable custom interactions, and processing
+failures as data. It imports `values`, `asi`, `results`, `pnp`, `interactions`, `content`, `processing` and `package`
+and runs in any JavaScript runtime. It reads no clock: every step takes the time it happened.
 
-| Export                                             | Purpose                                                                                       |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `resolveStructure(test, base, resolvers)`          | The `TestStructure`: parts, sections and item references, section references replaced.        |
-| `planTest(structure, options)`                     | A `TestPlan`: the sections and item instances of one session.                                 |
-| `planItems(plan, part?)`                           | The item instances of a plan, or of one test part, in order of presentation.                  |
-| `nextItem(structure, plan, from, rules)`           | The item to present after `from`, or the first item; pre-conditions and branch rules apply.   |
-| `previousItem(structure, plan, from)`              | The item before `from`, in a nonlinear part.                                                  |
-| `sessionControl(item)`                             | The item session control of an item reference after inheritance.                              |
-| `timeLimits(node, extra?)`                         | The time limits of the test, a part, a section or an item reference, with extra time.         |
-| `additionalTestingTime(profile)`                   | The extra testing time of a PNP.                                                              |
-| `ancestry(node)`, `partOf(node)`                   | The nodes that enclose a node, outermost first; the test part of a section or item reference. |
-| `ItemKey`                                          | An item instance: the identifier of the item reference and the instance, from 1.              |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …     | The plan: plain data, identifiers and numbers only.                                           |
-| `TestNode`, `PartNode`, `SectionNode`, …           | The nodes of the structure, with their models and the path of the document that holds them.   |
-| `RuleContext`                                      | What pre-conditions and branch rules read.                                                    |
-| `EffectiveSessionControl`, `EffectiveTimeLimits`   | The results of `sessionControl` and `timeLimits`.                                             |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions` | The limit on the size of a plan, and the options of `planTest`.                               |
+| Export                                             | Purpose                                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `resolveStructure(test, base, resolvers)`          | The `TestStructure`: parts, sections and item references, section references replaced.         |
+| `planTest(structure, options)`                     | A `TestPlan`: the sections and item instances of one session.                                  |
+| `planItems(plan, part?)`                           | The item instances of a plan, or of one test part, in order of presentation.                   |
+| `nextItem(structure, plan, from, rules)`           | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
+| `previousItem(structure, plan, from)`              | The item before `from`, in a nonlinear part.                                                   |
+| `sessionControl(item)`                             | The item session control of an item reference after inheritance.                               |
+| `timeLimits(node, extra?)`                         | The time limits of the test, a part, a section or an item reference, with extra time.          |
+| `additionalTestingTime(profile)`                   | The extra testing time of a PNP.                                                               |
+| `ancestry(node)`, `partOf(node)`                   | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
+| `ItemKey`                                          | An item instance: the identifier of the item reference and the instance, from 1.               |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …     | The plan: plain data, identifiers and numbers only.                                            |
+| `TestNode`, `PartNode`, `SectionNode`, …           | The nodes of the structure, with their models and the path of the document that holds them.    |
+| `RuleContext`                                      | What pre-conditions and branch rules read.                                                     |
+| `EffectiveSessionControl`, `EffectiveTimeLimits`   | The results of `sessionControl` and `timeLimits`.                                              |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions` | The limit on the size of a plan, and the options of `planTest`.                                |
+| `startItemSession(key, at, context, options?)`     | A new item session in the state `initial`, after template processing.                          |
+| `presentItem(session, at, context)`                | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
+| `suspendItem(session, at)`                         | Suspends an interacting session, as when the candidate moves to another item.                  |
+| `closeItem(session, at, context)`                  | Closes the session, ending an open attempt with its drafts.                                    |
+| `applyItemAction(session, action, context)`        | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
+| `itemFeedback(session, item, control)`             | The outcomes that decide the feedback shown in the state of the session.                       |
+| `itemResponses(session)`                           | The responses the item shows: drafts, submitted responses, or the solution.                    |
+| `resultStatus(session, item)`                      | The session status of Results Reporting.                                                       |
+| `standaloneSessionControl(control?)`               | The item session control of an item delivered alone.                                           |
+| `ItemSession`, `ItemSessionStatus`                 | The state of an item session: plain data with its variables, drafts and attempts.              |
+| `ItemSessionContext`, `ItemAction`, `ItemStep`     | What a step reads besides the session, the actions of the candidate, and the result of a step. |
+| `Refusal`, `RefusalCode`, `DeliveryEvent`, …       | Why a step is refused, and what an accepted step reports.                                      |
 
 ## Example
 
@@ -208,6 +222,181 @@ Extra time comes from `additionalTestingTime(profile)`, the `additional-testing-
 | `fixed-minutes`   | The minutes are added to the outermost maximum: a scope whose enclosing scopes declare none. Each path from the test to an item is extended once. |
 | `unlimited`       | Removed.                                                                                                                                          |
 
+## Item sessions
+
+An item session is the state of one item instance for one candidate (INFO §2.2.1): its variables, its drafts, its
+attempts and its state. `ItemSession` is plain data that holds no item content, so each step takes the item in an
+`ItemSessionContext` with the item session control in force and what processing needs: `random`, `customOperators`,
+`resolveTemplate` and `limits`. A step returns `{ ok: true, session, events }` or `{ ok: false, refusal }`, and never
+changes the session it is given. Every step takes `at`, epoch milliseconds; a step earlier than the latest change of the
+session is refused `clock-regression`.
+
+```ts
+import { createRandom } from "@luthfanwakan/olah";
+import { readAsi } from "@luthfanwakan/olah/asi";
+import {
+  applyItemAction,
+  type ItemSessionContext,
+  presentItem,
+  resultStatus,
+  standaloneSessionControl,
+  startItemSession,
+} from "@luthfanwakan/olah/delivery";
+import { single } from "@luthfanwakan/olah/values";
+
+const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="capital"
+    title="Capital" adaptive="true" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>jakarta</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body>
+    <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-simple-choice identifier="bandung">Bandung</qti-simple-choice>
+      <qti-simple-choice identifier="jakarta">Jakarta</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+  <qti-response-processing>
+    <qti-response-condition>
+      <qti-response-if>
+        <qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match>
+        <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value>
+        <qti-set-outcome-value identifier="completionStatus"><qti-base-value base-type="identifier">completed</qti-base-value></qti-set-outcome-value>
+      </qti-response-if>
+    </qti-response-condition>
+  </qti-response-processing>
+</qti-assessment-item>`);
+
+if (document.kind === "item") {
+  const context: ItemSessionContext = {
+    item: document.item,
+    control: standaloneSessionControl(),
+    random: createRandom(7),
+  };
+  const key = { ref: "capital", instance: 1 };
+  const answer = (choice: string) => ({
+    type: "set-responses" as const,
+    item: key,
+    responses: new Map([["RESPONSE", single("identifier", choice)]]),
+  });
+
+  const started = startItemSession(key, 0, context);
+  if (!started.ok) throw new Error(started.refusal.message);
+  const presented = presentItem(started.session, 1_000, context);
+  if (!presented.ok) throw new Error(presented.refusal.message);
+  let session = presented.session; // status "interacting", numAttempts 1
+
+  for (const [choice, at] of [
+    ["bandung", 5_000],
+    ["jakarta", 9_000],
+  ] as const) {
+    const answered = applyItemAction(session, { ...answer(choice), at }, context);
+    if (!answered.ok) throw new Error(answered.refusal.message);
+    const submitted = applyItemAction(answered.session, { type: "submit", item: key, at: at + 500 }, context);
+    if (!submitted.ok) throw new Error(submitted.refusal.message);
+    session = submitted.session;
+  }
+  // After "bandung": interacting, SCORE 0, numAttempts 1. After "jakarta": closed, SCORE 1, numAttempts 2.
+  session.variables.responses.get("duration"); // { cardinality: "single", baseType: "duration", value: 8.5 }
+  resultStatus(session, context.item); // "final"
+  applyItemAction(session, { ...answer("bandung"), at: 10_000 }, context);
+  // { ok: false, refusal: { code: "item-closed", message: "The item session is closed, so its responses are fixed.", source: "INFO §2.2.1" } }
+}
+```
+
+### States
+
+| From                       | Step                                                   | To                             |
+| -------------------------- | ------------------------------------------------------ | ------------------------------ |
+| —                          | `startItemSession`                                     | `initial`                      |
+| `initial`                  | `presentItem`: the first attempt starts                | `interacting`                  |
+| `initial`                  | `closeItem`: never attempted, responses stay NULL (B6) | `closed`                       |
+| `interacting`              | `suspendItem`                                          | `suspended`                    |
+| `suspended`                | `presentItem`                                          | `interacting`                  |
+| `interacting`              | `submit`, `skip`, `end-attempt` with no attempt left   | `closed`                       |
+| `interacting`              | `submit`, `skip`, `end-attempt` with attempts left     | `interacting`, no attempt open |
+| `interacting`, `suspended` | `closeItem`: an open attempt ends with its drafts      | `closed`                       |
+| `closed`, `solution`       | `review`, when `allow-review` is true                  | `review`                       |
+| `closed`, `review`         | `solution`, when `show-solution` is true               | `solution`                     |
+
+`presentItem` on a session that is interacting or closed, `suspendItem` on one that is not interacting, and `closeItem`
+on a closed one change nothing.
+
+### Attempts
+
+| Topic                   | Rule                                                                                                                                                                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start                   | `numAttempts` is 0, then goes up by 1 when an attempt starts (INFO §2.2.2.2). The first starts at the first presentation; the next with `next-attempt`, or with the next action on the item.                                                              |
+| First attempt           | Each response variable takes its default value; the drafts take the responses the interactions start with, so a choice interaction starts with nothing selected; `completionStatus` goes from `not_attempted` to `unknown` (INFO §2.2.2.2–3, §2.4.1.1).   |
+| End                     | `submit`, `skip` and `end-attempt` end the attempt; the drafts become the submitted responses and response processing runs (INFO §2.5).                                                                                                                   |
+| End attempt interaction | Its variable is true when it ended the attempt, false otherwise; its default is ignored (INFO §2.4.5).                                                                                                                                                    |
+| Outcomes                | A non-adaptive item resets its outcomes to their default values, else 0 for a numeric single, else NULL, before each response processing; an adaptive item keeps them. `completionStatus` is never reset (INFO §2.2.2.3, §2.5).                           |
+| Budget                  | A non-adaptive item closes when the attempts counted reach `max-attempts`: absent is 1, 0 is unlimited (INFO §7.19.1). An attempt that an end attempt interaction with `count-attempt="false"` ended is not counted, though `numAttempts` counts it (D8). |
+| Adaptive item           | `max-attempts` is ignored; the session closes when response processing sets `completionStatus` to `completed` (INFO §2.2.2.3).                                                                                                                            |
+| Choices                 | The order of the choices of every interaction is drawn at the first presentation and kept (INFO §5.30.1); an order interaction with a default keeps the order of the document (INFO §2.4.1.2).                                                            |
+| Time                    | `duration` sums the time the session is interacting, between attempts included, and leaves out suspended time and the time after it closed; it is truncated to the millisecond (INFO §2.2.2.2, G20).                                                      |
+
+Only submitted responses count: the response variables, which processing and a test read, change only when an attempt
+starts for the first time or ends (B96). The drafts hold what the candidate entered.
+
+### Actions and refusals
+
+`applyItemAction` takes an `ItemAction` with `at`. The rules are checked in this order, and the first that fails refuses
+the action.
+
+| Action          | Refused with                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| any             | `unknown-item` for another item instance; `clock-regression`; `not-current` before the first presentation; `suspended` while suspended                                                                                                                                                                                                                                             |
+| `set-responses` | `item-closed` after the session closed; `invalid-response` for a variable the candidate does not set (undeclared, built in, or of an end attempt interaction), a value of another cardinality or base type (an integer goes into a float), or a PCI state for a variable without a portable custom interaction; `value-out-of-range` for an integer outside the safe integers (D3) |
+| `submit`        | `item-closed`; `skipping-not-allowed` under `allow-skipping="false"` when every response is NULL or its default; `invalid-response` under `validate-responses="true"` when the response of an interaction the candidate sees breaks its constraints (INFO §7.19.6–7)                                                                                                               |
+| `skip`          | `item-closed`; `skipping-not-allowed` under `allow-skipping="false"`, unless the item has no response variables. A skip submits every response as NULL.                                                                                                                                                                                                                            |
+| `end-attempt`   | `item-closed`; `invalid-response` when no end attempt interaction is bound to `interaction`. It is neither a skip nor checked for validity.                                                                                                                                                                                                                                        |
+| `next-attempt`  | `attempts-exhausted` after the session closed; during an attempt it changes nothing                                                                                                                                                                                                                                                                                                |
+| `review`        | `review-not-allowed` before the session closed or without `allow-review`                                                                                                                                                                                                                                                                                                           |
+| `solution`      | `solution-not-allowed` before the session closed or without `show-solution`                                                                                                                                                                                                                                                                                                        |
+| `comment`       | `comment-not-allowed` without `allow-comment`; a comment replaces the one before                                                                                                                                                                                                                                                                                                   |
+
+`set-responses` may carry `pciStates`, the opaque state of each portable custom interaction by response identifier; the
+session keeps the latest for the PCI's `getInstance` (BPIG §3.7.12).
+
+### Feedback and responses shown
+
+`itemFeedback` gives the outcomes that decide integrated feedback and whether modal feedback shows, for `content` to
+resolve (INFO §7.19.1–3). Feedback that is not shown is decided by the values that response processing starts from, which
+show the body as at the start of an attempt.
+
+| State                | Feedback shown                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| `initial`            | none                                                                                 |
+| an attempt open      | the integrated feedback of earlier attempts for an adaptive item; none otherwise     |
+| between attempts     | all, modal included: more than one attempt means feedback is shown                   |
+| `closed`             | all when `show-feedback` is true                                                     |
+| `review`, `solution` | all when `show-feedback` is true, or when the item is adaptive and review is allowed |
+
+`itemResponses` gives the drafts while the session is open, the submitted responses when it is closed or in review, and in
+the solution state the correct responses, NULL where none is declared (INFO §2.2.1); the session keeps the candidate's.
+
+### Results status and processing failures
+
+| `resultStatus`              | When                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `initial`                   | `numAttempts` is 0                                                              |
+| `pendingSubmission`         | an attempt is open                                                              |
+| `pendingResponseProcessing` | response processing of the latest submission failed                             |
+| `pendingExternalScoring`    | response processing ran and the item declares an outcome with `external-scored` |
+| `final`                     | response processing ran                                                         |
+
+Template and response processing never throw from a step. When one fails with an olah error, such as a container above
+`maxContainerSize` or a value of the wrong type, the step reports `processing-failed` with the message: template
+variables keep their defaults, and outcomes stay as response processing found them, the reset values of a non-adaptive
+item or the outcomes of the earlier attempt of an adaptive one (RR §2.7.7, E26). The attempt still counts.
+
+### Item delivered alone
+
+`standaloneSessionControl(control?)` gives the control of an item delivered outside a test (E12): the defaults of item
+session control, except that `show-feedback` and `allow-review` are true, with the attributes of the control given in
+their place. `max-attempts` stays with the item when no control sets it.
+
 ## Decisions
 
 Where the specifications are silent or contradict themselves:
@@ -223,12 +412,20 @@ Where the specifications are silent or contradict themselves:
 | B29          | A target is an item or section of the same part, or a part. `EXIT_SECTION` and `EXIT_TESTPART` complete the container, so its rules follow. The first repeat ahead is the target.                              |
 | B36          | Extra time applies whenever the profile has the support and does not prohibit it, whether or not a set lists it.                                                                                               |
 | E11          | Instances are counted in order of presentation, for sections too.                                                                                                                                              |
+| B3           | An attempt starts at the first presentation, with `next-attempt`, or with the next action on the item after the feedback of the last attempt.                                                                  |
+| B32          | A skip submits NULL responses. The variables of end attempt interactions are not responses, so an end attempt is never a skip.                                                                                 |
+| B33          | Only the interactions that the candidate sees are validated: those in hidden feedback or template content are not, and an end attempt is not.                                                                  |
+| E26          | A failed response processing leaves the outcomes it started from: the reset values of a non-adaptive item, the earlier outcomes of an adaptive one.                                                            |
+| B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing; supplying the scores is pending work of the test.                                                             |
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                         |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`       | An argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan. |
-| `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items; an expression builds a container above its limit.                                                                                                                    |
-| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean.                                                                                                                                                                   |
-| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                   |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DataError`       | An argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
+| `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                           |
+| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                   |
+| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                            |
+
+A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions are
+data.

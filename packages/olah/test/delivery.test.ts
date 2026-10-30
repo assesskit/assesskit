@@ -1,15 +1,29 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { itemSessionFromJson, itemSessionToJson } from "../src/delivery/item-session-json.js";
 import {
   ASI_NAMESPACE,
+  type AssessmentItem,
   type AssessmentSection,
   type AssessmentTest,
   additionalTestingTime,
   ancestry,
+  applyItemAction,
+  closeItem,
+  container,
   createRandom,
   DataError,
   DEFAULT_PLAN_LIMITS,
+  type DeliveryEvent,
+  type EffectiveSessionControl,
+  type ItemAction,
   type ItemKey,
+  type ItemSession,
+  type ItemSessionContext,
+  type ItemSessionView,
+  type ItemStep,
+  itemFeedback,
+  itemResponses,
   nextItem,
   type PersonalNeedsProfile,
   type PlannedChild,
@@ -18,17 +32,25 @@ import {
   partOf,
   planItems,
   planTest,
+  presentItem,
   previousItem,
   type Random,
+  type Refusal,
   type RuleContext,
   readAsi,
   readPnp,
+  record,
   resolveStructure,
   restoreRandom,
+  resultStatus,
+  runOutcomeProcessing,
   SecurityError,
   type SingleValue,
   sessionControl,
   single,
+  standaloneSessionControl,
+  startItemSession,
+  suspendItem,
   type TestingTime,
   type TestPlan,
   type TestScope,
@@ -185,6 +207,864 @@ function tally(seeds: number, outcome: (seed: number) => string, categories: rea
   }
   return [...counts.values()];
 }
+
+/** An item of the ASI namespace, from its attributes and content. */
+function itemOf(attributes: string, content: string): AssessmentItem {
+  const document = readAsi(
+    `<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="item" title="Item" ${attributes}>${content}</qti-assessment-item>`,
+  );
+  return document.kind === "item" ? document.item : fail(`Expected an item, found ${document.kind}.`);
+}
+
+const CHOICES = `<qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice><qti-simple-choice identifier="C">C</qti-simple-choice>`;
+
+/**
+ * An item that counts its response processing runs in `RUNS`, scores 1 for the correct response `B`, and has a hint: an
+ * end attempt interaction bound to `HINT`. An adaptive one completes when the response is correct.
+ */
+function counterItem(options: { adaptive?: boolean; countAttempt?: boolean; defaults?: string } = {}): AssessmentItem {
+  const { adaptive = false, countAttempt, defaults = "" } = options;
+  const counted = countAttempt === undefined ? "" : ` count-attempt="${countAttempt}"`;
+  const completion = adaptive
+    ? `<qti-set-outcome-value identifier="completionStatus"><qti-base-value base-type="identifier">completed</qti-base-value></qti-set-outcome-value>`
+    : "";
+  return itemOf(
+    `adaptive="${adaptive}" time-dependent="false"`,
+    `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">${defaults}
+      <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
+    </qti-response-declaration>
+    <qti-response-declaration identifier="HINT" cardinality="single" base-type="boolean">
+      <qti-default-value><qti-value>true</qti-value></qti-default-value>
+    </qti-response-declaration>
+    <qti-outcome-declaration identifier="RUNS" cardinality="single" base-type="integer"/>
+    <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+    <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier">
+      <qti-default-value><qti-value>none</qti-value></qti-default-value>
+    </qti-outcome-declaration>
+    <qti-item-body>
+      <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction>
+      <p><qti-end-attempt-interaction response-identifier="HINT" title="Hint"${counted}/></p>
+      <qti-feedback-block outcome-identifier="FEEDBACK" identifier="hint" show-hide="show"><qti-content-body><p>Think of B.</p></qti-content-body></qti-feedback-block>
+    </qti-item-body>
+    <qti-response-processing>
+      <qti-set-outcome-value identifier="RUNS"><qti-sum><qti-variable identifier="RUNS"/><qti-base-value base-type="integer">1</qti-base-value></qti-sum></qti-set-outcome-value>
+      <qti-response-condition>
+        <qti-response-if><qti-variable identifier="HINT"/>
+          <qti-set-outcome-value identifier="FEEDBACK"><qti-base-value base-type="identifier">hint</qti-base-value></qti-set-outcome-value>
+        </qti-response-if>
+      </qti-response-condition>
+      <qti-response-condition>
+        <qti-response-if><qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match>
+          <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">1</qti-base-value></qti-set-outcome-value>
+          ${completion}
+        </qti-response-if>
+      </qti-response-condition>
+    </qti-response-processing>`,
+  );
+}
+
+/** The item session control of INFO §7.19 with its defaults, and the attributes given. */
+function controlWith(attributes: Partial<EffectiveSessionControl> = {}): EffectiveSessionControl {
+  return {
+    showFeedback: false,
+    allowReview: true,
+    showSolution: false,
+    allowComment: false,
+    allowSkipping: true,
+    validateResponses: false,
+    ...attributes,
+  };
+}
+
+function contextOf(
+  item: AssessmentItem,
+  attributes: Partial<EffectiveSessionControl> = {},
+  random: Random = createRandom(1),
+): ItemSessionContext {
+  return { item, control: controlWith(attributes), random };
+}
+
+const KEY: ItemKey = { ref: "q", instance: 1 };
+
+/** The session and events of an accepted step. */
+function accepted(step: ItemStep): { readonly session: ItemSession; readonly events: readonly DeliveryEvent[] } {
+  return step.ok ? step : fail(`The step was refused: ${step.refusal.code}: ${step.refusal.message}`);
+}
+
+/** The refusal of a step that is refused. */
+function refused(step: ItemStep): Refusal {
+  return step.ok ? fail("The step was accepted.") : step.refusal;
+}
+
+/** A session of the context, started and presented at the time given. */
+function presented(context: ItemSessionContext, at = 0): ItemSession {
+  const started = accepted(startItemSession(KEY, at, context)).session;
+  return accepted(presentItem(started, at, context)).session;
+}
+
+/** Applies an action at a time: by default 1 millisecond after the latest change of the session. */
+function act(
+  session: ItemSession,
+  context: ItemSessionContext,
+  action: ItemAction,
+  at = session.updatedAt + 1,
+): ItemStep {
+  return applyItemAction(session, { ...action, at }, context);
+}
+
+/** Applies actions in order and returns the last session; each must be accepted. */
+function acts(session: ItemSession, context: ItemSessionContext, ...actions: ItemAction[]): ItemSession {
+  return actions.reduce((current, action) => accepted(act(current, context, action)).session, session);
+}
+
+const respond = (identifier: string, value: Value | null): ItemAction => ({
+  type: "set-responses",
+  item: KEY,
+  responses: new Map([[identifier, value]]),
+});
+const SUBMIT: ItemAction = { type: "submit", item: KEY };
+const SKIP: ItemAction = { type: "skip", item: KEY };
+const HINT: ItemAction = { type: "end-attempt", item: KEY, interaction: "HINT" };
+const NEXT: ItemAction = { type: "next-attempt", item: KEY };
+
+const outcome = (session: ItemSession, name: string): Value | null => session.variables.outcomes.get(name) ?? null;
+const response = (session: ItemSession, name: string): Value | null => session.variables.responses.get(name) ?? null;
+const attempts = (session: ItemSession): Value | null => response(session, "numAttempts");
+const integer = (value: number): SingleValue => single("integer", value);
+const float = (value: number): SingleValue => single("float", value);
+const text = (value: string): SingleValue => single("string", value) ?? fail("A string value cannot be empty.");
+
+describe("applyItemAction", () => {
+  const DefaultA = "<qti-default-value><qti-value>A</qti-value></qti-default-value>";
+
+  it("[B96][B3] keeps the drafts apart from the submitted responses until the attempt ends", () => {
+    const context = contextOf(counterItem({ defaults: DefaultA }));
+    const session = presented(context);
+    expect(attempts(session)).toEqual(integer(1));
+    const answered = acts(session, context, respond("RESPONSE", identifier("B")));
+    expect(answered.drafts.get("RESPONSE")).toEqual(identifier("B"));
+    expect(response(answered, "RESPONSE")).toEqual(identifier("A"));
+    expect(outcome(answered, "SCORE")).toEqual(float(0));
+    const submitted = acts(answered, context, SUBMIT);
+    expect(response(submitted, "RESPONSE")).toEqual(identifier("B"));
+    expect(outcome(submitted, "SCORE")).toEqual(float(1));
+    expect(attempts(submitted)).toEqual(integer(1));
+  });
+
+  it("[B8][B31] closes a non-adaptive item after one attempt when no control sets max-attempts", () => {
+    const context = contextOf(counterItem());
+    const step = accepted(
+      act(acts(presented(context), context, respond("RESPONSE", identifier("A"))), context, SUBMIT),
+    );
+    expect(step.session.status).toBe("closed");
+    expect(step.events.map(({ type, detail }) => [type, detail])).toEqual([
+      ["attempt-ended", "submit"],
+      ["response-processed", undefined],
+    ]);
+    expect(refused(act(step.session, context, respond("RESPONSE", identifier("B"))))).toMatchObject({
+      code: "item-closed",
+      source: "INFO §2.2.1",
+    });
+    expect(refused(act(step.session, context, SUBMIT)).code).toBe("item-closed");
+    expect(refused(act(step.session, context, HINT)).code).toBe("item-closed");
+    expect(refused(act(step.session, context, NEXT)).code).toBe("attempts-exhausted");
+  });
+
+  it("[B8][B31] resets the outcomes of a non-adaptive item before each response processing and keeps the last", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 2 });
+    const first = acts(presented(context), context, respond("RESPONSE", identifier("B")), SUBMIT);
+    expect([first.status, first.attempting]).toEqual(["interacting", false]);
+    expect([outcome(first, "RUNS"), outcome(first, "SCORE")]).toEqual([integer(1), float(1)]);
+    const second = acts(first, context, respond("RESPONSE", identifier("A")), SUBMIT);
+    expect(attempts(second)).toEqual(integer(2));
+    expect([outcome(second, "RUNS"), outcome(second, "SCORE")]).toEqual([integer(1), float(0)]);
+    expect(second.status).toBe("closed");
+  });
+
+  it("[B31] allows any number of attempts when max-attempts is 0", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 0 });
+    const session = acts(presented(context), context, SUBMIT, SUBMIT, SUBMIT, SUBMIT, SUBMIT);
+    expect([session.status, session.countedAttempts]).toEqual(["interacting", 5]);
+    expect(attempts(session)).toEqual(integer(5));
+  });
+
+  it("[B9][E10] keeps the outcomes of an adaptive item between attempts, ignores max-attempts and closes it at completion", () => {
+    const context = contextOf(counterItem({ adaptive: true }), { maxAttempts: 1 });
+    const wrong = acts(
+      presented(context),
+      context,
+      respond("RESPONSE", identifier("A")),
+      SUBMIT,
+      respond("RESPONSE", identifier("C")),
+      SUBMIT,
+    );
+    expect([wrong.status, outcome(wrong, "RUNS"), outcome(wrong, "completionStatus")]).toEqual([
+      "interacting",
+      integer(2),
+      identifier("unknown"),
+    ]);
+    const right = acts(wrong, context, respond("RESPONSE", identifier("B")), SUBMIT);
+    expect([right.status, outcome(right, "RUNS"), outcome(right, "completionStatus")]).toEqual([
+      "closed",
+      integer(3),
+      identifier("completed"),
+    ]);
+    expect(attempts(right)).toEqual(integer(3));
+    expect(refused(act(right, context, NEXT)).code).toBe("attempts-exhausted");
+  });
+
+  it("[B3] starts the next attempt with next-attempt, or with the next action on the item, and once only", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 0 });
+    const ended = acts(presented(context), context, SUBMIT);
+    expect([ended.attempting, attempts(ended)]).toEqual([false, integer(1)]);
+    const next = acts(ended, context, NEXT);
+    expect([next.attempting, attempts(next)]).toEqual([true, integer(2)]);
+    expect(act(next, context, NEXT)).toEqual({ ok: true, session: next, events: [] });
+    const answered = acts(ended, context, respond("RESPONSE", identifier("B")));
+    expect([answered.attempting, attempts(answered)]).toEqual([true, integer(2)]);
+    expect(answered.drafts.get("RESPONSE")).toEqual(identifier("B"));
+  });
+
+  it("[B10][G16] sets the variable of an end attempt interaction to true when it ends the attempt and false otherwise, ignoring its default", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 0 });
+    const session = presented(context);
+    expect(response(session, "HINT")).toBeNull();
+    const step = accepted(act(session, context, HINT));
+    expect(step.events[0]).toEqual({ type: "attempt-ended", at: 1, item: KEY, detail: "end-attempt" });
+    expect([response(step.session, "HINT"), outcome(step.session, "FEEDBACK")]).toEqual([
+      bool(true),
+      identifier("hint"),
+    ]);
+    const submitted = acts(step.session, context, SUBMIT);
+    expect([response(submitted, "HINT"), outcome(submitted, "FEEDBACK")]).toEqual([bool(false), identifier("none")]);
+  });
+
+  it("[B10][G16] leaves an attempt that an end attempt interaction with count-attempt false ends out of max-attempts, while numAttempts counts it (D8)", () => {
+    const free = contextOf(counterItem({ countAttempt: false }));
+    const hinted = acts(presented(free), free, HINT);
+    expect([hinted.status, hinted.countedAttempts, attempts(hinted)]).toEqual(["interacting", 0, integer(1)]);
+    const done = acts(hinted, free, SUBMIT);
+    expect([done.status, done.countedAttempts, attempts(done)]).toEqual(["closed", 1, integer(2)]);
+    for (const options of [{}, { countAttempt: true }]) {
+      const counted = contextOf(counterItem(options));
+      expect(acts(presented(counted), counted, HINT).status).toBe("closed");
+    }
+  });
+
+  it("[B10] refuses an end attempt that names no end attempt interaction", () => {
+    const context = contextOf(counterItem());
+    expect(
+      refused(act(presented(context), context, { type: "end-attempt", item: KEY, interaction: "RESPONSE" })),
+    ).toMatchObject({ code: "invalid-response", source: "INFO §2.4.5" });
+  });
+
+  it("[B32] refuses a submission of only NULL or default responses, and a skip, when skipping is not allowed", () => {
+    const context = contextOf(counterItem({ defaults: DefaultA }), { allowSkipping: false });
+    const session = presented(context);
+    expect(refused(act(session, context, SUBMIT))).toMatchObject({
+      code: "skipping-not-allowed",
+      source: "INFO §7.19.6",
+    });
+    const defaulted = acts(session, context, respond("RESPONSE", identifier("A")));
+    expect(refused(act(defaulted, context, SUBMIT)).code).toBe("skipping-not-allowed");
+    expect(refused(act(defaulted, context, SKIP)).code).toBe("skipping-not-allowed");
+    expect(acts(defaulted, context, respond("RESPONSE", identifier("C")), SUBMIT).status).toBe("closed");
+    expect(acts(session, context, HINT).status).toBe("closed");
+  });
+
+  it("[B32] never blocks an item without response variables, and submits NULL responses for a skip", () => {
+    const reading = itemOf('time-dependent="false"', "<qti-item-body><p>Read this.</p></qti-item-body>");
+    const strict = contextOf(reading, { allowSkipping: false });
+    expect(acts(presented(strict), strict, SUBMIT).status).toBe("closed");
+    expect(acts(presented(strict), strict, SKIP).status).toBe("closed");
+    const context = contextOf(counterItem());
+    const step = accepted(act(acts(presented(context), context, respond("RESPONSE", identifier("B"))), context, SKIP));
+    expect(step.events[0]?.detail).toBe("skip");
+    expect([response(step.session, "RESPONSE"), outcome(step.session, "SCORE")]).toEqual([null, float(0)]);
+  });
+
+  it("[B33] refuses a submission with an invalid response of a visible interaction under validate-responses, but not a skip", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-response-declaration identifier="LATER" cardinality="single" base-type="identifier"/>
+      <qti-outcome-declaration identifier="STAGE" cardinality="single" base-type="identifier"/>
+      <qti-item-body>
+        <qti-choice-interaction response-identifier="RESPONSE" min-choices="1" max-choices="1">${CHOICES}</qti-choice-interaction>
+        <qti-feedback-block outcome-identifier="STAGE" identifier="two" show-hide="show"><qti-content-body>
+          <qti-choice-interaction response-identifier="LATER" min-choices="1" max-choices="1">${CHOICES}</qti-choice-interaction>
+        </qti-content-body></qti-feedback-block>
+      </qti-item-body>`,
+    );
+    const context = contextOf(item, { validateResponses: true });
+    const session = presented(context);
+    expect(refused(act(session, context, SUBMIT))).toMatchObject({
+      code: "invalid-response",
+      message: 'The responses "RESPONSE" are not valid, and the item session control validates responses.',
+      source: "INFO §7.19.7",
+    });
+    expect(acts(session, context, respond("RESPONSE", identifier("A")), SUBMIT).status).toBe("closed");
+    expect(acts(session, context, SKIP).status).toBe("closed");
+    expect(acts(session, contextOf(item), SUBMIT).status).toBe("closed");
+  });
+
+  it("[B34] lets review, the solution and comments follow the item session control", () => {
+    const item = counterItem();
+    const review: ItemAction = { type: "review", item: KEY };
+    const solution: ItemAction = { type: "solution", item: KEY };
+    const comment = (text: string): ItemAction => ({ type: "comment", item: KEY, text });
+    const open = contextOf(item, { maxAttempts: 0 });
+    expect(refused(act(presented(open), open, review))).toMatchObject({
+      code: "review-not-allowed",
+      source: "INFO §7.19.3",
+    });
+    expect(refused(act(presented(open), open, solution))).toMatchObject({
+      code: "solution-not-allowed",
+      source: "INFO §7.19.4",
+    });
+    expect(refused(act(presented(open), open, comment("Hard."))).code).toBe("comment-not-allowed");
+    const strict = contextOf(item, { allowReview: false });
+    const shut = acts(presented(strict), strict, SUBMIT);
+    expect(refused(act(shut, strict, review)).code).toBe("review-not-allowed");
+    expect(refused(act(shut, strict, solution)).code).toBe("solution-not-allowed");
+    const open2 = contextOf(item, { showSolution: true, allowComment: true });
+    const commented = acts(presented(open2), open2, comment("Hard."), SUBMIT, comment("Fair, after all."));
+    expect(commented.comment).toBe("Fair, after all.");
+    const reviewed = acts(commented, open2, review);
+    expect(reviewed.status).toBe("review");
+    expect(acts(reviewed, open2, solution).status).toBe("solution");
+    expect(acts(acts(reviewed, open2, solution), open2, review).status).toBe("review");
+  });
+
+  it("[B1][E4] refuses actions on an item not presented or suspended, of another instance, or earlier than the latest change", () => {
+    const context = contextOf(counterItem());
+    const started = accepted(startItemSession(KEY, 0, context)).session;
+    expect(refused(act(started, context, SUBMIT))).toMatchObject({ code: "not-current", source: "INFO §2.2.1" });
+    const session = presented(context, 10);
+    const suspended = accepted(suspendItem(session, 20)).session;
+    expect(refused(act(suspended, context, SUBMIT)).code).toBe("suspended");
+    expect(refused(applyItemAction(session, { ...SUBMIT, item: { ref: "q", instance: 2 }, at: 30 }, context))).toEqual({
+      code: "unknown-item",
+      message: 'The action names the item instance "q" 2, not the instance "q" 1 of the session.',
+      source: "INFO §2.2.1",
+    });
+    expect(refused(act(session, context, SUBMIT, 9))).toEqual({
+      code: "clock-regression",
+      message: "The step at 9 is earlier than the latest change of the item session at 10.",
+      source: "INFO §2.2.2.2",
+    });
+  });
+
+  it("[E4] refuses a variable the candidate does not set, a value of another type, and an integer beyond the safe integers (D3)", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="N" cardinality="single" base-type="integer"/>
+      <qti-response-declaration identifier="X" cardinality="single" base-type="float"/>
+      <qti-response-declaration identifier="HINT" cardinality="single" base-type="boolean"/>
+      <qti-item-body><p><qti-text-entry-interaction response-identifier="N"/> <qti-text-entry-interaction response-identifier="X"/></p>
+        <p><qti-end-attempt-interaction response-identifier="HINT" title="Hint"/></p></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    const session = presented(context);
+    for (const [name, value] of [
+      ["numAttempts", integer(2)],
+      ["HINT", bool(true)],
+      ["UNDECLARED", integer(1)],
+    ] as const) {
+      expect(refused(act(session, context, respond(name, value)))).toMatchObject({
+        code: "invalid-response",
+        message: `The item has no response variable "${name}" that the candidate sets.`,
+      });
+    }
+    expect(refused(act(session, context, respond("N", float(1.5))))).toEqual({
+      code: "invalid-response",
+      message: "The response variable N is a single integer, found a single float.",
+      source: "INFO §2.2.2.2",
+    });
+    const huge = json<Value>('{"cardinality": "single", "baseType": "integer", "value": 9007199254740993}');
+    expect(refused(act(session, context, respond("N", huge)))).toMatchObject({
+      code: "value-out-of-range",
+      source: "BIND §2.9",
+    });
+    expect(acts(session, context, respond("X", integer(2))).drafts.get("X")).toEqual(float(2));
+  });
+
+  it("[E29] stores the latest state of each portable custom interaction, and refuses a state for another interaction", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="R" cardinality="single" base-type="string"/>
+      <qti-response-declaration identifier="TEXT" cardinality="single" base-type="string"/>
+      <qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:example.com:pci:graph" module="graph"><qti-interaction-markup><p>Graph</p></qti-interaction-markup></qti-portable-custom-interaction>
+        <p><qti-text-entry-interaction response-identifier="TEXT"/></p></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    const states = (state: string, name = "R"): ItemAction => ({
+      type: "set-responses",
+      item: KEY,
+      responses: new Map([["R", single("string", state)]]),
+      pciStates: new Map([[name, `{"points":${state}}`]]),
+    });
+    const session = acts(presented(context), context, states("1"), states("2"));
+    expect(session.pciStates).toEqual(new Map([["R", '{"points":2}']]));
+    expect(refused(act(session, context, states("3", "TEXT")))).toMatchObject({
+      code: "invalid-response",
+      source: "BPIG §3.7.12",
+    });
+    expect(acts(session, context, respond("TEXT", single("string", "x"))).pciStates).toEqual(session.pciStates);
+  });
+
+  it("refuses arguments of other types", () => {
+    const context = contextOf(counterItem());
+    const session = presented(context);
+    expect(() => applyItemAction(json("null"), { ...SUBMIT, at: 1 }, context)).toThrow(
+      "The item session must be an object from startItemSession, found null.",
+    );
+    expect(() => applyItemAction(session, json("null"), context)).toThrow(DataError);
+    expect(() =>
+      applyItemAction(session, json('{"type": "dance", "item": {"ref": "q", "instance": 1}, "at": 1}'), context),
+    ).toThrow(
+      'The type of the action must be "set-responses", "submit", "skip", "end-attempt", "next-attempt", "review", "solution" or "comment", found "dance".',
+    );
+    expect(() =>
+      applyItemAction(session, json('{"type": "submit", "item": {"ref": "q", "instance": 1}, "at": "1"}'), context),
+    ).toThrow('The time must be a finite number, found "1".');
+    expect(() =>
+      applyItemAction(
+        session,
+        json('{"type": "set-responses", "item": {"ref": "q", "instance": 1}, "at": 1, "responses": {}}'),
+        context,
+      ),
+    ).toThrow("The responses of set-responses must be a Map from response identifier to value, found an object.");
+    expect(() =>
+      applyItemAction(session, { ...respond("RESPONSE", json('{"cardinality": "single"}')), at: 1 }, context),
+    ).toThrow(DataError);
+    expect(() => applyItemAction(session, { ...SUBMIT, at: 1 }, json("null"))).toThrow(DataError);
+    expect(() =>
+      applyItemAction(session, { ...SUBMIT, at: 1 }, { ...context, control: json('{"showFeedback": "no"}') }),
+    ).toThrow('The showFeedback of the item session control must be a boolean, found "no".');
+    expect(() => applyItemAction(session, { ...SUBMIT, at: 1 }, { ...context, random: json("{}") })).toThrow(DataError);
+  });
+});
+
+describe("itemFeedback", () => {
+  it("[B31][B16] shows the feedback between attempts, and the body as at the start of the attempt while a non-adaptive attempt is open", () => {
+    const item = counterItem();
+    const context = contextOf(item, { maxAttempts: 2 });
+    const hinted = acts(presented(context), context, HINT);
+    expect(itemFeedback(hinted, item, context.control)).toEqual({ outcomes: hinted.variables.outcomes, modal: true });
+    const next = acts(hinted, context, NEXT);
+    const during = itemFeedback(next, item, context.control);
+    expect([during.outcomes.get("FEEDBACK"), during.outcomes.get("RUNS"), during.modal]).toEqual([
+      identifier("none"),
+      integer(0),
+      false,
+    ]);
+  });
+
+  it("[B9] keeps the feedback of earlier attempts while an attempt of an adaptive item is open", () => {
+    const item = counterItem({ adaptive: true });
+    const context = contextOf(item);
+    const next = acts(presented(context), context, HINT, NEXT);
+    const during = itemFeedback(next, item, context.control);
+    expect([during.outcomes.get("FEEDBACK"), during.modal]).toEqual([identifier("hint"), false]);
+  });
+
+  it("[B95] shows the final outcomes of an adaptive item in review without show-feedback, which decides once it closed", () => {
+    const adaptive = counterItem({ adaptive: true });
+    const context = contextOf(adaptive, { showSolution: true });
+    const closed = acts(presented(context), context, HINT, respond("RESPONSE", identifier("B")), SUBMIT);
+    const atClose = itemFeedback(closed, adaptive, context.control);
+    expect([atClose.outcomes.get("FEEDBACK"), atClose.outcomes.get("SCORE"), atClose.modal]).toEqual([
+      identifier("none"),
+      float(0),
+      false,
+    ]);
+    expect(itemFeedback(closed, adaptive, controlWith({ showFeedback: true })).outcomes).toBe(
+      closed.variables.outcomes,
+    );
+    const reviewed = acts(closed, context, { type: "review", item: KEY });
+    expect(itemFeedback(reviewed, adaptive, context.control)).toEqual({
+      outcomes: reviewed.variables.outcomes,
+      modal: true,
+    });
+    const solved = acts(closed, context, { type: "solution", item: KEY });
+    const hidden = itemFeedback(solved, adaptive, controlWith({ allowReview: false, showSolution: true }));
+    expect(hidden.outcomes.get("FEEDBACK")).toEqual(identifier("none"));
+  });
+
+  it("[B16] reviews a non-adaptive item with its feedback only when show-feedback is true", () => {
+    const item = counterItem();
+    const context = contextOf(item);
+    const reviewed = acts(presented(context), context, HINT, { type: "review", item: KEY });
+    expect(itemFeedback(reviewed, item, context.control).outcomes.get("FEEDBACK")).toEqual(identifier("none"));
+    expect(itemFeedback(reviewed, item, controlWith({ showFeedback: true })).outcomes.get("FEEDBACK")).toEqual(
+      identifier("hint"),
+    );
+  });
+
+  it("refuses arguments of other types", () => {
+    const item = counterItem();
+    const session = presented(contextOf(item));
+    expect(() => itemFeedback(json("null"), item, controlWith())).toThrow(DataError);
+    expect(() => itemFeedback(session, json("null"), controlWith())).toThrow(DataError);
+    expect(() => itemFeedback(session, item, json('{"maxAttempts": -1}'))).toThrow(DataError);
+  });
+});
+
+describe("itemResponses", () => {
+  it("[B58] shows the correct responses in the solution state, NULL where none is declared, and keeps the candidate's", () => {
+    const context = contextOf(counterItem(), { showSolution: true });
+    const answered = acts(presented(context), context, respond("RESPONSE", identifier("A")));
+    expect(itemResponses(answered)).toBe(answered.drafts);
+    const closed = acts(answered, context, SUBMIT);
+    expect(itemResponses(closed)).toEqual(
+      new Map([
+        ["RESPONSE", identifier("A")],
+        ["HINT", bool(false)],
+      ]),
+    );
+    const solved = acts(closed, context, { type: "solution", item: KEY });
+    expect(itemResponses(solved)).toEqual(
+      new Map([
+        ["RESPONSE", identifier("B")],
+        ["HINT", null],
+      ]),
+    );
+    expect(response(solved, "RESPONSE")).toEqual(identifier("A"));
+    expect(itemResponses(acts(solved, context, { type: "review", item: KEY }))).toEqual(itemResponses(closed));
+  });
+
+  it("refuses an argument that is not an item session", () => {
+    expect(() => itemResponses(json('{"status": "initial"}'))).toThrow(DataError);
+  });
+});
+
+describe("startItemSession", () => {
+  it("[B6][B7][T18][T19][T20] starts with NULL responses, no attempt, no time, completionStatus not_attempted and the initial outcomes", () => {
+    const context = contextOf(
+      counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
+    );
+    const step = accepted(startItemSession(KEY, 100, context));
+    expect(step.events).toEqual([]);
+    const { session } = step;
+    expect([session.status, session.attempting, session.updatedAt, session.since]).toEqual([
+      "initial",
+      false,
+      100,
+      null,
+    ]);
+    expect(session.variables.responses).toEqual(
+      new Map([
+        ["numAttempts", integer(0)],
+        ["duration", single("duration", 0)],
+        ["RESPONSE", null],
+        ["HINT", null],
+      ]),
+    );
+    expect(session.variables.outcomes).toEqual(
+      new Map([
+        ["completionStatus", identifier("not_attempted")],
+        ["RUNS", integer(0)],
+        ["SCORE", float(0)],
+        ["FEEDBACK", identifier("none")],
+      ]),
+    );
+    expect(session.drafts).toEqual(
+      new Map([
+        ["RESPONSE", null],
+        ["HINT", null],
+      ]),
+    );
+  });
+
+  const Template = itemOf(
+    'time-dependent="false"',
+    `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="integer"/>
+    <qti-outcome-declaration identifier="ECHO" cardinality="single" base-type="integer"/>
+    <qti-template-declaration identifier="N" cardinality="single" base-type="integer"/>
+    <qti-template-processing><qti-set-template-value identifier="N"><qti-random-integer min="1" max="1000000"/></qti-set-template-value></qti-template-processing>
+    <qti-item-body><p><qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body>
+    <qti-response-processing><qti-set-outcome-value identifier="ECHO"><qti-variable identifier="N"/></qti-set-outcome-value></qti-response-processing>`,
+  );
+
+  it("[B11][B59] runs template processing once at the start, so that each instance records the values of its own clone", () => {
+    const oracle = createRandom(5);
+    // qti-random-integer draws an index over the admissible values: 1 + floor(uniform × 1000000) (§2.5).
+    const draws = [oracle.uniform(), oracle.uniform()].map((uniform) => 1 + Math.floor(uniform * 1_000_000));
+    const random = createRandom(5);
+    const context = contextOf(Template, {}, random);
+    const first = accepted(startItemSession(KEY, 0, context)).session;
+    const second = accepted(startItemSession({ ref: "q", instance: 2 }, 0, context)).session;
+    expect([first.variables.templates.get("N"), second.variables.templates.get("N")]).toEqual(draws.map(integer));
+    const done = acts(accepted(presentItem(first, 1, context)).session, context, SUBMIT);
+    expect([done.variables.templates.get("N"), outcome(done, "ECHO")]).toEqual([
+      integer(draws[0] ?? 0),
+      integer(draws[0] ?? 0),
+    ]);
+  });
+
+  it("[T21] sets the context values before template processing, so that template and response processing read QTI_CONTEXT", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-outcome-declaration identifier="WHO" cardinality="single" base-type="string"/>
+      <qti-template-declaration identifier="SEEN" cardinality="single" base-type="string"/>
+      <qti-template-processing><qti-set-template-value identifier="SEEN"><qti-field-value field-identifier="candidateIdentifier"><qti-variable identifier="QTI_CONTEXT"/></qti-field-value></qti-set-template-value></qti-template-processing>
+      <qti-item-body><p>Hello.</p></qti-item-body>
+      <qti-response-processing><qti-set-outcome-value identifier="WHO"><qti-field-value field-identifier="candidateIdentifier"><qti-variable identifier="QTI_CONTEXT"/></qti-field-value></qti-set-outcome-value></qti-response-processing>`,
+    );
+    const context = contextOf(item);
+    const contextValues = new Map([["QTI_CONTEXT", record([["candidateIdentifier", text("c-7")]])]]);
+    const started = accepted(startItemSession(KEY, 0, context, { contextValues })).session;
+    expect(started.variables.templates.get("SEEN")).toEqual(single("string", "c-7"));
+    const done = acts(accepted(presentItem(started, 1, context)).session, context, SUBMIT);
+    expect(outcome(done, "WHO")).toEqual(single("string", "c-7"));
+  });
+
+  it("[E26] keeps the template defaults and reports processing-failed when template processing fails", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-template-declaration identifier="T" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+      <qti-template-processing><qti-set-template-value identifier="T"><qti-container-size><qti-repeat number-repeats="5"><qti-base-value base-type="integer">1</qti-base-value></qti-repeat></qti-container-size></qti-set-template-value></qti-template-processing>
+      <qti-item-body><p>Count.</p></qti-item-body>`,
+    );
+    const step = accepted(startItemSession(KEY, 3, { ...contextOf(item), limits: { maxContainerSize: 2 } }));
+    expect(step.session.variables.templates.get("T")).toEqual(integer(7));
+    expect(step.events).toEqual([
+      {
+        type: "processing-failed",
+        at: 3,
+        item: KEY,
+        detail: "The operator qti-repeat builds a container of 5 values, more than the limit maxContainerSize of 2.",
+      },
+    ]);
+  });
+
+  it("refuses arguments of other types", () => {
+    const context = contextOf(counterItem());
+    expect(() => startItemSession(json("null"), 0, context)).toThrow(
+      "The item instance must be an object with a ref and an instance, found null.",
+    );
+    expect(() => startItemSession(KEY, json('"0"'), context)).toThrow('The time must be a finite number, found "0".');
+    expect(() => startItemSession(KEY, 0, json("null"))).toThrow(DataError);
+    expect(() => startItemSession(KEY, 0, { ...context, item: json('{"kind": "assessment-test"}') })).toThrow(
+      DataError,
+    );
+    expect(() => startItemSession(KEY, 0, context, json("null"))).toThrow("The options must be an object, found null.");
+    expect(() => startItemSession(KEY, 0, context, { contextValues: json("{}") })).toThrow(DataError);
+    expect(() => startItemSession(KEY, 0, context, { contextValues: new Map([["QTI_CONTEXT", integer(1)]]) })).toThrow(
+      DataError,
+    );
+  });
+});
+
+describe("presentItem", () => {
+  it("[B1][B3][B5][B6][B55] starts the first attempt at the first presentation, with the defaults and completionStatus unknown", () => {
+    const context = contextOf(
+      counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
+    );
+    const started = accepted(startItemSession(KEY, 0, context)).session;
+    const step = accepted(presentItem(started, 5, context));
+    expect(step.events).toEqual([{ type: "presented", at: 5, item: KEY }]);
+    const { session } = step;
+    expect([session.status, session.attempting, session.since, attempts(session)]).toEqual([
+      "interacting",
+      true,
+      5,
+      integer(1),
+    ]);
+    expect([response(session, "RESPONSE"), response(session, "HINT")]).toEqual([identifier("A"), null]);
+    expect(session.drafts).toEqual(
+      new Map([
+        ["RESPONSE", null],
+        ["HINT", null],
+      ]),
+    );
+    expect(outcome(session, "completionStatus")).toEqual(identifier("unknown"));
+  });
+
+  it("[B57][B54] draws the order of the choices at the first presentation; an order interaction with a default keeps its order", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-response-declaration identifier="ORDER" cardinality="ordered" base-type="identifier">
+        <qti-default-value><qti-value>C</qti-value><qti-value>A</qti-value><qti-value>B</qti-value></qti-default-value>
+      </qti-response-declaration>
+      <qti-item-body>
+        <qti-choice-interaction response-identifier="RESPONSE" shuffle="true" max-choices="1">${CHOICES}</qti-choice-interaction>
+        <qti-order-interaction response-identifier="ORDER" shuffle="true">${CHOICES}</qti-order-interaction>
+      </qti-item-body>`,
+    );
+    // Fisher–Yates from the last index: 0 swaps C to the front ([C B A]), then 0 swaps B to it ([B C A]).
+    const random = scripted(0, 0);
+    const context = contextOf(item, {}, random);
+    const session = presented(context);
+    expect(session.choiceOrders).toEqual(
+      new Map([
+        ["RESPONSE", [["B", "C", "A"]]],
+        ["ORDER", [["A", "B", "C"]]],
+      ]),
+    );
+    expect(session.drafts.get("ORDER")).toEqual(container("ordered", "identifier", ["C", "A", "B"]));
+    const resumed = accepted(presentItem(accepted(suspendItem(session, 1)).session, 2, context)).session;
+    expect([resumed.choiceOrders, random.left()]).toEqual([session.choiceOrders, 0]);
+  });
+
+  it("[B1] resumes a suspended session without a new attempt, and leaves a presented or closed session as it is", () => {
+    const context = contextOf(counterItem());
+    const session = presented(context);
+    const step = accepted(presentItem(accepted(suspendItem(session, 4)).session, 9, context));
+    expect([step.session.status, step.session.since, attempts(step.session), step.events]).toEqual([
+      "interacting",
+      9,
+      integer(1),
+      [{ type: "presented", at: 9, item: KEY }],
+    ]);
+    expect(accepted(presentItem(session, 10, context))).toEqual({ ok: true, session, events: [] });
+    const closed = acts(session, context, SUBMIT);
+    expect(accepted(presentItem(closed, 10, context)).session).toBe(closed);
+    expect(refused(presentItem(session, -1, context)).code).toBe("clock-regression");
+  });
+
+  it("refuses arguments of other types", () => {
+    const context = contextOf(counterItem());
+    const started = accepted(startItemSession(KEY, 0, context)).session;
+    expect(() => presentItem(json("[]"), 0, context)).toThrow(DataError);
+    expect(() => presentItem(started, Number.NaN, context)).toThrow("The time must be a finite number, found NaN.");
+    expect(() => presentItem(started, 0, json("null"))).toThrow(DataError);
+  });
+});
+
+describe("suspendItem", () => {
+  it("[B4][T19][G20] counts the time of the candidate sessions only, truncated to the millisecond", () => {
+    const item = itemOf(
+      'time-dependent="true"',
+      `<qti-outcome-declaration identifier="ELAPSED" cardinality="single" base-type="duration"/>
+      <qti-item-body><p>Wait.</p></qti-item-body>
+      <qti-response-processing><qti-set-outcome-value identifier="ELAPSED"><qti-variable identifier="duration"/></qti-set-outcome-value></qti-response-processing>`,
+    );
+    const context = contextOf(item);
+    const suspended = accepted(suspendItem(presented(context, 1000), 2500.5)).session;
+    expect([suspended.status, suspended.since, suspended.spent]).toEqual(["suspended", null, 1500.5]);
+    expect(response(suspended, "duration")).toEqual(single("duration", 1.5));
+    const resumed = accepted(presentItem(suspended, 9000, context)).session;
+    const done = accepted(act(resumed, context, SUBMIT, 9250.25)).session;
+    expect([response(done, "duration"), outcome(done, "ELAPSED")]).toEqual([
+      single("duration", 1.75),
+      single("duration", 1.75),
+    ]);
+  });
+
+  it("[B1] leaves a session that is not interacting as it is, and refuses a time earlier than its latest change", () => {
+    const context = contextOf(counterItem());
+    const started = accepted(startItemSession(KEY, 0, context)).session;
+    expect(accepted(suspendItem(started, 1)).session).toBe(started);
+    expect(refused(suspendItem(presented(context, 5), 4)).code).toBe("clock-regression");
+    expect(() => suspendItem(started, json("null"))).toThrow(DataError);
+    expect(() => suspendItem(json("1"), 0)).toThrow(DataError);
+  });
+});
+
+describe("closeItem", () => {
+  it("[B6][B1] closes a session that was never presented without an attempt, so its responses stay NULL", () => {
+    const context = contextOf(
+      counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
+    );
+    const step = accepted(closeItem(accepted(startItemSession(KEY, 0, context)).session, 3, context));
+    expect([step.session.status, response(step.session, "RESPONSE"), attempts(step.session), step.events]).toEqual([
+      "closed",
+      null,
+      integer(0),
+      [],
+    ]);
+    expect(resultStatus(step.session, context.item)).toBe("initial");
+  });
+
+  it("[B1] ends an open attempt with the drafts when it closes, whatever attempts are left", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 0 });
+    const answered = acts(presented(context), context, respond("RESPONSE", identifier("B")));
+    for (const session of [answered, accepted(suspendItem(answered, 5)).session]) {
+      const step = accepted(closeItem(session, 6, context));
+      expect([step.session.status, response(step.session, "RESPONSE"), outcome(step.session, "SCORE")]).toEqual([
+        "closed",
+        identifier("B"),
+        float(1),
+      ]);
+      expect(step.events.map(({ type, detail }) => [type, detail])).toEqual([
+        ["attempt-ended", "close"],
+        ["response-processed", undefined],
+      ]);
+    }
+  });
+
+  it("[B1] closes a session between attempts without processing again", () => {
+    const context = contextOf(counterItem(), { maxAttempts: 0 });
+    const ended = acts(presented(context), context, SUBMIT);
+    const step = accepted(closeItem(ended, 8, context));
+    expect([step.session.status, outcome(step.session, "RUNS"), step.session.since, step.events]).toEqual([
+      "closed",
+      integer(1),
+      null,
+      [],
+    ]);
+    expect(accepted(closeItem(step.session, 9, context)).session).toBe(step.session);
+  });
+
+  it("refuses arguments of other types", () => {
+    const context = contextOf(counterItem());
+    expect(() => closeItem(presented(context), 1, json("null"))).toThrow(DataError);
+    expect(() => closeItem(json("null"), 1, context)).toThrow(DataError);
+  });
+});
+
+describe("itemSessionToJson", () => {
+  it("[E29][B59] writes a session as JSON that reads back equal", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="R" cardinality="multiple" base-type="pair"/>
+      <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+      <qti-template-declaration identifier="N" cardinality="ordered" base-type="integer"/>
+      <qti-template-processing><qti-set-template-value identifier="N"><qti-ordered><qti-random-integer min="1" max="9"/><qti-base-value base-type="integer">0</qti-base-value></qti-ordered></qti-set-template-value></qti-template-processing>
+      <qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:example.com:pci:pairs" module="pairs"><qti-interaction-markup><p>Pairs</p></qti-interaction-markup></qti-portable-custom-interaction></qti-item-body>`,
+    );
+    const context = contextOf(item, { allowComment: true });
+    const session = acts(
+      presented(context),
+      context,
+      {
+        type: "set-responses",
+        item: KEY,
+        responses: new Map([["R", container("multiple", "pair", [["A", "B"]])]]),
+        pciStates: new Map([["R", '{"__proto__": 1}']]),
+      },
+      { type: "comment", item: KEY, text: "Pairs again." },
+    );
+    const read = itemSessionFromJson(JSON.parse(JSON.stringify(itemSessionToJson(session))));
+    expect(read).toEqual(session);
+    expect(read.variables.templates.get("N")).toEqual(session.variables.templates.get("N"));
+  });
+
+  it("refuses data that is not a session", () => {
+    const context = contextOf(counterItem());
+    const written = JSON.parse(JSON.stringify(itemSessionToJson(presented(context))));
+    expect(() => itemSessionFromJson(null)).toThrow("An item session must be an object, found null.");
+    expect(() => itemSessionFromJson({ ...written, status: "paused" })).toThrow(DataError);
+    expect(() =>
+      itemSessionFromJson({
+        ...written,
+        drafts: [
+          ["RESPONSE", null],
+          ["RESPONSE", null],
+        ],
+      }),
+    ).toThrow('The drafts of the item session has the identifier "RESPONSE" twice.');
+    expect(() => itemSessionFromJson({ ...written, drafts: [["RESPONSE", { value: 1 }]] })).toThrow(DataError);
+    expect(() => itemSessionFromJson({ ...written, pciStates: [["R", 1]] })).toThrow(DataError);
+    expect(() => itemSessionFromJson({ ...written, choiceOrders: [["R", "A"]] })).toThrow(DataError);
+    expect(() => itemSessionFromJson({ ...written, variables: { ...written.variables, outcomes: {} } })).toThrow(
+      DataError,
+    );
+  });
+});
 
 describe("nextItem", () => {
   it("[B26] gives the next item of the plan in a nonlinear part, ignoring pre-conditions and branch rules", () => {
@@ -777,6 +1657,89 @@ describe("planTest", () => {
   });
 });
 
+describe("resultStatus", () => {
+  it("[B2] reports initial before the first attempt, pendingSubmission during one, and final after response processing", () => {
+    const item = counterItem();
+    const context = contextOf(item, { maxAttempts: 2 });
+    const started = accepted(startItemSession(KEY, 0, context)).session;
+    const session = accepted(presentItem(started, 1, context)).session;
+    const ended = acts(session, context, SUBMIT);
+    const next = acts(ended, context, NEXT);
+    expect(
+      [started, session, ended, next, acts(next, context, SUBMIT)].map((each) => resultStatus(each, item)),
+    ).toEqual(["initial", "pendingSubmission", "final", "pendingSubmission", "final"]);
+    expect(resultStatus(accepted(suspendItem(session, 2)).session, item)).toBe("pendingSubmission");
+  });
+
+  it("[B2] reports pendingExternalScoring after response processing of an item with an externally scored outcome", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+      <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+      <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    const closed = acts(presented(context), context, respond("RESPONSE", single("string", "An essay.")), SUBMIT);
+    expect(resultStatus(closed, item)).toBe("pendingExternalScoring");
+  });
+
+  /** An item whose response processing fails for the response `X`: it repeats a value beyond `maxContainerSize`. */
+  function failingItem(adaptive: boolean): AssessmentItem {
+    return itemOf(
+      `adaptive="${adaptive}" time-dependent="false"`,
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-outcome-declaration identifier="STAGE" cardinality="single" base-type="integer"><qti-default-value><qti-value>-1</qti-value></qti-default-value></qti-outcome-declaration>
+      <qti-outcome-declaration identifier="SIZE" cardinality="single" base-type="integer"/>
+      <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="X">X</qti-simple-choice><qti-simple-choice identifier="Y">Y</qti-simple-choice></qti-choice-interaction></qti-item-body>
+      <qti-response-processing>
+        <qti-set-outcome-value identifier="STAGE"><qti-base-value base-type="integer">1</qti-base-value></qti-set-outcome-value>
+        <qti-response-condition><qti-response-if>
+          <qti-match><qti-variable identifier="RESPONSE"/><qti-base-value base-type="identifier">X</qti-base-value></qti-match>
+          <qti-set-outcome-value identifier="SIZE"><qti-container-size><qti-repeat number-repeats="5"><qti-variable identifier="STAGE"/></qti-repeat></qti-container-size></qti-set-outcome-value>
+          <qti-set-outcome-value identifier="STAGE"><qti-base-value base-type="integer">2</qti-base-value></qti-set-outcome-value>
+        </qti-response-if></qti-response-condition>
+      </qti-response-processing>`,
+    );
+  }
+
+  it("[B2][E26] reports pendingResponseProcessing when response processing fails, with the outcomes it started from", () => {
+    const item = failingItem(false);
+    const context: ItemSessionContext = { ...contextOf(item, { maxAttempts: 0 }), limits: { maxContainerSize: 2 } };
+    const step = accepted(
+      act(acts(presented(context), context, respond("RESPONSE", identifier("X"))), context, SUBMIT),
+    );
+    expect(step.events.map(({ type }) => type)).toEqual(["attempt-ended", "processing-failed"]);
+    expect(step.events[1]?.detail).toBe(
+      "The operator qti-repeat builds a container of 5 values, more than the limit maxContainerSize of 2.",
+    );
+    expect([outcome(step.session, "STAGE"), outcome(step.session, "SIZE")]).toEqual([integer(-1), integer(0)]);
+    expect([step.session.processingFailed, resultStatus(step.session, item)]).toEqual([
+      true,
+      "pendingResponseProcessing",
+    ]);
+    const recovered = acts(step.session, context, respond("RESPONSE", identifier("Y")), SUBMIT);
+    expect([outcome(recovered, "STAGE"), resultStatus(recovered, item)]).toEqual([integer(1), "final"]);
+  });
+
+  it("[E26] keeps the outcomes of the earlier attempt of an adaptive item when its response processing fails", () => {
+    const item = failingItem(true);
+    const context: ItemSessionContext = { ...contextOf(item), limits: { maxContainerSize: 2 } };
+    const first = acts(presented(context), context, respond("RESPONSE", identifier("Y")), SUBMIT);
+    const failed = acts(first, context, respond("RESPONSE", identifier("X")), SUBMIT);
+    expect([outcome(failed, "STAGE"), failed.status, resultStatus(failed, item)]).toEqual([
+      integer(1),
+      "interacting",
+      "pendingResponseProcessing",
+    ]);
+  });
+
+  it("refuses arguments of other types", () => {
+    const item = counterItem();
+    expect(() => resultStatus(json("null"), item)).toThrow(DataError);
+    expect(() => resultStatus(presented(contextOf(item)), json("null"))).toThrow(DataError);
+  });
+});
+
 describe("selection", () => {
   const abcd = (selection: string, ordering = ""): TestStructure =>
     nonlinear(section("S", selection + ordering + refs("a", "b", "c", "d")));
@@ -1021,6 +1984,30 @@ describe("sessionControl", () => {
     expect(() => sessionControl(json("null"))).toThrow("The item reference must be an object from resolveStructure");
     expect(() => sessionControl(json(JSON.stringify({ kind: "section" })))).toThrow(
       'The item reference must be a node of kind "item-ref", found the kind "section".',
+    );
+  });
+  it("[E12] gives an item delivered alone its feedback and review, and applies the control given to it", () => {
+    expect(standaloneSessionControl()).toEqual(controlWith({ showFeedback: true }));
+    const given = structureOf(
+      part(
+        "P",
+        section("S", refs("a")),
+        "linear",
+        '<qti-item-session-control max-attempts="3" show-feedback="false" show-solution="true"/>',
+      ),
+    ).part("P")?.model.itemSessionControl;
+    expect(standaloneSessionControl(given)).toEqual(controlWith({ maxAttempts: 3, showSolution: true }));
+    const item = counterItem();
+    const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
+    const closed = acts(presented(context), context, SUBMIT);
+    expect([closed.status, itemFeedback(closed, item, context.control).modal]).toEqual(["closed", true]);
+    expect(acts(closed, context, { type: "review", item: KEY }).status).toBe("review");
+  });
+
+  it("[E12] refuses a control that is not an item session control", () => {
+    expect(() => standaloneSessionControl(json("null"))).toThrow(DataError);
+    expect(() => standaloneSessionControl(json('{"kind": "assessment-item"}'))).toThrow(
+      'The item session control must be the model of a qti-item-session-control, found the kind "assessment-item".',
     );
   });
 });
@@ -1768,6 +2755,194 @@ describe("properties", () => {
         expect(effective.showFeedback).toBe(nearest((value) => value.showFeedback, false));
         expect(effective.allowReview).toBe(nearest((value) => value.allowReview, true));
         expect(effective.maxAttempts).toBe(nearest((value) => value.maxAttempts, undefined));
+      }),
+    );
+  });
+  /** A move of the candidate or the engine on a session, with the milliseconds since the move before. */
+  const sessionMoves = fc.array(
+    fc.record({
+      move: fc.constantFrom(
+        "respond",
+        "submit",
+        "skip",
+        "hint",
+        "next",
+        "review",
+        "solution",
+        "comment",
+        "suspend",
+        "present",
+        "close",
+      ),
+      choice: fc.constantFrom("A", "B", "C", null),
+      gap: fc.integer({ min: 0, max: 500 }),
+    }),
+    { maxLength: 25 },
+  );
+
+  type Move = typeof sessionMoves extends fc.Arbitrary<(infer T)[]> ? T : never;
+
+  const sessionControls = fc.record({
+    maxAttempts: fc.option(fc.integer({ min: 0, max: 3 }), { nil: undefined }),
+    showFeedback: fc.boolean(),
+    allowReview: fc.boolean(),
+    showSolution: fc.boolean(),
+    allowComment: fc.boolean(),
+    allowSkipping: fc.boolean(),
+    validateResponses: fc.boolean(),
+  });
+
+  function step(session: ItemSession, { move, choice }: Move, at: number, context: ItemSessionContext): ItemStep {
+    const apply = (action: ItemAction): ItemStep => applyItemAction(session, { ...action, at }, context);
+    switch (move) {
+      case "respond":
+        return apply(respond("RESPONSE", choice === null ? null : identifier(choice)));
+      case "submit":
+        return apply(SUBMIT);
+      case "skip":
+        return apply(SKIP);
+      case "hint":
+        return apply(HINT);
+      case "next":
+        return apply(NEXT);
+      case "review":
+      case "solution":
+        return apply({ type: move, item: KEY });
+      case "comment":
+        return apply({ type: "comment", item: KEY, text: `At ${at}.` });
+      case "suspend":
+        return suspendItem(session, at);
+      case "present":
+        return presentItem(session, at, context);
+      case "close":
+        return closeItem(session, at, context);
+    }
+  }
+
+  /** Runs moves from a presentation at time 0; returns every accepted step. */
+  function play(
+    context: ItemSessionContext,
+    moves: readonly Move[],
+  ): { session: ItemSession; events: DeliveryEvent[] } {
+    let session = presented(context);
+    const events: DeliveryEvent[] = [];
+    let at = 0;
+    for (const move of moves) {
+      at += move.gap;
+      const next = step(session, move, at, context);
+      if (next.ok) {
+        session = next.session;
+        events.push(...next.events);
+      }
+    }
+    return { session, events };
+  }
+
+  /** A test whose outcome ANSWER is the response of the item `q`. */
+  const reading = structureOf(
+    `${part("P", section("S", refs("q")))}<qti-outcome-processing><qti-set-outcome-value identifier="ANSWER"><qti-variable identifier="q.RESPONSE"/></qti-set-outcome-value></qti-outcome-processing>`,
+  );
+
+  /** What outcome processing of the test reads as the response of `q` in the session. */
+  function readByTest(session: ItemSession, item: AssessmentItem): Value | null {
+    const view: ItemSessionView = {
+      ref: (reading.itemRef("q") ?? fail("No q.")).model,
+      item,
+      variables: session.variables,
+    };
+    const scope: TestScope = { itemSessions: () => [view], itemSession: () => view, variable: () => undefined };
+    const outcomes = runOutcomeProcessing(reading.test.model, new Map(), scope, { random: createRandom(1) });
+    return outcomes.get("ANSWER") ?? null;
+  }
+
+  it("[B1][B3][B4][B8][B9][B10][B31][B96][E2] keeps the rules of attempts, outcomes, time and drafts over any sequence of actions", () => {
+    fc.assert(
+      fc.property(
+        fc.boolean(),
+        fc.option(fc.boolean(), { nil: undefined }),
+        sessionControls,
+        sessionMoves,
+        seeds,
+        (adaptive, countAttempt, attributes, moves, seed) => {
+          const item = counterItem({ adaptive, ...(countAttempt === undefined ? {} : { countAttempt }) });
+          const context = contextOf(item, attributes, createRandom(seed));
+          const maxAttempts = adaptive ? 0 : (attributes.maxAttempts ?? 1);
+          let session = presented(context);
+          let at = 0;
+          let spent = 0;
+          let submitted: Value | null = null;
+          let processed = 0;
+          for (const move of moves) {
+            const before = JSON.stringify(itemSessionToJson(session));
+            const next = step(session, move, at + move.gap, context);
+            expect(JSON.stringify(itemSessionToJson(session))).toBe(before);
+            if (session.status === "interacting") spent += move.gap;
+            at += move.gap;
+            if (!next.ok) {
+              expect(next.refusal.code).not.toBe("clock-regression");
+              continue;
+            }
+            const after = next.session;
+            const types = next.events.map(({ type }) => type);
+            const responding = ["respond", "submit", "skip", "hint"].includes(move.move);
+            expect(["closed", "review", "solution"].includes(session.status) && responding).toBe(false);
+            const count = (each: ItemSession): number => {
+              const value = attempts(each);
+              return value?.cardinality === "single" ? Number(value.value) : 0;
+            };
+            expect(count(after) - count(session)).toBeGreaterThanOrEqual(0);
+            expect(count(after) - count(session)).toBeLessThanOrEqual(1);
+            if (types.includes("attempt-ended")) submitted = after.drafts.get("RESPONSE") ?? null;
+            expect(response(after, "RESPONSE")).toEqual(submitted);
+            expect(readByTest(after, item)).toEqual(submitted);
+            if (types.includes("response-processed")) {
+              processed += 1;
+              expect(outcome(after, "RUNS")).toEqual(integer(adaptive ? processed : 1));
+            }
+            if (after.status === "interacting" && maxAttempts > 0)
+              expect(after.countedAttempts).toBeLessThan(maxAttempts);
+            if (after.status === "interacting" && adaptive) {
+              expect(outcome(after, "completionStatus")).not.toEqual(identifier("completed"));
+            }
+            expect(after.spent + (after.since === null ? 0 : at - after.since)).toBe(spent);
+            if (after.since === null)
+              expect(response(after, "duration")).toEqual(single("duration", Math.floor(after.spent) / 1000));
+            expect(itemSessionFromJson(JSON.parse(JSON.stringify(itemSessionToJson(after))))).toEqual(after);
+            session = after;
+          }
+        },
+      ),
+    );
+  });
+
+  it("[B3][E3] replays a session exactly from the same seed and actions", () => {
+    fc.assert(
+      fc.property(fc.boolean(), sessionControls, sessionMoves, seeds, (adaptive, attributes, moves, seed) => {
+        const item = counterItem({ adaptive });
+        const run = (): ReturnType<typeof play> => play(contextOf(item, attributes, createRandom(seed)), moves);
+        expect(run()).toEqual(run());
+      }),
+    );
+  });
+
+  it("[E29] keeps any PCI state through the JSON form of the session", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="__proto__" cardinality="single" base-type="string"/>
+      <qti-item-body><qti-portable-custom-interaction response-identifier="__proto__" custom-interaction-type-identifier="urn:fdc:example.com:pci:any" module="any"><qti-interaction-markup><p>Any</p></qti-interaction-markup></qti-portable-custom-interaction></qti-item-body>`,
+    );
+    const context = contextOf(item);
+    fc.assert(
+      fc.property(fc.string(), (state) => {
+        const session = acts(presented(context), context, {
+          type: "set-responses",
+          item: KEY,
+          responses: new Map(),
+          pciStates: new Map([["__proto__", state]]),
+        });
+        const read = itemSessionFromJson(JSON.parse(JSON.stringify(itemSessionToJson(session))));
+        expect(read.pciStates.get("__proto__")).toBe(state);
+        expect(read).toEqual(session);
       }),
     );
   });

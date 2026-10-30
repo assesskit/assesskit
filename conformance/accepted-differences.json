@@ -142,5 +142,77 @@
     "variable": "",
     "reason": "qti-set-correct-response sets the float RESPONSE to an integer, which olah promotes to a float on assignment (D5, G3); Longsight rejects the rule.",
     "source": "INFO §5.130.2"
+  },
+  {
+    "item": "items/shared-vocabulary/Items/Item_QTI3_Hotspot_01/hotspot-qti3.xml (turns)",
+    "variable": "",
+    "reason": "Longsight requires a single interaction bound to RESPONSE for a standard template; INFO §2.5.1 requires only that RESPONSE and SCORE are declared, so olah runs the template.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_102010.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_102012.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_102013.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_104045.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_104047.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_104048.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_104049.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/ccPackage/testitems/QUE_104051.xml (turns)",
+    "variable": "",
+    "reason": "Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in.",
+    "source": "INFO §2.5.1"
+  },
+  {
+    "item": "packaging/items/mc_calc3.xml (turns)",
+    "variable": "",
+    "reason": "qti-index names its n with the template variable i, which IntOrIdentifier allows; Longsight rejects the reference.",
+    "source": "INFO §5.72, §2.7.2"
+  },
+  {
+    "item": "packaging/items/multi-input.xml (turns)",
+    "variable": "",
+    "reason": "Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs.",
+    "source": "INFO §5.57"
+  },
+  {
+    "item": "a non-adaptive item that completes (turns) turn 2",
+    "variable": "numAttempts",
+    "reason": "Longsight starts no further attempt of a non-adaptive item once completionStatus is completed; numAttempts increases at the start of every attempt, and completion closes only the session of an adaptive item.",
+    "source": "INFO §2.2.2.2, §2.2.2.3"
   }
 ]

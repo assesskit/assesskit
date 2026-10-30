@@ -1,5 +1,5 @@
 import type { ItemSessionControl } from "../asi/index.js";
-import { checkRecord, describe } from "../checks.js";
+import { checkBoolean, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ancestry, type ItemRefNode, type StructureNode } from "./structure.js";
 
@@ -36,6 +36,29 @@ const DEFAULT_SESSION_CONTROL: EffectiveSessionControl = {
   allowSkipping: true,
   validateResponses: false,
 };
+
+/**
+ * The control of an item delivered alone, for practice (E12): the defaults of INFO §7.19 are stated for an item in a
+ * test, so an item alone shows its feedback and allows review.
+ */
+const STANDALONE_SESSION_CONTROL: EffectiveSessionControl = {
+  ...DEFAULT_SESSION_CONTROL,
+  showFeedback: true,
+  allowReview: true,
+};
+
+/** The kind of the model of `qti-item-session-control`. */
+const CONTROL_KIND = "item-session-control";
+
+/** The boolean attributes of an effective control. */
+const FLAGS = [
+  "showFeedback",
+  "allowReview",
+  "showSolution",
+  "allowComment",
+  "allowSkipping",
+  "validateResponses",
+] as const;
 
 /** Returns the control with the attributes that `control` sets in place of its own. */
 function override(effective: EffectiveSessionControl, control: ItemSessionControl): EffectiveSessionControl {
@@ -77,4 +100,37 @@ export function sessionControl(item: ItemRefNode): EffectiveSessionControl {
       (effective, control) => (control === undefined ? effective : override(effective, control)),
       DEFAULT_SESSION_CONTROL,
     );
+}
+
+/**
+ * Returns the item session control of an item delivered alone, outside a test (E12). It starts from the defaults of
+ * {@link sessionControl}, except that `show-feedback` and `allow-review` are true, and applies the attributes that the
+ * given control sets. `max-attempts` stays with the item when the control does not set it: 1 for a non-adaptive item and
+ * unlimited for an adaptive one (INFO §7.19.1).
+ *
+ * @param control - The `qti-item-session-control` that the host gives the item, as `readAsi` reads it. Default: none.
+ * @throws `DataError` when `control` is not the model of a `qti-item-session-control`.
+ */
+export function standaloneSessionControl(control?: ItemSessionControl): EffectiveSessionControl {
+  if (control === undefined) return STANDALONE_SESSION_CONTROL;
+  checkRecord(control, "The item session control must be an object of the model of qti-item-session-control");
+  if (control.kind !== CONTROL_KIND) {
+    throw new DataError(
+      `The item session control must be the model of a qti-item-session-control, found the kind ${describe(control.kind)}.`,
+    );
+  }
+  return override(STANDALONE_SESSION_CONTROL, control);
+}
+
+/**
+ * Checks an effective control.
+ *
+ * @throws `DataError` when it is not an object with the six booleans and an optional `maxAttempts` of at least 0.
+ */
+export function checkSessionControl(control: unknown): asserts control is EffectiveSessionControl {
+  checkRecord(control, "The item session control must be an object from sessionControl or standaloneSessionControl");
+  for (const flag of FLAGS) checkBoolean(control[flag], `The ${flag} of the item session control`);
+  if (control.maxAttempts !== undefined) {
+    checkNonNegativeInteger(control.maxAttempts, "The maxAttempts of the item session control");
+  }
 }

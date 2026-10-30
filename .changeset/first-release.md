@@ -78,3 +78,11 @@ package directory or an XML document against the official schemas, which it comp
 `validate`, and prints text or JSON with the exit codes 0 for valid, 1 for errors and 2 for a command line, input or schema
 set that it cannot use; `olah schemas fetch` downloads the pinned schemas into the user cache directory and checks their
 SHA-256, and is the only network access in olah.
+
+Item sessions (`delivery`): `startItemSession`, `presentItem`, `suspendItem`, `closeItem` and `applyItemAction` run the
+session of one item instance as plain data, with refusals as values and the time of every step given: attempts and the
+budget of `max-attempts` with `count-attempt`, adaptive items that close at completion, end attempt interactions, drafts
+kept apart from submitted responses, skipping and validity, review, solution and comments, the states of portable custom
+interactions, the item duration, and template and response processing failures reported as events. `itemFeedback`,
+`itemResponses` and `resultStatus` give the feedback, the responses and the Results Reporting status of a session, and
+`standaloneSessionControl` the control of an item delivered alone.

@@ -1,12 +1,15 @@
 import type { AcceptedDifference } from "../../conformance/accepted.ts";
-import type { Implementation, ItemCase, Observed, Run } from "./model.ts";
+import type { Implementation, ItemCase, Observed, Play, Run, SessionCase, TurnObservation } from "./model.ts";
 
 /** Where two implementations disagree about an item. */
 export interface Difference {
   /** The name of the case. */
   readonly item: string;
-  /** What differs: whether the item is accepted at all, an outcome value, or a template value. */
-  readonly kind: "acceptance" | "outcome" | "template";
+  /**
+   * What differs: whether the item, or a turn of its session, is accepted at all; an outcome value; a template value; or
+   * `numAttempts` or whether the session closed after a turn.
+   */
+  readonly kind: "acceptance" | "outcome" | "template" | "session";
   /** The identifier of the variable; empty for acceptance. */
   readonly variable: string;
   /** What the reference reports; `undefined` when it has no such variable or does not accept the item. */
@@ -15,7 +18,7 @@ export interface Difference {
   readonly subject: Observed | undefined;
 }
 
-/** The result of comparing implementations on a list of cases. */
+/** The result of comparing implementations on a list of cases or sessions. */
 export interface Report {
   /** The cases both implementations accepted, whose values were compared. */
   readonly compared: number;
@@ -42,7 +45,7 @@ export function sameValue(a: Observed | undefined, b: Observed | undefined): boo
 /** Compares the variables of two records. */
 function compareVariables(
   item: string,
-  kind: "outcome" | "template",
+  kind: Difference["kind"],
   reference: Readonly<Record<string, Observed>>,
   subject: Readonly<Record<string, Observed>>,
 ): Difference[] {
@@ -66,6 +69,57 @@ function compareRuns(item: string, reference: Run, subject: Run): Difference[] {
   return [];
 }
 
+/** Compares the turns of the sessions of one item, each named by the item and its number from 1. */
+function comparePlays(item: string, reference: Play, subject: Play): Difference[] {
+  if (!(reference.accepted && subject.accepted)) {
+    return reference.accepted === subject.accepted
+      ? []
+      : [{ item, kind: "acceptance", variable: "", reference: reference.accepted, subject: subject.accepted }];
+  }
+  const facts = ({ numAttempts, closed }: TurnObservation): Record<string, Observed> => ({ numAttempts, closed });
+  return reference.turns.flatMap((turn, index) => {
+    const name = `${item} turn ${index + 1}`;
+    const other = subject.turns[index];
+    if (other === undefined || turn.accepted !== other.accepted) {
+      return [
+        { item: name, kind: "acceptance" as const, variable: "", reference: turn.accepted, subject: other?.accepted },
+      ];
+    }
+    return [
+      ...compareVariables(name, "outcome", turn.outcomes, other.outcomes),
+      ...compareVariables(name, "session", facts(turn), facts(other)),
+    ];
+  });
+}
+
+/** Builds a report from the results of each case: whether each implementation accepted it, and the differences. */
+function report(
+  results: readonly {
+    readonly item: string;
+    readonly reference: Run | Play;
+    readonly subject: Run | Play;
+    readonly differences: readonly Difference[];
+  }[],
+  accepted: readonly AcceptedDifference[],
+): Report {
+  const rejected: { item: string; reason: string }[] = [];
+  const differences: Difference[] = [];
+  const accepts: Difference[] = [];
+  let compared = 0;
+  for (const result of results) {
+    const { reference, subject } = result;
+    if (reference.accepted && subject.accepted) compared++;
+    else if (!(reference.accepted || subject.accepted)) rejected.push({ item: result.item, reason: reference.reason });
+    for (const difference of result.differences) {
+      const isAccepted = accepted.some(
+        (entry) => entry.item === difference.item && entry.variable === difference.variable,
+      );
+      (isAccepted ? accepts : differences).push(difference);
+    }
+  }
+  return { compared, rejected, differences, accepted: accepts };
+}
+
 /**
  * Runs both implementations on every case and compares what they report.
  *
@@ -77,22 +131,40 @@ export function compare(
   subject: Implementation,
   accepted: readonly AcceptedDifference[],
 ): Report {
-  const rejected: { item: string; reason: string }[] = [];
-  const differences: Difference[] = [];
-  const accepts: Difference[] = [];
-  let compared = 0;
-  for (const testCase of cases) {
+  const results = cases.map((testCase) => {
     const referenceRun = reference.run(testCase);
     const subjectRun = subject.run(testCase);
-    if (referenceRun.accepted && subjectRun.accepted) compared++;
-    else if (!(referenceRun.accepted || subjectRun.accepted))
-      rejected.push({ item: testCase.name, reason: referenceRun.reason });
-    for (const difference of compareRuns(testCase.name, referenceRun, subjectRun)) {
-      const isAccepted = accepted.some(
-        (entry) => entry.item === difference.item && entry.variable === difference.variable,
-      );
-      (isAccepted ? accepts : differences).push(difference);
-    }
-  }
-  return { compared, rejected, differences, accepted: accepts };
+    return {
+      item: testCase.name,
+      reference: referenceRun,
+      subject: subjectRun,
+      differences: compareRuns(testCase.name, referenceRun, subjectRun),
+    };
+  });
+  return report(results, accepted);
+}
+
+/**
+ * Plays the sessions of every case with both implementations and compares them turn by turn: whether each turn is
+ * accepted, the outcome values, `numAttempts` and whether the session closed.
+ *
+ * @param accepted - The differences to set aside; they appear in the report as accepted.
+ */
+export function compareSessions(
+  cases: readonly SessionCase[],
+  reference: Implementation,
+  subject: Implementation,
+  accepted: readonly AcceptedDifference[],
+): Report {
+  const results = cases.map((testCase) => {
+    const referencePlay = reference.play(testCase);
+    const subjectPlay = subject.play(testCase);
+    return {
+      item: testCase.name,
+      reference: referencePlay,
+      subject: subjectPlay,
+      differences: comparePlays(testCase.name, referencePlay, subjectPlay),
+    };
+  });
+  return report(results, accepted);
 }

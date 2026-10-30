@@ -6,6 +6,7 @@ import {
   checkFinite,
   checkFunction,
   checkNonNegative,
+  checkNonNegativeInteger,
   checkOptions,
   checkPositiveInteger,
   checkRecord,
@@ -113,6 +114,17 @@ describe("checkNonNegative", () => {
     expect(() => checkNonNegative(0, "The minimum")).not.toThrow();
     expect(() => checkNonNegative(-1, "The minimum")).toThrow("The minimum must be a non-negative number, found -1.");
     expect(() => checkNonNegative(Number.POSITIVE_INFINITY, "The minimum")).toThrow(DataError);
+  });
+});
+
+describe("checkNonNegativeInteger", () => {
+  it("accepts safe integers from 0", () => {
+    expect(() => checkNonNegativeInteger(0, "The count")).not.toThrow();
+    for (const value of [-1, 1.5, 2 ** 53, "1"])
+      expect(() => checkNonNegativeInteger(value, "The count")).toThrow(DataError);
+    expect(() => checkNonNegativeInteger(-1, "The count")).toThrow(
+      "The count must be a non-negative integer, found -1.",
+    );
   });
 });
 

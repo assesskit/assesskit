@@ -24,6 +24,22 @@ export interface ItemKey {
   readonly instance: number;
 }
 
+/**
+ * Checks an item instance.
+ *
+ * @throws `DataError` when it is not an object with a string `ref` and a positive integer `instance`.
+ */
+export function checkKey(key: unknown): asserts key is ItemKey {
+  checkRecord(key, "The item instance must be an object with a ref and an instance");
+  checkString(key.ref, "The ref of the item instance");
+  checkPositiveInteger(key.instance, "The instance of the item instance");
+}
+
+/** Whether two keys name the same item instance. */
+export function sameKey(first: ItemKey, second: ItemKey): boolean {
+  return first.ref === second.ref && first.instance === second.instance;
+}
+
 /** An item instance in the plan. */
 export interface PlannedItem {
   /** Tells an item from a section. */
