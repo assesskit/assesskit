@@ -67,6 +67,25 @@ origin and the origins the host allows. The frame refuses to start where the bro
 - Allow other origins in `origins` only for hosts that you trust to serve scripts.
 - The code is visible to the candidate: keep answer keys in response processing, which the asset gate never serves.
 
+## tempuh: the LTI tool role
+
+A learning platform launches tempuh through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
+checked it ([lti.md](packages/tempuh/docs/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
+key, to the tool's client and deployment, and to one use.
+
+- Serve the login URL and the launch URL over HTTPS, and limit the size of a request body: the handlers read what the host
+  gives them.
+- `LtiStore.delete` must be atomic, and expired logins deleted. A login completes once because only one caller's `delete`
+  returns `true`.
+- Without third-party cookies, the launch is tied to the browser by the platform's storage, and the tool accepts the second
+  post of that path only from the origin of its own launch URL. Pass the `origin` header of the request to `ltiLaunch`.
+- The two pages of that path carry a content security policy that allows their one script by hash, and encode every value.
+  A host that adds headers must not weaken them.
+- The platform's key set is fetched from the URL of a registration, over HTTPS, without redirects, with a time limit and at
+  most 64 KiB. A token cannot choose the URL, and only RS256 with an RSA key of 2,048 bits or more verifies.
+- The tool's private key is the host's to keep. It signs client assertions and Deep Linking responses, which expire after
+  five minutes.
+
 ## Default limits
 
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;

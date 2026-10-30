@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts", "src/player/index.ts", "src/protocol/index.ts"],
+  "entryPoints": ["src/index.ts", "src/player/index.ts", "src/protocol/index.ts", "src/lti/index.ts"],
   "tsconfig": "tsconfig.build.json",
   "sourceLinkTemplate": "https://github.com/luthfanwakan/olah/blob/{gitRevision}/packages/tempuh/{path}#L{line}",
   "validation": {

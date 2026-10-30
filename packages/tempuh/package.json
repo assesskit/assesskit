@@ -36,6 +36,10 @@
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"
     },
+    "./lti": {
+      "types": "./dist/lti/index.d.ts",
+      "default": "./dist/lti/index.js"
+    },
     "./player.css": "./player.css",
     "./pci-frame/*": "./dist/pci-frame/*"
   },

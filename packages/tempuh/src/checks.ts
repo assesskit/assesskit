@@ -12,6 +12,11 @@ export function describe(value: unknown): string {
   return String(value);
 }
 
+/** Returns whether a value is an object that is neither `null` nor an array. */
+export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Checks that a value is a record, such as an envelope.
  *
@@ -19,9 +24,7 @@ export function describe(value: unknown): string {
  * @throws `DataError` when it is not.
  */
 export function checkRecord(value: unknown, message: string): asserts value is Readonly<Record<string, unknown>> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new DataError(`${message}, found ${describe(value)}.`);
-  }
+  if (!isRecord(value)) throw new DataError(`${message}, found ${describe(value)}.`);
 }
 
 /**
@@ -95,6 +98,18 @@ export function checkNonEmptyString(value: unknown, label: string): asserts valu
 export function checkNonNegativeInteger(value: unknown, label: string): asserts value is number {
   if (!(typeof value === "number" && Number.isSafeInteger(value) && value >= 0)) {
     throw new DataError(`${label} must be a non-negative integer, found ${describe(value)}.`);
+  }
+}
+
+/**
+ * Checks that a value is a safe integer of at least 1, such as a time limit.
+ *
+ * @param label - Names the value in the error message, such as `The option timeoutMs`.
+ * @throws `DataError` when it is not.
+ */
+export function checkPositiveInteger(value: unknown, label: string): asserts value is number {
+  if (!(typeof value === "number" && Number.isSafeInteger(value) && value >= 1)) {
+    throw new DataError(`${label} must be a positive integer, found ${describe(value)}.`);
   }
 }
 

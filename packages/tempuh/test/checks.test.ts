@@ -4,10 +4,12 @@ import {
   checkFunction,
   checkNonEmptyString,
   checkNonNegativeInteger,
+  checkPositiveInteger,
   checkProperties,
   checkRecord,
   checkString,
   describe as describeValue,
+  isRecord,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 
@@ -20,6 +22,15 @@ describe("describe", () => {
     expect(describeValue(null)).toBe("null");
     expect(describeValue(undefined)).toBe("undefined");
     expect(describeValue(1.5)).toBe("1.5");
+  });
+});
+
+describe("isRecord", () => {
+  it("accepts an object and rejects null, arrays and other values", () => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord(new Map())).toBe(true);
+    for (const text of ["null", "[]", '"a"', "5", "true"]) expect(isRecord(JSON.parse(text)), text).toBe(false);
+    expect(isRecord(undefined)).toBe(false);
   });
 });
 
@@ -114,6 +125,24 @@ describe("checkNonNegativeInteger", () => {
     }
     expect(() => checkNonNegativeInteger(-1, "The property seq")).toThrow(
       "The property seq must be a non-negative integer, found -1.",
+    );
+  });
+});
+
+describe("checkPositiveInteger", () => {
+  it("accepts the safe integers from 1", () => {
+    for (const value of [1, 2, Number.MAX_SAFE_INTEGER]) {
+      expect(() => checkPositiveInteger(value, "The option timeoutMs")).not.toThrow();
+    }
+  });
+
+  it("rejects 0, negative numbers, fractions, unsafe integers, non-finite numbers and other types", () => {
+    const bad = [0, -1, 1.5, 2 ** 53, Number.NaN, Number.POSITIVE_INFINITY, JSON.parse('"1"'), JSON.parse("null")];
+    for (const value of bad) {
+      expect(() => checkPositiveInteger(value, "The option timeoutMs")).toThrow(DataError);
+    }
+    expect(() => checkPositiveInteger(0, "The option timeoutMs")).toThrow(
+      "The option timeoutMs must be a positive integer, found 0.",
     );
   });
 });

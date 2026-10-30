@@ -40,6 +40,7 @@ messages and nothing of the other subpaths, so that a browser bundle and a serve
 | `.`          | shared  | The errors and the interface messages                                                                        |
 | `player`     | browser | The host of portable custom interactions ([PCI](pci.md)) and the tools of an item ([tools](tools.md))        |
 | `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                  |
+| `lti`        | server  | The tool role of LTI 1.3: login, launch, Deep Linking response, access token ([lti](lti.md))                 |
 | `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/` |
 
 The package also exports static files that a host serves: `pci-frame/*`, the frame of a portable custom interaction.
@@ -71,4 +72,5 @@ olah's errors pass through tempuh unchanged.
 | `LtiError`     | An LTI launch, login or service message fails validation, in either role                                              | `reason`            |
 | `ServiceError` | A call to the CAT, AGS, JWKS or Caliper service fails, or a store conflict outlasts its retries                       | `status` and `body` |
 
-`reason` is a kebab-case code such as `session-exists`. A host maps `AccessError` to 403.
+`reason` is a kebab-case code such as `session-exists`. A host maps `AccessError` to 403. `status` is `0` when a service did
+not answer.

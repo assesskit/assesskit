@@ -16,3 +16,7 @@ the height and the validity methods to the player. The static files of the frame
 The tools of an item (`player`): `mountTools` shows a rule, a protractor, basic and standard calculators, a line reader,
 answer masking, digital and physical materials, and slots for the tools that the host provides, for the companion
 materials that olah reads and the supports of a candidate's profile.
+
+The tool role of LTI 1.3 in `@luthfanwakan/tempuh/lti`: the third-party initiated login with a state cookie or with the
+platform's browser storage (LTI Client Side OIDC), the validation of the launch, a key set cache, the response to a Deep
+Linking request and the access token of the client-credentials grant.

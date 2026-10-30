@@ -57,7 +57,7 @@ export class LtiError extends TempuhError {
 export class ServiceError extends TempuhError {
   /** Error class name. */
   override name = "ServiceError";
-  /** The HTTP status of the failed call; `409` for a store conflict. */
+  /** The HTTP status of the failed call; `409` for a store conflict, and `0` when the call got no answer. */
   readonly status: number;
   /** The body of the response, or the empty string when the call had none. */
   readonly body: string;
