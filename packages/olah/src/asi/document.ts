@@ -1,0 +1,188 @@
+import { checkOptions, checkRecord, checkString, describe } from "../checks.js";
+import { DataError } from "../errors.js";
+import { type ParseXmlOptions, parseXml, serializeXml, XMLNS_NAMESPACE, type XmlElement } from "../xml/index.js";
+import { DOCUMENT_ELEMENTS } from "./element-table.js";
+import { isElement } from "./guards.js";
+import type {
+  AssessmentItem,
+  AssessmentSection,
+  AssessmentStimulus,
+  AssessmentTest,
+  OutcomeDeclaration,
+  OutcomeProcessing,
+  ResponseProcessing,
+} from "./model.js";
+import { ASI_NAMESPACE } from "./namespace.js";
+import { readElement } from "./read.js";
+import { asiError, type ReadContext } from "./read-error.js";
+import { typeNamed } from "./type-index.js";
+import { writeElement } from "./write.js";
+
+/**
+ * A document of QTI 3.0 ASI: the root element of the ASI schema, with the model of the element under the property that
+ * names it. Items, stimuli, tests, sections, outcome declarations, response processing templates and outcome processing
+ * are documents.
+ */
+export type AsiDocument =
+  | {
+      /** An assessment item. */
+      readonly kind: "item";
+      /** The item. */
+      readonly item: AssessmentItem;
+    }
+  | {
+      /** An assessment stimulus. */
+      readonly kind: "stimulus";
+      /** The stimulus. */
+      readonly stimulus: AssessmentStimulus;
+    }
+  | {
+      /** An assessment test. */
+      readonly kind: "test";
+      /** The test. */
+      readonly test: AssessmentTest;
+    }
+  | {
+      /** An assessment section. */
+      readonly kind: "section";
+      /** The section. */
+      readonly section: AssessmentSection;
+    }
+  | {
+      /** An outcome declaration. */
+      readonly kind: "outcome-declaration";
+      /** The outcome declaration. */
+      readonly declaration: OutcomeDeclaration;
+    }
+  | {
+      /** Response processing, such as a response processing template. */
+      readonly kind: "response-processing";
+      /** The response processing. */
+      readonly processing: ResponseProcessing;
+    }
+  | {
+      /** Outcome processing. */
+      readonly kind: "outcome-processing";
+      /** The outcome processing. */
+      readonly processing: OutcomeProcessing;
+    };
+
+/** Options of {@link readAsi}. */
+export interface ReadAsiOptions {
+  /** The path of the document in its package or directory; errors and issues name the document by it. */
+  readonly path?: string;
+  /** Limits that replace the defaults of {@link parseXml}, field by field; they apply to text and bytes. */
+  readonly limits?: ParseXmlOptions["limits"];
+}
+
+/** A root element, the kind of document it makes and the property of the document that holds its model. */
+interface DocumentEntry {
+  readonly element: keyof typeof DOCUMENT_ELEMENTS;
+  readonly kind: AsiDocument["kind"];
+  readonly property: string;
+}
+
+const ENTRIES: readonly DocumentEntry[] = [
+  { element: "qti-assessment-item", kind: "item", property: "item" },
+  { element: "qti-assessment-section", kind: "section", property: "section" },
+  { element: "qti-assessment-stimulus", kind: "stimulus", property: "stimulus" },
+  { element: "qti-assessment-test", kind: "test", property: "test" },
+  { element: "qti-outcome-declaration", kind: "outcome-declaration", property: "declaration" },
+  { element: "qti-outcome-processing", kind: "outcome-processing", property: "processing" },
+  { element: "qti-response-processing", kind: "response-processing", property: "processing" },
+];
+const BY_ELEMENT: ReadonlyMap<string, DocumentEntry> = new Map(ENTRIES.map((entry) => [entry.element, entry]));
+const BY_KIND: ReadonlyMap<string, DocumentEntry> = new Map(ENTRIES.map((entry) => [entry.kind, entry]));
+
+const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+/** The schema that `writeAsi` names: the primary ASI schema, version 3.0.1 (BPIG §1.1.5). */
+const SCHEMA_LOCATION = `${ASI_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd`;
+
+/** Returns the root without the attributes that name a schema, which are not part of the model (BIND §3). */
+function withoutSchemaLocation(root: XmlElement): XmlElement {
+  const attributes = root.attributes.filter(
+    ({ namespace, name }) =>
+      !(namespace === XSI_NAMESPACE && (name === "schemaLocation" || name === "noNamespaceSchemaLocation")),
+  );
+  return { ...root, attributes };
+}
+
+function rootOf(input: string | Uint8Array | XmlElement, options: ReadAsiOptions): XmlElement {
+  const { path, limits = {} } = options;
+  if (path !== undefined) checkString(path, "The option path");
+  checkRecord(limits, "The option limits must be an object");
+  if (typeof input === "string" || input instanceof Uint8Array) {
+    return parseXml(input, { path, limits });
+  }
+  if (!isElement(input)) {
+    throw new DataError(`The input must be a string, a Uint8Array or an XmlElement, found ${describe(input)}.`);
+  }
+  return input;
+}
+
+/**
+ * Reads an assessment item, stimulus, test, section, outcome declaration, response processing template or outcome
+ * processing document. The model has the attributes and child elements of the schema, with the defaults of the schema not
+ * applied, so that writing it gives the document back. It does not check the order of child elements or the minimum of a
+ * list, which the schema does, and it leaves the content of bodies (HTML, MathML, SSML, interactions and feedback) as XML
+ * nodes. The model carries no source positions.
+ *
+ * The document must be in the ASI namespace; versions 3.0.0 and 3.0.1 share it (BIND §3). An `xsi:schemaLocation` is
+ * ignored. `xi:include` elements stay in the model, as the `XmlElement`s they are; resolve them first with
+ * `resolveIncludes` of `xml` to read the included content.
+ *
+ * @param input - The document as text, bytes or a tree from `parseXml` or `resolveIncludes`.
+ * @param options - See {@link ReadAsiOptions}.
+ * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
+ * @throws `ReadError` when the document is not well-formed, the root is not a document element of the ASI namespace, or an
+ * element has an attribute, child element or text that the schema does not allow, lacks a required one, or has a value
+ * that is not in its lexical form.
+ * @throws `SecurityError` when the document has a DOCTYPE or exceeds a limit.
+ */
+export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAsiOptions = {}): AsiDocument {
+  checkOptions(options);
+  const root = rootOf(input, options);
+  const context: ReadContext = { path: options.path, trail: [] };
+  const entry = root.namespace === ASI_NAMESPACE ? BY_ELEMENT.get(root.name) : undefined;
+  if (entry === undefined) {
+    const names = ENTRIES.map(({ element }) => element).join(", ");
+    const message = `The root element must be one of ${names} in the namespace ${ASI_NAMESPACE}, found ${root.name} in ${describe(root.namespace)}.`;
+    throw asiError(context, root, "olah/asi/document-element", message);
+  }
+  const model = readElement(typeNamed(DOCUMENT_ELEMENTS[entry.element]), withoutSchemaLocation(root), context);
+  // The model is built from the table that also derives the types of the models, so that it has their shape.
+  return { kind: entry.kind, [entry.property]: model } as AsiDocument;
+}
+
+/**
+ * Writes a document as XML in UTF-8: the root element in the ASI namespace, with `xsi:schemaLocation` naming the 3.0.1
+ * ASI schema (BPIG §1.1.5). Attributes and child elements are in the order of the schema, so that the output is valid
+ * against it when the model is.
+ *
+ * @param document - The document.
+ * @throws `DataError` when the document is not an object of one of the kinds of {@link AsiDocument}, or its model is not
+ * an object of the shape the element has: a missing required property, a property the element does not have, or a
+ * value of the wrong type.
+ */
+export function writeAsi(document: AsiDocument): string {
+  checkRecord(document, "The document must be an object");
+  const entry = typeof document.kind === "string" ? BY_KIND.get(document.kind) : undefined;
+  if (entry === undefined) {
+    const kinds = ENTRIES.map(({ kind }) => JSON.stringify(kind)).join(", ");
+    throw new DataError(`The kind of a document must be one of ${kinds}, found ${describe(document.kind)}.`);
+  }
+  const root = writeElement(
+    typeNamed(DOCUMENT_ELEMENTS[entry.element]),
+    entry.element,
+    Reflect.get(document, entry.property),
+  );
+  return serializeXml({
+    ...root,
+    attributes: [
+      { namespace: XMLNS_NAMESPACE, name: "xmlns", value: ASI_NAMESPACE },
+      { namespace: XMLNS_NAMESPACE, prefix: "xmlns", name: "xsi", value: XSI_NAMESPACE },
+      { namespace: XSI_NAMESPACE, prefix: "xsi", name: "schemaLocation", value: SCHEMA_LOCATION },
+      ...root.attributes,
+    ],
+  });
+}

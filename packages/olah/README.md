@@ -2,7 +2,8 @@
 
 A QTI 3.0 runtime for JavaScript and TypeScript: it reads, writes, validates and executes assessment items, tests,
 content packages and results, and runs a test session without presentation. It is under development; this version has
-the foundation, the `values` module, a secure XML reader and writer, and validation against the official XSD schemas.
+the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, and the
+typed model of assessment documents with its reader and writer.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -60,11 +61,30 @@ issues.map(({ message }) => message.split(": ")[1]);
 schemas.close();
 ```
 
+Assessment documents are read into a typed model and written back:
+
+```ts
+import { readAsi, writeAsi } from "@luthfanwakan/olah/asi";
+
+const document = readAsi(
+  '<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="capital" title="Capital" time-dependent="false"><qti-item-body><p>Which city?</p></qti-item-body></qti-assessment-item>',
+);
+if (document.kind === "item") {
+  document.item.identifier; // "capital"
+  document.item.timeDependent; // false
+  document.item.body?.kind; // "item-body"
+}
+writeAsi(document).includes(
+  'xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd"',
+); // true
+```
+
 ## API
 
 | Import                      | Contents                                                                                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@luthfanwakan/olah`        | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                           |
+| `@luthfanwakan/olah/asi`    | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`             |
 | `@luthfanwakan/olah/values` | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex` |
 | `@luthfanwakan/olah/xml`    | `parseXml`, `serializeXml`, `resolveIncludes`, `DEFAULT_XML_LIMITS` and the tree types                                                                       |
 | `@luthfanwakan/olah/node`   | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`                                                                                            |
@@ -76,6 +96,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 ## Documentation
 
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
+- [ASI](docs/asi.md): the model of assessment documents, the reader and the writer, the covers of external scores, and the element table.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer and XInclude.
 - [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, and the engine.

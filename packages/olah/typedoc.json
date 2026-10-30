@@ -11,5 +11,18 @@
   "readme": "README.md",
   "excludePrivate": true,
   "projectDocuments": ["docs/*.md"],
-  "treatWarningsAsErrors": true
+  "treatWarningsAsErrors": true,
+  "intentionallyNotExported": [
+    "AttributeProperties",
+    "ContentProperties",
+    "EXPRESSION",
+    "ExtensionProperties",
+    "KindOf",
+    "Member",
+    "NUMERIC_EXPRESSION",
+    "OUTCOME_RULES",
+    "RESPONSE_RULES",
+    "TEMPLATE_RULES",
+    "Types"
+  ]
 }

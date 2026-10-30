@@ -24,6 +24,7 @@
     "schemas": "node scripts/schemas.ts fetch",
     "schemas:pin": "node scripts/schemas.ts pin",
     "unicode": "node scripts/unicode.ts",
+    "asi-table": "node scripts/asi-table.ts",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
     "prepare": "lefthook install"
@@ -37,6 +38,7 @@
     "knip": "^6.43.0",
     "lefthook": "^2.2.2",
     "publint": "^0.3.25",
+    "saxes": "6.0.0",
     "typedoc": "^0.28.20",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"

@@ -30,6 +30,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./asi": {
+      "types": "./dist/asi/index.d.ts",
+      "default": "./dist/asi/index.js"
+    },
     "./values": {
       "types": "./dist/values/index.d.ts",
       "default": "./dist/values/index.js"

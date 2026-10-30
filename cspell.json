@@ -26,6 +26,8 @@
     "BPIG",
     "finalizer",
     "Greekand",
+    "idref",
+    "idrefs",
     "imslticc",
     "imsmanifest",
     "letrec",
@@ -47,6 +49,8 @@
     "subpaths",
     "takar",
     "tempuh",
+    "URLD",
+    "usagedata",
     "Vigna",
     "xinclude",
     "xlink",
@@ -58,6 +62,7 @@
   ],
   "ignorePaths": [
     "packages/olah/docs/conformance.md",
+    "packages/olah/src/asi/element-table.ts",
     "packages/olah/src/values/unicode-blocks.ts",
     "packages/olah/src/values/unicode-categories.ts"
   ],

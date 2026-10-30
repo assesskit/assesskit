@@ -97,6 +97,10 @@ one `SchemaSet` with `loadSchemaSet` in `beforeAll` and closes it in `afterAll`;
 seconds, and each schema is compiled once per set. Every test of a writer passes the output to `validateXmlFiles`
 ([node](node.md) lists the evidence on the schemas).
 
+`packages/olah/src/asi/element-table.ts` is generated from the pinned ASI schema by `scripts/asi-table.ts` (`pnpm asi-table`).
+`asi.xsd.test.ts` generates the table again and fails when the committed file differs. The same file validates documents that
+fast-check generates from the table, and checks that they use every element of the rows A1 to A130.
+
 ## Differential tests
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`

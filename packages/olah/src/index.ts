@@ -3,6 +3,8 @@
  *
  * @module @luthfanwakan/olah
  */
+
+export * from "./asi/index.js";
 export {
   DataError,
   type Issue,

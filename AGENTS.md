@@ -53,7 +53,7 @@ packages/olah/            the library
 packages/tempuh/          the player
 differential/             olah against Longsight qti3-core
 conformance/              the inventory and its tooling
-scripts/                  corpus and schema downloads, Unicode table generator
+scripts/                  corpus and schema downloads, Unicode and element table generators
 validation/               Python scripts that write fixtures
 biome/                    Biome GritQL plugins
 ```
@@ -69,6 +69,7 @@ pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
 pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
 pnpm unicode          # regenerates the Unicode tables of `values` from the pinned files
+pnpm asi-table        # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
 pnpm knip             # unused files, exports and dependencies
 pnpm conformance      # every row of a merged unit has a test; docs/conformance.md is current
 pnpm build            # tsc -b after deleting dist/, so that no stale output ships

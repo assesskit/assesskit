@@ -5,5 +5,19 @@
   "entryPoints": ["packages/olah"],
   "readme": "README.md",
   "out": "docs/api",
-  "treatWarningsAsErrors": true
+  "treatWarningsAsErrors": true,
+  "highlightLanguages": [
+    "bash",
+    "console",
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "json5",
+    "tsx",
+    "typescript",
+    "xml",
+    "yaml"
+  ]
 }
