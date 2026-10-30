@@ -75,7 +75,7 @@ These values are not PNP and complete the markup:
 | `--tempuh-rows`                                 | The rows of a vertical choice stack: `ceil(choices / columns)`. CSS cannot count children          | `1`     |
 | `--tempuh-choices-width`                        | `data-choices-container-width` as a length, such as `188px`. Typed `attr()` is not in the baseline | `auto`  |
 | `--tempuh-sticky-top`, `--tempuh-sticky-bottom` | The heights of the sticky chrome, so that a focused element scrolls clear of it (WCAG 2.4.11)      | `0px`   |
-| `data-tempuh-placing` on a graphic gap match    | Present while the candidate places a choice                                                        | absent  |
+| `data-tempuh-placing`                           | On a graphic gap match or a position object while the candidate holds a choice or the object       | absent  |
 
 ## Parts
 
@@ -118,19 +118,43 @@ The content root ([content](content.md)) builds these parts around the content, 
 The interactions of [interactions](interactions.md) add these parts. Their elements are the custom elements named for the kind,
 and the stylesheet reads the state from attributes:
 
-| Class or attribute                                                     | What it is                                                                                                                                                          |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tempuh-notes`                                                         | The limits, the hint and the announcements of an interaction, after its content; in a grid it takes the row after the last.                                         |
-| `tempuh-instruction`, `tempuh-hint`                                    | The limits that the candidate is told, and the hint for a response that is not valid, which has a mark in front of it.                                              |
-| `tempuh-token`, `tempuh-chip`, `tempuh-chip-button`, `tempuh-remove`   | A choice in the pool, a choice in a place, its button, and the button that takes it out. `aria-pressed` marks the one in hand.                                      |
-| `tempuh-drop`, `tempuh-pair`, `tempuh-target-content`                  | The button that puts the choice in hand in a place; the box of two places of an association; the content of a match target.                                         |
-| `data-tempuh-over`, `tempuh-dragging`                                  | The place under a drag, and the choice that is dragged.                                                                                                             |
-| `tempuh-slider`, `-track`, `-thumb`, `-end`, `-ticks`, `-tick`         | The slider. `data-orientation`, `data-tempuh-unset` (no value yet), `data-tempuh-disabled` and `tempuh-slider-stepped` (steps are labelled) are on `tempuh-slider`. |
-| `tempuh-fields`, `tempuh-editor`, `tempuh-editable`, `tempuh-counter`  | The fields of an extended text, the editor of XHTML, its editable area, and the counter of characters.                                                              |
-| `tempuh-preformatted`                                                  | A text area that keeps its spaces.                                                                                                                                  |
-| `tempuh-media-bar`, `-status`, `-time`, `-notice`                      | The controls of a media interaction, the plays, the time, and what the candidate waits for.                                                                         |
-| `tempuh-upload`, `-upload-status`, `tempuh-stored`, `tempuh-recording` | The picker and the buttons of an upload, what it says, the file that the response holds, and the indicator of a recording.                                          |
-| `tempuh-custom`                                                        | Where a host's hook draws a custom interaction.                                                                                                                     |
+| Class or attribute                                                    | What it is                                                                                                                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tempuh-notes`                                                        | The limits, the hint and the announcements of an interaction, after its content; in a grid it takes the row after the last.                                         |
+| `tempuh-instruction`, `tempuh-hint`                                   | The limits that the candidate is told, and the hint for a response that is not valid, which has a mark in front of it.                                              |
+| `tempuh-token`, `tempuh-chip`, `tempuh-chip-button`, `tempuh-remove`  | A choice in the pool, a choice in a place, its button, and the button that takes it out. `aria-pressed` marks the one in hand.                                      |
+| `tempuh-drop`, `tempuh-pair`, `tempuh-target-content`                 | The button that puts the choice in hand in a place; the box of two places of an association; the content of a match target.                                         |
+| `data-tempuh-over`, `tempuh-dragging`                                 | The place under a drag, and the choice that is dragged.                                                                                                             |
+| `tempuh-slider`, `-track`, `-thumb`, `-end`, `-ticks`, `-tick`        | The slider. `data-orientation`, `data-tempuh-unset` (no value yet), `data-tempuh-disabled` and `tempuh-slider-stepped` (steps are labelled) are on `tempuh-slider`. |
+| `tempuh-fields`, `tempuh-editor`, `tempuh-editable`, `tempuh-counter` | The fields of an extended text, the editor of XHTML, its editable area, and the counter of characters.                                                              |
+| `tempuh-preformatted`                                                 | A text area that keeps its spaces.                                                                                                                                  |
+
+The graphic interactions ([graphics](graphics.md)) put an image in a stage, with a layer over it that has the drawn size of the
+image. The stylesheet needs these parts and attributes:
+
+| Class or attribute                                                                   | What it is                                                                                                                        |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `tempuh-stage`, `tempuh-layer`                                                       | The image with its container, and the layer over it. A position object interaction uses `qti-position-object-stage` as the stage. |
+| `data-shape` on a hotspot                                                            | `rect`, `circle`, `ellipse`, `poly` or `default`. A circle and an ellipse have round faces; a polygon draws its outline as SVG.   |
+| `data-tempuh-small` on a hotspot or object                                           | Present while it is drawn smaller than a target; the stylesheet gives it a target of 24 pixels.                                   |
+| `tempuh-outline`, `tempuh-halo`                                                      | The SVG of a polygon, and its halo under the line.                                                                                |
+| `tempuh-badge`                                                                       | The number of a hotspot in an order.                                                                                              |
+| `tempuh-surface`, `tempuh-crosshair`                                                 | The part of the image that takes a click and the focus of the keyboard, and the crosshair that the arrow keys move.               |
+| `tempuh-marker`, `tempuh-object`, `tempuh-start`                                     | A marked point, a placed object, and the first point of a shape.                                                                  |
+| `tempuh-tray`, `tempuh-pick`, `tempuh-pick-label`                                    | The tray under the stage of a position object, and the button that holds the object.                                              |
+| `tempuh-links`, `tempuh-associations`                                                | The lines of a graphic associate, and the list of its pairs, with a `tempuh-remove` button each.                                  |
+| `tempuh-toolbar`, `tempuh-tools`, `tempuh-colors`, `tempuh-actions`, `tempuh-canvas` | The parts of a drawing.                                                                                                           |
+| `tempuh-draggable`, `tempuh-dragging`                                                | A source of a drag that is not on a board, and the source while it is carried.                                                    |
+| `tempuh-usage`                                                                       | How to operate the interaction, in text beside it.                                                                                |
+| `aria-disabled="true"` on a `tempuh-control`                                         | A hotspot of a graphic associate that olah's rules leave no pair for.                                                             |
+
+The player sets these custom properties as inline styles: `--tempuh-image-width` and `--tempuh-image-height` on a layer, the
+size of the image in the units of its coordinates; `--tempuh-scale` on a layer, the drawn pixels for one unit; `--tempuh-x`,
+`--tempuh-y`, `--tempuh-w` and `--tempuh-h` on a hotspot, object, marker or crosshair, its box or position in those units; and
+`--tempuh-swatch` on a color of the drawing.
+| `tempuh-media-bar`, `-status`, `-time`, `-notice` | The controls of a media interaction, the plays, the time, and what the candidate waits for. |
+| `tempuh-upload`, `-upload-status`, `tempuh-stored`, `tempuh-recording` | The picker and the buttons of an upload, what it says, the file that the response holds, and the indicator of a recording. |
+| `tempuh-custom` | Where a host's hook draws a custom interaction. |
 
 A hidden control is visually hidden, stays in the tab order, and shows its focus and its state on its face. The choices
 come first in the markup, for a screen reader, and `qti-choices-bottom` and `qti-choices-right` move them only for the

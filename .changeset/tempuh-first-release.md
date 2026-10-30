@@ -86,3 +86,10 @@ it against the declaration, which the engine accepts after the test ended and re
 `checkSubmission` in `@luthfanwakan/tempuh/protocol` checks a submission that arrived as JSON, and `mountSubmission` in
 `@luthfanwakan/tempuh/player` shows it read-only to a rater in a shadow root, with the body and the rubric in content roots,
 each response of the outcome, the correct responses, and files as images, players or links.
+
+The graphic interactions (`player`): `createInteractionRenderers` also draws the hotspot, select point, graphic order, graphic
+associate, graphic gap match, position object and drawing interactions as elements of the same kind. Their coordinates are
+measured in the pixels the author declared for the image. A graphic associate dims the hotspots that olah's rules leave no pair
+for, and a hotspot with a maximum of one choice clears when it is chosen again. Every interaction is answered with single clicks or
+the keyboard alone, a drag has a choose-then-place form, and targets smaller than 24 pixels are enlarged. The drawing stores the
+picture, in the media type of the image, through the host's `files`, and `settled()` of its element tells the host when it has.

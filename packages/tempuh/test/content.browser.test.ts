@@ -184,6 +184,12 @@ describe("images", () => {
     const [first, second] = content.findAll("img");
     expect([first?.getAttribute("width"), first?.getAttribute("height")]).toEqual(["180", "120"]);
     expect(second?.getAttribute("width")).toBe("50%");
+    // The size the author gave stays in attributes of its own, because the coordinates of the graphic interactions use it.
+    expect([first?.getAttribute("data-tempuh-width"), first?.getAttribute("data-tempuh-height")]).toEqual([
+      "120",
+      "80",
+    ]);
+    expect(second?.hasAttribute("data-tempuh-width")).toBe(false);
   });
 
   it("[T4] resolves the sources of a picture, with their srcset and sizes", () => {
@@ -321,6 +327,8 @@ describe("objects", () => {
     expect(image.alt).toBe("A dot in the page");
     expect(image.className).toBe("qti-width-6");
     expect(image.getAttribute("width")).toBe("80");
+    expect(image.getAttribute("data-tempuh-width")).toBe("40");
+    expect(image.hasAttribute("data-tempuh-height")).toBe(false);
     expect(content.root.querySelector("object")).toBeNull();
     await image.decode();
   });

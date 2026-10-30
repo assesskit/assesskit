@@ -187,7 +187,9 @@ a candidate with a refused URL or a descriptor that is not a width or a density 
 | Anything else                        | A link that opens in a tab of its own, with the fallback content or the message `toolOpenFile` as its text.                    |
 
 The `id`, `class`, `lang`, ARIA and `data-*` attributes of the object go to the element, and its `width` and `height`,
-multiplied by `mediaScale` when they are pixels, go to `img`, `video` and `iframe`. A file that the URL policy refuses
+multiplied by `mediaScale` when they are pixels, go to `img`, `video` and `iframe`. An `img` that an object or an `img` of the
+item makes keeps the pixel size the author gave it in `data-tempuh-width` and `data-tempuh-height`, which the coordinates of the
+graphic interactions are measured in ([graphics](graphics.md#shapes-and-coordinates)). A file that the URL policy refuses
 leaves the fallback content.
 
 ### Links
@@ -218,7 +220,7 @@ variant without the hazard where it can; the notice is the fallback for a hazard
 ## Interactions
 
 An interaction is drawn by the renderer registered for its kind in the `interactions` map, and as a placeholder when there is
-none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of fourteen kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element:
+none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of twenty-one kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element:
 
 ```ts
 import type { InteractionRenderers } from "@luthfanwakan/tempuh/player";

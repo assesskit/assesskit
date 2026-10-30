@@ -1749,7 +1749,15 @@ qti-order-interaction:not(.qti-orientation-horizontal) :is(.tempuh-choices, .tem
    unselected hidden choice shows when it has focus or is selected; in a graphic gap match also while the candidate
    places a choice (the player sets data-tempuh-placing). */
 
-:is(qti-hotspot-interaction, qti-graphic-gap-match-interaction) {
+:is(
+  qti-hotspot-interaction,
+  qti-graphic-order-interaction,
+  qti-graphic-associate-interaction,
+  qti-graphic-gap-match-interaction,
+  qti-select-point-interaction,
+  qti-position-object-interaction,
+  qti-drawing-interaction
+) {
   --tempuh-hotspot-line: var(--tempuh-accent);
   --tempuh-hotspot-halo: var(--tempuh-bg);
 }
@@ -1785,9 +1793,8 @@ qti-hotspot-interaction.qti-unselected-hidden
   > .tempuh-control:not(:checked, :focus-visible)
   + .tempuh-face,
 qti-graphic-gap-match-interaction.qti-unselected-hidden:not([data-tempuh-placing])
-  qti-associable-hotspot
-  > .tempuh-control:not(:checked, :focus-visible)
-  + .tempuh-face {
+  qti-associable-hotspot:not(:focus-within)
+  > .tempuh-face {
   border-color: transparent;
   outline-color: transparent;
 }
@@ -1920,7 +1927,8 @@ qti-choice-interaction > .tempuh-notes {
   grid-area: -1 / 1 / auto / -1;
 }
 
-:is(qti-match-interaction, qti-gap-match-interaction, qti-order-interaction) > .tempuh-notes {
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction)
+  > .tempuh-notes {
   grid-area: 4 / 1 / auto / -1;
 }
 
@@ -2021,7 +2029,8 @@ qti-gap > .tempuh-drop {
   box-shadow: 0 0.25rem 0.5rem color-mix(in srgb, var(--tempuh-fg) 35%, transparent);
 }
 
-qti-gap-match-interaction .tempuh-targets {
+qti-gap-match-interaction .tempuh-targets,
+qti-graphic-gap-match-interaction .tempuh-targets {
   display: block;
 }
 
@@ -2228,6 +2237,390 @@ qti-simple-associable-choice.tempuh-target {
   color: var(--tempuh-muted);
   font-size: 0.9em;
   text-align: end;
+}
+
+/* 6.8 Graphic interactions: an image with a layer over it that has the drawn size of the image, and in the layer what
+   the candidate points at. The player sets --tempuh-image-width and --tempuh-image-height on the layer, the size of the
+   image in the units of its coordinates, and --tempuh-x, --tempuh-y, --tempuh-w and --tempuh-h on a hotspot, its box in
+   those units, so that the boxes follow the image at any scale. The layer is positioned by its left and top, not
+   by logical properties, because coordinates run from the top left whatever the direction of the text. */
+
+:where(
+  qti-select-point-interaction,
+  qti-graphic-order-interaction,
+  qti-graphic-associate-interaction,
+  qti-position-object-interaction,
+  qti-drawing-interaction
+) {
+  display: block;
+}
+
+.tempuh-stage,
+qti-position-object-stage {
+  position: relative;
+  display: inline-block;
+  max-inline-size: 100%;
+  vertical-align: top;
+}
+
+:is(.tempuh-stage, qti-position-object-stage) > :is(img, picture),
+:is(.tempuh-stage, qti-position-object-stage) > picture > img {
+  display: block;
+}
+
+.tempuh-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  aspect-ratio: var(--tempuh-image-width) / var(--tempuh-image-height);
+  pointer-events: none;
+}
+
+.tempuh-layer > * {
+  pointer-events: auto;
+}
+
+.tempuh-layer > :is(qti-hotspot-choice, qti-associable-hotspot, .tempuh-object) {
+  position: absolute;
+  left: calc(var(--tempuh-x) / var(--tempuh-image-width) * 100%);
+  top: calc(var(--tempuh-y) / var(--tempuh-image-height) * 100%);
+  inline-size: calc(var(--tempuh-w) / var(--tempuh-image-width) * 100%);
+  block-size: calc(var(--tempuh-h) / var(--tempuh-image-height) * 100%);
+}
+
+/* A circle and an ellipse are their box with round corners; a rectangle and the whole image are their box. */
+:is(qti-hotspot-choice, qti-associable-hotspot):is([data-shape="circle"], [data-shape="ellipse"]) > .tempuh-face {
+  border-radius: 50%;
+}
+
+/* A hotspot or an object drawn smaller than a target (WCAG 2.2, 2.5.8) has a target of the minimum size centered on it. */
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-tempuh-small] > .tempuh-face::after,
+.tempuh-object[data-tempuh-small]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  inline-size: var(--tempuh-target-size);
+  block-size: var(--tempuh-target-size);
+  transform: translate(-50%, -50%);
+  border-radius: inherit;
+}
+
+/* A polygon draws its line and fill as SVG in its box, because a border cannot follow it: the box itself shows only the
+   ring of the focus, and the polygon takes the pointer. */
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"] > .tempuh-face {
+  border: 0;
+  outline-style: none;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"] > .tempuh-control:checked + .tempuh-face,
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"]
+  > .tempuh-control[aria-pressed="true"]
+  + .tempuh-face {
+  background-color: transparent;
+}
+
+.tempuh-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tempuh-outline polygon {
+  fill: transparent;
+  stroke: var(--tempuh-hotspot-line);
+  stroke-width: calc(var(--tempuh-border-width) * 2);
+  pointer-events: all;
+}
+
+.tempuh-outline polygon.tempuh-halo {
+  stroke: var(--tempuh-hotspot-halo);
+  stroke-width: calc(var(--tempuh-border-width) * 6);
+}
+
+.tempuh-control:is(:checked, [aria-pressed="true"]) + .tempuh-face .tempuh-outline polygon:not(.tempuh-halo) {
+  fill: color-mix(in srgb, var(--tempuh-hotspot-line) 35%, transparent);
+  stroke-width: calc(var(--tempuh-border-width) * 4);
+}
+
+.tempuh-control:focus-visible + .tempuh-face .tempuh-outline polygon:not(.tempuh-halo) {
+  stroke-dasharray: 6 3;
+}
+
+:is(.qti-unselected-hidden)
+  .tempuh-control:not(:checked, :focus-visible, [aria-pressed="true"])
+  + .tempuh-face
+  .tempuh-outline {
+  opacity: 0;
+}
+
+/* A control that is a button marks a pressed state as a checked control does. */
+:is(qti-hotspot-choice, qti-associable-hotspot) > .tempuh-control[aria-pressed="true"] + .tempuh-face {
+  border-width: calc(var(--tempuh-border-width) * 4);
+  background-color: color-mix(in srgb, var(--tempuh-hotspot-line) 35%, transparent);
+}
+
+/* The place of a hotspot in an order: a number on the hotspot, in the colors of its line, which does not rely on color. */
+.tempuh-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding-inline: 0.3em;
+  border-radius: 999px;
+  color: var(--tempuh-hotspot-halo);
+  background-color: var(--tempuh-hotspot-line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.tempuh-badge[hidden] {
+  display: none;
+}
+
+/* Select point and position object: the surface takes the pointer and the focus of the keyboard, the crosshair shows where
+   the arrow keys have moved to, and a marker is a point or an object that the candidate placed. */
+.tempuh-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: crosshair;
+}
+
+.tempuh-surface:focus-visible {
+  outline-offset: calc(var(--tempuh-focus-width) * -1);
+}
+
+qti-position-object-interaction:not([data-tempuh-placing]) .tempuh-surface {
+  pointer-events: none;
+}
+
+.tempuh-layer > :is(.tempuh-marker, .tempuh-crosshair, .tempuh-start) {
+  position: absolute;
+  left: calc(var(--tempuh-x) / var(--tempuh-image-width) * 100%);
+  top: calc(var(--tempuh-y) / var(--tempuh-image-height) * 100%);
+  transform: translate(-50%, -50%);
+}
+
+.tempuh-crosshair {
+  inline-size: 2rem;
+  block-size: 2rem;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--tempuh-hotspot-line), var(--tempuh-hotspot-line)) center / 100% 3px no-repeat,
+    linear-gradient(var(--tempuh-hotspot-line), var(--tempuh-hotspot-line)) center / 3px 100% no-repeat;
+  filter: drop-shadow(0 0 1px var(--tempuh-hotspot-halo)) drop-shadow(0 0 1px var(--tempuh-hotspot-halo));
+}
+
+.tempuh-layer > .tempuh-crosshair[hidden] {
+  display: none;
+}
+
+.tempuh-marker {
+  inline-size: var(--tempuh-target-size);
+  block-size: var(--tempuh-target-size);
+  padding: 0;
+  border: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-line);
+  border-radius: 50%;
+  outline: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-halo);
+  color: var(--tempuh-hotspot-line);
+  background-color: var(--tempuh-hotspot-halo);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tempuh-object {
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.tempuh-object > img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* The tray under the image of a stage shared by position object interactions must not widen the stage, whose width is that of
+   the image: a box of no width that is as wide as the stage adds nothing to its width. */
+.tempuh-tray {
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+
+/* The object in the tray: a pressed one has a thick border and a fill. */
+.tempuh-pick {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-block-start: 0.5rem;
+}
+
+:is(.tempuh-pick, .tempuh-tools button)[aria-pressed="true"] {
+  border-color: var(--tempuh-accent);
+  background-color: var(--tempuh-accent-surface);
+  box-shadow: inset 0 0 0 calc(var(--tempuh-border-width) * 3) var(--tempuh-accent);
+}
+
+.tempuh-draggable {
+  position: relative;
+  user-select: none;
+}
+
+/* A graphic gap match: a gap is a hotspot that holds the choices put in it, and its button, which takes the whole gap, puts
+   the choice that is in hand there. The chips stand above the button, so that the pointer reaches the choice, and the face of
+   the gap stays behind them. */
+qti-graphic-gap-match-interaction qti-associable-hotspot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  align-content: center;
+  justify-content: center;
+}
+
+qti-associable-hotspot > .tempuh-face:not(.tempuh-control + .tempuh-face) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+qti-associable-hotspot > .tempuh-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0;
+}
+
+qti-associable-hotspot .tempuh-chip {
+  position: relative;
+  z-index: 1;
+}
+
+/* Once a gap holds a choice, the choices cover its button, so the button for the next one is a target of its own beside them
+   (WCAG 2.2, 2.5.8). The chips come first in the gap, so the sibling selector stands for "a gap that holds a choice". */
+qti-associable-hotspot .tempuh-chip ~ .tempuh-drop {
+  position: relative;
+  inline-size: var(--tempuh-target-size);
+  block-size: var(--tempuh-target-size);
+}
+
+qti-associable-hotspot .tempuh-chip img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+/* A hotspot that olah's rules leave no pair for waits. */
+.tempuh-control[aria-disabled="true"] + .tempuh-face {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A graphic associate: the line between two hotspots, and the list of the pairs. */
+.tempuh-layer > .tempuh-links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tempuh-links line {
+  stroke: var(--tempuh-hotspot-line);
+  stroke-width: calc(var(--tempuh-border-width) * 3);
+}
+
+.tempuh-links line.tempuh-halo {
+  stroke: var(--tempuh-hotspot-halo);
+  stroke-width: calc(var(--tempuh-border-width) * 7);
+}
+
+.tempuh-associations {
+  margin-block: 0.5rem 0;
+  padding-inline-start: 1.25rem;
+}
+
+.tempuh-associations[hidden] {
+  display: none;
+}
+
+/* A drawing: the toolbar, the canvas over the image, and the mark of the first point of a shape. A swatch shows the color it
+   draws, and its pressed state a ring around it, so that no state relies on color alone. */
+.tempuh-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-block-end: 0.5rem;
+}
+
+:is(.tempuh-tools, .tempuh-colors, .tempuh-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tempuh-colors button {
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  background-color: var(--tempuh-swatch);
+}
+
+.tempuh-colors button[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--tempuh-bg),
+    0 0 0 calc(var(--tempuh-border-width) * 3 + 2px) var(--tempuh-fg);
+}
+
+.tempuh-layer > canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
+
+.tempuh-start {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-line);
+  border-radius: 50%;
+  outline: calc(var(--tempuh-border-width) * 2) solid var(--tempuh-hotspot-halo);
+  pointer-events: none;
+}
+
+.tempuh-layer > .tempuh-start[hidden] {
+  display: none;
+}
+
+/* How to operate the interaction, in text beside it (WCAG 2.2, 3.3.2). */
+.tempuh-usage {
+  margin-block: 0.5rem 0;
+  color: var(--tempuh-muted);
+  font-size: 0.875em;
 }
 
 /* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping (BPIG §5.2.9.7.9,

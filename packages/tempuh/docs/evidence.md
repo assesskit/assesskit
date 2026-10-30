@@ -56,6 +56,11 @@ Safari on macOS leaves form controls out of the tab order unless the person turn
 control and press its keys. `elements.browser.corpus.test.ts` renders every item of the examples that has one of these
 interactions, answers each, and runs axe on it.
 
+The tests of the graphic interactions ([graphics](graphics.md)) show items through `graphic-fixture.ts`, which waits for the
+pictures, keeps what a drawing uploads in memory and gives the interactions of `interactions-fixture.ts` their pictures as
+`data:` URLs that the test draws on a canvas. `graphic.browser.corpus.test.ts` renders the graphic items of the 1EdTech
+examples with their images, which the asset origin serves from the whole examples directory under `/c/<token>/corpus/`.
+
 The 1EdTech examples that run in the frame are tests of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads
 the examples, and `pnpm test:corpus` runs them in the three engines. The global setup serves the package of an example
 under `/c/<token>/<example>/`, as the asset gate would, and the `pci-fixture.ts` helpers mount an interaction as the

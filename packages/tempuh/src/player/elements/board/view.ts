@@ -4,7 +4,7 @@ import type { Notes } from "../notes.js";
 import type { Board } from "./model.js";
 
 /** The distance in pixels that a pointer moves before a press becomes a drag. */
-const DRAG_THRESHOLD = 4;
+export const DRAG_THRESHOLD = 4;
 
 /** A choice of the pool: the element that stands in the pool, what it shows, and its name for a person who cannot see it. */
 export interface BoardToken {
@@ -110,7 +110,9 @@ export class BoardView {
 
   /** Draws the board as the state holds it. */
   render(): void {
-    const { board, tokens, slots, messages } = this.#options;
+    const { board, tokens, slots, messages, root } = this.#options;
+    // The stylesheet shows the gaps of an image while the candidate has a choice in hand (VOCAB §1.2.10.3).
+    root.toggleAttribute("data-tempuh-placing", this.#held !== undefined);
     this.#buttons.clear();
     this.#drops.clear();
     for (const token of tokens) {

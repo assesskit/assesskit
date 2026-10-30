@@ -50,6 +50,9 @@ const DIST = resolve(process.cwd(), "../../../packages/tempuh/dist");
 /** The player with its dependencies in one file, which `run-engines.ts` makes before the containers start. */
 const PLAYER_BUNDLE = resolve(process.cwd(), "../../.smoke/player.js");
 
+/** The protocol with its dependencies in one file, which `run-engines.ts` makes with the bundle of the player. */
+const PROTOCOL_BUNDLE = resolve(process.cwd(), "../../.smoke/protocol.js");
+
 /** The directory that holds `mathjax` and `@mathjax` as npm lays them out, which the pages load MathJax from. */
 const MATHJAX_FILES = dirname(realpathSync(resolve(process.cwd(), "../../../packages/tempuh/node_modules/mathjax")));
 
@@ -80,6 +83,7 @@ const PCI_MODULE = `define(["qtiCustomInteractionContext"], function (context) {
 function locate(path: string): string | undefined {
   if (path === "/player.css" || path === "/dist/player.css") return PLAYER_CSS_FILE;
   if (path === "/dist/player/index.js") return PLAYER_BUNDLE;
+  if (path === "/dist/protocol/index.js") return PROTOCOL_BUNDLE;
   const within = (directory: string, relative: string): string | undefined => {
     const file = resolve(directory, `.${relative}`);
     return file.startsWith(`${directory}${sep}`) ? file : undefined;
@@ -90,7 +94,8 @@ function locate(path: string): string | undefined {
 }
 
 /**
- * Serves `dist/` at `/dist/`, except that `/dist/player/index.js` is the bundle of the player; `player.css` at `/player.css`
+ * Serves `dist/` at `/dist/`, except that `/dist/player/index.js` and `/dist/protocol/index.js` are the bundles of the player
+ * and the protocol, which import olah; `player.css` at `/player.css`
  * and `/dist/player.css`; MathJax and its fonts at `/mathjax/` and `/@mathjax/`; the module of the interaction at
  * `/pci/echo.js`; and an empty page at `/`. Returns the URL of the page and a function that stops it.
  */
@@ -444,6 +449,101 @@ const MOUNT_INTERACTIONS = `(async () => {
   window.scene = { responses, focus: (selector) => root.querySelector(selector).focus() };
 })()`;
 
+/**
+ * Mounts a hotspot, a select point, a position object, a graphic gap match and a drawing with the renderers of the interactions,
+ * in a shadow root, and gives them the descriptors that olah would. It collects the responses and the types of the pictures
+ * that the drawing stored in `window.graphic`, and `window.graphic.focus` focuses the element that a selector finds in the root.
+ */
+const MOUNT_GRAPHIC = `(async () => {
+  const { createBodyRenderer, createInteractionRenderers } = await import("/dist/player/index.js");
+  const { EN_MESSAGES } = await import("/dist/index.js");
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = 100;
+  const picture = canvas.toDataURL("image/png");
+  const object = (width, height) => ({ kind: "object", type: "image/png", data: picture, width, height, extensions: [], children: [] });
+  const area = (kind, identifier, shape, coords, more) => Object.assign({ kind, identifier, shape, coords, extensions: [] }, more);
+  const text = (value) => ({ kind: "text", value });
+  const gap = (identifier) => ({ kind: "gap-text", identifier, matchMax: 1, extensions: [], children: [text(identifier)] });
+  const nodes = [
+    { kind: "hotspot-interaction", responseIdentifier: "H", maxChoices: 1, extensions: [], image: object("200", "100"), hotspotChoices: [
+      area("hotspot-choice", "A", "circle", "40,50,20"), area("hotspot-choice", "B", "rect", "100,20,160,80"), area("hotspot-choice", "C", "poly", "10,10,60,10,35,40")] },
+    { kind: "select-point-interaction", responseIdentifier: "S", maxChoices: 2, extensions: [], image: object("200", "100") },
+    { kind: "position-object-stage", extensions: [], image: object("200", "100"), positionObjectInteractions: [
+      { kind: "position-object-interaction", responseIdentifier: "P", maxChoices: 1, extensions: [], image: object("16", "16") }] },
+    { kind: "graphic-gap-match-interaction", responseIdentifier: "G", extensions: [], image: object("200", "100"), choices: [gap("X")],
+      associableHotspots: [area("associable-hotspot", "H1", "rect", "10,10,70,40", { matchMax: 1 })] },
+    { kind: "drawing-interaction", responseIdentifier: "D", extensions: [], image: object("200", "100") },
+  ];
+  const uploads = [];
+  const files = {
+    upload: async (bytes, mimeType) => { uploads.push(mimeType); return { reference: "f" + uploads.length, mimeType }; },
+    url: (file) => file.reference,
+  };
+  const renderer = createBodyRenderer({
+    messages: EN_MESSAGES,
+    assets: (path) => path,
+    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/" }),
+  });
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(await (await fetch("/player.css")).text());
+  const host = document.createElement("div");
+  const root = host.attachShadow({ mode: "open" });
+  root.adoptedStyleSheets = [sheet];
+  root.append(...renderer.nodes(nodes));
+  document.body.append(host);
+  const choice = (identifier) => ({ identifier, fixed: false, showHide: "show" });
+  const describe = (kind, responseIdentifier, cardinality, baseType, choices, constraints, matchSets) => ({
+    kind, responseIdentifier, declaration: { cardinality, baseType }, bindings: [{ cardinality, baseTypes: [baseType] }],
+    choices, constraints, shuffle: false, ...(matchSets ? { matchSets } : {}),
+  });
+  const descriptors = new Map([
+    ["H", describe("hotspot-interaction", "H", "single", "identifier", [choice("A"), choice("B"), choice("C")], { maxChoices: 1 })],
+    ["S", describe("select-point-interaction", "S", "multiple", "point", [], { maxChoices: 2 })],
+    ["P", describe("position-object-interaction", "P", "single", "point", [], { maxChoices: 1 })],
+    ["G", describe("graphic-gap-match-interaction", "G", "multiple", "directedPair", [choice("X"), choice("H1")], {}, [[choice("X")], [choice("H1")]])],
+    ["D", describe("drawing-interaction", "D", "single", "file", [], {})],
+  ]);
+  const responses = [];
+  root.addEventListener("tempuh-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
+  const elements = [];
+  for (const element of root.querySelectorAll("*")) {
+    const descriptor = descriptors.get(element.getAttribute("response-identifier"));
+    if (descriptor) {
+      element.descriptor = descriptor;
+      elements.push(element);
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  window.graphic = { root, elements, responses, uploads, focus: (selector) => root.querySelector(selector).focus() };
+})()`;
+
+/** What the keyboard did to the graphic interactions, as JSON: the responses they dispatched, the shapes, and the pictures stored. */
+const READ_GRAPHIC = `(async () => {
+  const { root, elements, responses, uploads } = window.graphic;
+  await Promise.all(elements.map((element) => element.settled()));
+  const [circle, rect] = [...root.querySelectorAll("qti-hotspot-choice")].map((area) => area.getBoundingClientRect());
+  const stage = root.querySelector(".tempuh-layer").getBoundingClientRect();
+  const inStage = (box) => [box.left - stage.left, box.top - stage.top, box.width, box.height].map(Math.round);
+  return JSON.stringify({
+    responses,
+    uploads,
+    // INFO section 7.9: a circle is its center and radius, a rectangle its corners, in the units of the 200 by 100 image.
+    circle: inStage(circle),
+    rect: inStage(rect),
+    polygon: root.querySelectorAll('qti-hotspot-choice[data-shape="poly"] polygon').length,
+  });
+})()`;
+
+/** What {@link READ_GRAPHIC} reads. */
+interface GraphicReading {
+  readonly responses: readonly [string, { readonly baseType: string }][];
+  readonly uploads: readonly string[];
+  readonly circle: readonly number[];
+  readonly rect: readonly number[];
+  readonly polygon: number;
+}
+
 /** The check of the worklet of the WAV recording, which runs in the page: the context loads it and makes a node of its processor. */
 const RECORDER_WORKLET = `(async () => {
   const context = new AudioContext();
@@ -651,6 +751,54 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           ["T", { cardinality: "single", baseType: "string", value: "ok" }],
         ]);
         assert.equal(await page.evaluate(RECORDER_WORKLET), 1);
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "answers the graphic interactions by keyboard and stores a drawing in the type of its image",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        await page.evaluate(MOUNT_GRAPHIC);
+        await page.evaluate(`window.graphic.focus("qti-hotspot-choice:nth-of-type(2) > input")`);
+        await page.keyboard.press(" ");
+        await page.evaluate(`window.graphic.focus("qti-select-point-interaction .tempuh-surface")`);
+        await page.keyboard.press("Enter");
+        await page.evaluate(`window.graphic.focus("button.tempuh-pick")`);
+        await page.keyboard.press("Enter");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Enter");
+        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.tempuh-token")`);
+        await page.keyboard.press(" ");
+        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.tempuh-drop")`);
+        await page.keyboard.press(" ");
+        await page.evaluate(`window.graphic.focus('button[data-tool="rectangle"]')`);
+        await page.keyboard.press(" ");
+        await page.evaluate(`window.graphic.focus("qti-drawing-interaction .tempuh-surface")`);
+        await page.keyboard.press("Enter");
+        await page.keyboard.press("ArrowRight");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Enter");
+        const reading: GraphicReading = JSON.parse(String(await page.evaluate(READ_GRAPHIC)));
+        assert.deepEqual(reading.circle, [20, 30, 40, 40]);
+        assert.deepEqual(reading.rect, [100, 20, 60, 60]);
+        assert.equal(reading.polygon, 2);
+        assert.deepEqual(
+          reading.responses.map(([identifier]) => identifier),
+          ["H", "S", "P", "G", "D"],
+        );
+        const answers = reading.responses.map(([, value]) => value);
+        assert.deepEqual(answers.slice(0, 4), [
+          { cardinality: "single", baseType: "identifier", value: "B" },
+          { cardinality: "multiple", baseType: "point", values: [[100, 50]] },
+          { cardinality: "single", baseType: "point", value: [100, 55] },
+          { cardinality: "multiple", baseType: "directedPair", values: [["X", "H1"]] },
+        ]);
+        assert.equal(answers[4]?.baseType, "file");
+        assert.deepEqual(reading.uploads, ["image/png"]);
       } finally {
         await stop();
       }

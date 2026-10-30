@@ -153,6 +153,14 @@ export abstract class InteractionElement extends HTMLElement {
   /** Shows the response and whether the candidate can respond. */
   protected abstract sync(descriptor: InteractionDescriptor, messages: Messages): void;
 
+  /**
+   * Resolves when the response is final, which is at once unless the element has work that its response waits for, such as
+   * a drawing that is being stored. The host waits for it before it submits.
+   */
+  settled(): Promise<void> {
+    return Promise.resolve();
+  }
+
   /** Returns the elements that say they are invalid and are described by the limits and the hints. Default: the element. */
   protected controls(): readonly Element[] {
     return [this];

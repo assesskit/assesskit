@@ -13,11 +13,15 @@ if (unknown.length > 0) {
   process.exit(1);
 }
 
-// The player imports olah by package name, which a browser cannot resolve, so the pages of the smoke test load it as one
-// bundle. The containers cannot make it: they run on the node_modules of this machine, and esbuild is a native program.
+// The player and the protocol import olah by package name, which a browser cannot resolve, so the pages of the smoke test load
+// each as one bundle. The containers cannot make them: they run on the node_modules of this machine, and esbuild is a native
+// program.
 await build({
-  entryPoints: [resolve(root, "packages/tempuh/dist/player/index.js")],
-  outfile: resolve(root, "compat/.smoke/player.js"),
+  entryPoints: {
+    player: resolve(root, "packages/tempuh/dist/player/index.js"),
+    protocol: resolve(root, "packages/tempuh/dist/protocol/index.js"),
+  },
+  outdir: resolve(root, "compat/.smoke"),
   bundle: true,
   format: "esm",
   target: ["chrome111", "firefox115", "safari16.4"],

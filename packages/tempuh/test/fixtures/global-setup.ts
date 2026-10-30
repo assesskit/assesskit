@@ -16,6 +16,7 @@ const EXAMPLES = resolve(import.meta.dirname, "../../../../.cache/corpus/qti-exa
 const EXAMPLE_FILES: ReadonlyMap<string, string> = new Map([
   ["pci-simple", resolve(EXAMPLES, "pci-simple/src")],
   ["pci", resolve(EXAMPLES, "pci/src")],
+  ["corpus", resolve(EXAMPLES, "..")],
 ]);
 const CDN_FILES = resolve(import.meta.dirname, "cdn");
 const CONTENT_FILES = resolve(import.meta.dirname, "content");

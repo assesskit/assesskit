@@ -117,6 +117,66 @@ export interface Messages {
   readonly speechLink: string;
   /** The word that the typing echo says for the space character. */
   readonly typingSpace: string;
+  /** The word before the number of a point that the candidate marked on an image, as in "Point 2". */
+  readonly graphicPoint: string;
+  /** The notice after the candidate marked a point. */
+  readonly graphicPointMarked: string;
+  /** The notice after the candidate took a point, an object, an association or a choice away. */
+  readonly graphicRemoved: string;
+  /** The name of the image on which the keyboard moves a crosshair to mark a point. */
+  readonly graphicPicker: string;
+  /** The instructions for marking a point on an image with one pointer or with the keyboard. */
+  readonly graphicPickerHint: string;
+  /** The action that takes an object in hand to place it on an image; the name of the object follows it. */
+  readonly graphicPlace: string;
+  /** The name of an object that the candidate places on an image, when the object has no text alternative. */
+  readonly graphicObject: string;
+  /** The notice after the candidate placed an object. */
+  readonly graphicPlaced: string;
+  /** The instructions for placing an object on an image with one pointer, by dragging, or with the keyboard. */
+  readonly graphicPlaceHint: string;
+  /** The notice after the candidate chose the first of two areas to join, which says what to do next. */
+  readonly graphicChooseSecond: string;
+  /** The notice after the candidate joined two areas. */
+  readonly graphicJoined: string;
+  /** The instructions for joining areas of an image in pairs. */
+  readonly graphicAssociateHint: string;
+  /** The name of the group of drawing tools of a drawing question. */
+  readonly drawTools: string;
+  /** The name of the pen, a drawing tool that follows the pointer. */
+  readonly drawToolPen: string;
+  /** The name of the eraser, a drawing tool that follows the pointer and takes away what was drawn. */
+  readonly drawToolEraser: string;
+  /** The name of the tool that draws a straight line between two points. */
+  readonly drawToolLine: string;
+  /** The name of the tool that draws a rectangle between two corners. */
+  readonly drawToolRectangle: string;
+  /** The name of the tool that draws an ellipse in the box between two corners. */
+  readonly drawToolEllipse: string;
+  /** The name of the tool that fills a region of the picture with a color. */
+  readonly drawToolFill: string;
+  /** The name of the group of colors of a drawing question. */
+  readonly drawColors: string;
+  /** The name of the color black. */
+  readonly drawColorBlack: string;
+  /** The name of the color red. */
+  readonly drawColorRed: string;
+  /** The name of the color green. */
+  readonly drawColorGreen: string;
+  /** The name of the color blue. */
+  readonly drawColorBlue: string;
+  /** The name of the color yellow. */
+  readonly drawColorYellow: string;
+  /** The action that takes back the last thing drawn. */
+  readonly drawUndo: string;
+  /** The action that takes away everything drawn and brings back the picture of the question. */
+  readonly drawClear: string;
+  /** The notice after the candidate picked the first point of a shape, which says what to do next. */
+  readonly drawStartSet: string;
+  /** The notice when the drawing could not be stored or read, with the way out. */
+  readonly drawSaveFailed: string;
+  /** The instructions for drawing: the pen needs a pointer, and the other tools can be used with one pointer or the keyboard. */
+  readonly drawHint: string;
   /** The heading of the feedback that the candidate gets after an attempt or during a test. */
   readonly feedbackTitle: string;
   /** The notice of a question with content that the candidate asked to avoid and that could not be left out; a list of the hazards follows it. */

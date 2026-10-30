@@ -1,6 +1,6 @@
 import { childNodes, type ModelNode } from "@luthfanwakan/olah/asi";
 import { isRecord } from "../../checks.js";
-import { scaleSize, setCommonAttributes } from "./attributes.js";
+import { declareSize, scaleSize, setCommonAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";
 import { embed } from "./embed.js";
 import { resolveUrl } from "./urls.js";
@@ -42,5 +42,9 @@ export function renderObject(node: ModelNode, context: RenderContext): Node[] {
   });
   const [first] = embedded;
   if (first instanceof Element) setCommonAttributes(first, node, context);
+  if (first instanceof HTMLImageElement) {
+    if (width !== undefined) declareSize(first, "width", width);
+    if (height !== undefined) declareSize(first, "height", height);
+  }
   return embedded;
 }

@@ -1,5 +1,13 @@
 import type { InteractionDescriptor } from "@luthfanwakan/olah/interactions";
-import { type Cardinality, container, type Pair, type Primitive, single, type Value } from "@luthfanwakan/olah/values";
+import {
+  type Cardinality,
+  container,
+  type Pair,
+  type Point,
+  type Primitive,
+  single,
+  type Value,
+} from "@luthfanwakan/olah/values";
 
 /**
  * Returns the cardinality that the response variable of an interaction has: the declared one, else the first that the
@@ -28,6 +36,14 @@ export function pairsOf(value: Value | null): Pair[] {
   );
 }
 
+/** Returns the points of a value, such as those that a select point interaction holds. */
+export function pointsOf(value: Value | null): Point[] {
+  return primitivesOf(value).filter(
+    (primitive): primitive is Point =>
+      Array.isArray(primitive) && typeof primitive[0] === "number" && typeof primitive[1] === "number",
+  );
+}
+
 /**
  * Builds the response from values of one base type. Several values need a container; one value is `single` where the
  * variable is declared `single`, so that a candidate who selects one choice of a multiple variable still gives a
@@ -37,7 +53,7 @@ export function pairsOf(value: Value | null): Pair[] {
  */
 export function responseOf(
   descriptor: InteractionDescriptor,
-  baseType: "directedPair" | "identifier" | "pair",
+  baseType: "directedPair" | "identifier" | "pair" | "point",
   values: readonly Primitive[],
   ordered = false,
 ): Value | null {
