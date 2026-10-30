@@ -51,11 +51,16 @@ function walkChildren(walk: Walk, children: readonly PlannedChild[], depth: numb
 }
 
 /**
- * Returns the navigation map of the test part that holds the item presented (E19): the visible sections that hold a
+ * Returns the navigation map of the test part that holds the item presented, or the adaptive section whose first stage
+ * is awaited (E19): the visible sections that hold a
  * listed item, and the item instances in the order of the plan. A nonlinear part lists every instance and marks those a
  * `move` reaches; a linear part lists those presented so far, none reachable.
  */
-export function navigationOf(course: Course, state: DeliveryState, placement: Placement): NavigationEntry[] {
+export function navigationOf(
+  course: Course,
+  state: DeliveryState,
+  placement: Pick<Placement, "part">,
+): NavigationEntry[] {
   const part = state.plan.parts.find((each) => each.identifier === placement.part);
   if (part === undefined) return [];
   const linear = partModel(course.structure, placement).navigationMode === "linear";

@@ -74,6 +74,11 @@ const EXPECTED: Readonly<Record<DeliveryEventType, readonly [CaliperEventType, s
   "support-changed": null,
   "variant-selected": null,
   "hazard-unavoidable": null,
+  "scoring-requested": null,
+  "scores-applied": null,
+  "scores-replaced": null,
+  "cat-requested": null,
+  "cat-stage-added": null,
 };
 const TYPES = Object.keys(EXPECTED) as DeliveryEventType[];
 

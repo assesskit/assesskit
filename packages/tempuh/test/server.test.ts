@@ -27,6 +27,11 @@ const EVERY_TYPE: Readonly<Record<DeliveryEventType, true>> = {
   "support-changed": true,
   "variant-selected": true,
   "hazard-unavoidable": true,
+  "scoring-requested": true,
+  "scores-applied": true,
+  "scores-replaced": true,
+  "cat-requested": true,
+  "cat-stage-added": true,
 };
 const TYPES = Object.keys(EVERY_TYPE) as DeliveryEventType[];
 

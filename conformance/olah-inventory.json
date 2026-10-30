@@ -39,7 +39,8 @@
     "OB18",
     "OB13a",
     "OB13b",
-    "OB17"
+    "OB17",
+    "OB16"
   ],
   "rows": [
     {
@@ -5548,8 +5549,8 @@
     },
     {
       "id": "C9",
-      "construct": "Assessment Result in the REST/JSON binding (`context`, `testResult`, `itemResult`)",
-      "source": "CAT §4.3",
+      "construct": "Assessment Result in the REST/JSON binding (`context`, `testResult`, `itemResult`); `datestamp` is `format: date-time`, RFC 3339 with an offset",
+      "source": "CAT §4.3, CAT binding Appendix B1.2",
       "modules": ["cat", "(types)"],
       "evidence": ["S"],
       "unit": "OB9"
@@ -6326,8 +6327,8 @@
     },
     {
       "id": "G21",
-      "construct": "CAT REST/JSON field names of Assessment Result are not public",
-      "source": "CAT §4.3",
+      "construct": "CAT REST/JSON field names of Assessment Result: public in the OpenAPI 3.0 listing of CAT binding Appendix B1.2, though the OpenAPI addresses that the binding names return 404",
+      "source": "CAT §4.3, CAT binding Appendix B1.2",
       "modules": ["cat"],
       "evidence": ["S"],
       "unit": "OB9"

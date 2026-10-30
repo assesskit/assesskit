@@ -87,9 +87,13 @@ sends a candidate's results there.
 - Create Section is not idempotent: the host makes it once and gives the returned identifier to the delivery definition.
 - A missing `sessionState` in an answer means there is none. A stateless engine sends one, and the next Submit Results
   request returns it unchanged (CAT §3.3, §3.4).
-- The REST binding is the adapter's concern. The port carries the typed `AssessmentResult` of [results](results.md); the JSON
-  field names of the binding are not public, so olah does not serialize it. An engine may leave out the context of the report
-  it returns, which the model requires; the adapter then supplies `{ sessionIdentifiers: [] }`.
+- The REST binding is the adapter's concern. The port carries the typed `AssessmentResult` of [results](results.md), and olah
+  does not serialize it: the field names of the JSON binding are those of the OpenAPI 3.0 listing in Appendix B1.2 of the
+  [CAT binding](https://www.imsglobal.org/spec/cat/v1p0/bind), which an adapter writes (the OpenAPI addresses that the binding
+  names return 404, so the listing in the document is the source). The binding declares `datestamp` as `format: date-time`,
+  RFC 3339 with an offset, while an `xs:dateTime` of Results Reporting may lack one; the reports that the delivery engine builds
+  always have `Z`. An engine may leave out the context of the report it returns, which the model requires; the adapter then
+  supplies `{ sessionIdentifiers: [] }`.
 - Access tokens, OAuth and HTTPS (CAT §5) are the adapter's concern.
 
 ## Section data

@@ -103,3 +103,15 @@ allowed actions, supports with their settings, hazards, the variant, the link to
 interactions. `viewToJson` and `viewFromJson`, and `actionToJson` and `parseCandidateAction`, carry values as `WireValue`;
 `parseCandidateAction` refuses the actions of the host and actions above the limits `DEFAULT_ACTION_LIMITS` sets, and
 `stamp` checks the action it stamps.
+
+Pending work and results (`delivery`): `Engine.pending` lists what a session waits on the host for. A scoring request is made
+for each externally scored outcome of an item when its session is over, and of the test when the responses its covers name
+are over or the test ends, with the declaration, the mode, the covers resolved to instances, presented or not, and the exact
+submitted responses. `supply-scores` gives its value in any state, also after the test ended, and a second supply replaces
+the first; the supplied value is the starting value of the outcome in every later run of outcome processing. `scorerView`
+gives a rater the rubric, the items as the candidate saw them and the answers. A link to a tool is an item scored by its tool
+through `SCORE` and `MAXSCORE`. An adaptive section asks its CAT engine for its stages: Create Session on entering, Submit
+Results when the first `stageLength` items are submitted or the candidate leaves, with the minimal report and the earlier
+results that changed, and End Session when the candidate leaves before the engine ends the session. `cat-response` gives the
+answers, which add the stages and merge the outcomes the engine reports, and `drainCat` makes the requests through a
+`CatPort`. `results` assembles the Results Reporting report of a session, with datestamps in RFC 3339 with an offset.

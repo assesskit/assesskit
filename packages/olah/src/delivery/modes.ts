@@ -5,7 +5,7 @@ import type { Placement } from "./plan-index.js";
 import type { TestStructure } from "./structure.js";
 
 /** Returns the test part that holds an item instance. */
-export function partModel(structure: TestStructure, placement: Placement): TestPart {
+export function partModel(structure: TestStructure, placement: Pick<Placement, "part">): TestPart {
   const part = structure.part(placement.part);
   if (part === undefined)
     throw new DataError(`The plan names ${describe(placement.part)}, which the test does not have.`);

@@ -23,6 +23,11 @@ import type { ItemKey } from "./plan.js";
  * | `support-changed`    | turned a support on or off; `detail` is its name, a space, and `on` or `off` (BPIG §5.3)     |
  * | `variant-selected`   | chose the variant that `item` presents; `detail` is the identifier of its resource (B100)    |
  * | `hazard-unavoidable` | presents `item` with hazards the candidate avoids, as no variant is free of them; `detail` lists them (B100) |
+ * | `scoring-requested`  | made a scoring request for the outcome of `item`, or of the test `scope`; `detail` is the identifier of the request (E13) |
+ * | `scores-applied`     | applied the first score supplied for a request; `detail` is its identifier (E15)             |
+ * | `scores-replaced`    | replaced a score that an earlier supply gave; `detail` is the identifier of the request (E15) |
+ * | `cat-requested`      | made a request of a CAT engine for the adaptive section `scope`; `detail` is `<kind> <identifier>` (E18) |
+ * | `cat-stage-added`    | added the items of a stage to the adaptive section `scope`; `detail` lists their identifiers (C8) |
  */
 export type DeliveryEventType =
   | "presented"
@@ -42,7 +47,12 @@ export type DeliveryEventType =
   | "resumed"
   | "support-changed"
   | "variant-selected"
-  | "hazard-unavoidable";
+  | "hazard-unavoidable"
+  | "scoring-requested"
+  | "scores-applied"
+  | "scores-replaced"
+  | "cat-requested"
+  | "cat-stage-added";
 
 /** An event of a step of a session. */
 export interface DeliveryEvent {

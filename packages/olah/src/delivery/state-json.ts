@@ -25,6 +25,7 @@ import { readEntries, readValues, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey } from "./item-key.js";
 import { itemSessionFromJson, itemSessionToJson } from "./item-session-json.js";
 import { DELIVERY_STATUSES } from "./names.js";
+import { catFromJson, catToJson, reportFromJson, scoringFromJson, scoringToJson } from "./pending-json.js";
 import type { PlannedChild, PlannedPart, TestPlan } from "./plan.js";
 import { readSessionSupport } from "./support-json.js";
 
@@ -68,6 +69,9 @@ export function serializeState(state: DeliveryState): string {
     clocks: state.clocks,
     supports: [...state.supports],
     needs: state.needs,
+    scoring: scoringToJson(state.scoring),
+    cat: catToJson(state.cat),
+    report: state.report,
   });
 }
 
@@ -178,17 +182,19 @@ function readTestingTime(json: unknown): TestingTime {
 
 function readNeeds(json: unknown): CandidateNeeds {
   checkRecord(json, "The needs of the state must be an object");
-  const { testingTime, translation } = json;
+  const { testingTime, translation, personalNeeds } = json;
   checkArray(json.avoidedHazards, "The avoided hazards of the state must be an array");
   const avoidedHazards = json.avoidedHazards.map((term) => {
     checkChoice(term, "An avoided hazard of the state", PNP_HAZARDS);
     return term;
   });
   if (translation !== undefined) checkString(translation, "The translation of the state");
+  if (personalNeeds !== undefined) checkString(personalNeeds, "The personal needs of the state");
   return {
     ...(testingTime === undefined ? {} : { testingTime: readTestingTime(testingTime) }),
     avoidedHazards,
     ...(translation === undefined ? {} : { translation }),
+    ...(personalNeeds === undefined ? {} : { personalNeeds }),
   };
 }
 
@@ -232,5 +238,8 @@ export function deserializeState(text: string): DeliveryState {
     clocks: json.clocks.map(readClock),
     supports: readSupports(json.supports),
     needs: readNeeds(json.needs),
+    scoring: scoringFromJson(json.scoring),
+    cat: catFromJson(json.cat),
+    report: reportFromJson(json.report),
   };
 }

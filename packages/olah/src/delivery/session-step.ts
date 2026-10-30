@@ -2,12 +2,14 @@ import type { AssessmentItem } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { DataError, OlahError } from "../errors.js";
 import type { SupportName } from "../pnp/index.js";
-import { assign } from "../processing/assign.js";
+import { assign, describeType } from "../processing/assign.js";
 import { evaluateTestExpression, type ProcessingContext, runOutcomeProcessing } from "../processing/index.js";
 import { restoreRandom, type SeededRandom } from "../random.js";
-import type { Value } from "../values/index.js";
-import type { Action } from "./action.js";
+import { normalizeValue, type Value } from "../values/index.js";
+import type { Action, HostAction } from "./action.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
+import { answerCat, type CatChange, leaveCat, startCat, submitDue } from "./cat-flow.js";
+import { type CatSession, catTestOutcomes, findCat, partOfSection, sectionKeys, withCat } from "./cat-session.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
 import { expiriesOf, maximumAt, type RunningScope, runningScopes } from "./deadlines.js";
 import {
@@ -26,16 +28,18 @@ import { partModel, submissionModeOf } from "./modes.js";
 import {
   type Destination,
   destinationAfter,
-  itemAfterPart,
-  nextItem,
+  destinationAfterPart,
+  destinationAfterSection,
   PART_END,
   previousItem,
   type RuleContext,
+  startDestination,
   TEST_END,
 } from "./navigation.js";
 import { type ItemKey, sameKey } from "./plan.js";
 import { liesIn, type Placement, planIndex } from "./plan-index.js";
 import { type Refusal, refusal } from "./refusal.js";
+import { dueRequests, fitScore, suppliedTestOutcomes } from "./scoring.js";
 import { SessionScope } from "./session-scope.js";
 import { chooseVariant } from "./variants.js";
 
@@ -65,17 +69,12 @@ function leaves(
   scope: RunningScope,
   here: Placement,
   destination: Destination,
-  target: Placement | undefined,
+  target: Pick<Placement, "part" | "sections"> | undefined,
 ): boolean {
   if (scope.scope === "test") return destination.to === "test-end";
   if (scope.scope === "item") return false;
   if (target === undefined || target.part !== here.part) return true;
   return scope.scope === "section" && !liesIn(target, scope);
-}
-
-/** Returns the destination that an item instance, or no instance, is. */
-function destinationOf(key: ItemKey | undefined): Destination {
-  return key === undefined ? TEST_END : { to: "item", key };
 }
 
 /**
@@ -105,8 +104,10 @@ export class SessionStep {
   /** Starts the session at its first item, or ends a test that has none (INFO §2.8). */
   begin(at: number): Refusal | undefined {
     const { structure } = this.course;
-    const first = this.navigate(at, (rules) => destinationOf(nextItem(structure, this.state.plan, undefined, rules)));
-    return first.to === "item" ? this.enter(first.key, at, false) : this.endTest(at);
+    const first = this.navigate(at, (rules) => startDestination(structure, this.state.plan, rules));
+    const refused = first.to === "item" ? this.enter(first.key, at, false) : this.arrive(first, at);
+    this.reconcile(at);
+    return refused;
   }
 
   /**
@@ -115,22 +116,28 @@ export class SessionStep {
    */
   apply(action: Action): Refusal | undefined {
     const { at } = action;
-    if (this.ended()) return refusal("ended", "The test has ended.", "INFO §2.8");
+    // The host answers scoring and CAT requests in any state, also after the test ended (E15, E18).
+    const answer = action.type === "supply-scores" || action.type === "cat-response";
+    if (this.ended() && !answer) return refusal("ended", "The test has ended.", "INFO §2.8");
     if (at < this.state.at) {
       const message = `The action at ${at} is earlier than the latest step of the session at ${this.state.at}.`;
       return refusal("clock-regression", message, "INFO §2.2.2.2");
     }
-    if (this.state.status === "suspended" && action.type !== "resume") {
+    if (this.state.status === "suspended" && action.type !== "resume" && !answer) {
       return refusal("suspended", "The candidate session is suspended; it goes on when it is resumed.", "INFO §2.2.1");
     }
     const expired = this.expireUntil(at);
     if (expired !== undefined) return expired;
     this.advance(at);
-    if (this.ended()) {
-      if (action.type === "time") return undefined;
-      return refusal("time-over", "The test ended when a maximum time passed.", "INFO §7.40.3");
+    if (this.ended() && !answer) {
+      if (action.type !== "time")
+        return refusal("time-over", "The test ended when a maximum time passed.", "INFO §7.40.3");
+      this.reconcile(at);
+      return undefined;
     }
-    return this.perform(action);
+    const refused = this.perform(action);
+    if (refused === undefined) this.reconcile(at);
+    return refused;
   }
 
   private ended(): boolean {
@@ -139,6 +146,13 @@ export class SessionStep {
 
   private perform(action: Action): Refusal | undefined {
     const { at } = action;
+    switch (action.type) {
+      case "supply-scores":
+        return this.supply(action);
+      case "cat-response":
+        return this.catResponse(action);
+    }
+    if (this.state.current === undefined) return this.idle(action);
     switch (action.type) {
       case "time":
         return undefined;
@@ -202,6 +216,7 @@ export class SessionStep {
       outcomes: this.state.outcomes,
       scope: new SessionScope(this.course, this.state),
       context: this.processing(),
+      catStarted: (section, instance) => findCat(this.state, section, instance) !== undefined,
     };
   }
 
@@ -261,10 +276,11 @@ export class SessionStep {
     if (!this.submitted) return;
     this.submitted = false;
     const { test } = this.course.structure;
+    const kept = this.keptOutcomes();
     try {
       const outcomes = runOutcomeProcessing(
         test.model,
-        new Map(),
+        kept,
         new SessionScope(this.course, this.state),
         this.processing(),
       );
@@ -272,9 +288,17 @@ export class SessionStep {
       this.events.push({ type: "outcome-processed", at, scope: test.model.identifier });
     } catch (error) {
       if (!(error instanceof OlahError)) throw error;
-      this.state = { ...this.state, outcomes: this.course.outcomes };
+      this.state = { ...this.state, outcomes: new Map([...this.course.outcomes, ...kept]) };
       this.failed(at, error.message);
     }
+  }
+
+  /**
+   * Returns the values that outcome processing starts the external-scored outcomes of the test from: those a scorer
+   * supplied, and those a CAT engine reported, which the reset of INFO §2.9 would otherwise erase (G24, E16, C4).
+   */
+  private keptOutcomes(): Map<string, Value | null> {
+    return new Map<string, Value | null>([...catTestOutcomes(this.state), ...suppliedTestOutcomes(this.state)]);
   }
 
   /** Runs a walk of the plan; when an expression of a rule fails, the failure is reported and the test ends (E26). */
@@ -475,22 +499,112 @@ export class SessionStep {
   /**
    * Leaves the item presented for what follows it (B26, B28, B29): the minimum time of the item must be reached; the item
    * is left; the walk decides where to go, and the minimum times of the sections, part and test that this leaves must
-   * be reached.
+   * be reached. In an adaptive section the candidate waits where the next item depends on the CAT engine (E18, C4): it is
+   * refused `awaiting-cat` while a request waits, and when leaving makes the engine send one, the move goes on when the
+   * answer has come.
    */
   private next(here: Placement, at: number): Refusal | undefined {
     const running = runningScopes(this.course, this.state);
     const early = minimumNotReached(running.filter((scope) => scope.scope === "item"));
     if (early !== undefined) return early;
+    if (this.waitsForCat(here)) {
+      return refusal(
+        "awaiting-cat",
+        "The adaptive section waits for the CAT engine to send the next items.",
+        "CAT §3.4, §2.4",
+      );
+    }
     const refused = this.leave(here, at);
     if (refused !== undefined) return refused;
     this.processOutcomes(at);
+    this.requestCat(at);
     const { structure } = this.course;
     const destination = this.navigate(at, (rules) =>
       destinationAfter(structure, this.state.plan, here.key, here.key.ref, rules),
     );
-    const target = destination.to === "item" ? this.placement(destination.key) : undefined;
-    const left = running.filter((scope) => leaves(scope, here, destination, target));
-    return minimumNotReached(left) ?? this.go(destination, at);
+    const left = running.filter((scope) => leaves(scope, here, destination, this.targetOf(destination)));
+    const tooEarly = minimumNotReached(left);
+    if (tooEarly !== undefined) return tooEarly;
+    this.leaveSectionOf(here, destination, at);
+    if (this.waitsForCat(here)) {
+      this.markMoving(here);
+      return undefined;
+    }
+    return this.go(destination, at);
+  }
+
+  /**
+   * Ends the CAT session of the section that holds the placement when the candidate goes to a destination outside it and
+   * the session waits for no answer: the results not yet reported are sent and the session ends (C4, C5). A session that
+   * waits for an answer may still send more items, so it is left as it is.
+   */
+  private leaveSectionOf(here: Placement, destination: Destination, at: number): void {
+    const session = this.catOf(here);
+    if (session === undefined || session.status !== "running" || session.request !== undefined) return;
+    if (this.staysIn(destination, session)) return;
+    this.leaveCat(at, (each) => each.section === session.section && each.instance === session.instance);
+  }
+
+  /** Returns the place that a destination is in: the part and the sections that hold it; `undefined` when it is none. */
+  private targetOf(destination: Destination): Pick<Placement, "part" | "sections"> | undefined {
+    if (destination.to === "item") return this.placement(destination.key);
+    if (destination.to !== "adaptive") return undefined;
+    const part = partOfSection(this.state.plan, destination.section, destination.instance);
+    if (part === undefined) throw new DataError(`The plan has no section ${describe(destination.section)}.`);
+    return { part, sections: [{ identifier: destination.section, instance: destination.instance }] };
+  }
+
+  /** The CAT session of the adaptive section that holds the placement, `undefined` when none does. */
+  private catOf(placement: Placement): CatSession | undefined {
+    for (const section of placement.sections) {
+      const session = findCat(this.state, section.identifier, section.instance);
+      if (session !== undefined) return session;
+    }
+    return undefined;
+  }
+
+  /** Whether the destination lies in the adaptive section of a session. */
+  private staysIn(destination: Destination, session: CatSession): boolean {
+    const target = this.targetOf(destination);
+    if (target === undefined) return false;
+    return target.sections.some((each) => each.identifier === session.section && each.instance === session.instance);
+  }
+
+  /**
+   * Whether the adaptive section of the placement waits for the CAT engine, so that the candidate cannot go on: a request
+   * waits and the next item of the section has not been presented, or there is none (E18).
+   */
+  private waitsForCat(here: Placement): boolean {
+    const session = this.catOf(here);
+    if (session?.request === undefined) return false;
+    const keys = sectionKeys(this.state.plan, session.section, session.instance);
+    const next = keys[keys.findIndex((key) => sameKey(key, here.key)) + 1];
+    return next === undefined || findDelivered(this.state, next) === undefined;
+  }
+
+  /** Notes that the candidate asked to move on while the session of the placement waits (E18). */
+  private markMoving(here: Placement): void {
+    const session = this.catOf(here);
+    if (session !== undefined) this.state = withCat(this.state, { ...session, moving: true });
+  }
+
+  /** Applies a step of the CAT flow to the state. */
+  private applyCat(change: CatChange): Refusal | undefined {
+    if (!change.ok) return change.refusal;
+    this.state = change.state;
+    this.events.push(...change.events);
+    if (change.outcomes) this.submitted = true;
+    return undefined;
+  }
+
+  /** Makes the Submit Results requests that the policy of C4 calls for. */
+  private requestCat(at: number): void {
+    this.applyCat(submitDue(this.state, at));
+  }
+
+  /** Ends the CAT sessions that the candidate leaves: the sessions for which `leaves` is true (C4, C5). */
+  private leaveCat(at: number, leaves: (session: CatSession) => boolean): void {
+    this.applyCat(leaveCat(this.state, at, leaves));
   }
 
   /**
@@ -513,38 +627,92 @@ export class SessionStep {
     return this.settle(left, closeItem(left.session, at, context));
   }
 
-  /** Goes where a walk leads: to an item, ending the test part when the item is in another, or to the end of the part or test. */
+  /**
+   * Returns the test part the candidate is in: that of the item presented, else that of the adaptive section whose first
+   * stage is awaited.
+   */
+  private currentPart(): string {
+    if (this.state.current !== undefined) return this.here().part;
+    const waiting = this.state.cat.find((session) => session.moving === true);
+    const part = waiting === undefined ? undefined : partOfSection(this.state.plan, waiting.section, waiting.instance);
+    if (part === undefined) throw new DataError("The state presents no item, though its test has not ended.");
+    return part;
+  }
+
+  /** Goes where a walk leads: to an item or an adaptive section, ending the test part when it is in another, or to the end of the part or test. */
   private go(destination: Destination, at: number): Refusal | undefined {
-    const { part } = this.here();
-    if (destination.to === "item") {
-      if (this.placement(destination.key).part === part) return this.enter(destination.key, at);
-      return this.endPart(at) ?? this.enter(destination.key, at);
+    const part = this.currentPart();
+    if (destination.to === "item" || destination.to === "adaptive") {
+      if (this.targetOf(destination)?.part === part) {
+        this.leaveSectionsFor(destination, at);
+        return this.arrive(destination, at);
+      }
+      return this.endPart(at) ?? this.arrive(destination, at);
     }
     const refused = this.endPart(at);
     if (refused !== undefined) return refused;
     if (destination.to === "test-end") return this.endTest(at);
     const { structure } = this.course;
-    const next = this.navigate(at, (rules) => destinationOf(itemAfterPart(structure, this.state.plan, part, rules)));
-    return next.to === "item" ? this.enter(next.key, at) : this.endTest(at);
+    const next = this.navigate(at, (rules) => destinationAfterPart(structure, this.state.plan, part, rules));
+    return this.arrive(next, at);
+  }
+
+  /** Goes to an item, starts an adaptive section, or ends the test. */
+  private arrive(destination: Destination, at: number): Refusal | undefined {
+    switch (destination.to) {
+      case "item":
+        return this.enter(destination.key, at);
+      case "adaptive":
+        return this.startAdaptive(destination.section, destination.instance, at);
+      default:
+        return this.endTest(at);
+    }
+  }
+
+  /** Ends the sessions of the adaptive sections that hold the item presented and not the destination (C4). */
+  private leaveSectionsFor(destination: Destination, at: number): void {
+    const { current } = this.state;
+    if (current === undefined) return;
+    const here = this.placement(current);
+    this.leaveCat(at, (session) => {
+      const holds = here.sections.some(
+        (each) => each.identifier === session.section && each.instance === session.instance,
+      );
+      return holds && !this.staysIn(destination, session);
+    });
+  }
+
+  /**
+   * Starts the CAT session of an adaptive section the candidate enters (C3, E18): the candidate has no item to see until
+   * the engine sends the first stage, so the session presents none.
+   */
+  private startAdaptive(section: string, instance: number, at: number): undefined {
+    this.applyCat(startCat(this.state, section, instance, at));
+    const { current: _left, ...state } = this.state;
+    this.state = state;
+    return undefined;
   }
 
   /**
    * Ends the test part of the item presented (INFO §2.8.2): every session of the part closes, so an open attempt ends
-   * with its drafts, which in simultaneous mode submits the group; outcome processing follows.
+   * with its drafts, which in simultaneous mode submits the group; outcome processing follows. The CAT sessions of the
+   * part end, with the results of the attempts that just closed (C4, C5).
    */
   private endPart(at: number): Refusal | undefined {
-    const { part } = this.here();
+    const part = this.currentPart();
     for (const item of this.state.items) {
       if (this.placement(item.session.key).part !== part) continue;
       const refused = this.settle(item, closeItem(item.session, at, this.itemContext(item.session.key)));
       if (refused !== undefined) return refused;
     }
     this.processOutcomes(at);
+    this.leaveCat(at, (session) => partOfSection(this.state.plan, session.section, session.instance) === part);
     this.events.push({ type: "part-ended", at, scope: part });
     return undefined;
   }
 
   private endTest(at: number): undefined {
+    this.leaveCat(at, () => true);
     const { current: _left, ...state } = this.state;
     this.state = { ...state, status: "ended" };
     this.events.push({ type: "test-ended", at, scope: this.course.structure.test.model.identifier });
@@ -565,6 +733,7 @@ export class SessionStep {
       this.advance(due.at);
       const refused = this.expire(due.scope, due.at);
       if (refused !== undefined) return refused;
+      this.reconcile(due.at);
     }
     return undefined;
   }
@@ -637,9 +806,12 @@ export class SessionStep {
   }
 
   private suspend(at: number): Refusal | undefined {
-    const item = this.delivered(this.here().key);
-    const refused = this.settle(item, suspendItem(item.session, at));
-    if (refused !== undefined) return refused;
+    const { current } = this.state;
+    if (current !== undefined) {
+      const item = this.delivered(current);
+      const refused = this.settle(item, suspendItem(item.session, at));
+      if (refused !== undefined) return refused;
+    }
     this.state = { ...this.state, status: "suspended" };
     this.events.push({ type: "suspended", at });
     return undefined;
@@ -649,7 +821,9 @@ export class SessionStep {
     if (this.state.status !== "suspended") return undefined;
     this.state = { ...this.state, status: "in-progress" };
     this.events.push({ type: "resumed", at });
-    return this.present(this.here().key, at);
+    const { current } = this.state;
+    const presented = current === undefined ? undefined : this.present(current, at);
+    return presented ?? this.continueCat(at);
   }
 
   /** Turns a support that is an option on or off (BPIG §5.3, E28); one turned on counts for the item presented. */
@@ -666,9 +840,140 @@ export class SessionStep {
     if (support.active === active) return undefined;
     this.state = { ...this.state, supports: new Map(this.state.supports).set(name, { ...support, active }) };
     this.events.push({ type: "support-changed", at, detail: `${name} ${active ? "on" : "off"}` });
-    if (!active) return undefined;
-    const item = this.delivered(this.here().key);
+    const { current } = this.state;
+    if (!active || current === undefined) return undefined;
+    const item = this.delivered(current);
     if (!item.supports.includes(name)) this.store({ ...item, supports: [...item.supports, name] });
     return undefined;
+  }
+
+  /**
+   * Applies an action of the candidate while no item is presented, because the first stage of an adaptive section is
+   * awaited (E18): time passes without effect, a support can be turned on or off, the session can be suspended and resumed,
+   * and the part or the test can be ended. Anything else waits for the CAT engine.
+   */
+  private idle(action: Action): Refusal | undefined {
+    const { at } = action;
+    switch (action.type) {
+      case "time":
+        return undefined;
+      case "support":
+        return this.toggle(action.name, action.active, at);
+      case "suspend":
+        return this.suspend(at);
+      case "resume":
+        return this.resume(at);
+      case "end-part":
+        return this.end(PART_END, at);
+      case "end-test":
+        return this.end(TEST_END, at);
+      default:
+        return refusal(
+          "awaiting-cat",
+          "The adaptive section waits for the CAT engine to send its first items.",
+          "CAT §3.3",
+        );
+    }
+  }
+
+  /**
+   * Makes the scoring requests that are due (E13): item outcomes whose session is over, and test outcomes whose covers are
+   * over or whose test has ended. The CAT requests that the submissions call for are made with them (C4).
+   */
+  private reconcile(at: number): void {
+    this.requestCat(at);
+    const due = dueRequests(this.course, this.state, at);
+    if (due.length === 0) return;
+    this.state = { ...this.state, scoring: [...this.state.scoring, ...due] };
+    const test = this.course.structure.test.model.identifier;
+    for (const request of due) {
+      const where = request.item === undefined ? { scope: test } : { item: request.item };
+      this.events.push({ type: "scoring-requested", at, ...where, detail: request.id });
+    }
+  }
+
+  /**
+   * Takes the value that the host supplied for a scoring request (E15): it must fit the declaration; a second supply
+   * replaces the first. An item outcome is set in the session without running response processing again (G25); the
+   * outcome processing of the test runs again, with the supplied values as the starting values of the external-scored
+   * outcomes (G24, E16).
+   */
+  private supply(action: HostAction & { readonly type: "supply-scores"; readonly at: number }): Refusal | undefined {
+    const { at } = action;
+    const request = this.state.scoring.find(({ id }) => id === action.request);
+    if (request === undefined) {
+      return refusal("unknown-request", `The state has no scoring request ${describe(action.request)}.`, "RR §2.7.7");
+    }
+    const value = fitScore(request, action.value === null ? null : normalizeValue(action.value));
+    if (value === undefined) {
+      return refusal(
+        "score-type-mismatch",
+        `The outcome ${request.outcome} is ${describeType(request.declaration)}, found ${describe(action.value)}.`,
+        "RR §2.7.7",
+      );
+    }
+    const replaced = request.supplied !== undefined;
+    const supplied = { ...request, supplied: { value, at, scorer: action.scorer } };
+    this.state = { ...this.state, scoring: this.state.scoring.map((each) => (each === request ? supplied : each)) };
+    const where =
+      request.item === undefined ? { scope: this.course.structure.test.model.identifier } : { item: request.item };
+    this.events.push({ type: replaced ? "scores-replaced" : "scores-applied", at, ...where, detail: request.id });
+    const delivered = request.item === undefined ? undefined : findDelivered(this.state, request.item);
+    if (delivered !== undefined) {
+      const { variables } = delivered.session;
+      const outcomes = new Map(variables.outcomes).set(request.outcome, value);
+      this.store({ ...delivered, session: { ...delivered.session, variables: { ...variables, outcomes } } });
+    }
+    this.submitted = true;
+    this.processOutcomes(at);
+    return undefined;
+  }
+
+  /** Takes the answer of the CAT engine to a request (E18); a candidate who waited for it moves on. */
+  private catResponse(
+    action: HostAction & { readonly type: "cat-response"; readonly at: number },
+  ): Refusal | undefined {
+    const { at } = action;
+    const refused = this.applyCat(answerCat(this.course, this.state, action.request, action.response, at));
+    if (refused !== undefined) return refused;
+    this.processOutcomes(at);
+    return this.continueCat(at);
+  }
+
+  /**
+   * Moves a candidate on who waited for the CAT engine, once nothing is awaited (E18): to the first item of the stage
+   * when none was presented, else where the walk leads from the item left. A candidate who is suspended moves on at
+   * resuming.
+   */
+  private continueCat(at: number): Refusal | undefined {
+    const session = this.state.cat.find((each) => each.moving === true && each.request === undefined);
+    if (session === undefined || this.state.status !== "in-progress") return undefined;
+    const { current } = this.state;
+    const first = session.status === "running" ? session.stage[0] : undefined;
+    let refused: Refusal | undefined;
+    if (current === undefined && first !== undefined) {
+      refused = this.enter(first, at);
+    } else if (current === undefined) {
+      const { structure } = this.course;
+      const destination = this.navigate(at, (rules) =>
+        destinationAfterSection(structure, this.state.plan, session.section, session.instance, rules),
+      );
+      refused = this.go(destination, at);
+    } else {
+      const here = this.placement(current);
+      const { structure } = this.course;
+      const destination = this.navigate(at, (rules) =>
+        destinationAfter(structure, this.state.plan, current, current.ref, rules),
+      );
+      this.leaveSectionOf(here, destination, at);
+      if (this.waitsForCat(here)) return undefined;
+      refused = this.go(destination, at);
+    }
+    const still = findCat(this.state, session.section, session.instance);
+    if (still !== undefined && still.moving === true) {
+      const { moving: _moved, ...rest } = still;
+      this.state = withCat(this.state, rest);
+    }
+    return refused;
   }
 }

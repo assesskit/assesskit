@@ -1,7 +1,7 @@
 import type { AdaptiveSelection } from "../asi/index.js";
 import { checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { checkBytes, encodeBase64 } from "./base64.js";
+import { checkBytes, encodeBase64 } from "../values/base64.js";
 import type { SectionData } from "./model.js";
 
 /** The files that the references of a `qti-adaptive-selection` name, as bytes (CAT §2.2). */

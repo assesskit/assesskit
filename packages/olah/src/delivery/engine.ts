@@ -7,13 +7,17 @@ import {
   resolveSupports,
   type SupportName,
   type SupportSetting,
+  writePnp,
 } from "../pnp/index.js";
 import { givenContext } from "../processing/variables.js";
 import { createRandom } from "../random.js";
+import type { AssessmentResult, ResultContext } from "../results/index.js";
+import { encodeBase64 } from "../values/base64.js";
 import type { Value } from "../values/index.js";
 import { type Action, checkAction } from "./action.js";
 import type { CandidateView } from "./candidate-view.js";
 import { buildCourse, type Course, type DeliveryDefinition, type EngineOptions } from "./course.js";
+import { checkInstant } from "./datestamp.js";
 import { type Deadline, deadlinesOf } from "./deadlines.js";
 import {
   type CandidateNeeds,
@@ -23,7 +27,10 @@ import {
   STATE_VERSION,
   type Step,
 } from "./delivery-state.js";
+import { type PendingWork, pendingWork } from "./pending-work.js";
 import { planTest } from "./plan.js";
+import { assembleResults } from "./results-assembly.js";
+import { type ScorerView, scorerViewOf } from "./scorer-view.js";
 import { SessionStep } from "./session-step.js";
 import { additionalTestingTime } from "./time-limits.js";
 import { candidateView } from "./view.js";
@@ -46,6 +53,11 @@ export interface StartOptions {
    * that declares it (INFO §2.2.2.1, B50). A variable left out has its default value, else NULL. Default: none.
    */
   readonly context?: ReadonlyMap<string, Value | null>;
+  /**
+   * Who took the test, for the `context` of the results report: the `sourcedId` of the candidate and the sessions of the
+   * delivery system (RR §2.4.2, E24). Default: `{ sessionIdentifiers: [] }`.
+   */
+  readonly resultContext?: ResultContext;
 }
 
 /**
@@ -65,7 +77,8 @@ export interface Engine {
   /**
    * Applies an action to a state (E1, E4, E7): the maximum times that passed before it first, each at its time, then
    * the action; a refusal leaves the state as it was. It never throws on a state of this engine: a processing failure
-   * is reported as a `processing-failed` event (E26).
+   * is reported as a `processing-failed` event (E26). The host's `supply-scores` and `cat-response` are accepted in any
+   * state, also when the session is suspended or has ended, as long as the request they answer exists (E15, E18).
    *
    * @throws `DataError` when the state or the action is not one.
    */
@@ -85,10 +98,42 @@ export interface Engine {
    * @throws `DataError` when the state is not one of this engine, or `now` is not a finite number.
    */
   view(state: DeliveryState, now: number): CandidateView;
+  /**
+   * Returns what the engine waits on the host for (E13, E18): the scoring requests with no value yet, and the requests to
+   * CAT engines. The host answers the first with `supply-scores` actions and the second with `cat-response` actions, or
+   * has `drainCat` answer them.
+   *
+   * @throws `DataError` when the state is not one of this engine.
+   */
+  pending(state: DeliveryState): PendingWork;
+  /**
+   * Returns what a scorer needs to rate the outcome of a scoring request, including the correct responses, so that it
+   * belongs on the server (E27, R6).
+   *
+   * @throws `DataError` when the state is not one of this engine, or has no such request.
+   */
+  scorerView(state: DeliveryState, requestId: string): ScorerView;
+  /**
+   * Assembles the results report of a state (E24): the context, the result of the test and one result for each item
+   * instance presented, with the datestamps of the actions. It is provisional while scoring requests are pending (E17).
+   * A report has no single datestamp of its own: the result of the test carries the time of the latest step.
+   *
+   * @throws `DataError` when the state is not one of this engine.
+   */
+  results(state: DeliveryState): AssessmentResult;
+}
+
+/**
+ * Returns the profile as the Create Session request carries it: the document `writePnp` writes, as UTF-8 in base64
+ * (CAT §3.3, C3). A test without an adaptive section sends no request, so nothing is encoded for it.
+ */
+function personalNeedsOf(course: Course, profile: PersonalNeedsProfile | undefined): string | undefined {
+  if (profile === undefined || course.catSections.size === 0) return undefined;
+  return encodeBase64(new TextEncoder().encode(writePnp(profile)));
 }
 
 /** Returns what the engine takes from a profile besides the supports (BPIG §5.2.4–5). */
-function needsOf(profile: PersonalNeedsProfile | undefined): CandidateNeeds {
+function needsOf(profile: PersonalNeedsProfile | undefined, personalNeeds: string | undefined): CandidateNeeds {
   if (profile === undefined) return { avoidedHazards: [] };
   const testingTime = additionalTestingTime(profile);
   const hazards = profile.supports.get("hazard-avoidance");
@@ -101,6 +146,28 @@ function needsOf(profile: PersonalNeedsProfile | undefined): CandidateNeeds {
     ...(testingTime === undefined ? {} : { testingTime }),
     avoidedHazards,
     ...(translated ? { translation: translation.language } : {}),
+    ...(personalNeeds === undefined ? {} : { personalNeeds }),
+  };
+}
+
+/**
+ * Checks the context of the results and returns a copy of it.
+ *
+ * @throws `DataError` when it is not an object with an array of session identifiers and an optional `sourcedId`.
+ */
+function checkedResultContext(context: ResultContext): ResultContext {
+  checkRecord(context, "The option resultContext must be an object with the array sessionIdentifiers");
+  const { sourcedId, sessionIdentifiers } = context;
+  if (sourcedId !== undefined) checkString(sourcedId, "The sourcedId of the option resultContext");
+  checkArray(sessionIdentifiers, "The sessionIdentifiers of the option resultContext must be an array");
+  return {
+    ...(sourcedId === undefined ? {} : { sourcedId }),
+    sessionIdentifiers: sessionIdentifiers.map((each) => {
+      checkRecord(each, "A session identifier of the option resultContext must be an object");
+      checkString(each.sourceId, "The sourceId of a session identifier of the option resultContext");
+      checkString(each.identifier, "The identifier of a session identifier of the option resultContext");
+      return { sourceId: each.sourceId, identifier: each.identifier };
+    }),
   };
 }
 
@@ -123,7 +190,9 @@ function supportsOf(
       ...(given === undefined ? {} : { settings: given }),
     });
   }
-  for (const name of universal) if (!supports.has(name)) supports.set(name, { state: "option", active: false });
+  for (const name of universal) {
+    if (!supports.has(name)) supports.set(name, { state: "option", active: false, universal: true });
+  }
   return supports;
 }
 
@@ -150,9 +219,16 @@ function checkContextValues(course: Course, values: ReadonlyMap<string, Value | 
 
 function start(course: Course, options: StartOptions): Step {
   checkOptions(options);
-  const { seed, at, pnp, universalSupports = [], context = new Map<string, Value | null>() } = options;
+  const {
+    seed,
+    at,
+    pnp,
+    universalSupports = [],
+    context = new Map<string, Value | null>(),
+    resultContext = { sessionIdentifiers: [] },
+  } = options;
   checkSeed(seed);
-  checkFinite(at, "The option at");
+  checkInstant(at, "The option at");
   if (pnp !== undefined) checkRecord(pnp, "The option pnp must be an object of the model of a PNP");
   checkArray(universalSupports, "The option universalSupports must be an array of support names");
   for (const name of universalSupports) {
@@ -174,7 +250,10 @@ function start(course: Course, options: StartOptions): Step {
     context: new Map(context),
     clocks: [{ scope: "test", identifier: structure.test.model.identifier, spent: 0 }],
     supports: supportsOf(pnp, universalSupports),
-    needs: needsOf(pnp),
+    needs: needsOf(pnp, personalNeedsOf(course, pnp)),
+    scoring: [],
+    cat: [],
+    report: checkedResultContext(resultContext),
   };
   const step = new SessionStep(course, state);
   const refused = step.begin(at);
@@ -213,6 +292,19 @@ export function createEngine(definition: DeliveryDefinition, options: EngineOpti
       checkState(state);
       checkFinite(now, "The time now");
       return candidateView(course, state, now);
+    },
+    pending: (state) => {
+      checkState(state);
+      return pendingWork(course, state);
+    },
+    scorerView: (state, requestId) => {
+      checkState(state);
+      checkString(requestId, "The request");
+      return scorerViewOf(course, state, requestId);
+    },
+    results: (state) => {
+      checkState(state);
+      return assembleResults(course, state);
     },
   };
 }

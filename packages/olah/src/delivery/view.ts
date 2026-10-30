@@ -3,12 +3,13 @@ import { describe } from "../checks.js";
 import { resolveContent, testRubricBlocks, visibleTestFeedback } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { CandidateView, SupportView, TimerView } from "./candidate-view.js";
+import { partOfSection } from "./cat-session.js";
 import type { Course } from "./course.js";
 import { candidateOf } from "./course.js";
 import { expiriesOf, maximumAt, minimumAt, runningScopes } from "./deadlines.js";
 import { type DeliveryState, findDelivered } from "./delivery-state.js";
 import { partModel, submissionModeOf } from "./modes.js";
-import { planIndex } from "./plan-index.js";
+import { type Placement, planIndex, type SectionInstance } from "./plan-index.js";
 import { SessionStep } from "./session-step.js";
 import { allowedActions, type ItemRules } from "./view-actions.js";
 import { candidateItem } from "./view-item.js";
@@ -27,6 +28,34 @@ function settled(course: Course, state: DeliveryState, now: number): DeliverySta
   const refused = step.apply({ type: "time", at: Math.max(now, state.at) });
   const done = step.done();
   return refused === undefined && done.ok ? done.state : state;
+}
+
+/** Where the candidate is: the part and sections, and the placement of the item presented when there is one. */
+interface Whereabouts {
+  readonly part: string;
+  readonly sections: readonly SectionInstance[];
+  readonly placement?: Placement;
+}
+
+/**
+ * Returns where the candidate is: at the item presented, else in the adaptive section whose first stage is awaited (E18).
+ *
+ * @throws `DataError` when the state presents no item of its plan and awaits no section.
+ */
+function whereabouts(state: DeliveryState): Whereabouts {
+  if (state.current !== undefined) {
+    const placement = planIndex(state.plan).placement(state.current);
+    if (placement === undefined) {
+      throw new DataError("The state presents no item of its plan, though its test has not ended.");
+    }
+    return { part: placement.part, sections: placement.sections, placement };
+  }
+  const waiting = state.cat.find((session) => session.moving === true);
+  const part = waiting === undefined ? undefined : partOfSection(state.plan, waiting.section, waiting.instance);
+  if (waiting === undefined || part === undefined) {
+    throw new DataError("The state presents no item of its plan, though its test has not ended.");
+  }
+  return { part, sections: [{ identifier: waiting.section, instance: waiting.instance }] };
 }
 
 /** Returns the supports as the candidate sees them; the settings of a prohibited support stay out. */
@@ -101,14 +130,14 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
       actions: allowedActions(state, undefined),
     };
   }
-  const placement = state.current === undefined ? undefined : planIndex(state.plan).placement(state.current);
-  if (placement === undefined)
-    throw new DataError("The state presents no item of its plan, though its test has not ended.");
-  const part = structure.part(placement.part)?.model;
+  const where = whereabouts(state);
+  const { placement } = where;
+  const part = structure.part(where.part)?.model;
   const partView = {
-    identifier: placement.part,
-    navigationMode: partModel(structure, placement).navigationMode,
-    submissionMode: submissionModeOf(structure, placement),
+    identifier: where.part,
+    navigationMode: partModel(structure, where).navigationMode,
+    // The items of an adaptive section are submitted one by one in either mode of the part (CAT §2.4, B27).
+    submissionMode: placement === undefined ? ("individual" as const) : submissionModeOf(structure, placement),
   };
   if (state.status === "suspended") {
     return {
@@ -121,13 +150,25 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
       actions: allowedActions(state, undefined),
     };
   }
-  const sections = placement.sections.flatMap((each) => structure.section(each.identifier)?.model ?? []);
+  const sections = where.sections.flatMap((each) => structure.section(each.identifier)?.model ?? []);
   const rubric = testRubricBlocks({ test, ...(part === undefined ? {} : { part }), sections }, "candidate").flatMap(
     (block) => block.contentBody.children,
   );
   const during = [test, ...(part === undefined ? [] : [part])].flatMap((holder) =>
     visibleTestFeedback(holder.testFeedback, state.outcomes, "during"),
   );
+  // No item is presented while the first stage of an adaptive section is awaited (E18): the candidate sees the test part.
+  if (placement === undefined) {
+    return {
+      ...base,
+      part: partView,
+      navigation: navigationOf(course, state, where),
+      rubric: testContent(state, rubric),
+      testFeedback: testContent(state, feedbackContent(during)),
+      timers: timersOf(course, state),
+      actions: allowedActions(state, undefined),
+    };
+  }
   const delivered = findDelivered(state, placement.key);
   const entry = course.items.get(placement.key.ref);
   if (delivered === undefined || entry === undefined) {

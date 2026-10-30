@@ -72,7 +72,7 @@ export function planIndex(plan: TestPlan): PlanIndex {
 }
 
 /** Whether a placement lies in a section instance. */
-export function liesIn(placement: Placement, section: SectionInstance): boolean {
+export function liesIn(placement: Pick<Placement, "sections">, section: SectionInstance): boolean {
   return placement.sections.some(
     (each) => each.identifier === section.identifier && each.instance === section.instance,
   );

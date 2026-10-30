@@ -5,9 +5,11 @@
  * test with its section references resolved, the selection and ordering of its items, the item instances, the order of
  * presentation in linear test parts under pre-conditions and branch rules, the inheritance of item session control, and
  * the time limits with a candidate's extra time — the item sessions: attempts, adaptive items, drafts and submitted
- * responses, review and solution, comments, PCI states, and processing failures as data — and the candidate side: the
+ * responses, review and solution, comments, PCI states, and processing failures as data — the candidate side: the
  * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions, with
- * the limits that a server puts on the actions of its clients.
+ * the limits that a server puts on the actions of its clients — and the pending work that the engine waits on the host
+ * for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine and `drainCat`, links
+ * to tools scored by their tool, and the results report of a session.
  *
  * @module @luthfanwakan/olah/delivery
  */
@@ -29,6 +31,14 @@ export type {
   TimerView,
   VariantView,
 } from "./candidate-view.js";
+export type {
+  CatOutcome,
+  CatSectionRef,
+  CatSession,
+  CatStatus,
+  CatWait,
+  ReportedItem,
+} from "./cat-session.js";
 export type { DeliveryDefinition, EngineOptions } from "./course.js";
 export type { Deadline } from "./deadlines.js";
 export type {
@@ -41,6 +51,7 @@ export type {
   SessionSupport,
   Step,
 } from "./delivery-state.js";
+export { drainCat } from "./drain-cat.js";
 export { createEngine, type Engine, type StartOptions } from "./engine.js";
 export type { DeliveryEvent, DeliveryEventType } from "./events.js";
 export { applyItemAction, type ItemAction } from "./item-action.js";
@@ -54,6 +65,7 @@ export {
 } from "./item-lifecycle.js";
 export type { ItemSession, ItemSessionContext, ItemSessionStatus, ItemStep } from "./item-session.js";
 export { nextItem, previousItem, type RuleContext } from "./navigation.js";
+export type { CatRequest, CatRequestBase, PendingWork } from "./pending-work.js";
 export {
   DEFAULT_PLAN_LIMITS,
   type ItemKey,
@@ -69,6 +81,14 @@ export {
 } from "./plan.js";
 export type { Refusal, RefusalCode } from "./refusal.js";
 export { resultStatus } from "./result-status.js";
+export type { ScorerItem, ScorerView } from "./scorer-view.js";
+export type {
+  Scorer,
+  ScoringCover,
+  ScoringDeclaration,
+  ScoringRequest,
+  SuppliedScore,
+} from "./scoring.js";
 export { type EffectiveSessionControl, sessionControl, standaloneSessionControl } from "./session-control.js";
 export { stamp } from "./stamp.js";
 export { deserializeState, serializeState } from "./state-json.js";

@@ -59,7 +59,8 @@ writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] });
 - The variables of a result keep the order of the document, because the schema lets the four kinds mix.
 - An optional field the document leaves out is absent from the model, never `undefined`.
 - `datestamp` is an `xs:dateTime` with a four-digit year, such as `2020-08-25T18:19:20`; olah never reads a clock, so
-  the caller supplies it.
+  the caller supplies it. The delivery engine writes `2026-10-30T12:00:00.000Z`, RFC 3339 with the offset that the JSON
+  binding of CAT 1.0 requires ([delivery](delivery.md#results) builds the report of a session).
 - `extensions` and `outcomeInformation` hold elements of other namespaces as `XmlElement`s, the only places the schema
   allows them (S14). An element read by `parseXml` keeps its `line` and `column`.
 

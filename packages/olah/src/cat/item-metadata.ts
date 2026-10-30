@@ -7,7 +7,7 @@ import {
   type QtiMetadata,
   type ScoringMode,
 } from "../metadata/index.js";
-import { checkBytes, encodeBase64 } from "./base64.js";
+import { checkBytes, encodeBase64 } from "../values/base64.js";
 
 /**
  * A metadata file that is not QTI metadata, such as IEEE LOM (`lom`) or curriculum standards metadata (`csmd`); other

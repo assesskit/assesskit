@@ -6,7 +6,7 @@ import { fromWireValue, toWireValue, type Value, type WireValue } from "../value
 export type ValueJson = WireValue | null;
 
 /** Writes a value with its own type; NULL needs none, because its variable is declared. */
-function valueToJson(value: Value | null): ValueJson {
+export function valueToJson(value: Value | null): ValueJson {
   if (value === null) return null;
   return toWireValue(
     value,
@@ -45,10 +45,19 @@ export function readEntries<T>(
 }
 
 /**
+ * Reads a value that {@link valueToJson} wrote.
+ *
+ * @throws `DataError` when the data is not a wire value or `null`.
+ */
+export function valueFromJson(json: unknown): Value | null {
+  return json === null ? null : fromWireValue(json);
+}
+
+/**
  * Reads entries that {@link valuesToJson} wrote.
  *
  * @throws `DataError` when the data is not such entries.
  */
 export function readValues(json: unknown, label: string): Map<string, Value | null> {
-  return readEntries(json, label, (value) => (value === null ? null : fromWireValue(value)));
+  return readEntries(json, label, valueFromJson);
 }

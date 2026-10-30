@@ -119,6 +119,11 @@ const RULES_BY_TYPE: Readonly<Record<DeliveryEventType, Rule | null>> = {
   "support-changed": null,
   "variant-selected": null,
   "hazard-unavoidable": null,
+  "scoring-requested": null,
+  "scores-applied": null,
+  "scores-replaced": null,
+  "cat-requested": null,
+  "cat-stage-added": null,
 };
 
 /** The rules by type name; a map, so that a type named `__proto__` is data. */

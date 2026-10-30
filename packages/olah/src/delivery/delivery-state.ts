@@ -3,12 +3,15 @@ import type { PnpHazardTerm } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";
 import type { RandomState } from "../random.js";
+import type { ResultContext } from "../results/index.js";
 import type { Value } from "../values/index.js";
+import type { CatSession } from "./cat-session.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession } from "./item-session.js";
 import { DELIVERY_STATUSES } from "./names.js";
 import { type ItemKey, sameKey, type TestPlan } from "./plan.js";
 import type { Refusal } from "./refusal.js";
+import type { ScoringRequest } from "./scoring.js";
 
 /** The version of the format of {@link DeliveryState}, which `deserializeState` reads. */
 export const STATE_VERSION = 1;
@@ -65,6 +68,8 @@ export interface SessionSupport {
    * not name, and for a custom support.
    */
   readonly settings?: SupportSetting;
+  /** Whether the program gives the support to every candidate and the profile does not name it (RR §2.7.2); absent otherwise. */
+  readonly universal?: true;
 }
 
 /** What the engine takes from the candidate's PNP besides the supports (BPIG §5.2). */
@@ -75,6 +80,11 @@ export interface CandidateNeeds {
   readonly avoidedHazards: readonly PnpHazardTerm[];
   /** The language of `item-translation`, a BCP 47 tag; absent when the profile asks for no translation. */
   readonly translation?: string;
+  /**
+   * The profile as `writePnp` writes it, in UTF-8 and base64, for the Create Session request of an adaptive section
+   * (C3, CAT §3.3); absent when the test has no adaptive section or the session starts without a profile.
+   */
+  readonly personalNeeds?: string;
 }
 
 /**
@@ -106,6 +116,12 @@ export interface DeliveryState {
   readonly supports: ReadonlyMap<SupportName, SessionSupport>;
   /** What the engine takes from the candidate's PNP besides the supports. */
   readonly needs: CandidateNeeds;
+  /** The scoring requests made so far, in the order they were made; a request stays after its value is supplied (E13, E15). */
+  readonly scoring: readonly ScoringRequest[];
+  /** The CAT sessions of the adaptive sections the candidate has entered, in the order of entry (E18). */
+  readonly cat: readonly CatSession[];
+  /** Who took the test, for the `context` of the results: the host's, with the sessions that CAT engines add (E24, CAT §4.3.2). */
+  readonly report: ResultContext;
 }
 
 /** What a step of a candidate session gives: the new state and what happened, or a refusal that leaves it as it was. */
@@ -156,4 +172,7 @@ export function checkState(state: DeliveryState): void {
       throw new DataError(`The ${field} of the state must be a Map, found ${describe(value)}.`);
   }
   checkRecord(state.needs, "The needs of the state must be an object");
+  checkArray(state.scoring, "The scoring of the state must be an array");
+  checkArray(state.cat, "The cat of the state must be an array");
+  checkRecord(state.report, "The report of the state must be an object");
 }

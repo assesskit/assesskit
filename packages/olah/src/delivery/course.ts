@@ -1,9 +1,11 @@
-import type {
-  AssessmentItem,
-  AssessmentStimulus,
-  AssessmentTest,
-  ItemSessionControl,
-  ResponseProcessing,
+import {
+  type AssessmentItem,
+  type AssessmentStimulus,
+  type AssessmentTest,
+  type ItemSessionControl,
+  type ResponseProcessing,
+  readScoreCovers,
+  type ScoreCover,
 } from "../asi/index.js";
 import { checkFunction, checkOptions, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
 import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
@@ -21,17 +23,24 @@ import {
 import { checkItem, initialOutcome } from "../processing/variables.js";
 import { validateAsi, validateTest } from "../validate/index.js";
 import type { Value } from "../values/index.js";
+import type { CatSectionRef } from "./cat-session.js";
 import { ltiItem } from "./lti-item.js";
 import { DEFAULT_PLAN_LIMITS, type PlanLimits } from "./plan.js";
 import { type EffectiveSessionControl, sessionControl, standaloneSessionControl } from "./session-control.js";
 import { standaloneTest } from "./standalone.js";
-import { type ContentNode, type ItemRefNode, resolveStructure, type TestStructure } from "./structure.js";
+import {
+  type ContentNode,
+  type ItemRefNode,
+  resolveStructure,
+  type SectionNode,
+  type TestStructure,
+} from "./structure.js";
 
 /**
  * What the engine delivers: a test, or an item alone for practice (E12).
  *
- * - `test`: the test, the path of its document, and the resolvers of its references, such as those of
- *   `packageResolvers`.
+ * - `test`: the test, the path of its document, the resolvers of its references, such as those of `packageResolvers`,
+ *   and where the CAT engine of each adaptive section is.
  * - `item`: the item, the path of its document, the resolver of the stimuli it names, and the item session control that
  *   the host gives it, if any.
  */
@@ -45,6 +54,12 @@ export type DeliveryDefinition =
       readonly base: string;
       /** The resolvers of the references of the test. */
       readonly resolvers: Resolvers;
+      /**
+       * The CAT engine of each adaptive section, by the identifier of the section: the URL prefix of the engine and the
+       * identifier that `CatPort.createSection` returned when the host deployed the section (C1). The test needs an entry
+       * for each of its adaptive sections and for no other section. Default: none.
+       */
+      readonly catSections?: ReadonlyMap<string, CatSectionRef>;
     }
   | {
       /** Delivers an item alone. */
@@ -138,6 +153,12 @@ export interface Course {
   readonly resolveTemplate: ((uri: string) => ResponseProcessing | undefined) | undefined;
   /** The limits of processing and planning. */
   readonly limits: ProcessingLimits & PlanLimits;
+  /** The CAT engine of each adaptive section of the test, by the identifier of the section (E18). */
+  readonly catSections: ReadonlyMap<string, CatSectionRef>;
+  /** The covers of the externally scored outcomes of the test, by outcome identifier (O2, O4). */
+  readonly covers: ReadonlyMap<string, readonly ScoreCover[]>;
+  /** Whether the course delivers one item alone, so that no test exists to report on (E12). */
+  readonly standalone: boolean;
 }
 
 /**
@@ -304,6 +325,7 @@ function courseOf(
   structure: TestStructure,
   items: ReadonlyMap<string, CourseItem>,
   options: Pick<Course, "customOperators" | "resolveTemplate" | "limits">,
+  adaptive: Pick<Course, "catSections" | "standalone">,
 ): Course {
   const test = structure.test.model;
   const outcomes = new Map<string, Value | null>();
@@ -329,12 +351,55 @@ function courseOf(
       for (const declaration of item.contextDeclarations) declare(declaration.identifier, declaration);
     }
   }
-  return { structure, items, outcomes, contexts, contextTypes, ...options };
+  return { structure, items, outcomes, contexts, contextTypes, covers: readScoreCovers(test), ...options, ...adaptive };
+}
+
+/** Returns the adaptive sections of a structure in document order (CAT §2.1). */
+function adaptiveSectionsOf(structure: TestStructure): SectionNode[] {
+  const below = (section: SectionNode): SectionNode[] => [
+    ...(section.model.adaptiveSelection === undefined ? [] : [section]),
+    ...section.children.flatMap((child) => (child.kind === "section" ? below(child) : [])),
+  ];
+  return structure.test.parts.flatMap((part) => part.sections.flatMap(below));
+}
+
+/**
+ * Checks the CAT engines of the adaptive sections: each adaptive section has one, and each entry names an adaptive
+ * section (C1).
+ *
+ * @throws `DataError` when the entries are not a Map of prefix and identifier, or do not match the adaptive sections.
+ */
+function checkCatSections(structure: TestStructure, given: unknown): ReadonlyMap<string, CatSectionRef> {
+  if (!(given instanceof Map)) {
+    throw new DataError(
+      `The catSections of the definition must be a Map from the identifier of an adaptive section to its prefix and identifier, found ${describe(given)}.`,
+    );
+  }
+  const adaptive = adaptiveSectionsOf(structure).map(({ model }) => model.identifier);
+  for (const [identifier, ref] of given) {
+    checkString(identifier, "An identifier of the catSections of the definition");
+    checkRecord(ref, `The entry ${describe(identifier)} of the catSections of the definition must be an object`);
+    checkString(ref.prefix, `The prefix of the entry ${describe(identifier)} of the catSections`);
+    checkString(ref.sectionIdentifier, `The sectionIdentifier of the entry ${describe(identifier)} of the catSections`);
+    if (!adaptive.includes(identifier)) {
+      throw new DataError(
+        `The catSections of the definition has an entry for ${describe(identifier)}, which is not an adaptive section of the test.`,
+      );
+    }
+  }
+  for (const identifier of adaptive) {
+    if (!given.has(identifier)) {
+      throw new DataError(
+        `The adaptive section ${describe(identifier)} needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned (CAT §3.1).`,
+      );
+    }
+  }
+  return given;
 }
 
 /** Builds the course of a test: the static checks, then the structure and every item it can reach. */
 function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, options: EngineOptions): Course {
-  const { test, base, resolvers } = definition;
+  const { test, base, resolvers, catSections = new Map<string, CatSectionRef>() } = definition;
   checkRecord(test, "The test must be an object of the model of qti-assessment-test");
   if (test.kind !== TEST_KIND) {
     throw new DataError(`The test must be the model of a qti-assessment-test, found the kind ${describe(test.kind)}.`);
@@ -355,7 +420,10 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
       candidates: candidatesOf(item, path, resolvers),
     });
   }
-  return courseOf(structure, items, checked);
+  return courseOf(structure, items, checked, {
+    catSections: checkCatSections(structure, catSections),
+    standalone: false,
+  });
 }
 
 /** Builds the course of an item delivered alone: a test of one nonlinear part with the item (E12). */
@@ -373,7 +441,10 @@ function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, o
   if (node === undefined)
     throw new DataError(`The test of the item has no item reference ${describe(item.identifier)}.`);
   const own = makeCandidate(item.identifier, { kind: "qti", item }, { hazards: [], languages: [] }, base, resolvers);
-  return courseOf(structure, new Map([[item.identifier, { node, control: effective, candidates: [own] }]]), checked);
+  return courseOf(structure, new Map([[item.identifier, { node, control: effective, candidates: [own] }]]), checked, {
+    catSections: new Map(),
+    standalone: true,
+  });
 }
 
 /**

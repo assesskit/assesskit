@@ -10,13 +10,16 @@ instances, decides what follows an item in a linear test part under pre-conditio
 control, and computes time limits with a candidate's extra time. It runs the session of each item instance: attempts,
 adaptive items, end attempt interactions, drafts and submitted responses, review and solution, comments, the states of
 portable custom interactions, and processing failures as data. It builds the view of a candidate session, which holds no
-answer key, processing or hidden content, and writes and reads the JSON forms of views and actions. It imports `values`, `asi`, `results`, `pnp`,
-`interactions`, `content`, `processing`, `package` and `validate` and runs in any JavaScript runtime. It reads no clock:
+answer key, processing or hidden content, and writes and reads the JSON forms of views and actions. The engine also holds
+what it waits on the host for: scoring requests for externally scored outcomes with the scorer view, the sessions of
+adaptive sections with a CAT engine and `drainCat`, links to tools scored by their tool, and the results report of a
+session. It imports `values`, `asi`, `results`, `pnp`, `interactions`, `content`, `processing`, `cat`, `package` and
+`validate` and runs in any JavaScript runtime. It reads no clock:
 every step takes the time it happened.
 
 | Export                                                        | Purpose                                                                                        |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                          | The `Engine` of a test or an item: `start`, `apply`, `deadlines`, `view`.                      |
+| `createEngine(definition, options?)`                          | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.       |
 | `stamp(state, action, now)`                                   | The action with `at` = max(`now`, the time of the latest step).                                |
 | `viewToJson(view)`, `viewFromJson(json)`                      | The JSON form of a `CandidateView`, and the view of a JSON form.                               |
 | `actionToJson(action)`, `parseCandidateAction(json, limits?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.             |
@@ -26,6 +29,10 @@ every step takes the time it happened.
 | `DeliveryState`, `Step`, `Deadline`                           | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
 | `CandidateAction`, `HostAction`, `Action`                     | The actions of the candidate and the host, with their time.                                    |
 | `DeliveryDefinition`, `EngineOptions`, `StartOptions`         | What the engine delivers, its options, and the options of a session.                           |
+| `drainCat(engine, state, port, now)`                          | Makes the waiting requests of CAT engines through a `CatPort` and applies each answer.         |
+| `PendingWork`, `ScoringRequest`, `CatRequest`                 | What the engine waits on the host for: scores and answers of CAT engines.                      |
+| `ScorerView`, `ScorerItem`                                    | What a scorer needs to rate a request, correct responses included.                             |
+| `CatSession`, `CatSectionRef`                                 | The session of an adaptive section in a state, and where its CAT engine is.                    |
 | `resolveStructure(test, base, resolvers)`                     | The `TestStructure`: parts, sections and item references, section references replaced.         |
 | `planTest(structure, options)`                                | A `TestPlan`: the sections and item instances of one session.                                  |
 | `planItems(plan, part?)`                                      | The item instances of a plan, or of one test part, in order of presentation.                   |
@@ -155,7 +162,7 @@ it is given, and a refusal gives no state. `apply` never throws on a state of it
 
 | `DeliveryDefinition` | Fields                                                                                                  |
 | -------------------- | ------------------------------------------------------------------------------------------------------- |
-| `kind: "test"`       | `test`, `base` (the path of the test document), `resolvers` (such as `packageResolvers(pkg)`)           |
+| `kind: "test"`       | `test`, `base`, `resolvers` (such as `packageResolvers(pkg)`), `catSections` (default: none)            |
 | `kind: "item"`       | `item`, `base` (the path of the item document), `control` (a `qti-item-session-control`; default: none) |
 
 | `EngineOptions`   | Default                                            | Meaning                                                                     |
@@ -180,10 +187,12 @@ without response variables and with the outcomes `SCORE` and `MAXSCORE`, single 
 | `pnp`               | none    | The candidate's profile: supports, extra time, hazards avoided, item translation.                          |
 | `universalSupports` | none    | Supports the program gives every candidate; options unless the profile names them.                         |
 | `context`           | none    | Values of context variables, `QTI_CONTEXT` included, for the test and every item that declares them (B50). |
+| `resultContext`     | none    | Who took the test, for the results `context`: `sourcedId` and delivery system sessions (E24).              |
 
 `start` plans the session with `planTest` and `createRandom(seed)`, and presents the first item that the walk of
 pre-conditions and branch rules gives; a test with nothing to present ends at once. A context value must fit every
-declaration of its variable, in the test and in its items, else `start` throws a `DataError`.
+declaration of its variable, in the test and in its items, else `start` throws a `DataError`. A time, in `at` and in every
+action, is epoch milliseconds from the year 1 to the year 9999, so that a results report can write it as a datestamp.
 
 ### Actions
 
@@ -198,6 +207,8 @@ declaration of its variable, in the test and in its items, else `start` throws a
 | `suspend`, `resume`                                                                               | Suspends and resumes the candidate session                                    |
 | `support`                                                                                         | Turns a support that is an option on or off                                   |
 | `time` (host)                                                                                     | Applies the maximum times that passed; nothing else                           |
+| `supply-scores` (host)                                                                            | Gives the value of an externally scored outcome, in any state (E15)           |
+| `cat-response` (host)                                                                             | Gives the answer of a CAT engine to a request, in any state (E18)             |
 
 Every action carries `at`. Before the action, the maximum times that passed by `at` apply, each at its own time (E7).
 `stamp(state, action, now)` sets `at` to max(`now`, `state.at`), so a server whose clock steps back never has an action
@@ -215,6 +226,10 @@ refused; an action stamped earlier than the latest step is refused `clock-regres
 | `wrong-submission-mode`        | `submit`, `skip` or `end-attempt` in a part with simultaneous submission.                                   |
 | `min-time-not-reached`         | Leaving an item, section, part or test before its minimum time.                                             |
 | `support-not-available`        | `support` for a support that is not an option.                                                              |
+| `awaiting-cat`                 | The next item depends on a CAT engine that has not answered, or a first stage is awaited.                   |
+| `unknown-request`              | `supply-scores` or `cat-response` names a request the state lacks, or one that waits for no answer.         |
+| `score-type-mismatch`          | `supply-scores` gives a value that does not fit the declaration of the outcome.                             |
+| `invalid-response`             | Also a `cat-response` that does not fit its request, or whose stage exceeds `maxPlanNodes`.                 |
 | the codes of `applyItemAction` | The rules of the item session (see Item sessions).                                                          |
 
 ### Navigation and submission
@@ -285,15 +300,17 @@ leaves without it.
 
 `Step.events` lists what happened, in order, with times and the item or scope: the item events of item sessions, and
 `outcome-processed`, `moved`, `section-entered`, `part-ended`, `test-ended`, `time-limit-passed`, `time-out`,
-`late-submission`, `suspended`, `resumed`, `support-changed`, `variant-selected` and `hazard-unavoidable` (E23). The
-TSDoc of `DeliveryEventType` gives the fields of each.
+`late-submission`, `suspended`, `resumed`, `support-changed`, `variant-selected`, `hazard-unavoidable`, `scoring-requested`,
+`scores-applied`, `scores-replaced`, `cat-requested` and `cat-stage-added` (E23). The TSDoc of `DeliveryEventType` gives
+the fields of each.
 
 ### State
 
 `DeliveryState` is plain data that holds no item content: the version of the format, the status, the time of the latest
 step, the generator state, the plan, the item presented, the item instances presented with their sessions, variants,
-supports and expiries, the test outcomes, the context values, the clocks of the test, parts and sections, the supports and
-what the engine takes from the profile. `serializeState` writes it as JSON with values as `WireValue`s and maps as arrays
+supports and expiries, the test outcomes, the context values, the clocks of the test, parts and sections, the supports,
+what the engine takes from the profile, the scoring requests with their supplied values, the sessions of adaptive sections,
+and the context of the results. `serializeState` writes it as JSON with values as `WireValue`s and maps as arrays
 of entries; `deserializeState` reads it back equal and refuses another version of the format (E2). Replaying the actions
 from the seed reproduces a state and its events exactly (E3).
 
@@ -352,6 +369,10 @@ Then every list of choices in an interaction takes the order that the session dr
 descriptors agree. References in the content are as the item writes them, against the document of the item; only
 `stylesheets` are package paths.
 
+While the first stage of an adaptive section is awaited (E18), no item is presented: the view has the part, the navigation
+map of its presented items and the actions `end-part`, `end-test` and `suspend` (and `support` when a support is an option),
+and no `current`.
+
 The view never holds (E20, E21):
 
 - response, template or outcome processing, mappings, area mappings and lookup tables;
@@ -403,6 +424,143 @@ the server owns the engine, the state and the clock. Host actions (`time`, `supp
 a client, and the time of an action is the server's `stamp`. In device mode the same engine and `engine.view` run on the
 device, and nothing is converted. `viewFromJson` and `actionToJson` import no engine code, so a browser bundle of them holds
 none of the answer keys.
+
+### Scoring requests
+
+An outcome with `external-scored` is one that a scorer sets, not processing (INFO §4.5.10, W18). The engine asks for each
+one once, and keeps the request in the state after its value is supplied, so that a second supply can replace the first
+(E13). `pending(state).scoring` lists the requests with no value yet.
+
+| Outcome of | The request is made when …                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| an item    | the session of the instance is over: its last attempt ended, or the part or a time-out closed it, or the candidate left it in a linear part |
+| the test   | every response its covers name has been presented and its session is over (G26); with no covers, when the test ends (O5)                    |
+
+| `ScoringRequest`                           | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                                       | `item:<ref>:<instance>:<outcome>` or `test:<outcome>`, which `supply-scores` and `scorerView` name.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `scope`, `item`                            | `item` with the instance, or `test`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `outcome`, `mode`, `variableIdentifierRef` | The outcome, who scores it (`human` or `externalMachine`), and the `variable-identifier-ref` of its declaration.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `declaration`                              | Cardinality, base type, normal minimum and maximum, mastery value, interpretation and long interpretation.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `covers`                                   | The responses the outcome rates (E14, O12): the instance, the response identifier, the label, `presented`, the kind of interaction and the last submitted value, exact. An item outcome covers the responses of its item. A test outcome covers what the `qti-rubric-block` of the olah convention names (§4.16, `readScoreCovers`), resolved to every instance in the plan; an instance never presented has `presented: false` and a NULL response. The covers come from the blocks only, never from the rules that use the outcome (O4). |
+| `lti`                                      | `true` for an item that models a link to a tool (E25).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `requestedAt`, `supplied`                  | When it was made, and the value supplied with its time and scorer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+`supply-scores` gives one value for one request (E15). The value must fit the declaration, an integer for a float; NULL is
+a value. It is accepted in any state, also after the test ended and while the session is suspended, as long as the request
+exists, and a second one replaces the first (`scores-replaced`). An item outcome is set in the item session without
+running response processing again (G25); the outcome processing of the test runs again, and an externally scored outcome
+of the test starts every run from its supplied value, since INFO §2.9 would reset it (G24, E16); until then it has its
+declared default. A link to a tool is an item whose `SCORE` and `MAXSCORE` are scored by the tool: both are requested when
+`submit` or leaving closes the session, and the host supplies the grade and its maximum from the tool (E25, G42).
+
+While a request is pending the report is provisional: the item result has the status `pendingExternalScoring`, and the
+responses it covers `scoreStatus="notscored"` (E17).
+
+```ts
+import { readAsi } from "@luthfanwakan/olah/asi";
+import { createEngine } from "@luthfanwakan/olah/delivery";
+import { single } from "@luthfanwakan/olah/values";
+
+const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="essay"
+    title="Essay" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`);
+if (document.kind !== "item") throw new Error("Expected an item.");
+
+const engine = createEngine({ kind: "item", item: document.item, base: "essay.xml" });
+const started = engine.start({ seed: 1, at: 0 });
+if (!started.ok) throw new Error(started.refusal.message);
+const item = { ref: "essay", instance: 1 };
+const written = engine.apply(started.state, {
+  type: "set-responses",
+  item,
+  responses: new Map([["RESPONSE", single("string", "Dear Sir")]]),
+  at: 1_000,
+});
+if (!written.ok) throw new Error(written.refusal.message);
+const submitted = engine.apply(written.state, { type: "submit", item, at: 2_000 });
+if (!submitted.ok) throw new Error(submitted.refusal.message);
+
+const [request] = engine.pending(submitted.state).scoring;
+request?.id; // "item:essay:1:SCORE"
+request?.covers[0]?.response; // { cardinality: "single", baseType: "string", value: "Dear Sir" }
+engine.results(submitted.state).itemResults[0]?.sessionStatus; // "pendingExternalScoring"
+
+const scored = engine.apply(submitted.state, {
+  type: "supply-scores",
+  request: request?.id ?? "",
+  value: single("float", 7.5),
+  scorer: "human",
+  at: 3_000,
+});
+if (!scored.ok) throw new Error(scored.refusal.message);
+scored.events.map(({ type }) => type); // ["scores-applied", "outcome-processed"]
+engine.pending(scored.state).scoring; // []
+engine.results(scored.state).itemResults[0]?.sessionStatus; // "final"
+```
+
+### Scorer view
+
+`scorerView(state, requestId)` gives what a rater needs (E27, R6): the request; the `rubric` of the test for the `scorer`
+view, and for an item outcome that of its part and sections too, without the covers blocks of other outcomes; and for each
+covered instance its title, its body as the candidate saw it after template processing, followed by the rubric blocks of the
+item that only the scorer sees, its template values, submitted responses and correct responses. An instance not presented
+has an empty body and empty maps. The view holds the correct responses, so it belongs on the server.
+
+### Adaptive sections
+
+An adaptive section (`qti-adaptive-selection`) takes its items from a CAT engine in stages (CAT §2). The definition names
+the engine of each one in `catSections`: the URL prefix and the identifier that `CatPort.createSection` returned when the
+host deployed the section (C1). The host answers the engine's requests; `drainCat` does it through a `CatPort`.
+
+| Moment                                                         | What the engine does                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The candidate reaches the section                              | Makes the Create Session request, with the candidate's PNP as `writePnp` writes it, in base64 (C3), and waits: no item is presented, and the clocks stand still.                                                                                                                                      |
+| `cat-response` to Create Session                               | Stores the session identifier and state, adds the items of the first stage to the section, each an instance as in a selection with replacement (C8), and presents the first.                                                                                                                          |
+| The first `stageLength` items of the stage are submitted       | Makes the Submit Results request (C4) with the minimal report of CAT §4.3.1 for the items not yet reported (C10), the earlier ones again when a further attempt changed them (B98), and the stored `sessionState`. The candidate is refused `awaiting-cat` where the next item depends on the answer. |
+| `cat-response` to Submit Results                               | Merges the outcomes the engine reported, stores `sessionState` (an absent one clears it), drops the items of the old stage that were not presented, and adds the next stage; an answer without items ends the session.                                                                                |
+| The candidate leaves the section, or the part or the test ends | Sends the results not yet reported in a last Submit Results, and End Session unless the engine's answer ended the session (C5).                                                                                                                                                                       |
+
+- A candidate who moves on while a request is made waits where the move was asked; when the answer has come, the move goes on.
+- Pre-conditions and branch rules on the items of an adaptive section are ignored; a branch rule that targets one finds no
+  target, since the pool is not in the plan until the engine sends it (B66). The section itself keeps both.
+- The items of an adaptive section are processed one by one, also in a part with simultaneous submission: response and
+  outcome processing run before the request (B27, CAT §2.4).
+- The outcomes of a report (CAT §4.3.2, B67): a declared outcome with `external-scored="externalMachine"` takes the value,
+  by its own identifier or by its `variable-identifier-ref`, and keeps it through later outcome processing; the same name as a
+  context, template or response variable, or as an outcome without that attribute, is ignored; any other outcome is kept as
+  if declared, with `external-scored="externalMachine"` in the results. An outcome that one engine set is not overwritten by
+  the engine of another section. The sessions of the report join the `context` of the results.
+- A report to the engine names an item the plan holds more than once `<ref>.<instance>` (CAT §4.3.1), has an empty `context`,
+  and gives an item that the candidate submitted without a response no response variables and no `SCORE`, with the status
+  `initial`; items not presented are left out.
+- `drainCat(engine, state, port, now)` makes the waiting requests one by one and applies each answer with `now()` as its time.
+  A request that the port rejects rejects the call and loses the answers so far, because the requests of a CAT engine are not
+  idempotent: a host that must resume applies the answers itself, one `cat-response` at a time, from `pending(state).cat`.
+
+A test part that holds an adaptive section should be linear (CAT §2.3); the engine waits for the first stage where the walk
+reaches the section, in a nonlinear part too.
+
+### Results
+
+`results(state)` assembles the report of RR (E24): the `context` given at `start`; the result of the test, with its
+`duration`, `PART.duration` and `SECTION.duration`, its context variables and outcomes, and the supports used; and an item
+result for each instance presented, in order of presentation, with `sequenceIndex` from 1 (INFO §5.98).
+
+| Item result       | Content                                                                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `datestamp`       | The time of its last event: the end of its last attempt (a submission, a skip, a time-out), else its latest change. `RFC 3339` with the offset `Z` and milliseconds.                                                        |
+| `sessionStatus`   | `resultStatus`, with `pendingExternalScoring` until every score of the item is supplied, and while a pending score of the test covers one of its responses (E17).                                                           |
+| responses         | `numAttempts` and `duration` (also for an item that is not time dependent), then each declared response with its last submitted value, `choiceSequence` when the choices were shuffled, `scoreStatus` and `answeredStatus`. |
+| other variables   | Template and context variables, then `completionStatus` and each declared outcome with its `view`, interpretation, normal and mastery values, `external-scored` and `variable-identifier-ref`.                              |
+| comment, supports | The candidate's comment, and the supports on while the item was presented: `assigned` when the profile names them, `universal` when only the program gives them (E28).                                                      |
+
+The result of the test has no datestamp of its own: it is the time of the latest step. An item delivered alone has no result
+of the test. A datestamp is always written with an offset because the JSON binding of CAT 1.0 declares it as
+`format: date-time` (CAT binding Appendix B1.2), which RFC 3339 defines with one, while an `xs:dateTime` may lack it.
 
 ## Planning example
 
@@ -781,7 +939,7 @@ Where the specifications are silent or contradict themselves:
 | B32          | A skip submits NULL responses. The variables of end attempt interactions are not responses, so an end attempt is never a skip.                                                                                                                     |
 | B33          | Only the interactions that the candidate sees are validated: those in hidden feedback or template content are not, and an end attempt is not.                                                                                                      |
 | E26          | A failed response processing leaves the outcomes it started from: the reset values of a non-adaptive item, the earlier outcomes of an adaptive one.                                                                                                |
-| B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing; supplying the scores is pending work of the test.                                                                                                 |
+| B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing, until the scores are supplied (E17).                                                                                                              |
 | B41, B100    | An item session starts at the first presentation of its instance: the variant is chosen and the template defaults are evaluated then. An instance not yet presented reads as a session before template processing.                                 |
 | B38, G9      | `ITEM.VAR` reads the instance whose attempt ended last, in both submission modes.                                                                                                                                                                  |
 | E9           | Leaving an item of a linear part with individual submission submits its open attempt, with the checks, and closes it. `end-part` and `end-test` work from any item, and end open attempts without the checks.                                      |
@@ -808,6 +966,14 @@ Where the specifications are silent or contradict themselves:
 | `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| E13, G26          | A test outcome is requested when its covers are presented and over, or the test ended; with no covers, at the end. An item outcome, when its session is over. A request is made once.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| E15, G24          | A supplied value of a test outcome is its starting value for every later outcome processing, a failed run included. A supply is accepted after the test ended.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| G25               | Supplying an item score does not run response processing again; the outcome processing of the test does run.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| C4                | Results go to a CAT engine when the first `stageLength` items are submitted, or the candidate leaves the section (past its last item, or the part or test ends). A `stageLength` absent or 0 is the whole stage.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| C8                | Items of a stage not presented when the next stage comes leave the plan: a stage replaces what the engine did not ask the candidate to answer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| B66               | A test part with an adaptive section waits for the first stage where the walk reaches the section, also when the part is nonlinear.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| C9, G21           | The port carries the typed `AssessmentResult`; a REST adapter writes the field names of the OpenAPI 3.0 listing of CAT binding Appendix B1.2 (the addresses the binding names return 404).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| E24               | A datestamp is a time in UTC with milliseconds and `Z`; a time outside the years 1 to 9999 is a `DataError` at `start` and `apply`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and
 in the engine are data.

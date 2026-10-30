@@ -51,8 +51,8 @@ event gives none, and the host's log keeps it.
 | `section-entered`                      | NavigationEvent NavigatedTo a section                  |
 
 These types have no Caliper event and give none: `responses-set`, `response-processed`, `processing-failed`,
-`outcome-processed`, `part-ended`, `time-limit-passed`, `time-out`, `late-submission`, `support-changed`, `variant-selected` and
-`hazard-unavoidable`.
+`outcome-processed`, `part-ended`, `time-limit-passed`, `time-out`, `late-submission`, `support-changed`, `variant-selected`,
+`hazard-unavoidable`, `scoring-requested`, `scores-applied`, `scores-replaced`, `cat-requested` and `cat-stage-added`.
 
 The mapping is a record over olah's `DeliveryEventType`, so a type that olah adds fails the type check until it is decided.
 An event whose type is none of these is a `DataError`.

@@ -16,6 +16,7 @@ import {
   BASE_TYPES,
   type CandidateAction,
   type CandidateView,
+  type CatSectionRef,
   closeItem,
   container,
   createEngine,
@@ -405,12 +406,14 @@ function engineOf(
   content: string,
   items: Readonly<Record<string, AssessmentItem | ResolvedItem>> = {},
   options: EngineOptions = {},
+  catSections: ReadonlyMap<string, CatSectionRef> = new Map(),
 ): Engine {
   return createEngine(
     {
       kind: "test",
       test: testDocument(content),
       base: "test.xml",
+      catSections,
       resolvers: {
         items: (href) => {
           const named = items[href] ?? counterItem();
@@ -699,7 +702,7 @@ describe("Engine.start", () => {
       ["line-reader", { state: "active", active: true, settings: { name: "line-reader", replaceAccessModes: [] } }],
       ["dictionary-on-screen", { state: "option", active: false }],
       ["spell-checker-on-screen", { state: "prohibited", active: false }],
-      ["calculator-on-screen", { state: "option", active: false }],
+      ["calculator-on-screen", { state: "option", active: false, universal: true }],
     ]);
     expect(state.items[0]?.supports).toEqual(["line-reader"]);
   });
@@ -836,20 +839,30 @@ describe("Engine.apply", () => {
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
     const engine = engineOf(
       `${TOTAL}${testPart("P", section("A", adaptive + refs("c")) + section("S", refs("b")), "nonlinear", "simultaneous")}${outcomeProcessing(SUM_SCORES)}`,
+      {},
+      {},
+      new Map([["A", { prefix: "http://example.org/engine", sectionIdentifier: "cat-1" }]]),
     );
-    // The section A has no items until a stage of its CAT engine is appended to the plan; here c is appended by hand.
+    // The section A has no items until a stage of its CAT engine is appended to the plan, so the candidate waits for it.
     const { state } = begun(engine);
-    expect(state.current).toEqual(key("b"));
-    const written = JSON.parse(serializeState(state));
-    written.plan.parts[0].children[0].children = [{ kind: "item", key: key("c") }];
-    const staged = deserializeState(JSON.stringify(written));
-    const atC = played(engine, staged, moveTo(key("c"), 1), answer("c", "B", 2));
+    expect(state.current).toBeUndefined();
+    const request = engine.pending(state).cat[0];
+    const staged = played(engine, state, {
+      type: "cat-response",
+      request: request?.id ?? "",
+      response: { sessionIdentifier: "s1", nextItems: { itemIdentifiers: ["c"], stageLength: 1 } },
+      at: 0,
+    });
+    expect(staged.state.current).toEqual(key("c"));
+    const atC = played(engine, staged.state, answer("c", "B", 2));
     expect(described(played(engine, atC.state, on("submit", "c", 3)).events)).toEqual([
       "attempt-ended c submit@3",
       "response-processed c@3",
       "outcome-processed T@3",
+      "cat-requested A submit-results cat:A:1:2@3",
     ]);
-    expect(refusalOf(engine, staged, on("submit", "b", 1)).code).toBe("wrong-submission-mode");
+    const atB = played(engine, staged.state, moveTo(key("b"), 1));
+    expect(refusalOf(engine, atB.state, on("submit", "b", 2)).code).toBe("wrong-submission-mode");
   });
 
   it("[W32][B37] runs outcome processing after each submission in an individual part, from the outcomes' defaults", () => {
@@ -5457,7 +5470,7 @@ describe("properties", () => {
       fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
         const engine = flowEngine(flow);
         session(engine, seed, moves, (before, action, step) => {
-          if (action.type === "time") return;
+          if (action.type === "time" || action.type === "supply-scores" || action.type === "cat-response") return;
           const received = parseCandidateAction(throughText(actionToJson(action)));
           const stamped = stamp(before, received, action.at);
           expect(stamped).toEqual(action);

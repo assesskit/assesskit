@@ -26,6 +26,11 @@ export interface RuleContext {
   readonly scope: TestScope;
   /** The source of random draws, the custom operators and the limits. */
   readonly context: ProcessingContext;
+  /**
+   * Whether the candidate has entered the instance of an adaptive section, so that the walk stops at one that it has not:
+   * its first stage comes from the CAT engine (E18). Default: none, so that an adaptive section without items is passed.
+   */
+  readonly catStarted?: (section: string, instance: number) => boolean;
 }
 
 /** The branch rule targets that name no node but a place to leave (INFO §5.23.1). */
@@ -46,21 +51,26 @@ interface Frame {
   last: number;
 }
 
-/** What the walk does next: it enters, completes or goes on after a node, stops at an item to present, or ends. */
+/**
+ * What the walk does next: it enters, completes or goes on after a node, stops at an item to present or at an adaptive
+ * section to start, or ends.
+ */
 type Move =
   | { readonly to: "enter" | "complete" | "after"; readonly frame: Frame }
   | { readonly to: "present"; readonly key: ItemKey }
+  | { readonly to: "adaptive"; readonly section: string; readonly instance: number }
   | { readonly to: "end" };
 
 const END: Move = { to: "end" };
 
 /**
  * Where the candidate goes on leaving an item or a section: an item, of the same test part or of another that a branch
- * rule leads to; the end of the test part, after which the walk goes on from the part once it has ended; or the end of
+ * rule leads to; an adaptive section that the candidate has not entered, whose first stage the CAT engine gives (E18); the end of the test part, after which the walk goes on from the part once it has ended; or the end of
  * the test, at `EXIT_TEST` or after the last part.
  */
 export type Destination =
   | { readonly to: "item"; readonly key: ItemKey }
+  | { readonly to: "adaptive"; readonly section: string; readonly instance: number }
   | { readonly to: "part-end" }
   | { readonly to: "test-end" };
 
@@ -144,19 +154,19 @@ class Walk {
     this.frames = indexPlan(plan);
   }
 
-  /** Returns the first item to present, `undefined` when the test has none. */
-  start(): ItemKey | undefined {
+  /** Returns where the test starts: its first item, or the end when it has none. */
+  start(): Destination {
     const [first] = this.frames.roots;
-    return keyOf(this.run(first === undefined ? END : { to: "enter", frame: first }));
+    return this.run(first === undefined ? END : { to: "enter", frame: first });
   }
 
   /**
-   * Returns the item to present after the candidate leaves an item, `undefined` when the test ends.
+   * Returns where the candidate goes on leaving an item.
    *
    * @throws `DataError` when the plan has no such item instance.
    */
-  after(key: ItemKey): ItemKey | undefined {
-    return keyOf(this.run({ to: "complete", frame: this.itemFrame(key) }));
+  after(key: ItemKey): Destination {
+    return this.run({ to: "complete", frame: this.itemFrame(key) });
   }
 
   /**
@@ -176,15 +186,28 @@ class Walk {
   }
 
   /**
-   * Returns the item to present once a test part has ended, `undefined` when the test ends: the part is completed, so
-   * that its branch rules follow.
+   * Returns where the candidate goes on leaving an adaptive section that holds no item for the walk to stop at: the
+   * section is completed, so that its branch rules follow.
+   *
+   * @throws `DataError` when the plan has no such section.
+   */
+  afterSection(section: string, instance: number): Destination {
+    const frame = this.frames.named
+      .get(section)
+      ?.find((candidate) => candidate.node.kind === "section" && candidate.node.instance === instance);
+    if (frame === undefined) throw new DataError(`The plan has no section ${describe(section)} ${instance}.`);
+    return this.run({ to: "complete", frame });
+  }
+
+  /**
+   * Returns where the candidate goes once a test part has ended: the part is completed, so that its branch rules follow.
    *
    * @throws `DataError` when the plan has no such test part.
    */
-  afterPart(part: string): ItemKey | undefined {
+  afterPart(part: string): Destination {
     const frame = this.frames.roots.find((root) => identifierOf(root.node) === part);
     if (frame === undefined) throw new DataError(`The plan has no test part ${describe(part)}.`);
-    return keyOf(this.run({ to: "complete", frame }));
+    return this.run({ to: "complete", frame });
   }
 
   private itemFrame(key: ItemKey): Frame {
@@ -204,6 +227,8 @@ class Walk {
       switch (move.to) {
         case "present":
           return { to: "item", key: move.key };
+        case "adaptive":
+          return { to: "adaptive", section: move.section, instance: move.instance };
         case "end":
           return TEST_END;
         case "enter":
@@ -263,17 +288,36 @@ class Walk {
     return this.modelOf(frame).preConditions.every((condition) => this.holds(condition.operand));
   }
 
+  /** Whether the frame is an item of an adaptive section, whose pre-conditions and branch rules are ignored (B66, CAT §2.3). */
+  private inAdaptive(frame: Frame): boolean {
+    if (frame.node.kind !== "item") return false;
+    return pathTo(frame).some(
+      ({ node }) =>
+        node.kind === "section" && this.structure.section(node.identifier)?.model.adaptiveSelection !== undefined,
+    );
+  }
+
+  /** Returns the move that starts the adaptive section of a frame, `undefined` when the frame is not one to start. */
+  private startAdaptive(frame: Frame): Move | undefined {
+    const { node } = frame;
+    const started = this.rules.catStarted;
+    if (node.kind !== "section" || started === undefined || started(node.identifier, node.instance)) return undefined;
+    if (this.structure.section(node.identifier)?.model.adaptiveSelection === undefined) return undefined;
+    return { to: "adaptive", section: node.identifier, instance: node.instance };
+  }
+
   /** Enters a node: skips it when a pre-condition is false, presents an item, else goes to the first child. */
   private enter(frame: Frame): Move {
-    if (this.applies(frame) && !this.eligible(frame)) return { to: "after", frame };
+    if (this.applies(frame) && !this.inAdaptive(frame) && !this.eligible(frame)) return { to: "after", frame };
     if (frame.node.kind === "item") return { to: "present", key: frame.node.key };
     const [first] = frame.children;
-    return first === undefined ? { to: "complete", frame } : { to: "enter", frame: first };
+    if (first !== undefined) return { to: "enter", frame: first };
+    return this.startAdaptive(frame) ?? { to: "complete", frame };
   }
 
   /** Completes a node that was entered: the first branch rule that is true decides, else the walk goes on after it. */
   private complete(frame: Frame): Move {
-    if (!this.applies(frame)) return { to: "after", frame };
+    if (!this.applies(frame) || this.inAdaptive(frame)) return { to: "after", frame };
     for (const rule of this.modelOf(frame).branchRules) {
       const destination = this.destination(frame, rule.target);
       if (destination !== undefined && this.holds(rule.expression)) return destination;
@@ -339,7 +383,7 @@ class Walk {
   }
 }
 
-/** Returns the item of a destination of a walk that stops at nothing but an item or the end of the test. */
+/** Returns the item of a destination of a walk, `undefined` for any other. */
 function keyOf(destination: Destination): ItemKey | undefined {
   return destination.to === "item" ? destination.key : undefined;
 }
@@ -392,7 +436,7 @@ export function nextItem(
   if (from !== undefined) checkKey(from);
   checkRecord(rules, "The rule context must be an object");
   const walk = new Walk(structure, plan, rules);
-  return from === undefined ? walk.start() : walk.after(from);
+  return keyOf(from === undefined ? walk.start() : walk.after(from));
 }
 
 /**
@@ -416,20 +460,47 @@ export function destinationAfter(
 }
 
 /**
- * Returns the item to present after a test part ended, as {@link nextItem} decides: the branch rules of the part, in a
- * linear part, follow, then the walk goes on; `undefined` when the test ends. Its callers pass a structure and a plan of
- * the session, so the arguments are not checked.
+ * Returns where the candidate goes once a test part ended, as {@link itemAfterPart} decides, with the adaptive sections
+ * the candidate has not entered among the destinations. Its callers pass a structure and a plan of the session.
  *
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
  */
-export function itemAfterPart(
+export function destinationAfterPart(
   structure: TestStructure,
   plan: TestPlan,
   part: string,
   rules: RuleContext,
-): ItemKey | undefined {
+): Destination {
   return new Walk(structure, plan, rules).afterPart(part);
+}
+
+/**
+ * Returns where the candidate goes on leaving an adaptive section that has no item to present, as {@link nextItem}
+ * decides. Its callers pass a structure and a plan of the session.
+ *
+ * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
+ * @throws `SecurityError` when an expression builds a container above the limit.
+ */
+export function destinationAfterSection(
+  structure: TestStructure,
+  plan: TestPlan,
+  section: string,
+  instance: number,
+  rules: RuleContext,
+): Destination {
+  return new Walk(structure, plan, rules).afterSection(section, instance);
+}
+
+/**
+ * Returns where the session starts, as {@link nextItem} decides without a `from`, with an adaptive section among the
+ * destinations. Its callers pass a structure and a plan of the session.
+ *
+ * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
+ * @throws `SecurityError` when an expression builds a container above the limit.
+ */
+export function startDestination(structure: TestStructure, plan: TestPlan, rules: RuleContext): Destination {
+  return new Walk(structure, plan, rules).start();
 }
 
 /**

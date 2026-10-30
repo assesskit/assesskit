@@ -19,7 +19,7 @@ import { type PlanIndex, planIndex } from "./plan-index.js";
 import { ancestry, type ItemRefNode } from "./structure.js";
 
 /** Returns the time a clock shows as the value of a `duration` variable: seconds, truncated to the millisecond (G20). */
-function durationOf(clocks: readonly ScopeClock[], scope: ScopeClock["scope"], identifier: string): Value {
+export function durationOf(clocks: readonly ScopeClock[], scope: ScopeClock["scope"], identifier: string): Value {
   const spent = clocks.find((clock) => clock.scope === scope && clock.identifier === identifier)?.spent ?? 0;
   return single("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
 }
