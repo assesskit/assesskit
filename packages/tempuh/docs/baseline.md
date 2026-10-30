@@ -53,4 +53,14 @@ same version, `mcr.microsoft.com/playwright:v1.31.2-jammy` and `v1.36.2-jammy`, 
 system libraries of their time. `pnpm compat:engines` runs the smoke cases of `compat/smoke.ts` in both images, with
 Docker; pass a pair name (`chromium-webkit` or `firefox`) to run one. The CI job `engines` runs it too.
 
+The player imports olah by package name, which a browser cannot resolve, so before the containers start `pnpm compat:engines`
+bundles `dist/player/index.js` with its dependencies into `compat/.smoke/player.js`, which the smoke server serves in its
+place. The containers run on the `node_modules` of the machine, so esbuild, a native program, runs outside them. The smoke
+server also serves MathJax and its fonts from the `mathjax` package that the tests use.
+
+The cases are: the engine is the baseline; the banned features are present or absent as the table says; the shared modules
+run; `player.css` styles a content root; a portable custom interaction runs in its frame and reaches no network; a speech
+request is built from a content root; and MathJax typesets MathML in a shadow root, gives braille and leaves elementary
+math to the browser.
+
 Playwright's WebKit is not Safari. A person checks the player in Safari 16.4 before the first release.

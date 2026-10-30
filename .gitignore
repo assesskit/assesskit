@@ -7,3 +7,4 @@ coverage/
 .venv/
 .DS_Store
 .vitest/
+compat/.smoke/

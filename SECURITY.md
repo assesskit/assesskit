@@ -102,6 +102,18 @@ place only.
 olah keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
 parameters of the items and the settings of the test: keep it on the server. takar is a runtime dependency of tempuh, and
 only `cat/` imports it.
+## tempuh: MathJax and speech
+
+MathJax is code that the host chooses and serves: tempuh loads the script from the URL it is given and bundles none. Serve
+MathJax and its fonts from the asset origin, from the files of the pinned version of the npm package `mathjax`, and put
+that origin in the `script-src`, `font-src` and `connect-src` of the page and `blob:` in its `worker-src`
+([math](packages/tempuh/docs/math.md#serving-mathjax)). tempuh sets MathJax's fonts to the host, so that it reaches no CDN. A
+page loads MathJax from one URL.
+
+A speech request is made from the content of the page and goes to the voice of the host. The `ssml` holds only the SSML
+elements and attributes of SSML 1.1 that the ASI schema allows, with every value escaped, and an `audio` keeps its source
+only for an `http` or `https` URL. Lexicons are parsed by olah's XML reader, with its limits, and become `sub` and `phoneme`
+in the request, so that a voice fetches no lexicon.
 
 ## Default limits
 

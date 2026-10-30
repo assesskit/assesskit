@@ -33,12 +33,18 @@ has one of three kinds:
 
 ## Tests in a browser
 
-The browser tests of the frame use fixtures in `test/fixtures/`. The global setup `global-setup.ts` builds the files of the
-frame and starts three servers on free ports: the asset origin, a second origin that a test may allow, and a stranger that
-nothing may reach. A test asks a server for the paths it was requested for at `/__hits`, and the browsers of a run share
-the servers, so each test names its paths with a token of its own. The browser commands in `commands.ts` give a test what a
-page cannot do: run axe-core inside a frame of an opaque origin, click in it, and read the accessibility tree with its
-frames.
+The browser tests use fixtures in `test/fixtures/`. The global setup `global-setup.ts` builds the files of the frame and
+starts three servers on free ports: the asset origin, a second origin that a test may allow, and a stranger that nothing
+may reach. A test asks a server for the paths it was requested for at `/__hits`, and the browsers of a run share the
+servers, so each test names its paths with a token of its own. The asset origin also serves MathJax and its fonts from the
+`mathjax` package under `/mathjax/`, and validates SSML: a test posts a document to `/validate/ssml` and gets the issues
+that the SSML 1.1 schema finds, as JSON. That needs the schemas, so run `pnpm schemas` before `pnpm test:browser`. The
+browser commands in `commands.ts` give a test what a page cannot do: run axe-core inside a frame of an opaque origin,
+click in it, and read the accessibility tree with its frames. `test/content-fixture.ts` mounts content written as XML,
+with SSML and MathML in their namespaces, in a content root.
+
+MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
+failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.
 
 The browser tests of the tools build their page in the test: the toolbar in the document and the item in a shadow root, as
 the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG §3.7.8 with olah's `readAsi`, so that the
@@ -55,7 +61,7 @@ repository. The container needs network access to install the dependencies and t
 docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
-  pnpm exec playwright install chromium firefox webkit && pnpm test:browser'
+  pnpm schemas && pnpm exec playwright install chromium firefox webkit && pnpm test:browser'
 ```
 
 ## Tests name their rows and criteria

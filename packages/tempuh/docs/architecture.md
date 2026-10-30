@@ -35,18 +35,21 @@ Node.js or any server runtime, and no DOM. tempuh imports olah by package name a
 Each subpath is a folder of `src/` with an `index.ts`, listed in `exports`. The root `.` re-exports the errors and the
 messages and nothing of the other subpaths, so that a browser bundle and a server load none of each other's code.
 
-| Subpath      | Side    | Contents                                                                                                     |
-| ------------ | ------- | ------------------------------------------------------------------------------------------------------------ |
-| `.`          | shared  | The errors and the interface messages                                                                        |
-| `player`     | browser | The host of portable custom interactions ([PCI](pci.md)) and the tools of an item ([tools](tools.md))        |
-| `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                  |
-| `cat`        | server  | The CAT engines over takar and over the REST binding of CAT 1.0, and their deployment ([CAT](cat.md))        |
-| `lti`        | server  | The tool role of LTI 1.3: login, launch, Deep Linking response, access token ([lti](lti.md))                 |
-| `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/` |
+| Subpath      | Side    | Contents                                                                                                                                                           |
+| ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.`          | shared  | The errors and the interface messages                                                                                                                              |
+| `player`     | browser | The host of portable custom interactions ([PCI](pci.md)), the tools of an item ([tools](tools.md)), mathematics ([math](math.md)) and speech ([speech](speech.md)) |
+| `protocol`   | shared  | The caller and the envelopes between a browser and a server                                                                                                        |
+| `cat`        | server  | The CAT engines over takar and over the REST binding of CAT 1.0, and their deployment ([CAT](cat.md))                                                              |
+| `lti`        | server  | The tool role of LTI 1.3: login, launch, Deep Linking response, access token ([lti](lti.md))                                                                       |
+| `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/`                                                       |
 
 The package also exports static files that a host serves: `pci-frame/*`, the frame of a portable custom interaction.
 `pnpm build` writes them to `dist/pci-frame/` with `scripts/build-frame.ts`, which bundles `src/player/pci/frame/bridge.ts`
 into a classic script with esbuild and copies `frame.html` and RequireJS beside it.
+
+tempuh depends on olah (`workspace:^`), which browser folders import by package name and subpath. The built `dist/` keeps
+those imports, so a page loads the player through a bundler, which also resolves olah's own dependencies.
 
 ## TypeScript
 

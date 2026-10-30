@@ -113,4 +113,8 @@ export interface Messages {
   readonly calculatorMemoryAdd: string;
   /** The name of the key that subtracts the number from the memory; it starts with the symbols on the key. */
   readonly calculatorMemorySubtract: string;
+  /** The word that read-aloud says before a link, when the candidate's link indication is to speak it. */
+  readonly speechLink: string;
+  /** The word that the typing echo says for the space character. */
+  readonly typingSpace: string;
 }

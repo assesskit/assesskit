@@ -22,7 +22,7 @@ tests. A difference from Longsight `qti3-core` that the specification settles go
 
 Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip` and `pnpm conformance`, then `pnpm build`,
 `pnpm check:packages`, `pnpm compat` and `pnpm docs:api`. A change to the code that runs in a browser also runs
-`pnpm test:browser`, which needs the browsers of `pnpm exec playwright install`, and `pnpm compat:engines`, which needs
+`pnpm test:browser`, which needs the browsers of `pnpm exec playwright install` and the schemas of `pnpm schemas`, and `pnpm compat:engines`, which needs
 Docker ([baseline](packages/tempuh/docs/baseline.md)). The tests that read the corpus run with `pnpm corpus` and `pnpm test:corpus`,
 and the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`.
 A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with

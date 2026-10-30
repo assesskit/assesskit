@@ -57,4 +57,6 @@ export const ID_MESSAGES: Messages = {
   calculatorMemoryRecall: "MR, panggil memori",
   calculatorMemoryAdd: "M+, tambah ke memori",
   calculatorMemorySubtract: "M−, kurangi dari memori",
+  speechLink: "tautan",
+  typingSpace: "spasi",
 };

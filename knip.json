@@ -7,7 +7,7 @@
     "packages/tempuh": {
       "entry": ["src/index.ts", "src/*/index.ts", "src/player/pci/frame/bridge.ts"],
       "ignore": ["test/fixtures/**"],
-      "ignoreDependencies": ["requirejs"]
+      "ignoreDependencies": ["requirejs", "mathjax"]
     },
     "compat": {
       "entry": ["smoke.ts"],

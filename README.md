@@ -2,10 +2,10 @@
 
 A QTI 3.0 runtime for JavaScript and TypeScript, and the player built on it. This repository holds two packages:
 
-| Package                               | What it is                                                                                                                                                                                                                                                                           |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`olah`](packages/olah/README.md)     | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server or practice on a device.                                                                                             |
-| [`tempuh`](packages/tempuh/README.md) | The player: rendering, the PCI host, accessibility in the UI and the server-side integrations. It uses olah only through its published subpaths. Under development; this version has the errors, the interface messages, the protocol and the frame of portable custom interactions. |
+| Package                               | What it is                                                                                                                                                                                                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`olah`](packages/olah/README.md)     | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server or practice on a device.                                                                                                                  |
+| [`tempuh`](packages/tempuh/README.md) | The player: rendering, the PCI host, accessibility in the UI and the server-side integrations. It uses olah only through its published subpaths. Under development; this version has the errors, the interface messages, the protocol, the frame of portable custom interactions, mathematics and speech. |
 
 olah is not certified by 1EdTech. [Conformance](packages/olah/docs/conformance.md) states how every construct of the
 specifications is evidenced.

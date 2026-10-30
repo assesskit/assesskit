@@ -14,6 +14,7 @@ masking, materials, and slots for the tools that the host provides. It also has 
 response and access token. On the server it has the CAT engines for olah's `CatPort`:
 item-level adaptive sections and multistage panels over takar, a client of the REST binding of CAT 1.0, and the deployment of a
 package's adaptive sections.
+Mathematics is typeset with MathJax 4, loaded from the host's URL when an item has an expression, and speech is read aloud from SSML, `data-ssml` and pronunciation lexicons through a voice of the host or the browser.
 
 ## Browser baseline
 
@@ -39,6 +40,8 @@ envelope.seq; // 3
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@luthfanwakan/tempuh`             | `TempuhError`, `DataError`, `AccessError`, `LtiError`, `ServiceError`; `Messages`, `EN_MESSAGES`, `ID_MESSAGES`, `selectMessages`                                                                                           |
 | `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciModules`, `PciEvent`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields |
+| `@luthfanwakan/tempuh/player`      | `createMathTypesetter`, `MathTypesetter`                                                                                                                                                                                    |
+| `@luthfanwakan/tempuh/player`      | `buildSpeechRequest`, `SpeechOptions`, `SpeechRequest`, `SpeechSettings`, `SpeechHook`, `webSpeech`, `echoTyping`, `TypingEchoOptions`, `applyReadingType`, `parseLexicon`, `Lexicon`, `Pronunciation`                      |
 | `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                    |
 | `@luthfanwakan/tempuh/lti`         | `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `createJwksCache` and the types of their arguments and results                                                                                               |
 | `@luthfanwakan/tempuh/cat`         | `takarCatPort`, `takarPanelPort`, `restCatPort`, `deployCatSections`; `SectionStore`, `StoredSection`, `PanelParameters`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                      |
@@ -50,6 +53,8 @@ envelope.seq; // 3
 - [Architecture](docs/architecture.md): principles, layers and errors.
 - [Baseline](docs/baseline.md): the browser baseline, the banned features and how they are tested.
 - [Portable custom interactions](docs/pci.md): the frame, its policy, loading, events and serving the files.
+- [Mathematics](docs/math.md): MathJax by URL, shadow roots, elementary math and braille.
+- [Speech](docs/speech.md): the speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo.
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [LTI](docs/lti.md): the tool role of LTI 1.3, its checks and its deployment.
 - [CAT](docs/cat.md): the CAT engines over takar and over REST, the section store and the deployment of a package.

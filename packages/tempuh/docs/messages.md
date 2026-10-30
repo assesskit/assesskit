@@ -60,6 +60,8 @@ same name everywhere (WCAG 3.2.4). tempuh ships English and Indonesian.
 | `calculatorMemoryRecall`   | MR, recall memory                                                                      | MR, panggil memori                                                                              |
 | `calculatorMemoryAdd`      | M+, add to memory                                                                      | M+, tambah ke memori                                                                            |
 | `calculatorMemorySubtract` | M−, subtract from memory                                                               | M−, kurangi dari memori                                                                         |
+| `speechLink`               | link                                                                                   | tautan                                                                                          |
+| `typingSpace`              | space                                                                                  | spasi                                                                                           |
 
 `Messages` is the type of a catalog, `EN_MESSAGES` and `ID_MESSAGES` are the shipped ones, and a catalog for another
 language has the same keys.

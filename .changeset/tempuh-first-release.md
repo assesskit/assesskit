@@ -26,3 +26,9 @@ takar, for item-level adaptive sections and multistage panels, with the `Section
 `scalingConstant` of a bank on the normal-ogive metric. `restCatPort` speaks the REST/JSON binding of CAT 1.0 to one remote
 engine over HTTPS with OAuth 2.0 client credentials, and `deployCatSections` creates the sections of a package's adaptive
 selections at the engine and checks their pool. takar is a runtime dependency.
+Mathematics and speech (`player`): `createMathTypesetter` typesets MathML with MathJax 4, which it loads from the host's URL
+when a root has an expression, adopts MathJax's styles into shadow roots and leaves expressions with elementary math to the
+browser. `buildSpeechRequest` reads a range of content into an SSML 1.1 document and plain text, applying SSML, `data-ssml`,
+pronunciation lexicons (`parseLexicon`), suppression by reading type, content roles and the restriction types of the spoken
+support. `webSpeech` voices a request with the Web Speech API, `echoTyping` repeats typing as the support asks, and
+`applyReadingType` applies the reading type to the accessibility tree.

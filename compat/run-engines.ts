@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { build } from "esbuild";
 import { ENGINE_PAIRS, imageOf } from "./engines.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -11,6 +12,17 @@ if (unknown.length > 0) {
   );
   process.exit(1);
 }
+
+// The player imports olah by package name, which a browser cannot resolve, so the pages of the smoke test load it as one
+// bundle. The containers cannot make it: they run on the node_modules of this machine, and esbuild is a native program.
+await build({
+  entryPoints: [resolve(root, "packages/tempuh/dist/player/index.js")],
+  outfile: resolve(root, "compat/.smoke/player.js"),
+  bundle: true,
+  format: "esm",
+  target: ["chrome111", "firefox115", "safari16.4"],
+  logLevel: "warning",
+});
 
 let failed = false;
 for (const pair of ENGINE_PAIRS.filter(({ name }) => requested.length === 0 || requested.includes(name))) {

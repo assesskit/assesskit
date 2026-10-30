@@ -1,26 +1,42 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { createServer, type Server, type ServerResponse } from "node:http";
+import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
-import { extname, join, resolve, sep } from "node:path";
+import { dirname, extname, join, resolve, sep } from "node:path";
+import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "@luthfanwakan/olah/node";
 import type { TestProject } from "vitest/node";
+import { requireSchemas } from "../../../../scripts/schemas.ts";
 import { buildFrame } from "../../scripts/build-frame.ts";
 import "./origins.ts";
 
 const PACKAGE_FILES = resolve(import.meta.dirname, "pci");
 const TEMPUH = resolve(import.meta.dirname, "../..");
 const CDN_FILES = resolve(import.meta.dirname, "cdn");
+const ROOT = resolve(import.meta.dirname, "../../../..");
 
 const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
   [".html", "text/html"],
   [".js", "text/javascript"],
   [".css", "text/css"],
   [".svg", "image/svg+xml"],
+  [".json", "application/json"],
+  [".woff2", "font/woff2"],
 ]);
 
 /** The frame of the static files with a script that keeps a policy from being set, as a browser without one would. */
 const WITHOUT_POLICY = '<script>Object.defineProperty(HTMLMetaElement.prototype, "content", { set() {} });</script>';
 
-type Handler = (path: string, response: ServerResponse) => Promise<void> | void;
+type Handler = (path: string, response: ServerResponse, request: IncomingMessage) => Promise<void> | void;
+
+/** The `xsi:schemaLocation` that makes olah validate an SSML document against the SSML 1.1 schema that it pins. */
+const SSML_SCHEMA_HINT =
+  'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis https://purl.imsglobal.org/spec/ssml/v1p1/schema/xsd/ssmlv1p1-core.xsd"';
+
+/** Reads the body of a request as text. */
+async function readBody(request: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 /** Serves a file below a directory, or 404 for a path that leaves it. */
 async function serveFile(directory: string, path: string, response: ServerResponse, patch?: (text: string) => string) {
@@ -53,7 +69,7 @@ async function listen(handler: Handler): Promise<{ readonly server: Server; read
     }
     hits.push(path);
     response.setHeader("access-control-allow-origin", "*");
-    void handler(path, response);
+    void handler(path, response, request);
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address();
@@ -70,12 +86,16 @@ const close = (server: Server): Promise<void> =>
 /**
  * Starts the servers of the browser tests and builds the frame's files for them; the servers stop when the tests end.
  * The asset origin serves the frame twice: under `/static/`, and under `/unrestricted/` with a script that stops the frame
- * from setting its policy.
+ * from setting its policy. It serves MathJax and its fonts under `/mathjax/`, and validates the SSML that a test posts to
+ * `/validate/ssml` against the SSML 1.1 schema, which needs `pnpm schemas` first, and answers with the issues as JSON.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const built = await mkdtemp(join(tmpdir(), "tempuh-frame-"));
+  // The directory that holds `mathjax` and `@mathjax` side by side, as npm lays them out.
+  const mathjaxFiles = dirname(await realpath(resolve(TEMPUH, "node_modules/mathjax")));
   await buildFrame(join(built, "pci-frame"));
-  const asset = await listen(async (path, response) => {
+  let schemas: Promise<SchemaSet> | undefined;
+  const asset = await listen(async (path, response, request) => {
     const [, area, rest = ""] = /^\/([^/]+)(\/.*)?$/u.exec(path) ?? [];
     if (area === "static" || area === "unrestricted") {
       if (rest === "/player.css") {
@@ -89,6 +109,14 @@ export default async function setup(project: TestProject): Promise<() => Promise
       await serveFile(built, rest, response, patch);
     } else if (area === "g") {
       await serveFile(PACKAGE_FILES, `/${rest.split("/").slice(2).join("/")}`, response);
+    } else if (area === "validate" && request.method === "POST") {
+      schemas ??= loadSchemaSet(requireSchemas(ROOT));
+      const document = (await readBody(request)).replace("<speak ", `<speak ${SSML_SCHEMA_HINT} `);
+      const issues = await validateXmlFiles(await schemas, [{ path: "request.ssml", content: document }]);
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify(issues.map(({ message }) => message)));
+    } else if (area === "mathjax") {
+      await serveFile(mathjaxFiles, rest.replace(/^\/(?!@)[^/]+/u, "/mathjax"), response);
     } else if (area !== "hang") {
       response.statusCode = 404;
       response.end();
@@ -101,6 +129,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   project.provide("fixtures", { asset: asset.origin, other: other.origin, stranger: stranger.origin });
   return async () => {
     await Promise.all([asset, other, stranger].map(({ server }) => close(server)));
+    (await schemas)?.close();
     await rm(built, { recursive: true, force: true });
   };
 }

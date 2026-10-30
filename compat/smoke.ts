@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, resolve, sep } from "node:path";
+import { dirname, extname, resolve, sep } from "node:path";
 import { BANNED_FEATURES, BASELINE, type Engine } from "./banned-features.ts";
 
 /** What a smoke case uses of a Playwright page; every release of `engines/` has it. */
@@ -40,10 +41,17 @@ const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
   [".js", "text/javascript"],
   [".json", "application/json"],
   [".map", "application/json"],
+  [".woff2", "font/woff2"],
 ]);
 
 /** The built package, which engines/<name>/ runs in: `playwright test` starts there. */
 const DIST = resolve(process.cwd(), "../../../packages/tempuh/dist");
+
+/** The player with its dependencies in one file, which `run-engines.ts` makes before the containers start. */
+const PLAYER_BUNDLE = resolve(process.cwd(), "../../.smoke/player.js");
+
+/** The directory that holds `mathjax` and `@mathjax` as npm lays them out, which the pages load MathJax from. */
+const MATHJAX_FILES = dirname(realpathSync(resolve(process.cwd(), "../../../packages/tempuh/node_modules/mathjax")));
 
 /** The stylesheet of the player, which the package ships as it is. */
 const PLAYER_CSS_FILE = resolve(process.cwd(), "../../../packages/tempuh/player.css");
@@ -68,7 +76,24 @@ const PCI_MODULE = `define(["qtiCustomInteractionContext"], function (context) {
   });
 });`;
 
-/** Serves `dist/` at `/dist/`, `player.css` at `/player.css` and `/dist/player.css`, the module of the interaction at `/pci/echo.js` and an empty page at `/`; returns the URL of the page and a function that stops it. */
+/** Returns the file that serves a path, or `undefined` when the server has none. */
+function locate(path: string): string | undefined {
+  if (path === "/player.css" || path === "/dist/player.css") return PLAYER_CSS_FILE;
+  if (path === "/dist/player/index.js") return PLAYER_BUNDLE;
+  const within = (directory: string, relative: string): string | undefined => {
+    const file = resolve(directory, `.${relative}`);
+    return file.startsWith(`${directory}${sep}`) ? file : undefined;
+  };
+  if (path.startsWith("/dist/")) return within(DIST, path.slice("/dist".length));
+  if (/^\/@?mathjax\//u.test(path)) return within(MATHJAX_FILES, path);
+  return undefined;
+}
+
+/**
+ * Serves `dist/` at `/dist/`, except that `/dist/player/index.js` is the bundle of the player; `player.css` at `/player.css`
+ * and `/dist/player.css`; MathJax and its fonts at `/mathjax/` and `/@mathjax/`; the module of the interaction at
+ * `/pci/echo.js`; and an empty page at `/`. Returns the URL of the page and a function that stops it.
+ */
 async function serve(): Promise<{ readonly url: string; readonly stop: () => Promise<void> }> {
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -82,9 +107,8 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
       response.end(PCI_MODULE);
       return;
     }
-    const isPlayerCss = path === "/player.css" || path === "/dist/player.css";
-    const file = isPlayerCss ? PLAYER_CSS_FILE : resolve(DIST, `.${path.replace(/^\/dist/, "")}`);
-    if (!(isPlayerCss || (path.startsWith("/dist/") && file.startsWith(`${DIST}${sep}`)))) {
+    const file = locate(path);
+    if (file === undefined) {
       response.statusCode = 404;
       response.end();
       return;
@@ -253,6 +277,52 @@ function offsetOf(transform: string | null): number {
   return Number(/translate\((-?[\d.]+)px/.exec(transform ?? "")?.[1]);
 }
 
+/** The check of the speech request, which runs in the page: SSML, data-ssml, a lexicon, suppression and a range. */
+const SPEECH_REQUEST = `(async () => {
+  const { buildSpeechRequest, parseLexicon } = await import("/dist/player/index.js");
+  const host = document.createElement("div");
+  const root = host.attachShadow({ mode: "open" });
+  root.innerHTML = "<p>Read <span data-ssml='{\\"sub\\":{\\"alias\\":\\"World Wide Web\\"}}'>WWW</span> and " +
+    "<span data-qti-suppress-tts='computer-read-aloud'>hidden</span> W3C.</p>";
+  const sub = document.createElementNS("http://www.w3.org/2001/10/synthesis", "sub");
+  sub.setAttribute("alias", "Froyd");
+  sub.textContent = "Freud";
+  root.firstElementChild.append(" ", sub);
+  document.body.append(host);
+  const lexicon = parseLexicon("<lexicon xmlns='http://www.w3.org/2005/01/pronunciation-lexicon' version='1.0' alphabet='ipa' xml:lang='en'>" +
+    "<lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>");
+  const range = document.createRange();
+  range.selectNodeContents(root);
+  const request = buildSpeechRequest(range, {
+    settings: { readingType: "computer-read-aloud", restrictionTypes: [] },
+    messages: { speechLink: "link", typingSpace: "space" },
+    language: "en",
+    lexicons: [lexicon],
+  });
+  return { text: request.text, lang: request.lang, keepsSub: request.ssml.includes("<sub alias=\\"World Wide Web\\">WWW</sub>") };
+})()`;
+
+/** The check of MathJax, which runs in the page: it loads from the host, typesets in a shadow root and gives braille. */
+const MATHJAX = `(async () => {
+  const { createMathTypesetter } = await import("/dist/player/index.js");
+  const mathml = "http://www.w3.org/1998/Math/MathML";
+  const host = document.createElement("div");
+  const root = host.attachShadow({ mode: "open" });
+  root.innerHTML = "<p><math xmlns='" + mathml + "'><mfrac><mi>x</mi><mn>2</mn></mfrac></math></p>" +
+    "<p id='elementary'><math xmlns='" + mathml + "'><mstack><mn>12</mn></mstack></math></p>";
+  document.body.append(host);
+  await createMathTypesetter(location.origin + "/mathjax/mml-chtml.js").typeset(root);
+  const top = (selector) => root.querySelector(selector).getBoundingClientRect().top;
+  const braille = root.querySelector("mjx-speech").getAttribute("aria-braillelabel");
+  return {
+    typeset: root.querySelectorAll("mjx-container").length,
+    stacked: top("mjx-den") > top("mjx-num") + 4,
+    elementary: root.querySelectorAll("#elementary math").length,
+    adopted: root.adoptedStyleSheets.length,
+    braille: /^[\\u2800-\\u28ff]+$/.test(braille),
+  };
+})()`;
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -357,6 +427,40 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
         await page.evaluate(`window.scene.stage.querySelector(".tempuh-mask button").focus()`);
         await page.keyboard.press("Enter");
         assert.equal((await readTools(page)).masked, false);
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "builds the speech request of a content root",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(SPEECH_REQUEST), {
+          text: "Read World Wide Web and World Wide Web Consortium. Froyd",
+          lang: "en",
+          keepsSub: true,
+        });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title: "typesets MathML with MathJax in a shadow root and leaves elementary math to the browser",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        assert.deepEqual(await page.evaluate(MATHJAX), {
+          typeset: 1,
+          stacked: true,
+          elementary: 1,
+          adopted: 1,
+          braille: true,
+        });
       } finally {
         await stop();
       }

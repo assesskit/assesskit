@@ -96,8 +96,11 @@ describe("selectMessages", () => {
   });
 
   it("rejects a message key that the catalog does not have", () => {
+    const last = Object.keys(EN_MESSAGES).at(-1);
     expect(() => select("id", { id: { toolRulers: "x" } })).toThrow(
-      /^The catalog for the language "id" has the properties "interactiveQuestion", .* and "calculatorMemorySubtract", found "toolRulers"\.$/,
+      new RegExp(
+        `^The catalog for the language "id" has the properties "interactiveQuestion", .* and "${last}", found "toolRulers"\\.$`,
+      ),
     );
   });
 

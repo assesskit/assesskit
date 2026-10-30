@@ -57,4 +57,6 @@ export const EN_MESSAGES: Messages = {
   calculatorMemoryRecall: "MR, recall memory",
   calculatorMemoryAdd: "M+, add to memory",
   calculatorMemorySubtract: "M−, subtract from memory",
+  speechLink: "link",
+  typingSpace: "space",
 };
