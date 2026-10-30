@@ -66,3 +66,13 @@ work by pick-up and place, by keyboard and by drag, never only by drag. Text ent
 extended text has plain, preformatted and XHTML formats with counters, media counts plays as the response and keeps the pause
 attributes in both spellings, and upload sends files through the host's storage and records audio with `MediaRecorder`, or as WAV
 through the audio worklet that the package exports as `recorder-worklet.js`.
+
+The player shell (`player`): `mountDelivery` shows a session with a navigation map, timers with warnings 300 and 60 seconds
+before a limit, actions with refusal messages and confirmations, review, solution, comments and attempts, in status regions that
+never take the focus, and runs portable custom interactions with their state. The session clients (`client`):
+`createRemoteSession` sends envelopes with autosave and resends a request whose answer was lost, and `createLocalSession` runs
+olah's engine on the device for practice and previews. The session host of exam mode (`server`): `createSessionHost` binds a
+session to the principal that started it, applies a client-action policy that leaves `suspend` and `resume` to the proctor,
+saves by version with bounded retries, schedules time-outs and answers a repeated sequence number with the stored answer.
+`createAssetGate` serves package files only under signed prefixes in the path, never a file that can hold a key, and signs the
+files of the candidate for five minutes.

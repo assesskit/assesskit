@@ -1,5 +1,8 @@
+import type { Refusal } from "@luthfanwakan/olah/delivery";
 import { checkNonNegativeInteger, checkProperties, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
+import { checkViewDocuments, type ViewDocuments } from "./documents.js";
+import { checkRefusal } from "./refusal.js";
 
 /** What a session host answers: the candidate view in olah's JSON form, with the sequence number it answers. */
 export interface ViewEnvelope {
@@ -9,22 +12,32 @@ export interface ViewEnvelope {
   readonly view: unknown;
   /** Each asset prefix that the view needs, mapped to its base URL; the URL of a package path is the base plus the path. */
   readonly assets: Readonly<Record<string, string>>;
+  /**
+   * The documents the content of the view comes from, so that a client resolves the references in it against the right
+   * path. Default: none, so that every reference resolves against the root of the package.
+   */
+  readonly documents?: ViewDocuments;
+  /** Why the engine refused the action this answers, which then left the state as it was. Default: none, the action was applied. */
+  readonly refusal?: Refusal;
 }
 
 /**
  * Checks the shape of a view envelope that arrived as JSON. The view is not read: that is `viewFromJson`.
  *
- * @throws `DataError` when it is not an object with the properties `seq`, `view` and `assets` only, `seq` a non-negative
- * integer and `assets` an object of strings.
+ * @throws `DataError` when it is not an object with the properties `seq`, `view`, `assets` and, optionally, `documents`
+ * and `refusal` only, `seq` a non-negative integer, `assets` an object of strings, `documents` the documents of a view
+ * and `refusal` a refusal of olah.
  */
 export function checkViewEnvelope(value: unknown): asserts value is ViewEnvelope {
   checkRecord(value, "A view envelope must be an object");
-  checkProperties(value, "A view envelope", ["seq", "view", "assets"]);
+  checkProperties(value, "A view envelope", ["seq", "view", "assets", "documents", "refusal"]);
   checkNonNegativeInteger(value.seq, "The property seq of a view envelope");
   if (value.view === undefined) throw new DataError('A view envelope must have the property "view".');
-  const { assets } = value;
+  const { assets, documents, refusal } = value;
   checkRecord(assets, "The property assets of a view envelope must be an object");
   for (const [prefix, base] of Object.entries(assets)) {
     checkString(base, `The base URL of the asset prefix ${describe(prefix)}`);
   }
+  if (documents !== undefined) checkViewDocuments(documents);
+  if (refusal !== undefined) checkRefusal(refusal);
 }

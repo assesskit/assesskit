@@ -90,6 +90,32 @@ docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:
   pnpm schemas && pnpm corpus && pnpm test:browser && pnpm test:corpus'
 ```
 
+## Tests of the shell, the clients and the gate
+
+The tests of `server/` run in Node with an in-memory store, scheduler and file store (`exam-fixture.ts`), a clock that a test
+moves and the fixture package of a test of three items with an image, a stylesheet, a portable custom interaction and files
+that hide as web content: an item fragment, a response-processing template and a document of QTI data that no resource
+declares, under extensions that the gate serves and under `.xml`. Each rule of the gate has a test that fails without it.
+The tests of the origin accept `http` on loopback and refuse the names and addresses that only look like it. The gate is also
+tested over the 1EdTech examples (`server.corpus.test.ts`, run by `pnpm test:corpus` in the project `tempuh-corpus-node`):
+under a token for the whole package, every file of each of the 24 directories and 24 archives is served or refused as an
+oracle outside the gate says: the manifest, the main file of every resource of a document type, every file the reader of olah
+parses as a document of QTI data, the references of adaptive sections and every file that is not a web asset are `404`; the
+other files are `200`.
+
+`bundle.test.ts` bundles the player and the remote session with esbuild and reads the metafile of the output: no file of olah's
+engine has code in it, and a bundle that makes a local session has (so the check can see it).
+
+The browser tests of the shell and the clients (`delivery.browser.test.ts`, `client.browser.test.ts`) run a session host in the
+page with the wire between them: every envelope goes through JSON. `exam.browser.test.ts` is the end-to-end test: the global
+setup `exam-setup.ts` starts an HTTP server (`exam-server.ts`) that runs session hosts and the asset gate, and the tests act as
+a candidate through `fetch`. The server takes the authentication from the headers `x-session` and `x-principal`, picks the exam
+from `x-exam` and moves its clock by `x-offset`, so that a test makes time pass for its own session only. It covers the
+caller binding (403 for another candidate's session and for a second start), the policy that refuses `suspend` (400), the
+proctor's suspension, conflict retries (a competing write comes first three times and the request still succeeds, and a
+fourth gives 409), a time-out that the scheduler's job applies, the gate's refusals and headers, the token of an upload, and a
+portable custom interaction with a relative `define` and a stylesheet with a relative `url()` that load under their prefixes.
+
 ## Tests of Caliper
 
 The tests of `caliper/` and of `server/` run in Node with no network. Their oracles are not the code under test.

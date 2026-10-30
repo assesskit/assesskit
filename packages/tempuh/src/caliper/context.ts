@@ -1,10 +1,10 @@
 import { checkNonEmptyString, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 
-/** The step of a session that made the events: its start, or the action with this sequence number. */
+/** The step of a session that made the events: its start, or the version of the session record that the step saved. */
 export type CaliperStep = "start" | number;
 
-/** The step of `Engine.start`, which has no action and so no sequence number. */
+/** The step of `Engine.start`, which has no earlier record and so no version. */
 export const START_STEP = "start" satisfies CaliperStep;
 
 /** Who, what and where an event is about, as IRIs. They are the host's, because only it can name them. */
@@ -25,8 +25,9 @@ export interface CaliperContext extends CaliperParties {
   /** The identifier of the candidate session, the `session` of a `Caller`. */
   readonly session: string;
   /**
-   * The step of the session that made the events: `"start"` for `Engine.start`, else the sequence number of the action
-   * that the session host stored.
+   * The step of the session that made the events: `"start"` for `Engine.start`, else the version of the session record
+   * that the step saved. The version counts the steps of the host too (a proctor's action, a time-out), which a client's
+   * sequence number does not.
    */
   readonly step: CaliperStep;
 }

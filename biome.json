@@ -1140,6 +1140,10 @@
                     "message": "player/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                  },
+                  {
                     "group": ["../**/olah/**"],
                     "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
                   },
@@ -1179,6 +1183,10 @@
                       "**/server/**"
                     ],
                     "message": "client/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
                     "group": ["../**/olah/**"],
@@ -1222,6 +1230,10 @@
                     "message": "scoring/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                  },
+                  {
                     "group": ["../**/olah/**"],
                     "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
                   },
@@ -1263,6 +1275,10 @@
                     "message": "caliper/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                  },
+                  {
                     "group": ["../**/olah/**"],
                     "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
                   },
@@ -1302,6 +1318,10 @@
                       "**/server/**"
                     ],
                     "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
                     "group": ["../**/olah/**"],

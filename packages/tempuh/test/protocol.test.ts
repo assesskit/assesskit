@@ -1,7 +1,18 @@
+import type { CandidateView, RefusalCode } from "@luthfanwakan/olah/delivery";
+import type { AssessmentResult } from "@luthfanwakan/olah/results";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError } from "../src/index.js";
-import { checkActionEnvelope, checkCaller, checkViewEnvelope } from "../src/protocol/index.js";
+import {
+  checkActionEnvelope,
+  checkCaller,
+  checkRefusal,
+  checkViewEnvelope,
+  isOfficialResult,
+  REFUSAL_CODES,
+  viewDocuments,
+} from "../src/protocol/index.js";
+import { markOfficial } from "../src/protocol/official.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
@@ -100,7 +111,9 @@ describe("checkViewEnvelope", () => {
 
   it("rejects a property that an envelope does not have", () => {
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{},"assets":{},"principal":"p1"}'))).toThrow(
-      new DataError('A view envelope has the properties "seq", "view" and "assets", found "principal".'),
+      new DataError(
+        'A view envelope has the properties "seq", "view", "assets", "documents" and "refusal", found "principal".',
+      ),
     );
   });
 
@@ -124,6 +137,128 @@ describe("checkViewEnvelope", () => {
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{},"assets":{"items/q1/":5}}'))).toThrow(
       new DataError('The base URL of the asset prefix "items/q1/" must be a string, found 5.'),
     );
+  });
+});
+
+describe("checkViewEnvelope: documents and refusal", () => {
+  const base = { seq: 2, view: {}, assets: {} };
+
+  it("[T71] accepts the documents of a view and the refusal of an action", () => {
+    const documents = { test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: ["stimuli/s1.xml"] };
+    const refusal = { code: "time-over", message: "The time is over.", source: "INFO §2.8.5" };
+    expect(() => checkViewEnvelope(json(JSON.stringify({ ...base, documents, refusal })))).not.toThrow();
+  });
+
+  it("[T71] rejects documents that are not an object of the test, the item and the stimuli", () => {
+    const check = (documents: string): void =>
+      checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"documents":${documents}}`));
+    expect(() => check("[]")).toThrow("The documents of a view envelope must be an object, found an array.");
+    expect(() => check('{"test":"","item":""}')).toThrow(
+      "The property stimuli of the documents of a view envelope must be an array",
+    );
+    expect(() => check('{"test":1,"item":"","stimuli":[]}')).toThrow(
+      "The property test of the documents of a view envelope must be a string",
+    );
+    expect(() => check('{"test":"","item":"","stimuli":[5]}')).toThrow("A path of the stimuli");
+    expect(() => check('{"test":"","item":"","stimuli":[],"other":1}')).toThrow(
+      "The documents of a view envelope has the properties",
+    );
+  });
+
+  it("[T71] rejects a refusal that is not one of olah's", () => {
+    const check = (refusal: string): void =>
+      checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
+    expect(() => check("5")).toThrow("A refusal must be an object, found 5.");
+    expect(() => check('{"code":"nope","message":"m","source":"s"}')).toThrow(
+      'The property code of a refusal must be "attempts-exhausted"',
+    );
+    expect(() => check('{"code":"ended","message":1,"source":"s"}')).toThrow(
+      "The property message of a refusal must be a string",
+    );
+    expect(() => check('{"code":"ended","message":"m"}')).toThrow(
+      "The property source of a refusal must be a string, found undefined.",
+    );
+    expect(() => check('{"code":"ended","message":"m","source":"s","at":1}')).toThrow("A refusal has the properties");
+  });
+});
+
+describe("REFUSAL_CODES", () => {
+  it("[T55] lists every refusal code of olah", () => {
+    const every: Readonly<Record<RefusalCode, true>> = {
+      "attempts-exhausted": true,
+      "awaiting-cat": true,
+      "clock-regression": true,
+      "comment-not-allowed": true,
+      ended: true,
+      "invalid-response": true,
+      "item-closed": true,
+      "linear-backward": true,
+      "min-time-not-reached": true,
+      "not-current": true,
+      "review-not-allowed": true,
+      "score-type-mismatch": true,
+      "skipping-not-allowed": true,
+      "solution-not-allowed": true,
+      "support-not-available": true,
+      suspended: true,
+      "time-over": true,
+      "unknown-item": true,
+      "unknown-request": true,
+      "value-out-of-range": true,
+      "wrong-submission-mode": true,
+    };
+    expect([...REFUSAL_CODES].sort()).toEqual(Object.keys(every).sort());
+    for (const code of REFUSAL_CODES) expect(() => checkRefusal({ code, message: "m", source: "s" })).not.toThrow();
+  });
+});
+
+describe("viewDocuments", () => {
+  const view = (current: unknown): CandidateView =>
+    JSON.parse(JSON.stringify({ test: { identifier: "t", title: "T" }, current }));
+  const source = {
+    test: "tests/t.xml",
+    item: (reference: string) =>
+      reference === "q1" ? { path: "items/q1.xml", stimuli: ["stimuli/s.xml"] } : undefined,
+  };
+
+  it("[T73] names the documents of the item presented and the test", () => {
+    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 } }), source)).toEqual({
+      test: "tests/t.xml",
+      item: "items/q1.xml",
+      stimuli: ["stimuli/s.xml"],
+    });
+  });
+
+  it("[T73] resolves against the root of the package for a variant, an unknown item, no item, and no source", () => {
+    const root = { test: "tests/t.xml", item: "", stimuli: [] };
+    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 }, variant: { resource: "v" } }), source)).toEqual(root);
+    expect(viewDocuments(view({ key: { ref: "q9", instance: 1 } }), source)).toEqual(root);
+    expect(viewDocuments(view(undefined), source)).toEqual(root);
+    expect(viewDocuments(view({ key: { ref: "q1", instance: 1 } }), undefined)).toEqual({
+      test: "",
+      item: "",
+      stimuli: [],
+    });
+  });
+});
+
+describe("official results", () => {
+  const report = (): AssessmentResult => JSON.parse('{"testResults":[],"itemResults":[]}');
+
+  it("[T67] marks the report that the host brands, and no copy of it", () => {
+    const result = report();
+    expect(isOfficialResult(result)).toBe(false);
+    const official = markOfficial(result);
+    expect(official).toBe(result);
+    expect(isOfficialResult(official)).toBe(true);
+    expect(isOfficialResult({ ...official })).toBe(false);
+    expect(isOfficialResult(structuredClone(official))).toBe(false);
+    expect(isOfficialResult(JSON.parse(JSON.stringify(official)))).toBe(false);
+    expect(isOfficialResult(report())).toBe(false);
+  });
+
+  it("[T67] marks nothing that is not an object", () => {
+    for (const text of ["null", "5", '"result"', "[]"]) expect(isOfficialResult(json(text)), text).toBe(false);
   });
 });
 

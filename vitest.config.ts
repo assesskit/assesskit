@@ -21,6 +21,9 @@ const browser = () => ({
 /** Starts the servers of the browser tests of tempuh, with its static files and the packages they load. */
 const GLOBAL_SETUP = ["packages/tempuh/test/fixtures/global-setup.ts"];
 
+/** Starts the exam server, which runs session hosts and the asset gate over HTTP for the end-to-end tests. */
+const EXAM_SETUP = "packages/tempuh/test/fixtures/exam-setup.ts";
+
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
   test: {
@@ -46,7 +49,7 @@ export default defineConfig({
         test: {
           name: "tempuh-browser",
           include: ["packages/tempuh/test/**/*.browser.test.ts"],
-          globalSetup: GLOBAL_SETUP,
+          globalSetup: [...GLOBAL_SETUP, EXAM_SETUP],
           browser: browser(),
         },
       },
@@ -58,6 +61,15 @@ export default defineConfig({
           include: ["packages/tempuh/test/**/*.browser.corpus.test.ts"],
           globalSetup: GLOBAL_SETUP,
           browser: browser(),
+        },
+      },
+      {
+        // The asset gate and the session host over the 1EdTech examples, in Node.
+        resolve: { alias: OLAH_SOURCES },
+        test: {
+          name: "tempuh-corpus-node",
+          include: ["packages/tempuh/test/**/*.corpus.test.ts"],
+          exclude: ["**/*.browser.corpus.test.ts"],
         },
       },
       {

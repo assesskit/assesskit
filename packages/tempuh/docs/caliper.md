@@ -62,7 +62,7 @@ An event whose type is none of these is a `DataError`.
 | Property     | Meaning                                                                                                                   | Default  |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------- | -------- |
 | `session`    | The identifier of the candidate session, the `session` of a `Caller`. A non-empty string.                                 | required |
-| `step`       | `"start"` for the step of `Engine.start`, else the sequence number of the action that the session host stored.            | required |
+| `step`       | `"start"` for the step of `Engine.start`, else the version of the session record that the step saved.                     | required |
 | `actor`      | The IRI of the candidate: the host's opaque identifier, such as `urn:uuid:` and a UUID. Never an email address or a name. | required |
 | `assessment` | The IRI of the test.                                                                                                      | required |
 | `edApp`      | The IRI of the application that delivers the test.                                                                        | required |
@@ -116,8 +116,9 @@ session. The identifiers of entities are not addresses that a server can derefer
 
 ## Scores
 
-olah's events carry no score, so a score reaches Caliper through `caliperGrade(grade, context)`, which the host calls when it
-applies one. It returns the GradeEvent Graded of the Grading Profile.
+olah's events carry no score, so a score reaches Caliper through `caliperGrade(grade, context)`, which returns the GradeEvent
+Graded of the Grading Profile. `forwardEvents` calls it for the step of a `supply-scores` action
+([below](#forwarding-the-events-of-a-step)), so a host that forwards its steps does not call it itself.
 
 | Property     | Meaning                                                                                                | Default  |
 | ------------ | ------------------------------------------------------------------------------------------------------ | -------- |
@@ -160,6 +161,8 @@ would send the token elsewhere. At least one event is needed, as an envelope has
 
 `forwardEvents(step, options)` of `@luthfanwakan/tempuh/server` is what the session host calls after each step. It gives every
 event of the step to the host's log, whatever its type, and the events that Caliper has a counterpart for to the endpoint.
+`createSessionHost` takes the same options as `forward`, calls it after it saved a step, and numbers the steps by the version of
+the record they saved ([server](server.md#handling-a-request)).
 
 ```ts
 import { forwardEvents } from "@luthfanwakan/tempuh/server";
@@ -175,11 +178,12 @@ await forwardEvents(
 // session-1 3 1
 ```
 
-| Property of `step` | Meaning                                                             |
-| ------------------ | ------------------------------------------------------------------- |
-| `session`          | The identifier of the candidate session.                            |
-| `step`             | `"start"`, or the sequence number of the action that made the step. |
-| `events`           | The events of the step, as `Step.events` gives them.                |
+| Property of `step` | Meaning                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `session`          | The identifier of the candidate session.                                              |
+| `step`             | `"start"`, or the version of the session record that the step saved.                  |
+| `events`           | The events of the step, as `Step.events` gives them.                                  |
+| `supplied`         | The score of a `supply-scores` step: `value`, `scorer` and `scoredBy`. Default: none. |
 
 | Option            | Meaning                                                                                       | Default    |
 | ----------------- | --------------------------------------------------------------------------------------------- | ---------- |
@@ -190,6 +194,12 @@ await forwardEvents(
 
 - The log goes first. A failure of the log stops the forwarding, and a failure of Caliper leaves the log entry.
 - A step without events calls nothing, and a step with no event that Caliper has a counterpart for sends nothing.
+- olah's `scores-applied` and `scores-replaced` carry the request and not the score, so they map to no event of the
+  Assessment Profile. A step with `supplied` also sends a GradeEvent Graded for each of them, after the mapped events, when the
+  value is a single number: `scoreGiven` is the value, `scorer` and `scoredBy` are those of `supplied`, and the object is the
+  attempt at the item of the event, or at the test for an outcome of the test. A value that is NULL or not a number gives none.
+  `createSessionHost` fills `supplied` from the action and from the `scoredBy` that `SessionHost.host` takes
+  ([server](server.md#session-host)). A replaced score is reported at its own step, so it has its own identifiers.
 - A host that sees a failure reports the same step again. The log receives the step again, so it keeps a step by its
   session and `step`, and the endpoint receives the same identifiers.
 

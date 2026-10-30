@@ -257,4 +257,148 @@ export interface Messages {
   readonly uploadRemove: string;
   /** The notice in place of a question of a kind that the player does not run. */
   readonly customUnsupported: string;
+  /** The name of the map of the questions of the test. */
+  readonly navigationLabel: string;
+  /** The name of the region that shows the time limits. */
+  readonly timersLabel: string;
+  /** The name of the region that holds the actions of the test. */
+  readonly actionsLabel: string;
+  /** The notice of a question that is time dependent: the time the candidate takes is part of the task. */
+  readonly timeDependentNotice: string;
+  /** The words before the number of attempts the candidate has started on a question. */
+  readonly attemptsUsed: string;
+  /** The words before the number of attempts the candidate has left on a question. */
+  readonly attemptsLeft: string;
+  /** The state of a question the candidate has not opened. */
+  readonly statusInitial: string;
+  /** The state of a question the candidate is answering or can still answer. */
+  readonly statusInteracting: string;
+  /** The state of a question while the test is paused. */
+  readonly statusSuspended: string;
+  /** The state of a question whose answers are submitted. */
+  readonly statusClosed: string;
+  /** The state of a question the candidate reviews. */
+  readonly statusReview: string;
+  /** The state of a question that shows its solution. */
+  readonly statusSolution: string;
+  /** The action that goes to the question before. */
+  readonly actionPrevious: string;
+  /** The action that goes to the question after. */
+  readonly actionNext: string;
+  /** The action that submits the answer to a question. */
+  readonly actionSubmit: string;
+  /** The action that skips a question. */
+  readonly actionSkip: string;
+  /** The action that starts another attempt at a question. */
+  readonly actionNextAttempt: string;
+  /** The action that shows a question again with the answer submitted. */
+  readonly actionReview: string;
+  /** The action that shows the solution of a question. */
+  readonly actionSolution: string;
+  /** The action that ends the part of the test the candidate is in. */
+  readonly actionEndPart: string;
+  /** The action that ends the test. */
+  readonly actionEndTest: string;
+  /** The action that pauses the test. */
+  readonly actionSuspend: string;
+  /** The action that continues a paused test. */
+  readonly actionResume: string;
+  /** The name of the field in which the candidate comments on a question. */
+  readonly commentLabel: string;
+  /** The action that saves the comment on a question. */
+  readonly actionComment: string;
+  /** The name of the dialog that asks the candidate to confirm an action. */
+  readonly confirmTitle: string;
+  /** The question before a submission that the candidate cannot undo. */
+  readonly confirmSubmit: string;
+  /** The question before the end of a part. */
+  readonly confirmEndPart: string;
+  /** The question before the end of the test. */
+  readonly confirmEndTest: string;
+  /** The sentence that says a part submits all its answers when it ends. */
+  readonly confirmSimultaneous: string;
+  /** The words before the number of questions whose answers are not submitted. */
+  readonly confirmUnsubmitted: string;
+  /** The answer that goes on with the action to confirm. */
+  readonly confirmYes: string;
+  /** The answer that goes back without the action. */
+  readonly confirmNo: string;
+  /** The name of the time limit of the test. */
+  readonly timerTest: string;
+  /** The name of the time limit of a part of the test. */
+  readonly timerPart: string;
+  /** The name of the time limit of a section of the test. */
+  readonly timerSection: string;
+  /** The name of the time limit of a question. */
+  readonly timerItem: string;
+  /** The name of the time that must pass before the candidate may leave. */
+  readonly timerMinimum: string;
+  /** The notice of a time limit that passed and still takes answers. */
+  readonly timerLate: string;
+  /** The action that hides the timers. */
+  readonly timerHide: string;
+  /** The action that shows the timers. */
+  readonly timerShow: string;
+  /** The words that a screen reader says before the time left, when a time limit is near. */
+  readonly timerWarning: string;
+  /** The announcement that a time limit has passed. */
+  readonly timerExpired: string;
+  /** The notice of a test that is paused. */
+  readonly testSuspended: string;
+  /** The notice of a test that has ended. */
+  readonly testEnded: string;
+  /** The notice of a test that waits for its next question. */
+  readonly awaitingItem: string;
+  /** The notice of an interactive question that did not start. */
+  readonly pciFailed: string;
+  /** The announcement that the answers are saved. */
+  readonly answersSaved: string;
+  /** The announcement that the comment is saved. */
+  readonly commentSaved: string;
+  /** The announcement that the answers did not reach the test and will be sent again. */
+  readonly sendFailed: string;
+  /** The announcement that the test did not accept an action. */
+  readonly sendRejected: string;
+  /** The reason for refusing another attempt at a question. */
+  readonly refusalAttemptsExhausted: string;
+  /** The reason for refusing to move on while the next question is chosen. */
+  readonly refusalAwaitingCat: string;
+  /** The reason for refusing an action that is dated before the last one. */
+  readonly refusalClockRegression: string;
+  /** The reason for refusing a comment. */
+  readonly refusalCommentNotAllowed: string;
+  /** The reason for refusing an action after the test has ended. */
+  readonly refusalEnded: string;
+  /** The reason for refusing an answer. */
+  readonly refusalInvalidResponse: string;
+  /** The reason for refusing a change to a question that is closed. */
+  readonly refusalItemClosed: string;
+  /** The reason for refusing to go back in a part that moves forward only. */
+  readonly refusalLinearBackward: string;
+  /** The reason for refusing to leave before the minimum time. */
+  readonly refusalMinTimeNotReached: string;
+  /** The reason for refusing an action on a question that is not on screen. */
+  readonly refusalNotCurrent: string;
+  /** The reason for refusing a review. */
+  readonly refusalReviewNotAllowed: string;
+  /** The reason for refusing a score that does not fit the question. */
+  readonly refusalScoreTypeMismatch: string;
+  /** The reason for refusing to skip a question. */
+  readonly refusalSkippingNotAllowed: string;
+  /** The reason for refusing to show a solution. */
+  readonly refusalSolutionNotAllowed: string;
+  /** The reason for refusing to turn a support on or off. */
+  readonly refusalSupportNotAvailable: string;
+  /** The reason for refusing an action while the test is paused. */
+  readonly refusalSuspended: string;
+  /** The reason for refusing an action on a question whose time is over. */
+  readonly refusalTimeOver: string;
+  /** The reason for refusing to go to a question that the test does not have. */
+  readonly refusalUnknownItem: string;
+  /** The reason for refusing an answer to a request that is not known. */
+  readonly refusalUnknownRequest: string;
+  /** The reason for refusing a number outside the range that can be stored. */
+  readonly refusalValueOutOfRange: string;
+  /** The reason for refusing to submit one question of a part that submits all together. */
+  readonly refusalWrongSubmissionMode: string;
 }

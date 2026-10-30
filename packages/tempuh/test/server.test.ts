@@ -1,9 +1,54 @@
-import type { DeliveryEvent, DeliveryEventType } from "@luthfanwakan/olah/delivery";
+import {
+  actionToJson,
+  type CandidateAction,
+  type CandidateView,
+  createEngine,
+  type DeliveryEvent,
+  type DeliveryEventType,
+  deserializeState,
+  stamp,
+  viewFromJson,
+  viewToJson,
+} from "@luthfanwakan/olah/delivery";
+import { single } from "@luthfanwakan/olah/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { DataError, ServiceError } from "../src/index.js";
-import { forwardEvents, type StepEvents } from "../src/server/index.js";
-import { ACTOR, APPLICATION, ASSESSMENT, type FakeReply, fakeEndpoint, SESSION } from "./caliper-fixture.js";
+import { AccessError, DataError, ServiceError } from "../src/index.js";
+import { isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
+import {
+  type AssetGate,
+  CANDIDATE_ACTION_TYPES,
+  collectAssetPrefixes,
+  createAssetGate,
+  createSessionHost,
+  DEFAULT_TTL_SECONDS,
+  DEFAULT_UPLOAD_TTL_SECONDS,
+  EXAM_CLIENT_ACTIONS,
+  forwardEvents,
+  MAX_SAVE_RETRIES,
+  type StepEvents,
+} from "../src/server/index.js";
+import {
+  ACTOR,
+  APPLICATION,
+  ASSESSMENT,
+  eventProblems,
+  type FakeReply,
+  fakeEndpoint,
+  SESSION,
+  urnOf,
+} from "./caliper-fixture.js";
+import {
+  EXAM_ORIGIN,
+  examDefinition,
+  examFiles,
+  examHost,
+  gateKey,
+  HIDDEN_KEY_FILE,
+  memoryFileStore,
+  packageOf,
+  recordingScheduler,
+} from "./exam-fixture.js";
 
 const SECOND = 1000;
 
@@ -245,7 +290,1126 @@ describe("forwardEvents", () => {
   });
 });
 
+const DAY = 24 * 3600 * SECOND;
+const ALICE = { session: "exam-1", principal: "alice" };
+const BOB = { session: "exam-1", principal: "bob" };
+const NOW = 1_700_000_000_000;
+
+/** The envelope of a request: an action of the candidate in olah's JSON form, with its sequence number. */
+const request = (seq: number, action: CandidateAction): unknown => ({ seq, action: actionToJson(action) });
+const Q1 = { ref: "q1", instance: 1 };
+const answer = (identifier: string): CandidateAction => ({
+  type: "set-responses",
+  item: Q1,
+  responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+});
+const viewOf = (envelope: ViewEnvelope): CandidateView => viewFromJson(envelope.view);
+
+describe("forwardEvents: a score that a step supplied", () => {
+  const Rater = "https://rater.example/raters/17";
+  const applied = (type: "scores-applied" | "scores-replaced", extra: Partial<DeliveryEvent> = {}): DeliveryEvent => ({
+    type,
+    at: 5 * SECOND,
+    item: { ref: "q1", instance: 1 },
+    detail: "item:q1:1:SCORE",
+    ...extra,
+  });
+  const sent = (endpoint: ReturnType<typeof host>["endpoint"]) =>
+    JSON.parse(endpoint.requests[0]?.init.body ?? "{}").data as {
+      type: string;
+      action: string;
+      actor: { id: string; type: string };
+      object: { id: string; type: string };
+      generated: { id: string; type: string; scoreGiven: number; scoredBy: string; attempt: string };
+    }[];
+
+  it("[T114][T109] gives a GradeEvent Graded for the score that a rater supplied, scored by the rater, for the item of the event", async () => {
+    const { options, endpoint } = host({ status: 200 });
+    const supplied = { value: single("float", 3.5), scorer: "human" as const, scoredBy: Rater };
+    await forwardEvents({ session: SESSION, step: 7, events: [applied("scores-applied")], supplied }, options);
+    const [grade, ...others] = sent(endpoint);
+    expect(others).toEqual([]);
+    expect(`${grade?.type} ${grade?.action}`).toBe("GradeEvent Graded");
+    expect(grade?.actor).toEqual({ id: Rater, type: "Person" });
+    expect(grade?.generated).toMatchObject({ type: "Score", scoreGiven: 3.5, scoredBy: Rater });
+    expect(grade?.generated.attempt).toBe(grade?.object.id);
+    expect(grade?.object.id).toBe(urnOf("attempt", SESSION, "q1", 1));
+    expect(eventProblems(JSON.parse(endpoint.requests[0]?.init.body ?? "{}").data[0])).toEqual([]);
+  });
+
+  it("[T114][T109] names a scoring service a SoftwareApplication, and gives the test's attempt for an outcome of the test", async () => {
+    const { options, endpoint } = host({ status: 200 });
+    const supplied = { value: single("integer", 2), scorer: "externalMachine" as const, scoredBy: Rater };
+    const event: DeliveryEvent = { type: "scores-applied", at: SECOND, scope: "main", detail: "test:SCORE" };
+    await forwardEvents({ session: SESSION, step: 8, events: [event], supplied }, options);
+    const [grade] = sent(endpoint);
+    expect(grade?.actor.type).toBe("SoftwareApplication");
+    expect(grade?.object.id).toBe(urnOf("attempt", SESSION));
+    expect(grade?.generated.scoreGiven).toBe(2);
+  });
+
+  it("[T114][T109] gives a GradeEvent for a replaced score, with the same identifiers when the step is reported again", async () => {
+    const supplied = { value: single("float", 4), scorer: "human" as const, scoredBy: Rater };
+    const ids: string[] = [];
+    for (const step of [9, 9, 10]) {
+      const { options, endpoint } = host({ status: 200 });
+      await forwardEvents({ session: SESSION, step, events: [applied("scores-replaced")], supplied }, options);
+      ids.push(sent(endpoint)[0]?.generated.id ?? "");
+    }
+    expect(ids[0]).toBe(ids[1]);
+    expect(ids[2]).not.toBe(ids[0]);
+  });
+
+  it("[T114][T109] sends the grade after the events that the step maps, in one envelope", async () => {
+    const { options, endpoint } = host({ status: 200 });
+    const events = [applied("scores-applied"), eventOf("test-ended", 6 * SECOND)];
+    const supplied = { value: single("float", 1), scorer: "human" as const, scoredBy: Rater };
+    await forwardEvents({ session: SESSION, step: 11, events, supplied }, options);
+    expect(endpoint.requests).toHaveLength(1);
+    expect(sent(endpoint).map(({ type, action }) => `${type} ${action}`)).toEqual([
+      "AssessmentEvent Submitted",
+      "GradeEvent Graded",
+    ]);
+  });
+
+  it("[T114][T109] gives no GradeEvent for a value that is not a number, for NULL, or for a step without the events of a score", async () => {
+    const values = [null, single("string", "good"), single("boolean", true)];
+    for (const value of values) {
+      const { options, endpoint } = host({ status: 200 });
+      const supplied = { value, scorer: "human" as const, scoredBy: Rater };
+      await forwardEvents({ session: SESSION, step: 12, events: [applied("scores-applied")], supplied }, options);
+      expect(endpoint.requests, String(value?.cardinality)).toEqual([]);
+    }
+    const { options, endpoint } = host({ status: 200 });
+    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: Rater };
+    await forwardEvents({ session: SESSION, step: 13, events: [eventOf("presented", SECOND)], supplied }, options);
+    expect(sent(endpoint).map(({ type }) => type)).toEqual(["AssessmentItemEvent"]);
+  });
+
+  it("[T114] logs the step with its score and sends nothing when Caliper is not configured", async () => {
+    const logged: StepEvents[] = [];
+    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: Rater };
+    const step: StepEvents = { session: SESSION, step: 14, events: [applied("scores-applied")], supplied };
+    await forwardEvents(step, { log: (each) => void logged.push(each) });
+    expect(logged).toEqual([step]);
+  });
+
+  it("[T114] refuses a score whose rater is not an IRI, after the log", async () => {
+    const { options, logged } = host({ status: 200 });
+    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: "rater-17" };
+    await expect(
+      forwardEvents({ session: SESSION, step: 15, events: [applied("scores-applied")], supplied }, options),
+    ).rejects.toThrow(DataError);
+    expect(logged).toHaveLength(1);
+    await expect(
+      forwardEvents({ session: SESSION, step: 15, events: [], supplied: JSON.parse("5") }, options),
+    ).rejects.toThrow("The supplied score of the step must be an object");
+  });
+});
+
+describe("collectAssetPrefixes", () => {
+  it("[T73] gives the content root the deepest directory that holds its document, image and stylesheet", async () => {
+    const { host, pkg } = await examHost();
+    const started = await host.start(ALICE, { seed: 1 });
+    expect(Object.keys(started.assets)).toEqual(["items/q1/"]);
+    expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set(["items/q1/"]));
+  });
+
+  it("[T73] gives a portable custom interaction a prefix of its own, over its modules and module resolution files", async () => {
+    const { host, pkg } = await examHost();
+    await host.start(ALICE, { seed: 1 });
+    const moved = await host.handle(ALICE, request(1, { type: "move", to: { ref: "q3", instance: 1 } }));
+    expect(collectAssetPrefixes(viewOf(moved), pkg)).toEqual(new Set(["items/q3/", "modules/pci/"]));
+    expect(Object.keys(moved.assets).sort()).toEqual(["items/q3/", "modules/pci/"]);
+  });
+
+  it("[T73] gives no prefix to a view that shows no file", async () => {
+    const { host, pkg } = await examHost();
+    await host.start(ALICE, { seed: 1 });
+    await host.proctor(ALICE.session, { type: "end-test" });
+    expect(collectAssetPrefixes(viewOf(await host.view(ALICE)), pkg)).toEqual(new Set());
+  });
+
+  it("[T73] climbs to the directory that holds the files that the manifest lists for the resource", async () => {
+    const files = examFiles();
+    const manifest = String(files["imsmanifest.xml"]).replace(
+      '<file href="items/q1/style.css"/>',
+      '<file href="items/q1/style.css"/><file href="shared/font.woff2"/>',
+    );
+    const { host, pkg } = await examHost({}, { ...files, "imsmanifest.xml": manifest, "shared/font.woff2": "font" });
+    const started = await host.start(ALICE, { seed: 1 });
+    expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set([""]));
+  });
+});
+
+describe("the asset gate", () => {
+  async function gateOf(files: Readonly<Record<string, string | Uint8Array>> = examFiles()) {
+    const pkg = packageOf(files);
+    const fileStore = memoryFileStore();
+    const key = await gateKey();
+    const gate = createAssetGate({ key, origin: EXAM_ORIGIN, packages: async () => pkg, files: fileStore });
+    return { gate, pkg, fileStore, key };
+  }
+  /** The path of a file under a signed prefix, as a browser requests it. */
+  const pathOf = (base: string, file: string): string => `${new URL(base).pathname}${file}`;
+  const baseOf = async (gate: AssetGate, prefix: string): Promise<string> =>
+    (await gate.sign("s1", [prefix], NOW))[prefix] ?? "";
+
+  it("[T73] signs a prefix and serves the files under it with the headers of the gate", async () => {
+    const { gate } = await gateOf();
+    const base = await baseOf(gate, "items/q1/");
+    expect(base).toMatch(/^https:\/\/assets\.example\/g\/[\w-]+\.[\w-]+\/$/u);
+    const response = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW);
+    expect(response.status).toBe(200);
+    expect(response.headers).toMatchObject({
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Type": "image/png",
+    });
+    expect(response.body?.length).toBeGreaterThan(0);
+  });
+
+  it("[T73] sends Referrer-Policy and nosniff with every status", async () => {
+    const { gate } = await gateOf();
+    const base = await baseOf(gate, "items/q1/");
+    const answers = [
+      await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW),
+      await gate.serve({ path: pathOf(base, "items/q1/images/none.png") }, NOW),
+      await gate.serve({ path: pathOf(base, "items/q2/item.xml") }, NOW),
+      await gate.serve({ path: "/elsewhere" }, NOW),
+    ];
+    expect(answers.map(({ status }) => status)).toEqual([200, 404, 403, 404]);
+    for (const { headers } of answers) {
+      expect(headers["Referrer-Policy"]).toBe("no-referrer");
+      expect(headers["X-Content-Type-Options"]).toBe("nosniff");
+    }
+  });
+
+  it("[T73] refuses a path outside the prefix of the token, also when dots or percent-encoding lead out of it", async () => {
+    const { gate } = await gateOf();
+    const base = await baseOf(gate, "items/q1/");
+    const paths = [
+      "items/q2/item.xml",
+      "items/q1/../q2/item.xml",
+      "items/q1/../../imsmanifest.xml",
+      "items/q1/%2e%2e/q2/item.xml",
+      "items/q1/..%2F/..%2F/imsmanifest.xml",
+      "items/q1x/images/map.png",
+      "/items/q1/images/map.png",
+      "../items/q1/images/map.png",
+    ];
+    for (const path of paths) expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(403);
+  });
+
+  it("[T73] refuses a token with a wrong MAC, another payload, or no MAC at all", async () => {
+    const { gate } = await gateOf();
+    const base = await baseOf(gate, "items/q1/");
+    const [payload = "", mac = ""] = (new URL(base).pathname.split("/")[2] ?? "").split(".");
+    const forged = Buffer.from(JSON.stringify({ use: "asset", session: "s2", prefix: "", exp: NOW + DAY })).toString(
+      "base64url",
+    );
+    const wrong = mac.startsWith("A") ? `B${mac.slice(1)}` : `A${mac.slice(1)}`;
+    const tokens = [`${payload}.${wrong}`, `${forged}.${mac}`, payload, `${payload}.${mac}.${mac}`, ".", `${payload}.`];
+    for (const token of tokens) {
+      const response = await gate.serve({ path: `/g/${token}/items/q1/images/map.png` }, NOW);
+      expect(response.status, token).toBe(403);
+    }
+  });
+
+  it("[T73] refuses a token signed with another key", async () => {
+    const { gate } = await gateOf();
+    const other = (await gateOf()).gate;
+    const base = await baseOf(other, "items/q1/");
+    expect((await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW)).status).toBe(403);
+  });
+
+  it("[T73] refuses an expired token, an hour after it was signed by default", async () => {
+    const { gate } = await gateOf();
+    const path = pathOf(await baseOf(gate, "items/q1/"), "items/q1/images/map.png");
+    expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND)).status).toBe(200);
+    expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND + 1)).status).toBe(403);
+  });
+
+  it("[T73] never serves the manifest, the test or an item, even under a token for the whole package", async () => {
+    const { gate } = await gateOf();
+    const base = await baseOf(gate, "");
+    for (const path of ["imsmanifest.xml", "tests/exam.xml", "items/q1/item.xml", "items/q2/item.xml"]) {
+      expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(404);
+    }
+    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
+  });
+
+  it("[T73] never serves an XML file of QTI data that the manifest lists as web content or does not list", async () => {
+    const asi = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
+    const hidden: Readonly<Record<string, string>> = {
+      prefixed: `<q:qti-assessment-item xmlns:q="${asi}" identifier="k"/>`,
+      prolog: `<?xml version="1.0"?><!-- a comment > --><!DOCTYPE x [ <!ENTITY e "a>b"> ]><qti-assessment-item xmlns="${asi}"/>`,
+      bracket: `<qti-assessment-item note=">" xmlns="${asi}" identifier="k"/>`,
+      quotes: `<qti-assessment-item xmlns='${asi}'/>`,
+      relativeLti: '<cartridge_basiclti_link xmlns="/xsd/imslticc_v1p0"/>',
+      lti: '<cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0"/>',
+      relativeAsi: '<qti-assessment-item xmlns="/xsd/imsqtiasi_v3p0"/>',
+      packaging: '<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"/>',
+      results: '<assessmentResult xmlns="http://www.imsglobal.org/xsd/imsqti_result_v3p0"/>',
+      usage: '<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0"/>',
+      usage22: '<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2"/>',
+      metadata: '<qtiMetadata xmlns="http://www.imsglobal.org/xsd/imsqti_metadata_v3p0"/>',
+      lom: '<lom xmlns="http://ltsc.ieee.org/xsd/LOM"/>',
+      longComment: `<!--${"x".repeat(5000)}--><qti-assessment-item xmlns="${asi}"/>`,
+      wrapped: `<html xmlns="http://www.w3.org/1999/xhtml"><body><qti-assessment-item xmlns="${asi}"/></body></html>`,
+      noRoot: "<",
+    };
+    const utf16 = new TextEncoder().encode(`<qti-assessment-item xmlns="${asi}"/>`);
+    const { gate } = await gateOf({
+      ...examFiles(),
+      // The same documents under names of web assets: an unlisted item saved as a page, a template as a vector image.
+      ...Object.fromEntries(Object.entries(hidden).map(([name, text]) => [`items/q1/${name}.html`, text])),
+      "items/q1/unlisted.svg": `<svg xmlns="http://www.w3.org/2000/svg"><qti-assessment-item xmlns="${asi}"/></svg>`,
+      "items/q1/unlisted.xml": hidden.quotes ?? "",
+      "items/q1/utf16.html": Uint8Array.from([0xff, 0xfe, ...[...utf16].flatMap((byte) => [byte, 0])]),
+      "items/q1/utf16be.html": Uint8Array.from([0xfe, 0xff, ...[...utf16].flatMap((byte) => [0, byte])]),
+    });
+    const base = await baseOf(gate, "items/q1/");
+    const names = [
+      ...Object.keys(hidden).map((name) => `${name}.html`),
+      "unlisted.svg",
+      "unlisted.xml",
+      "utf16.html",
+      "utf16be.html",
+      HIDDEN_KEY_FILE.slice("items/q1/".length),
+    ];
+    for (const name of names) {
+      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW)).status, name).toBe(404);
+    }
+  });
+
+  it("[T73] serves web pages, vector images, scripts and data of the types a browser loads for content", async () => {
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "items/q1/page.html": '<!DOCTYPE html><html lang="en"><body>A note</body></html>',
+      "items/q1/art.svg": '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+      "items/q1/data.json": '{"points":[1,2]}',
+      "items/q1/plain.txt": "no markup here",
+      "items/q1/subtitles.vtt": "captions",
+      "items/q1/lexicon.pls": "<lexicon/>",
+      "items/q1/font.woff2": "font",
+      "items/q1/UPPER.PNG": "png",
+    });
+    const base = await baseOf(gate, "items/q1/");
+    const types: Record<string, string> = {};
+    for (const name of [
+      "page.html",
+      "art.svg",
+      "data.json",
+      "plain.txt",
+      "subtitles.vtt",
+      "lexicon.pls",
+      "font.woff2",
+      "UPPER.PNG",
+    ]) {
+      const response = await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW);
+      expect(response.status, name).toBe(200);
+      types[name] = response.headers["Content-Type"] ?? "";
+    }
+    expect(types).toEqual({
+      "page.html": "text/html; charset=utf-8",
+      "art.svg": "image/svg+xml",
+      "data.json": "application/json",
+      "plain.txt": "text/plain; charset=utf-8",
+      "subtitles.vtt": "text/vtt; charset=utf-8",
+      "lexicon.pls": "application/pls+xml",
+      "font.woff2": "font/woff2",
+      "UPPER.PNG": "image/png",
+    });
+  });
+
+  it("[T73] never serves a file of a type that is not a web asset: XML of any namespace, unknown extensions, none", async () => {
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "items/q1/notes.dat": '<notes xmlns="https://example.org/notes"><note>Hi</note></notes>',
+      "items/q1/other.xml": '<notes xmlns="https://example.org/notes"/>',
+      "items/q1/answers.bin": "A",
+      "items/q1/answers": "A",
+      "items/q1/.hidden": "A",
+      "items/q1/dir.v2/answers": "A",
+      "items/q1/ends.": "A",
+    });
+    const base = await baseOf(gate, "items/q1/");
+    for (const name of ["notes.dat", "other.xml", "answers.bin", "answers", ".hidden", "dir.v2/answers", "ends."]) {
+      expect((await gate.serve({ path: pathOf(base, `items/q1/${name}`) }, NOW)).status, name).toBe(404);
+    }
+  });
+
+  /** The manifest of the fixture with resources and files added, as a package that lists more than the fixture does. */
+  const listing = (resources: string, itemFiles = ""): string =>
+    String(examFiles()["imsmanifest.xml"])
+      .replace('<file href="items/q1/style.css"/>', `<file href="items/q1/style.css"/>${itemFiles}`)
+      .replace("</resources>", `${resources}</resources>`);
+
+  it("[T73] never serves a file that the manifest lists for an item unless it is a web asset", async () => {
+    const files = ["parts/stem.xml", "parts/stem", "parts/stem.dat", "parts/hint.html", "parts/photo.png"];
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "imsmanifest.xml": listing("", files.map((file) => `<file href="items/q1/${file}"/>`).join("")),
+      "items/q1/parts/stem.xml": "<stem/>",
+      "items/q1/parts/stem": "<stem/>",
+      "items/q1/parts/stem.dat": "<stem/>",
+      "items/q1/parts/hint.html": "<p>A hint</p>",
+      "items/q1/parts/photo.png": "png",
+    });
+    const base = await baseOf(gate, "items/q1/");
+    const statuses = await Promise.all(
+      files.map(async (file) => (await gate.serve({ path: pathOf(base, `items/q1/${file}`) }, NOW)).status),
+    );
+    expect(statuses).toEqual([404, 404, 404, 200, 200]);
+  });
+
+  it("[T73] never serves a fragment that an item or a test includes, whatever its name, namespace or whether it is listed", async () => {
+    const xi = 'xmlns:xi="http://www.w3.org/2001/XInclude"';
+    const include = (href: string): string => `<xi:include ${xi} href="${href}"/>`;
+    const items = String(examFiles()["items/q1/item.xml"]).replace(
+      "<qti-item-body>",
+      `<qti-item-body>${include("parts/stem.html")}`,
+    );
+    const exam = String(examFiles()["tests/exam.xml"]).replace(
+      "<qti-assessment-section ",
+      `${include("../parts/section.html")}<qti-assessment-section `,
+    );
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "items/q1/item.xml": items,
+      "tests/exam.xml": exam,
+      // A fragment with no namespace and a name of a web page, which neither the manifest nor the sniff would know.
+      "items/q1/parts/stem.html": `<div ${xi}>The key is B.${include("deeper.html")}</div>`,
+      "items/q1/parts/deeper.html": "<div>Also hidden</div>",
+      "items/q1/parts/photo.png": "png",
+      "parts/section.html": `<div ${xi}>${include("fragments/rubric.css")}</div>`,
+      "parts/fragments/rubric.css": "scorer only",
+    });
+    const base = await baseOf(gate, "");
+    const status = async (path: string): Promise<number> =>
+      (await gate.serve({ path: pathOf(base, path) }, NOW)).status;
+    expect(await status("items/q1/parts/stem.html")).toBe(404);
+    expect(await status("items/q1/parts/deeper.html")).toBe(404);
+    expect(await status("parts/section.html")).toBe(404);
+    expect(await status("parts/fragments/rubric.css")).toBe(404);
+    expect(await status("items/q1/parts/photo.png")).toBe(200);
+    expect(await status("items/q1/style.css")).toBe(200);
+  });
+
+  it("[T73] never serves the template or the response processing that the manifest lists as a resource, whatever the name", async () => {
+    const resources = [
+      '<resource identifier="rp1" type="imsqti_rptemplate_xmlv3p0" href="templates/custom.xml"><file href="templates/custom.xml"/></resource>',
+      '<resource identifier="rp2" type="imsqti_resprocessing_xmlv3p0" href="templates/shared.html"><file href="templates/shared.html"/></resource>',
+      '<resource identifier="rp3" type="imsqti_fragment_xmlv3p0" href="fragments/part.txt"/>',
+      '<resource identifier="rp4" type="imsqti_outcomes_xmlv3p0"><file href="fragments/outcomes.json"/></resource>',
+      '<resource identifier="ud" type="qtiusagedata/xml" href="usage/data.json"/>',
+      '<resource identifier="lti" type="imsbasiclti_xmlv1p3" href="links/tool.txt"/>',
+      '<resource identifier="ctl" type="controlfile" href="control/settings.js"/>',
+    ].join("");
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "imsmanifest.xml": listing(resources),
+      "templates/custom.xml": "<responseProcessing/>",
+      "templates/shared.html": "<responseProcessing/>",
+      "fragments/part.txt": "a part",
+      "fragments/outcomes.json": "{}",
+      "usage/data.json": "{}",
+      "links/tool.txt": "link",
+      "control/settings.js": "settings",
+    });
+    const base = await baseOf(gate, "");
+    for (const path of [
+      "templates/custom.xml",
+      "templates/shared.html",
+      "fragments/part.txt",
+      "fragments/outcomes.json",
+      "usage/data.json",
+      "links/tool.txt",
+      "control/settings.js",
+    ]) {
+      expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(404);
+    }
+  });
+
+  it("[T73] never serves the files that qti-adaptive-selection refers to", async () => {
+    const adaptive = String(examFiles()["tests/exam.xml"]).replace(
+      "</qti-assessment-section>",
+      `<qti-adaptive-selection>
+         <qti-adaptive-engine-ref identifier="engine" href="https://cat.example/engine"/>
+         <qti-adaptive-settings-ref identifier="settings" href="../cat/settings.json"/>
+       </qti-adaptive-selection></qti-assessment-section>`,
+    );
+    const { gate, pkg } = await gateOf({ ...examFiles(), "tests/exam.xml": adaptive, "cat/settings.json": '{"k":1}' });
+    expect(pkg.paths).toContain("cat/settings.json");
+    const base = await baseOf(gate, "");
+    expect((await gate.serve({ path: pathOf(base, "cat/settings.json") }, NOW)).status).toBe(404);
+    expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
+  });
+
+  it("[T73] refuses to sign a prefix that is not a directory", async () => {
+    const { gate } = await gateOf();
+    for (const prefix of ["imsmanifest.xml", "items/q1", "items//", "../", "items/./", "a\\b/"]) {
+      await expect(gate.sign("s1", [prefix], NOW), prefix).rejects.toThrow(DataError);
+    }
+  });
+
+  it("[T72] signs the URL of a file of the candidate, and serves it for five minutes in a sandbox", async () => {
+    const { gate, fileStore } = await gateOf();
+    const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", "answer.wav");
+    const url = await gate.signFile("s1", file, NOW);
+    expect(url).toMatch(/^https:\/\/assets\.example\/f\/[\w-]+\.[\w-]+\/file-1$/u);
+    const path = new URL(url).pathname;
+    const response = await gate.serve({ path }, NOW);
+    expect(response.status).toBe(200);
+    expect(response.headers).toMatchObject({
+      "Content-Type": "audio/wav",
+      "Content-Security-Policy": "sandbox",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    });
+    expect(new TextDecoder().decode(response.body)).toBe("RIFF");
+    expect((await gate.serve({ path }, NOW + DEFAULT_UPLOAD_TTL_SECONDS * SECOND)).status).toBe(200);
+    expect((await gate.serve({ path }, NOW + DEFAULT_UPLOAD_TTL_SECONDS * SECOND + 1)).status).toBe(403);
+  });
+
+  it("[T72] refuses a file token for another file, and a token of the other kind", async () => {
+    const { gate, fileStore } = await gateOf();
+    const file = await fileStore.put(new Uint8Array([1]), "image/png");
+    const token = new URL(await gate.signFile("s1", file, NOW)).pathname.split("/")[2] ?? "";
+    expect((await gate.serve({ path: `/f/${token}/file-2` }, NOW)).status).toBe(403);
+    expect((await gate.serve({ path: `/f/${token}/file-1/extra` }, NOW)).status).toBe(403);
+    expect((await gate.serve({ path: `/f/${token}/%E0%A4%A` }, NOW)).status).toBe(403);
+    expect((await gate.serve({ path: `/g/${token}/items/q1/images/map.png` }, NOW)).status).toBe(403);
+    const packageToken = new URL(await baseOf(gate, "")).pathname.split("/")[2] ?? "";
+    expect((await gate.serve({ path: `/f/${packageToken}/file-1` }, NOW)).status).toBe(403);
+  });
+
+  it("[T72] answers 404 for a file that the store no longer has", async () => {
+    const { gate } = await gateOf();
+    const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" }, NOW);
+    expect((await gate.serve({ path: new URL(gone).pathname }, NOW)).status).toBe(404);
+  });
+
+  it("[T73] checks its options and arguments", async () => {
+    const { key, pkg, fileStore, gate } = await gateOf();
+    const good = { key, origin: EXAM_ORIGIN, packages: async () => pkg, files: fileStore };
+    const make = (changes: Record<string, unknown>): unknown => createAssetGate({ ...good, ...changes });
+    expect(() => createAssetGate(JSON.parse("null"))).toThrow(DataError);
+    expect(() => make({ origin: "http://assets.example" })).toThrow("an absolute https URL");
+    for (const origin of ["http://127.0.0.1:5000", "http://localhost:8080", "http://[::1]:3000"]) {
+      expect(() => make({ origin }), origin).not.toThrow();
+    }
+    // `http` is for loopback only: a name that merely starts or ends like one, another address of 127.0.0.0/8, the
+    // unspecified address and a user name that looks like a host are not.
+    const lookalikes = [
+      "http://localhost.example",
+      "http://127.0.0.1.example",
+      "http://127.0.0.2",
+      "http://0.0.0.0",
+      "http://[::2]",
+      "http://localhost.",
+      "http://localhost@assets.example",
+      "http://assets.example#localhost",
+      "http://assets.example:80",
+      "ftp://localhost",
+      "http://",
+    ];
+    for (const origin of lookalikes) expect(() => make({ origin }), origin).toThrow(DataError);
+    expect(() => make({ origin: "https://assets.example/path" })).toThrow("an origin without a path");
+    expect(() => make({ key: "secret" })).toThrow("HMAC key");
+    expect(() => make({ ttlSeconds: 0 })).toThrow("The option ttlSeconds must be a positive integer, found 0.");
+    expect(() => make({ uploadTtlSeconds: null })).toThrow("The option uploadTtlSeconds");
+    expect(() => make({ packages: null })).toThrow("The option packages must be a function");
+    expect(() => make({ files: {} })).toThrow("The function put");
+    expect(() => make({ extra: 1 })).toThrow("The options has the properties");
+    await expect(gate.sign(JSON.parse("5"), [], NOW)).rejects.toThrow("The session must be a string");
+    await expect(gate.sign("s1", JSON.parse('["a/"]'), -1)).rejects.toThrow("The time now");
+    await expect(gate.signFile("s1", JSON.parse('{"reference":1}'), NOW)).rejects.toThrow("The reference of the file");
+    await expect(gate.serve(JSON.parse("null"), NOW)).rejects.toThrow("The request must be an object");
+    await expect(gate.serve({ path: JSON.parse("5") }, NOW)).rejects.toThrow("The path of the request");
+  });
+});
+
+describe("the client-action policy", () => {
+  it("[T67] allows every action of the candidate but suspend and resume in an exam", () => {
+    const every: Readonly<Record<CandidateAction["type"], true>> = {
+      "set-responses": true,
+      submit: true,
+      "end-attempt": true,
+      "next-attempt": true,
+      skip: true,
+      review: true,
+      solution: true,
+      comment: true,
+      move: true,
+      support: true,
+      "end-part": true,
+      "end-test": true,
+      suspend: true,
+      resume: true,
+    };
+    expect([...CANDIDATE_ACTION_TYPES].sort()).toEqual(Object.keys(every).sort());
+    expect(EXAM_CLIENT_ACTIONS).toEqual(
+      CANDIDATE_ACTION_TYPES.filter((type) => type !== "suspend" && type !== "resume"),
+    );
+  });
+});
+
+describe("createSessionHost", () => {
+  it("[T67] starts a session bound to the caller, and answers with the first view, the assets and the documents", async () => {
+    const { host, store, scheduler, logged } = await examHost();
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(started.seq).toBe(0);
+    const view = viewOf(started);
+    expect(view.status).toBe("in-progress");
+    expect(view.current?.key).toEqual(Q1);
+    expect(view.rubric.length).toBeGreaterThan(0);
+    expect(started.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [] });
+    expect(Object.entries(started.assets)).toEqual([
+      ["items/q1/", expect.stringMatching(/^https:\/\/assets\.example\/g\//u)],
+    ]);
+    expect(store.records.get("exam-1")).toMatchObject({ principal: "alice", version: 0, seq: 0 });
+    expect(scheduler.jobs).toEqual([]);
+    expect(logged.map(({ step }) => step)).toEqual(["start"]);
+  });
+
+  it("[T67] keeps the seed and the answer keys out of the envelope", async () => {
+    const { host } = await examHost();
+    const text = JSON.stringify(await host.start(ALICE, { seed: 987_654_321 }));
+    expect(text).not.toContain("987654321");
+    expect(text).not.toContain("correct");
+    expect(text).not.toContain("match_correct");
+  });
+
+  it("[T67] answers an action with the view that the engine gives, and keeps the principal that started the session", async () => {
+    const { host, engine, clock, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(5 * SECOND);
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(reply.seq).toBe(1);
+    expect(reply.refusal).toBeUndefined();
+    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    const stored = store.records.get("exam-1");
+    expect(stored).toMatchObject({ principal: "alice", version: 1, seq: 1 });
+    const state = deserializeState(stored?.state ?? "");
+    expect(viewOf(reply).actions).toEqual(engine.view(state, clock.now()).actions.filter((type) => type !== "suspend"));
+  });
+
+  it("[T67] puts a refusal of the engine in the envelope, and leaves the state as it was", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const before = store.records.get("exam-1")?.state;
+    const reply = await host.handle(ALICE, request(1, { type: "submit", item: { ref: "q2", instance: 1 } }));
+    expect(reply.refusal?.code).toBe("not-current");
+    expect(store.records.get("exam-1")?.state).toBe(before);
+    expect(store.records.get("exam-1")?.seq).toBe(1);
+  });
+
+  it("[T67] gives 403 to a caller that is not the principal of the session, and to a session that does not exist", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const attempts = [
+      host.handle(BOB, request(1, answer("B"))),
+      host.check(BOB),
+      host.view(BOB),
+      host.handle({ session: "other", principal: "alice" }, request(1, answer("B"))),
+    ];
+    for (const attempt of attempts) {
+      await expect(attempt).rejects.toMatchObject({ name: "AccessError", reason: "not-bound" });
+    }
+    await expect(host.check(ALICE)).resolves.toBeUndefined();
+  });
+
+  it("[T67] never starts a session twice, and never binds it to another principal", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    const before = store.records.get("exam-1");
+    for (const caller of [ALICE, BOB]) {
+      await expect(host.start(caller, { seed: 8 })).rejects.toMatchObject({
+        name: "AccessError",
+        reason: "session-exists",
+      });
+    }
+    expect(store.records.get("exam-1")).toEqual(before);
+    await expect(host.check(BOB)).rejects.toThrow(AccessError);
+  });
+
+  it("[T67] reports two starts that race as session-exists for the one that loses", async () => {
+    const { host } = await examHost();
+    const results = await Promise.allSettled([host.start(ALICE, { seed: 1 }), host.start(BOB, { seed: 2 })]);
+    expect(results.map(({ status }) => status).sort()).toEqual(["fulfilled", "rejected"]);
+    const lost = results.find((result) => result.status === "rejected");
+    expect(lost?.status === "rejected" && lost.reason).toMatchObject({ reason: "session-exists" });
+  });
+
+  it("[T68] refuses the actions of the host from a client, whatever their form", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const actions = [
+      { type: "time" },
+      { type: "supply-scores", request: "r", value: null, scorer: "human" },
+      { type: "cat-response", request: "r", response: { ended: true } },
+    ];
+    for (const action of actions) {
+      await expect(host.handle(ALICE, { seq: 1, action })).rejects.toMatchObject({ name: "DataError" });
+    }
+    await expect(host.handle(ALICE, { seq: 1, action: { type: "move", to: "next", at: 5 } })).rejects.toMatchObject({
+      name: "DataError",
+    });
+  });
+
+  it("[T68] refuses an action that is larger than the limits", async () => {
+    const { host } = await examHost({ limits: { maxActionSize: 50 } });
+    await host.start(ALICE, { seed: 7 });
+    await expect(host.handle(ALICE, request(1, answer("A".repeat(100))))).rejects.toThrow("maxActionSize of 50");
+  });
+
+  it("[T68] answers a repeated sequence number with the stored answer and changes nothing", async () => {
+    const { host, store, logged, clock } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const first = await host.handle(ALICE, request(1, answer("A")));
+    const saves = store.saves.length;
+    const steps = logged.length;
+    clock.advance(10 * SECOND);
+    const again = await host.handle(ALICE, request(1, answer("B")));
+    expect(again.view).toEqual(first.view);
+    expect(again.seq).toBe(1);
+    expect(store.saves).toHaveLength(saves);
+    expect(logged).toHaveLength(steps);
+    expect(viewOf(again).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+  });
+
+  it("[T68] renews the tokens of a repeated answer", async () => {
+    const { host, clock, gate } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const first = await host.handle(ALICE, request(1, answer("A")));
+    clock.advance(2 * DAY);
+    const again = await host.handle(ALICE, request(1, answer("A")));
+    expect(Object.keys(again.assets)).toEqual(Object.keys(first.assets));
+    const stale = new URL(first.assets["items/q1/"] ?? "").pathname;
+    const fresh = new URL(again.assets["items/q1/"] ?? "").pathname;
+    expect((await gate.serve({ path: `${stale}items/q1/images/map.png` }, clock.now())).status).toBe(403);
+    expect((await gate.serve({ path: `${fresh}items/q1/images/map.png` }, clock.now())).status).toBe(200);
+  });
+
+  it("[T68] refuses a stale sequence number", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    await host.handle(ALICE, request(2, answer("B")));
+    await expect(host.handle(ALICE, request(1, answer("A")))).rejects.toThrow(
+      new DataError("The sequence number 1 is stale: the latest request answered has 2."),
+    );
+  });
+
+  it("[T68] applies a request once when it is delivered twice at the same time", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const [first, second] = await Promise.all([
+      host.handle(ALICE, request(1, answer("A"))),
+      host.handle(ALICE, request(1, answer("A"))),
+    ]);
+    expect(first.view).toEqual(second.view);
+    expect(store.saves).toHaveLength(1);
+  });
+
+  it("[T67] refuses suspend and resume from a client in an exam, and takes them out of the actions of the view", async () => {
+    const { host, store } = await examHost();
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(viewOf(started).actions).not.toContain("suspend");
+    expect(viewOf(started).actions).toContain("move");
+    const before = store.records.get("exam-1");
+    await expect(host.handle(ALICE, request(1, { type: "suspend" }))).rejects.toThrow(
+      /^A client may not send the action "suspend" in this session; the actions it may send are "set-responses"/u,
+    );
+    await expect(host.handle(ALICE, request(1, { type: "resume" }))).rejects.toThrow(DataError);
+    expect(store.records.get("exam-1")).toEqual(before);
+  });
+
+  it("[T61] lets the host allow suspend and resume for a client, as practice does", async () => {
+    const { host } = await examHost({ clientActions: CANDIDATE_ACTION_TYPES });
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(viewOf(started).actions).toContain("suspend");
+    const suspended = await host.handle(ALICE, request(1, { type: "suspend" }));
+    expect(viewOf(suspended).status).toBe("suspended");
+    expect(viewOf(suspended).actions).toEqual(["resume"]);
+    const resumed = await host.handle(ALICE, request(2, { type: "resume" }));
+    expect(viewOf(resumed).status).toBe("in-progress");
+  });
+
+  it("[T61] lets the proctor suspend and resume, and the candidate then sees the break and cannot end it", async () => {
+    const { host, logged, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    const suspended = await host.proctor(ALICE.session, { type: "suspend" });
+    expect(suspended.ok).toBe(true);
+    const during = await host.handle(ALICE, request(2, answer("B")));
+    expect(during.refusal?.code).toBe("suspended");
+    expect(viewOf(during).status).toBe("suspended");
+    expect(viewOf(during).actions).toEqual([]);
+    expect(viewOf(await host.view(ALICE)).status).toBe("suspended");
+    await expect(host.handle(ALICE, request(3, { type: "resume" }))).rejects.toThrow(DataError);
+    expect((await host.proctor(ALICE.session, { type: "resume" })).ok).toBe(true);
+    const after = await host.handle(ALICE, request(3, answer("B")));
+    expect(after.refusal).toBeUndefined();
+    expect(viewOf(after).current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
+    // The refused request saved a version without events, so the log has no step for it.
+    expect(logged.map(({ step }) => step)).toEqual(["start", 1, 2, 4, 5]);
+    expect(store.records.get("exam-1")?.version).toBe(5);
+  });
+
+  it("[T61] answers a proctor action that the engine refuses with the step, and saves nothing", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.proctor(ALICE.session, { type: "end-test" });
+    const version = store.records.get("exam-1")?.version;
+    const suspended = await host.proctor(ALICE.session, { type: "suspend" });
+    expect(suspended.ok).toBe(false);
+    expect(store.records.get("exam-1")?.version).toBe(version);
+    await expect(host.proctor("nobody", { type: "suspend" })).rejects.toThrow(DataError);
+    await expect(host.proctor(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
+      /^The type of a proctor action must be "suspend", "resume", "end-part" or "end-test"/u,
+    );
+  });
+
+  it("[T67] handles the request again when another request saved first, and applies it once", async () => {
+    const { host, store, logged } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    store.conflictNext(MAX_SAVE_RETRIES);
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(viewOf(reply).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(store.saves).toHaveLength(1);
+    expect(store.records.get("exam-1")).toMatchObject({ version: MAX_SAVE_RETRIES + 1, seq: 1 });
+    expect(logged.filter(({ events }) => events.some(({ type }) => type === "responses-set"))).toHaveLength(1);
+  });
+
+  it("[T67] fails with a ServiceError of 409 when the conflicts outlast the retries", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    store.conflictNext(MAX_SAVE_RETRIES + 1);
+    await expect(host.handle(ALICE, request(1, answer("A")))).rejects.toMatchObject({
+      name: "ServiceError",
+      status: 409,
+    });
+    expect(store.saves).toEqual([]);
+  });
+
+  it("[T66] schedules the maximum times of the new state before it saves, and a job of the scheduler applies the time-out", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, scheduler, clock, store } = await examHost({}, examFiles({ limits }));
+    const start = clock.now();
+    await host.start(ALICE, { seed: 7 });
+    expect(scheduler.jobs).toEqual([["exam-1", start + 600 * SECOND]]);
+    clock.advance(300 * SECOND);
+    await host.handle(ALICE, request(1, answer("A")));
+    expect(scheduler.jobs).toHaveLength(1);
+    clock.advance(301 * SECOND);
+    const timedOut = await host.host(ALICE.session, { type: "time" });
+    expect(timedOut.ok).toBe(true);
+    if (timedOut.ok) expect(timedOut.events.map(({ type }) => type)).toContain("time-out");
+    const late = await host.handle(ALICE, request(2, answer("B")));
+    expect(late.refusal?.code).toBe("time-over");
+    expect(store.records.get("exam-1")?.version).toBe(3);
+  });
+
+  it("[T66] loses no time-out when the scheduler fails: nothing is saved and the request can be sent again", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    let failing = true;
+    const scheduler = {
+      schedule: async () => {
+        if (failing) throw new ServiceError("The queue is down.", 503, "");
+      },
+    };
+    const { host, store } = await examHost({ scheduler }, examFiles({ limits }));
+    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(ServiceError);
+    expect(store.records.size).toBe(0);
+    failing = false;
+    await expect(host.start(ALICE, { seed: 7 })).resolves.toBeDefined();
+  });
+
+  it("[T66] does not schedule a job twice for one time, and does not fail when a job finds nothing to apply", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, scheduler, clock } = await examHost({}, examFiles({ limits }));
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    await host.handle(ALICE, request(2, answer("B")));
+    expect(scheduler.jobs).toHaveLength(1);
+    const early = await host.host(ALICE.session, { type: "time" });
+    expect(early.ok && early.events).toEqual([]);
+    clock.advance(601 * SECOND);
+    await host.host(ALICE.session, { type: "time" });
+    const again = await host.host(ALICE.session, { type: "time" });
+    expect(again.ok && again.events).toEqual([]);
+  });
+
+  it("[T66] absorbs a time-out whose job came late: the next action applies the deadline first", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, clock } = await examHost({}, examFiles({ limits }));
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(700 * SECOND);
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(reply.refusal?.code).toBe("time-over");
+    const first = viewOf(reply).navigation.find((entry) => entry.kind === "item" && entry.key.ref === "q1");
+    expect(first?.kind === "item" && first.status).toBe("closed");
+  });
+
+  it("[T69] restores a session from the store in a host with no memory of it", async () => {
+    const first = await examHost();
+    await first.host.start(ALICE, { seed: 7 });
+    await first.host.handle(ALICE, request(1, answer("A")));
+    const second = createSessionHost({
+      engine: createEngine(examDefinition(first.pkg)),
+      store: first.store,
+      scheduler: recordingScheduler(),
+      clock: first.clock,
+      gate: first.gate,
+      packages: async () => first.pkg,
+    });
+    const restored = await second.view(ALICE);
+    expect(restored.seq).toBe(1);
+    expect(viewOf(restored).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    const next = await second.handle(ALICE, request(restored.seq + 1, { type: "move", to: "next" }));
+    expect(viewOf(next).current?.key).toEqual({ ref: "q2", instance: 1 });
+  });
+
+  it("[T67] returns the results of a session marked official, and a copy of them is not", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    await host.handle(ALICE, request(2, { type: "submit", item: Q1 }));
+    await host.proctor(ALICE.session, { type: "end-test" });
+    const result = await host.results(ALICE.session);
+    expect(isOfficialResult(result)).toBe(true);
+    expect(isOfficialResult({ ...result })).toBe(false);
+    expect(isOfficialResult(structuredClone(result))).toBe(false);
+    expect(result.itemResults.map(({ identifier }) => identifier)).toContain("q1");
+  });
+
+  it("[T67] hands the pending work and the view of a rater to the host only", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    expect(await host.pending(ALICE.session)).toEqual({ scoring: [], cat: [] });
+    await expect(host.scorerView(ALICE.session, "none")).rejects.toMatchObject({ name: "DataError" });
+    await expect(host.pending("nobody")).rejects.toThrow(DataError);
+  });
+
+  it("[T114] numbers the steps of the log by the version of the record they saved", async () => {
+    const { host, logged } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    await host.handle(ALICE, request(1, answer("A")));
+    await host.handle(ALICE, request(2, { type: "submit", item: Q1 }));
+    expect(logged.map(({ session, step }) => [session, step])).toEqual([
+      ["exam-1", "start"],
+      ["exam-1", 1],
+      ["exam-1", 2],
+    ]);
+  });
+
+  it("[T114][T109] forwards a GradeEvent for a score that the host supplies, scored by the rater it names, for the item", async () => {
+    const essay = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="q2" title="Item q2" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`;
+    const endpoint = fakeEndpoint({ status: 200 });
+    const forward = {
+      log: () => undefined,
+      caliper: {
+        parties: () => ({ actor: ACTOR, assessment: ASSESSMENT, edApp: APPLICATION }),
+        sender: {
+          endpoint: "https://lrs.example/caliper",
+          token: "token-123",
+          sensor: "https://exam.example/sensors/1",
+          fetch: endpoint.fetch,
+        },
+        clock: { now: () => 1_700_000_000_000 },
+      },
+    };
+    const { host } = await examHost({ forward }, { ...examFiles(), "items/q2/item.xml": essay });
+    const rater = "https://rater.example/raters/17";
+    await host.start(ALICE, { seed: 7 });
+    const q2 = { ref: "q2", instance: 1 };
+    await host.handle(ALICE, request(1, { type: "move", to: q2 }));
+    await host.handle(
+      ALICE,
+      request(2, {
+        type: "set-responses",
+        item: q2,
+        responses: new Map([["RESPONSE", single("string", "An essay.")]]),
+      }),
+    );
+    await host.handle(ALICE, request(3, { type: "submit", item: q2 }));
+    const [pending] = (await host.pending(ALICE.session)).scoring;
+    expect(pending?.id).toBe("item:q2:1:SCORE");
+    const before = endpoint.requests.length;
+    const value = single("float", 3);
+    await expect(
+      host.host(ALICE.session, { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" }),
+    ).rejects.toThrow("The scoredBy of a supply-scores action must be a string");
+    await expect(
+      host.host(
+        ALICE.session,
+        { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" },
+        "rater-17",
+      ),
+    ).rejects.toThrow("The scoredBy of a supply-scores action must be an absolute IRI");
+    expect((await host.pending(ALICE.session)).scoring).toHaveLength(1);
+    expect(endpoint.requests).toHaveLength(before);
+    const step = await host.host(
+      ALICE.session,
+      { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" },
+      rater,
+    );
+    expect(step.ok).toBe(true);
+    const grades = endpoint.requests.slice(before).flatMap((each) => JSON.parse(each.init.body ?? "{}").data);
+    expect(grades).toHaveLength(1);
+    expect(grades[0].generated.attempt).toBe(grades[0].object.id);
+    expect(grades[0]).toMatchObject({
+      type: "GradeEvent",
+      actor: { id: rater, type: "Person" },
+      object: { type: "Attempt" },
+      generated: { scoreGiven: 3, scoredBy: rater },
+    });
+    const replaced = await host.host(
+      ALICE.session,
+      { type: "supply-scores", request: pending?.id ?? "", value: single("float", 4), scorer: "human" },
+      rater,
+    );
+    expect(replaced.ok && replaced.events.map(({ type }) => type)).toContain("scores-replaced");
+    expect(endpoint.requests.slice(before)).toHaveLength(2);
+  });
+
+  it("[T67] checks its options and arguments", async () => {
+    const good = await examHost();
+    const options = {
+      engine: good.engine,
+      store: good.store,
+      scheduler: good.scheduler,
+      clock: good.clock,
+      gate: good.gate,
+      packages: async () => good.pkg,
+    };
+    const make = (changes: Record<string, unknown>): unknown => createSessionHost({ ...options, ...changes });
+    expect(() => createSessionHost(JSON.parse("null"))).toThrow("The options must be an object");
+    expect(() => make({ engine: {} })).toThrow("The function start of the option engine");
+    expect(() => make({ store: null })).toThrow("The option store must be an object");
+    expect(() => make({ scheduler: { schedule: 1 } })).toThrow("The function schedule of the option scheduler");
+    expect(() => make({ clock: {} })).toThrow("The function now of the option clock");
+    expect(() => make({ gate: {} })).toThrow("The function sign of the option gate");
+    expect(() => make({ packages: null })).toThrow("The option packages must be a function");
+    expect(() => make({ clientActions: ["suspend", "fly"] })).toThrow(
+      'A type of the option clientActions must be "set-responses"',
+    );
+    expect(() => make({ clientActions: "move" })).toThrow("The option clientActions must be an array");
+    expect(() => make({ limits: 5 })).toThrow("The option limits must be an object");
+    expect(() => make({ other: 1 })).toThrow("The options has the properties");
+    await expect(good.host.start(JSON.parse('{"session":"s"}'), { seed: 1 })).rejects.toThrow(
+      "The principal of a caller",
+    );
+    await expect(good.host.start(ALICE, JSON.parse("null"))).rejects.toThrow("The options of start must be an object");
+    await expect(good.host.handle(ALICE, JSON.parse('{"seq":1}'))).rejects.toThrow('must have the property "action"');
+    await expect(good.host.handle(JSON.parse("null"), { seq: 1, action: {} })).rejects.toThrow(
+      "The caller must be an object",
+    );
+    await expect(good.host.host(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
+      "The type of a host action",
+    );
+  });
+});
+
 describe("properties", () => {
+  const Actions: readonly CandidateAction[] = [
+    answer("A"),
+    answer("B"),
+    { type: "move", to: "next" },
+    { type: "move", to: "previous" },
+    { type: "move", to: { ref: "q3", instance: 1 } },
+    { type: "skip", item: Q1 },
+    { type: "submit", item: Q1 },
+    { type: "comment", item: Q1, text: "A comment." },
+    { type: "end-part" },
+    { type: "end-test" },
+    { type: "submit", item: { ref: "q9", instance: 1 } },
+  ];
+  const actions = fc.array(fc.constantFrom(...Actions), { maxLength: 7 });
+
+  it("[T71][T67] returns the view that the engine gives for the same actions, through viewToJson and viewFromJson", async () => {
+    await fc.assert(
+      fc.asyncProperty(actions, async (list) => {
+        const { host, clock, engine } = await examHost();
+        await host.start(ALICE, { seed: 3 });
+        const started = engine.start({ seed: 3, at: clock.now() });
+        if (!started.ok) throw new Error("The fixture test starts.");
+        let state = started.state;
+        let seq = 0;
+        for (const action of list) {
+          seq += 1;
+          clock.advance(SECOND);
+          const reply = await host.handle(ALICE, request(seq, action));
+          const step = engine.apply(state, stamp(state, action, clock.now()));
+          if (step.ok) state = step.state;
+          const expected = engine.view(state, clock.now());
+          const allowed = { ...expected, actions: expected.actions.filter((type) => type !== "suspend") };
+          expect(viewOf(reply)).toEqual(viewFromJson(viewToJson(allowed)));
+        }
+      }),
+      { numRuns: 25 },
+    );
+  });
+
+  it("[T68] changes nothing when a request is repeated, whatever the actions before it", async () => {
+    await fc.assert(
+      fc.asyncProperty(actions, async (list) => {
+        const { host, store, logged } = await examHost();
+        await host.start(ALICE, { seed: 3 });
+        let seq = 0;
+        let last: ViewEnvelope | undefined;
+        for (const action of list) {
+          seq += 1;
+          last = await host.handle(ALICE, request(seq, action));
+        }
+        if (last === undefined) return;
+        const record = store.records.get("exam-1");
+        const steps = logged.length;
+        const again = await host.handle(ALICE, request(seq, { type: "end-test" }));
+        expect(again.view).toEqual(last.view);
+        expect(again.refusal).toEqual(last.refusal);
+        expect(store.records.get("exam-1")).toEqual(record);
+        expect(logged).toHaveLength(steps);
+      }),
+      { numRuns: 25 },
+    );
+  });
+
+  it("[T67] converges when competing writes come first, up to the retries, and fails with 409 beyond them", async () => {
+    await fc.assert(
+      fc.asyncProperty(actions, fc.integer({ min: 0, max: MAX_SAVE_RETRIES + 2 }), async (list, conflicts) => {
+        const free = await examHost();
+        const raced = await examHost();
+        await free.host.start(ALICE, { seed: 3 });
+        await raced.host.start(ALICE, { seed: 3 });
+        let seq = 0;
+        for (const action of list) {
+          seq += 1;
+          await free.host.handle(ALICE, request(seq, action));
+          await raced.host.handle(ALICE, request(seq, action));
+        }
+        const next = request(seq + 1, { type: "move", to: "next" });
+        const expected = await free.host.handle(ALICE, next);
+        raced.store.conflictNext(conflicts);
+        if (conflicts > MAX_SAVE_RETRIES) {
+          await expect(raced.host.handle(ALICE, next)).rejects.toMatchObject({ name: "ServiceError", status: 409 });
+        } else {
+          expect((await raced.host.handle(ALICE, next)).view).toEqual(expected.view);
+        }
+      }),
+      { numRuns: 20 },
+    );
+  });
+
   it("[T114] forwards any events, of any type, to the log without a change", async () => {
     await fc.assert(
       fc.asyncProperty(

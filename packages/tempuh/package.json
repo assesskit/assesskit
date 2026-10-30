@@ -32,6 +32,10 @@
       "types": "./dist/player/index.d.ts",
       "default": "./dist/player/index.js"
     },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
     "./protocol": {
       "types": "./dist/protocol/index.d.ts",
       "default": "./dist/protocol/index.js"

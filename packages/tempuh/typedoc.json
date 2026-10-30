@@ -3,6 +3,7 @@
   "entryPoints": [
     "src/index.ts",
     "src/player/index.ts",
+    "src/client/index.ts",
     "src/protocol/index.ts",
     "src/lti/index.ts",
     "src/cat/index.ts",

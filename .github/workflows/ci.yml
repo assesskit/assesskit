@@ -92,7 +92,7 @@ jobs:
       - run: pnpm bench
 
   # The rendering tests of tempuh, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
-  # WebKit.
+  # WebKit, and its tests of the asset gate over the same examples, which run in Node.
   browsers:
     runs-on: ubuntu-latest
     steps:

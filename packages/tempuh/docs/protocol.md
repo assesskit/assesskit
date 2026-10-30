@@ -29,10 +29,10 @@ properties are ignored, because a host may pass a richer object.
 An envelope has no session identifier. The host takes the session from the authenticated request, so a candidate cannot
 name another candidate's session.
 
-| Envelope         | Properties                                                                                                                | Sent by |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `ActionEnvelope` | `seq`: a non-negative integer; `action`: olah's JSON of a candidate action                                                | client  |
-| `ViewEnvelope`   | `seq`: the number it answers; `view`: olah's JSON of a candidate view; `assets`: each asset prefix mapped to its base URL | host    |
+| Envelope         | Properties                                                                                                                                                                                                                            | Sent by |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `ActionEnvelope` | `seq`: a non-negative integer; `action`: olah's JSON of a candidate action                                                                                                                                                            | client  |
+| `ViewEnvelope`   | `seq`: the number it answers; `view`: olah's JSON of a candidate view; `assets`: each asset prefix mapped to its base URL; `documents` (optional): where the content comes from; `refusal` (optional): why the action was not applied | host    |
 
 `seq` makes a request idempotent: a repeated number returns the answer already given, and a stale one is refused.
 
@@ -42,7 +42,8 @@ name another candidate's session.
 - has a property other than those of its row, such as `session`;
 - has a `seq` that is not a safe integer of at least 0;
 - lacks `action` or `view`;
-- has `assets` that is not an object whose values are strings (`ViewEnvelope`).
+- has `assets` that is not an object whose values are strings (`ViewEnvelope`);
+- has `documents` that are not [documents](#documents), or a `refusal` that is not [a refusal](#refusal) (`ViewEnvelope`).
 
 ```ts
 import { checkActionEnvelope } from "@luthfanwakan/tempuh/protocol";
@@ -50,3 +51,41 @@ import { checkActionEnvelope } from "@luthfanwakan/tempuh/protocol";
 checkActionEnvelope(JSON.parse('{"seq":1,"action":{},"session":"s2"}'));
 // DataError: An action envelope has the properties "seq" and "action", found "session".
 ```
+
+## Refusal
+
+When the engine refuses a well-formed action, the host answers with the view of the state as it was, and the refusal in the
+envelope. A refusal has the properties `code`, `message` and `source` of olah's `Refusal`. `REFUSAL_CODES` lists the codes,
+and `checkRefusal(value)` throws `DataError` unless `value` is a refusal with one of them. The player has a message for each
+code ([delivery](delivery.md#refusals-and-status-messages)).
+
+## Documents
+
+A reference in content is written against its own document (B93), and the view does not say which document that is. The
+host does: `documents` has `test`, the path of the test document, `item`, the path of the document of the item presented,
+and `stimuli`, the paths of the documents of its stimuli, in the order of the view. A path is a path in the package; `""` is its
+root, which is where a variant's references resolve, since olah does not know its path (olah E19). Without `documents`, every
+reference resolves against the root. `viewDocuments(view, source)` builds them from the `DocumentSource` that a host or a local
+session has of its test.
+
+## The session client
+
+`SessionClient` is the one interface the player mounts against, whether the engine runs on a server or on the device
+([client](client.md)).
+
+| Member                | Meaning                                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `view`                | The latest view.                                                                                                                  |
+| `documents`           | The documents the content of the latest view comes from.                                                                          |
+| `age()`               | The milliseconds since the view was built or received, on the client's clock.                                                     |
+| `assets(path)`        | The URL of a path of the package: the base URL of the longest asset prefix of the latest view that holds the path, plus the path. |
+| `dispatch(action)`    | Sends an action and resolves with `{ view, refusal? }`: the view after it, or the view as it was with the refusal of the engine.  |
+| `subscribe(listener)` | Calls the listener with every new view, and returns the function that removes it.                                                 |
+| `close()`             | Stops the timers and the listeners of the client.                                                                                 |
+
+## Official results
+
+`SessionHost.results` returns a report of type `OfficialResult`. The host marks the object it returns in a private `WeakSet`,
+and `isOfficialResult(value)` tells whether a value is one: a copy of the report, a report parsed from JSON and the report of a
+practice session are not. The marking function is not exported; only `server/` and `lti/` may import `protocol/official.ts`
+(lint). A service that reports a score takes only an `OfficialResult` and refuses any other object.

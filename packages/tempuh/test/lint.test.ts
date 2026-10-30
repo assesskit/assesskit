@@ -124,6 +124,14 @@ const takar = {
   inServer: source(`${SRC}/server/takar.ts`, ['export * from "@luthfanwakan/takar";']),
   inCat: source(`${SRC}/cat/takar.ts`, ['export * from "@luthfanwakan/takar/cat";']),
 };
+const official = {
+  inPlayer: source(`${SRC}/player/official.ts`, ['export * from "../protocol/official.js";']),
+  inClient: source(`${SRC}/client/official.ts`, ['export { markOfficial } from "../protocol/official";']),
+  inScoring: source(`${SRC}/scoring/official.ts`, ['export * from "../protocol/official.js";']),
+  inServer: source(`${SRC}/server/official.ts`, ['export * from "../protocol/official.js";']),
+  inLti: source(`${SRC}/lti/official.ts`, ['export * from "../protocol/official.js";']),
+  inProtocol: source(`${SRC}/protocol/official-copy.ts`, ['export * from "./official.js";']),
+};
 const olahByPath = {
   inShared: source(`${SRC}/protocol/olah.ts`, ['export * from "../../../olah/src/xml/index.js";']),
   inBrowser: source(`${SRC}/player/olah.ts`, ['export * from "../../../olah/dist/index.js";']),
@@ -259,6 +267,15 @@ describe("layering", () => {
     expect(whatFor(takar.inPlayer)).toContain(RESTRICTED_IMPORT);
     expect(whatFor(takar.inServer)).toContain(RESTRICTED_IMPORT);
     expect(whatFor(takar.inCat)).not.toContain(RESTRICTED_IMPORT);
+  });
+
+  it("[T67] lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
+    for (const path of [official.inPlayer, official.inClient, official.inScoring]) {
+      expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
+    }
+    for (const path of [official.inServer, official.inLti, official.inProtocol]) {
+      expect(whatFor(path), path).not.toContain(RESTRICTED_IMPORT);
+    }
   });
 
   it("keeps tempuh to the published subpaths of olah", () => {

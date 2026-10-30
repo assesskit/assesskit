@@ -1,0 +1,258 @@
+import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@luthfanwakan/olah/delivery";
+import type { Value } from "@luthfanwakan/olah/values";
+import { checkFunction, checkProperties, checkRecord } from "../checks.js";
+import { AccessError, DataError, isDataError } from "../errors.js";
+import {
+  type ActionEnvelope,
+  checkViewEnvelope,
+  type DispatchResult,
+  type SessionClient,
+  type ViewDocuments,
+  type ViewEnvelope,
+} from "../protocol/index.js";
+import { assetResolver } from "./assets.js";
+import { BROWSER_CLOCK, type Clock, checkClock } from "./clock.js";
+
+/** How long the client waits after the last change of a response before it sends the responses (tempuh design §2.3, F-m10). */
+export const AUTOSAVE_MS = 1000;
+
+/** How long before the nearest timer reaches 0 the client sends the responses it holds, so that the host has them when the time-out ends the attempt. */
+export const FLUSH_BEFORE_DEADLINE_MS = 10_000;
+
+/** The longest delay that `setTimeout` takes; a longer one fires at once. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
+/** Sends an envelope to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example. */
+export type Transport = (envelope: ActionEnvelope) => Promise<ViewEnvelope>;
+
+/** The options of {@link createRemoteSession}. */
+export interface RemoteSessionOptions {
+  /** The clock that times a view's age. Default: the clock of the browser. */
+  readonly clock?: Clock;
+}
+
+const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [] };
+
+type SetResponses = Extract<CandidateAction, { readonly type: "set-responses" }>;
+
+/** The responses that the client holds back, for one item. */
+interface Held {
+  readonly item: SetResponses["item"];
+  readonly responses: Map<string, Value | null>;
+  readonly pciStates: Map<string, string>;
+  readonly waiters: { readonly resolve: (result: DispatchResult) => void; readonly reject: (error: unknown) => void }[];
+}
+
+/** What the client knows of the latest envelope. */
+interface Latest {
+  readonly view: CandidateView;
+  readonly assets: (path: string) => string;
+  readonly documents: ViewDocuments;
+  readonly receivedAt: number;
+}
+
+/** Whether an error says that the host looked at the request and did not apply it, so that a new request may take its place. */
+const isRejection = (error: unknown): boolean => isDataError(error) || error instanceof AccessError;
+
+/**
+ * Creates the session client of exam mode (tempuh design §2.3): the engine is on the server, and the client keeps the
+ * latest view.
+ *
+ * - **Envelopes.** Each request is an `ActionEnvelope` with the next sequence number and the action in olah's JSON form,
+ *   sent one at a time. The answer is read with `viewFromJson`.
+ * - **Lost answers.** A request that got no answer may or may not have been applied, so it is sent again, unchanged, before
+ *   any later one; the host answers a repeated sequence number with the answer it stored.
+ * - **Autosave.** `set-responses` actions are held and sent together {@link AUTOSAVE_MS} after the last one, and before any
+ *   other action, when the page is hidden, and {@link FLUSH_BEFORE_DEADLINE_MS} before the nearest timer reaches 0. At 0 the
+ *   client sends them once more, or an empty `set-responses` if it holds none, to learn from the host whether the time-out
+ *   happened.
+ *
+ * @param transport - Sends an envelope to the host.
+ * @param initial - The envelope that `SessionHost.start` or `SessionHost.view` gave. The next request has its sequence
+ * number plus one.
+ * @param options - See {@link RemoteSessionOptions}.
+ * @throws `DataError` when an argument has the wrong type.
+ */
+export function createRemoteSession(
+  transport: Transport,
+  initial: ViewEnvelope,
+  options: RemoteSessionOptions = {},
+): SessionClient {
+  checkFunction(transport, "The transport must be a function");
+  checkViewEnvelope(initial);
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", ["clock"]);
+  const { clock = BROWSER_CLOCK } = options;
+  checkClock(clock);
+
+  const listeners = new Set<(view: CandidateView) => void>();
+  let sequence = initial.seq;
+  let inDoubt: ActionEnvelope | undefined;
+  let held: Held | undefined;
+  let queue: Promise<unknown> = Promise.resolve();
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let flushTimer: ReturnType<typeof setTimeout> | undefined;
+  let syncTimer: ReturnType<typeof setTimeout> | undefined;
+  let closed = false;
+
+  const read = (envelope: ViewEnvelope): Latest => ({
+    view: viewFromJson(envelope.view),
+    assets: assetResolver(envelope.assets),
+    documents: envelope.documents ?? NO_DOCUMENTS,
+    receivedAt: clock.now(),
+  });
+  let latest = read(initial);
+
+  const report = (promise: Promise<unknown>): void => {
+    promise.catch((error: unknown) => reportError(error));
+  };
+
+  const clearTimers = (): void => {
+    clearTimeout(flushTimer);
+    clearTimeout(syncTimer);
+  };
+
+  /** Sets the timers for the nearest maximum time of the latest view. */
+  const arm = (): void => {
+    clearTimers();
+    const remaining = latest.view.timers.flatMap((timer) =>
+      timer.remaining !== undefined && timer.remaining > 0 && !timer.late ? [timer.remaining] : [],
+    );
+    if (closed || remaining.length === 0) return;
+    const nearest = Math.min(...remaining);
+    if (nearest > MAX_TIMER_DELAY_MS) return;
+    flushTimer = setTimeout(() => report(flush()), Math.max(0, nearest - FLUSH_BEFORE_DEADLINE_MS));
+    syncTimer = setTimeout(() => report(sync()), nearest);
+  };
+
+  const accept = (envelope: ViewEnvelope): DispatchResult => {
+    latest = read(envelope);
+    for (const listener of [...listeners]) {
+      try {
+        listener(latest.view);
+      } catch (error) {
+        reportError(error);
+      }
+    }
+    arm();
+    return { view: latest.view, ...(envelope.refusal === undefined ? {} : { refusal: envelope.refusal }) };
+  };
+
+  /** Sends an envelope and reads the answer; one that got no answer stays in doubt and is sent again first next time. */
+  const deliver = async (envelope: ActionEnvelope): Promise<ViewEnvelope> => {
+    try {
+      const reply = await transport(envelope);
+      checkViewEnvelope(reply);
+      if (reply.seq !== envelope.seq) {
+        throw new DataError(`The host answered the sequence number ${reply.seq} to the request ${envelope.seq}.`);
+      }
+      return reply;
+    } catch (error) {
+      inDoubt = isRejection(error) ? undefined : envelope;
+      throw error;
+    }
+  };
+
+  const exchange = async (action: CandidateAction): Promise<DispatchResult> => {
+    const again = inDoubt;
+    if (again !== undefined) {
+      inDoubt = undefined;
+      try {
+        accept(await deliver(again));
+      } catch (error) {
+        // A request that the host rejected is gone; one that got no answer again blocks the next.
+        if (!isRejection(error)) throw error;
+      }
+    }
+    sequence += 1;
+    return accept(await deliver({ seq: sequence, action: actionToJson(action) }));
+  };
+
+  /** Sends one action after the ones before it. */
+  const send = (action: CandidateAction): Promise<DispatchResult> => {
+    const result = queue.then(() => exchange(action));
+    queue = result.catch(() => undefined);
+    return result;
+  };
+
+  /** Sends the responses that the client holds, and answers the callers that waited for them. */
+  const flush = (): Promise<DispatchResult | undefined> => {
+    clearTimeout(saveTimer);
+    const batch = held;
+    held = undefined;
+    if (batch === undefined) return Promise.resolve(undefined);
+    const sent = send({
+      type: "set-responses",
+      item: batch.item,
+      responses: batch.responses,
+      ...(batch.pciStates.size === 0 ? {} : { pciStates: batch.pciStates }),
+    });
+    sent.then(
+      (result) => {
+        for (const waiter of batch.waiters) waiter.resolve(result);
+      },
+      (error: unknown) => {
+        for (const waiter of batch.waiters) waiter.reject(error);
+      },
+    );
+    return sent;
+  };
+
+  /** Learns the host's view at a deadline: the held responses, or an empty `set-responses` for the item presented. */
+  const sync = async (): Promise<DispatchResult | undefined> => {
+    const flushed = await flush();
+    if (flushed !== undefined) return flushed;
+    const item = latest.view.current;
+    return item === undefined ? undefined : send({ type: "set-responses", item: item.key, responses: new Map() });
+  };
+
+  const hold = (action: SetResponses): Promise<DispatchResult> => {
+    if (held !== undefined && (held.item.ref !== action.item.ref || held.item.instance !== action.item.instance)) {
+      report(flush());
+    }
+    held ??= { item: action.item, responses: new Map(), pciStates: new Map(), waiters: [] };
+    const batch = held;
+    for (const [identifier, value] of action.responses) batch.responses.set(identifier, value);
+    for (const [identifier, state] of action.pciStates ?? []) batch.pciStates.set(identifier, state);
+    const waiting = new Promise<DispatchResult>((resolve, reject) => batch.waiters.push({ resolve, reject }));
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => report(flush()), AUTOSAVE_MS);
+    return waiting;
+  };
+
+  const onVisibility = (): void => {
+    if (document.visibilityState === "hidden") report(flush());
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  arm();
+
+  return {
+    get view() {
+      return latest.view;
+    },
+    get documents() {
+      return latest.documents;
+    },
+    age: () => clock.now() - latest.receivedAt,
+    assets: (path) => latest.assets(path),
+    dispatch: async (action) => {
+      if (closed) throw new DataError("The session client is closed.");
+      actionToJson(action);
+      if (action.type === "set-responses") return hold(action);
+      await flush();
+      return send(action);
+    },
+    subscribe: (listener) => {
+      checkFunction(listener, "The listener must be a function");
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+    close: () => {
+      closed = true;
+      clearTimers();
+      clearTimeout(saveTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      listeners.clear();
+    },
+  };
+}

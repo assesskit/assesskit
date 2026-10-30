@@ -108,6 +108,28 @@ An upload interaction can record the candidate's voice, and a WAV recording load
   response that holds anything else is shown as its text. A host that shows a response to a rater treats it as it treats
   any answer: untrusted text.
 
+## tempuh: the session host and the asset gate
+
+In an exam the engine, the seeds and the answer keys stay on the server ([server.md](packages/tempuh/docs/server.md)). The
+browser code imports only the wire functions of olah's `delivery`, and a test fails if the bundle of the player and the remote
+session holds any file of the engine. Practice runs the engine on the device, so its keys are visible there.
+
+- The host's authentication gives `{ session, principal }` to every call. Envelopes carry no session identifier, and a
+  request for a session that is not bound to the principal, or that does not exist, is the same `AccessError`: map it to 403
+  and tell nothing else. `start` never rebinds a session.
+- A client may not send `suspend` or `resume` in an exam, because olah counts suspended time nowhere. Breaks are the proctor's.
+  Keep the proctor's and the scheduler's endpoints away from candidates.
+- The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is
+  started once.
+- Serve package files only through the asset gate ([asset-gate.md](packages/tempuh/docs/asset-gate.md)), from an origin
+  without cookies. A token is in the path and names a session, a prefix and an expiry (an hour by default). The gate sends
+  `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`; do not strip them. Keep the HMAC key out of the
+  browser and rotate it to end every token.
+- The gate never serves the manifest, a file of a QTI resource type, a file that an adaptive section names, or an XML file in a
+  namespace of QTI data. Keys stay safe by type and content, not by what a view references: a file under a prefix that no view
+  references is served, so keep one folder for each item and its media.
+- The files of the candidate have tokens of their own, valid for five minutes, and are served in a sandbox.
+
 ## tempuh: the LTI tool role
 
 A learning platform launches tempuh through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
