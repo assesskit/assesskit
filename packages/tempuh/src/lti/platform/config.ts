@@ -1,8 +1,7 @@
 import type { webcrypto } from "node:crypto";
-import { checkRecord, describe, isRecord } from "../../checks.js";
+import { checkHttpsUrl, checkRecord, describe, isRecord } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { encodeBase64Url } from "../base64url.js";
-import { checkHttpsUrl } from "../http.js";
 import { isHmacKey, isRsaKey } from "../keys.js";
 
 const AUTHORIZATION_PATH = "/authorize";

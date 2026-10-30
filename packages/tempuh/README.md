@@ -13,7 +13,9 @@ Guide (§3.7.12). It also has the tools of an item: a rule, a protractor, basic 
 masking, materials, and slots for the tools that the host provides. It also has LTI 1.3: the tool role, the launch of a test by a learning platform, with its login, Deep Linking
 response and access token, and the platform role, which launches the tools of LTI items. On the server it has the CAT engines for olah's `CatPort`:
 item-level adaptive sections and multistage panels over takar, a client of the REST binding of CAT 1.0, and the deployment of a
-package's adaptive sections.
+package's adaptive sections. It also has Caliper 1.2: the events of a session as Caliper events of the Assessment Profile and the
+Grading Profile, identifiers that stay the same when a step is reported again, the sensor that sends them, and the forwarding
+of each step's events to the host's log and to Caliper.
 Mathematics is typeset with MathJax 4, loaded from the host's URL when an item has an expression, and speech is read aloud from SSML, `data-ssml` and pronunciation lexicons through a voice of the host or the browser.
 Content is drawn by a renderer from olah's typed nodes, with a policy for attributes and references that keeps script out, and a content root that shows an item with its stimuli in a shadow root, with sanitized stylesheets, cards on demand, a hazard notice and modal feedback.
 
@@ -47,6 +49,8 @@ envelope.seq; // 3
 | `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                                                                                           |
 | `@luthfanwakan/tempuh/lti`         | Tool role: `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `createJwksCache`. Platform role: `ltiPlatformLogin`, `ltiPlatformAuthorize`, `platformJwks`, `platformToken`, `agsLineItem`, `agsScores`, `readAgsScore`, `platformEndpoints`. The types of their arguments and results |
 | `@luthfanwakan/tempuh/cat`         | `takarCatPort`, `takarPanelPort`, `restCatPort`, `deployCatSections`; `SectionStore`, `StoredSection`, `PanelParameters`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                                                                                             |
+| `@luthfanwakan/tempuh/caliper`     | `caliperEvents`, `caliperGrade`, `sendCaliper`, `CALIPER_CONTEXT`; `CaliperEvent`, `CaliperEntity`, `CaliperContext`, `CaliperParties`, `CaliperGrade`, `SendCaliperOptions`, `CaliperFetch`                                                                                                       |
+| `@luthfanwakan/tempuh/server`      | `forwardEvents`, `StepEvents`, `ForwardOptions`, `CaliperForwarding`                                                                                                                                                                                                                               |
 | `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                                                                                                     |
 | `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                                                                                          |
 
@@ -62,6 +66,7 @@ envelope.seq; // 3
 - [LTI](docs/lti.md): the tool role of LTI 1.3, its checks and its deployment.
 - [LTI platform](docs/lti-platform.md): the platform role, its three origins, the signed hints, the token endpoint and the grade services.
 - [CAT](docs/cat.md): the CAT engines over takar and over REST, the section store and the deployment of a package.
+- [Caliper](docs/caliper.md): the mapping from the events of a session, the identifiers, scores, sending, and forwarding a step's events.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
 - [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
 - [Tools](docs/tools.md): the tools of an item, how they are shown and operated.

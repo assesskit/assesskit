@@ -1,8 +1,14 @@
 import type { webcrypto } from "node:crypto";
-import { checkFunction, checkNonEmptyString, checkPositiveInteger, checkRecord, isRecord } from "../checks.js";
+import {
+  checkFunction,
+  checkHttpsUrl,
+  checkNonEmptyString,
+  checkPositiveInteger,
+  checkRecord,
+  isRecord,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import { type Clock, checkClock, readClock } from "./clock.js";
-import { checkHttpsUrl } from "./http.js";
 import { callService, DEFAULT_TIMEOUT_MS, type Fetch } from "./service.js";
 
 const DEFAULT_TTL_SECONDS = 3600;

@@ -107,6 +107,23 @@ olah keeps in the delivery state, so keep it on the server like the seed of an e
 parameters of the items and the settings of the test: keep it on the server. takar is a runtime dependency of tempuh, and
 only `cat/` imports it.
 
+## tempuh: Caliper
+
+`sendCaliper` sends events about a candidate and a bearer token to a Caliper endpoint that the host configures
+([caliper.md](packages/tempuh/docs/caliper.md)).
+
+- The endpoint must be `https`. A redirect is an error, so it cannot carry the token to another address. Every call is
+  aborted after `timeoutMs`.
+- The candidate is the IRI that the host gives as `actor`. Give an opaque identifier, such as `urn:uuid:` and a UUID that the
+  host keeps in its own records, never an email address, a name or an identifier that another service knows. The
+  identifiers that tempuh makes (events, attempts, scores, items and sections) are UUIDs of names that hold the session
+  identifier and the item reference, and the session identifier does not leave the server in them.
+- The events hold times, the identifiers of item references and sections, and, for `caliperGrade`, the score that the host
+  gives. They hold no response, no answer key and no personal needs and preferences. Call `caliperGrade` only for a score that
+  the endpoint may know.
+- The token goes only in the `Authorization` header of that endpoint. A `ServiceError` carries the endpoint's answer as
+  `body`: log it as untrusted text.
+
 ## tempuh: content
 
 The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from olah's typed

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   checkArray,
+  checkFinite,
   checkFunction,
+  checkHttpsUrl,
   checkNonEmptyString,
   checkNonNegativeInteger,
   checkPositiveInteger,
@@ -111,6 +113,25 @@ describe("checkNonEmptyString", () => {
   });
 });
 
+describe("checkHttpsUrl", () => {
+  it("accepts an absolute https URL", () => {
+    for (const url of ["https://example.edu", "https://example.edu:8443/path?q=1#f", "HTTPS://EXAMPLE.EDU/"]) {
+      expect(() => checkHttpsUrl(url, "The option endpoint")).not.toThrow();
+    }
+  });
+
+  it("rejects other schemes, relative references and other types", () => {
+    for (const url of ["http://example.edu", "ftp://example.edu", "urn:uuid:1", "/path", "example.edu", ""]) {
+      expect(() => checkHttpsUrl(url, "The option endpoint"), url).toThrow(
+        new DataError(`The option endpoint must be an absolute https URL, found ${JSON.stringify(url)}.`),
+      );
+    }
+    expect(() => checkHttpsUrl(JSON.parse("5"), "The option endpoint")).toThrow(
+      "The option endpoint must be a string, found 5.",
+    );
+  });
+});
+
 describe("checkNonNegativeInteger", () => {
   it("accepts 0 and the safe integers above it", () => {
     for (const value of [0, 1, Number.MAX_SAFE_INTEGER]) {
@@ -143,6 +164,22 @@ describe("checkPositiveInteger", () => {
     }
     expect(() => checkPositiveInteger(0, "The option timeoutMs")).toThrow(
       "The option timeoutMs must be a positive integer, found 0.",
+    );
+  });
+});
+
+describe("checkFinite", () => {
+  it("accepts finite numbers of either sign", () => {
+    for (const value of [0, -0.5, 12.25, Number.MAX_VALUE]) {
+      expect(() => checkFinite(value, "The property scoreGiven")).not.toThrow();
+    }
+  });
+
+  it("rejects NaN, infinities and other types", () => {
+    const bad = [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, JSON.parse('"1"'), JSON.parse("null")];
+    for (const value of bad) expect(() => checkFinite(value, "The property scoreGiven")).toThrow(DataError);
+    expect(() => checkFinite(Number.NaN, "The property scoreGiven")).toThrow(
+      "The property scoreGiven must be a finite number, found NaN.",
     );
   });
 });

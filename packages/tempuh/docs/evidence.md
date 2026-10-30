@@ -79,6 +79,23 @@ docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:
   pnpm schemas && pnpm corpus && pnpm test:browser && pnpm test:corpus'
 ```
 
+## Tests of Caliper
+
+The tests of `caliper/` and of `server/` run in Node with no network. Their oracles are not the code under test.
+
+| Oracle                                        | Used for                                                                                                               |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `validation/caliper_ids.py`                   | The name-based UUIDs of Python's `uuid5`, in `test/fixtures/caliper-ids.json`, and the worked example of RFC 9562 A.4. |
+| `test/fixtures/caliper-context-v1p2.json`     | The JSON-LD context of Caliper 1.2, as 1EdTech serves it at `http://purl.imsglobal.org/ctx/caliper/v1p2/`.             |
+| Caliper 1.2 §3.2, §3.6 and Appendices A and B | The actions, objects and generated entities each event may have, and the properties each entity may have.              |
+
+`caliper-fixture.ts` checks an event against the context: every term is defined by it, every value has the type that the context
+coerces its term to, an `@id` value is an absolute IRI, an `@vocab` value is a term, and the properties that §2.1 requires
+are there. It checks an envelope for its four properties. `sendCaliper` is tested against a fake endpoint that records the
+request, and `forwardEvents` against a log that records its calls. The fixture of the context is a copy of the file that was
+served on 2026-10-30 (SHA-256 `8a78d3d0d380e80c03c7507d1e6d0113d8ab2aa2f772f3e1c8442d958d40837d`); a new version of the context is
+a new file and a new decision.
+
 ## Tests name their rows and criteria
 
 A title names what it evidences in brackets, as a string literal: `it("[T97] chooses the catalog of the language")` or

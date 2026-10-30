@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
-import { checkNonEmptyString, checkProperties, checkRecord, checkString, describe } from "../checks.js";
-import { DataError, ServiceError } from "../errors.js";
+import { checkHttpsUrl, checkNonEmptyString, checkProperties, checkRecord, describe } from "../checks.js";
+import { ServiceError } from "../errors.js";
 
 /** A request of the REST client: the part of `RequestInit` that it uses. */
 export interface CatFetchRequest {
@@ -46,28 +46,6 @@ export interface OAuthClientCredentials {
 }
 
 const CREDENTIALS = ["tokenUrl", "clientId", "clientSecret", "scope"];
-
-/** Parses an absolute URL; `URL.canParse` is not in every runtime that the package supports. */
-function parseUrl(text: string): URL | undefined {
-  try {
-    return new URL(text);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Checks that a value is an absolute `https` URL: the binding requires TLS for every request and response (CAT binding §4.1).
- *
- * @param label - Names the value in the error message, such as `The option endpoint`.
- * @throws `DataError` when it is not.
- */
-export function checkHttpsUrl(value: unknown, label: string): asserts value is string {
-  checkString(value, label);
-  if (parseUrl(value)?.protocol !== "https:") {
-    throw new DataError(`${label} must be an absolute https URL, found ${describe(value)}.`);
-  }
-}
 
 /**
  * Checks OAuth client credentials, as a host passes them from JavaScript.

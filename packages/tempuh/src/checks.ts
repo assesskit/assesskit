@@ -89,6 +89,29 @@ export function checkNonEmptyString(value: unknown, label: string): asserts valu
   }
 }
 
+/** Parses an absolute URL; `URL.canParse` is outside the browser baseline that this shared file keeps. */
+function parseUrl(text: string): URL | undefined {
+  try {
+    return new URL(text);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Checks that a value is an absolute `https` URL, which LTI (Core §3.5), the CAT binding (§4.1) and Caliper (§5.4) require
+ * of every URL of a message and a service.
+ *
+ * @param label - Names the value in the error message, such as `The option endpoint`.
+ * @throws `DataError` when it is not.
+ */
+export function checkHttpsUrl(value: unknown, label: string): asserts value is string {
+  checkString(value, label);
+  if (parseUrl(value)?.protocol !== "https:") {
+    throw new DataError(`${label} must be an absolute https URL, found ${describe(value)}.`);
+  }
+}
+
 /**
  * Checks that a value is a safe integer of at least 0, such as a sequence number.
  *
@@ -121,6 +144,18 @@ export function checkPositiveInteger(value: unknown, label: string): asserts val
  */
 export function checkBoolean(value: unknown, label: string): asserts value is boolean {
   if (typeof value !== "boolean") throw new DataError(`${label} must be true or false, found ${describe(value)}.`);
+}
+
+/**
+ * Checks that a value is a finite number, such as a score.
+ *
+ * @param label - Names the value in the error message, such as `The property scoreGiven`.
+ * @throws `DataError` when it is not.
+ */
+export function checkFinite(value: unknown, label: string): asserts value is number {
+  if (!(typeof value === "number" && Number.isFinite(value))) {
+    throw new DataError(`${label} must be a finite number, found ${describe(value)}.`);
+  }
 }
 
 /**

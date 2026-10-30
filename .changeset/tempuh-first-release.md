@@ -48,3 +48,11 @@ and the allowed origins, drawing an `object` by its type, and handing interactio
 `createContentRoot` shows an item with its stimuli, rubric and test feedback in a contained shadow root, with its sanitized
 stylesheets, MathJax typesetting, a notice that withholds media where a hazard remains, cards on demand
 (`ContentRoot.card`) and modal feedback in a dialog (`ContentRoot.showFeedback`).
+
+Caliper 1.2 in `@luthfanwakan/tempuh/caliper`: `caliperEvents` maps the events of a step of a delivery session to the events of the
+Assessment Profile (AssessmentEvent Started, Paused, Resumed and Submitted, AssessmentItemEvent Started, Skipped and Completed,
+NavigationEvent NavigatedTo), `caliperGrade` gives the GradeEvent Graded of the Grading Profile for a score, and every identifier is a
+name-based UUID of version 5 over the session, the step and the position, so that reporting a step again gives the same events.
+`sendCaliper` posts them in an envelope to an endpoint over HTTPS with a bearer token. `forwardEvents` in
+`@luthfanwakan/tempuh/server` gives every event of a step to the host's log, whatever its type, and the events that Caliper has a
+counterpart for to the endpoint.

@@ -9,6 +9,7 @@ import {
   checkArray,
   checkBoolean,
   checkFunction,
+  checkHttpsUrl,
   checkNonEmptyString,
   checkPositive,
   checkProperties,
@@ -17,13 +18,7 @@ import {
   describe,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import {
-  type CatFetch,
-  checkCredentials,
-  checkHttpsUrl,
-  createRestClient,
-  type OAuthClientCredentials,
-} from "./rest-client.js";
+import { type CatFetch, checkCredentials, createRestClient, type OAuthClientCredentials } from "./rest-client.js";
 import { assessmentResultFromJson, assessmentResultToJson, readStage } from "./rest-json.js";
 import { readSectionData } from "./section.js";
 

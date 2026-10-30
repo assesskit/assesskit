@@ -40,9 +40,17 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./caliper": {
+      "types": "./dist/caliper/index.d.ts",
+      "default": "./dist/caliper/index.js"
+    },
     "./lti": {
       "types": "./dist/lti/index.d.ts",
       "default": "./dist/lti/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
     },
     "./player.css": "./player.css",
     "./pci-frame/*": "./dist/pci-frame/*"

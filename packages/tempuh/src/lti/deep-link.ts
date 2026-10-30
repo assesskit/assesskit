@@ -1,8 +1,15 @@
-import { checkArray, checkNonEmptyString, checkProperties, checkRecord, checkString, describe } from "../checks.js";
+import {
+  checkArray,
+  checkHttpsUrl,
+  checkNonEmptyString,
+  checkProperties,
+  checkRecord,
+  checkString,
+  describe,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import { CLAIM, LTI_VERSION, MESSAGE_TYPE } from "./claims.js";
 import { readClock } from "./clock.js";
-import { checkHttpsUrl } from "./http.js";
 import { signJwt } from "./jwt.js";
 import type { DeepLinkingLaunch } from "./launch-model.js";
 import { checkToolOptions, findDeployment, type ToolOptions } from "./options.js";

@@ -70,20 +70,6 @@ export function checkHttpRequest(value: unknown): asserts value is HttpRequest {
   }
 }
 
-/**
- * Checks that a value is an absolute `https` URL. LTI requires HTTPS for every URL of a message and a service
- * (LTI 1.3 Core §3.5).
- *
- * @param label - Names the value in the error message, such as `The option jwksUrl`.
- * @throws `DataError` when it is not.
- */
-export function checkHttpsUrl(value: unknown, label: string): asserts value is string {
-  checkString(value, label);
-  if (!URL.canParse(value) || new URL(value).protocol !== "https:") {
-    throw new DataError(`${label} must be an absolute https URL, found ${describe(value)}.`);
-  }
-}
-
 /** Collects the parameters of a query or a form into a map. */
 function collect(parameters: URLSearchParams, where: string): ReadonlyMap<string, string> {
   const collected = new Map<string, string>();

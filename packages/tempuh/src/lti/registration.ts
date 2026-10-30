@@ -1,7 +1,6 @@
 import type { webcrypto } from "node:crypto";
-import { checkArray, checkNonEmptyString, checkRecord, describe } from "../checks.js";
+import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { checkHttpsUrl } from "./http.js";
 import { isRsaKey } from "./keys.js";
 
 /** The host's record of one platform that the tool trusts, as the platform's administrator and the tool agreed on it. */

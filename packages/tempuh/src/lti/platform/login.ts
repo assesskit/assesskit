@@ -1,11 +1,10 @@
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
 import type { LtiLink } from "@luthfanwakan/olah/package";
-import { checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
+import { checkHttpsUrl, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
 import { DataError, LtiError } from "../../errors.js";
 import { type Caller, checkCaller } from "../../protocol/index.js";
 import { MAX_IDENTIFIER_LENGTH, POSITIVE_NUMBER } from "../claims.js";
 import { readClock } from "../clock.js";
-import { checkHttpsUrl } from "../http.js";
 import { randomToken } from "../random.js";
 import type { PlatformConfig } from "./config.js";
 import { checkLoginOptions, type PlatformLoginOptions } from "./options.js";

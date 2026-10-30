@@ -5,7 +5,9 @@
     "src/player/index.ts",
     "src/protocol/index.ts",
     "src/lti/index.ts",
-    "src/cat/index.ts"
+    "src/cat/index.ts",
+    "src/caliper/index.ts",
+    "src/server/index.ts"
   ],
   "tsconfig": "tsconfig.build.json",
   "sourceLinkTemplate": "https://github.com/luthfanwakan/olah/blob/{gitRevision}/packages/tempuh/{path}#L{line}",
