@@ -11,7 +11,11 @@ presentation.
 The frame of portable custom interactions (`player`): `mountPciFrame` puts an interaction in a sandboxed `iframe` of an
 opaque origin that restricts itself with a content security policy, loads its modules with RequireJS from primary and
 fallback locations, provides the communication bridge `qtiCustomInteractionContext`, and reports the response, the state,
-the height and the validity methods to the player. The static files of the frame are exported as `pci-frame/*`.
+the height and the validity methods to the player. It takes the interaction as olah reads it and locates its modules under
+the asset prefix of the package with olah's module resolution. The variables travel as the JSON of BPIG Appendix C that
+olah writes and reads, and the host's asynchronous storage serves the file callbacks of that codec: the bytes of files go
+to the interaction before it starts, and the files it gives are stored before the response is delivered, as a value of the
+declaration. The static files of the frame are exported as `pci-frame/*`.
 
 The tools of an item (`player`): `mountTools` shows a rule, a protractor, basic and standard calculators, a line reader,
 answer masking, digital and physical materials, and slots for the tools that the host provides, for the companion

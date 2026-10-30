@@ -9,6 +9,18 @@ const OLAH_SOURCES = [
   { find: /^@luthfanwakan\/olah\/(.+)$/, replacement: resolve(import.meta.dirname, "packages/olah/src/$1/index.ts") },
 ];
 
+/** The engines of the browser tests, and the commands that they use. Vitest names the instances, so each project has its own. */
+const browser = () => ({
+  enabled: true,
+  headless: true,
+  provider: playwright(),
+  instances: [{ browser: "chromium" as const }, { browser: "firefox" as const }, { browser: "webkit" as const }],
+  commands: COMMANDS,
+});
+
+/** Starts the servers of the browser tests of tempuh, with its static files and the packages they load. */
+const GLOBAL_SETUP = ["packages/tempuh/test/fixtures/global-setup.ts"];
+
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
   test: {
@@ -25,7 +37,7 @@ export default defineConfig({
         test: {
           name: "tempuh",
           include: ["packages/tempuh/test/**/*.test.ts"],
-          exclude: ["**/*.browser.test.ts"],
+          exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts"],
         },
       },
       {
@@ -34,14 +46,18 @@ export default defineConfig({
         test: {
           name: "tempuh-browser",
           include: ["packages/tempuh/test/**/*.browser.test.ts"],
-          globalSetup: ["packages/tempuh/test/fixtures/global-setup.ts"],
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright(),
-            instances: [{ browser: "chromium" }, { browser: "firefox" }, { browser: "webkit" }],
-            commands: COMMANDS,
-          },
+          globalSetup: GLOBAL_SETUP,
+          browser: browser(),
+        },
+      },
+      {
+        // The 1EdTech examples in the browsers: `pnpm corpus` downloads them.
+        resolve: { alias: OLAH_SOURCES },
+        test: {
+          name: "tempuh-corpus",
+          include: ["packages/tempuh/test/**/*.browser.corpus.test.ts"],
+          globalSetup: GLOBAL_SETUP,
+          browser: browser(),
         },
       },
       {

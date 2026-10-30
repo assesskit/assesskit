@@ -152,8 +152,20 @@ function onChanged(event: Event): void {
   }
 }
 
+/**
+ * Returns the key of the factory for an interaction: its type identifier ([BPIG] §3.7.12.7), or else the one factory that
+ * the modules registered. The 1EdTech examples need the second: the item of `pci-simple` names
+ * `urn-fdc-hmhco.com-pci-tapToReveal` for a module that registers `urn:fdc:hmhco.com:pci:tapToReveal`.
+ */
+function factoryKey(typeIdentifier: string): string | undefined {
+  if (factories.has(typeIdentifier)) return typeIdentifier;
+  const keys = [...factories.keys()];
+  return keys.length === 1 ? keys[0] : undefined;
+}
+
 function create(command: PciStart, dom: HTMLElement): void {
-  if (!factories.has(command.typeIdentifier)) {
+  const key = factoryKey(command.typeIdentifier);
+  if (key === undefined) {
     fail("register");
     return;
   }
@@ -174,7 +186,7 @@ function create(command: PciStart, dom: HTMLElement): void {
       }),
   };
   try {
-    const created = context.getInstance(command.typeIdentifier, dom, configuration, command.state ?? undefined);
+    const created = context.getInstance(key, dom, configuration, command.state ?? undefined);
     if (typeof created !== "object" || created === null) throw new TypeError("An interaction is an object.");
     instance = created;
   } catch {
@@ -248,7 +260,7 @@ function complete(): void {
 window.addEventListener("message", (event: MessageEvent<PciCommand>) => {
   if (event.source !== window.parent) return;
   const command = event.data;
-  if (command.type === "start" && !started) {
+  if (command.type === "start" && !started && !completing) {
     started = true;
     void start(command);
   } else if (command.type === "validity") {

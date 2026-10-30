@@ -10,6 +10,13 @@ import "./origins.ts";
 
 const PACKAGE_FILES = resolve(import.meta.dirname, "pci");
 const TEMPUH = resolve(import.meta.dirname, "../..");
+
+/** The packages of the 1EdTech examples that `pnpm corpus` downloads, by the name the tests use. */
+const EXAMPLES = resolve(import.meta.dirname, "../../../../.cache/corpus/qti-examples/qtiv3-examples/packaging");
+const EXAMPLE_FILES: ReadonlyMap<string, string> = new Map([
+  ["pci-simple", resolve(EXAMPLES, "pci-simple/src")],
+  ["pci", resolve(EXAMPLES, "pci/src")],
+]);
 const CDN_FILES = resolve(import.meta.dirname, "cdn");
 const ROOT = resolve(import.meta.dirname, "../../../..");
 
@@ -109,6 +116,10 @@ export default async function setup(project: TestProject): Promise<() => Promise
       await serveFile(built, rest, response, patch);
     } else if (area === "g") {
       await serveFile(PACKAGE_FILES, `/${rest.split("/").slice(2).join("/")}`, response);
+    } else if (area === "c") {
+      // /c/<token>/<example>/<path>: a file of an example package, as the asset gate would serve it.
+      const [, , example = "", ...path] = rest.split("/");
+      await serveFile(EXAMPLE_FILES.get(example) ?? "/nowhere", `/${path.join("/")}`, response);
     } else if (area === "validate" && request.method === "POST") {
       schemas ??= loadSchemaSet(requireSchemas(ROOT));
       const document = (await readBody(request)).replace("<speak ", `<speak ${SSML_SCHEMA_HINT} `);

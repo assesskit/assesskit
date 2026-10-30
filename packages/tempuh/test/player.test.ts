@@ -1,7 +1,12 @@
+import { readAsi } from "@luthfanwakan/olah/asi";
+import type { PciModuleConfiguration } from "@luthfanwakan/olah/pci";
+import { container, single, type Value, type ValueDeclaration } from "@luthfanwakan/olah/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError, EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { buildStart, checkPciFrameOptions, type PciFrameOptions } from "../src/player/pci/options.js";
+import { checkVariable, createResponseDecoder, encodeVariable, type PciFiles } from "../src/player/pci/files.js";
+import { pciModules } from "../src/player/pci/modules.js";
+import { checkPciFrameOptions, describeFrame, type PciFrameOptions } from "../src/player/pci/options.js";
 import {
   buildFrameCsp,
   isRequestedStatus,
@@ -9,6 +14,9 @@ import {
   readFrameMessage,
   toJson,
 } from "../src/player/pci/protocol.js";
+
+/** Matches the `DataError` of tempuh and the one of olah, which are two classes with one name. */
+const DATA_ERROR = expect.objectContaining({ name: "DataError" });
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
@@ -22,6 +30,517 @@ function directives(policy: string): ReadonlyMap<string, readonly string[]> {
     }),
   );
 }
+
+const NS = 'xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"';
+
+/** Reads a `qti-portable-custom-interaction` with the given attributes and content. */
+function interactionOf(attributes: string, children = "<qti-interaction-markup/>") {
+  const document = readAsi(
+    `<qti-assessment-item ${NS} identifier="item" title="Item" time-dependent="false"><qti-item-body><qti-portable-custom-interaction response-identifier="RESPONSE" custom-interaction-type-identifier="urn:fdc:example.com:2024:pci:test" ${attributes}>${children}</qti-portable-custom-interaction></qti-item-body></qti-assessment-item>`,
+  );
+  const [node] = document.kind === "item" ? (document.item.body?.children ?? []) : [];
+  if (node?.kind !== "portable-custom-interaction") throw new Error("The test reads a portable custom interaction.");
+  return node;
+}
+
+const resolution = (paths: Readonly<Record<string, string>>, waitSeconds = 7) => ({
+  waitSeconds,
+  paths: new Map(Object.entries(paths)),
+});
+
+const GATE = "https://assets.example/g/t0k3n/";
+const assets = (path: string): string => `${GATE}${path}`;
+
+const INTEGER: ValueDeclaration = { cardinality: "single", baseType: "integer" };
+const FILE: ValueDeclaration = { cardinality: "single", baseType: "file" };
+
+/** The bytes of the text "pleasure.", and the base64 of them that BPIG App. C.1 gives in its example of a file. */
+const PLEASURE = { bytes: new TextEncoder().encode("pleasure."), base64: "cGxlYXN1cmUu" };
+
+/** A host that keeps files in memory: the references are `file-1`, `file-2` and so on, and the calls are recorded. */
+function memoryFiles(stored: ReadonlyMap<string, Uint8Array> = new Map()) {
+  const uploads: { readonly bytes: Uint8Array; readonly mimeType: string; readonly fileName: string | undefined }[] =
+    [];
+  const files: PciFiles = {
+    read: async ({ reference }) => stored.get(reference) ?? new Uint8Array(),
+    upload: async (blob, mimeType, fileName) => {
+      uploads.push({ bytes: new Uint8Array(await blob.arrayBuffer()), mimeType, fileName });
+      return { reference: `file-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
+    },
+  };
+  return { files, uploads };
+}
+
+describe("checkVariable", () => {
+  it("[T50] accepts a value with its declaration, and NULL", () => {
+    expect(() => checkVariable({ value: single("integer", 3), declaration: INTEGER })).not.toThrow();
+    expect(() => checkVariable({ value: null, declaration: INTEGER })).not.toThrow();
+  });
+
+  it("[T50] rejects what is not a variable, and a value that is not of its declaration", () => {
+    expect(() => checkVariable(json("null"))).toThrow("A variable must be an object with a value and a declaration");
+    expect(() => checkVariable({ value: single("string", "a"), declaration: INTEGER })).toThrow(DATA_ERROR);
+    expect(() => checkVariable({ value: single("integer", 1), declaration: json('{"cardinality":"many"}') })).toThrow(
+      DATA_ERROR,
+    );
+    expect(() => checkVariable({ value: json('{"cardinality":"single"}'), declaration: INTEGER })).toThrow(DATA_ERROR);
+  });
+});
+
+describe("encodeVariable", () => {
+  it("[T51] writes a value as the JSON of BPIG App. C.1 to C.3", async () => {
+    const { files } = memoryFiles();
+    expect(await encodeVariable({ value: single("integer", 3), declaration: INTEGER }, files)).toEqual({
+      base: { integer: 3 },
+    });
+    expect(await encodeVariable({ value: null, declaration: INTEGER }, files)).toEqual({ base: null });
+    expect(
+      await encodeVariable(
+        {
+          value: container("multiple", "integer", [3, 4]),
+          declaration: { cardinality: "multiple", baseType: "integer" },
+        },
+        files,
+      ),
+    ).toEqual({ list: { integer: [3, 4] } });
+  });
+
+  it("[T51] reads the bytes of a file from the host and writes them inline as base64, as App. C.1 shows", async () => {
+    const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
+    const value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
+    expect(await encodeVariable({ value, declaration: FILE }, files)).toEqual({
+      base: { file: { data: PLEASURE.base64, mime: "text/plain", name: "helloworld.txt" } },
+    });
+  });
+
+  it("[T51] reads each file of a container and of a record", async () => {
+    const { files } = memoryFiles(
+      new Map([
+        ["a", new TextEncoder().encode("a")],
+        ["b", new TextEncoder().encode("b")],
+      ]),
+    );
+    const list = container("multiple", "file", [
+      { reference: "a", mimeType: "text/plain" },
+      { reference: "b", mimeType: "text/plain" },
+    ]);
+    expect(
+      await encodeVariable({ value: list, declaration: { cardinality: "multiple", baseType: "file" } }, files),
+    ).toEqual({
+      list: {
+        file: [
+          { data: "YQ==", mime: "text/plain" },
+          { data: "Yg==", mime: "text/plain" },
+        ],
+      },
+    });
+  });
+
+  it("[T51] passes on the error of the host's storage", async () => {
+    const files: PciFiles = {
+      read: () => Promise.reject(new Error("The storage is down.")),
+      upload: async () => ({ reference: "", mimeType: "" }),
+    };
+    const value = single("file", { reference: "stored-1", mimeType: "text/plain" });
+    await expect(encodeVariable({ value, declaration: FILE }, files)).rejects.toThrow("The storage is down.");
+  });
+});
+
+describe("createResponseDecoder", () => {
+  const inline = (data: string, name = "helloworld.txt") => ({ base: { file: { data, mime: "text/plain", name } } });
+
+  it("[T51] reads the JSON of a response as a value of the declaration", async () => {
+    const decode = createResponseDecoder(memoryFiles().files);
+    expect(await decode({ base: { integer: 3 } }, INTEGER)).toEqual(single("integer", 3));
+    expect(await decode({ list: { integer: [3, 4] } }, { cardinality: "multiple", baseType: "integer" })).toEqual(
+      container("multiple", "integer", [3, 4]),
+    );
+  });
+
+  it("[T51] gives NULL for no response, for null, and for the NULL of App. C", async () => {
+    const decode = createResponseDecoder(memoryFiles().files);
+    expect(await decode(json("null"), INTEGER)).toBeNull();
+    expect(await decode({ base: null }, INTEGER)).toBeNull();
+  });
+
+  it("[T51] stores an inline file through the host and keeps its reference", async () => {
+    const { files, uploads } = memoryFiles();
+    const decode = createResponseDecoder(files);
+    const value = await decode(inline(PLEASURE.base64), FILE);
+    expect(value).toEqual(single("file", { reference: "file-1", mimeType: "text/plain", fileName: "helloworld.txt" }));
+    expect(uploads).toEqual([{ bytes: PLEASURE.bytes, mimeType: "text/plain", fileName: "helloworld.txt" }]);
+  });
+
+  it("[T51] stores a file without a name without one", async () => {
+    const { files, uploads } = memoryFiles();
+    await createResponseDecoder(files)({ base: { file: { data: PLEASURE.base64, mime: "text/plain" } } }, FILE);
+    expect(uploads[0]?.fileName).toBeUndefined();
+  });
+
+  it("[T51] stores the files of a container in order, each with its own reference", async () => {
+    const { files, uploads } = memoryFiles();
+    const decode = createResponseDecoder(files);
+    const value = await decode(
+      {
+        list: {
+          file: [
+            { data: "YQ==", mime: "text/plain" },
+            { data: "Yg==", mime: "text/plain" },
+          ],
+        },
+      },
+      { cardinality: "multiple", baseType: "file" },
+    );
+    expect(value).toEqual(
+      container("multiple", "file", [
+        { reference: "file-1", mimeType: "text/plain" },
+        { reference: "file-2", mimeType: "text/plain" },
+      ]),
+    );
+    expect(uploads.map(({ bytes }) => new TextDecoder().decode(bytes))).toEqual(["a", "b"]);
+  });
+
+  it("[T51] stores a file that an earlier response held only once, and one that is new", async () => {
+    const { files, uploads } = memoryFiles();
+    const decode = createResponseDecoder(files);
+    const first = await decode(inline(PLEASURE.base64), FILE);
+    const again = await decode(inline(PLEASURE.base64), FILE);
+    const other = await decode(inline("YQ=="), FILE);
+    expect(again).toEqual(first);
+    expect(uploads).toHaveLength(2);
+    expect(other).toEqual(single("file", { reference: "file-2", mimeType: "text/plain", fileName: "helloworld.txt" }));
+    await decode(inline(PLEASURE.base64), FILE);
+    expect(uploads).toHaveLength(3);
+  });
+
+  it("[T51] stores nothing for JSON that is not of the declaration", async () => {
+    const { files, uploads } = memoryFiles();
+    const decode = createResponseDecoder(files);
+    await expect(decode({ base: { integer: "x" } }, INTEGER)).rejects.toThrow(DATA_ERROR);
+    await expect(decode({ base: { file: { data: PLEASURE.base64 } } }, FILE)).rejects.toThrow(DATA_ERROR);
+    await expect(decode({ base: { string: "a" } }, FILE)).rejects.toThrow(DATA_ERROR);
+    await expect(decode(json('"base"'), INTEGER)).rejects.toThrow(DATA_ERROR);
+    expect(uploads).toEqual([]);
+  });
+
+  it("[T51] refuses a file whose data is not base64, before it stores anything", async () => {
+    const { files, uploads } = memoryFiles();
+    const decode = createResponseDecoder(files);
+    await expect(decode(inline("not base64!"), FILE)).rejects.toThrow("The data of a file must be base64.");
+    expect(uploads).toEqual([]);
+  });
+
+  it("[T51] refuses a host that stores a file and gives no reference", async () => {
+    const files: PciFiles = { read: async () => new Uint8Array(), upload: async () => json("{}") as never };
+    await expect(createResponseDecoder(files)(inline(PLEASURE.base64), FILE)).rejects.toThrow(
+      "The reference of an uploaded file must be a string",
+    );
+  });
+});
+
+describe("pciModules", () => {
+  it("[T49] locates the module of the module attribute and its dependencies under the asset prefix (BPIG §3.7.12.4)", () => {
+    const primary = resolution({ exampleLikertScale: "modules/likert", handlebars: "modules/lib/handlebars.min" }, 15);
+    expect(pciModules(interactionOf('module="exampleLikertScale"'), { primary }, assets)).toEqual({
+      baseUrl: `${GATE}modules/`,
+      paths: new Map([
+        ["exampleLikertScale", [`${GATE}modules/likert`]],
+        ["handlebars", [`${GATE}modules/lib/handlebars.min`]],
+      ]),
+      waitSeconds: 15,
+      load: ["exampleLikertScale"],
+    });
+  });
+
+  it("[T49] lists the primary location before the fallback, and leaves a location with a protocol as it is", () => {
+    const modules = pciModules(
+      interactionOf('module="m"'),
+      {
+        primary: resolution({ m: "https://cdn.example/js/m" }),
+        fallback: resolution({ m: "modules/lib/m" }),
+      },
+      assets,
+    );
+    expect(modules.paths).toEqual(new Map([["m", ["https://cdn.example/js/m", `${GATE}modules/lib/m`]]]));
+  });
+
+  it("[T49] takes the base URL from the first package location of the first module, the fallback when the primary is a URL", () => {
+    const modules = pciModules(
+      interactionOf('module="m"'),
+      { primary: resolution({ m: "https://cdn.example/js/m" }), fallback: resolution({ m: "deep/dir/m" }) },
+      assets,
+    );
+    expect(modules.baseUrl).toBe(`${GATE}deep/dir/`);
+  });
+
+  it("[T49] takes the base URL from the configuration file when every location has a protocol", () => {
+    const interaction = interactionOf(
+      'module="m"',
+      '<qti-interaction-modules primary-configuration="lib/config.js"/><qti-interaction-markup/>',
+    );
+    expect(pciModules(interaction, { primary: resolution({ m: "https://cdn.example/m" }) }, assets).baseUrl).toBe(
+      `${GATE}lib/`,
+    );
+    expect(
+      pciModules(interactionOf('module="m"'), { primary: resolution({ m: "https://cdn.example/m" }) }, assets).baseUrl,
+    ).toBe(`${GATE}modules/`);
+  });
+
+  it("[T49] loads the modules of qti-interaction-modules, in document order, when there is no module attribute", () => {
+    const interaction = interactionOf(
+      "",
+      '<qti-interaction-modules><qti-interaction-module id="eve" primary-path="modules/lib/eve.js"/><qti-interaction-module id="shading" primary-path="modules/shadingXX.js" fallback-path="modules/shading.js"/></qti-interaction-modules><qti-interaction-markup/>',
+    );
+    const modules = pciModules(interaction, {}, assets);
+    expect(modules.load).toEqual(["eve", "shading"]);
+    expect(modules.paths).toEqual(
+      new Map([
+        ["eve", [`${GATE}modules/lib/eve`]],
+        // the extension is not part of a location
+        ["shading", [`${GATE}modules/shadingXX`, `${GATE}modules/shading`]],
+      ]),
+    );
+    expect(modules.baseUrl).toBe(`${GATE}modules/lib/`);
+  });
+
+  it("[T49] takes a location with the .js extension for the file that RequireJS would find without it", () => {
+    const interaction = interactionOf(
+      "",
+      '<qti-interaction-modules><qti-interaction-module id="eve" primary-path="modules/lib/eve.js"/><qti-interaction-module id="shading" primary-path="https://cdn.example/shading.min.js" fallback-path="modules/shading.js?v=2"/></qti-interaction-modules><qti-interaction-markup/>',
+    );
+    expect(pciModules(interaction, {}, assets).paths).toEqual(
+      new Map([
+        ["eve", [`${GATE}modules/lib/eve`]],
+        ["shading", ["https://cdn.example/shading.min", `${GATE}modules/shading.js?v=2`]],
+      ]),
+    );
+  });
+
+  it("[T49] waits 7 seconds when no primary configuration says otherwise, and keeps 0, which waits for ever", () => {
+    expect(pciModules(interactionOf('module="m"'), { fallback: resolution({ m: "m" }) }, assets).waitSeconds).toBe(7);
+    expect(pciModules(interactionOf('module="m"'), { primary: resolution({ m: "m" }, 0) }, assets).waitSeconds).toBe(0);
+  });
+
+  it("[T49] refuses an interaction that names no module, and a module that has no location", () => {
+    expect(() => pciModules(interactionOf(""), { primary: resolution({ m: "m" }) }, assets)).toThrow(
+      "The interaction names no module to load",
+    );
+    expect(() => pciModules(interactionOf('module="m"'), { primary: resolution({ other: "o" }) }, assets)).toThrow(
+      'The module "m" has no location',
+    );
+  });
+
+  it("[T49] refuses arguments of other types", () => {
+    const configuration: PciModuleConfiguration = { primary: resolution({ m: "m" }) };
+    expect(() => pciModules(json("null") as never, configuration, assets)).toThrow(DATA_ERROR);
+    expect(() => pciModules(interactionOf('module="m"'), json("null") as never, assets)).toThrow(DATA_ERROR);
+  });
+});
+
+/** The smallest options that `checkPciFrameOptions` accepts. */
+const MINIMAL: PciFrameOptions = {
+  staticUrl: "https://assets.example/static/",
+  messages: EN_MESSAGES,
+  language: "en",
+  interaction: interactionOf('module="tap" data-toggle="true"'),
+  configuration: { primary: resolution({ tap: "modules/tap" }) },
+  assets,
+  prompt: null,
+  markup: "",
+  stylesheets: [],
+  status: "interacting",
+  response: { value: single("integer", 0), declaration: INTEGER },
+  files: memoryFiles().files,
+  onEvent: () => undefined,
+};
+
+/** Calls `checkPciFrameOptions` with the options changed, as plain JavaScript passes them. */
+const check = (changes: Readonly<Record<string, unknown>>): void => checkPciFrameOptions({ ...MINIMAL, ...changes });
+
+describe("checkPciFrameOptions", () => {
+  it("[T49] accepts the smallest options, and the options with every optional one", () => {
+    expect(() => checkPciFrameOptions(MINIMAL)).not.toThrow();
+    expect(() =>
+      check({
+        origins: ["https://cdn.example", "http://localhost:8080"],
+        templateVariables: new Map([["X", { value: single("integer", 1), declaration: INTEGER }]]),
+        contextVariables: new Map(),
+        state: "{}",
+        prompt: "Tap the picture.",
+      }),
+    ).not.toThrow();
+  });
+
+  it("[T49] rejects options that are not an object, and an option that is not known", () => {
+    for (const text of ["null", "[]", '"x"']) {
+      expect(() => checkPciFrameOptions(json(text)), text).toThrow(/^The options must be an object, found /);
+    }
+    expect(() => check({ origin: "https://cdn.example" })).toThrow(
+      /^The options has the properties "staticUrl", .* found "origin"\.$/,
+    );
+    expect(() => check({ modules: {} })).toThrow(/found "modules"\.$/);
+  });
+
+  it("[T49] rejects a static URL that is not an absolute http URL ending in a slash", () => {
+    expect(() => check({ staticUrl: "https://assets.example/static" })).toThrow(
+      new DataError('The option staticUrl must end in "/", found "https://assets.example/static".'),
+    );
+    expect(() => check({ staticUrl: "/static/" })).toThrow(
+      /^The option staticUrl must be an absolute http or https URL/,
+    );
+    expect(() => check({ staticUrl: "javascript:alert(1)//" })).toThrow(
+      /^The option staticUrl must be an absolute http or https URL/,
+    );
+    expect(() => check({ staticUrl: json("5") })).toThrow("The option staticUrl must be a string, found 5.");
+  });
+
+  it("[T49] rejects an origin that is more than a scheme, a host and a port", () => {
+    for (const origin of [
+      "https://cdn.example/",
+      "https://cdn.example/path",
+      "cdn.example",
+      "ftp://cdn.example",
+      "*",
+    ]) {
+      expect(() => check({ origins: [origin] }), origin).toThrow(DataError);
+    }
+    expect(() => check({ origins: [json("5")] })).toThrow("An origin must be a string, found 5.");
+    expect(() => check({ origins: json("{}") })).toThrow("The option origins must be an array, found an object.");
+    expect(() => check({ origins: json("null") })).toThrow("The option origins must be an array, found null.");
+  });
+
+  it("[T49] rejects an interaction that is not a portable custom interaction", () => {
+    expect(() => check({ interaction: json("null") })).toThrow("The option interaction must be an object, found null.");
+    expect(() => check({ interaction: json('{"kind":"choice-interaction"}') })).toThrow(
+      'The option interaction must be a qti-portable-custom-interaction, found the kind "choice-interaction".',
+    );
+    expect(() => check({ interaction: json('{"kind":"portable-custom-interaction"}') })).toThrow(
+      "The custom-interaction-type-identifier of the interaction must be a non-empty string",
+    );
+    expect(() => check({ configuration: json("null") })).toThrow(
+      "The option configuration must be an object, found null.",
+    );
+    expect(() => check({ assets: json("null") })).toThrow("The option assets must be a function, found null.");
+  });
+
+  it("[T50] rejects the variables, the state and the status of the wrong type", () => {
+    expect(() => check({ response: json("null") })).toThrow(
+      "A variable must be an object with a value and a declaration",
+    );
+    expect(() => check({ response: { value: single("string", "a"), declaration: INTEGER } })).toThrow(DATA_ERROR);
+    expect(() => check({ templateVariables: json("{}") })).toThrow(
+      "The option templateVariables must be a Map, found an object.",
+    );
+    expect(() => check({ templateVariables: json("null") })).toThrow("must be a Map, found null.");
+    expect(() => check({ contextVariables: new Map([["", { value: null, declaration: INTEGER }]]) })).toThrow(
+      "A name in The option contextVariables",
+    );
+    expect(() => check({ contextVariables: new Map([["X", json("5")]]) })).toThrow("A variable must be an object");
+    expect(() => check({ state: json("5") })).toThrow("The option state must be a string, found 5.");
+    expect(() => check({ state: json("null") })).not.toThrow();
+    expect(() => check({ status: "paused" })).toThrow(
+      'The option status must be "interacting", "suspended", "closed", "solution" or "review", found "paused".',
+    );
+  });
+
+  it("[T49] rejects a prompt, a language, markup, stylesheets, messages, files and a listener of the wrong type", () => {
+    expect(() => check({ prompt: json("5") })).toThrow("The option prompt must be a string, found 5.");
+    expect(() => check({ prompt: undefined })).toThrow("The option prompt must be a string, found undefined.");
+    expect(() => check({ language: "" })).toThrow("The option language must be a non-empty string");
+    expect(() => check({ markup: json("null") })).toThrow("The option markup must be a string, found null.");
+    expect(() => check({ stylesheets: ["item.css"] })).toThrow(
+      /^A stylesheet of the option stylesheets must be an absolute/,
+    );
+    expect(() => check({ messages: json("null") })).toThrow("The option messages must be an object, found null.");
+    expect(() => check({ messages: {} })).toThrow("The message interactiveQuestion must be a non-empty string");
+    expect(() => check({ files: json("null") })).toThrow("The option files must be an object");
+    expect(() => check({ files: { read: () => 1 } })).toThrow(
+      "The function upload of the option files must be a function",
+    );
+    expect(() => check({ onEvent: json("null") })).toThrow("The option onEvent must be a function, found null.");
+  });
+});
+
+describe("describeFrame", () => {
+  it("[T50] gives the interaction its identifiers, class, properties and modules, from the interaction itself", async () => {
+    const interaction = interactionOf(
+      'module="tap" class="hmh-tap-border-rounded qti-orientation-horizontal" data-toggle="true" data-tap-message="Tap to reveal"',
+    );
+    const { prepare } = describeFrame({ ...MINIMAL, interaction });
+    expect(await prepare()).toMatchObject({
+      type: "start",
+      language: "en",
+      className: "hmh-tap-border-rounded qti-orientation-horizontal",
+      typeIdentifier: "urn:fdc:example.com:2024:pci:test",
+      responseIdentifier: "RESPONSE",
+      status: "interacting",
+      properties: new Map([
+        ["toggle", "true"],
+        ["tapMessage", "Tap to reveal"],
+      ]),
+      modules: { baseUrl: `${GATE}modules/`, load: ["tap"], waitSeconds: 7 },
+      state: null,
+      origins: [],
+      markup: "",
+    });
+  });
+
+  it("[T50] writes the response, the template variables and the context variables as JSON", async () => {
+    const { prepare } = describeFrame({
+      ...MINIMAL,
+      response: { value: single("integer", 2), declaration: INTEGER },
+      templateVariables: new Map([["X", { value: single("integer", 3), declaration: INTEGER }]]),
+      contextVariables: new Map([
+        [
+          "LIMITS",
+          {
+            value: container("multiple", "float", [1.5, 2.5]),
+            declaration: { cardinality: "multiple", baseType: "float" },
+          },
+        ],
+        ["NOTHING", { value: null, declaration: INTEGER }],
+      ]),
+      state: '{"count":2}',
+    });
+    expect(await prepare()).toMatchObject({
+      boundTo: { base: { integer: 2 } },
+      templateVariables: new Map([["X", { base: { integer: 3 } }]]),
+      contextVariables: new Map([
+        ["LIMITS", { list: { float: [1.5, 2.5] } }],
+        ["NOTHING", { base: null }],
+      ]),
+      state: '{"count":2}',
+    });
+  });
+
+  it("[T51] reads the bytes of the files that go to the interaction", async () => {
+    const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
+    const value: Value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
+    const { prepare } = describeFrame({ ...MINIMAL, response: { value, declaration: FILE }, files });
+    expect((await prepare()).boundTo).toEqual({
+      base: { file: { data: PLEASURE.base64, mime: "text/plain", name: "helloworld.txt" } },
+    });
+  });
+
+  it("[T50] puts player.css from the static URL before the stylesheets of the item", async () => {
+    const { prepare } = describeFrame({ ...MINIMAL, stylesheets: [`${GATE}styles/item.css`] });
+    expect((await prepare()).stylesheets).toEqual([
+      "https://assets.example/static/player.css",
+      `${GATE}styles/item.css`,
+    ]);
+  });
+
+  it("[SC 4.1.2] names the frame from the prompt, with its white space collapsed, else by the message", () => {
+    expect(describeFrame({ ...MINIMAL, prompt: "  Which\n  is   larger? " }).title).toBe("Which is larger?");
+    expect(describeFrame({ ...MINIMAL, prompt: null }).title).toBe("Interactive question");
+    expect(describeFrame({ ...MINIMAL, prompt: " \n\t " }).title).toBe("Interactive question");
+    expect(describeFrame({ ...MINIMAL, prompt: "", messages: ID_MESSAGES }).title).toBe("Soal interaktif");
+  });
+
+  it("[T49] refuses an interaction whose modules cannot load", () => {
+    expect(() => describeFrame({ ...MINIMAL, interaction: interactionOf("") })).toThrow("names no module to load");
+  });
+});
 
 describe("isRequestedStatus", () => {
   it("[T52] accepts the statuses that BPIG §3.7.12.7.2 lists for ondone and no other", () => {
@@ -193,192 +712,6 @@ describe("readFrameMessage", () => {
   });
 });
 
-const GATE = "https://assets.example/g/t0k3n/";
-
-/** The smallest options that `checkPciFrameOptions` accepts. */
-const MINIMAL: PciFrameOptions = {
-  staticUrl: "https://assets.example/static/",
-  messages: EN_MESSAGES,
-  prompt: null,
-  language: "en",
-  stylesheets: [],
-  markup: "",
-  modules: { baseUrl: `${GATE}modules/`, paths: new Map([["tap", [`${GATE}modules/tap`]]]), load: ["tap"] },
-  typeIdentifier: "urn:fdc:hmhco.com:pci:tapToReveal",
-  responseIdentifier: "RESPONSE",
-  status: "interacting",
-  boundTo: { base: null },
-  onEvent: () => undefined,
-};
-
-/** Calls `checkPciFrameOptions` with the options changed, as plain JavaScript passes them. */
-const check = (changes: Readonly<Record<string, unknown>>): void => checkPciFrameOptions({ ...MINIMAL, ...changes });
-
-describe("checkPciFrameOptions", () => {
-  it("[T49] accepts the smallest options, and the options with every optional one", () => {
-    expect(() => checkPciFrameOptions(MINIMAL)).not.toThrow();
-    expect(() =>
-      check({
-        origins: ["https://cdn.example", "http://localhost:8080"],
-        className: "qti-orientation-horizontal",
-        properties: new Map([["labelMin", "Low"]]),
-        templateVariables: new Map([["X", { base: { integer: 1 } }]]),
-        contextVariables: new Map(),
-        state: "{}",
-        modules: { ...MINIMAL.modules, waitSeconds: 0 },
-      }),
-    ).not.toThrow();
-  });
-
-  it("[T49] rejects options that are not an object, and an option that is not known", () => {
-    for (const text of ["null", "[]", '"x"']) {
-      expect(() => checkPciFrameOptions(json(text)), text).toThrow(/^The options must be an object, found /);
-    }
-    expect(() => check({ origin: "https://cdn.example" })).toThrow(
-      /^The options has the properties "staticUrl", .* found "origin"\.$/,
-    );
-  });
-
-  it("[T49] rejects a static URL and a base URL that are not an absolute http URL ending in a slash", () => {
-    expect(() => check({ staticUrl: "https://assets.example/static" })).toThrow(
-      new DataError('The option staticUrl must end in "/", found "https://assets.example/static".'),
-    );
-    expect(() => check({ staticUrl: "/static/" })).toThrow(
-      /^The option staticUrl must be an absolute http or https URL/,
-    );
-    expect(() => check({ staticUrl: "javascript:alert(1)//" })).toThrow(
-      /^The option staticUrl must be an absolute http or https URL/,
-    );
-    expect(() => check({ staticUrl: json("5") })).toThrow("The option staticUrl must be a string, found 5.");
-    expect(() => check({ modules: { ...MINIMAL.modules, baseUrl: "https://assets.example/g/t/modules" } })).toThrow(
-      /^The base URL of the modules must end in "\/"/,
-    );
-  });
-
-  it("[T49] rejects an origin that is more than a scheme, a host and a port", () => {
-    for (const origin of [
-      "https://cdn.example/",
-      "https://cdn.example/path",
-      "cdn.example",
-      "ftp://cdn.example",
-      "*",
-    ]) {
-      expect(() => check({ origins: [origin] }), origin).toThrow(DataError);
-    }
-    expect(() => check({ origins: [json("5")] })).toThrow("An origin must be a string, found 5.");
-    expect(() => check({ origins: json("{}") })).toThrow("The option origins must be an array, found an object.");
-  });
-
-  it("[T49] rejects modules that are not the base URL, a Map of locations, a number of seconds and names", () => {
-    const modules = MINIMAL.modules;
-    expect(() => check({ modules: json("null") })).toThrow("The option modules must be an object, found null.");
-    expect(() => check({ modules: { ...modules, extra: 1 } })).toThrow(/^The option modules has the properties/);
-    expect(() => check({ modules: { ...modules, paths: json("{}") } })).toThrow(
-      "The paths of the modules must be a Map, found an object.",
-    );
-    expect(() => check({ modules: { ...modules, paths: new Map([["tap", "https://x.example/tap"]]) } })).toThrow(
-      'The locations of the module "tap" must be an array',
-    );
-    expect(() => check({ modules: { ...modules, paths: new Map([["tap", ["tap"]]]) } })).toThrow(
-      /^A location of the module "tap" must be an absolute http or https URL/,
-    );
-    expect(() => check({ modules: { ...modules, paths: new Map([["", [`${GATE}x`]]]) } })).toThrow(
-      "The name of a module",
-    );
-    expect(() => check({ modules: { ...modules, waitSeconds: -1 } })).toThrow(
-      "The option waitSeconds must be a non-negative integer, found -1.",
-    );
-    expect(() => check({ modules: { ...modules, waitSeconds: json("null") } })).toThrow("found null.");
-    expect(() => check({ modules: { ...modules, load: [""] } })).toThrow("A module to load must be a non-empty string");
-    expect(() => check({ modules: { ...modules, load: json("null") } })).toThrow(
-      "The modules to load must be an array",
-    );
-  });
-
-  it("[T50] rejects properties, variables and a state of the wrong type", () => {
-    expect(() => check({ properties: json("{}") })).toThrow("The option properties must be a Map, found an object.");
-    expect(() => check({ properties: new Map([["a", 1]]) })).toThrow('The property "a" must be a string, found 1.');
-    expect(() => check({ properties: new Map([["", "a"]]) })).toThrow("A name in The option properties");
-    expect(() => check({ templateVariables: json("[]") })).toThrow("The option templateVariables must be a Map");
-    expect(() => check({ contextVariables: new Map([["X", 1n]]) })).toThrow("A value must be JSON");
-    expect(() => check({ state: json("5") })).toThrow("The option state must be a string, found 5.");
-    expect(() => check({ state: json("null") })).not.toThrow();
-  });
-
-  it("[T49] rejects a status, a prompt, a language, a class and markup of the wrong type", () => {
-    expect(() => check({ status: "paused" })).toThrow(
-      'The option status must be "interacting", "suspended", "closed", "solution" or "review", found "paused".',
-    );
-    expect(() => check({ prompt: json("5") })).toThrow("The option prompt must be a string, found 5.");
-    expect(() => check({ prompt: undefined })).toThrow("The option prompt must be a string, found undefined.");
-    expect(() => check({ language: "" })).toThrow("The option language must be a non-empty string");
-    expect(() => check({ className: json("null") })).toThrow("The option className must be a string, found null.");
-    expect(() => check({ markup: json("null") })).toThrow("The option markup must be a string, found null.");
-    expect(() => check({ typeIdentifier: "" })).toThrow("The option typeIdentifier must be a non-empty string");
-    expect(() => check({ responseIdentifier: json("5") })).toThrow(
-      "The option responseIdentifier must be a non-empty string",
-    );
-    expect(() => check({ stylesheets: ["item.css"] })).toThrow(
-      /^A stylesheet of the option stylesheets must be an absolute/,
-    );
-    expect(() => check({ messages: json("null") })).toThrow("The option messages must be an object, found null.");
-    expect(() => check({ messages: {} })).toThrow("The message interactiveQuestion must be a non-empty string");
-    expect(() => check({ onEvent: json("null") })).toThrow("The option onEvent must be a function, found null.");
-  });
-});
-
-describe("buildStart", () => {
-  it("[T50] fills the defaults: no origins, no class, seven seconds, no properties, no state", () => {
-    const start = buildStart(MINIMAL);
-    expect(start).toMatchObject({
-      type: "start",
-      language: "en",
-      className: "",
-      origins: [],
-      markup: "",
-      typeIdentifier: "urn:fdc:hmhco.com:pci:tapToReveal",
-      responseIdentifier: "RESPONSE",
-      status: "interacting",
-      boundTo: { base: null },
-      state: null,
-    });
-    expect(start.modules).toEqual({ ...MINIMAL.modules, waitSeconds: 7 });
-    expect(start.properties.size + start.templateVariables.size + start.contextVariables.size).toBe(0);
-  });
-
-  it("[T49] keeps a wait of 0, which waits for ever", () => {
-    expect(buildStart({ ...MINIMAL, modules: { ...MINIMAL.modules, waitSeconds: 0 } }).modules.waitSeconds).toBe(0);
-  });
-
-  it("[T50] puts player.css from the static URL before the stylesheets of the item", () => {
-    const start = buildStart({ ...MINIMAL, stylesheets: [`${GATE}styles/item.css`] });
-    expect(start.stylesheets).toEqual(["https://assets.example/static/player.css", `${GATE}styles/item.css`]);
-  });
-
-  it("[T50] keeps the properties, and turns the values of variables into JSON", () => {
-    const start = buildStart({
-      ...MINIMAL,
-      properties: new Map([["labelMin", "Low"]]),
-      templateVariables: new Map([["X", { base: { integer: 1 } }]]),
-      contextVariables: new Map([["LIMIT", undefined]]),
-      boundTo: undefined,
-      state: "{}",
-    });
-    expect(start.properties).toEqual(new Map([["labelMin", "Low"]]));
-    expect(start.templateVariables).toEqual(new Map([["X", { base: { integer: 1 } }]]));
-    expect(start.contextVariables).toEqual(new Map([["LIMIT", null]]));
-    expect(start.boundTo).toBeNull();
-    expect(start.state).toBe("{}");
-  });
-
-  it("[SC 4.1.2] names the frame from the prompt, with its white space collapsed, else by the message", () => {
-    expect(buildStart({ ...MINIMAL, prompt: "  Which\n  is   larger? " }).title).toBe("Which is larger?");
-    expect(buildStart({ ...MINIMAL, prompt: null }).title).toBe("Interactive question");
-    expect(buildStart({ ...MINIMAL, prompt: " \n\t " }).title).toBe("Interactive question");
-    expect(buildStart({ ...MINIMAL, prompt: "", messages: ID_MESSAGES }).title).toBe("Soal interaktif");
-  });
-});
-
 describe("properties", () => {
   it("[T53] gives a message of a known type or throws a DataError, for any value", () => {
     fc.assert(
@@ -408,6 +741,24 @@ describe("properties", () => {
         const message = readFrameMessage({ type: "changed", response, state: "s", valid: true });
         expect(message.type === "changed" && JSON.stringify(message.response)).toBe(JSON.stringify(response));
       }),
+    );
+  });
+
+  it("[T51] gives back the value that a response was written from, files included", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.uint8Array({ maxLength: 64 }),
+        fc.constantFrom("text/plain", "image/png"),
+        async (bytes, mimeType) => {
+          const stored = new Map([["stored-1", bytes]]);
+          const value = single("file", { reference: "stored-1", mimeType, fileName: "f.bin" });
+          const written = await encodeVariable({ value, declaration: FILE }, memoryFiles(stored).files);
+          const { files, uploads } = memoryFiles();
+          const read = await createResponseDecoder(files)(written, FILE);
+          expect(read).toEqual(single("file", { reference: "file-1", mimeType, fileName: "f.bin" }));
+          expect(uploads[0]?.bytes).toEqual(bytes);
+        },
+      ),
     );
   });
 });

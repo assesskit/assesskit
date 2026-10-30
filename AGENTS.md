@@ -229,7 +229,8 @@ describes how the baseline is tested.
   `test/arbitraries/xml.ts`) and accepts a result or a `ReadError` or `SecurityError`, nothing else. A defect that fuzzing
   finds gets a regression test with the input that exposed it.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
-- Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`.
+- Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of tempuh that
+  also need a browser are named `*.browser.corpus.test.ts`.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.

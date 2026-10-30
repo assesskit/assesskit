@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import type {} from "@vitest/browser-playwright";
-import type { Frame } from "playwright";
+import type { Frame, Page } from "playwright";
 import type { BrowserCommand, BrowserCommandContext } from "vitest/node";
 
 /** An accessibility violation that axe found in a frame: the rule and the markup of each node. */
@@ -14,6 +14,8 @@ declare module "vitest/browser" {
     axeInFrame: (title: string, tags: readonly string[]) => Promise<readonly FrameViolation[]>;
     ariaSnapshot: () => Promise<string>;
     clickInFrame: (title: string, selector: string) => Promise<void>;
+    watchConsole: () => Promise<void>;
+    consoleErrors: () => Promise<readonly string[]>;
   }
 }
 
@@ -56,5 +58,20 @@ const ariaSnapshot: BrowserCommand<[], string> = async (context) => {
   return tester.locator("body").ariaSnapshot({ mode: "ai" });
 };
 
+/** The errors that each page logged to its console since a test began to watch it. */
+const consoleErrorsOf = new WeakMap<Page, string[]>();
+
+/** Starts to collect the errors that the page and its frames log to the console, such as a resource that a policy refused. */
+const watchConsole: BrowserCommand<[], void> = (context) => {
+  const errors: string[] = [];
+  consoleErrorsOf.set(context.page, errors);
+  context.page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`${message.text()} (${message.location().url})`);
+  });
+};
+
+/** Returns the errors that the page logged since `watchConsole`. */
+const consoleErrors: BrowserCommand<[], readonly string[]> = (context) => consoleErrorsOf.get(context.page) ?? [];
+
 /** The browser commands of the tests of tempuh. */
-export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame };
+export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, watchConsole, consoleErrors };

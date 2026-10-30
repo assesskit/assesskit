@@ -43,6 +43,10 @@ browser commands in `commands.ts` give a test what a page cannot do: run axe-cor
 click in it, and read the accessibility tree with its frames. `test/content-fixture.ts` mounts content written as XML,
 with SSML and MathML in their namespaces, in a content root.
 
+The 1EdTech examples that run in the frame are tests of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads the
+examples, and `pnpm test:corpus` runs them in the three engines. The global setup serves the package of an example under
+`/c/<token>/<example>/`, as the asset gate would, and the `pci-fixture.ts` helpers mount an interaction as the player does.
+
 MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
 failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.
 
@@ -61,7 +65,8 @@ repository. The container needs network access to install the dependencies and t
 docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
-  pnpm schemas && pnpm exec playwright install chromium firefox webkit && pnpm test:browser'
+  pnpm schemas && pnpm exec playwright install chromium firefox webkit &&
+  pnpm schemas && pnpm corpus && pnpm test:browser && pnpm test:corpus'
 ```
 
 ## Tests name their rows and criteria

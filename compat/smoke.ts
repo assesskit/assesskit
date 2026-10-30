@@ -187,15 +187,22 @@ const PCI_FRAME = `(async () => {
   const frame = mountPciFrame(document.body, {
     staticUrl: location.origin + "/dist/",
     messages: { interactiveQuestion: "Interactive question" },
-    prompt: null,
     language: "en",
-    stylesheets: [],
+    interaction: {
+      kind: "portable-custom-interaction",
+      responseIdentifier: "RESPONSE",
+      customInteractionTypeIdentifier: "urn:smoke:echo",
+      module: "echo",
+      extensions: [],
+    },
+    configuration: { primary: { waitSeconds: 7, paths: new Map([["echo", "pci/echo"]]) } },
+    assets: (path) => location.origin + "/" + path,
+    prompt: null,
     markup: "<p>Echo</p>",
-    modules: { baseUrl: location.origin + "/pci/", paths: new Map([["echo", [location.origin + "/pci/echo"]]]), load: ["echo"] },
-    typeIdentifier: "urn:smoke:echo",
-    responseIdentifier: "RESPONSE",
+    stylesheets: [],
     status: "interacting",
-    boundTo: { base: null },
+    response: { value: null, declaration: { cardinality: "single", baseType: "integer" } },
+    files: { read: async () => new Uint8Array(), upload: async () => { throw new Error("The page has no storage."); } },
     onEvent: (event) => events.push(event.type),
   });
   const until = async (done) => {

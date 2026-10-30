@@ -1,3 +1,4 @@
+import type { PciJson } from "@luthfanwakan/olah/pci";
 import { checkNonNegativeInteger, checkRecord, checkString, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
 
@@ -26,9 +27,11 @@ export type PciFailure =
   /** The modules loaded, but none registered the type identifier of the interaction. */
   | "register"
   /** The factory of the interaction threw. */
-  | "instance";
+  | "instance"
+  /** The host's storage could not give the bytes of a file that the interaction is to receive. */
+  | "files";
 
-const FAILURES: readonly PciFailure[] = ["csp", "modules", "register", "instance"];
+const FAILURES: readonly PciFailure[] = ["csp", "modules", "register", "instance", "files"];
 
 /** The optional methods of an interaction that report whether its response is valid ([BPIG] §3.7.12.7.3). */
 export type PciValidityMethod = "checkValidity" | "reportValidity" | "setCustomValidity" | "getCustomValidity";
@@ -49,8 +52,8 @@ export interface PciModules {
    * location comes first and the fallback after it.
    */
   readonly paths: ReadonlyMap<string, readonly string[]>;
-  /** How long RequireJS waits for a script before it tries the next location, in seconds; 0 waits for ever. Default: `7`. */
-  readonly waitSeconds?: number;
+  /** How long RequireJS waits for a script before it tries the next location, in seconds; 0 waits for ever. */
+  readonly waitSeconds: number;
   /** The names of the modules to load, which register the interaction. */
   readonly load: readonly string[];
 }
@@ -74,8 +77,8 @@ export interface PciStart {
   readonly stylesheets: readonly string[];
   /** The HTML of `qti-interaction-markup`, with its URLs resolved. */
   readonly markup: string;
-  /** The modules to load, with every default filled. */
-  readonly modules: Required<PciModules>;
+  /** The modules to load. */
+  readonly modules: PciModules;
   /** The `custom-interaction-type-identifier` of the interaction. */
   readonly typeIdentifier: string;
   /** The `response-identifier` of the interaction. */
@@ -85,11 +88,11 @@ export interface PciStart {
   /** The `data-*` attributes of the interaction. */
   readonly properties: ReadonlyMap<string, string>;
   /** The template variables bound to the interaction, as JSON ([BPIG] App. C). */
-  readonly templateVariables: ReadonlyMap<string, unknown>;
+  readonly templateVariables: ReadonlyMap<string, PciJson>;
   /** The context variables bound to the interaction, as JSON ([BPIG] App. C). */
-  readonly contextVariables: ReadonlyMap<string, unknown>;
+  readonly contextVariables: ReadonlyMap<string, PciJson>;
   /** The value of the response variable, as JSON ([BPIG] App. C). */
-  readonly boundTo: unknown;
+  readonly boundTo: PciJson;
   /** The state to restore, or `null` for a new interaction. */
   readonly state: string | null;
 }
@@ -217,7 +220,9 @@ function readFlushed(value: unknown): { readonly response: unknown; readonly sta
 function readFailure(value: unknown): PciFailure {
   const reason = FAILURES.find((candidate) => candidate === value);
   if (reason === undefined) {
-    throw new DataError(`A failure must be "csp", "modules", "register" or "instance", found ${describe(value)}.`);
+    throw new DataError(
+      `A failure must be "csp", "modules", "register", "instance" or "files", found ${describe(value)}.`,
+    );
   }
   return reason;
 }

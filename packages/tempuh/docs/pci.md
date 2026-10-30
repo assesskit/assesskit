@@ -3,31 +3,51 @@
 A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface
 ([BPIG] §3.7.12). The code is the package author's, so it runs where it can do no harm. `mountPciFrame` puts each
 interaction in a frame of its own, loads its modules with RequireJS, and passes what it does to the player as events.
+The interaction, the module resolution and the JSON of its variables are olah's (`@luthfanwakan/olah/pci`); the frame is
+tempuh's.
 
 ```ts
+import { readAsi } from "@luthfanwakan/olah/asi";
+import { moduleConfigurationPaths, parseModuleResolution } from "@luthfanwakan/olah/pci";
+import { single } from "@luthfanwakan/olah/values";
 import { EN_MESSAGES } from "@luthfanwakan/tempuh";
 import { mountPciFrame } from "@luthfanwakan/tempuh/player";
 
 const gate = "https://assets.example/g/dGFwLXRva2Vu.c2ln/";
+const item = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="pci" title="PCI" time-dependent="false">
+  <qti-item-body>
+    <qti-portable-custom-interaction response-identifier="RESPONSE" module="tap"
+        custom-interaction-type-identifier="urn:fdc:hmhco.com:pci:tapToReveal" data-toggle="true">
+      <qti-interaction-markup/>
+    </qti-portable-custom-interaction>
+  </qti-item-body>
+</qti-assessment-item>`);
+const [interaction] = item.kind === "item" ? (item.item.body?.children ?? []) : [];
+if (interaction?.kind !== "portable-custom-interaction") throw new Error("The item has no interaction.");
+
+// The host reads the file at moduleConfigurationPaths(interaction).primary from the package.
+const primary = parseModuleResolution('{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}');
+
 const host = document.createElement("div");
 document.body.append(host);
 
 const frame = mountPciFrame(host, {
   staticUrl: "https://assets.example/static/",
   messages: EN_MESSAGES,
-  prompt: "Tap each picture to reveal it.",
   language: "en",
-  stylesheets: [`${gate}styles/item.css`],
+  interaction,
+  configuration: { primary },
+  assets: (path) => `${gate}${path}`,
+  prompt: "Tap each picture to reveal it.",
   markup: `<qti-interaction-markup><img class="tap" src="${gate}ammonia.svg" alt="Ammonia"></qti-interaction-markup>`,
-  modules: {
-    baseUrl: `${gate}modules/`,
-    paths: new Map([["tap", [`${gate}modules/tap`]]]),
-    load: ["tap"],
-  },
-  typeIdentifier: "urn:fdc:hmhco.com:pci:tapToReveal",
-  responseIdentifier: "RESPONSE",
+  stylesheets: [`${gate}styles/item.css`],
   status: "interacting",
-  boundTo: { base: { integer: 0 } },
+  response: { value: single("integer", 0), declaration: { cardinality: "single", baseType: "integer" } },
+  files: {
+    read: async () => new Uint8Array(),
+    upload: async (_bytes, mimeType) => ({ reference: "file-1", mimeType }),
+  },
   onEvent: (event) => console.log(event.type),
 });
 
@@ -56,64 +76,99 @@ also keeps a module from navigating its own frame to another site.
 ## Options
 
 `mountPciFrame(parent, options)` appends the `iframe` to `parent` and returns a `PciFrame`. It throws `DataError` when
-`parent` is not an element or an option is not valid.
+`parent` is not an element, an option is not valid, the interaction names no module to load, or a module has no location.
 
-| Option               | Type                              | Meaning                                                                                                                                    |
-| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `staticUrl`          | `string`                          | Base URL of the static files, ending in `/`                                                                                                |
-| `origins`            | `string[]`                        | Origins besides the asset origin that scripts, styles, images, media and fonts may come from, such as `https://cdn.example`. Default: `[]` |
-| `messages`           | `{ interactiveQuestion: string }` | The interface text; `Messages` fits                                                                                                        |
-| `prompt`             | `string \| null`                  | The text of the interaction's prompt, which names the frame                                                                                |
-| `language`           | `string`                          | The language of the item, a BCP 47 tag, for the document of the frame                                                                      |
-| `className`          | `string`                          | The `class` of the interaction in the item, so that the item's stylesheets select its markup as they do there. Default: `""`               |
-| `stylesheets`        | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
-| `markup`             | `string`                          | The HTML of `qti-interaction-markup`, with the URLs in it resolved                                                                         |
-| `modules`            | `PciModules`                      | The modules to load, below                                                                                                                 |
-| `typeIdentifier`     | `string`                          | The `custom-interaction-type-identifier`                                                                                                   |
-| `responseIdentifier` | `string`                          | The `response-identifier`                                                                                                                  |
-| `status`             | `PciStatus`                       | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
-| `properties`         | `Map<string, string>`             | The `data-*` attributes, named as `dataset` names them. Default: empty                                                                     |
-| `templateVariables`  | `Map<string, unknown>`            | The template variables bound to the interaction, as JSON ([BPIG] App. C). Default: empty                                                   |
-| `contextVariables`   | `Map<string, unknown>`            | The context variables bound to it, as JSON. Default: empty                                                                                 |
-| `boundTo`            | `unknown`                         | The value of the response variable, as JSON                                                                                                |
-| `state`              | `string \| null`                  | The state that `getState` gave before, to restore. Default: `null`                                                                         |
-| `onEvent`            | `(event: PciEvent) => void`       | Receives what the interaction does                                                                                                         |
+| Option              | Type                              | Meaning                                                                                                                                    |
+| ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `staticUrl`         | `string`                          | Base URL of the static files, ending in `/`                                                                                                |
+| `origins`           | `string[]`                        | Origins besides the asset origin that scripts, styles, images, media and fonts may come from, such as `https://cdn.example`. Default: `[]` |
+| `messages`          | `{ interactiveQuestion: string }` | The interface text; `Messages` fits                                                                                                        |
+| `language`          | `string`                          | The language of the item, a BCP 47 tag, for the document of the frame                                                                      |
+| `interaction`       | `PortableCustomInteraction`       | The `qti-portable-custom-interaction` as olah reads it                                                                                     |
+| `configuration`     | `PciModuleConfiguration`          | The module resolution files of the interaction, parsed; a file that the package lacks is left out                                          |
+| `assets`            | `(path: string) => string`        | The absolute URL, under the asset prefix of the package, of a path in the package                                                          |
+| `prompt`            | `string \| null`                  | The text of the interaction's prompt, which names the frame                                                                                |
+| `markup`            | `string`                          | The HTML of `qti-interaction-markup`, with the URLs in it resolved                                                                         |
+| `stylesheets`       | `string[]`                        | URLs of the item's stylesheets, loaded after `player.css`                                                                                  |
+| `status`            | `PciStatus`                       | `interacting`, `suspended`, `closed`, `solution` or `review`; the interaction is not to accept input in the last three                     |
+| `state`             | `string \| null`                  | The state that `getState` gave before, to restore. Default: `null`                                                                         |
+| `response`          | `PciVariable`                     | The response variable the interaction is bound to, with its value                                                                          |
+| `templateVariables` | `Map<string, PciVariable>`        | The template variables bound to the interaction, by identifier. Default: empty                                                             |
+| `contextVariables`  | `Map<string, PciVariable>`        | The context variables bound to it, by identifier. Default: empty                                                                           |
+| `files`             | `PciFiles`                        | The host's storage of files, below                                                                                                         |
+| `onEvent`           | `(event: PciEvent) => void`       | Receives what the interaction does, in order                                                                                               |
 
-`PciModules`:
+The type identifier, the response identifier, the `class` and the properties come from the interaction: the
+identifiers as written, the `class` as the `class` of the element that holds the markup in the frame, so that the item's
+stylesheets select its markup as they do in the item, and the properties from `pciProperties` of olah, the `data-*`
+attributes named as `dataset` names them. Maps keep names such as `__proto__` as data. A stylesheet URL is an absolute
+`http` or `https` URL, and an origin is only a scheme, a host and a port.
 
-| Property      | Type                    | Meaning                                                                                                                        |
-| ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `baseUrl`     | `string`                | What RequireJS resolves names against, ending in `/`                                                                           |
-| `paths`       | `Map<string, string[]>` | Each module name to absolute URLs without `.js`, tried in order: the primary location, then the fallback                       |
-| `waitSeconds` | `number`                | Seconds that RequireJS waits for a script before it tries the next location; 0 waits for ever ([BPIG] §3.7.12.2). Default: `7` |
-| `load`        | `string[]`              | The names of the modules to load, which register the interaction                                                               |
+`PciVariable` is `{ value, declaration }`: a `Value` of olah or `null` for NULL, and the cardinality and base type of the
+variable. The value is checked against the declaration when the frame is mounted.
 
-Maps keep names such as `__proto__` as data. Every URL is an absolute `http` or `https` URL, and every origin is only a
-scheme, a host and a port.
+## Variables and files
+
+The variables travel as the plain JSON of [BPIG] App. C.1 to C.3, which `encodePciValue` and `decodePciValue` of olah
+write and read: `{ "base": ... }`, `{ "list": ... }` and `{ "record": ... }`, with `null` inside for NULL. A file is
+`{ "data", "mime", "name" }` with the bytes in `data` as base64. A file value only refers to its bytes, and the callbacks
+of olah's codec are synchronous, so the host's storage, which is not, is used in two steps:
+
+- **To the interaction.** Before the frame starts, the player reads the bytes of every file value among the variables
+  with `files.read(file)` and writes them inline. If `read` rejects, the interaction does not start: the event `failed`
+  with the reason `files`, and the error goes to `reportError`.
+- **From the interaction.** The player reads the JSON of a response to find the inline files, stores each with
+  `files.upload(bytes, mimeType, fileName?)`, and reads it again so that each file value holds the reference that `upload`
+  resolved with. A file that an earlier response held, byte for byte, is not stored again, since an interaction that draws
+  gives the same image with every change.
+
+`PciFiles` is `{ read(file: FileValue): Promise<Uint8Array>; upload(bytes: Blob, mimeType: string, fileName?: string):
+Promise<FileValue> }`.
+
+A response is untrusted until `decodePciValue` has read it. JSON that is not a value of the declaration of the response
+variable, or a file whose data is not base64, is dropped: the player delivers no event for it, and stores nothing. The
+events keep the order in which the frame sent them, although storing files takes time.
 
 ## Loading
 
-The frame gives RequireJS `baseUrl`, `paths` and `waitSeconds`, then requires the modules of `load`. A location that
-answers with an error, or does not answer within `waitSeconds`, makes RequireJS try the next one of the module. A
-dependency such as `define(["./renderer"], ...)` has the name `renderer` in the module's directory, which RequireJS
-resolves against `baseUrl`. So when `baseUrl` is the directory of the primary module under the asset prefix of the
-interaction, dependencies and the `url()` of stylesheets stay under that prefix.
+The modules come from `resolvePciModules` of olah ([BPIG] §3.7.12.2 to §3.7.12.4). The player requires the module of the
+`module` attribute or, when there is none, those of `qti-interaction-modules`. It gives RequireJS a location for each
+module that the interaction or the configuration files name, the primary location first and the fallback after it:
+
+| Location                                   | The player gives RequireJS                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| A path in the package, such as `modules/x` | `assets(path)`, under the asset prefix                                 |
+| A location with a protocol                 | the location as it is, which the policy of the frame allows or refuses |
+| Any location ending in `.js`               | the location without `.js`, which RequireJS adds again                 |
+
+`waitSeconds` is that of the primary configuration, 7 when there is none, and 0 waits for ever. A location that answers
+with an error, or does not answer within `waitSeconds`, makes RequireJS try the next one of the module. A dependency such
+as `define(["./renderer"], ...)` has the name `renderer` in the module's directory, which RequireJS resolves against
+`baseUrl`. `baseUrl` is the directory of the first package location of the first module to load, under its asset prefix,
+or the directory of the primary configuration file when every location has a protocol. So dependencies, and the `url()` of
+stylesheets that they add, stay under the prefix that the asset gate signed for the interaction.
 
 The frame loads scripts from its own origin and from `origins` only. A location on another origin fails, and so does the
 module that needs it, with the failure `modules`.
+
+The frame calls the factory that the modules registered under the interaction's type identifier. When no factory has it
+and the modules registered exactly one, that one serves the interaction: the `pci-simple` example of 1EdTech names
+`urn-fdc-hmhco.com-pci-tapToReveal` for a module that registers `urn:fdc:hmhco.com:pci:tapToReveal`. With several factories
+and none matching, the failure is `register`.
 
 The communication bridge `qtiCustomInteractionContext` is the AMD module of that name and the property of `window`
 ([BPIG] §3.7.12.7). A module calls its `register`; once the modules have loaded and the stylesheets have loaded or
 failed, the frame calls the registered factory with `getInstance(dom, configuration, state)`:
 
-| Argument or property                                    | Value                                                                          |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `dom`                                                   | A `qti-portable-custom-interaction` element with `className`, holding `markup` |
-| `configuration.properties`                              | An object of `properties`                                                      |
-| `configuration.templateVariables`, `contextVariables`   | Objects of the variables                                                       |
-| `configuration.boundTo`, `responseIdentifier`, `status` | As in the options                                                              |
-| `configuration.onready`, `ondone`                       | Callbacks that become the events `ready` and `done`                            |
-| `state`                                                 | `state`, or `undefined`                                                        |
+| Argument or property                                  | Value                                                                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `dom`                                                 | A `qti-portable-custom-interaction` element with the `class` of the interaction, holding `markup` |
+| `configuration.properties`                            | An object of the `data-*` attributes                                                              |
+| `configuration.templateVariables`, `contextVariables` | Objects of the variables, as JSON                                                                 |
+| `configuration.boundTo`                               | The response variable, as JSON                                                                    |
+| `configuration.responseIdentifier`, `status`          | The `response-identifier` of the interaction, and the `status` option                             |
+| `configuration.onready`, `ondone`                     | Callbacks that become the events `ready` and `done`                                               |
+| `state`                                               | `state`, or `undefined`                                                                           |
 
 ## Events
 
@@ -125,16 +180,22 @@ failed, the frame calls the registered factory with `getInstance(dom, configurat
 | `completed` | `response`, `state`           | `destroy` collected the final response and state of an interaction that exists                                                   |
 | `failed`    | `reason`                      | The interaction did not start                                                                                                    |
 
-`response` is the JSON of [BPIG] App. C that the interaction gave, or `null` when `getResponse()` gave `undefined`. The
-module checks that it is JSON, and nothing more: the caller decodes it against the declaration of the response variable.
-`valid` is what the interaction says in the event, or `undefined`. A `failed` reason is one of:
+`response` is a `Value` of olah, or `null` for NULL: the interaction gave no response (`getResponse()` gave `undefined`),
+or gave the NULL of App. C. It is read against the declaration of the response variable, and its files are stored.
+`valid` is what the interaction says in the event, or `undefined`.
 
-| Reason     | Meaning                                                             |
-| ---------- | ------------------------------------------------------------------- |
-| `csp`      | The browser did not apply the frame's policy, so nothing was loaded |
-| `modules`  | A module did not load from any of its locations in time             |
-| `register` | The modules loaded, but none registered the `typeIdentifier`        |
-| `instance` | The factory threw                                                   |
+The player turns `changed` and `completed` into the response of the item session: the value goes to the response variable
+under the response identifier, and `state` is kept with the session, so that the interaction restores on any device. The
+item session is the delivery engine's, which the player's shell wires to the events; `done` is a request that the shell
+may honor. A `failed` reason is one of:
+
+| Reason     | Meaning                                                                         |
+| ---------- | ------------------------------------------------------------------------------- |
+| `csp`      | The browser did not apply the frame's policy, so nothing was loaded             |
+| `modules`  | A module did not load from any of its locations in time                         |
+| `register` | The modules loaded, but none registered the interaction                         |
+| `instance` | The factory threw                                                               |
+| `files`    | The host's storage could not give the bytes of a file that the interaction gets |
 
 ## The `PciFrame`
 
@@ -152,7 +213,8 @@ answer within two seconds. `destroy` waits at most two seconds for a frozen modu
 called again.
 
 Before it removes the frame, `destroy` has the frame call `getResponse()` and `getState()`, send them, and then call
-`oncompleted()` ([BPIG] §3.7.12.7.4), so a listener flushes the final response before the module cleans up. An interaction
+`oncompleted()` ([BPIG] §3.7.12.7.4), so a listener flushes the final response before the module cleans up. It resolves
+when every event, the `completed` one included, has been delivered. An interaction
 that is to see new markup or a new status is mounted again with the saved state ([BPIG] §3.7.12).
 
 ## The frame and its limits
@@ -177,7 +239,7 @@ which the policy refuses. Where that script loads, the browser applies no policy
 nothing.
 
 Everything a module sends is untrusted. The player reads a message only from the frame's window, only with the shape of
-the table above, and with JSON for a response. It sets the height of the frame to the content height the frame
+the table above, and a response only as a value of its declaration. It sets the height of the frame to the content height the frame
 reports, between 48 and 4096 CSS pixels (`MIN_PCI_HEIGHT` and `MAX_PCI_HEIGHT`); taller content scrolls in the frame.
 
 A module is code of the package and its source is visible to the candidate, so it must not hold an answer key.
@@ -191,6 +253,8 @@ prevent.
 
 ## Errors
 
-`mountPciFrame` throws `DataError` for an option of the wrong type, a URL that is not absolute `http` or `https`, a base
-URL that does not end in `/`, and an origin that is more than a scheme, a host and a port. A message from the frame that
-fails its check is dropped, not thrown.
+`mountPciFrame` throws `DataError` for an option of the wrong type, a variable that does not have its declared type, a URL
+that is not absolute `http` or `https`, a base URL that does not end in `/`, an origin that is more than a scheme, a host
+and a port, an interaction that names no module to load, and a module without a location. olah's `DataError` passes
+through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
+are dropped, not thrown. An error of the host's storage goes to `reportError`.

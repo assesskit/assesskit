@@ -73,3 +73,12 @@ export class ServiceError extends TempuhError {
     this.body = body;
   }
 }
+
+/**
+ * Tells whether an error is a `DataError` of tempuh or of olah. They are two classes with one name, and olah's errors
+ * pass through tempuh unchanged, so `instanceof` knows only one of them. The player asks it to drop what a frame sent and
+ * olah or tempuh refuses, and to let the errors of the host's storage through.
+ */
+export function isDataError(error: unknown): boolean {
+  return error instanceof Error && error.name === "DataError";
+}

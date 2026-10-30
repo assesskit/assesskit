@@ -1,6 +1,7 @@
 import { checkString, describe } from "../../checks.js";
-import { DataError } from "../../errors.js";
-import { buildStart, checkPciFrameOptions, type PciFrameOptions } from "./options.js";
+import { DataError, isDataError } from "../../errors.js";
+import { createResponseDecoder } from "./files.js";
+import { checkPciFrameOptions, describeFrame, type PciEvent, type PciFrameOptions } from "./options.js";
 import {
   type PciCommand,
   type PciFrameMessage,
@@ -45,13 +46,18 @@ export interface PciFrame {
   getCustomValidity(): Promise<string | undefined>;
   /**
    * Hands over the final response and state as a `completed` event, lets the interaction call `oncompleted`, and
-   * removes the frame ([BPIG] §3.7.12.7.4). It waits at most two seconds for a frozen module. Calling it again returns
-   * the same promise.
+   * removes the frame ([BPIG] §3.7.12.7.4). It waits at most two seconds for a frozen module, and it resolves when every
+   * event has been delivered. Calling it again returns the same promise.
    */
   destroy(): Promise<void>;
 }
 
 type Phase = "waiting" | "started" | "closing" | "closed";
+
+/** An event as the frame sent it: a response that is JSON and not yet a value. */
+type RawEvent =
+  | Exclude<PciFrameMessage, { readonly type: "loaded" | "height" | "validity" | "completed" }>
+  | { readonly type: "completed"; readonly response: unknown; readonly state: string };
 
 function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement {
   const frame = document.createElement("iframe");
@@ -70,27 +76,38 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
  * Mounts a portable custom interaction in a sandboxed frame ([BPIG] §3.7.12) and appends the frame to `parent`.
  *
  * The frame is an `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so it has an opaque origin, and its
- * document is `pci-frame/frame.html` under `staticUrl`. Once the frame says it runs, the player sends it the
- * configuration; the frame restricts itself with a content security policy, loads `player.css` and the stylesheets,
- * builds the markup, loads the modules with RequireJS and creates the interaction. What the interaction does arrives
- * as {@link PciEvent}s. Messages from the frame are untrusted and dropped unless they come from its window and have
- * the shape of a message that the frame sends.
+ * document is `pci-frame/frame.html` under `staticUrl`. The player writes the variables bound to the interaction as the
+ * JSON of BPIG App. C, reading the bytes of the files among them first, and sends them with the configuration once the
+ * frame says it runs. The frame restricts itself with a content security policy, loads `player.css` and the stylesheets,
+ * builds the markup, loads the modules with RequireJS and creates the interaction.
+ *
+ * What the interaction does arrives as {@link PciEvent}s, in order. Messages from the frame are untrusted and dropped
+ * unless they come from its window and have the shape of a message that the frame sends; a response that is not the JSON
+ * of a value of the declaration of the response variable is dropped too, and the files of a response are stored through
+ * the host before the event is delivered.
  *
  * @param parent - The element that gets the frame.
  * @param options - See {@link PciFrameOptions}.
- * @throws `DataError` when `parent` is not an element or an option is not valid.
+ * @throws `DataError` when `parent` is not an element, an option is not valid, or the interaction names no module to load
+ * or a module has no location.
  */
 export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): PciFrame {
   if (!(parent instanceof HTMLElement))
     throw new DataError(`The parent must be an element, found ${describe(parent)}.`);
   checkPciFrameOptions(options);
-  const start = buildStart(options);
-  const frame = createFrameElement(options.staticUrl, start.title);
+  const { title, prepare } = describeFrame(options);
+  const frame = createFrameElement(options.staticUrl, title);
+  const decode = createResponseDecoder(options.files);
+  const starting = prepare().catch((error: unknown) => {
+    reportError(error);
+    return undefined;
+  });
   const asked = new Map<number, (value: PciValidityResult) => void>();
   let phase: Phase = "waiting";
   let nextId = 0;
   let finishClosing: (() => void) | undefined;
   let closing: Promise<void> | undefined;
+  let delivery: Promise<void> = Promise.resolve();
 
   // The target origin is "*" because an opaque origin cannot be named.
   const post = (command: PciCommand): void => frame.contentWindow?.postMessage(command, "*");
@@ -99,12 +116,37 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     frame.style.height = `${Math.min(MAX_PCI_HEIGHT, Math.max(MIN_PCI_HEIGHT, height))}px`;
   };
 
+  const toEvent = async (raw: RawEvent): Promise<PciEvent> => {
+    if (raw.type === "ready" || raw.type === "failed") return raw;
+    return { ...raw, response: await decode(raw.response, options.response.declaration) };
+  };
+
+  // One chain, so that events arrive in the order they were sent although storing the files of a response takes time.
+  const deliver = (raw: RawEvent): void => {
+    delivery = delivery.then(async () => {
+      let event: PciEvent;
+      try {
+        event = await toEvent(raw);
+      } catch (error) {
+        if (!isDataError(error)) reportError(error);
+        return;
+      }
+      try {
+        options.onEvent(event);
+      } catch (error) {
+        reportError(error);
+      }
+    });
+  };
+
   const handle = (message: PciFrameMessage): void => {
     switch (message.type) {
       case "loaded":
         if (phase === "waiting") {
           phase = "started";
-          post(start);
+          void starting.then((start) =>
+            start === undefined ? deliver({ type: "failed", reason: "files" }) : post(start),
+          );
         }
         break;
       case "height":
@@ -115,12 +157,12 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
         break;
       case "completed":
         if (phase === "closing") {
-          if (message.flushed !== null) options.onEvent({ type: "completed", ...message.flushed });
+          if (message.flushed !== null) deliver({ type: "completed", ...message.flushed });
           finishClosing?.();
         }
         break;
       default:
-        if (phase === "started") options.onEvent(message);
+        if (phase === "started") deliver(message);
     }
   };
 
@@ -130,7 +172,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     try {
       message = readFrameMessage(event.data);
     } catch (error) {
-      if (error instanceof DataError) return;
+      if (isDataError(error)) return;
       throw error;
     }
     handle(message);
@@ -167,6 +209,7 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     window.removeEventListener("message", onMessage);
     for (const answer of [...asked.values()]) answer(undefined);
     frame.remove();
+    await delivery;
   };
 
   window.addEventListener("message", onMessage);

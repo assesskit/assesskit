@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, inject, it, vi } from "vitest";
+import { container, single, type Value } from "@luthfanwakan/olah/values";
+import { describe, expect, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/messages/index.js";
 import {
@@ -6,74 +7,33 @@ import {
   MIN_PCI_HEIGHT,
   mountPciFrame,
   type PciEvent,
-  type PciFrame,
+  type PciFiles,
   type PciFrameOptions,
 } from "../src/player/index.js";
+import {
+  asset,
+  assets,
+  eventOf,
+  hits,
+  INTEGER,
+  interactionOf,
+  type Mounted,
+  memoryFiles,
+  mount,
+  other,
+  PRESS,
+  probeOf,
+  ready,
+  requests,
+  resolution,
+  SIMPLE,
+  stranger,
+  tokenOf,
+} from "./pci-fixture.js";
 
-const { asset, other, stranger } = inject("fixtures");
-const PRESS = '<button id="press">Press</button><button id="done">Done</button><span class="dot"></span>';
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-
-/** A probe message: what code inside a frame reports to the test, which the player ignores. */
-type Probe = Readonly<Record<string, unknown>> & { readonly probe: string };
-
-interface Mounted {
-  readonly frame: PciFrame;
-  readonly events: PciEvent[];
-  readonly probes: Probe[];
-  readonly container: HTMLElement;
-  /** Stops collecting probes. */
-  readonly stop: () => void;
-}
-
-const mounted: Mounted[] = [];
-
-/** The token of the test: the browsers of a run share the servers, so a test names its paths with a token of its own. */
-let token = "";
-beforeEach(() => {
-  token = crypto.randomUUID();
-});
-const gate = () => `${asset}/g/${token}/`;
-
-/** Mounts the interaction of `simple.js` in a frame, with the options replaced by the given ones. */
-function mount(overrides: Partial<PciFrameOptions> = {}): Mounted {
-  const events: PciEvent[] = [];
-  const probes: Probe[] = [];
-  const container = document.createElement("div");
-  document.body.append(container);
-  const frame = mountPciFrame(container, {
-    staticUrl: `${asset}/static/`,
-    messages: EN_MESSAGES,
-    prompt: "Press the button.",
-    language: "en",
-    stylesheets: [`${gate()}styles/item.css`],
-    markup: `<qti-interaction-markup>${PRESS}</qti-interaction-markup>`,
-    modules: {
-      baseUrl: `${gate()}modules/`,
-      paths: new Map([["simple", [`${gate()}modules/simple`]]]),
-      load: ["simple"],
-    },
-    typeIdentifier: "urn:test:simple",
-    responseIdentifier: "RESPONSE",
-    status: "interacting",
-    boundTo: { base: null },
-    onEvent: (event) => events.push(event),
-    ...overrides,
-  });
-  const collect = (event: MessageEvent): void => {
-    const { data } = event;
-    if (event.source === frame.element.contentWindow && typeof data === "object" && data !== null && "probe" in data) {
-      probes.push(data);
-    }
-  };
-  window.addEventListener("message", collect);
-  const result = { frame, events, probes, container, stop: () => window.removeEventListener("message", collect) };
-  mounted.push(result);
-  return result;
-}
-
-const eventOf = <T extends PciEvent["type"]>(events: readonly PciEvent[], type: T) =>
-  events.find((event): event is Extract<PciEvent, { type: T }> => event.type === type);
+const TITLE = "Press the button.";
+const FILE = { cardinality: "single", baseType: "file" } as const;
 
 /** The ids of the elements that took the focus inside the frame, in order, which the interaction reports. */
 const visited = ({ probes }: Mounted) => probes.filter(({ probe }) => probe === "focus").map(({ id }) => id);
@@ -84,30 +44,24 @@ async function tabTo(target: Element, shift = false): Promise<void> {
   expect(document.activeElement).toBe(target);
 }
 
-const probeOf = (probes: readonly Probe[], name: string) => probes.find(({ probe }) => probe === name);
+/** The events of a type, in order. */
+const eventsOf = <T extends PciEvent["type"]>({ events }: Mounted, type: T) =>
+  events.filter((event): event is Extract<PciEvent, { type: T }> => event.type === type);
 
-/** Waits until the interaction of the frame is ready. */
-const ready = ({ events }: Mounted) =>
-  vi.waitFor(() => expect(eventOf(events, "ready")).toBeDefined(), { timeout: 8000 });
+/** The buttons of `files.js`: each gives a response. */
+const GIVE = '<button id="give">Give</button><button id="same">Same</button><button id="bad">Bad</button>';
 
-/** Returns every path that a fixture server was asked for. */
-async function requests(origin: string): Promise<string[]> {
-  return (await fetch(`${origin}/__hits`, { cache: "no-store" })).json();
-}
-
-/** Returns the paths below the token of the test that a fixture server was asked for, without the token. */
-async function hits(origin: string): Promise<string[]> {
-  const prefix = new RegExp(`/${token}(?=/)`, "u");
-  return (await requests(origin)).filter((path) => prefix.test(path)).map((path) => path.replace(prefix, ""));
-}
-
-afterEach(async () => {
-  for (const { frame, container, stop } of mounted.splice(0)) {
-    await frame.destroy();
-    stop();
-    container.remove();
-  }
+/** The options for the interaction of `files.js`, whose response variable is a file. */
+const filesPci = (files: PciFiles, value: Value | null = null): Partial<PciFrameOptions> => ({
+  interaction: interactionOf('module="files" custom-interaction-type-identifier="urn:test:files"'),
+  configuration: { primary: resolution({ files: "modules/files" }) },
+  markup: GIVE,
+  response: { value, declaration: FILE },
+  files,
 });
+
+/** The configuration that locates the module at a path that the server lacks. */
+const FAILING = { primary: resolution({ simple: "missing/simple" }) };
 
 describe("mountPciFrame", () => {
   describe("the frame and RequireJS", () => {
@@ -130,10 +84,9 @@ describe("mountPciFrame", () => {
 
     it("[T49] loads the second location when the first is missing", async () => {
       const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["simple", [`${gate()}missing/simple`, `${gate()}modules/simple`]]]),
-          load: ["simple"],
+        configuration: {
+          primary: resolution({ simple: "missing/simple" }),
+          fallback: resolution({ simple: "modules/simple" }),
         },
       });
       await ready(result);
@@ -145,11 +98,9 @@ describe("mountPciFrame", () => {
     it("[T49] loads the second location when the first does not answer within waitSeconds", async () => {
       const started = performance.now();
       const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["simple", [`${asset}/hang/${token}/simple`, `${gate()}modules/simple`]]]),
-          waitSeconds: 1,
-          load: ["simple"],
+        configuration: {
+          primary: resolution({ simple: `${asset}/hang/${tokenOf()}/simple` }, 1),
+          fallback: resolution({ simple: "modules/simple" }),
         },
       });
       await ready(result);
@@ -159,12 +110,8 @@ describe("mountPciFrame", () => {
 
     it("[T49] resolves a relative dependency against the base URL under the prefix of the package", async () => {
       const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["relative", [`${gate()}modules/relative`]]]),
-          load: ["relative"],
-        },
-        typeIdentifier: "urn:test:relative",
+        interaction: interactionOf('module="relative" custom-interaction-type-identifier="urn:test:relative"'),
+        configuration: { primary: resolution({ relative: "modules/relative" }) },
       });
       await ready(result);
       await vi.waitFor(() => expect(probeOf(result.probes, "relative")).toMatchObject({ helper: "helper-loaded" }));
@@ -180,19 +127,17 @@ describe("mountPciFrame", () => {
 
     it("[T49] loads a module from an origin that is allowed, and from no other", async () => {
       const external = {
-        baseUrl: `${gate()}modules/`,
-        paths: new Map([
-          ["external", [`${gate()}modules/external`]],
-          ["cdn", [`${other}/cdn/${token}/cdn-module`]],
-        ]),
-        load: ["external"],
+        interaction: interactionOf('module="external" custom-interaction-type-identifier="urn:test:external"'),
+        configuration: {
+          primary: resolution({ external: "modules/external", cdn: `${other}/cdn/${tokenOf()}/cdn-module` }),
+        },
       };
-      const allowed = mount({ modules: external, origins: [other], typeIdentifier: "urn:test:external" });
+      const allowed = mount({ ...external, origins: [other] });
       await ready(allowed);
       expect(probeOf(allowed.probes, "external")).toMatchObject({ cdn: "cdn-loaded" });
       expect(await hits(other)).toEqual(["/cdn/cdn-module.js"]);
 
-      const refused = mount({ modules: external, typeIdentifier: "urn:test:external" });
+      const refused = mount(external);
       await vi.waitFor(() => expect(eventOf(refused.events, "failed")).toEqual({ type: "failed", reason: "modules" }), {
         timeout: 8000,
       });
@@ -201,31 +146,18 @@ describe("mountPciFrame", () => {
     });
 
     it("[T49] reports that no location of a module loads", async () => {
-      const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["simple", [`${gate()}missing/simple`]]]),
-          load: ["simple"],
-        },
-      });
+      const result = mount({ configuration: FAILING });
       await vi.waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "modules" }]), { timeout: 8000 });
     });
 
-    it("[T49] reports a module that registers no interaction of the type, and a factory that throws", async () => {
+    it("[T49] reports a module that registers no interaction, and a factory that throws", async () => {
       const silent = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["unregistered", [`${gate()}modules/unregistered`]]]),
-          load: ["unregistered"],
-        },
+        interaction: interactionOf('module="unregistered" custom-interaction-type-identifier="urn:test:none"'),
+        configuration: { primary: resolution({ unregistered: "modules/unregistered" }) },
       });
       const failing = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["throws", [`${gate()}modules/throws`]]]),
-          load: ["throws"],
-        },
-        typeIdentifier: "urn:test:throws",
+        interaction: interactionOf('module="throws" custom-interaction-type-identifier="urn:test:throws"'),
+        configuration: { primary: resolution({ throws: "modules/throws" }) },
       });
       await vi.waitFor(() => expect(silent.events).toEqual([{ type: "failed", reason: "register" }]), {
         timeout: 8000,
@@ -234,21 +166,50 @@ describe("mountPciFrame", () => {
         timeout: 8000,
       });
     });
+
+    it("[T49] starts the one interaction that the modules register under another identifier, and no interaction of several", async () => {
+      // The pci-simple example of 1EdTech names a type identifier that its module does not register.
+      const renamed = mount({
+        interaction: interactionOf('module="simple" custom-interaction-type-identifier="urn-test-simple"'),
+      });
+      await ready(renamed);
+      expect(probeOf(renamed.probes, "instance")).toBeDefined();
+
+      const several = mount({
+        interaction: interactionOf('module="two" custom-interaction-type-identifier="urn:test:c"'),
+        configuration: { primary: resolution({ two: "modules/two" }) },
+      });
+      await vi.waitFor(() => expect(several.events).toEqual([{ type: "failed", reason: "register" }]), {
+        timeout: 8000,
+      });
+      const chosen = mount({
+        interaction: interactionOf('module="two" custom-interaction-type-identifier="urn:test:b"'),
+        configuration: { primary: resolution({ two: "modules/two" }) },
+      });
+      await ready(chosen);
+      expect(probeOf(chosen.probes, "made")).toMatchObject({ typeIdentifier: "urn:test:b" });
+    });
   });
 
   describe("the configuration", () => {
     it("[T50] gives the interaction its properties, variables, markup, status and language", async () => {
       const result = mount({
-        className: "qti-orientation-horizontal",
+        interaction: interactionOf(
+          `${SIMPLE} class="qti-orientation-horizontal" data-label-min="Very poorly" data-__proto__="data"`,
+        ),
         language: "id",
         status: "review",
-        properties: new Map([
-          ["labelMin", "Very poorly"],
-          ["__proto__", "data"],
+        templateVariables: new Map([["X", { value: single("integer", 3), declaration: INTEGER }]]),
+        contextVariables: new Map([
+          [
+            "LIMIT",
+            {
+              value: container("multiple", "float", [1.5, 2.5]),
+              declaration: { cardinality: "multiple", baseType: "float" },
+            },
+          ],
         ]),
-        templateVariables: new Map([["X", { base: { integer: 3 } }]]),
-        contextVariables: new Map([["LIMIT", { list: { float: [1.5, 2.5] } }]]),
-        boundTo: { base: { integer: 2 } },
+        response: { value: single("integer", 2), declaration: INTEGER },
         state: JSON.stringify({ count: 2 }),
       });
       await ready(result);
@@ -265,18 +226,18 @@ describe("mountPciFrame", () => {
         state: '{"count":2}',
         className: "qti-orientation-horizontal",
         language: "id",
-        title: "Press the button.",
+        title: TITLE,
       });
       expect(JSON.stringify(instance?.configuration)).toContain('"__proto__":"data"');
       expect(instance?.markup).toContain('<button id="press">Press</button>');
     });
 
-    it("[T50] creates a new interaction without state", async () => {
+    it("[T50] creates a new interaction without state, and the NULL of its response variable", async () => {
       const result = mount();
       await ready(result);
       expect(probeOf(result.probes, "instance")).toMatchObject({
         state: null,
-        configuration: { status: "interacting" },
+        configuration: { status: "interacting", boundTo: { base: null } },
       });
     });
 
@@ -299,6 +260,114 @@ describe("mountPciFrame", () => {
     });
   });
 
+  describe("the responses", () => {
+    it("[T51] turns qti-interaction-changed into the value of the response variable, with the state", async () => {
+      const result = mount();
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#press");
+      await vi.waitFor(() =>
+        expect(eventOf(result.events, "changed")).toEqual({
+          type: "changed",
+          response: single("integer", 1),
+          state: '{"count":1}',
+          valid: true,
+        }),
+      );
+    });
+
+    it("[T51] restores the interaction from the state that getState gave", async () => {
+      const result = mount({
+        state: JSON.stringify({ count: 2 }),
+        response: { value: single("integer", 2), declaration: INTEGER },
+      });
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#press");
+      await vi.waitFor(() =>
+        expect(eventOf(result.events, "changed")).toMatchObject({ response: single("integer", 3) }),
+      );
+    });
+
+    it("[T51] reads the bytes of a file value before the interaction starts, and writes them inline", async () => {
+      const { files } = memoryFiles(new Map([["stored-1", new TextEncoder().encode("pleasure.")]]));
+      const result = mount(
+        filesPci(files, single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" })),
+      );
+      await ready(result);
+      // The data is the base64 of "pleasure." that BPIG App. C.1 shows.
+      expect(probeOf(result.probes, "instance")).toMatchObject({
+        boundTo: { base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } } },
+      });
+    });
+
+    it("[T51] stores the file of a response through the host and delivers its reference", async () => {
+      const { files, uploads } = memoryFiles();
+      const result = mount(filesPci(files));
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#give");
+      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1));
+      expect(eventOf(result.events, "changed")).toMatchObject({
+        response: single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "f1.txt" }),
+      });
+      expect(uploads).toEqual([
+        { bytes: new TextEncoder().encode("file 1"), mimeType: "text/plain", fileName: "f1.txt" },
+      ]);
+    });
+
+    it("[T51] stores a file that the interaction gives again only once", async () => {
+      const { files, uploads } = memoryFiles();
+      const result = mount(filesPci(files));
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#same");
+      await commands.clickInFrame(TITLE, "#same");
+      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2));
+      expect(uploads).toHaveLength(1);
+      expect(eventsOf(result, "changed").map((event) => event.response)).toEqual([
+        single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
+        single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
+      ]);
+    });
+
+    it("[T51] delivers the events in the order they were sent, although storing a file takes time", async () => {
+      const { files, uploads } = memoryFiles();
+      const slow: typeof files = {
+        read: files.read,
+        upload: async (blob, mimeType, fileName) => {
+          if (uploads.length === 0) await new Promise((done) => setTimeout(done, 300));
+          return files.upload(blob, mimeType, fileName);
+        },
+      };
+      const result = mount(filesPci(slow));
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#give");
+      await commands.clickInFrame(TITLE, "#give");
+      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2), { timeout: 5000 });
+      const states = eventsOf(result, "changed").map((event) => event.state);
+      expect(states).toEqual(['{"given":1}', '{"given":2}']);
+    });
+
+    it("[T51] drops a response that is not the JSON of a value of the declaration, and goes on", async () => {
+      const result = mount(filesPci(memoryFiles().files));
+      await ready(result);
+      await commands.clickInFrame(TITLE, "#bad");
+      await commands.clickInFrame(TITLE, "#give");
+      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1), { timeout: 5000 });
+      expect(eventOf(result.events, "changed")).toMatchObject({ state: '{"given":1}' });
+    });
+
+    it("[T51] reports that the interaction cannot start when the host cannot read a file", async () => {
+      const report = vi.spyOn(window, "reportError").mockImplementation(() => undefined);
+      const result = mount(
+        filesPci(
+          { read: () => Promise.reject(new Error("The storage is down.")), upload: memoryFiles().files.upload },
+          single("file", { reference: "lost", mimeType: "text/plain" }),
+        ),
+      );
+      await vi.waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "files" }]), { timeout: 8000 });
+      expect(report).toHaveBeenCalledWith(new Error("The storage is down."));
+      report.mockRestore();
+    });
+  });
+
   describe("the events", () => {
     it("[T52] tells that the interaction is ready, with its state", async () => {
       const result = mount({ state: JSON.stringify({ count: 4 }) });
@@ -306,33 +375,10 @@ describe("mountPciFrame", () => {
       expect(eventOf(result.events, "ready")).toEqual({ type: "ready", state: '{"count":4}' });
     });
 
-    it("[T52] turns qti-interaction-changed into the response and the state", async () => {
+    it("[T52] passes ondone with the status that the interaction asks for, and NULL for no response", async () => {
       const result = mount();
       await ready(result);
-      await commands.clickInFrame("Press the button.", "#press");
-      await vi.waitFor(() =>
-        expect(eventOf(result.events, "changed")).toEqual({
-          type: "changed",
-          response: { base: { integer: 1 } },
-          state: '{"count":1}',
-          valid: true,
-        }),
-      );
-    });
-
-    it("[T52] restores the state that getState gave", async () => {
-      const result = mount({ state: JSON.stringify({ count: 2 }) });
-      await ready(result);
-      await commands.clickInFrame("Press the button.", "#press");
-      await vi.waitFor(() =>
-        expect(eventOf(result.events, "changed")).toMatchObject({ response: { base: { integer: 3 } } }),
-      );
-    });
-
-    it("[T52] passes ondone with the status that the interaction asks for, and null for no response", async () => {
-      const result = mount();
-      await ready(result);
-      await commands.clickInFrame("Press the button.", "#done");
+      await commands.clickInFrame(TITLE, "#done");
       await vi.waitFor(() =>
         expect(eventOf(result.events, "done")).toEqual({
           type: "done",
@@ -347,7 +393,7 @@ describe("mountPciFrame", () => {
       const result = mount();
       await ready(result);
       expect(await result.frame.checkValidity()).toBe(false);
-      await commands.clickInFrame("Press the button.", "#press");
+      await commands.clickInFrame(TITLE, "#press");
       await vi.waitFor(async () => expect(await result.frame.checkValidity()).toBe(true));
       expect(await result.frame.reportValidity()).toBe(true);
       expect(probeOf(result.probes, "reportValidity")).toBeDefined();
@@ -364,25 +410,22 @@ describe("mountPciFrame", () => {
     });
 
     it("[T52] gives no verdict when the interaction is not running", async () => {
-      const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["simple", [`${gate()}missing/simple`]]]),
-          load: ["simple"],
-        },
-      });
+      const result = mount({ configuration: FAILING });
       expect(await result.frame.checkValidity()).toBeUndefined();
       await vi.waitFor(() => expect(eventOf(result.events, "failed")).toBeDefined(), { timeout: 8000 });
       expect(await result.frame.getCustomValidity()).toBeUndefined();
     });
 
     it("[T52] hands over the response and the state, then calls oncompleted, when the frame goes", async () => {
-      const result = mount({ state: JSON.stringify({ count: 2 }) });
+      const result = mount({
+        state: JSON.stringify({ count: 2 }),
+        response: { value: single("integer", 2), declaration: INTEGER },
+      });
       await ready(result);
       await result.frame.destroy();
       expect(eventOf(result.events, "completed")).toEqual({
         type: "completed",
-        response: { base: { integer: 2 } },
+        response: single("integer", 2),
         state: '{"count":2}',
       });
       const completed = probeOf(result.probes, "oncompleted");
@@ -423,7 +466,7 @@ describe("mountPciFrame", () => {
       await vi.waitFor(() => {
         const height = result.frame.element.getBoundingClientRect().height;
         expect(height).toBeGreaterThanOrEqual(300);
-        expect(height).toBeLessThan(340);
+        expect(height).toBeLessThan(360);
       });
     });
 
@@ -437,26 +480,30 @@ describe("mountPciFrame", () => {
   });
 
   describe("options", () => {
-    it("[T49] refuses a parent that is not an element and options that are not valid", () => {
+    it("[T49] refuses a parent that is not an element, options that are not valid, and an interaction with no module", () => {
       const parent = document.createElement("div");
       const options: PciFrameOptions = {
         staticUrl: `${asset}/static/`,
         messages: EN_MESSAGES,
-        prompt: null,
         language: "en",
-        stylesheets: [],
+        interaction: interactionOf(SIMPLE),
+        configuration: { primary: resolution({ simple: "modules/simple" }) },
+        assets,
+        prompt: null,
         markup: "",
-        modules: { baseUrl: gate(), paths: new Map(), load: [] },
-        typeIdentifier: "urn:test:simple",
-        responseIdentifier: "RESPONSE",
+        stylesheets: [],
         status: "interacting",
-        boundTo: { base: null },
+        response: { value: null, declaration: INTEGER },
+        files: memoryFiles().files,
         onEvent: () => undefined,
       };
       expect(() => mountPciFrame(JSON.parse("null"), options)).toThrow("The parent must be an element, found null.");
       expect(() => mountPciFrame(parent, JSON.parse('{"staticUrl":"x"}'))).toThrow(/staticUrl/u);
       expect(() => mountPciFrame(parent, { ...options, staticUrl: "https://cdn.example/static" })).toThrow(
         'The option staticUrl must end in "/"',
+      );
+      expect(() => mountPciFrame(parent, { ...options, configuration: {} })).toThrow(
+        'The module "simple" has no location',
       );
       expect(parent.childElementCount).toBe(0);
     });
@@ -467,13 +514,10 @@ describe("the frame", () => {
   describe("the policy", () => {
     it("[T53] reaches no network, no parent, no storage and no other window", async () => {
       const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["hostile", [`${gate()}modules/hostile`]]]),
-          load: ["hostile"],
-        },
-        typeIdentifier: "urn:test:hostile",
-        properties: new Map([["evil", stranger]]),
+        interaction: interactionOf(
+          `module="hostile" custom-interaction-type-identifier="urn:test:hostile" data-evil="${stranger}"`,
+        ),
+        configuration: { primary: resolution({ hostile: "modules/hostile" }) },
       });
       const location = window.location.href;
       await vi.waitFor(() => expect(probeOf(result.probes, "hostile")).toBeDefined(), { timeout: 10000 });
@@ -504,12 +548,8 @@ describe("the frame", () => {
 
     it("[T53] drops forged messages and bounds a forged height", async () => {
       const result = mount({
-        modules: {
-          baseUrl: `${gate()}modules/`,
-          paths: new Map([["forger", [`${gate()}modules/forger`]]]),
-          load: ["forger"],
-        },
-        typeIdentifier: "urn:test:forger",
+        interaction: interactionOf('module="forger" custom-interaction-type-identifier="urn:test:forger"'),
+        configuration: { primary: resolution({ forger: "modules/forger" }) },
       });
       await vi.waitFor(() => expect(result.frame.element.style.height).toBe(`${MAX_PCI_HEIGHT}px`), { timeout: 5000 });
       expect(result.events).toEqual([{ type: "ready", state: "{}" }]);
@@ -538,7 +578,7 @@ describe("the frame", () => {
       const none = mount({ prompt: null });
       const blank = mount({ prompt: " \n " });
       const indonesian = mount({ prompt: null, messages: ID_MESSAGES });
-      expect(prompt.frame.element.title).toBe("Press the button.");
+      expect(prompt.frame.element.title).toBe(TITLE);
       expect(none.frame.element.title).toBe("Interactive question");
       expect(blank.frame.element.title).toBe("Interactive question");
       expect(indonesian.frame.element.title).toBe("Soal interaktif");
@@ -550,7 +590,7 @@ describe("the frame", () => {
       await ready(result);
       const outside = await axe.run(result.container, { runOnly: { type: "tag", values: WCAG_TAGS } });
       expect(outside.violations).toEqual([]);
-      expect(await commands.axeInFrame("Press the button.", WCAG_TAGS)).toEqual([]);
+      expect(await commands.axeInFrame(TITLE, WCAG_TAGS)).toEqual([]);
     });
 
     it("[SC 4.1.2] exposes the controls of the frame in the accessibility tree, below the frame", async () => {

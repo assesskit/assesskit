@@ -1,8 +1,10 @@
+import type { PortableCustomInteraction } from "@luthfanwakan/olah/asi";
+import { type PciJson, type PciModuleConfiguration, pciProperties } from "@luthfanwakan/olah/pci";
+import type { Value } from "@luthfanwakan/olah/values";
 import {
   checkArray,
   checkFunction,
   checkNonEmptyString,
-  checkNonNegativeInteger,
   checkProperties,
   checkRecord,
   checkString,
@@ -10,17 +12,9 @@ import {
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import type { Messages } from "../../messages/index.js";
-import {
-  type PciFailure,
-  type PciModules,
-  type PciRequestedStatus,
-  type PciStart,
-  type PciStatus,
-  toJson,
-} from "./protocol.js";
-
-/** The seconds that RequireJS waits for a script when the module resolution says nothing ([BPIG] §3.7.12.2). */
-const DEFAULT_WAIT_SECONDS = 7;
+import { checkVariable, encodeVariable, type PciFiles, type PciVariable } from "./files.js";
+import { pciModules } from "./modules.js";
+import type { PciFailure, PciRequestedStatus, PciStart, PciStatus } from "./protocol.js";
 
 /** The shared stylesheet of the player, under `staticUrl`. */
 const PLAYER_CSS = "player.css";
@@ -38,13 +32,13 @@ export type PciEvent =
     }
   /**
    * The response changed: the interaction fired `qti-interaction-changed`, and the frame read `getResponse()` and
-   * `getState()` ([BPIG] §3.7.12.7.5).
+   * `getState()` ([BPIG] §3.7.12.7.5). The player sets the response variable to `response` and stores `state` with it.
    */
   | {
       /** The kind of event. */
       readonly type: "changed";
-      /** The JSON of `getResponse()`, or `null` when the interaction has no response. */
-      readonly response: unknown;
+      /** The value of `getResponse()`, or `null` when the interaction has no response. */
+      readonly response: Value | null;
       /** The result of `getState()`. */
       readonly state: string;
       /** What the interaction says of its validity, if it says. */
@@ -57,8 +51,8 @@ export type PciEvent =
   | {
       /** The kind of event. */
       readonly type: "done";
-      /** The JSON of the response that the interaction passed. */
-      readonly response: unknown;
+      /** The response that the interaction passed, or `null` for NULL. */
+      readonly response: Value | null;
       /** The state that the interaction passed. */
       readonly state: string;
       /** The status asked for; `interacting` when the interaction gives none. */
@@ -68,8 +62,8 @@ export type PciEvent =
   | {
       /** The kind of event. */
       readonly type: "completed";
-      /** The JSON of `getResponse()`, or `null` when the interaction has no response. */
-      readonly response: unknown;
+      /** The value of `getResponse()`, or `null` when the interaction has no response. */
+      readonly response: Value | null;
       /** The result of `getState()`. */
       readonly state: string;
     }
@@ -92,35 +86,36 @@ export interface PciFrameOptions {
   readonly origins?: readonly string[];
   /** The text of the interface; the frame's title is `interactiveQuestion` when the interaction has no prompt. */
   readonly messages: Pick<Messages, "interactiveQuestion">;
-  /** The text of the interaction's prompt, which names the frame, or `null` for none. */
-  readonly prompt: string | null;
   /** The language of the item, a BCP 47 tag. */
   readonly language: string;
-  /** The `class` of the interaction, so that the stylesheets of the item select its markup as they do in the item. Default: `""`. */
-  readonly className?: string;
-  /** The URLs of the item's stylesheets, loaded after `player.css` from `staticUrl`. */
-  readonly stylesheets: readonly string[];
+  /**
+   * The interaction, as olah reads it. Its type identifier, response identifier, `class`, `data-*` attributes and
+   * modules come from it.
+   */
+  readonly interaction: PortableCustomInteraction;
+  /** The module resolution files of the interaction, parsed; a file that the package lacks is left out. */
+  readonly configuration: PciModuleConfiguration;
+  /** Gives the URL, under the asset prefix of the package, of a path in the package. */
+  readonly assets: (path: string) => string;
+  /** The text of the interaction's prompt, which names the frame, or `null` for none. */
+  readonly prompt: string | null;
   /** The HTML of `qti-interaction-markup`, with the URLs in it resolved. The frame parses it, under its policy. */
   readonly markup: string;
-  /** The modules to load and where they are. */
-  readonly modules: PciModules;
-  /** The `custom-interaction-type-identifier` of the interaction. */
-  readonly typeIdentifier: string;
-  /** The `response-identifier` of the interaction. */
-  readonly responseIdentifier: string;
+  /** The URLs of the item's stylesheets, loaded after `player.css` from `staticUrl`. */
+  readonly stylesheets: readonly string[];
   /** The status of the item session. */
   readonly status: PciStatus;
-  /** The `data-*` attributes of the interaction, named as `dataset` names them ([BPIG] §3.7.12.7.1). Default: empty. */
-  readonly properties?: ReadonlyMap<string, string>;
-  /** The template variables bound to the interaction, by identifier, as JSON ([BPIG] App. C). Default: empty. */
-  readonly templateVariables?: ReadonlyMap<string, unknown>;
-  /** The context variables bound to the interaction, by identifier, as JSON ([BPIG] App. C). Default: empty. */
-  readonly contextVariables?: ReadonlyMap<string, unknown>;
-  /** The value of the response variable, as JSON ([BPIG] App. C). */
-  readonly boundTo: unknown;
   /** The state that `getState` gave before, to restore, or `null` for a new interaction. Default: `null`. */
   readonly state?: string | null;
-  /** Receives what the interaction does. */
+  /** The response variable the interaction is bound to, with its value. */
+  readonly response: PciVariable;
+  /** The template variables bound to the interaction, by identifier. Default: empty. */
+  readonly templateVariables?: ReadonlyMap<string, PciVariable>;
+  /** The context variables bound to the interaction, by identifier. Default: empty. */
+  readonly contextVariables?: ReadonlyMap<string, PciVariable>;
+  /** The host's storage of files. */
+  readonly files: PciFiles;
+  /** Receives what the interaction does, in order. */
   readonly onEvent: (event: PciEvent) => void;
 }
 
@@ -164,34 +159,33 @@ function checkMap(value: unknown, message: string): asserts value is ReadonlyMap
   if (!(value instanceof Map)) throw new DataError(`${message}, found ${describe(value)}.`);
 }
 
-function checkModules(value: unknown): asserts value is PciModules {
-  checkRecord(value, "The option modules must be an object");
-  checkProperties(value, "The option modules", ["baseUrl", "paths", "waitSeconds", "load"]);
-  const { baseUrl, paths, waitSeconds = DEFAULT_WAIT_SECONDS, load } = value;
-  checkBaseUrl(baseUrl, "The base URL of the modules");
-  checkMap(paths, "The paths of the modules must be a Map");
-  for (const [name, locations] of paths) {
-    checkNonEmptyString(name, "The name of a module");
-    checkEach(locations, `The locations of the module ${describe(name)} must be an array`, (location) =>
-      checkHttpUrl(location, `A location of the module ${describe(name)}`),
-    );
+function checkVariables(value: unknown, label: string): asserts value is ReadonlyMap<string, PciVariable> {
+  checkMap(value, `${label} must be a Map`);
+  for (const [name, variable] of value) {
+    checkNonEmptyString(name, `A name in ${label}`);
+    checkVariable(variable);
   }
-  checkNonNegativeInteger(waitSeconds, "The option waitSeconds");
-  checkEach(load, "The modules to load must be an array", (name) => checkNonEmptyString(name, "A module to load"));
 }
 
-function checkEntries(value: unknown, label: string, checkValue: (item: unknown, name: string) => void): void {
-  checkMap(value, `${label} must be a Map`);
-  for (const [name, item] of value) {
-    checkNonEmptyString(name, `A name in ${label}`);
-    checkValue(item, name);
+function checkInteraction(value: unknown): asserts value is PortableCustomInteraction {
+  checkRecord(value, "The option interaction must be an object");
+  if (value.kind !== "portable-custom-interaction") {
+    throw new DataError(
+      `The option interaction must be a qti-portable-custom-interaction, found the kind ${describe(value.kind)}.`,
+    );
   }
+  checkNonEmptyString(
+    value.customInteractionTypeIdentifier,
+    "The custom-interaction-type-identifier of the interaction",
+  );
+  checkNonEmptyString(value.responseIdentifier, "The response-identifier of the interaction");
 }
 
 /**
  * Checks the options of {@link mountPciFrame}, as a host passes them from JavaScript.
  *
- * @throws `DataError` when an option is missing, has the wrong type, or is a URL or an origin that is not one.
+ * @throws `DataError` when an option is missing, has the wrong type, or is a URL or an origin that is not one, or a
+ * variable does not have its declared cardinality and base type.
  */
 export function checkPciFrameOptions(options: unknown): asserts options is PciFrameOptions {
   checkRecord(options, "The options must be an object");
@@ -199,91 +193,111 @@ export function checkPciFrameOptions(options: unknown): asserts options is PciFr
     "staticUrl",
     "origins",
     "messages",
-    "prompt",
     "language",
-    "className",
-    "stylesheets",
+    "interaction",
+    "configuration",
+    "assets",
+    "prompt",
     "markup",
-    "modules",
-    "typeIdentifier",
-    "responseIdentifier",
+    "stylesheets",
     "status",
-    "properties",
+    "state",
+    "response",
     "templateVariables",
     "contextVariables",
-    "boundTo",
-    "state",
+    "files",
     "onEvent",
   ]);
-  const { staticUrl, origins = [], messages, prompt, language, className = "", stylesheets, markup } = options;
+  const { staticUrl, origins = [], messages, language, prompt, markup, stylesheets, state = null } = options;
+  const { templateVariables = new Map(), contextVariables = new Map() } = options;
   checkBaseUrl(staticUrl, "The option staticUrl");
   checkEach(origins, "The option origins must be an array", checkOrigin);
   checkRecord(messages, "The option messages must be an object");
   checkNonEmptyString(messages.interactiveQuestion, "The message interactiveQuestion");
-  if (prompt !== null) checkString(prompt, "The option prompt");
   checkNonEmptyString(language, "The option language");
-  checkString(className, "The option className");
+  checkInteraction(options.interaction);
+  checkRecord(options.configuration, "The option configuration must be an object");
+  checkFunction(options.assets, "The option assets must be a function");
+  if (prompt !== null) checkString(prompt, "The option prompt");
+  checkString(markup, "The option markup");
   checkEach(stylesheets, "The option stylesheets must be an array", (url) =>
     checkHttpUrl(url, "A stylesheet of the option stylesheets"),
   );
-  checkString(markup, "The option markup");
-  checkModules(options.modules);
-  checkNonEmptyString(options.typeIdentifier, "The option typeIdentifier");
-  checkNonEmptyString(options.responseIdentifier, "The option responseIdentifier");
   if (!STATUSES.some((status) => status === options.status)) {
     throw new DataError(
       `The option status must be "interacting", "suspended", "closed", "solution" or "review", found ${describe(options.status)}.`,
     );
   }
-  const { properties = new Map(), templateVariables = new Map(), contextVariables = new Map(), state = null } = options;
-  checkEntries(properties, "The option properties", (value, name) =>
-    checkString(value, `The property ${describe(name)}`),
-  );
-  checkEntries(templateVariables, "The option templateVariables", toJson);
-  checkEntries(contextVariables, "The option contextVariables", toJson);
   if (state !== null) checkString(state, "The option state");
+  checkVariable(options.response);
+  checkVariables(templateVariables, "The option templateVariables");
+  checkVariables(contextVariables, "The option contextVariables");
+  checkRecord(options.files, "The option files must be an object with the functions read and upload");
+  checkFunction(options.files.read, "The function read of the option files must be a function");
+  checkFunction(options.files.upload, "The function upload of the option files must be a function");
   checkFunction(options.onEvent, "The option onEvent must be a function");
 }
 
 /** Collapses the white space of a prompt, which was text in a block, into the one line of a title. */
 const oneLine = (text: string): string => text.split(/\s+/u).filter(Boolean).join(" ");
 
+/** What a frame needs to be created, and the means to build the message that starts it. */
+export interface FrameDescription {
+  /** The name of the frame: the prompt with its white space collapsed, else the message `interactiveQuestion`. */
+  readonly title: string;
+  /** Reads the files that go to the interaction and builds the message that starts the frame. */
+  readonly prepare: () => Promise<PciStart>;
+}
+
+async function encodeAll(
+  variables: ReadonlyMap<string, PciVariable>,
+  files: PciFiles,
+): Promise<ReadonlyMap<string, PciJson>> {
+  const encoded = await Promise.all(
+    [...variables].map(async ([name, variable]) => [name, await encodeVariable(variable, files)] as const),
+  );
+  return new Map(encoded);
+}
+
 /**
- * Builds the message that starts the frame: the options with their defaults, and the frame's title.
+ * Derives from the options what the frame needs: its title now, and the message that starts it once the bytes of the
+ * files that go to the interaction are read.
  *
  * @param options - Options that {@link checkPciFrameOptions} accepted.
+ * @throws `DataError` when the interaction names no module to load, or a module has no location.
  */
-export function buildStart(options: PciFrameOptions): PciStart {
-  const {
-    origins = [],
-    messages,
-    prompt,
-    className = "",
-    modules,
-    properties = new Map(),
-    templateVariables = new Map(),
-    contextVariables = new Map(),
-    state = null,
-  } = options;
+export function describeFrame(options: PciFrameOptions): FrameDescription {
+  const { messages, prompt, interaction, configuration, assets, files, state = null } = options;
+  const { origins = [], templateVariables = new Map(), contextVariables = new Map() } = options;
   const title = oneLine(prompt ?? "") || messages.interactiveQuestion;
-  const entriesOf = (map: ReadonlyMap<string, unknown>) =>
-    new Map([...map].map(([name, value]) => [name, toJson(value)] as const));
+  const modules = pciModules(interaction, configuration, assets);
+  const properties = pciProperties(interaction);
   return {
-    type: "start",
     title,
-    language: options.language,
-    className,
-    origins,
-    stylesheets: [new URL(PLAYER_CSS, options.staticUrl).href, ...options.stylesheets],
-    markup: options.markup,
-    modules: { ...modules, waitSeconds: modules.waitSeconds ?? DEFAULT_WAIT_SECONDS },
-    typeIdentifier: options.typeIdentifier,
-    responseIdentifier: options.responseIdentifier,
-    status: options.status,
-    properties,
-    templateVariables: entriesOf(templateVariables),
-    contextVariables: entriesOf(contextVariables),
-    boundTo: toJson(options.boundTo),
-    state,
+    prepare: async () => {
+      const [boundTo, templates, contexts] = await Promise.all([
+        encodeVariable(options.response, files),
+        encodeAll(templateVariables, files),
+        encodeAll(contextVariables, files),
+      ]);
+      return {
+        type: "start",
+        title,
+        language: options.language,
+        className: (interaction.class ?? []).join(" "),
+        origins,
+        stylesheets: [new URL(PLAYER_CSS, options.staticUrl).href, ...options.stylesheets],
+        markup: options.markup,
+        modules,
+        typeIdentifier: interaction.customInteractionTypeIdentifier,
+        responseIdentifier: interaction.responseIdentifier,
+        status: options.status,
+        properties,
+        templateVariables: templates,
+        contextVariables: contexts,
+        boundTo,
+        state,
+      };
+    },
   };
 }

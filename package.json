@@ -9,9 +9,9 @@
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
-    "test": "vitest run --project '!*-corpus' --project '!*-xsd' --project '!*-browser*'",
+    "test": "vitest run --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*'",
     "test:browser": "vitest run --project '*-browser*'",
-    "test:corpus": "vitest run --project '*-corpus'",
+    "test:corpus": "vitest run --project '*-corpus*'",
     "test:xsd": "vitest run --project '*-xsd'",
     "lint": "biome check . && cspell --no-progress",
     "format": "biome check --write .",
