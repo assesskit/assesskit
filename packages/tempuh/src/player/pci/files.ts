@@ -1,5 +1,12 @@
 import { decodePciValue, encodePciValue, type PciJson } from "@luthfanwakan/olah/pci";
-import type { FileValue, Primitive, Value, ValueDeclaration } from "@luthfanwakan/olah/values";
+import {
+  decodeBase64,
+  encodeBase64,
+  type FileValue,
+  type Primitive,
+  type Value,
+  type ValueDeclaration,
+} from "@luthfanwakan/olah/values";
 import { checkRecord, checkString } from "../../checks.js";
 import { DataError } from "../../errors.js";
 
@@ -24,23 +31,10 @@ export interface PciFiles {
   upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
 }
 
-/** The characters that `String.fromCharCode` takes at once; more would overflow the stack. */
-const CHUNK = 0x8000;
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let start = 0; start < bytes.length; start += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(start, start + CHUNK));
-  }
-  return btoa(binary);
-}
-
 function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-  try {
-    return Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
-  } catch {
-    throw new DataError("The data of a file must be base64.");
-  }
+  const bytes = decodeBase64(text);
+  if (bytes === undefined) throw new DataError("The data of a file must be base64.");
+  return bytes;
 }
 
 const isFile = (primitive: Primitive): primitive is FileValue =>
@@ -88,7 +82,7 @@ export function checkVariable(variable: unknown): asserts variable is PciVariabl
  */
 export async function encodeVariable(variable: PciVariable, files: PciFiles): Promise<PciJson> {
   const loaded = new Map<string, string>();
-  for (const file of filesOf(variable.value)) loaded.set(file.reference, toBase64(await files.read(file)));
+  for (const file of filesOf(variable.value)) loaded.set(file.reference, encodeBase64(await files.read(file)));
   return encodePciValue(variable.value, variable.declaration, { load: loader(loaded) });
 }
 

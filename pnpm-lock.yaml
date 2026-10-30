@@ -271,8 +271,8 @@ importers:
         version: 2.2.0
     devDependencies:
       '@luthfanwakan/takar':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: link:../../../takar/packages/takar
+        version: link:../../../takar/packages/takar
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
@@ -282,10 +282,10 @@ importers:
       '@luthfanwakan/olah':
         specifier: workspace:^
         version: link:../olah
-      '@luthfanwakan/takar':
-        specifier: ^1.0.0
-        version: 1.0.0
     devDependencies:
+      '@luthfanwakan/takar':
+        specifier: link:../../../takar/packages/takar
+        version: link:../../../takar/packages/takar
       axe-core:
         specifier: ^4.14.0
         version: 4.14.0
@@ -998,10 +998,6 @@ packages:
 
   '@longsightgroup/qti3-core@0.13.3':
     resolution: {integrity: sha512-rNc4ZBek+fFIK2Cbnxtb80HMlHdHUxF6FvnQztUmeT3jZgi6f88Ow9ctssESjStQXrXIdYDkgTVS5Z11wn0akw==}
-
-  '@luthfanwakan/takar@1.0.0':
-    resolution: {integrity: sha512-PvwjCOuDHtm7QdFIV6ltEXPfbYq/lbMAw7uFq1FegGQCFh3zTwJoEGN/7XdxdgfHDHoN3BXGRWZQ8f3h88lQxg==}
-    engines: {node: '>=22'}
 
   '@manypkg/find-root@3.1.0':
     resolution: {integrity: sha512-BcSqCyKhBVZ5YkSzOiheMCV41kqAFptW6xGqYSTjkVTl9XQpr+pqHhwgGCOHQtjDCv7Is6EFyA14Sm5GVbVABA==}
@@ -3599,8 +3595,6 @@ snapshots:
       '@braidai/lang': 1.1.2
 
   '@longsightgroup/qti3-core@0.13.3': {}
-
-  '@luthfanwakan/takar@1.0.0': {}
 
   '@manypkg/find-root@3.1.0':
     dependencies:

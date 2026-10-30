@@ -4,8 +4,8 @@
 
 The error classes, the `Issue` type, and a seeded random number generator whose state can be saved and restored, with
 the same sequence as takar's. The `values` module: base types, cardinalities, values and NULL, lexical forms, matching and
-promotion, the JSON codec of BPIG Appendix C with olah's wire value, and regular expressions of XML Schema that run in
-linear time.
+promotion, the JSON codec of BPIG Appendix C with olah's wire value, base64 and base64url that decode only the canonical
+encoding (RFC 4648), and regular expressions of XML Schema that run in linear time.
 
 A secure XML reader and writer (`xml`): an immutable tree with namespaces, the encoding rules of XML 1.0, limits on size,
 depth, attributes and nodes, rejection of every DOCTYPE, and XInclude resolution through a resolver the caller passes. For
@@ -35,8 +35,9 @@ ZIP files and from directories, with symbolic links rejected, and packages to ZI
 
 Computer adaptive testing (`cat`): `CatPort`, the six requests of a CAT 1.0 engine that the host implements, with the models
 of their bodies and answers, `sectionData` for the section data of an adaptive section, `isSessionEnd` for item stages,
-`checkPool` for the agreement of the item references with the engine's pool, and `catMetadata` for the metadata JSON of CAT
-Appendix B. `metadata` has `checkQtiMetadata`.
+`checkPool` for the agreement of the item references with the engine's pool, `catMetadata` for the metadata JSON of CAT
+Appendix B, and `assessmentResultToJson`, `assessmentResultFromJson` and `itemStageFromJson` for the JSON of the public CAT
+binding. `metadata` has `checkQtiMetadata`.
 
 Template, response and outcome processing (`processing`): `createItemVariables`, a tree interpreter for all 64
 expressions and every rule with the semantics of the Information Model, the constraint loop of template processing, lookup

@@ -1,4 +1,5 @@
 // cspell:ignore Gxvb foob fooba
+// biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 import { Buffer } from "node:buffer";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -7,18 +8,23 @@ import {
   ASI_NAMESPACE,
   type AssessmentResult,
   type AssessmentSection,
+  assessmentResultFromJson,
+  assessmentResultToJson,
   type CatPort,
   type CreateSectionResponse,
   type CreateSessionRequest,
   type CreateSessionResponse,
   catMetadata,
   checkPool,
+  container,
   DataError,
   type GetSectionResponse,
   isSessionEnd,
+  itemStageFromJson,
   type QtiMetadata,
   readAsi,
   readResults,
+  record,
   type SectionData,
   type SubmitResultsRequest,
   type SubmitResultsResponse,
@@ -411,6 +417,383 @@ const MINIMAL_REPORT: AssessmentResult = {
   ],
 };
 
+const DATESTAMP = "2026-10-30T10:05:00";
+
+/** A result as the delivery engine reports it (RR §2.3.1), with every kind of variable the binding has a place for. */
+const RESULT: AssessmentResult = {
+  context: {
+    sourcedId: "candidate1",
+    sessionIdentifiers: [{ sourceId: "https://delivery.example", identifier: "session1" }],
+  },
+  testResult: {
+    identifier: "test1",
+    datestamp: DATESTAMP,
+    variables: [
+      { kind: "outcome", identifier: "TOTAL", cardinality: "single", baseType: "float", value: single("float", 1) },
+      { kind: "context", identifier: "LEVEL", cardinality: "single", baseType: "integer", value: single("integer", 2) },
+    ],
+    supports: [{ name: "spoken", assignment: "assigned" }],
+  },
+  itemResults: [
+    {
+      identifier: "i1",
+      sequenceIndex: 1,
+      datestamp: DATESTAMP,
+      sessionStatus: "final",
+      variables: [
+        {
+          kind: "response",
+          identifier: "RESPONSE",
+          cardinality: "single",
+          baseType: "identifier",
+          candidateResponse: single("identifier", "B"),
+          correctResponse: { interpretation: "The capital", value: single("identifier", "A") },
+          choiceSequence: ["B", "A"],
+          scoreStatus: "scored",
+          answeredStatus: "answered",
+          extensions: [],
+        },
+        { kind: "template", identifier: "N", cardinality: "single", baseType: "integer", value: single("integer", 4) },
+        {
+          kind: "outcome",
+          identifier: "SCORE",
+          cardinality: "single",
+          baseType: "float",
+          value: single("float", 0),
+          view: ["candidate", "scorer"],
+          normalMaximum: 1,
+          externalScored: "human",
+          variableIdentifierRef: "RESPONSE",
+        },
+      ],
+      candidateComment: "Unsure",
+      supports: [{ name: "spoken", assignment: "assigned" }],
+    },
+    {
+      identifier: "i2",
+      sequenceIndex: 2,
+      datestamp: DATESTAMP,
+      sessionStatus: "pendingExternalScoring",
+      variables: [
+        {
+          kind: "response",
+          identifier: "PAIRS",
+          cardinality: "multiple",
+          baseType: "pair",
+          candidateResponse: container("multiple", "pair", [
+            ["A", "B"],
+            ["C", "D"],
+          ]),
+          extensions: [],
+        },
+        {
+          kind: "response",
+          identifier: "NOTHING",
+          cardinality: "single",
+          baseType: "string",
+          candidateResponse: null,
+          extensions: [],
+        },
+        {
+          kind: "outcome",
+          identifier: "DETAIL",
+          cardinality: "record",
+          value: record([
+            ["points", single("float", 1.5)],
+            ["label", { cardinality: "single", baseType: "string", value: "ok" }],
+          ]),
+        },
+      ],
+      supports: [],
+    },
+  ],
+};
+
+/** The same result in the JSON of the binding (https://www.imsglobal.org/spec/cat/v1p0/bind, §5.2.8, §5.3, §6.11). */
+const RESULT_JSON = {
+  context: {
+    sourcedId: "candidate1",
+    sessionIdentifiers: [{ sourceID: "https://delivery.example", identifier: "session1" }],
+  },
+  testResult: {
+    identifier: "test1",
+    datestamp: DATESTAMP,
+    responseVariables: [],
+    templateVariables: [],
+    outcomeVariables: [{ identifier: "TOTAL", cardinality: "single", baseType: "float", value: [{ value: "1" }] }],
+  },
+  itemResult: [
+    {
+      identifier: "i1",
+      sequenceIndex: 1,
+      datestamp: DATESTAMP,
+      sessionStatus: "final",
+      responseVariables: [
+        {
+          identifier: "RESPONSE",
+          cardinality: "single",
+          baseType: "identifier",
+          choiceSequence: ["B", "A"],
+          correctResponse: { interpretation: "The capital", value: [{ value: "A" }] },
+          candidateResponse: { value: [{ value: "B" }] },
+        },
+      ],
+      templateVariables: [{ identifier: "N", cardinality: "single", baseType: "integer", value: [{ value: "4" }] }],
+      outcomeVariables: [
+        {
+          identifier: "SCORE",
+          cardinality: "single",
+          baseType: "float",
+          view: ["candidate", "scorer"],
+          normalMaximum: 1,
+          value: [{ value: "0" }],
+        },
+      ],
+      candidateComment: "Unsure",
+    },
+    {
+      identifier: "i2",
+      sequenceIndex: 2,
+      datestamp: DATESTAMP,
+      sessionStatus: "pendingResponseProcessing",
+      responseVariables: [
+        {
+          identifier: "PAIRS",
+          cardinality: "multiple",
+          baseType: "pair",
+          candidateResponse: { value: [{ value: "A B" }, { value: "C D" }] },
+        },
+        { identifier: "NOTHING", cardinality: "single", baseType: "string", candidateResponse: { value: [] } },
+      ],
+      templateVariables: [],
+      outcomeVariables: [
+        {
+          identifier: "DETAIL",
+          cardinality: "record",
+          value: [
+            { fieldIdentifier: "points", baseType: "float", value: "1.5" },
+            { fieldIdentifier: "label", baseType: "string", value: "ok" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson", () => {
+  it("[C9][G21] writes an assessment result in the JSON of the binding: itemResult, sourceID, and the three lists of variables", () => {
+    expect(JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)))).toEqual(RESULT_JSON);
+  });
+
+  it("[C9][G21] writes NULL as the absence of a value, and the status that waits for external scoring as pending processing", () => {
+    const written = JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)));
+    expect(written.itemResult[1].responseVariables[1].candidateResponse).toEqual({ value: [] });
+    expect(written.itemResult[1].sessionStatus).toBe("pendingResponseProcessing");
+    expect(JSON.stringify(written)).not.toContain("externalScored");
+    expect(JSON.stringify(written)).not.toContain("LEVEL");
+  });
+
+  it("[C9][G21] reads the assessment result of an engine, with the lists of variables joined, and no context as no sessions", () => {
+    const read = assessmentResultFromJson({
+      testResult: {
+        identifier: "t",
+        datestamp: DATESTAMP,
+        outcomeVariables: [
+          {
+            identifier: "THETA",
+            cardinality: "single",
+            baseType: "float",
+            value: [{ value: "0.42" }],
+            interpretation: "Ability",
+            normalMinimum: -4,
+            view: ["tutor"],
+          },
+          { identifier: "SE", cardinality: "single", baseType: "float", value: [] },
+        ],
+      },
+      itemResult: [
+        {
+          identifier: "i1",
+          sequenceIndex: 3,
+          datestamp: DATESTAMP,
+          sessionStatus: "initial",
+          responseVariables: [
+            {
+              identifier: "R",
+              cardinality: "ordered",
+              baseType: "identifier",
+              candidateResponse: { value: [{ value: "B" }, { value: "A" }] },
+              correctResponse: { value: [{ value: "A" }, { value: "B" }] },
+              choiceSequence: ["B", "A"],
+            },
+          ],
+          templateVariables: [
+            {
+              identifier: "T",
+              cardinality: "record",
+              value: [{ fieldIdentifier: "f", baseType: "point", value: "1 2" }],
+            },
+          ],
+          candidateComment: "hi",
+        },
+      ],
+    });
+    expect(read).toEqual({
+      context: { sessionIdentifiers: [] },
+      testResult: {
+        identifier: "t",
+        datestamp: DATESTAMP,
+        variables: [
+          {
+            kind: "outcome",
+            identifier: "THETA",
+            cardinality: "single",
+            baseType: "float",
+            value: single("float", 0.42),
+            interpretation: "Ability",
+            normalMinimum: -4,
+            view: ["tutor"],
+          },
+          { kind: "outcome", identifier: "SE", cardinality: "single", baseType: "float", value: null },
+        ],
+        supports: [],
+      },
+      itemResults: [
+        {
+          identifier: "i1",
+          sequenceIndex: 3,
+          datestamp: DATESTAMP,
+          sessionStatus: "initial",
+          variables: [
+            {
+              kind: "response",
+              identifier: "R",
+              cardinality: "ordered",
+              baseType: "identifier",
+              candidateResponse: container("ordered", "identifier", ["B", "A"]),
+              correctResponse: { value: container("ordered", "identifier", ["A", "B"]) },
+              choiceSequence: ["B", "A"],
+              extensions: [],
+            },
+            {
+              kind: "template",
+              identifier: "T",
+              cardinality: "record",
+              value: record([["f", single("point", [1, 2])]]),
+            },
+          ],
+          candidateComment: "hi",
+          supports: [],
+        },
+      ],
+    });
+  });
+
+  it("[C9][G21] reads the context of an engine with its source identifiers", () => {
+    const read = assessmentResultFromJson({
+      context: { sourcedId: "c1", sessionIdentifiers: [{ sourceID: "https://engine.example", identifier: "s1" }] },
+    });
+    expect(read).toEqual({
+      context: { sourcedId: "c1", sessionIdentifiers: [{ sourceId: "https://engine.example", identifier: "s1" }] },
+      itemResults: [],
+    });
+  });
+
+  it("[C9][G21] rejects a result of the wrong form", () => {
+    const variable = { identifier: "V", cardinality: "single", baseType: "float", value: [{ value: "1" }] };
+    const itemResult = { identifier: "i", datestamp: DATESTAMP, sessionStatus: "final" };
+    const withOutcome = (outcome: unknown): unknown => ({
+      itemResult: [{ ...itemResult, outcomeVariables: [outcome] }],
+    });
+    const rejects: readonly (readonly [unknown, RegExp])[] = [
+      [json("null"), /^The assessmentResult must be an object/],
+      [{ itemResult: "x" }, /^The itemResult of a result must be an array/],
+      [
+        { itemResult: [{ ...itemResult, sessionStatus: "done" }] },
+        /^The sessionStatus of an itemResult must be one of/,
+      ],
+      [
+        { itemResult: [{ ...itemResult, sequenceIndex: -1 }] },
+        /^The sequenceIndex of an itemResult must be a non-negative integer/,
+      ],
+      [{ itemResult: [{ identifier: "", datestamp: DATESTAMP }] }, /^The identifier of an itemResult/],
+      [{ testResult: { identifier: "t" } }, /^The datestamp of the testResult/],
+      [{ context: { sessionIdentifiers: [{ identifier: "s" }] } }, /^The sourceID of a session identifier/],
+      [withOutcome({ ...variable, cardinality: "many" }), /^The cardinality of the outcome variable "V" must be/],
+      [
+        withOutcome({ ...variable, baseType: "number" }),
+        /^The baseType of the outcome variable "V" must be a base type/,
+      ],
+      [withOutcome({ ...variable, baseType: undefined }), /is required unless its cardinality is record/],
+      [
+        withOutcome({ ...variable, value: [{ value: "1" }, { value: "2" }] }),
+        /has the cardinality single and 2 values/,
+      ],
+      [withOutcome({ ...variable, value: [{ value: "one" }] }), /is not a float/],
+      [withOutcome({ ...variable, value: [{ value: 1 }] }), /^A value of the outcome variable "V" must be a string/],
+      [withOutcome({ ...variable, value: "1" }), /^The value of the outcome variable "V" must be an array/],
+      [withOutcome({ ...variable, view: ["everyone"] }), /^A view of the outcome variable "V" must be one of/],
+      [
+        withOutcome({ ...variable, normalMaximum: "1" }),
+        /^The normalMaximum of the outcome variable "V" must be a number/,
+      ],
+      [withOutcome({ ...variable, cardinality: "record", value: [{ value: "1" }] }), /^The fieldIdentifier of a field/],
+      [
+        withOutcome({ ...variable, cardinality: "record", value: [{ fieldIdentifier: "f", value: "1" }] }),
+        /^The baseType of a field/,
+      ],
+      [
+        withOutcome({
+          ...variable,
+          cardinality: "record",
+          value: [{ fieldIdentifier: "f", baseType: "string", value: "" }],
+        }),
+        /cannot be an empty string/,
+      ],
+      [withOutcome(5), /^The outcome variables must be objects/],
+      [
+        { itemResult: [{ ...itemResult, responseVariables: [{ ...variable, candidateResponse: 5 }] }] },
+        /^The candidateResponse of the response variable "V"/,
+      ],
+      [
+        {
+          itemResult: [
+            { ...itemResult, responseVariables: [{ ...variable, candidateResponse: {}, choiceSequence: [5] }] },
+          ],
+        },
+        /^A choice of the response variable "V" must be a string/,
+      ],
+      [
+        {
+          itemResult: [
+            { ...itemResult, responseVariables: [{ ...variable, candidateResponse: {}, correctResponse: 5 }] },
+          ],
+        },
+        /^The correctResponse of the response variable/,
+      ],
+    ];
+    for (const [result, message] of rejects) {
+      expect(() => assessmentResultFromJson(result), JSON.stringify(result)).toThrow(message);
+    }
+    expect(() => assessmentResultToJson(json("null"))).toThrow(DataError);
+    expect(() => assessmentResultToJson(json('{"context":{},"itemResults":"x"}'))).toThrow(DataError);
+  });
+
+  it("[C8] reads an item stage with absent or null fields as the stage that ends the session", () => {
+    expect(itemStageFromJson({}, "stage")).toEqual({ itemIdentifiers: null, stageLength: null });
+    expect(itemStageFromJson({ itemIdentifiers: null, stageLength: null }, "stage")).toEqual({
+      itemIdentifiers: null,
+      stageLength: null,
+    });
+    expect(itemStageFromJson({ itemIdentifiers: ["a"], stageLength: 1 }, "stage")).toEqual({
+      itemIdentifiers: ["a"],
+      stageLength: 1,
+    });
+    expect(() => itemStageFromJson({ stageLength: -1 }, "stage")).toThrow(/^The stageLength of the stage/);
+    expect(() => itemStageFromJson(json("[]"), "stage")).toThrow(DataError);
+  });
+});
+
 describe("CatPort", () => {
   it("[C1][C2][C7][U10] deploys the section data of the files, and the pool Get Section returns agrees with the section", async () => {
     const engine = new ScriptedEngine();
@@ -450,7 +833,7 @@ describe("CatPort", () => {
     expect(engine.submitted[0]?.sessionState).toBe("state-1");
   });
 
-  it("[C9][G21] carries the typed Assessment Result of the minimal report unchanged: the REST adapter serializes it", async () => {
+  it("[C9][G21] carries the typed Assessment Result of the minimal report unchanged: the JSON form is a codec apart", async () => {
     const engine = new ScriptedEngine();
     await engine.submitResults(PREFIX, "S1", "T1", { assessmentResult: MINIMAL_REPORT });
     expect(engine.submitted[0]?.assessmentResult).toBe(MINIMAL_REPORT);

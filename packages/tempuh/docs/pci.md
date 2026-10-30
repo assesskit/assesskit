@@ -126,7 +126,7 @@ of olah's codec are synchronous, so the host's storage, which is not, is used in
 Promise<FileValue> }`.
 
 A response is untrusted until `decodePciValue` has read it. JSON that is not a value of the declaration of the response
-variable, or a file whose data is not base64, is dropped: the player delivers no event for it, and stores nothing. The
+variable, or a file whose data is not canonical base64 (RFC 4648 §4), is dropped: the player delivers no event for it, and stores nothing. The
 events keep the order in which the frame sent them, although storing files takes time.
 
 ## Loading

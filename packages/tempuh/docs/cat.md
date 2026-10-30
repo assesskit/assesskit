@@ -1,18 +1,22 @@
 # CAT
 
-`@luthfanwakan/tempuh/cat` implements olah's `CatPort`, the six requests of a CAT 1.0 engine, for the server. olah makes no
-network request and runs no CAT algorithm; tempuh supplies the engines it calls. It runs on any server runtime.
+tempuh implements olah's `CatPort`, the six requests of a CAT 1.0 engine, for the server. olah makes no network request and
+runs no CAT algorithm; tempuh supplies the engines it calls. It runs on any server runtime.
 
-| Export                                                        | Purpose                                                                                      |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `takarCatPort(options)`                                       | An engine in process for item-level adaptive sections, over takar's `adaptiveTest`.          |
-| `takarPanelPort(options)`                                     | An engine in process for calibrated multistage panels, over takar's `multistageTest`.        |
-| `restCatPort(options)`                                        | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                          |
-| `deployCatSections(pkg, port)`                                | Creates the sections of a package's adaptive selections at the engine and checks their pool. |
-| `SectionStore`, `StoredSection`                               | The host's storage of the sections that the two takar ports parse.                           |
-| `PanelParameters`, `CategoryOfOutcomes`, `DeployedCatSection` | The arguments and results of the above.                                                      |
-| `CatFetch`, `CatFetchRequest`, `CatFetchResponse`             | The part of `fetch` that `restCatPort` uses.                                                 |
-| `OAuthClientCredentials`                                      | The client credentials with which `restCatPort` asks for a token.                            |
+| Subpath                          | Export                                            | Purpose                                                                                          |
+| -------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `@luthfanwakan/tempuh/cat`       | `restCatPort(options)`                            | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                              |
+| `@luthfanwakan/tempuh/cat`       | `deployCatSections(pkg, port)`                    | Creates the sections of a package's adaptive selections at the engine and checks their pool.     |
+| `@luthfanwakan/tempuh/cat`       | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `restCatPort` uses.                                                     |
+| `@luthfanwakan/tempuh/cat`       | `OAuthClientCredentials`, `DeployedCatSection`    | The client credentials with which `restCatPort` asks for a token, and what a deployment returns. |
+| `@luthfanwakan/tempuh/cat/takar` | `takarCatPort(options)`                           | An engine in process for item-level adaptive sections, over takar's `adaptiveTest`.              |
+| `@luthfanwakan/tempuh/cat/takar` | `takarPanelPort(options)`                         | An engine in process for calibrated multistage panels, over takar's `multistageTest`.            |
+| `@luthfanwakan/tempuh/cat/takar` | `SectionStore`, `StoredSection`                   | The host's storage of the sections that the two takar ports parse.                               |
+| `@luthfanwakan/tempuh/cat/takar` | `PanelParameters`, `CategoryOfOutcomes`           | The arguments of the two takar ports.                                                            |
+
+takar is an optional peer dependency. A host that uses the ports in process installs `@luthfanwakan/takar` (version 1 or
+later) and imports `@luthfanwakan/tempuh/cat/takar`; `@luthfanwakan/tempuh/cat`, with the REST port and the deployment,
+loads no module of takar, so a host without takar imports every subpath of tempuh.
 
 The delivery engine of olah makes the session requests (`drainCat`). A host deploys once, then gives the port and the map
 that `deployCatSections` returns to the delivery:
@@ -20,7 +24,7 @@ that `deployCatSections` returns to the delivery:
 ```ts
 import { Buffer } from "node:buffer";
 import { writeUsageData } from "@luthfanwakan/olah/usage";
-import { type SectionStore, takarCatPort } from "@luthfanwakan/tempuh/cat";
+import { type SectionStore, takarCatPort } from "@luthfanwakan/tempuh/cat/takar";
 
 const kept = new Map<string, string>();
 const sections: SectionStore = {
@@ -60,7 +64,7 @@ created.nextItems; // { itemIdentifiers: ["q1"], stageLength: 1 }
 
 ## Sections
 
-A section is the configuration of an adaptive selection. The ports read the three files of its section data (CAT §4.1):
+A section is the configuration of an adaptive selection. The takar ports read the three files of its section data (CAT §4.1):
 the settings, the usage data and the metadata.
 
 - **Identifier.** A section is named by the SHA-256, in lowercase hexadecimal, of the UTF-8 JSON array
@@ -160,7 +164,8 @@ hands the `sessionState` back with each request:
 ```ts
 import { createEngine, drainCat } from "@luthfanwakan/olah/delivery";
 import { packageResolvers, type QtiPackage } from "@luthfanwakan/olah/package";
-import { deployCatSections, type SectionStore, takarCatPort } from "@luthfanwakan/tempuh/cat";
+import { deployCatSections } from "@luthfanwakan/tempuh/cat";
+import { type SectionStore, takarCatPort } from "@luthfanwakan/tempuh/cat/takar";
 
 async function begin(pkg: QtiPackage, sections: SectionStore) {
   const port = takarCatPort({ sections, seeds: () => crypto.getRandomValues(new Uint32Array(1))[0] ?? 0 });
@@ -238,22 +243,15 @@ estimate. Every item of a module needs parameters in the usage data, which Creat
 
 ### JSON
 
-The names of the JSON are those of the binding (§5, Appendix B). olah's results are written and read as follows.
+The names of the JSON are those of the binding (§5, Appendix B). olah's `cat` module writes and reads the assessment result
+and the item stage (the JSON binding section of olah's CAT guide), and the port reads and writes the rest of the bodies:
 
-| olah                                         | Binding                                                                                             |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `itemResults`                                | `itemResult`                                                                                        |
-| `variables` of a result                      | `responseVariables`, `templateVariables`, `outcomeVariables`                                        |
-| `SessionIdentifier.sourceId`                 | `sourceID`                                                                                          |
-| `GetSectionResponse.sectionData` and `items` | `section` and `items`                                                                               |
-| `PriorDataEntry` `{ name, value }`           | `{ key, value }`; a value that is not text is its JSON                                              |
-| A value                                      | `value`: a list of `{ value }` in lexical form; a record's fields add `fieldIdentifier`, `baseType` |
-| NULL                                         | An empty `value` list                                                                               |
+| olah                                         | Binding                                                |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `GetSectionResponse.sectionData` and `items` | `section` and `items`                                  |
+| `PriorDataEntry` `{ name, value }`           | `{ key, value }`; a value that is not text is its JSON |
 
-The binding has no field for context variables, supports, `scoreStatus`, `answeredStatus`, `externalScored`,
-`variableIdentifierRef` and `outcomeInformation`, so they are left out. `pendingExternalScoring`, which the binding's
-`sessionStatus` lacks, is sent as `pendingResponseProcessing`. An engine may leave out the context of the result it returns
-(CAT §4.3.2); the port then supplies one without session identifiers.
+An engine may leave out the context of the result it returns (CAT §4.3.2); the result then has no session identifiers.
 
 ### Section metadata
 
@@ -277,7 +275,7 @@ validates the body rejects text where it expects an object. The metadata file of
 
 The binding's OpenAPI 3 file is named in Appendix B of the binding as
 `https://purl.imsglobal.org/cat/v1p0/schema/openapi/imscatv1p0_openapi3_v1p0.json`; that address does not serve the file. The
-listing in Appendix B1.2 of <https://www.imsglobal.org/spec/cat/v1p0/bind> is the text the port was written against.
+listing in Appendix B1.2 of <https://www.imsglobal.org/spec/cat/v1p0/bind> is the text the codec of olah was written against.
 
 ## deployCatSections
 
@@ -301,6 +299,8 @@ the sections made so far stay, and the `DataError` names the section at the engi
 | `DataError`    | An option or an argument has the wrong type, or section data, a `sessionState` or an engine's answer is malformed. |
 | `ServiceError` | The engine answers with a status other than 2xx, or with a body that is not JSON, or the token endpoint fails.     |
 
-Errors of olah (`ReadError` and `SecurityError` of the usage data and the package) and of takar pass through unchanged.
+Errors of olah pass through unchanged: `ReadError` and `SecurityError` of the usage data and the package, and the `DataError`
+of olah for an assessment result or an item stage of an answer that is not the JSON of the binding. The errors of takar pass
+through unchanged too.
 takar reports a section that cannot run, such as content targets without content areas or cut points that do not match the
 modules, when the section is created.

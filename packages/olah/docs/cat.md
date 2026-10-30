@@ -1,8 +1,9 @@
 # CAT
 
 `cat` is olah's side of computer adaptive testing (CAT 1.0), which QTI 3.0 references through `qti-adaptive-selection`: the
-port to a CAT engine, the models of its requests and responses, the section data that configures a section, the check of
-its item pool and the metadata file. It imports `asi`, `results` and `metadata` and runs in any JavaScript runtime. olah
+port to a CAT engine, the models of its requests and responses, the JSON form of the assessment result and the item stage,
+the section data that configures a section, the check of its item pool and the metadata file. It imports `values`, `asi`,
+`results` and `metadata` and runs in any JavaScript runtime. olah
 makes no network request and implements no CAT algorithm: the host implements `CatPort`, for example over an IRT library
 or over the REST API of CAT 1.0.
 
@@ -13,6 +14,8 @@ or over the REST API of CAT 1.0.
 | `isSessionEnd(stage)`                                                                            | Tells whether a stage, or a missing one, ends the session.                                  |
 | `checkPool(section, pool)`                                                                       | Compares the item references of an adaptive section with the pool that Get Section returns. |
 | `catMetadata(items, options?)`                                                                   | Builds the metadata JSON of CAT Appendix B from the QTI metadata of the items.              |
+| `assessmentResultToJson(result)`, `assessmentResultFromJson(json)`                               | Write and read an assessment result in the JSON of the public binding.                      |
+| `itemStageFromJson(json, noun)`                                                                  | Reads an item stage of the binding.                                                         |
 | `SectionData`, `ItemStage`, `PriorDataEntry`                                                     | The data types of CAT §4.                                                                   |
 | `CreateSectionResponse`, `GetSectionResponse`                                                    | The answers to Create Section and Get Section.                                              |
 | `CreateSessionRequest`, `CreateSessionResponse`, `SubmitResultsRequest`, `SubmitResultsResponse` | The bodies and answers of Create Session and Submit Results.                                |
@@ -90,14 +93,10 @@ sends a candidate's results there.
 - Create Section is not idempotent: the host makes it once and gives the returned identifier to the delivery definition.
 - A missing `sessionState` in an answer means there is none. A stateless engine sends one, and the next Submit Results
   request returns it unchanged (CAT §3.3, §3.4).
-- The REST binding is the adapter's concern. The port carries the typed `AssessmentResult` of [results](results.md), and olah
-  does not serialize it: the field names of the JSON binding are those of the OpenAPI 3.0 listing in Appendix B1.2 of the
-  [CAT binding](https://www.imsglobal.org/spec/cat/v1p0/bind), which an adapter writes (the OpenAPI addresses that the binding
-  names return 404, so the listing in the document is the source). The binding declares `datestamp` as `format: date-time`,
-  RFC 3339 with an offset, while an `xs:dateTime` of Results Reporting may lack one; the reports that the delivery engine builds
-  always have `Z`. An engine may leave out the context of the report it returns, which the model requires; the adapter then
-  supplies `{ sessionIdentifiers: [] }`.
-- Access tokens, OAuth and HTTPS (CAT §5) are the adapter's concern.
+- The port carries the typed `AssessmentResult` of [results](results.md). [JSON binding](#json-binding) writes and reads it in
+  the form of the public binding. The binding declares `datestamp` as `format: date-time`, RFC 3339 with an offset, while an
+  `xs:dateTime` of Results Reporting may lack one; the reports that the delivery engine builds always have `Z`.
+- The HTTP client, access tokens, OAuth and HTTPS (CAT §5) are the adapter's concern.
 
 ## Section data
 
@@ -140,6 +139,62 @@ side lists, first the item references and then the pool, each in list order.
 An adaptive section has no nested sections (CAT §2.3), so only the item references that are children count. The section must
 have its includes resolved, as `QtiPackage.document` has. An identifier counts once however often a side lists it.
 
+## JSON binding
+
+`assessmentResultToJson(result)` and `assessmentResultFromJson(json)` convert an assessment result to and from the JSON
+of the public REST binding of CAT 1.0 (<https://www.imsglobal.org/spec/cat/v1p0/bind>, §5 and Appendix B1.2). The OpenAPI
+files that the binding names do not serve, so its listing in Appendix B1.2 is the source of the field names.
+`itemStageFromJson(json, noun)` reads an item stage; `noun` names it in the error message, such as `nextItems of the
+answer`. The functions make no request: the adapter that talks to the engine owns the transport.
+
+| olah                         | Binding                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| `itemResults`                | `itemResult`                                                                                        |
+| `variables` of a result      | `responseVariables`, `templateVariables`, `outcomeVariables`                                        |
+| `SessionIdentifier.sourceId` | `sourceID`                                                                                          |
+| A value                      | `value`: a list of `{ value }` in lexical form; a record's fields add `fieldIdentifier`, `baseType` |
+| NULL                         | An empty `value` list                                                                               |
+
+- **Left out.** The binding has no field for context variables, supports, `scoreStatus`, `answeredStatus`,
+  `externalScored`, `variableIdentifierRef` and `outcomeInformation`, so `assessmentResultToJson` does not write them and
+  `assessmentResultFromJson` leaves them empty.
+- **Status.** The `sessionStatus` of the binding lacks `pendingExternalScoring`; it is written as
+  `pendingResponseProcessing`.
+- **Context.** An engine may leave out the context of the result it returns (CAT §4.3.2). The model requires one, so the
+  result then has no session identifiers.
+- **Order.** The three lists of variables are joined in the order responses, templates, outcomes.
+- **Stage.** `itemIdentifiers` and `stageLength` may be absent or `null`, which is the stage that ends the session (CAT
+  §4.2); they are read as `null`.
+
+```ts
+import { assessmentResultFromJson, assessmentResultToJson } from "@luthfanwakan/olah/cat";
+import { single } from "@luthfanwakan/olah/values";
+
+const result = {
+  context: { sessionIdentifiers: [{ sourceId: "https://delivery.example", identifier: "s1" }] },
+  itemResults: [
+    {
+      identifier: "q1",
+      sequenceIndex: 1,
+      datestamp: "2026-10-30T10:00:00Z",
+      sessionStatus: "final" as const,
+      variables: [
+        {
+          kind: "outcome" as const,
+          identifier: "SCORE",
+          cardinality: "single" as const,
+          baseType: "float" as const,
+          value: single("float", 1),
+        },
+      ],
+      supports: [],
+    },
+  ],
+};
+const json = assessmentResultToJson(result);
+assessmentResultFromJson(JSON.parse(JSON.stringify(json))).itemResults[0]?.identifier; // "q1"
+```
+
 ## Metadata JSON
 
 `catMetadata(items, options?)` builds the content of the file that `qti-metadata-ref` references, in the JSON binding of CAT
@@ -167,11 +222,11 @@ metadata XML); any other type is allowed by agreement. The content is bytes: ser
 | Construct                                                                                                 | Owner                                     |
 | --------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | The delivery of a session: when each request is made, the merge of the engine's outcomes into the results | `delivery`                                |
-| The REST and JSON binding, access tokens, OAuth, HTTPS (CAT §5)                                           | The adapter in tempuh                     |
+| The HTTP client of the REST binding, access tokens, OAuth, HTTPS (CAT §5)                                 | The adapter in tempuh                     |
 | `adaptiveItemSelection` inside the `selection` of QTI 2.x                                                 | QTI 2.x content, which olah does not read |
 | The algorithm that selects items                                                                          | The CAT engine                            |
 
 ## Errors
 
-All functions throw `DataError` for an argument of the wrong type, as plain JavaScript or JSON passes it; the messages say
-what is wrong and what is expected. Only `checkPool` returns `Issue`s, with the source `CAT §2.1, §2.2`.
+All functions throw `DataError` for an argument of the wrong type, as plain JavaScript or JSON passes it, and the readers
+of the binding for JSON that is not the binding's; the messages say what is wrong and what is expected. Only `checkPool` returns `Issue`s, with the source `CAT §2.1, §2.2`.

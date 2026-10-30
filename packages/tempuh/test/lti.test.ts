@@ -3,7 +3,6 @@ import { createHmac } from "node:crypto";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError, ServiceError } from "../src/index.js";
-import { decodeBase64Url, encodeBase64Url } from "../src/lti/base64url.js";
 import {
   type AccessTokenOptions,
   createJwksCache,
@@ -1614,60 +1613,6 @@ describe("ltiLogin", () => {
 });
 
 describe("properties", () => {
-  it("round-trips any bytes through base64url without padding", () => {
-    fc.assert(
-      fc.property(fc.uint8Array({ maxLength: 200 }), (bytes) => {
-        const text = encodeBase64Url(bytes);
-        expect(text).toMatch(/^[A-Za-z0-9_-]*$/u);
-        expect(decodeBase64Url(text)).toEqual(bytes);
-        expect(text).toBe(Buffer.from(bytes).toString("base64url"));
-      }),
-    );
-  });
-
-  it("decodes the base64 test vectors of RFC 4648 §10, in base64url without padding", () => {
-    const vectors = [
-      ["f", "Zg"],
-      ["fo", "Zm8"],
-      ["foo", "Zm9v"],
-      ["foob", "Zm9vYg"],
-      ["fooba", "Zm9vYmE"],
-      ["foobar", "Zm9vYmFy"],
-    ] as const;
-    for (const [text, encoded] of vectors) {
-      expect(encodeBase64Url(new TextEncoder().encode(text)), text).toBe(encoded);
-      expect(new TextDecoder().decode(decodeBase64Url(encoded)), text).toBe(text);
-    }
-  });
-
-  it("decodes only the canonical spelling of bytes, in which the bits after the last byte are zero (RFC 4648 §3.5)", () => {
-    expect(decodeBase64Url("Zg")).toEqual(new Uint8Array([0x66]));
-    for (const spelling of ["Zh", "Zi", "Zj", "Zm9", "Zm-", "Zm_"]) {
-      expect(decodeBase64Url(spelling), spelling).toBeUndefined();
-    }
-    expect(decodeBase64Url("Zm8")).toEqual(new Uint8Array([0x66, 0x6f]));
-  });
-
-  it("decodes only text that is canonical base64url", () => {
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    /** Whether the bits of the last character that stand for no byte are zero: 4 bits after one byte, 2 after two. */
-    const canonical = (text: string): boolean => {
-      const unused = text.length % 4 === 2 ? 0b1111 : text.length % 4 === 3 ? 0b11 : 0;
-      return (alphabet.indexOf(text.at(-1) ?? "A") & unused) === 0;
-    };
-    fc.assert(
-      fc.property(fc.string({ maxLength: 40 }), (text) => {
-        const valid = /^[A-Za-z0-9_-]*$/u.test(text) && text.length % 4 !== 1 && canonical(text);
-        expect(decodeBase64Url(text) !== undefined).toBe(valid);
-      }),
-    );
-    fc.assert(
-      fc.property(fc.stringMatching(/^[A-Za-z0-9_-]{1,40}$/u), (text) => {
-        expect(decodeBase64Url(text) !== undefined).toBe(text.length % 4 !== 1 && canonical(text));
-      }),
-    );
-  });
-
   it("signs any claims so that they decode and verify with the public key, and with no other", async () => {
     await fc.assert(
       fc.asyncProperty(fc.dictionary(fc.string({ maxLength: 12 }), fc.jsonValue()), async (claims) => {

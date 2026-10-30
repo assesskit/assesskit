@@ -4,7 +4,9 @@
  *
  * @module @luthfanwakan/olah/values
  */
+
 export { BASE_TYPES, type BaseType, isBaseType } from "./base-type.js";
+export { decodeBase64, decodeBase64Url, encodeBase64, encodeBase64Url } from "./base64.js";
 export { CARDINALITIES, type Cardinality, isCardinality } from "./cardinality.js";
 export { parseIsoDuration } from "./duration.js";
 export { isIdentifier } from "./identifier.js";

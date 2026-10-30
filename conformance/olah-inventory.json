@@ -5550,7 +5550,7 @@
     },
     {
       "id": "C9",
-      "construct": "Assessment Result in the REST/JSON binding (`context`, `testResult`, `itemResult`); `datestamp` is `format: date-time`, RFC 3339 with an offset",
+      "construct": "Assessment Result in the JSON of the public CAT binding (`context`, `testResult`, `itemResult`, the three lists of variables), written and read by `cat`; `datestamp` is `format: date-time`, RFC 3339 with an offset",
       "source": "CAT §4.3, CAT binding Appendix B1.2",
       "modules": ["cat", "(types)"],
       "evidence": ["S"],
@@ -6328,7 +6328,7 @@
     },
     {
       "id": "G21",
-      "construct": "CAT REST/JSON field names of Assessment Result: public in the OpenAPI 3.0 listing of CAT binding Appendix B1.2, though the OpenAPI addresses that the binding names return 404",
+      "construct": "CAT REST/JSON field names of Assessment Result: the OpenAPI 3.0 listing of CAT binding Appendix B1.2 is their source, because the OpenAPI addresses that the binding names return 404",
       "source": "CAT §4.3, CAT binding Appendix B1.2",
       "modules": ["cat"],
       "evidence": ["S"],

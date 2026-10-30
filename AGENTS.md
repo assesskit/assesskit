@@ -143,7 +143,7 @@ olah owns everything QTI defines that is not presentation or platform; tempuh ow
 - Runtime dependencies are listed in `packages/olah/package.json`, pinned, and recorded in `SECURITY.md`.
 - A tempuh folder imports only the folders in its row of the table in
   [architecture.md](packages/tempuh/docs/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
-  of them. Biome enforces the rows. Only `cat/` imports takar, and `fetch` appears only as an option parameter.
+  of them. Biome enforces the rows. Only `cat/takar/` imports takar, and `fetch` appears only as an option parameter.
 - tempuh's shared folders use no DOM or Node, its browser folders no Node, and its server folders no DOM. Time comes from
   a clock that the caller passes: `Date.now` appears only in `client/clock.ts` and `server/clock.ts`.
 - Browser folders import from `@luthfanwakan/olah/delivery` only `viewFromJson`, `actionToJson` and types, because the

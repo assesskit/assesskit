@@ -25,11 +25,12 @@ The tool role of LTI 1.3 in `@luthfanwakan/tempuh/lti`: the third-party initiate
 platform's browser storage (LTI Client Side OIDC), the validation of the launch, a key set cache, the response to a Deep
 Linking request and the access token of the client-credentials grant.
 
-Computer adaptive testing on the server (`cat`): `takarCatPort` and `takarPanelPort` implement olah's `CatPort` in process over
-takar, for item-level adaptive sections and multistage panels, with the `SectionStore` of parsed sections and the
-`scalingConstant` of a bank on the normal-ogive metric. `restCatPort` speaks the REST/JSON binding of CAT 1.0 to one remote
+Computer adaptive testing on the server (`cat`): `restCatPort` speaks the REST/JSON binding of CAT 1.0 to one remote
 engine over HTTPS with OAuth 2.0 client credentials, and `deployCatSections` creates the sections of a package's adaptive
-selections at the engine and checks their pool. takar is a runtime dependency.
+selections at the engine and checks their pool. `takarCatPort` and `takarPanelPort` of `@luthfanwakan/tempuh/cat/takar`
+implement olah's `CatPort` in process over takar, for item-level adaptive sections and multistage panels, with the
+`SectionStore` of parsed sections and the `scalingConstant` of a bank on the normal-ogive metric. takar is an optional peer
+dependency that only that subpath loads.
 Mathematics and speech (`player`): `createMathTypesetter` typesets MathML with MathJax 4, which it loads from the host's URL
 when a root has an expression, adopts MathJax's styles into shadow roots and leaves expressions with elementary math to the
 browser. `buildSpeechRequest` reads a range of content into an SSML 1.1 document and plain text, applying SSML, `data-ssml`,

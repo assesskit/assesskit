@@ -1,4 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
+import { encodeBase64 } from "@luthfanwakan/olah/values";
 import { checkHttpsUrl, checkNonEmptyString, checkProperties, checkRecord, describe } from "../checks.js";
 import { ServiceError } from "../errors.js";
 
@@ -101,7 +102,8 @@ function parseBody(text: string, what: string, status: number): unknown {
  */
 export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOptions): RestClient {
   const { tokenUrl, clientId, clientSecret, scope } = credentials;
-  const basic = btoa(`${formEncode(clientId)}:${formEncode(clientSecret)}`);
+  // The form-encoded identifier and secret are ASCII (RFC 6749 §2.3.1), so their UTF-8 bytes are their characters.
+  const basic = encodeBase64(new TextEncoder().encode(`${formEncode(clientId)}:${formEncode(clientSecret)}`));
   let token: Promise<string> | undefined;
 
   const requestToken = async (): Promise<string> => {

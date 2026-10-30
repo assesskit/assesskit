@@ -1,6 +1,6 @@
 import type { webcrypto } from "node:crypto";
+import { decodeBase64Url, encodeBase64Url } from "@luthfanwakan/olah/values";
 import { isRecord } from "../../checks.js";
-import { decodeBase64Url, encodeBase64Url, encodeTextBase64Url } from "../base64url.js";
 import type { Claims } from "../claims.js";
 
 const HMAC = { name: "HMAC" };
@@ -10,7 +10,7 @@ const HMAC = { name: "HMAC" };
  * so whoever holds it can read it. The `use` names what the token is for, and a token of one use is refused for another.
  */
 export async function sealToken(use: string, claims: Claims, key: webcrypto.CryptoKey): Promise<string> {
-  const payload = encodeTextBase64Url(JSON.stringify({ ...claims, use }));
+  const payload = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ ...claims, use })));
   const mac = await crypto.subtle.sign(HMAC, key, new TextEncoder().encode(payload));
   return `${payload}.${encodeBase64Url(new Uint8Array(mac))}`;
 }

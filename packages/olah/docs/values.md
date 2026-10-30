@@ -1,7 +1,7 @@
 # Values
 
 `values` holds the values of QTI variables: base types, cardinalities, NULL, lexical forms, equality and promotion, two
-JSON forms, and the regular expressions of XML Schema. It imports no other module and runs in any JavaScript runtime.
+JSON forms, base64 and base64url, and the regular expressions of XML Schema. It imports no other module and runs in any JavaScript runtime.
 
 ```ts
 import { container, matchValues, single } from "@luthfanwakan/olah/values";
@@ -152,6 +152,26 @@ fromJsonValue(json, declaration); // { cardinality: "single", baseType: "duratio
 
 toWireValue(null, { cardinality: "ordered", baseType: "point" });
 // { cardinality: "ordered", baseType: "point", value: null }
+```
+
+## Base64
+
+`encodeBase64` and `decodeBase64` convert bytes to and from base 64 with padding (RFC 4648 §4), the encoding of the files of
+CAT 1.0 and of the data of a file in the JSON of BPIG Appendix C. `encodeBase64Url` and `decodeBase64Url` use the URL and
+filename safe alphabet without padding (RFC 4648 §5), the form of the parts of a JWT (RFC 7515 §2). The decoders return
+`undefined` for a text that is not an encoding of bytes. Only the canonical encoding decodes (RFC 4648 §3.5): a text with a
+character outside the alphabet, wrong padding, a lone last digit, or bits after the last byte that are not zero is
+refused, so that one byte string has one spelling.
+
+```ts
+import { decodeBase64, decodeBase64Url, encodeBase64, encodeBase64Url } from "@luthfanwakan/olah/values";
+
+const bytes = new TextEncoder().encode("fo");
+encodeBase64(bytes); // "Zm8="
+encodeBase64Url(bytes); // "Zm8"
+decodeBase64("Zm8="); // Uint8Array [102, 111]
+decodeBase64("Zm9="); // undefined: the bits after the last byte are not zero
+decodeBase64Url("Zm8"); // Uint8Array [102, 111]
 ```
 
 ## Regular expressions

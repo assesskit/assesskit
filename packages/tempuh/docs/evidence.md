@@ -80,10 +80,12 @@ The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a po
 operates the tools by keyboard.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
-repository. The container needs network access to install the dependencies and the browsers:
+repository. The container needs network access to install the dependencies and the browsers. takar is a dev dependency of
+olah and tempuh, linked from `../../../takar/packages/takar`, so the container mounts the `takar` checkout beside the repository
+at `/takar`:
 
 ```bash
-docker run --rm --ipc=host --volume "$PWD":/src:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
+docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../takar":/takar:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
   pnpm schemas && pnpm exec playwright install chromium firefox webkit &&

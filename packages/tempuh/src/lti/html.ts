@@ -1,3 +1,5 @@
+import { encodeBase64 } from "@luthfanwakan/olah/values";
+
 /** Encodes text for an HTML attribute value or text. */
 export function escapeHtml(text: string): string {
   return text
@@ -20,7 +22,7 @@ export async function pagePolicy(script: string, formAction: string, frameAncest
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script)));
   const directives = [
     "default-src 'none'",
-    `script-src 'sha256-${btoa(String.fromCharCode(...digest))}'`,
+    `script-src 'sha256-${encodeBase64(digest)}'`,
     "base-uri 'none'",
     `form-action ${formAction}`,
   ];

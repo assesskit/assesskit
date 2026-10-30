@@ -1,9 +1,12 @@
-import type {
-  CatPort,
-  CreateSessionRequest,
-  CreateSessionResponse,
-  SectionData,
-  SubmitResultsResponse,
+import {
+  assessmentResultFromJson,
+  assessmentResultToJson,
+  type CatPort,
+  type CreateSessionRequest,
+  type CreateSessionResponse,
+  itemStageFromJson,
+  type SectionData,
+  type SubmitResultsResponse,
 } from "@luthfanwakan/olah/cat";
 import {
   checkArray,
@@ -19,8 +22,7 @@ import {
 } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type CatFetch, checkCredentials, createRestClient, type OAuthClientCredentials } from "./rest-client.js";
-import { assessmentResultFromJson, assessmentResultToJson, readStage } from "./rest-json.js";
-import { readSectionData } from "./section.js";
+import { readSectionData } from "./section-data.js";
 
 /** Options of {@link restCatPort}. */
 export interface RestCatPortOptions {
@@ -115,7 +117,7 @@ function readCreateSession(body: unknown): CreateSessionResponse {
     nextItems:
       body.nextItems === undefined
         ? { itemIdentifiers: [], stageLength: 0 }
-        : readStage(body.nextItems, `nextItems of ${label}`),
+        : itemStageFromJson(body.nextItems, `nextItems of ${label}`),
     ...optionalText(body, "sessionState", label),
   };
 }
@@ -127,7 +129,7 @@ function readSubmitResults(body: unknown): SubmitResultsResponse {
   return {
     ...(nextItems === undefined
       ? {}
-      : { nextItems: nextItems === null ? null : readStage(nextItems, `nextItems of ${label}`) }),
+      : { nextItems: nextItems === null ? null : itemStageFromJson(nextItems, `nextItems of ${label}`) }),
     ...(assessmentResult === undefined ? {} : { assessmentResult: assessmentResultFromJson(assessmentResult) }),
     ...optionalText(body, "sessionState", label),
   };
@@ -197,7 +199,7 @@ export function restCatPort(options: RestCatPortOptions): CatPort {
       checkRecord(body, "The answer to Get Section must be an object");
       return {
         sectionData: readBindingSection(body.section),
-        items: readStage(body.items, "items of the answer to Get Section"),
+        items: itemStageFromJson(body.items, "items of the answer to Get Section"),
       };
     },
 

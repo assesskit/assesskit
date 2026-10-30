@@ -1,5 +1,5 @@
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
-import { encodeBase64Url } from "../base64url.js";
+import { encodeBase64Url } from "@luthfanwakan/olah/values";
 
 /**
  * Returns the identifier of the resource link of an item instance of a session: stable for the instance, different for

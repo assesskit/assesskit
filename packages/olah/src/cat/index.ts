@@ -1,6 +1,7 @@
 /**
- * Computer adaptive testing (CAT 1.0): the port to a CAT engine, the models of its requests and responses, the section
- * data of an adaptive section, the check of its item pool and the metadata file for the engine.
+ * Computer adaptive testing (CAT 1.0): the port to a CAT engine, the models of its requests and responses, the JSON form
+ * of the assessment result and the item stage in the public binding, the section data of an adaptive section, the check
+ * of its item pool and the metadata file for the engine.
  *
  * @module @luthfanwakan/olah/cat
  */
@@ -15,6 +16,7 @@ export {
   catMetadata,
 } from "./item-metadata.js";
 export { isSessionEnd } from "./item-stage.js";
+export { assessmentResultFromJson, assessmentResultToJson, itemStageFromJson } from "./json.js";
 export type {
   CatResponse,
   CreateSectionResponse,

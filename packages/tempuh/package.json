@@ -44,6 +44,10 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./cat/takar": {
+      "types": "./dist/cat/takar/index.d.ts",
+      "default": "./dist/cat/takar/index.js"
+    },
     "./caliper": {
       "types": "./dist/caliper/index.d.ts",
       "default": "./dist/caliper/index.js"
@@ -76,10 +80,18 @@
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css ./recorder-worklet.js"
   },
   "dependencies": {
-    "@luthfanwakan/olah": "workspace:^",
+    "@luthfanwakan/olah": "workspace:^"
+  },
+  "peerDependencies": {
     "@luthfanwakan/takar": "^1.0.0"
   },
+  "peerDependenciesMeta": {
+    "@luthfanwakan/takar": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@luthfanwakan/takar": "link:../../../takar/packages/takar",
     "axe-core": "^4.14.0",
     "esbuild": "0.28.2",
     "fast-check": "^4.10.2",

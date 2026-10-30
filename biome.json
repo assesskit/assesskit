@@ -960,7 +960,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -988,7 +988,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1016,7 +1016,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1061,7 +1061,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1104,7 +1104,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1149,7 +1149,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1194,7 +1194,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1239,7 +1239,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1284,7 +1284,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1335,6 +1335,47 @@
       }
     },
     {
+      "includes": ["packages/tempuh/src/cat/**", "!packages/tempuh/src/cat/takar/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/player",
+                      "**/player/**",
+                      "**/client",
+                      "**/client/**",
+                      "**/scoring",
+                      "**/scoring/**",
+                      "**/caliper",
+                      "**/caliper/**",
+                      "**/lti",
+                      "**/lti/**",
+                      "**/server",
+                      "**/server/**"
+                    ],
+                    "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["../**/olah/**"],
+                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                  },
+                  {
+                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**", "**/takar", "**/takar/**"],
+                    "message": "Only cat/takar/ imports takar, so that a host without takar can import the rest of tempuh."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/tempuh/src/lti/**"],
       "linter": {
         "rules": {
@@ -1366,7 +1407,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }
@@ -1394,7 +1435,7 @@
                   },
                   {
                     "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/ imports takar."
+                    "message": "Only cat/takar/ imports takar."
                   }
                 ]
               }

@@ -1,15 +1,15 @@
 import type { SectionData } from "@luthfanwakan/olah/cat";
+import { decodeBase64 } from "@luthfanwakan/olah/values";
 import {
   checkArray,
   checkNonEmptyString,
   checkPositiveInteger,
   checkProperties,
   checkRecord,
-  checkString,
   describe,
-} from "../checks.js";
-import { DataError } from "../errors.js";
-import { decodeBase64, readJson, toHex } from "./encoding.js";
+} from "../../checks.js";
+import { DataError } from "../../errors.js";
+import { readSectionData } from "../section-data.js";
 import type { StoredAdaptiveSection, StoredItem, StoredModule, StoredPanelSection } from "./section-store.js";
 import { readItems } from "./usage.js";
 
@@ -29,7 +29,35 @@ interface SectionParts {
   readonly items: readonly StoredItem[];
 }
 
-const SECTION_DATA_PROPERTIES = ["sectionConfiguration", "qtiUsagedata", "qtiMetadata"];
+const HEX_RADIX = 16;
+const HEX_DIGITS_PER_BYTE = 2;
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(HEX_RADIX).padStart(HEX_DIGITS_PER_BYTE, "0")).join("");
+}
+
+/** Decodes the base64 text of a file of the section data (CAT §4.1) to its bytes. */
+function readFile(encoded: string, label: string): Uint8Array {
+  const bytes = decodeBase64(encoded);
+  if (bytes === undefined) throw new DataError(`${label} must be base64 text (RFC 4648), found text that is not.`);
+  return bytes;
+}
+
+/** Reads a file of the section data as UTF-8 JSON. */
+function readJson(encoded: string, label: string): unknown {
+  const bytes = readFile(encoded, label);
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new DataError(`${label} must be UTF-8 text, found bytes that are not.`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new DataError(`${label} must be JSON text, found text that is not.`);
+  }
+}
 
 /**
  * Returns the content-addressed identifier of section data: the SHA-256, in lowercase hexadecimal, of the UTF-8 JSON array
@@ -42,26 +70,6 @@ export async function sectionIdentifier(data: SectionData): Promise<string> {
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))));
 }
 
-/**
- * Checks section data, as a host passes it from JavaScript, and returns a copy that has only its fields.
- *
- * @throws `DataError` when it is not an object with the base64 text `sectionConfiguration` and, optionally, the base64
- * text `qtiUsagedata` and `qtiMetadata`.
- */
-export function readSectionData(data: unknown): SectionData {
-  checkRecord(data, "The section data must be an object");
-  checkProperties(data, "The section data", SECTION_DATA_PROPERTIES);
-  const { sectionConfiguration, qtiUsagedata, qtiMetadata } = data;
-  checkString(sectionConfiguration, "The sectionConfiguration of the section data");
-  if (qtiUsagedata !== undefined) checkString(qtiUsagedata, "The qtiUsagedata of the section data");
-  if (qtiMetadata !== undefined) checkString(qtiMetadata, "The qtiMetadata of the section data");
-  return {
-    sectionConfiguration,
-    ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
-    ...(qtiMetadata === undefined ? {} : { qtiMetadata }),
-  };
-}
-
 async function readParts(input: unknown): Promise<SectionParts> {
   const data = readSectionData(input);
   const { sectionConfiguration, qtiUsagedata } = data;
@@ -69,8 +77,7 @@ async function readParts(input: unknown): Promise<SectionParts> {
     identifier: await sectionIdentifier(data),
     data,
     settings: readJson(sectionConfiguration, "The sectionConfiguration of the section data"),
-    items:
-      qtiUsagedata === undefined ? [] : readItems(decodeBase64(qtiUsagedata, "The qtiUsagedata of the section data")),
+    items: qtiUsagedata === undefined ? [] : readItems(readFile(qtiUsagedata, "The qtiUsagedata of the section data")),
   };
 }
 

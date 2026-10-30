@@ -122,7 +122,9 @@ const platform = {
 const takar = {
   inPlayer: source(`${SRC}/player/takar.ts`, ['export * from "@luthfanwakan/takar/cat";']),
   inServer: source(`${SRC}/server/takar.ts`, ['export * from "@luthfanwakan/takar";']),
-  inCat: source(`${SRC}/cat/takar.ts`, ['export * from "@luthfanwakan/takar/cat";']),
+  inCat: source(`${SRC}/cat/engine.ts`, ['export * from "@luthfanwakan/takar/cat";']),
+  inCatFolder: source(`${SRC}/cat/ports.ts`, ['export * from "./takar/index.js";']),
+  inCatTakar: source(`${SRC}/cat/takar/engine.ts`, ['export * from "@luthfanwakan/takar/cat";']),
 };
 const official = {
   inPlayer: source(`${SRC}/player/official.ts`, ['export * from "../protocol/official.js";']),
@@ -263,10 +265,12 @@ describe("layering", () => {
     expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([2, 4]);
   });
 
-  it("lets only cat/ import takar", () => {
+  it("lets only cat/takar/ import takar, and the rest of cat/ not even import cat/takar/", () => {
     expect(whatFor(takar.inPlayer)).toContain(RESTRICTED_IMPORT);
     expect(whatFor(takar.inServer)).toContain(RESTRICTED_IMPORT);
-    expect(whatFor(takar.inCat)).not.toContain(RESTRICTED_IMPORT);
+    expect(whatFor(takar.inCat)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(takar.inCatFolder)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(takar.inCatTakar)).not.toContain(RESTRICTED_IMPORT);
   });
 
   it("[T67] lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {

@@ -1,6 +1,6 @@
 import type { SectionData } from "@luthfanwakan/olah/cat";
-import { checkRecord, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { checkRecord, describe } from "../../checks.js";
+import { DataError } from "../../errors.js";
 
 /**
  * The parameters of one item of the usage data, as the item bank states them: the discrimination `a`, the difficulty

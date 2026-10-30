@@ -806,7 +806,7 @@
       "id": "T99",
       "construct": "Item-level CAT over takar, stateless through `sessionState`",
       "olah": ["N5", "C1–C8"],
-      "modules": ["cat/"],
+      "modules": ["cat/takar/"],
       "evidence": ["U", "P", "E"],
       "unit": "TB12"
     },
@@ -814,13 +814,13 @@
       "id": "T100",
       "construct": "Calibrated panels over takar, theta routing",
       "olah": ["N5"],
-      "modules": ["cat/"],
+      "modules": ["cat/takar/"],
       "evidence": ["U", "P"],
       "unit": "TB12"
     },
     {
       "id": "T101",
-      "construct": "CAT REST client: OAuth 2, HTTPS, JSON binding [U]",
+      "construct": "CAT REST client: OAuth 2, HTTPS, the JSON binding through olah's codec [U]",
       "olah": ["C9", "C12", "G21"],
       "modules": ["cat/"],
       "evidence": ["F", "L"],

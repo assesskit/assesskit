@@ -163,8 +163,8 @@ place only.
 
 `takarCatPort` and `takarPanelPort` run in process and send nothing. The session seed travels in the `sessionState`, which
 olah keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
-parameters of the items and the settings of the test: keep it on the server. takar is a runtime dependency of tempuh, and
-only `cat/` imports it.
+parameters of the items and the settings of the test: keep it on the server. takar is an optional peer dependency of
+tempuh, and only `cat/takar/` imports it.
 
 ## tempuh: Caliper
 

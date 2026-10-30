@@ -1,4 +1,4 @@
-import { encodeBase64Url } from "./base64url.js";
+import { encodeBase64Url } from "@luthfanwakan/olah/values";
 
 // RFC 6749 §10.10: the probability of guessing a credential must be at most 2^-128 and should be at most 2^-160.
 const RANDOM_BYTES = 20;

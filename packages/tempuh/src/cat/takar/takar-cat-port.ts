@@ -15,8 +15,8 @@ import {
   checkRecord,
   checkString,
   describe,
-} from "../checks.js";
-import { DataError } from "../errors.js";
+} from "../../checks.js";
+import { DataError } from "../../errors.js";
 import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
 import { type CategoryOfOutcomes, responseTo, scoreCategory } from "./response.js";
 import { readAdaptiveSection } from "./section.js";

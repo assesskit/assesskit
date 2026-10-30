@@ -6,8 +6,8 @@ import {
   multistageTest,
 } from "@luthfanwakan/takar/cat";
 import type { TestItem } from "@luthfanwakan/takar/irt";
-import { checkFunction, checkPositive, checkProperties, checkRecord, checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { checkFunction, checkPositive, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
+import { DataError } from "../../errors.js";
 import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
 import { responseTo, scoreCategory } from "./response.js";
 import { readPanelSection } from "./section.js";

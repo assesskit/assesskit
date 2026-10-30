@@ -121,7 +121,7 @@
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
   },
   "devDependencies": {
-    "@luthfanwakan/takar": "^1.0.0",
+    "@luthfanwakan/takar": "link:../../../takar/packages/takar",
     "fast-check": "^4.10.2"
   },
   "dependencies": {

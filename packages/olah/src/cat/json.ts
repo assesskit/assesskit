@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
-import type { ItemStage } from "@luthfanwakan/olah/cat";
+import { checkArray, checkNonNegativeInteger, checkRecord, checkString, describe } from "../checks.js";
+import { DataError } from "../errors.js";
 import {
   type AssessmentResult,
   type ItemResult,
@@ -14,7 +15,7 @@ import {
   type SessionStatus,
   type TemplateVariable,
   type TestResult,
-} from "@luthfanwakan/olah/results";
+} from "../results/index.js";
 import {
   type BaseType,
   container,
@@ -26,19 +27,19 @@ import {
   type SingleValue,
   single,
   type Value,
-} from "@luthfanwakan/olah/values";
-import {
-  checkArray,
-  checkNonEmptyString,
-  checkNonNegativeInteger,
-  checkRecord,
-  checkString,
-  describe,
-} from "../checks.js";
-import { DataError } from "../errors.js";
+} from "../values/index.js";
+import { checkStage } from "./item-stage.js";
+import type { ItemStage } from "./model.js";
 
-// The REST/JSON binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind, §5 and Appendix B). Its field names
-// differ from olah's model in `sourceID`, `itemResult` and the three lists of variables of a result.
+// The JSON of the public binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind, §5 and Appendix B1.2). Its
+// field names differ from olah's model in `sourceID`, `itemResult` and the three lists of variables of a result.
+
+/** Checks that a value is a string of at least one character, such as an identifier. */
+function checkNonEmptyString(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || value === "") {
+    throw new DataError(`${label} must be a non-empty string, found ${describe(value)}.`);
+  }
+}
 
 /** The `sessionStatus` terms of the binding: those of QTI 2.2 Results Reporting, without `pendingExternalScoring`. */
 const BINDING_STATUSES: readonly SessionStatus[] = [
@@ -424,19 +425,12 @@ export function assessmentResultFromJson(json: unknown): AssessmentResult {
  * Reads an item stage that a CAT engine returned: `itemIdentifiers` and `stageLength`, each of which may be absent or
  * `null`, as CAT §4.2 allows for a stage that ends the session.
  *
- * @param noun - Names the stage in the error message, such as `nextItems of the answer` for `The nextItems of the answer must
- * be an object`.
+ * @param noun - Names the stage in the error message, such as `nextItems of the answer` for `The nextItems of the answer
+ * must be an object`.
  * @throws `DataError` when it is not an item stage.
  */
-export function readStage(json: unknown, noun: string): ItemStage {
-  checkRecord(json, `The ${noun} must be an object`);
+export function itemStageFromJson(json: unknown, noun: string): ItemStage {
+  checkStage(json, noun);
   const { itemIdentifiers = null, stageLength = null } = json;
-  if (stageLength !== null) checkNonNegativeInteger(stageLength, `The stageLength of the ${noun}`);
-  return {
-    itemIdentifiers:
-      itemIdentifiers === null
-        ? null
-        : readStrings(itemIdentifiers, `The itemIdentifiers of the ${noun}`, `An item identifier of the ${noun}`),
-    stageLength,
-  };
+  return { itemIdentifiers, stageLength };
 }

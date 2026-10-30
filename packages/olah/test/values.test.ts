@@ -1,4 +1,5 @@
 // cspell:ignore directedpair xabc Marksfor ffffd fffd ffffe Isbasic letrec Approximative
+import { Buffer } from "node:buffer";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { DataError } from "../src/index.js";
@@ -10,6 +11,10 @@ import {
   compileXsdRegex,
   container,
   DEFAULT_XSD_REGEX_LIMITS,
+  decodeBase64,
+  decodeBase64Url,
+  encodeBase64,
+  encodeBase64Url,
   formatIdentifierList,
   formatIntegerList,
   formatPrimitive,
@@ -98,6 +103,80 @@ describe("base types", () => {
 
   it("[W13] rejects values that are not strings", () => {
     for (const other of NOT_STRINGS) expect(isBaseType(other)).toBe(false);
+  });
+});
+
+describe("base64 and base64url", () => {
+  // The test vectors of RFC 4648 §10, with the base64url of §5, which has no padding, beside them.
+  const Vectors: readonly (readonly [text: string, base64: string, base64url: string])[] = [
+    ["", "", ""],
+    ["f", "Zg==", "Zg"],
+    ["fo", "Zm8=", "Zm8"],
+    ["foo", "Zm9v", "Zm9v"],
+    ["foob", "Zm9vYg==", "Zm9vYg"],
+    ["fooba", "Zm9vYmE=", "Zm9vYmE"],
+    ["foobar", "Zm9vYmFy", "Zm9vYmFy"],
+  ];
+  const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text);
+
+  it.each(Vectors)("[C7] encodes %j as the vectors of RFC 4648 §10", (text, base64, base64url) => {
+    expect(encodeBase64(bytesOf(text))).toBe(base64);
+    expect(encodeBase64Url(bytesOf(text))).toBe(base64url);
+  });
+
+  it.each(Vectors)("[C7] decodes the vectors of RFC 4648 §10 to %j", (text, base64, base64url) => {
+    expect(decodeBase64(base64)).toEqual(bytesOf(text));
+    expect(decodeBase64Url(base64url)).toEqual(bytesOf(text));
+  });
+
+  it("[C7] writes the digits 62 and 63 as + and / in base64 and as - and _ in base64url (RFC 4648 §4, §5)", () => {
+    const bytes = Uint8Array.from([0xfb, 0xff, 0xbf]);
+    expect(encodeBase64(bytes)).toBe("+/+/");
+    expect(encodeBase64Url(bytes)).toBe("-_-_");
+    expect(decodeBase64("+/+/")).toEqual(bytes);
+    expect(decodeBase64Url("-_-_")).toEqual(bytes);
+  });
+
+  it("[C7] decodes only the canonical encoding of bytes (RFC 4648 §3.5)", () => {
+    const base64 = [
+      "Zh==", // bits after the last byte that are not zero: "f" is "Zg=="
+      "Zm9=", // the same after two bytes: "fo" is "Zm8="
+      "Zg", // padding missing
+      "Zg=", // padding too short
+      "Zg===", // padding too long, and the length is not a multiple of 4
+      "Z===", // a lone digit stands for no byte
+      "====",
+      "Zg=A", // padding in the middle
+      "Zm9v\n", // characters outside the alphabet
+      " Zm9v",
+      "Zm 9v",
+      "-_-_", // the alphabet of base64url
+      "Zm9é",
+    ];
+    for (const text of base64) expect(decodeBase64(text), JSON.stringify(text)).toBeUndefined();
+    const base64url = [
+      "Zh", // bits after the last byte that are not zero
+      "Zi",
+      "Zj",
+      "Zm9", // a base64url text of length 4k + 3 holds 2 bytes: "Zm8" is canonical
+      "Zm-",
+      "Zm_",
+      "Z", // a lone digit stands for no byte
+      "Zg==", // padding is not part of the text
+      "Zm9v\n",
+      "+/+/", // the alphabet of base64
+      "Zm9é",
+    ];
+    for (const text of base64url) expect(decodeBase64Url(text), JSON.stringify(text)).toBeUndefined();
+  });
+
+  it("[C7] rejects arguments of other types", () => {
+    expect(() => encodeBase64(json("[1]"))).toThrow(
+      new DataError("The bytes to encode must be a Uint8Array, found an array."),
+    );
+    expect(() => encodeBase64Url(json("null"))).toThrow(DataError);
+    expect(() => decodeBase64(json("5"))).toThrow(new DataError("The text to decode must be a string, found 5."));
+    expect(() => decodeBase64Url(json("null"))).toThrow(DataError);
   });
 });
 
@@ -1743,6 +1822,54 @@ describe("properties", () => {
     .map((fields) => nonNull(record(fields as [string, never][])));
   const value = fc.oneof(singleValue, containerValue, recordValue);
 
+  it("encodes any bytes as the base64 and base64url of Node.js and decodes them back", () => {
+    fc.assert(
+      fc.property(fc.uint8Array({ maxLength: 64 }), (bytes) => {
+        const expected = Buffer.from(bytes);
+        expect(encodeBase64(bytes)).toBe(expected.toString("base64"));
+        expect(encodeBase64Url(bytes)).toBe(expected.toString("base64url"));
+        expect(decodeBase64(encodeBase64(bytes))).toEqual(bytes);
+        expect(decodeBase64Url(encodeBase64Url(bytes))).toEqual(bytes);
+      }),
+      FUZZ,
+    );
+  });
+
+  it("decodes a text of the base64url alphabet exactly when the bits after its last byte are zero", () => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    /** Whether the bits of the last character that stand for no byte are zero: 4 bits after one byte, 2 after two. */
+    const canonical = (text: string): boolean => {
+      const unused = text.length % 4 === 2 ? 0b1111 : text.length % 4 === 3 ? 0b11 : 0;
+      return (alphabet.indexOf(text.at(-1) ?? "A") & unused) === 0;
+    };
+    fc.assert(
+      fc.property(fc.string({ maxLength: 40 }), (text) => {
+        const valid = /^[A-Za-z0-9_-]*$/u.test(text) && text.length % 4 !== 1 && canonical(text);
+        expect(decodeBase64Url(text) !== undefined).toBe(valid);
+      }),
+      FUZZ,
+    );
+    fc.assert(
+      fc.property(fc.stringMatching(/^[A-Za-z0-9_-]{1,40}$/u), (text) => {
+        expect(decodeBase64Url(text) !== undefined).toBe(text.length % 4 !== 1 && canonical(text));
+      }),
+      FUZZ,
+    );
+  });
+
+  it("decodes a text exactly when encoding the result gives the text back", () => {
+    const digits = fc.constantFrom(..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/-_=");
+    fc.assert(
+      fc.property(fc.array(digits, { maxLength: 12 }), (characters) => {
+        const text = characters.join("");
+        const bytes = decodeBase64(text);
+        expect(bytes === undefined || encodeBase64(bytes) === text).toBe(true);
+        const urlBytes = decodeBase64Url(text);
+        expect(urlBytes === undefined || encodeBase64Url(urlBytes) === text).toBe(true);
+      }),
+      FUZZ,
+    );
+  });
   it("[T12][T13][T14][T15] builds values of every cardinality and base type that match themselves", () => {
     fc.assert(
       fc.property(value, (built) => {

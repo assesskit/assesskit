@@ -1,6 +1,6 @@
 import { readUsageData, type TargetObject } from "@luthfanwakan/olah/usage";
-import { describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { describe } from "../../checks.js";
+import { DataError } from "../../errors.js";
 import type { StoredItem } from "./section-store.js";
 
 /** The item statistics that give the parameters of a logistic item, by the property of `StoredItem` they set (UD §2.8.2). */

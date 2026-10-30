@@ -1,7 +1,7 @@
 import type { webcrypto } from "node:crypto";
+import { decodeBase64Url, encodeBase64Url } from "@luthfanwakan/olah/values";
 import { describe, isRecord } from "../checks.js";
 import { LtiError } from "../errors.js";
-import { decodeBase64Url, encodeBase64Url, encodeTextBase64Url } from "./base64url.js";
 
 const RS256 = { name: "RSASSA-PKCS1-v1_5" };
 
@@ -95,8 +95,8 @@ export async function signJwt(
   key: webcrypto.CryptoKey,
   keyId: string,
 ): Promise<string> {
-  const header = encodeTextBase64Url(JSON.stringify({ alg: "RS256", typ: "JWT", kid: keyId }));
-  const signedPart = `${header}.${encodeTextBase64Url(JSON.stringify(claims))}`;
+  const header = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT", kid: keyId })));
+  const signedPart = `${header}.${encodeBase64Url(new TextEncoder().encode(JSON.stringify(claims)))}`;
   const signature = await crypto.subtle.sign(RS256, key, new TextEncoder().encode(signedPart));
   return `${signedPart}.${encodeBase64Url(new Uint8Array(signature))}`;
 }

@@ -1,8 +1,8 @@
 import type { AssessmentResult, ItemResult } from "@luthfanwakan/olah/results";
 import type { Value } from "@luthfanwakan/olah/values";
 import type { TestItem } from "@luthfanwakan/takar/irt";
-import { checkArray, checkRecord, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { checkArray, checkRecord, describe } from "../../checks.js";
+import { DataError } from "../../errors.js";
 
 /** The outcome that carries the score of an item (CAT §4.3.1). */
 const SCORE = "SCORE";
