@@ -18,6 +18,7 @@
   },
   "readme": "README.md",
   "excludePrivate": true,
+  "excludeProtected": true,
   "projectDocuments": ["docs/*.md"],
   "treatWarningsAsErrors": true
 }

@@ -129,4 +129,132 @@ export interface Messages {
   readonly hazardOlfactory: string;
   /** The name of simulated motion, a hazard that the candidate can avoid. */
   readonly hazardMotionSimulation: string;
+  /** The name of the area that holds the choices which are not placed yet. */
+  readonly boardChoices: string;
+  /** The name of one choice that shows no text, such as an image without an alternative; its number follows. */
+  readonly choiceLabel: string;
+  /** The label of the button that puts the chosen choice in a place. */
+  readonly boardPlaceHere: string;
+  /** The label of the button that takes a placed choice out of its place; the name of the choice follows it. */
+  readonly boardRemove: string;
+  /** The name of one place of an order; its number follows. */
+  readonly boardPosition: string;
+  /** The name of the area where the candidate puts the choices in order. */
+  readonly boardOrder: string;
+  /** The name of one pair of an association; its number follows. */
+  readonly boardPair: string;
+  /** The word that names the first choice of a pair. */
+  readonly boardFirst: string;
+  /** The word that names the second choice of a pair. */
+  readonly boardSecond: string;
+  /** The name of one gap in a text; its number follows. */
+  readonly boardGap: string;
+  /** What is announced after the name of a choice that the candidate picked up. */
+  readonly boardSelected: string;
+  /** What is announced between the name of a choice and the name of the place it was put in. */
+  readonly boardPlaced: string;
+  /** What is announced after the name of a choice that the candidate took out of its place. */
+  readonly boardRemoved: string;
+  /** What is announced when the candidate chooses a place before choosing a choice. */
+  readonly boardNothingSelected: string;
+  /** The hint for an answer that no change of the candidate's can fix, such as one that names a choice that does not exist. */
+  readonly hintInvalid: string;
+  /** The hint for a required answer that is missing. */
+  readonly hintRequired: string;
+  /** The hint for too few selected choices; the least number follows it. */
+  readonly hintMinChoices: string;
+  /** The hint for too many selected choices; the greatest number follows it. */
+  readonly hintMaxChoices: string;
+  /** The hint for too few placed choices; the least number follows it. */
+  readonly hintMinPlaced: string;
+  /** The hint for too many placed choices; the greatest number follows it. */
+  readonly hintMaxPlaced: string;
+  /** The hint for too few associations; the least number follows it. */
+  readonly hintMinAssociations: string;
+  /** The hint for too many associations; the greatest number follows it. */
+  readonly hintMaxAssociations: string;
+  /** The hint for a choice that is used fewer times than it needs. */
+  readonly hintMatchMin: string;
+  /** The hint for a choice that is used more times than it allows. */
+  readonly hintMatchMax: string;
+  /** The hint for choices that are matched but cannot be matched together. */
+  readonly hintMatchGroup: string;
+  /** The hint for too few texts entered; the least number follows it. */
+  readonly hintMinStrings: string;
+  /** The hint for too many texts entered; the greatest number follows it. */
+  readonly hintMaxStrings: string;
+  /** The hint for a text that does not have the required form. */
+  readonly hintPatternMask: string;
+  /** The hint for a recording played too few times; the least number follows it. */
+  readonly hintMinPlays: string;
+  /** The hint for a recording played too many times; the greatest number follows it. */
+  readonly hintMaxPlays: string;
+  /** The hint for a file of a type that is not accepted; the accepted types follow it. */
+  readonly hintMimeType: string;
+  /** The hint for a text that is not a number where a number is needed. */
+  readonly hintNumber: string;
+  /** The hint for a number with a fraction where a whole number is needed. */
+  readonly hintInteger: string;
+  /** The name of a field where the candidate types an answer. */
+  readonly answerLabel: string;
+  /** The unit after the number of characters typed, next to the expected number. */
+  readonly counterCharacters: string;
+  /** The words after the number of characters that remain of the expected number. */
+  readonly counterLeft: string;
+  /** The name of the group of buttons that format the text of an answer. */
+  readonly editorToolbar: string;
+  /** The name of the button that makes the selected text bold. */
+  readonly editorBold: string;
+  /** The name of the button that makes the selected text italic. */
+  readonly editorItalic: string;
+  /** The name of the button that underlines the selected text. */
+  readonly editorUnderline: string;
+  /** The name of the button that makes the selected lines a bulleted list. */
+  readonly editorBulletList: string;
+  /** The name of the button that makes the selected lines a numbered list. */
+  readonly editorNumberedList: string;
+  /** The text of the menu that offers choices inside a sentence, before the candidate chooses. */
+  readonly inlineChoicePrompt: string;
+  /** The value that a slider reads out while the candidate has not chosen one. */
+  readonly sliderNotSet: string;
+  /** The name of the group of buttons that control a recording. */
+  readonly mediaPlayer: string;
+  /** The name of the button that starts or resumes a recording. */
+  readonly mediaPlay: string;
+  /** The name of the button that pauses a recording. */
+  readonly mediaPause: string;
+  /** The name of the button that takes a recording back to its start. */
+  readonly mediaRewind: string;
+  /** The name of the button that turns captions on and off. */
+  readonly mediaCaptions: string;
+  /** The name of the button that turns audio description on and off. */
+  readonly mediaAudioDescription: string;
+  /** The word before the number of times a recording was played and the number it can be played. */
+  readonly mediaPlays: string;
+  /** The notice that a recording cannot be played again. */
+  readonly mediaNoPlaysLeft: string;
+  /** The notice while a recording waits before it starts. */
+  readonly mediaStartsSoon: string;
+  /** The notice that a recording cannot be paused again. */
+  readonly mediaNoPauses: string;
+  /** The notice while a paused recording waits to continue by itself. */
+  readonly mediaResumes: string;
+  /** The name of the control that picks a file to upload. */
+  readonly uploadChoose: string;
+  /** The name of the button that starts a recording to upload. */
+  readonly uploadRecord: string;
+  /** The name of the button that ends a recording. */
+  readonly uploadStopRecording: string;
+  /** The indicator that the microphone is recording. */
+  readonly uploadRecording: string;
+  /** The notice while a file is sent to be kept. */
+  readonly uploadUploading: string;
+  /** The notice that a file could not be sent to be kept. */
+  readonly uploadFailed: string;
+  /** The notice that the microphone could not be used for a recording. */
+  readonly uploadNoMicrophone: string;
+  /** The name of the button that takes the uploaded file away. */
+  readonly uploadRemove: string;
+  /** The notice in place of a question of a kind that the player does not run. */
+  readonly customUnsupported: string;
 }

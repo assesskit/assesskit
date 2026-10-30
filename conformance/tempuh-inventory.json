@@ -18,7 +18,7 @@
     "TB13b",
     "TB15"
   ],
-  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6", "TB14", "TB12"],
+  "merged": ["TB1", "TB2", "TB3", "TB13a", "TB5", "TB4", "TB13c", "TB6", "TB14", "TB12", "TB7"],
   "rows": [
     {
       "id": "T1",
@@ -224,7 +224,7 @@
       "id": "T26",
       "construct": "Choice: limits, order from the view, orientation; label, suffix, stacking and hidden-control classes",
       "olah": ["A132", "A164", "B55", "B57", "W23"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -232,7 +232,7 @@
       "id": "T27",
       "construct": "Order: default initial order; subset ordering",
       "olah": ["A146", "B54"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -240,7 +240,7 @@
       "id": "T28",
       "construct": "Associate",
       "olah": ["A131", "A163"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -248,7 +248,7 @@
       "id": "T29",
       "construct": "Match, list and tabular (`qti-match-tabular`, `data-first-column-header`)",
       "olah": ["A144", "A165"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -256,7 +256,7 @@
       "id": "T30",
       "construct": "Gap match: text and image gaps, required gaps, groups, review in context",
       "olah": ["A137", "A155–A157"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -264,7 +264,7 @@
       "id": "T31",
       "construct": "Inline choice: `data-prompt`, input widths",
       "olah": ["A143", "A160"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -272,7 +272,7 @@
       "id": "T32",
       "construct": "Text entry: `base`, `string-identifier`, numeric records through `numericRecord`, `pattern-mask` hints",
       "olah": ["A152", "B53"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -280,7 +280,7 @@
       "id": "T33",
       "construct": "Extended text: strings, lines, `format` plain, preformatted or xhtml, counters",
       "olah": ["A136", "B53", "W37"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -288,7 +288,7 @@
       "id": "T34",
       "construct": "Hottext",
       "olah": ["A142", "A159"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -344,7 +344,7 @@
       "id": "T41",
       "construct": "Slider: bounds, step, step labels, orientation, reverse; no position without a default",
       "olah": ["A151"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A", "X"],
       "unit": "TB7"
     },
@@ -352,7 +352,7 @@
       "id": "T42",
       "construct": "Media: play count as the response, counted from the restored value; `max-plays` stops play; `data-qti-media-player-controls`",
       "olah": ["A145"],
-      "modules": ["player"],
+      "modules": ["player/media"],
       "evidence": ["R", "A", "E"],
       "unit": "TB7"
     },
@@ -360,7 +360,7 @@
       "id": "T43",
       "construct": "Upload by MIME type; audio recording through `MediaRecorder` or WAV (owner decision)",
       "olah": ["A153", "W45"],
-      "modules": ["player"],
+      "modules": ["player/elements", "player/recording"],
       "evidence": ["R", "A", "E"],
       "unit": "TB7"
     },
@@ -376,7 +376,7 @@
       "id": "T45",
       "construct": "End attempt: a button that sends `end-attempt`",
       "olah": ["A135", "B10"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "A"],
       "unit": "TB7"
     },
@@ -384,7 +384,7 @@
       "id": "T46",
       "construct": "Custom interaction (deprecated): the host hook; otherwise an \"unsupported\" notice",
       "olah": ["A133", "B65", "S14"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R"],
       "unit": "TB7"
     },
@@ -392,7 +392,7 @@
       "id": "T47",
       "construct": "Live validity hints and `data-*-message` texts from `checkResponse`",
       "olah": ["B56", "B70"],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["R", "U"],
       "unit": "TB7"
     },
@@ -400,7 +400,7 @@
       "id": "T48",
       "construct": "Keyboard operation and drag alternatives for every interaction ([CERT] A-19, WCAG 2.1.1)",
       "olah": [],
-      "modules": ["player"],
+      "modules": ["player/elements"],
       "evidence": ["A", "E"],
       "unit": "TB7"
     },

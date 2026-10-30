@@ -93,6 +93,21 @@ origin and the origins the host allows. The frame refuses to start where the bro
 - Allow other origins in `origins` only for hosts that you trust to serve scripts.
 - The code is visible to the candidate: keep answer keys in response processing, which the asset gate never serves.
 
+## tempuh: the interactions
+
+An upload interaction can record the candidate's voice, and a WAV recording loads a script into an audio worklet.
+
+- The microphone is asked for only when the candidate presses Record in an upload interaction, and a visible indicator shows
+  while it records. A recording that is not finished is discarded when the candidate leaves the page. Set `record: false` of
+  `createInteractionRenderers` to offer no recording.
+- Put the origin of `staticUrl` in the `script-src` of the page, because a worklet is a script. `recorder-worklet.js` holds no
+  package data and reaches no network; serve it from the asset origin, like `pci-frame/*`.
+- Recordings and files go only to the host's storage through `files.upload`; the state and the results hold references. The
+  player writes nothing to `localStorage`.
+- The editor of an XHTML answer writes only `p`, `br`, `strong`, `em`, `u`, `ul`, `ol`, `li`, `sub` and `sup`, with no attribute, and a
+  response that holds anything else is shown as its text. A host that shows a response to a rater treats it as it treats
+  any answer: untrusted text.
+
 ## tempuh: the LTI tool role
 
 A learning platform launches tempuh through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has

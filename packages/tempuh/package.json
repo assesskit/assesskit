@@ -53,7 +53,8 @@
       "default": "./dist/server/index.js"
     },
     "./player.css": "./player.css",
-    "./pci-frame/*": "./dist/pci-frame/*"
+    "./pci-frame/*": "./dist/pci-frame/*",
+    "./recorder-worklet.js": "./dist/recorder-worklet.js"
   },
   "files": [
     "dist",
@@ -66,9 +67,9 @@
   },
   "scripts": {
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
-    "build": "pnpm clean && tsc -b tsconfig.build.json && node scripts/build-frame.ts",
+    "build": "pnpm clean && tsc -b tsconfig.build.json && node scripts/build-static.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && tsc -p tsconfig.server.json",
-    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css"
+    "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css ./recorder-worklet.js"
   },
   "dependencies": {
     "@luthfanwakan/olah": "workspace:^",

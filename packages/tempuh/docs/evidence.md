@@ -45,10 +45,21 @@ escapes it. The browser commands in `commands.ts` give a test what a page cannot
 opaque origin, click in it, read the accessibility tree with its frames, and read the XML and CSS files of the 1EdTech
 examples (`corpusFiles`, which needs `pnpm corpus`). The asset origin also serves the package files of the content
 renderer from `test/fixtures/content/` under `/content/<token>/`. `test/content-fixture.ts` mounts content written as
-XML, with SSML and MathML in their namespaces, in a content root. The 1EdTech examples that run in the frame are tests
-of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads the examples, and `pnpm test:corpus` runs them in the
-three engines. The global setup serves the package of an example under `/c/<token>/<example>/`, as the asset gate would,
-and the `pci-fixture.ts` helpers mount an interaction as the player does.
+XML, with SSML and MathML in their namespaces, in a content root.
+
+The browser tests of the interactions ([interactions](interactions.md)) render items written as XML with the renderers
+of the interactions in a content root and give the interactions the descriptors of olah's `describeInteractions`
+(`interactions-fixture.ts`). The asset origin also serves the worklet of the WAV recording under
+`/static/recorder-worklet.js`, and two short tones and a caption file among the package files, for the rules of media.
+The tests answer with the mouse, with real key presses and with a stream of an oscillator in place of the microphone;
+Safari on macOS leaves form controls out of the tab order unless the person turns that on, so the keyboard tests focus a
+control and press its keys. `elements.browser.corpus.test.ts` renders every item of the examples that has one of these
+interactions, answers each, and runs axe on it.
+
+The 1EdTech examples that run in the frame are tests of their own, `*.browser.corpus.test.ts`: `pnpm corpus` downloads
+the examples, and `pnpm test:corpus` runs them in the three engines. The global setup serves the package of an example
+under `/c/<token>/<example>/`, as the asset gate would, and the `pci-fixture.ts` helpers mount an interaction as the
+player does.
 
 MathJax is a global of the page and a failure to load it is final, so a test that needs a page without MathJax, or with a
 failure, has a file of its own (`math-failure` and `math-wrong-script`). A test file runs in a page of its own.

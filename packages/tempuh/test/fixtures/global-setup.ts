@@ -5,7 +5,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "@luthfanwakan/olah/node";
 import type { TestProject } from "vitest/node";
 import { requireSchemas } from "../../../../scripts/schemas.ts";
-import { buildFrame } from "../../scripts/build-frame.ts";
+import { buildFrame, buildWorklet } from "../../scripts/build-static.ts";
 import "./origins.ts";
 
 const PACKAGE_FILES = resolve(import.meta.dirname, "pci");
@@ -29,6 +29,8 @@ const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
   [".png", "image/png"],
   [".json", "application/json"],
   [".woff2", "font/woff2"],
+  [".wav", "audio/wav"],
+  [".vtt", "text/vtt"],
 ]);
 
 /** The frame of the static files with a script that keeps a policy from being set, as a browser without one would. */
@@ -115,6 +117,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   // The directory that holds `mathjax` and `@mathjax` side by side, as npm lays them out.
   const mathjaxFiles = dirname(await realpath(resolve(TEMPUH, "node_modules/mathjax")));
   await buildFrame(join(built, "pci-frame"));
+  await buildWorklet(join(built, "recorder-worklet.js"));
   let schemas: Promise<SchemaSet> | undefined;
   const asset = await listen(async (path, response, request) => {
     const [, area, rest = ""] = /^\/([^/]+)(\/.*)?$/u.exec(path) ?? [];

@@ -394,6 +394,65 @@ const CONTENT_ROOT = `(async () => {
   };
 })()`;
 
+/**
+ * Mounts a choice, an order, a slider and a text entry with the renderers of the interactions, in a shadow root, and gives
+ * them the descriptors that olah would. It collects the responses in `window.scene.responses`, and `window.scene.focus` focuses the
+ * element that a selector finds in the root.
+ */
+const MOUNT_INTERACTIONS = `(async () => {
+  const { createBodyRenderer, createInteractionRenderers, defineElements } = await import("/dist/player/index.js");
+  const { EN_MESSAGES } = await import("/dist/index.js");
+  const text = (value) => ({ kind: "text", value });
+  const choice = (identifier, label) => ({ kind: "simple-choice", identifier, children: [text(label)] });
+  const nodes = [
+    { kind: "choice-interaction", responseIdentifier: "C", maxChoices: 2, simpleChoices: [choice("A", "Alpha"), choice("B", "Beta")] },
+    { kind: "order-interaction", responseIdentifier: "O", simpleChoices: [choice("A", "Alpha"), choice("B", "Beta")] },
+    { kind: "slider-interaction", responseIdentifier: "S", lowerBound: 0, upperBound: 10 },
+    { kind: "p", children: [text("Type "), { kind: "text-entry-interaction", responseIdentifier: "T" }, text(".")] },
+  ];
+  const files = { upload: async () => { throw new Error("The page has no storage."); }, url: () => "" };
+  const renderer = createBodyRenderer({
+    messages: EN_MESSAGES,
+    assets: (path) => path,
+    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/" }),
+  });
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(await (await fetch("/player.css")).text());
+  const host = document.createElement("div");
+  const root = host.attachShadow({ mode: "open" });
+  root.adoptedStyleSheets = [sheet];
+  root.append(...renderer.nodes(nodes));
+  document.body.append(host);
+  const pair = (identifier, baseType, cardinality) => ({ cardinality, baseTypes: [baseType], identifier });
+  const choices = [{ identifier: "A", fixed: false, showHide: "show" }, { identifier: "B", fixed: false, showHide: "show" }];
+  const descriptors = new Map([
+    ["C", { kind: "choice-interaction", responseIdentifier: "C", declaration: { cardinality: "multiple", baseType: "identifier" },
+      bindings: [{ cardinality: "multiple", baseTypes: ["identifier"] }], choices, constraints: { maxChoices: 2 }, shuffle: false }],
+    ["O", { kind: "order-interaction", responseIdentifier: "O", declaration: { cardinality: "ordered", baseType: "identifier" },
+      bindings: [{ cardinality: "ordered", baseTypes: ["identifier"] }], choices, constraints: {}, shuffle: false }],
+    ["S", { kind: "slider-interaction", responseIdentifier: "S", declaration: { cardinality: "single", baseType: "integer" },
+      bindings: [{ cardinality: "single", baseTypes: ["integer"] }], choices: [], constraints: { lowerBound: 0, upperBound: 10, step: 1 }, shuffle: false }],
+    ["T", { kind: "text-entry-interaction", responseIdentifier: "T", declaration: { cardinality: "single", baseType: "string" },
+      bindings: [{ cardinality: "single", baseTypes: ["string"] }], choices: [], constraints: { base: 10 }, shuffle: false }],
+  ]);
+  const responses = [];
+  root.addEventListener("tempuh-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
+  for (const element of root.querySelectorAll("*")) {
+    const descriptor = descriptors.get(element.getAttribute("response-identifier"));
+    if (descriptor) element.descriptor = descriptor;
+  }
+  window.scene = { responses, focus: (selector) => root.querySelector(selector).focus() };
+})()`;
+
+/** The check of the worklet of the WAV recording, which runs in the page: the context loads it and makes a node of its processor. */
+const RECORDER_WORKLET = `(async () => {
+  const context = new AudioContext();
+  await context.audioWorklet.addModule("/dist/recorder-worklet.js");
+  const node = new AudioWorkletNode(context, "tempuh-recorder");
+  await context.close();
+  return node.numberOfOutputs;
+})()`;
+
 /** The cases of the smoke test of the pinned engines. */
 export const SMOKE_CASES: readonly SmokeCase[] = [
   {
@@ -560,6 +619,38 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
           modal: true,
           removed: true,
         });
+      } finally {
+        await stop();
+      }
+    },
+  },
+  {
+    title:
+      "renders a choice, an order, a slider and a text entry, answers them by keyboard, and loads the recording worklet",
+    async run({ page }) {
+      const { url, stop } = await serve();
+      try {
+        await page.goto(url);
+        await page.evaluate(MOUNT_INTERACTIONS);
+        await page.evaluate(`window.scene.focus("qti-choice-interaction input")`);
+        await page.keyboard.press("Space");
+        await page.evaluate(`window.scene.focus("qti-order-interaction .tempuh-choices button")`);
+        await page.keyboard.press("Enter");
+        await page.evaluate(`window.scene.focus("qti-order-interaction button.tempuh-drop")`);
+        await page.keyboard.press("Enter");
+        await page.evaluate(`window.scene.focus("[role=slider]")`);
+        await page.keyboard.press("End");
+        await page.evaluate(`window.scene.focus("qti-text-entry-interaction input")`);
+        await page.keyboard.press("o");
+        await page.keyboard.press("k");
+        assert.deepEqual(JSON.parse(String(await page.evaluate("JSON.stringify(window.scene.responses)"))), [
+          ["C", { cardinality: "multiple", baseType: "identifier", values: ["A"] }],
+          ["O", { cardinality: "ordered", baseType: "identifier", values: ["A"] }],
+          ["S", { cardinality: "single", baseType: "integer", value: 10 }],
+          ["T", { cardinality: "single", baseType: "string", value: "o" }],
+          ["T", { cardinality: "single", baseType: "string", value: "ok" }],
+        ]);
+        assert.equal(await page.evaluate(RECORDER_WORKLET), 1);
       } finally {
         await stop();
       }

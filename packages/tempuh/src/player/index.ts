@@ -5,6 +5,7 @@
  * @module @luthfanwakan/tempuh/player
  */
 export * from "./content/index.js";
+export * from "./elements/index.js";
 export * from "./math/index.js";
 export * from "./pci/index.js";
 export * from "./roots/index.js";

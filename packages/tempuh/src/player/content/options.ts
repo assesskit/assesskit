@@ -81,7 +81,8 @@ const OPTION_NAMES = [
   "fileUrl",
 ];
 
-function checkMessages(messages: unknown): asserts messages is Messages {
+/** Checks that a value is the messages of the interface: an object with a string for every message of the catalog. */
+export function checkMessages(messages: unknown): asserts messages is Messages {
   checkRecord(messages, "The option messages must be an object");
   for (const key of Object.keys(EN_MESSAGES)) checkString(messages[key], `The message ${key} of the option messages`);
 }

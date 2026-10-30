@@ -62,7 +62,7 @@ packages/tempuh/          the player
   src/protocol/           Caller, ActionEnvelope and ViewEnvelope, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
   player.css              the stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation
-  scripts/                build-frame.ts writes the static files of the PCI frame to dist/pci-frame/
+  scripts/                build-static.ts writes the static files of the player: the PCI frame and the recording worklet
   test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
                           *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
                           commands of the browser tests

@@ -56,3 +56,13 @@ name-based UUID of version 5 over the session, the step and the position, so tha
 `sendCaliper` posts them in an envelope to an endpoint over HTTPS with a bearer token. `forwardEvents` in
 `@luthfanwakan/tempuh/server` gives every event of a step to the host's log, whatever its type, and the events that Caliper has a
 counterpart for to the endpoint.
+
+The interactions of text, choice and files (`player`): `createInteractionRenderers` draws choice, order, associate, match, gap
+match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload and custom interactions as elements
+that extend `InteractionElement`. The host gives an element the descriptor of olah, the response and whether the candidate can
+respond, and hears `tempuh-response` and `tempuh-end-attempt`. A response that olah finds not valid gets a hint in text, tied to the
+controls, in the words of the item where it has some; the limits are told before; and the interactions that put choices in places
+work by pick-up and place, by keyboard and by drag, never only by drag. Text entry reads numbers with olah's `numericRecord`,
+extended text has plain, preformatted and XHTML formats with counters, media counts plays as the response and keeps the pause
+attributes in both spellings, and upload sends files through the host's storage and records audio with `MediaRecorder`, or as WAV
+through the audio worklet that the package exports as `recorder-worklet.js`.

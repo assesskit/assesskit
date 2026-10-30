@@ -115,6 +115,23 @@ The content root ([content](content.md)) builds these parts around the content, 
 </qti-choice-interaction>
 ```
 
+The interactions of [interactions](interactions.md) add these parts. Their elements are the custom elements named for the kind,
+and the stylesheet reads the state from attributes:
+
+| Class or attribute                                                     | What it is                                                                                                                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tempuh-notes`                                                         | The limits, the hint and the announcements of an interaction, after its content; in a grid it takes the row after the last.                                         |
+| `tempuh-instruction`, `tempuh-hint`                                    | The limits that the candidate is told, and the hint for a response that is not valid, which has a mark in front of it.                                              |
+| `tempuh-token`, `tempuh-chip`, `tempuh-chip-button`, `tempuh-remove`   | A choice in the pool, a choice in a place, its button, and the button that takes it out. `aria-pressed` marks the one in hand.                                      |
+| `tempuh-drop`, `tempuh-pair`, `tempuh-target-content`                  | The button that puts the choice in hand in a place; the box of two places of an association; the content of a match target.                                         |
+| `data-tempuh-over`, `tempuh-dragging`                                  | The place under a drag, and the choice that is dragged.                                                                                                             |
+| `tempuh-slider`, `-track`, `-thumb`, `-end`, `-ticks`, `-tick`         | The slider. `data-orientation`, `data-tempuh-unset` (no value yet), `data-tempuh-disabled` and `tempuh-slider-stepped` (steps are labelled) are on `tempuh-slider`. |
+| `tempuh-fields`, `tempuh-editor`, `tempuh-editable`, `tempuh-counter`  | The fields of an extended text, the editor of XHTML, its editable area, and the counter of characters.                                                              |
+| `tempuh-preformatted`                                                  | A text area that keeps its spaces.                                                                                                                                  |
+| `tempuh-media-bar`, `-status`, `-time`, `-notice`                      | The controls of a media interaction, the plays, the time, and what the candidate waits for.                                                                         |
+| `tempuh-upload`, `-upload-status`, `tempuh-stored`, `tempuh-recording` | The picker and the buttons of an upload, what it says, the file that the response holds, and the indicator of a recording.                                          |
+| `tempuh-custom`                                                        | Where a host's hook draws a custom interaction.                                                                                                                     |
+
 A hidden control is visually hidden, stays in the tab order, and shows its focus and its state on its face. The choices
 come first in the markup, for a screen reader, and `qti-choices-bottom` and `qti-choices-right` move them only for the
 eye. A hot text, a hotspot and a choice use the state of the control: `:checked` and `:focus-visible`.

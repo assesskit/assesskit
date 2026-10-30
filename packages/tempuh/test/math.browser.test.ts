@@ -18,6 +18,19 @@ async function hits(): Promise<string[]> {
   return paths.filter((path) => path.includes(`/${TOKEN}/`)).map((path) => path.replace(`/${TOKEN}`, ""));
 }
 
+/**
+ * Returns the URLs of the fonts that the document declares with `@font-face`. A browser that has a font from an earlier
+ * page asks the network for none, so the declarations say where the fonts come from, and the downloads do not.
+ */
+function declaredFonts(): string[] {
+  return [...document.styleSheets]
+    .flatMap((sheet) => [...sheet.cssRules])
+    .filter((rule) => rule instanceof CSSFontFaceRule)
+    .flatMap((rule) =>
+      [...rule.style.getPropertyValue("src").matchAll(/url\("([^"]+)"\)/gu)].map((match) => match[1] ?? ""),
+    );
+}
+
 const FRACTION = `<p id="a"><math ${MATHML}><mfrac><mi>x</mi><mn>2</mn></mfrac></math></p>`;
 
 /** Follows a path of properties from a value; MathJax's objects have them and TypeScript does not know them. */
@@ -114,10 +127,8 @@ describe("createMathTypesetter", () => {
 
   it("[T9] gets the fonts and the speech data from the host, never from a CDN", async () => {
     await typesetter.typeset(mount(FRACTION).root);
-    const names = performance.getEntriesByType("resource").map((entry) => entry.name);
-    expect(names.filter((name) => name.includes("jsdelivr"))).toEqual([]);
-    const fonts = names.filter((name) => name.endsWith(".woff2"));
-    expect(fonts.length).toBeGreaterThan(0);
+    const fonts = declaredFonts();
+    expect(fonts).not.toEqual([]);
     for (const font of fonts) expect(font.startsWith(`${asset}/mathjax/@mathjax/mathjax-newcm-font/`)).toBe(true);
     const speech = await hits();
     expect(speech).toContain("/mathjax/sre/speech-worker.js");

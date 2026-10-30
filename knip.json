@@ -5,7 +5,12 @@
       "entry": ["src/index.ts", "src/*/index.ts", "src/cli/bin.ts"]
     },
     "packages/tempuh": {
-      "entry": ["src/index.ts", "src/*/index.ts", "src/player/pci/frame/bridge.ts"],
+      "entry": [
+        "src/index.ts",
+        "src/*/index.ts",
+        "src/player/pci/frame/bridge.ts",
+        "src/player/recording/worklet/recorder-worklet.ts"
+      ],
       "ignore": ["test/fixtures/**"],
       "ignoreDependencies": ["requirejs", "mathjax"]
     },

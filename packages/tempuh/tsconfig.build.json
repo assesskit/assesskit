@@ -8,6 +8,6 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "exclude": ["src/player/pci/frame"],
+  "exclude": ["src/player/pci/frame", "src/player/recording/worklet"],
   "references": [{ "path": "../olah/tsconfig.build.json" }]
 }

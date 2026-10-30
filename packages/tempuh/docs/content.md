@@ -218,7 +218,7 @@ variant without the hazard where it can; the notice is the fallback for a hazard
 ## Interactions
 
 An interaction is drawn by the renderer registered for its kind in the `interactions` map, and as a placeholder when there is
-none. A renderer gets the interaction and the `BodyRenderer`, and returns the element:
+none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of fourteen kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element:
 
 ```ts
 import type { InteractionRenderers } from "@luthfanwakan/tempuh/player";
