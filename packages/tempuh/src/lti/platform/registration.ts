@@ -2,6 +2,7 @@ import type { webcrypto } from "node:crypto";
 import { errors, type JWTVerifyGetKey } from "jose";
 import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
 import { DataError } from "../../errors.js";
+import { checkAllowList } from "../../protocol/index.js";
 import { MAX_IDENTIFIER_LENGTH } from "../claims.js";
 import type { JwksCache } from "../jwks.js";
 import { isRsaKey } from "../keys.js";
@@ -20,6 +21,13 @@ export interface ToolRegistration {
   readonly jwksUrl?: string;
   /** The tool's public RSA keys by `kid`, for a tool that gives keys and not a URL. Exactly one of this and `jwksUrl`. */
   readonly keys?: ReadonlyMap<string, webcrypto.CryptoKey>;
+  /**
+   * The `allow` attribute of the tool's frame: the features of the browser, such as `microphone`, that the tool may use
+   * when it runs in an item.
+   *
+   * @defaultValue none, so that the tool may use no feature that needs permission
+   */
+  readonly allow?: string;
 }
 
 /**
@@ -46,6 +54,7 @@ export function checkToolRegistration(value: unknown): asserts value is ToolRegi
   if ((value.jwksUrl === undefined) === (value.keys === undefined)) {
     throw new DataError("A tool must have exactly one of the properties jwksUrl and keys.");
   }
+  if (value.allow !== undefined) checkAllowList(value.allow, "The allow list of a tool");
   if (value.jwksUrl !== undefined) checkHttpsUrl(value.jwksUrl, "The key set URL of a tool");
   if (value.keys !== undefined) {
     const keys = value.keys;

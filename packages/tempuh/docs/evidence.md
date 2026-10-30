@@ -88,6 +88,16 @@ so that the `support` action, its refusals and the next view are olah's. A runni
 takes a new look in `player.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
 origin.
 
+The LTI tests run the frames of an LTI item against a second set of servers, which `fixtures/lti-setup.ts` starts: a platform
+that serves its storage page with the headers `storagePage` builds, and two tool origins that serve `fixtures/lti/tool.html`.
+The tool page runs a scenario, which the test names in the query: it talks to the storage frame and to the player the way
+LTI Client Side postMessages and LTI postMessage Storage describe, and each step it takes is a request to its own server
+(`/report/<token>/<step>`), which the test reads at `/__hits`. `lti-frame.browser.test.ts` mounts the frames alone and with
+`mountDelivery`, over the exam server's package of an essay and a link to a tool (`lti-exam-fixture.ts`).
+`lti-items.test.ts` runs the whole exchange in Node, without a browser, between a session host over that package, the
+platform's handlers, a tool that follows the specifications (`lti-fake-tool.ts`) and a learning platform that checks the rules
+of the score service (`lti-fake-lms.ts`).
+
 The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
 operates the tools by keyboard.
 

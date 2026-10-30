@@ -104,3 +104,12 @@ runs. `mountSupportPanel` shows the supports that are options as toggle buttons 
 it, shows caption and description tracks, and shows the alternative text of images. `mountSpoken` has the controls of
 reading aloud, a word-by-word cursor and the typing echo, and `mountVariantNotice` shows the variant that olah delivered with
 its language. The tools take the supports of the view as they are.
+
+LTI scores and LTI items. `publishScore` in `@luthfanwakan/tempuh/lti` posts the score of a finished test to the line item of
+the launch that started it: `scoreGiven` is `SCORE` raised to 0, with `scoreMaximum` from `MAXSCORE` or the line item,
+`gradingProgress` is `PendingManual` while a person must score, `Pending` while a scoring service must and `FullyGraded`
+after, and only the results that the session host returned are accepted. `ltiPlatformFrame` and `platformStorage` serve the
+frame of an LTI item: the player's `ltiLogin` hook shows the tool in a sandboxed frame beside a hidden frame of the platform's
+storage page, which answers `lti.put_data` and `lti.get_data` for the tool's login, and refuses a tool served from the origin
+of the page or of the assets. `createLtiScoreIntake` in `@luthfanwakan/tempuh/server` keeps the latest score of each line item
+by its time and supplies a final score to the `SCORE` and `MAXSCORE` requests of the item.

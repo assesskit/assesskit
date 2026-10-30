@@ -33,7 +33,8 @@
     "TB9",
     "TB11",
     "TB8",
-    "TB10"
+    "TB10",
+    "TB13b"
   ],
   "rows": [
     {
@@ -878,7 +879,7 @@
       "id": "T106",
       "construct": "LTI items: `CandidateItem.lti` launch frame (cross-origin only), the platform handshake, AGS intake by `readAgsScore`, then `supply-scores` for the `lti` request",
       "olah": ["K20", "E25", "G42"],
-      "modules": ["lti/", "player/"],
+      "modules": ["lti/", "player/", "server/"],
       "evidence": ["U", "F", "E"],
       "unit": "TB13b"
     },
@@ -1002,9 +1003,9 @@
     },
     {
       "id": "T122",
-      "construct": "`lti-cs-oidc` storage answered by the player for LTI item frames",
+      "construct": "`lti-cs-oidc` storage for LTI item frames: the platform's storage page in a frame beside the tool's answers `lti.put_data` and `lti.get_data`, and the player answers `lti.capabilities`",
       "olah": ["N7"],
-      "modules": ["player/"],
+      "modules": ["lti/", "player/"],
       "evidence": ["R", "E"],
       "unit": "TB13b"
     }

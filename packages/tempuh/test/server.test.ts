@@ -6,6 +6,7 @@ import {
   type DeliveryEvent,
   type DeliveryEventType,
   deserializeState,
+  type HostAction,
   stamp,
   viewFromJson,
   viewToJson,
@@ -14,12 +15,14 @@ import { single } from "@luthfanwakan/olah/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { AccessError, DataError, ServiceError } from "../src/index.js";
+import type { AgsScore } from "../src/lti/index.js";
 import { isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,
   collectAssetPrefixes,
   createAssetGate,
+  createLtiScoreIntake,
   createSessionHost,
   DEFAULT_TTL_SECONDS,
   DEFAULT_UPLOAD_TTL_SECONDS,
@@ -93,6 +96,7 @@ function eventOf(type: DeliveryEventType, at: number): DeliveryEvent {
 }
 
 const fromJson = <T>(text: string): T => JSON.parse(text);
+const json = (text: string): unknown => JSON.parse(text);
 
 /** The options of a host that logs to a list and sends to a fake endpoint. */
 function host(...replies: readonly FakeReply[]) {
@@ -1321,6 +1325,203 @@ describe("createSessionHost", () => {
     );
     await expect(good.host.host(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
       "The type of a host action",
+    );
+  });
+});
+
+describe("createLtiScoreIntake", () => {
+  const Item = { ref: "draw", instance: 1 };
+  const score = (change: Partial<AgsScore> = {}): AgsScore => ({
+    userId: "u1",
+    scoreGiven: 6,
+    scoreMaximum: 10,
+    activityProgress: "Completed",
+    gradingProgress: "FullyGraded",
+    timestamp: "2026-10-30T12:00:00.000Z",
+    timestampMs: Date.parse("2026-10-30T12:00:00.000Z"),
+    ...change,
+  });
+  const later = (seconds: number, change: Partial<AgsScore> = {}): AgsScore =>
+    score({
+      timestamp: new Date(Date.parse("2026-10-30T12:00:00.000Z") + seconds * SECOND).toISOString(),
+      timestampMs: Date.parse("2026-10-30T12:00:00.000Z") + seconds * SECOND,
+      ...change,
+    });
+
+  /** A store that keeps by the time of the score, and a host that answers the requests in `known` and refuses the others. */
+  function intake(known: readonly string[] = ["item:draw:1:SCORE", "item:draw:1:MAXSCORE"]) {
+    const kept = new Map<string, AgsScore>();
+    const calls: { session: string; action: HostAction; by: string | undefined }[] = [];
+    const refusal: { code?: string } = {};
+    const made = createLtiScoreIntake({
+      host: {
+        host: async (session, action, by) => {
+          calls.push({ session, action, by });
+          if (action.type !== "supply-scores") throw new Error("Not a supply.");
+          if (refusal.code !== undefined) {
+            return { ok: false, refusal: { code: refusal.code, message: "no", source: "test" } } as never;
+          }
+          if (!known.includes(action.request)) {
+            return { ok: false, refusal: { code: "unknown-request", message: "none", source: "test" } } as never;
+          }
+          return { ok: true } as never;
+        },
+      },
+      scores: {
+        keep: async (session, item, next) => {
+          const key = `${session} ${item.ref} ${item.instance}`;
+          const before = kept.get(key);
+          if (before !== undefined && before.timestampMs >= next.timestampMs) return false;
+          kept.set(key, next);
+          return true;
+        },
+        latest: async (session, item) => kept.get(`${session} ${item.ref} ${item.instance}`),
+      },
+      scoredBy: async (session) => `https://tool.example/${session}`,
+    });
+    return { ...made, kept, calls, refusal };
+  }
+  const supplied = (calls: { action: HostAction }[]): [string, unknown][] =>
+    calls.map(({ action }) =>
+      action.type === "supply-scores"
+        ? [action.request, action.value === null ? null : (action.value as { value: unknown }).value]
+        : ["", null],
+    );
+  const step = (...types: readonly DeliveryEventType[]): StepEvents => ({
+    session: "s1",
+    step: 3,
+    events: types.map((type) => ({ type, at: 1, item: Item, detail: "item:draw:1:SCORE" })),
+  });
+
+  it("[T106] supplies a final score as floats to the SCORE and MAXSCORE of the item, scored by an external machine", async () => {
+    const { onScore, calls } = intake();
+    await onScore("s1", Item, score());
+    expect(supplied(calls)).toEqual([
+      ["item:draw:1:SCORE", 6],
+      ["item:draw:1:MAXSCORE", 10],
+    ]);
+    expect(calls.map(({ action, by }) => [action.type === "supply-scores" && action.scorer, by])).toEqual([
+      ["externalMachine", "https://tool.example/s1"],
+      ["externalMachine", "https://tool.example/s1"],
+    ]);
+    expect(calls[0]?.action).toMatchObject({ value: single("float", 6) });
+  });
+
+  it("[T106] supplies NULL for a part the score does not have", async () => {
+    const { onScore, calls } = intake();
+    await onScore("s1", Item, score({ scoreGiven: undefined, scoreMaximum: undefined }));
+    expect(supplied(calls)).toEqual([
+      ["item:draw:1:SCORE", null],
+      ["item:draw:1:MAXSCORE", null],
+    ]);
+  });
+
+  it("[T106] keeps a score that is not final and supplies nothing", async () => {
+    const { onScore, calls, kept } = intake();
+    for (const [index, gradingProgress] of (["NotReady", "Pending", "PendingManual", "Failed"] as const).entries()) {
+      await onScore("s1", Item, later(index, { gradingProgress }));
+    }
+    expect(calls).toEqual([]);
+    expect(kept.get("s1 draw 1")?.gradingProgress).toBe("Failed");
+  });
+
+  it("[T106] ignores a score whose time is not later than the kept one", async () => {
+    const { onScore, calls, kept } = intake();
+    await onScore("s1", Item, later(10, { scoreGiven: 6 }));
+    await onScore("s1", Item, later(5, { scoreGiven: 9 }));
+    await onScore("s1", Item, later(10, { scoreGiven: 8 }));
+    expect(supplied(calls).filter(([request]) => request.endsWith("SCORE") && !request.endsWith("MAXSCORE"))).toEqual([
+      ["item:draw:1:SCORE", 6],
+    ]);
+    expect(kept.get("s1 draw 1")?.scoreGiven).toBe(6);
+  });
+
+  it("[T106] supplies a later final score again, which replaces the values of the first", async () => {
+    const { onScore, calls } = intake();
+    await onScore("s1", Item, later(1, { scoreGiven: 6 }));
+    await onScore("s1", Item, later(2, { scoreGiven: 9 }));
+    expect(supplied(calls).filter(([request]) => request === "item:draw:1:SCORE")).toEqual([
+      ["item:draw:1:SCORE", 6],
+      ["item:draw:1:SCORE", 9],
+    ]);
+  });
+
+  it("[T106] keeps a final score for a session that has made no request yet, and supplies it when a step makes them", async () => {
+    const { onScore, settle, calls, refusal, kept } = intake([]);
+    await onScore("s1", Item, score());
+    expect(kept.size).toBe(1);
+    expect(calls).toHaveLength(1);
+    refusal.code = undefined;
+    const ready = intake();
+    ready.kept.set("s1 draw 1", score());
+    await ready.settle(step("scoring-requested", "scoring-requested"));
+    expect(supplied(ready.calls)).toEqual([
+      ["item:draw:1:SCORE", 6],
+      ["item:draw:1:MAXSCORE", 10],
+    ]);
+    // The same step with nothing kept calls nothing.
+    await settle(step("moved"));
+    expect(calls).toHaveLength(1);
+  });
+
+  it("[T106] settles only for steps that made scoring requests, and only for items with a kept score", async () => {
+    const { settle, calls, kept } = intake();
+    await settle(step("moved", "scores-applied", "attempt-ended"));
+    await settle(step("scoring-requested"));
+    expect(calls).toEqual([]);
+    kept.set("s1 draw 1", score({ gradingProgress: "Pending" }));
+    await settle(step("scoring-requested"));
+    expect(calls).toEqual([]);
+    await settle({
+      session: "s1",
+      step: 4,
+      events: [{ type: "scoring-requested", at: 1, scope: "exam", detail: "test:TOTAL" }],
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it("[T106] throws DataError when the session refuses the score for a reason other than a request it does not have", async () => {
+    const { onScore, refusal } = intake();
+    refusal.code = "score-type-mismatch";
+    await expect(onScore("s1", Item, score())).rejects.toThrow(
+      new DataError('The session "s1" refused the score of the tool for item:draw:1:SCORE: no'),
+    );
+  });
+
+  it("[T106] leaves the scorer out of the action when the host names none", async () => {
+    const calls: unknown[][] = [];
+    const bare = createLtiScoreIntake({
+      host: {
+        host: async (...args) => {
+          calls.push(args);
+          return { ok: true } as never;
+        },
+      },
+      scores: { keep: async () => true, latest: async () => undefined },
+    });
+    await bare.onScore("s1", Item, score());
+    expect(calls.map(([, , by]) => by)).toEqual([undefined, undefined]);
+  });
+
+  it("[T106] throws DataError for options of other types", () => {
+    const good = {
+      host: { host: async () => ({ ok: true }) },
+      scores: { keep: async () => true, latest: async () => undefined },
+    };
+    const make = (change: Record<string, unknown>): unknown => createLtiScoreIntake({ ...good, ...change } as never);
+    expect(() => make({ host: json("null") })).toThrow(new DataError("The option host must be an object, found null."));
+    expect(() => make({ host: {} })).toThrow(
+      new DataError("The function host of the option host must be a function, found undefined."),
+    );
+    expect(() => make({ scores: json("5") })).toThrow(new DataError("The option scores must be an object, found 5."));
+    expect(() => make({ scores: { keep: async () => true } })).toThrow(
+      new DataError("The function latest of the option scores must be a function, found undefined."),
+    );
+    expect(() => make({ scoredBy: json("1") })).toThrow(
+      new DataError("The option scoredBy must be a function, found 1."),
+    );
+    expect(() => createLtiScoreIntake(json("null") as never)).toThrow(
+      new DataError("The options must be an object, found null."),
     );
   });
 });

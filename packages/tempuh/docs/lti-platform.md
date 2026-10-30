@@ -5,16 +5,18 @@
 Connect handshake. The platform role is the other side of the [tool role](lti.md): it uses the same JWT, key set and HTTP
 primitives, with [jose](https://github.com/panva/jose).
 
-| Function                                    | Does                                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `ltiPlatformLogin(caller, item, link, ...)` | Prepares the launch of a tool for an item and returns the URL of the tool's third-party initiated login |
-| `ltiPlatformAuthorize(request, options)`    | Answers the tool's authentication request with the page that posts the `id_token`                       |
-| `platformJwks(options)`                     | Publishes the key set that verifies the `id_token`s                                                     |
-| `platformToken(request, options)`           | Grants access tokens by the client-credentials grant with a JWT assertion                               |
-| `agsLineItem(request, options)`             | Answers a request for the one line item of an item instance                                             |
-| `agsScores(request, options)`               | Receives the scores that the tool posts to the line item                                                |
-| `readAgsScore(body)`                        | Reads the body of a score request                                                                       |
-| `platformEndpoints(config)`                 | Gives the URLs of the authorization endpoint, the key set and the token endpoint                        |
+| Function                                    | Does                                                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `ltiPlatformLogin(caller, item, link, ...)` | Prepares the launch of a tool for an item and returns the URL of the tool's third-party initiated login     |
+| `ltiPlatformFrame(caller, item, link, ...)` | Prepares the same launch and returns what the player needs: that URL, the storage page and the `allow` list |
+| `ltiPlatformAuthorize(request, options)`    | Answers the tool's authentication request with the page that posts the `id_token`                           |
+| `platformJwks(options)`                     | Publishes the key set that verifies the `id_token`s                                                         |
+| `platformStorage(options)`                  | Serves the page that keeps the `state` and the `nonce` of a tool's login                                    |
+| `platformToken(request, options)`           | Grants access tokens by the client-credentials grant with a JWT assertion                                   |
+| `agsLineItem(request, options)`             | Answers a request for the one line item of an item instance                                                 |
+| `agsScores(request, options)`               | Receives the scores that the tool posts to the line item                                                    |
+| `readAgsScore(body)`                        | Reads the body of a score request                                                                           |
+| `platformEndpoints(config)`                 | Gives the URLs of the authorization endpoint, the key set, the token endpoint and the storage page          |
 
 The handlers take an `HttpRequest` and return an `HttpResponse`, as in the tool role. They take callbacks and never the
 session host: `check` confirms the caller's session, `once` records single-use identifiers, and `onScore` receives the
@@ -40,7 +42,7 @@ would share the origin with the player, and any injection into that page would r
 | -------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `issuer`       | The `iss` of the platform: an `https` URL without query or fragment                                              |
 | `origin`       | The origin of the handlers, such as `https://lti.platform.example`                                               |
-| `playerOrigin` | The origin of the player page, which frames the tool and holds the platform's storage for it                     |
+| `playerOrigin` | The origin of the player page, which frames the tool and the storage page                                        |
 | `assetOrigin`  | The origin that serves the files of packages                                                                     |
 | `keys`         | An RSA `CryptoKeyPair` for RS256; the public key must be extractable. The `kid` is its JWK thumbprint (RFC 7638) |
 | `hintKey`      | An HMAC key with SHA-256 for `sign` and `verify`                                                                 |
@@ -53,6 +55,7 @@ paths of `origin`, and the host routes them:
 | Authorization         | `/authorize` (GET or POST)       | `ltiPlatformAuthorize` |
 | Key set               | `/jwks` (GET)                    | `platformJwks`         |
 | Token                 | `/token` (POST)                  | `platformToken`        |
+| Storage page          | `/storage` (GET)                 | `platformStorage`      |
 | Line item             | `/ags/{line item}` (GET)         | `agsLineItem`          |
 | Scores of a line item | `/ags/{line item}/scores` (POST) | `agsScores`            |
 
@@ -70,16 +73,20 @@ endpoint.
 | `redirectUris` | The URLs that the platform may post an `id_token` to; the `redirect_uri` of a request must be one |
 | `jwksUrl`      | The tool's key set. Exactly one of this and `keys`                                                |
 | `keys`         | The tool's public RSA keys by `kid`, a `Map`. Exactly one of this and `jwksUrl`                   |
+| `allow`        | The `allow` attribute of the tool's frame, such as `microphone; camera 'self'`. Default: none     |
 
 Every URL is `https`. A link must have a launch URL: `secureLaunchUrl`, else `launchUrl`. A link that names only a vendor is
 refused with `DataError`.
 
 ## The launch
 
-1. The host's authenticated route calls `ltiPlatformLogin(caller, item, link, options)`. `options.check(caller)` runs first and
-   confirms that the session is the caller's (`SessionHost.check`, `AccessError` otherwise). The result is the URL of the
-   tool's login: `iss`, `login_hint`, `lti_message_hint`, `target_link_uri`, `client_id`, `lti_deployment_id` and
-   `lti_storage_target=_parent`. The player navigates the item's frame to it.
+1. The player calls its `ltiLogin` hook when the candidate opens an LTI item. The host's authenticated route answers with
+   `ltiPlatformFrame(caller, item, link, options)`, which does what `ltiPlatformLogin` does and adds the storage page and the
+   `allow` list of the registration to the result. `options.check(caller)` runs first and confirms that the session is the
+   caller's (`SessionHost.check`, `AccessError` otherwise). The URL is that of the tool's login: `iss`, `login_hint`,
+   `lti_message_hint`, `target_link_uri`, `client_id`, `lti_deployment_id` and `lti_storage_target=lti-storage`. The player
+   shows the storage page in a hidden frame named `lti-storage`, and when it has loaded navigates the frame of the tool, named
+   `lti-tool`, to the URL ([the storage page](#the-storage-page)).
 2. The tool answers with its authentication request (Security Framework §5.1.1.2) to the authorization endpoint.
    `ltiPlatformAuthorize` checks it and answers with a page that posts the `id_token` and the `state` to the redirect URI.
 
@@ -126,6 +133,36 @@ The page holds a form with the `id_token` and the `state` and one script that su
 hash and nothing else: `default-src 'none'; script-src 'sha256-...'; base-uri 'none'; form-action <origin of the redirect
 URI>; frame-ancestors <player origin>`. Every value is HTML-encoded. The answer is not cached and sends no referrer. Without
 JavaScript the form has a button.
+
+### The storage page
+
+The tool keeps the `state` and the `nonce` of its login in the platform while the browser goes to the platform and back, in
+place of a cookie that a frame may not set ([LTI Client Side OIDC 0.1](https://www.imsglobal.org/spec/lti-cs-oidc/v0p1)).
+It posts `lti.put_data` and `lti.get_data` to the frame that `lti_storage_target` names, with the origin of the
+authentication endpoint as the target, and accepts an answer only from that origin
+([LTI postMessage Storage 0.1](https://www.imsglobal.org/spec/lti-pm-s/v0p1)).
+
+The player page is on another origin than the endpoint, so it could not receive these messages. The storage page, served by
+`platformStorage` from the platform's origin, answers them instead, in a frame that the player puts beside the frame of the
+tool. Both frames are children of the host element of the player, which the player draws through a slot, and not of its shadow
+root: a window finds a frame by name only among the frames of its own document tree.
+
+| Message                                                          | Answer                                                                                          |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `lti.put_data` with a `key` and a `value`                        | `lti.put_data.response` with the key and the value; no `value`, or an empty one, clears the key |
+| `lti.get_data` with a `key`                                      | `lti.get_data.response` with the value, or the error `key_not_found`                            |
+| A request without a `message_id` or a `key`, or a non-text value | The error `bad_request`                                                                         |
+| Any other subject                                                | The error `unsupported_subject`                                                                 |
+| A write that passes 4096 bytes or 500 keys for the origin        | The error `storage_exhaustion`                                                                  |
+
+The page keeps the values by the origin of the message, so that one tool cannot read another's, and answers only the window of
+the frame `lti-tool`: a message from any other window gets no answer. It sends the answer to the window and the origin that sent
+the request. Its policy is `default-src 'none'; script-src 'sha256-...'; base-uri 'none'; form-action 'none'; frame-ancestors
+<player origin>`, and the answer is not cached and sends no referrer.
+
+The capabilities request (`lti.capabilities`, [LTI Client Side postMessages 0.1](https://www.imsglobal.org/spec/lti-cs-pm/v0p1))
+goes to the parent window, so the player answers it, for the frame of the tool only, with the three supported subjects and
+`frame: "lti-storage"` for the two storage messages.
 
 ### The `id_token`
 
@@ -192,6 +229,8 @@ absent means no score. The `timestamp` is ISO 8601 with a time zone designator (
 of a second is read when it is there. `timestampMs` is the same instant in milliseconds, so that scores of one line item and
 user compare across time zones. The platform must not update a result with an older score (§3.4.9), and `agsScores` does not
 keep one: `onScore` receives every score that passed the checks, and the host keeps the one with the greatest `timestampMs`.
+`createLtiScoreIntake` of `@luthfanwakan/tempuh/server` does that and supplies the final score to the session
+([server](server.md#the-scores-of-lti-items)).
 
 ## Example
 
@@ -208,10 +247,12 @@ import {
   createJwksCache,
   type HttpRequest,
   type HttpResponse,
+  type LtiFrame,
   ltiPlatformAuthorize,
-  ltiPlatformLogin,
+  ltiPlatformFrame,
   type PlatformConfig,
   platformJwks,
+  platformStorage,
   platformToken,
   type ToolRegistration,
 } from "@luthfanwakan/tempuh/lti";
@@ -269,9 +310,13 @@ function toResponse({ status, headers, body }: HttpResponse): Response {
   return new Response(status === 204 ? null : body, { status, headers });
 }
 
-/** The route of the host, behind its own authentication: the URL to navigate the item's frame to. */
-export function launchUrl(session: string, principal: string, item: ItemKey, link: LtiLink): Promise<string> {
-  return ltiPlatformLogin({ session, principal }, item, link, { ...options, check: async () => undefined });
+/**
+ * The route of the host behind the `ltiLogin` hook of the player, behind its own authentication. It answers with JSON: the
+ * URL of the tool's login, the storage page and the `allow` list. Take the item and its link from the session, as the host
+ * knows them, and not from the request: a candidate must not launch the tool of an item that is not open.
+ */
+export function frameFor(session: string, principal: string, item: ItemKey, link: LtiLink): Promise<LtiFrame> {
+  return ltiPlatformFrame({ session, principal }, item, link, { ...options, check: async () => undefined });
 }
 
 /** The routes of the platform's own origin. */
@@ -280,6 +325,7 @@ export async function platform(request: Request): Promise<Response> {
   const http = await toHttpRequest(request);
   if (pathname === "/authorize") return toResponse(await ltiPlatformAuthorize(http, options));
   if (pathname === "/jwks") return toResponse(await platformJwks(options));
+  if (pathname === "/storage") return toResponse(await platformStorage(options));
   if (pathname === "/token") return toResponse(await platformToken(http, options));
   if (pathname.endsWith("/scores")) return toResponse(await agsScores(http, options));
   if (pathname.startsWith("/ags/")) return toResponse(await agsLineItem(http, options));
@@ -296,6 +342,9 @@ export async function platform(request: Request): Promise<Response> {
 - Keep the hint key secret and stable while hints, line items and access tokens are in use: changing it ends them. Line items
   have no expiry.
 - Limit the size of a request body.
-- Wire `check` to `SessionHost.check`, and call `ltiPlatformLogin` only from a route that authenticated the caller.
-- `onScore` is where the host decides what a score is worth: it keeps the latest score by `timestampMs`, and supplies only a
-  `FullyGraded` score to the session.
+- Wire `check` to `SessionHost.check`, and call `ltiPlatformFrame` only from a route that authenticated the caller and
+  that takes the item from the session.
+- Wire `onScore` to `createLtiScoreIntake`: it keeps the latest score by `timestampMs`, and supplies only a `FullyGraded`
+  score to the session.
+- Route `/storage` to `platformStorage` on the platform's origin, and make sure the player shows it in the frame named
+  `lti-storage`, which `mountDelivery` does. One player per page: the frames are found by name.

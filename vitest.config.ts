@@ -24,6 +24,9 @@ const GLOBAL_SETUP = ["packages/tempuh/test/fixtures/global-setup.ts"];
 /** Starts the exam server, which runs session hosts and the asset gate over HTTP for the end-to-end tests. */
 const EXAM_SETUP = "packages/tempuh/test/fixtures/exam-setup.ts";
 
+/** Starts the servers of the LTI browser tests: the storage page of a platform and two tools. */
+const LTI_SETUP = "packages/tempuh/test/fixtures/lti-setup.ts";
+
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
   test: {
@@ -49,7 +52,7 @@ export default defineConfig({
         test: {
           name: "tempuh-browser",
           include: ["packages/tempuh/test/**/*.browser.test.ts"],
-          globalSetup: [...GLOBAL_SETUP, EXAM_SETUP],
+          globalSetup: [...GLOBAL_SETUP, EXAM_SETUP, LTI_SETUP],
           browser: browser(),
         },
       },

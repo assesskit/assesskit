@@ -10,6 +10,8 @@
  *
  * @module @luthfanwakan/tempuh/lti
  */
+
+export type { LtiFrame } from "../protocol/index.js";
 export { type AccessToken, ltiAccessToken } from "./access-token.js";
 export type { Clock } from "./clock.js";
 export { type DeepLinkItem, type DeepLinkLineItem, deepLinkResponse } from "./deep-link.js";
@@ -35,6 +37,7 @@ export {
   agsScores,
   LTI_HINT_TTL_SECONDS,
   ltiPlatformAuthorize,
+  ltiPlatformFrame,
   ltiPlatformLogin,
   type PlatformAuthorizeOptions,
   type PlatformConfig,
@@ -44,10 +47,12 @@ export {
   type PlatformTokenOptions,
   platformEndpoints,
   platformJwks,
+  platformStorage,
   platformToken,
   readAgsScore,
   type ToolRegistration,
 } from "./platform/index.js";
+export { publishScore } from "./publish-score.js";
 export type { PlatformRegistration } from "./registration.js";
 export type { Fetch } from "./service.js";
 export type { LoginRecord, LtiStore } from "./store.js";

@@ -14,6 +14,7 @@ import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
 import { readOrigins } from "../content/urls.js";
 import type { CustomInteractionHook } from "../elements/index.js";
+import type { LtiLogin } from "../lti-frame/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { SpeechHook } from "../speech/index.js";
 
@@ -55,6 +56,13 @@ export interface MountOptions {
     readonly record?: boolean;
     /** The voice that reads aloud for the candidates whose supports ask for it. Default: the voice of the browser, `webSpeech()`. */
     readonly voice?: SpeechHook;
+    /**
+     * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item (see
+     * `ltiPlatformFrame`).
+     *
+     * @defaultValue none, so that an LTI item says that its tool is not available
+     */
+    readonly ltiLogin?: LtiLogin;
   };
 }
 
@@ -95,7 +103,7 @@ const OPTION_NAMES = [
 /** Checks the hooks of the host. */
 function checkHooks(hooks: unknown): void {
   checkRecord(hooks, "The option hooks must be an object");
-  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice"]);
+  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice", "ltiLogin"]);
   if (hooks.customInteraction !== undefined) {
     checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
   }
@@ -105,6 +113,7 @@ function checkHooks(hooks: unknown): void {
     checkFunction(hooks.voice.speak, "The method speak of the hook voice must be a function");
     checkFunction(hooks.voice.stop, "The method stop of the hook voice must be a function");
   }
+  if (hooks.ltiLogin !== undefined) checkFunction(hooks.ltiLogin, "The hook ltiLogin must be a function");
 }
 
 /**

@@ -4,27 +4,28 @@
 [jose](https://github.com/panva/jose) for the tokens and the key sets. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on
 2022-06-30) are refused. The same subpath has the [platform role](lti-platform.md), which launches tools.
 
-| Function                                      | Does                                                                                          |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `ltiLogin(request, options)`                  | Answers the platform's third-party initiated login with the authentication request            |
-| `ltiLaunch(request, options)`                 | Validates the `id_token` and returns the launch, or the verification page of the storage path |
-| `deepLinkResponse(launch, items, options)`    | Signs the response to a Deep Linking request                                                  |
-| `ltiAccessToken(deployment, scopes, options)` | Requests an access token for the platform's services (client-credentials grant, JWT)          |
-| `createJwksCache(options)`                    | Creates the cache of the platforms' key sets that `ltiLaunch` verifies signatures with        |
+| Function                                         | Does                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ltiLogin(request, options)`                     | Answers the platform's third-party initiated login with the authentication request            |
+| `ltiLaunch(request, options)`                    | Validates the `id_token` and returns the launch, or the verification page of the storage path |
+| `deepLinkResponse(launch, items, options)`       | Signs the response to a Deep Linking request                                                  |
+| `ltiAccessToken(deployment, scopes, options)`    | Requests an access token for the platform's services (client-credentials grant, JWT)          |
+| `publishScore(result, launch, pending, options)` | Publishes the score of a finished test to the line item of the launch                         |
+| `createJwksCache(options)`                       | Creates the cache of the platforms' key sets that `ltiLaunch` verifies signatures with        |
 
 The handlers take an `HttpRequest` and return an `HttpResponse`, plain objects that a host builds from any web framework. The
 host owns the routes, the sessions, the database and the keys.
 
 ## Sources
 
-| Specification                                                                                                                                                                                                  | Used for                                                            |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [LTI 1.3 Core](https://www.imsglobal.org/spec/lti/v1p3)                                                                                                                                                        | Login parameters, launch claims, token endpoint                     |
-| [LTI Security Framework 1.0](https://www.imsglobal.org/spec/security/v1p0)                                                                                                                                     | Authentication request, `id_token` validation, key sets, assertions |
-| [LTI Deep Linking 2.0](https://www.imsglobal.org/spec/lti-dl/v2p0)                                                                                                                                             | Deep Linking request and response                                   |
-| [LTI Assignment and Grade Services 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0)                                                                                                                           | The `endpoint` claim of a launch                                    |
-| [LTI Client Side OIDC 0.1](https://www.imsglobal.org/spec/lti-cs-oidc/v0p1)                                                                                                                                    | `state` and `nonce` in the platform's browser storage               |
-| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749), [RFC 7515](https://www.rfc-editor.org/rfc/rfc7515), [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518), [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523) | OAuth 2.0, JWS, RS256, the JWT assertion                            |
+| Specification                                                                                                                                                                                                  | Used for                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [LTI 1.3 Core](https://www.imsglobal.org/spec/lti/v1p3)                                                                                                                                                        | Login parameters, launch claims, token endpoint                       |
+| [LTI Security Framework 1.0](https://www.imsglobal.org/spec/security/v1p0)                                                                                                                                     | Authentication request, `id_token` validation, key sets, assertions   |
+| [LTI Deep Linking 2.0](https://www.imsglobal.org/spec/lti-dl/v2p0)                                                                                                                                             | Deep Linking request and response                                     |
+| [LTI Assignment and Grade Services 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0)                                                                                                                           | The `endpoint` claim of a launch, the line item and the score service |
+| [LTI Client Side OIDC 0.1](https://www.imsglobal.org/spec/lti-cs-oidc/v0p1)                                                                                                                                    | `state` and `nonce` in the platform's browser storage                 |
+| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749), [RFC 7515](https://www.rfc-editor.org/rfc/rfc7515), [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518), [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523) | OAuth 2.0, JWS, RS256, the JWT assertion                              |
 
 ## Example
 
@@ -256,6 +257,56 @@ Core §6.2.1). `deployment` is a launch or any object with `issuer`, `clientId` 
 The result is an `AccessToken`: `value`, `expiresAt` (milliseconds) and `scopes`, which are those requested, or the subset the
 platform granted. A service request carries `Authorization: Bearer <value>`. The tool may keep the token until `expiresAt`; the
 function keeps none.
+
+## Publishing a score
+
+`publishScore(result, launch, pending, options)` gives the learning platform the score of a test that ended: the tool posts
+it to the score service of the line item that the launch offered ([LTI AGS 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0#score-publish-service)).
+`result` is the report of `SessionHost.results`, `pending` is `SessionHost.pending` of the same session, and `launch` is the
+resource link launch that started it. `options` are those of `ltiAccessToken`. The function asks for an access token for the
+scopes it needs on every call and keeps none.
+
+| Property of the score | Value                                                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `userId`              | The `sub` of the launch                                                                                                                  |
+| `timestamp`           | The time of the last change of the report, in UTC with milliseconds. It grows as the session changes, as the service requires            |
+| `activityProgress`    | `Completed`: call the function once the test has ended                                                                                   |
+| `gradingProgress`     | `PendingManual` while a request waits for a person; else `Pending` while a request waits for a scoring service; else `FullyGraded`       |
+| `scoreGiven`          | The outcome `SCORE` of the test, or of the one item delivered alone, raised to 0 when it is negative. Left out while a person must score |
+| `scoreMaximum`        | The outcome `MAXSCORE`; else the `scoreMaximum` of the line item, which the function reads. Present whenever `scoreGiven` is             |
+| `comment`             | `Raw score: <value>` when a negative `SCORE` was sent as 0. Left out otherwise                                                           |
+
+A report with no `SCORE`, or a `SCORE` that is NULL, gives a score without `scoreGiven`, which tells the platform that there
+is no score yet. A `SCORE` or `MAXSCORE` that is not a finite integer or float, and a `MAXSCORE` that is not above 0, is a
+`DataError`.
+
+Only the report that the session host returned is accepted. A copy of it, the report of a practice session and any other
+object are refused with `DataError`, because the host marks the reports of its own sessions in a set that no other code reaches.
+
+```ts
+import type { PendingWork } from "@luthfanwakan/olah/delivery";
+import { type AccessTokenOptions, type LtiLaunch, publishScore } from "@luthfanwakan/tempuh/lti";
+import type { OfficialResult } from "@luthfanwakan/tempuh/protocol";
+
+declare const options: AccessTokenOptions;
+declare const launch: LtiLaunch; // from ltiLaunch, kept with the session
+declare const results: (session: string) => Promise<OfficialResult>; // SessionHost.results
+declare const pending: (session: string) => Promise<PendingWork>; // SessionHost.pending
+
+/** Publishes the state of a finished session; call it again when a person or a service supplies a score. */
+export async function publish(session: string): Promise<void> {
+  await publishScore(await results(session), launch, await pending(session), options);
+}
+```
+
+| Error                              | When                                                                                                              |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `DataError`                        | An argument has the wrong type, the report is not official, or the report or the line item has no usable score    |
+| `LtiError` `line-item-unavailable` | The launch has no grade services, or offers no line item                                                          |
+| `LtiError` `scope-unavailable`     | The launch does not offer the `score` scope, or the scope to read the line item when the report has no `MAXSCORE` |
+| `LtiError` `subject-unavailable`   | The launch is anonymous                                                                                           |
+| `LtiError` `scope-denied`          | The platform granted fewer scopes than the call needs                                                             |
+| `ServiceError`                     | The token endpoint, the line item or the score service did not answer with a success                              |
 
 ## The key set cache
 

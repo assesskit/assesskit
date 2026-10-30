@@ -68,6 +68,13 @@ function standaloneItemPath(pkg: QtiPackage, identifier: string): string | undef
   return undefined;
 }
 
+/** Tells whether the file at a path is the link of an LTI resource, a document of the LTI schema and not of QTI (BPIG 6.2.9). */
+function isLtiLink(pkg: QtiPackage, path: string): boolean {
+  return pkg.manifest.resources.some(
+    (resource) => resource.type === "imsbasiclti_xmlv1p3" && resourcePath(pkg.manifest, resource) === path,
+  );
+}
+
 /** Returns the paths of the stimuli an item names, resolved against its document. */
 function stimulusPaths(pkg: QtiPackage, itemPath: string): readonly string[] {
   const document = pkg.document(itemPath);
@@ -84,7 +91,8 @@ function sourceOf(pkg: QtiPackage, identifier: string): DocumentSource | undefin
       item: (reference) => {
         const node = test.structure.itemRef(reference);
         const path = node === undefined ? undefined : resolveReference(node.base, node.model.href);
-        return path === undefined ? undefined : { path, stimuli: stimulusPaths(pkg, path) };
+        // A link to a tool has no document of QTI to read, and no content that the gate serves.
+        return path === undefined || isLtiLink(pkg, path) ? undefined : { path, stimuli: stimulusPaths(pkg, path) };
       },
     };
   }

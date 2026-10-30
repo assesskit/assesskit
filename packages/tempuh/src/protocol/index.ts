@@ -8,6 +8,13 @@
 export { type ActionEnvelope, checkActionEnvelope } from "./action-envelope.js";
 export { type Caller, checkCaller } from "./caller.js";
 export { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "./documents.js";
+export {
+  checkAllowList,
+  checkLtiFrame,
+  LTI_STORAGE_FRAME,
+  LTI_TOOL_FRAME,
+  type LtiFrame,
+} from "./lti-frame.js";
 export { isOfficialResult, type OfficialResult } from "./official.js";
 export { checkRefusal, REFUSAL_CODES } from "./refusal.js";
 export type { DispatchResult, SessionClient } from "./session-client.js";

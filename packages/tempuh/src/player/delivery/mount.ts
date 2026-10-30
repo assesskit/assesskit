@@ -9,6 +9,7 @@ import {
   InteractionElement,
   RESPONSE_EVENT,
 } from "../elements/index.js";
+import { createLtiSlot } from "../lti-frame/index.js";
 import { createMathTypesetter } from "../math/index.js";
 import { createContentRoot } from "../roots/index.js";
 import { webSpeech } from "../speech/index.js";
@@ -47,7 +48,8 @@ const itemId = (key: ItemKey | undefined): string => (key === undefined ? "" : `
  * - **Confirmations** are modal dialogs that start on the answer that goes back (WCAG 3.3.4).
  * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being stored.
  *
- * @param host - An element that has no shadow root. The player attaches one and draws in it.
+ * @param host - An element that has no shadow root. The player attaches one and draws in it. The frames of an LTI item are
+ * children of `host`, which the shadow root shows through a slot.
  * @param options - See {@link DeliveryOptions}.
  * @returns The mounted player.
  * @throws `DataError` when `host` or an option is not of its type.
@@ -80,6 +82,12 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const actionsSlot = html("div", { class: "tempuh-actions", role: "group", "aria-label": messages.actionsLabel });
   const supportsSlot = html("div", { class: "tempuh-supports-slot" });
   const contentHost = html("div", { class: "tempuh-content-host" });
+  const lti = createLtiSlot({
+    host,
+    messages,
+    login: hooks.ltiLogin,
+    refused: [window.location.origin, new URL(staticUrl, window.location.href).origin],
+  });
   let view: CandidateView = client.view;
   let destroyed = false;
   let shown = { item: "", content: "", modal: "" };
@@ -300,6 +308,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       notices,
       supportsSlot,
       contentHost,
+      lti.element,
       attempts,
       comment.element,
       actionsSlot,
@@ -333,6 +342,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     heading.textContent = next.current?.title ?? next.test.title;
     renderNotices(next);
     supports.update(next);
+    lti.update(next.current);
     if (chrome) renderChrome(next);
     if (!first && changed && chrome) heading.focus();
     shown = { ...shown, item: itemId(next.current?.key) };
@@ -356,6 +366,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       supports.destroy();
       status.stop();
       timerStatus.stop();
+      lti.destroy();
       void pci.reset().then(() => content.destroy());
       shadow.replaceChildren();
     },

@@ -589,4 +589,10 @@ export interface Messages {
   readonly variantLanguage: string;
   /** The notice that a version of a question that is adapted for the candidate is shown. */
   readonly variantAdapted: string;
+  /** The notice that the tool of a question that is a link to a tool could not be started. */
+  readonly ltiUnavailable: string;
+  /** The notice that the tool of a question is no longer open, which a review shows in place of the tool. */
+  readonly ltiClosed: string;
+  /** The title of the hidden frame that keeps what the tool of a question stores for its login. */
+  readonly ltiStorageFrame: string;
 }

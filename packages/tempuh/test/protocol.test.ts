@@ -6,11 +6,15 @@ import { isRecord } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 import {
   checkActionEnvelope,
+  checkAllowList,
   checkCaller,
+  checkLtiFrame,
   checkRefusal,
   checkSubmission,
   checkViewEnvelope,
   isOfficialResult,
+  LTI_STORAGE_FRAME,
+  LTI_TOOL_FRAME,
   REFUSAL_CODES,
   viewDocuments,
 } from "../src/protocol/index.js";
@@ -241,6 +245,73 @@ describe("viewDocuments", () => {
       item: "",
       stimuli: [],
     });
+  });
+});
+
+describe("the frame of an LTI item", () => {
+  const frame = { url: "https://tool.example.com/lti/login", storageUrl: "https://lti.platform.example/storage" };
+
+  it("[T106] names the frames of the tool and of the storage page, which the storage page and the tool look for by name", () => {
+    expect([LTI_TOOL_FRAME, LTI_STORAGE_FRAME]).toEqual(["lti-tool", "lti-storage"]);
+  });
+
+  it("[T106] accepts a frame with two URLs, with or without an allow list", () => {
+    expect(() => checkLtiFrame(frame)).not.toThrow();
+    expect(() =>
+      checkLtiFrame({ ...frame, allow: "microphone; camera 'self' https://tool.example.com" }),
+    ).not.toThrow();
+    expect(() =>
+      checkLtiFrame({ url: "http://127.0.0.1:8080/login", storageUrl: "http://127.0.0.1:8081/storage" }),
+    ).not.toThrow();
+  });
+
+  it("[T106] rejects what is not a frame", () => {
+    const cases: readonly [unknown, string][] = [
+      [json("null"), "The frame of an LTI item must be an object, found null."],
+      [
+        { ...frame, extra: 1 },
+        'The frame of an LTI item has the properties "url", "storageUrl" and "allow", found "extra".',
+      ],
+      [
+        { storageUrl: frame.storageUrl },
+        "The property url of the frame of an LTI item must be a string, found undefined.",
+      ],
+      [
+        { ...frame, url: "javascript:alert(1)" },
+        'The property url of the frame of an LTI item must be an absolute http or https URL, found "javascript:alert(1)".',
+      ],
+      [
+        { ...frame, url: "data:text/html,x" },
+        'The property url of the frame of an LTI item must be an absolute http or https URL, found "data:text/html,x".',
+      ],
+      [
+        { ...frame, storageUrl: "/storage" },
+        'The property storageUrl of the frame of an LTI item must be an absolute http or https URL, found "/storage".',
+      ],
+      [{ ...frame, allow: json("5") }, "The property allow of the frame of an LTI item must be a string, found 5."],
+      [
+        { ...frame, allow: "" },
+        'The property allow of the frame of an LTI item must be a Permissions Policy allow list of letters, digits, spaces and the characters ; * : / . \' -, found "".',
+      ],
+    ];
+    for (const [value, message] of cases) expect(() => checkLtiFrame(value), message).toThrow(new DataError(message));
+  });
+
+  it("[T106] accepts an allow list of the characters of a Permissions Policy and rejects any other", () => {
+    fc.assert(
+      fc.property(fc.stringMatching(/^[A-Za-z0-9 ;*:/.'-]{1,40}$/u), (allow) => {
+        expect(() => checkAllowList(allow, "The allow list")).not.toThrow();
+      }),
+    );
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 1, maxLength: 20 }),
+        fc.constantFrom('"', ",", "(", ")", "\n", "<", "`"),
+        (head, bad) => {
+          expect(() => checkAllowList(`${head}${bad}`, "The allow list")).toThrow(DataError);
+        },
+      ),
+    );
   });
 });
 

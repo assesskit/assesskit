@@ -67,7 +67,16 @@ host does: `documents` has `test`, the path of the test document, `item`, the pa
 and `stimuli`, the paths of the documents of its stimuli, in the order of the view. A path is a path in the package; `""` is its
 root, which is where a variant's references resolve, since olah does not know its path (olah E19). Without `documents`, every
 reference resolves against the root. `viewDocuments(view, source)` builds them from the `DocumentSource` that a host or a local
-session has of its test.
+session has of its test. A reference that names a link to a tool has no document of QTI, so `item` is `""` for it.
+
+## The frame of an LTI item
+
+`LtiFrame` is what the host's route answers the player's `ltiLogin` hook with: `url`, the tool's login, `storageUrl`, the
+platform's storage page, and `allow`, the `allow` list of the tool's frame, which is absent when the registration has none
+(`ltiPlatformFrame` builds it). `checkLtiFrame(value)` throws `DataError` unless `value` is an object with those properties
+only, the URLs absolute `http` or `https` URLs (never `javascript:` or `data:`) and `allow` an allow list: letters, digits,
+spaces and the characters `; * : / . ' -` (`checkAllowList`). `LTI_TOOL_FRAME` (`lti-tool`) and `LTI_STORAGE_FRAME` (`lti-storage`)
+are the names of the two frames, which the storage page and the tool look each other up by.
 
 ## The session client
 

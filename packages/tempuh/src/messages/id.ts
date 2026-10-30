@@ -300,4 +300,7 @@ export const ID_MESSAGES: Messages = {
   readAloudFailed: "Suara tidak dapat membacakan ini.",
   variantLanguage: "Bahasa versi ini",
   variantAdapted: "Versi soal yang disesuaikan ditampilkan.",
+  ltiUnavailable: "Alat untuk soal ini tidak dapat dijalankan.",
+  ltiClosed: "Alat untuk soal ini sudah tidak terbuka.",
+  ltiStorageFrame: "Penyimpanan untuk alat",
 };

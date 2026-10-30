@@ -23,5 +23,6 @@ export {
 } from "./gate/gate.js";
 export { collectAssetPrefixes } from "./gate/prefixes.js";
 export { createSessionHost, MAX_SAVE_RETRIES, type SessionHost, type SessionHostOptions } from "./host.js";
+export { createLtiScoreIntake, type LtiScoreIntake, type LtiScoreIntakeOptions } from "./lti-scores.js";
 export { CANDIDATE_ACTION_TYPES, type CandidateActionType, EXAM_CLIENT_ACTIONS } from "./policy.js";
-export type { FileStore, Scheduler, SessionSave, SessionStore, StoredSession } from "./stores.js";
+export type { AgsScoreStore, FileStore, Scheduler, SessionSave, SessionStore, StoredSession } from "./stores.js";

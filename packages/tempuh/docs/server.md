@@ -111,11 +111,53 @@ for them.
 
 ## Stores
 
-| Interface      | Methods                                                                                                                                                                                                                                                                        |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SessionStore` | `create(session, { state, principal, envelope })` returns `false` when the session exists. `load(session)` gives `{ state, principal, version, seq, envelope }`. `save(session, record)` stores `version + 1` if the stored version is `record.version`, else returns `false`. |
-| `Scheduler`    | `schedule(session, at)`: idempotent per pair.                                                                                                                                                                                                                                  |
-| `FileStore`    | `put(bytes, mimeType, fileName?)` returns the `FileValue` that refers to the bytes; `read(file)` returns them or `undefined`.                                                                                                                                                  |
+| Interface       | Methods                                                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SessionStore`  | `create(session, { state, principal, envelope })` returns `false` when the session exists. `load(session)` gives `{ state, principal, version, seq, envelope }`. `save(session, record)` stores `version + 1` if the stored version is `record.version`, else returns `false`. |
+| `Scheduler`     | `schedule(session, at)`: idempotent per pair.                                                                                                                                                                                                                                  |
+| `FileStore`     | `put(bytes, mimeType, fileName?)` returns the `FileValue` that refers to the bytes; `read(file)` returns them or `undefined`.                                                                                                                                                  |
+| `AgsScoreStore` | `keep(session, item, score)` keeps the score if it is later than the kept one and returns `false` otherwise. `latest(session, item)` returns the kept score or `undefined`.                                                                                                    |
 
-`create` and `save` must be atomic across the host's processes. `state` is olah's `serializeState`, `envelope` the JSON of the
+`create` and `save` of `SessionStore`, and `keep` of `AgsScoreStore`, must be atomic across the host's processes. `state` is olah's `serializeState`, `envelope` the JSON of the
 latest `ViewEnvelope`, and `action` of a save the JSON `{ at, action }` of the step that made it: the log of the session.
+
+## The scores of LTI items
+
+An item that is a link to a tool is delivered by the tool, which posts its score to the line item that the
+[platform role](lti-platform.md) offers. `createLtiScoreIntake({ host, scores, scoredBy? })` turns those scores into the scores
+of the session. Its `onScore` is the `onScore` of `agsScores`, and its `settle` takes the steps of the host's forwarding.
+
+| Option     | Meaning                                                                                                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `host`     | The session host, of which the intake uses `host`.                                                                                             |
+| `scores`   | The `AgsScoreStore` that keeps the latest score of each line item.                                                                             |
+| `scoredBy` | `(session, item) => iri`: the IRI of the tool, for the GradeEvent of Caliper. Needed when the session host forwards to Caliper. Default: none. |
+
+- The line item keeps the score with the latest `timestamp`. A score that is not later is ignored, as the score service of the
+  grade services requires ([LTI AGS 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0#timestamp)).
+- A score that is `FullyGraded` is supplied with `supply-scores`, scored by an external machine: its `scoreGiven` answers the
+  `SCORE` request of the item and its `scoreMaximum` the `MAXSCORE` request. A later final score replaces the values. A value that
+  the score lacks is NULL. `Pending`, `PendingManual` and the other progress is kept and not supplied.
+- olah makes the requests of an item when its session is over, not when the tool is done. A final score that arrives earlier is
+  kept, and `settle` supplies it when a step makes the requests. Call it from the `log` of the host's forwarding:
+
+```ts
+import {
+  createLtiScoreIntake,
+  createSessionHost,
+  type AgsScoreStore,
+  type SessionHostOptions,
+} from "@luthfanwakan/tempuh/server";
+
+declare const options: Omit<SessionHostOptions, "forward">;
+declare const scores: AgsScoreStore;
+
+// The intake and the host need each other: the host logs through the intake, and the intake supplies through the host.
+const intake = createLtiScoreIntake({ host: { host: (...call) => host.host(...call) }, scores });
+const host = createSessionHost({ ...options, forward: { log: (step) => intake.settle(step) } });
+
+// The handler of the score service: agsScores({ ...platformOptions, onScore: intake.onScore }).
+```
+
+A host that logs in other ways calls `settle` after its own log. The intake does not publish the results: that is
+[`publishScore`](lti.md#publishing-a-score) when the session is over, and again when a person or a tool supplies the rest.

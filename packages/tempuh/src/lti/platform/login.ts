@@ -2,19 +2,17 @@ import type { ItemKey } from "@luthfanwakan/olah/delivery";
 import type { LtiLink } from "@luthfanwakan/olah/package";
 import { checkHttpsUrl, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
 import { DataError, LtiError } from "../../errors.js";
-import { type Caller, checkCaller } from "../../protocol/index.js";
+import { type Caller, checkCaller, LTI_STORAGE_FRAME, type LtiFrame } from "../../protocol/index.js";
 import { MAX_IDENTIFIER_LENGTH, POSITIVE_NUMBER } from "../claims.js";
 import { readClock } from "../clock.js";
 import { randomToken } from "../random.js";
-import type { PlatformConfig } from "./config.js";
+import { endpointsOf, type PlatformConfig } from "./config.js";
 import { checkLoginOptions, type PlatformLoginOptions } from "./options.js";
 import { checkToolRegistration, type ToolRegistration } from "./registration.js";
 import { sealHint, sealLoginHint } from "./tokens.js";
 
 /** How long a hint is valid, in seconds (D-M1). It is the time for the browser to go to the tool and back. */
 export const LTI_HINT_TTL_SECONDS = 300;
-// The player page holds the platform's storage for the tool (LTI Client Side OIDC 0.1 §2.1), and it is the parent of the frame.
-const STORAGE_TARGET = "_parent";
 
 /** Checks the item instance that the host passes. */
 function checkItemKey(item: unknown): asserts item is ItemKey {
@@ -65,31 +63,14 @@ function launchUrlOf(link: LtiLink): string {
   return url;
 }
 
-/**
- * Prepares the launch of a tool for an item and returns the URL of the tool's third-party initiated login (Security
- * Framework §5.1.1.1) for the player to navigate the item's frame to.
- *
- * The URL carries `iss`, `client_id`, `lti_deployment_id`, `target_link_uri` and `lti_storage_target`, and two hints:
- * `lti_message_hint` is HMAC-signed and names the session, the item and the principal with a random `jti` and an expiry of
- * `LTI_HINT_TTL_SECONDS`, and `login_hint` is the principal, signed with the same key (D-M1). The hint also carries the
- * link's launch URL, custom properties and title, and the item's highest score, which `ltiPlatformAuthorize` puts in the
- * launch. It is signed and not encrypted, so the tool can read the session, the item and the principal.
- *
- * @param caller - The authenticated caller of the host's route.
- * @param item - The item instance to launch the tool for.
- * @param link - The LTI link of the item, from olah's `readLtiLink`.
- * @throws `DataError` when an argument or an option has the wrong type, the principal has more than 255 characters, the
- * link has no `https` launch URL or the highest score is not above 0.
- * @throws `AccessError` when `options.check` finds that the session is not the caller's.
- * @throws `LtiError` (`tool-unknown`) when the platform has no tool for the link, and (`origin-refused`) when the
- * link's launch URL or the tool's URLs are on the platform's, the player's or the asset origin.
- */
-export async function ltiPlatformLogin(
-  caller: Caller,
-  item: ItemKey,
-  link: LtiLink,
-  options: PlatformLoginOptions,
-): Promise<string> {
+/** A login that the platform prepared: the URL to send the browser to, and the registration of the tool it is for. */
+interface Prepared {
+  readonly url: string;
+  readonly registration: ToolRegistration;
+}
+
+/** Checks the arguments, finds the tool and builds the URL of its login with the signed hints. */
+async function prepare(caller: Caller, item: ItemKey, link: LtiLink, options: PlatformLoginOptions): Promise<Prepared> {
   checkLoginOptions(options);
   checkCaller(caller);
   checkItemKey(item);
@@ -135,8 +116,59 @@ export async function ltiPlatformLogin(
     ["target_link_uri", target],
     ["client_id", registration.clientId],
     ["lti_deployment_id", registration.deploymentId],
-    ["lti_storage_target", STORAGE_TARGET],
+    ["lti_storage_target", LTI_STORAGE_FRAME],
   ];
   for (const [name, value] of parameters) url.searchParams.append(name, value);
-  return url.href;
+  return { url: url.href, registration };
+}
+
+/**
+ * Prepares the launch of a tool for an item and returns the URL of the tool's third-party initiated login for the player
+ * to navigate the item's frame to.
+ *
+ * The URL carries `iss`, `client_id`, `lti_deployment_id`, `target_link_uri` and `lti_storage_target`, and two hints:
+ * `lti_message_hint` is HMAC-signed and names the session, the item and the principal with a random `jti` and an expiry of
+ * `LTI_HINT_TTL_SECONDS`, and `login_hint` is the principal, signed with the same key. The hint also carries the
+ * link's launch URL, custom properties and title, and the item's highest score, which `ltiPlatformAuthorize` puts in the
+ * launch. It is signed and not encrypted, so the tool can read the session, the item and the principal. The
+ * `lti_storage_target` is `LTI_STORAGE_FRAME`, the frame that the player shows with the page of `platformStorage`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/security/v1p0/#step-1-third-party-initiated-login | LTI Security Framework 1.0, third-party initiated login}
+ * @param caller - The authenticated caller of the host's route.
+ * @param item - The item instance to launch the tool for.
+ * @param link - The LTI link of the item, from olah's `readLtiLink`.
+ * @throws `DataError` when an argument or an option has the wrong type, the principal has more than 255 characters, the
+ * link has no `https` launch URL or the highest score is not above 0.
+ * @throws `AccessError` when `options.check` finds that the session is not the caller's.
+ * @throws `LtiError` (`tool-unknown`) when the platform has no tool for the link, and (`origin-refused`) when the
+ * link's launch URL or the tool's URLs are on the platform's, the player's or the asset origin.
+ */
+export async function ltiPlatformLogin(
+  caller: Caller,
+  item: ItemKey,
+  link: LtiLink,
+  options: PlatformLoginOptions,
+): Promise<string> {
+  return (await prepare(caller, item, link, options)).url;
+}
+
+/**
+ * Prepares the launch of a tool for an item as `ltiPlatformLogin` does, and returns what the player needs to show it: the
+ * URL of the login, the URL of the storage page, and the `allow` list of the tool's registration. The host's route for the
+ * player's `ltiLogin` hook answers with it as JSON.
+ *
+ * @param caller - The authenticated caller of the host's route.
+ * @param item - The item instance to launch the tool for.
+ * @param link - The LTI link of the item, from olah's `readLtiLink`.
+ * @throws `DataError`, `AccessError` and `LtiError` as {@link ltiPlatformLogin} does.
+ */
+export async function ltiPlatformFrame(
+  caller: Caller,
+  item: ItemKey,
+  link: LtiLink,
+  options: PlatformLoginOptions,
+): Promise<LtiFrame> {
+  const { url, registration } = await prepare(caller, item, link, options);
+  const { allow } = registration;
+  return { url, storageUrl: endpointsOf(options.config).storage, ...(allow === undefined ? {} : { allow }) };
 }

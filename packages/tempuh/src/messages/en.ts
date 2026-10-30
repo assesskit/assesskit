@@ -300,4 +300,7 @@ export const EN_MESSAGES: Messages = {
   readAloudFailed: "The voice could not read this.",
   variantLanguage: "Language of this version",
   variantAdapted: "An adapted version of this question is shown.",
+  ltiUnavailable: "The tool for this question could not be started.",
+  ltiClosed: "The tool for this question is no longer open.",
+  ltiStorageFrame: "Storage for the tool",
 };

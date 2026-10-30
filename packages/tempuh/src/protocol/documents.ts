@@ -41,7 +41,7 @@ export interface ItemDocuments {
 export interface DocumentSource {
   /** The path of the test document; `""` when the test has none, as a test that delivers one item alone. */
   readonly test: string;
-  /** Returns the documents of the item that an item reference names; `undefined` when the test has no such reference. */
+  /** Returns the documents of the item that an item reference names; `undefined` when the test has no such reference, or the reference names a link to a tool, which has no document of QTI. */
   item(reference: string): ItemDocuments | undefined;
 }
 

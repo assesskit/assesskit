@@ -7,6 +7,7 @@ import { isHmacKey, isRsaKey } from "../keys.js";
 const AUTHORIZATION_PATH = "/authorize";
 const JWKS_PATH = "/jwks";
 const TOKEN_PATH = "/token";
+const STORAGE_PATH = "/storage";
 /** The path under which the platform serves its line items; the segment after it names a line item. */
 export const LINE_ITEM_PATH = "/ags/";
 
@@ -16,7 +17,7 @@ export interface PlatformConfig {
   readonly issuer: string;
   /** The origin that serves the platform's handlers. It differs from the origins of the player and of the assets. */
   readonly origin: string;
-  /** The origin of the player page, which frames the tool and answers its storage messages. */
+  /** The origin of the player page, which frames the tool and the storage page. */
   readonly playerOrigin: string;
   /** The origin that serves the files of packages. */
   readonly assetOrigin: string;
@@ -34,6 +35,8 @@ export interface PlatformEndpoints {
   readonly jwks: string;
   /** The OAuth 2.0 token endpoint, served by `platformToken`; also the audience of the tool's client assertions. */
   readonly token: string;
+  /** The storage page that the player shows in a frame beside the frame of the tool, served by `platformStorage`. */
+  readonly storage: string;
 }
 
 /** Checks that a value is the origin of an `https` URL, such as `https://platform.example`. */
@@ -93,6 +96,7 @@ export function endpointsOf(config: PlatformConfig): PlatformEndpoints {
     authorization: `${config.origin}${AUTHORIZATION_PATH}`,
     jwks: `${config.origin}${JWKS_PATH}`,
     token: `${config.origin}${TOKEN_PATH}`,
+    storage: `${config.origin}${STORAGE_PATH}`,
   };
 }
 

@@ -62,7 +62,7 @@ describe("the shipped inventory", () => {
     expect(shipped.criteria.map(({ id }) => id)).not.toContain("4.1.1");
   });
 
-  it("has merged TB1, TB2, TB3, TB13a, TB5, TB4, TB13c, TB6, TB14, TB12, TB7, TB9, TB11, TB8 and TB10, with their rows", () => {
+  it("has merged TB1, TB2, TB3, TB13a, TB5, TB4, TB13c, TB6, TB14, TB12, TB7, TB9, TB11, TB8, TB10 and TB13b, with their rows", () => {
     expect(shipped.inventory.merged).toEqual([
       "TB1",
       "TB2",
@@ -79,6 +79,7 @@ describe("the shipped inventory", () => {
       "TB11",
       "TB8",
       "TB10",
+      "TB13b",
     ]);
     const rowsOf = (unit: string): string[] =>
       shipped.inventory.rows.filter((r) => "unit" in r && r.unit === unit).map((r) => r.id);
@@ -104,7 +105,7 @@ describe("the shipped inventory", () => {
       ...["T65", "T66", "T67", "T68", "T69", "T70", "T71", "T72", "T73"],
     ]);
     expect(rowsOf("TB11")).toEqual(["T110", "T111", "T112"]);
-    expect(rowsOf("TB13b")).toContain("T113");
+    expect(rowsOf("TB13b")).toEqual(["T105", "T106", "T113", "T122"]);
     expect(rowsOf("TB8")).toEqual(["T35", "T36", "T37", "T38", "T39", "T40", "T44"]);
     expect(rowsOf("TB10")).toEqual([
       ...["T74", "T75", "T76", "T77", "T78", "T79", "T80", "T81", "T82", "T83", "T84"],

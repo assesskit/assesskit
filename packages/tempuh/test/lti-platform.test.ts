@@ -17,11 +17,13 @@ import {
   ltiLaunch,
   ltiLogin,
   ltiPlatformAuthorize,
+  ltiPlatformFrame,
   ltiPlatformLogin,
   type PlatformConfig,
   type PlatformRegistration,
   platformEndpoints,
   platformJwks,
+  platformStorage,
   platformToken,
   readAgsScore,
   type ToolRegistration,
@@ -1230,6 +1232,7 @@ describe("platformEndpoints and the configuration", () => {
       authorization: `${PLATFORM_ORIGIN}/authorize`,
       jwks: `${PLATFORM_ORIGIN}/jwks`,
       token: `${PLATFORM_ORIGIN}/token`,
+      storage: `${PLATFORM_ORIGIN}/storage`,
     });
   });
 
@@ -1411,7 +1414,7 @@ describe("ltiPlatformLogin", () => {
       targetLinkUri: TOOL_LAUNCH_URL,
       clientId: TOOL_CLIENT_ID,
       deploymentId: TOOL_DEPLOYMENT_ID,
-      storageTarget: "_parent",
+      storageTarget: "lti-storage",
     });
     expect([...new URL(url).searchParams.keys()]).toEqual([
       "iss",
@@ -1594,6 +1597,16 @@ describe("ltiPlatformLogin", () => {
         "A tool must have exactly one of the properties jwksUrl and keys.",
       ],
       [
+        "an allow list with a quote of the other kind",
+        toolRegistration({ allow: 'microphone "self"' }),
+        'The allow list of a tool must be a Permissions Policy allow list of letters, digits, spaces and the characters ; * : / . \' -, found "microphone \\"self\\"".',
+      ],
+      [
+        "an allow list that is not a string",
+        toolRegistration({ allow: JSON.parse("5") }),
+        "The allow list of a tool must be a string, found 5.",
+      ],
+      [
         "a key set URL that is http",
         toolRegistration({ jwksUrl: "http://tool.example.com/jwks" }),
         'The key set URL of a tool must be an absolute https URL, found "http://tool.example.com/jwks".',
@@ -1679,6 +1692,68 @@ describe("ltiPlatformLogin", () => {
       ],
     ];
     for (const [message, call] of cases) await expect(call(), message).rejects.toThrow(new DataError(message));
+  });
+});
+
+describe("platformStorage", () => {
+  const response = (): Promise<HttpResponse> => platformStorage({ config, clock: { now: () => NOW } });
+
+  it("[T122] serves the page that keeps the values of a tool, with a policy that names its one script by hash and the player as its only frame", async () => {
+    const { status, headers, body } = await response();
+    expect(status).toBe(200);
+    expect(headers["content-type"]).toBe("text/html; charset=utf-8");
+    expect(headers["cache-control"]).toBe("no-store");
+    expect(headers["referrer-policy"]).toBe("no-referrer");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    const script = /<script>([\s\S]*)<\/script>/u.exec(body)?.[1] ?? "";
+    expect(body.split("<script").length - 1).toBe(1);
+    expect(headers["content-security-policy"]).toBe(
+      `default-src 'none'; script-src 'sha256-${createHash("sha256").update(script).digest("base64")}'; base-uri 'none'; form-action 'none'; frame-ancestors ${PLAYER_ORIGIN}`,
+    );
+  });
+
+  it("[T122] names the frame of the tool and the limits of LTI postMessage Storage 0.1: 4096 bytes and 500 keys for an origin", async () => {
+    const { body } = await response();
+    const config = JSON.parse(unescapeHtml(/data-config="([^"]*)"/u.exec(body)?.[1] ?? ""));
+    expect(config).toEqual({ tool: "lti-tool", maxBytes: 4096, maxKeys: 500 });
+  });
+
+  it("[T122] throws DataError for options of other types", async () => {
+    await expect(async () => platformStorage(JSON.parse("null"))).rejects.toThrow(
+      new DataError("The options must be an object, found null."),
+    );
+  });
+});
+
+describe("ltiPlatformFrame", () => {
+  it("[T122] gives the URL of the login, the URL of the storage page and the allow list of the registration", async () => {
+    const tools = new Map([[TOOL_CLIENT_ID, toolRegistration({ allow: "microphone; camera 'self'" })]]);
+    const ctx = setup({ tools });
+    const frame = await ltiPlatformFrame(caller, item, link, ctx.login);
+    expect(Object.keys(frame)).toEqual(["url", "storageUrl", "allow"]);
+    expect(frame.storageUrl).toBe(endpoints.storage);
+    expect(frame.allow).toBe("microphone; camera 'self'");
+    expect(readInitiation(frame.url).storageTarget).toBe("lti-storage");
+    expect(ctx.checked).toEqual([`${caller.session}/${caller.principal}`]);
+  });
+
+  it("[T122] leaves the allow list out when the registration has none", async () => {
+    const ctx = setup();
+    const frame = await ltiPlatformFrame(caller, item, link, ctx.login);
+    expect(frame).not.toHaveProperty("allow");
+    expect(Object.keys(frame)).toEqual(["url", "storageUrl"]);
+  });
+
+  it("[T122] refuses what ltiPlatformLogin refuses", async () => {
+    const ctx = setup();
+    await expect(
+      ltiPlatformFrame(caller, item, otherLink, { ...ctx.login, registration: async () => undefined }),
+    ).rejects.toMatchObject({
+      reason: "tool-unknown",
+    });
+    await expect(ltiPlatformFrame(caller, item, link, JSON.parse("null"))).rejects.toThrow(
+      new DataError("The options must be an object, found null."),
+    );
   });
 });
 
