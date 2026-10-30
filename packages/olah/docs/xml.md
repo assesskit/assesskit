@@ -9,9 +9,12 @@ documents that are not well-formed and reads no DTD.
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `parseXml(input, options?)`                                                   | Parses text or bytes into an `XmlElement`.                                 |
 | `serializeXml(root)`                                                          | Writes an `XmlElement` as a UTF-8 document.                                |
+| `ElementReader`, `ReaderRules`                                                | Reads an element into a model and reports what the model leaves unread.    |
+| `buildElement(namespace, name, attributes?, children?)`                       | Builds an element for a writer.                                            |
+| `isXmlLanguage(value)`                                                        | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                              | Replaces each `xi:include` with the root element of the document it names. |
 | `DEFAULT_XML_LIMITS`, `XmlLimits`                                             | The limits on size, depth, attributes, nodes and include nesting.          |
-| `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XINCLUDE_NAMESPACE`                      | Namespace URIs the reader and writer treat specially.                      |
+| `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`     | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction` | The tree.                                                                  |
 
 ## Example
@@ -119,6 +122,42 @@ limits are checked while the tree grows: the reader never builds a tree larger t
 - It throws `DataError` for a tree that cannot be written as well-formed XML: a character XML 1.0 does not allow, a name that is not
   an NCName, a prefix without a namespace or a namespace without a prefix on an attribute, one prefix for two namespaces on an
   element, a repeated attribute, `--` in a comment, a processing instruction named `xml` or containing `?>`. The message names the element.
+
+## Mapping a document to a model
+
+`ElementReader` is what [results](results.md), [usage](usage.md) and [pnp](pnp.md) read with. It is positioned on one
+element and moves forward through its children; `done()` fails when an attribute, a child or text is left, so that no
+part of a document is dropped without notice.
+
+```ts
+import { ElementReader } from "@luthfanwakan/olah/xml";
+
+const rules = { module: "demo", source: "DEMO XSD", namespaces: ["urn:demo"] };
+const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b/></a>', rules, "The demo");
+reader.attribute("n", Number); // 12
+reader.done(); // ReadError: The element b is not allowed in a at this place. (line 1, column 25)
+```
+
+| Member                                              | Purpose                                                                                                                                     |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ElementReader.open(input, rules, what)`            | Opens a document: text and bytes through `parseXml`, an element as it is.                                                                   |
+| `attribute(name, parse?)`, `required(name, parse?)` | The value of an attribute in no namespace, converted by `parse`; a `DataError` from `parse` becomes a `ReadError` that names the attribute. |
+| `term(name, terms)`, `requiredTerm(name, terms)`    | An attribute that must be one of some terms.                                                                                                |
+| `language()`, `requiredLanguage()`                  | `xml:lang`, which must be a language tag.                                                                                                   |
+| `take`, `takeAny`, `require`, `takeAll`             | Consume the next child, a run of children, or the next child that must be there.                                                            |
+| `next()`, `foreign`                                 | Consume the next child whatever it is, and tell an extension: an element outside the namespaces of the rules.                               |
+| `takeForeign()`, `extension()`                      | Consume the extensions, which must be in a namespace of their own.                                                                          |
+| `text(parse?)`                                      | The text of an element that has no child elements.                                                                                          |
+| `fail(code, message, source?)`, `attempt(...)`      | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                     |
+| `done()`                                            | Fail on an attribute, child or text that was not read. Namespace declarations and `xsi:` attributes never count.                            |
+
+`ReaderRules` names the module, whose issue codes are `olah/<module>/<name>`, the schema every issue cites, and the
+namespaces of the schema's elements. An issue has the line and column of the element and its path, such as
+`assessmentResult/itemResult`.
+
+`buildElement` leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one;
+a name with the prefix `xml:` or `xsi:` is in that namespace. `isXmlLanguage` accepts the language tags of `xs:language`
+and the empty string (XML 1.0 §2.12).
 
 ## XInclude
 

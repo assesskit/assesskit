@@ -101,6 +101,15 @@ seconds, and each schema is compiled once per set. Every test of a writer passes
 `asi.xsd.test.ts` generates the table again and fails when the committed file differs. The same file validates documents that
 fast-check generates from the table, and checks that they use every element of the rows A1 to A130.
 
+## Generators
+
+`packages/olah/test/arbitraries/` holds the fast-check generators of the models that have a reader and a writer: values
+(`values.ts`), results, usage data and PNP profiles and records, with the elements of an unknown namespace for the
+extensions (`xml.ts`). A generated model is what a reader returns for the document the writer writes, so the properties
+check `read(write(m))` against `m`, and the XSD tests validate a fixed sample of the written documents. A generator with
+`extensions: false` leaves out the elements of an unknown namespace, which a schema with a strict wildcard rejects. The
+generators of `asi` are driven by its element table instead (`asi-arbitraries.ts`).
+
 ## Differential tests
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`

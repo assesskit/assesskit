@@ -1,7 +1,5 @@
-import type { XmlElement } from "../xml/index.js";
+import { type XmlElement, XSI_NAMESPACE } from "../xml/index.js";
 import { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
-
-const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 
 /**
  * The schema of each namespace a document can have at its root: the primary schema that validates every document of

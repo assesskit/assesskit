@@ -1,0 +1,348 @@
+import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { DataError, type ReadError } from "../errors.js";
+import { isXmlLanguage } from "./language.js";
+import { parseXml } from "./parse.js";
+import { readError } from "./read-error.js";
+import { XML_NAMESPACE, XMLNS_NAMESPACE, type XmlAttribute, type XmlElement, XSI_NAMESPACE } from "./tree.js";
+
+/** What an {@link ElementReader} needs to know about the documents it reads. */
+export interface ReaderRules {
+  /** The module that reads, such as `results`: the codes of its issues are `olah/<module>/<name>`. */
+  readonly module: string;
+  /** The schema or section that defines the rules of the document, such as `RR XSD`; every issue cites it. */
+  readonly source: string;
+  /** The namespaces of the elements the schema defines, the schema's own first; elements in other namespaces are extensions. */
+  readonly namespaces: readonly string[];
+}
+
+/** Returns whether a text node holds only XML white space. */
+const isBlank = (value: string): boolean => value.trim() === "";
+
+/**
+ * Reads one element of a document that is being mapped to a model: its attributes, its child elements in order, or its
+ * text. It reports what the model leaves unread, so that nothing in a document is dropped without notice, and it turns
+ * each problem into a `ReadError` that names the element, its position and the rule.
+ *
+ * A reader is positioned on an element and moves forward through its children: `take`, `takeAny`, `require`, `takeAll` and
+ * `takeForeign` consume the children that follow, `next` consumes the next child whatever it is. {@link done} fails when
+ * an attribute or a child is left.
+ */
+export class ElementReader {
+  /** The element this reader reads. */
+  readonly element: XmlElement;
+  private readonly rules: ReaderRules;
+  private readonly trail: string;
+  private readonly used = new Set<XmlAttribute>();
+  private elements: readonly XmlElement[] | undefined;
+  private position = 0;
+  private textRead = false;
+
+  /**
+   * @param element - The element to read, from `parseXml` or built by the caller.
+   * @param rules - See {@link ReaderRules}.
+   * @param trail - The path of the parent elements, `/`-separated; empty for a root.
+   * @throws `DataError` when `element` is not an element or the rules are not rules.
+   */
+  constructor(element: XmlElement, rules: ReaderRules, trail = "") {
+    if (!(typeof element === "object" && element !== null && element.kind === "element")) {
+      throw new DataError("The element to read must be an element of the tree that parseXml returns.");
+    }
+    checkRecord(rules, "The rules of a reader must be an object");
+    checkString(rules.module, "The module of the rules of a reader");
+    checkString(rules.source, "The source of the rules of a reader");
+    checkArray(rules.namespaces, "The namespaces of the rules of a reader must be an array");
+    this.element = element;
+    this.rules = rules;
+    this.trail = trail === "" ? element.name : `${trail}/${element.name}`;
+  }
+
+  /**
+   * Opens a document for reading: text and bytes are parsed with {@link parseXml}, an element is taken as it is.
+   *
+   * @param input - The document.
+   * @param rules - See {@link ReaderRules}.
+   * @param what - Names the document in messages, such as `The results`.
+   * @throws `DataError` when `input` is none of these.
+   * @throws `ReadError`, `SecurityError` as {@link parseXml} does.
+   */
+  static open(input: unknown, rules: ReaderRules, what: string): ElementReader {
+    if (typeof input === "string" || input instanceof Uint8Array) return new ElementReader(parseXml(input), rules);
+    if (typeof input === "object" && input !== null && Reflect.get(input, "kind") === "element") {
+      return new ElementReader(input as XmlElement, rules);
+    }
+    throw new DataError(`${what} to read must be a string, a Uint8Array or an XmlElement, found ${describe(input)}.`);
+  }
+
+  /** The local name of the element. */
+  get name(): string {
+    return this.element.name;
+  }
+
+  /** The name of the element for a message: the local name, preceded by the namespace in braces when it is not the one of the rules. */
+  get qualifiedName(): string {
+    return this.labelOf(this.element);
+  }
+
+  /** Whether the element is in another namespace than the rules define: an extension. */
+  get foreign(): boolean {
+    return !this.isModel(this.element);
+  }
+
+  /** Builds the `ReadError` for a problem at this element. Throw the result. */
+  fail(code: string, message: string, source: string = this.rules.source): ReadError {
+    const { line, column } = this.element;
+    return readError(`olah/${this.rules.module}/${code}`, message, source, { line, column, element: this.trail });
+  }
+
+  /**
+   * Runs a conversion that signals a bad value with a `DataError`, such as a function of `values`, and turns that error into a
+   * `ReadError` at this element.
+   *
+   * @param code - The issue code of the problem, such as `invalid-value`.
+   * @param source - The rule the value breaks. Default: the source of the rules.
+   * @param lead - Text that opens the message of the `ReadError` before the message of the `DataError`.
+   */
+  attempt<T>(code: string, run: () => T, source?: string, lead = ""): T {
+    try {
+      return run();
+    } catch (error) {
+      if (error instanceof DataError) throw this.fail(code, `${lead}${error.message}`, source);
+      throw error;
+    }
+  }
+
+  private labelOf(element: XmlElement): string {
+    if (this.rules.namespaces.includes(element.namespace)) return element.name;
+    return element.namespace === "" ? `${element.name} in no namespace` : `{${element.namespace}}${element.name}`;
+  }
+
+  private attributeNamed(namespace: string, name: string): XmlAttribute | undefined {
+    const found = this.element.attributes.find(
+      (attribute) => attribute.namespace === namespace && attribute.name === name,
+    );
+    if (found !== undefined) this.used.add(found);
+    return found;
+  }
+
+  private convert<T>(parse: (text: string) => T, text: string, code: string, what: string): T {
+    return this.attempt(code, () => parse(text), undefined, `${what} is invalid. `);
+  }
+
+  /**
+   * Returns the value of an attribute that is in no namespace, or `undefined` when the element has none.
+   *
+   * @param name - The local name of the attribute.
+   */
+  attribute(name: string): string | undefined;
+  /**
+   * Returns the value of an attribute that is in no namespace, converted, or `undefined` when the element has none.
+   *
+   * @param name - The local name of the attribute.
+   * @param parse - Converts the text of the attribute, for instance with `parsePrimitive`. A `DataError` that it throws
+   * becomes a `ReadError` that names the attribute.
+   */
+  attribute<T>(name: string, parse: (text: string) => T): T | undefined;
+  attribute<T>(name: string, parse?: (text: string) => T): string | T | undefined {
+    const text = this.attributeNamed("", name)?.value;
+    if (text === undefined || parse === undefined) return text;
+    return this.convert(parse, text, "invalid-attribute", `The attribute ${name} of the element ${this.name}`);
+  }
+
+  /** Returns the value of an attribute in no namespace; a `ReadError` when the element has none. */
+  required(name: string): string;
+  /** Returns the value of an attribute in no namespace, converted as {@link attribute} does; a `ReadError` when the element has none. */
+  required<T>(name: string, parse: (text: string) => T): T;
+  required<T>(name: string, parse?: (text: string) => T): string | T {
+    const value = parse === undefined ? this.attribute(name) : this.attribute(name, parse);
+    if (value === undefined) {
+      throw this.fail("missing-attribute", `The element ${this.name} needs the attribute ${name}.`);
+    }
+    return value;
+  }
+
+  /**
+   * Returns the value of an attribute that must be one of some terms, or `undefined` when the element has none.
+   *
+   * @throws `ReadError` when the value is another term.
+   */
+  term<T extends string>(name: string, terms: readonly T[]): T | undefined {
+    return this.attribute(name, (text): T => {
+      checkChoice(text, `The attribute ${name}`, terms);
+      return text;
+    });
+  }
+
+  /** Returns the value of an attribute that must be one of some terms; a `ReadError` when the element has none or another term. */
+  requiredTerm<T extends string>(name: string, terms: readonly T[]): T {
+    const value = this.term(name, terms);
+    if (value === undefined) {
+      throw this.fail("missing-attribute", `The element ${this.name} needs the attribute ${name}.`);
+    }
+    return value;
+  }
+
+  /**
+   * Returns the value of `xml:lang`, or `undefined` when the element has none.
+   *
+   * @throws `ReadError` when the value is not a language tag or empty.
+   */
+  language(): string | undefined {
+    const text = this.attributeNamed(XML_NAMESPACE, "lang")?.value;
+    if (text === undefined || isXmlLanguage(text)) return text;
+    const message = `The attribute xml:lang of the element ${this.name} is invalid. The text ${describe(text)} is not a language tag such as en or pt-BR.`;
+    throw this.fail("invalid-attribute", message, "XML 1.0 §2.12");
+  }
+
+  /** Returns the value of `xml:lang`; a `ReadError` when the element has none or an invalid one. */
+  requiredLanguage(): string {
+    const value = this.language();
+    if (value === undefined) {
+      throw this.fail("missing-attribute", `The element ${this.name} needs the attribute xml:lang.`);
+    }
+    return value;
+  }
+
+  /** The child elements, after checking that the element has no text other than white space. */
+  private content(): readonly XmlElement[] {
+    if (this.elements === undefined) {
+      const stray = this.element.children.find(
+        (child) => (child.kind === "text" || child.kind === "cdata") && !isBlank(child.value),
+      );
+      if (stray !== undefined) {
+        throw this.fail("unexpected-text", `The element ${this.name} has text, but it contains elements only.`);
+      }
+      this.elements = this.element.children.filter((child) => child.kind === "element");
+    }
+    return this.elements;
+  }
+
+  private reader(element: XmlElement): ElementReader {
+    return new ElementReader(element, this.rules, this.trail);
+  }
+
+  private isModel(element: XmlElement): boolean {
+    return this.rules.namespaces.includes(element.namespace);
+  }
+
+  /** Consumes and returns the next child element, or `undefined` when none is left. */
+  next(): ElementReader | undefined {
+    const element = this.content()[this.position];
+    if (element === undefined) return undefined;
+    this.position += 1;
+    return this.reader(element);
+  }
+
+  /** Consumes the next child if it is one of the elements `names` of the namespace of the rules; otherwise returns `undefined`. */
+  takeAny(names: readonly string[]): ElementReader | undefined {
+    const element = this.content()[this.position];
+    if (element === undefined || !(this.isModel(element) && names.includes(element.name))) return undefined;
+    this.position += 1;
+    return this.reader(element);
+  }
+
+  /** Consumes the next child if it is the element `name` of the namespace of the rules; otherwise returns `undefined`. */
+  take(name: string): ElementReader | undefined {
+    return this.takeAny([name]);
+  }
+
+  /** Consumes the next child, which must be the element `name`; a `ReadError` when it is not. */
+  require(name: string): ElementReader {
+    const reader = this.take(name);
+    if (reader === undefined) {
+      const next = this.content()[this.position];
+      const found = next === undefined ? "no more elements" : `the element ${this.labelOf(next)}`;
+      throw this.fail("missing-element", `The element ${this.name} needs the element ${name}, found ${found}.`);
+    }
+    return reader;
+  }
+
+  /** Consumes the run of children that are the element `name`, and returns them; none gives an empty array. */
+  takeAll(name: string): ElementReader[] {
+    const readers: ElementReader[] = [];
+    for (let reader = this.take(name); reader !== undefined; reader = this.take(name)) readers.push(reader);
+    return readers;
+  }
+
+  /**
+   * Returns the element of a reader as an extension: an element of another namespace than the schema's, which a model keeps
+   * as it is. The schema's wildcards (`##other`) do not allow an element in no namespace.
+   *
+   * @throws `ReadError` when the element is in no namespace.
+   */
+  extension(): XmlElement {
+    if (this.element.namespace === "") {
+      const message = `The element ${this.qualifiedName} is not an extension: an extension is in a namespace of its own.`;
+      throw this.fail("unexpected-element", message);
+    }
+    return this.element;
+  }
+
+  /**
+   * Consumes the run of children that are in another namespace, extensions that the model keeps as they are.
+   *
+   * @throws `ReadError` when one is in no namespace; see {@link extension}.
+   */
+  takeForeign(): XmlElement[] {
+    const extensions: XmlElement[] = [];
+    for (
+      let element = this.content()[this.position];
+      element !== undefined && !this.isModel(element);
+      element = this.content()[this.position]
+    ) {
+      this.position += 1;
+      extensions.push(this.reader(element).extension());
+    }
+    return extensions;
+  }
+
+  /**
+   * Returns the text of the element: its text and CDATA sections joined, without comments and processing instructions.
+   *
+   * @throws `ReadError` when the element has child elements.
+   */
+  text(): string;
+  /**
+   * Returns the text of the element, converted.
+   *
+   * @param parse - Converts the text, as for {@link attribute}.
+   * @throws `ReadError` when the element has child elements, or `parse` fails.
+   */
+  text<T>(parse: (text: string) => T): T;
+  text<T>(parse?: (text: string) => T): string | T {
+    this.textRead = true;
+    let text = "";
+    for (const child of this.element.children) {
+      if (child.kind === "element") {
+        const message = `The element ${this.name} has the element ${this.labelOf(child)}, but it contains text only.`;
+        throw this.fail("unexpected-element", message);
+      }
+      if (child.kind === "text" || child.kind === "cdata") text += child.value;
+    }
+    return parse === undefined
+      ? text
+      : this.convert(parse, text, "invalid-text", `The text of the element ${this.name}`);
+  }
+
+  /**
+   * Finishes the element: it must have no attribute, no child element and no text left unread. Namespace declarations and the
+   * attributes of `xsi:` (XML Schema Part 1, 2.6) are never unread.
+   *
+   * @throws `ReadError` for the first attribute or child element left.
+   */
+  done(): void {
+    const stray = this.element.attributes.find(
+      (attribute) =>
+        !(this.used.has(attribute) || attribute.namespace === XMLNS_NAMESPACE || attribute.namespace === XSI_NAMESPACE),
+    );
+    if (stray !== undefined) {
+      const name = stray.prefix === undefined ? stray.name : `${stray.prefix}:${stray.name}`;
+      const message = `The element ${this.name} has the attribute ${name}, which the schema does not define for it.`;
+      throw this.fail("unexpected-attribute", message);
+    }
+    const extra = this.textRead ? undefined : this.content()[this.position];
+    if (extra !== undefined) {
+      const message = `The element ${this.labelOf(extra)} is not allowed in ${this.name} at this place.`;
+      throw this.reader(extra).fail("unexpected-element", message);
+    }
+  }
+}

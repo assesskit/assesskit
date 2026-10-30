@@ -2,7 +2,15 @@ import { checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type BaseType, checkBaseType } from "./base-type.js";
 import { isIdentifier } from "./identifier.js";
-import { isFileValue, isTuple, normalizePrimitive, type Primitive } from "./primitive.js";
+import {
+  type FileValue,
+  isFileValue,
+  isTuple,
+  normalizePrimitive,
+  type Pair,
+  type Point,
+  type Primitive,
+} from "./primitive.js";
 import { xmlTokens } from "./whitespace.js";
 
 /** `xs:integer`: an optional sign and digits (XML Schema Part 2, 3.3.13). */
@@ -75,6 +83,12 @@ function twoTokens(tokens: readonly string[], text: string, baseType: BaseType):
  * @param baseType - The base type.
  * @throws `DataError` when `text` is not a string, `baseType` is not a base type or the text is not in the lexical form.
  */
+export function parsePrimitive(text: string, baseType: "boolean"): boolean;
+export function parsePrimitive(text: string, baseType: "integer" | "float" | "duration"): number;
+export function parsePrimitive(text: string, baseType: "string" | "identifier" | "uri"): string;
+export function parsePrimitive(text: string, baseType: "point" | "pair" | "directedPair"): Point | Pair;
+export function parsePrimitive(text: string, baseType: "file"): FileValue;
+export function parsePrimitive(text: string, baseType: BaseType): Primitive;
 export function parsePrimitive(text: string, baseType: BaseType): Primitive {
   checkString(text, "The text");
   checkBaseType(baseType);

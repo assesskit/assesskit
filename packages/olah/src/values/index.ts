@@ -6,6 +6,7 @@
  */
 export { BASE_TYPES, type BaseType, isBaseType } from "./base-type.js";
 export { CARDINALITIES, type Cardinality, isCardinality } from "./cardinality.js";
+export { parseIsoDuration } from "./duration.js";
 export { isIdentifier } from "./identifier.js";
 export {
   fromJsonValue,
@@ -22,6 +23,7 @@ export { UNICODE_VERSION } from "./unicode-categories.js";
 export {
   type ContainerValue,
   container,
+  normalizeValue,
   type RecordValue,
   record,
   type SingleValue,
@@ -29,6 +31,7 @@ export {
   type Value,
 } from "./value.js";
 export { fromWireValue, toWireValue, type WireValue } from "./wire.js";
+export { isXsdDate, isXsdDateTime } from "./xsd-date-time.js";
 export {
   type CompileXsdRegexOptions,
   compileXsdRegex,

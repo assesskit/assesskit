@@ -34,6 +34,18 @@
       "types": "./dist/asi/index.d.ts",
       "default": "./dist/asi/index.js"
     },
+    "./pnp": {
+      "types": "./dist/pnp/index.d.ts",
+      "default": "./dist/pnp/index.js"
+    },
+    "./results": {
+      "types": "./dist/results/index.d.ts",
+      "default": "./dist/results/index.js"
+    },
+    "./usage": {
+      "types": "./dist/usage/index.d.ts",
+      "default": "./dist/usage/index.js"
+    },
     "./values": {
       "types": "./dist/values/index.d.ts",
       "default": "./dist/values/index.js"

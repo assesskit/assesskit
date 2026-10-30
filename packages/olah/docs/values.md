@@ -38,7 +38,8 @@ copy them and return `null` for what is NULL, so a `Value` is never empty.
 | `ordered`   | A sequence                                                                                                  |
 | `record`    | A `Map` from field identifier to a single value, each field with its own base type; insertion order is kept |
 
-A container holds at least one value and no empty string; a record holds at least one field. `BASE_TYPES` and
+A container holds at least one value and no empty string; a record holds at least one field. `normalizeValue(value)` checks
+an untrusted value deeply and returns a copy of it. `BASE_TYPES` and
 `CARDINALITIES` list the terms of `BaseTypeEnum` and `CardinalityEnum`, and `isBaseType` and `isCardinality` test a string
 against them.
 
@@ -66,6 +67,29 @@ import { formatPrimitive, parsePrimitive } from "@luthfanwakan/olah/values";
 parsePrimitive("118 184", "point"); // [118, 184]
 parsePrimitive(" 12 ", "integer"); // 12
 formatPrimitive([118, 184], "point"); // "118 184"
+```
+
+`parsePrimitive` returns the type of the base type you give it when that is a literal: a `number` for `"integer"`, `"float"`
+and `"duration"`, a `boolean` for `"boolean"`, a `string` for `"string"`, `"identifier"` and `"uri"`, and so on.
+
+### Dates and durations in documents
+
+Documents write dates and durations in forms of XML Schema and ISO 8601 that are not base types of QTI.
+
+| Function                 | Form                                                                                                                                                                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isXsdDateTime(text)`    | `YYYY-MM-DDThh:mm:ss` with an optional fraction and time zone, a four-digit year from `0001`, a real day of that month, and `24:00:00` for the end of a day: the `xs:dateTime` of RR's `datestamp`. |
+| `isXsdDate(text)`        | `YYYY-MM-DD` with a four-digit year from `0001`, a real day of that month and no time zone: the `DateDType` of UD's `lastUpdated`.                                                                  |
+| `parseIsoDuration(text)` | An ISO 8601 duration in seconds. Weeks, days, hours, minutes and seconds only; years and months are a `DataError` (G14).                                                                            |
+
+```ts
+import { isXsdDate, isXsdDateTime, parseIsoDuration } from "@luthfanwakan/olah/values";
+
+isXsdDateTime("2020-08-25T18:19:20"); // true
+isXsdDateTime("2020-08-25"); // false
+isXsdDate("2004-07-04"); // true
+isXsdDate("2004-7-4"); // false
+parseIsoDuration("PT2M0.049722S"); // 120.049722
 ```
 
 ## Identifiers and lists

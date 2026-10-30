@@ -18,10 +18,14 @@ import {
   isBaseType,
   isCardinality,
   isIdentifier,
+  isXsdDate,
+  isXsdDateTime,
   matchValues,
+  normalizeValue,
   type Primitive,
   parseIdentifierList,
   parseIntegerList,
+  parseIsoDuration,
   parsePrimitive,
   promote,
   record,
@@ -273,6 +277,27 @@ describe("values", () => {
     }
   });
 
+  it("[T12][T13][T14][T15] checks a value deeply and returns a copy of it", () => {
+    const values = [
+      nonNull(single("integer", 5)),
+      nonNull(container("ordered", "string", ["a", "b"])),
+      nonNull(record([["x", nonNull(single("boolean", true))]])),
+    ];
+    for (const value of values) {
+      const copy = normalizeValue(value);
+      expect(copy).toEqual(value);
+      expect(copy).not.toBe(value);
+    }
+  });
+
+  it("[T12][T15] refuses what is not a value", () => {
+    expect(() => normalizeValue(json("null"))).toThrow("A value must be an object, found null.");
+    expect(() => normalizeValue(json('{"cardinality":"single","baseType":"integer","value":"5"}'))).toThrow(DataError);
+    expect(() => normalizeValue(json('{"cardinality":"multiple","baseType":"integer","values":[]}'))).toThrow(
+      "A value cannot be empty; the absence of a value is null.",
+    );
+  });
+
   it("rejects arguments of other types", () => {
     expect(() => single(json('"unknown"'), json("1"))).toThrow('The base type must be "boolean"');
     expect(() => single(json("null"), json("1"))).toThrow(DataError);
@@ -425,6 +450,93 @@ describe("lexical forms", () => {
     expect(() => parsePrimitive("5", json('"number"'))).toThrow(DataError);
     expect(() => formatPrimitive(json('"5"'), "integer")).toThrow(DataError);
     expect(() => formatPrimitive(5, json("null"))).toThrow(DataError);
+  });
+});
+
+describe("XML Schema dates", () => {
+  it("[R4][R5] accepts the dateTimes of the examples of RR and the forms of XML Schema Part 2, 3.2.7", () => {
+    // The first two are the datestamps of 1EdTech's results/report.xml and conformance-use-case-1.xml.
+    for (const text of [
+      "2020-08-25T18:19:20",
+      "2021-02-22T22:27:45.988",
+      "2000-02-29T00:00:00Z",
+      "2020-01-01T24:00:00",
+      "2020-01-01T24:00:00.000",
+      "1999-12-31T23:59:59+14:00",
+      "1999-12-31T23:59:59-05:30",
+      "0001-01-01T00:00:00",
+      "9999-12-31T23:59:59.999999999",
+    ]) {
+      expect(isXsdDateTime(text), text).toBe(true);
+    }
+  });
+
+  it("[R4][R5][N] rejects what is not a dateTime with a four-digit year", () => {
+    for (const text of [
+      "",
+      "2020-08-25",
+      "2020-08-25 18:19:20",
+      "2020-08-25T18:19",
+      "2021-02-29T00:00:00",
+      "1900-02-29T00:00:00",
+      "2020-13-01T00:00:00",
+      "2020-00-10T00:00:00",
+      "2020-04-31T00:00:00",
+      "0000-01-01T00:00:00",
+      "12345-01-01T00:00:00",
+      "20-01-01T00:00:00",
+      "2020-01-01T25:00:00",
+      "2020-01-01T24:00:01",
+      "2020-01-01T24:30:00",
+      "2020-01-01T24:00:00.5",
+      "2020-01-01T23:60:00",
+      "2020-01-01T23:59:60",
+      "2020-01-01T00:00:00+14:30",
+      "2020-01-01T00:00:00+15:00",
+      "2020-01-01T00:00:00+05:60",
+      "2020-01-01T00:00:00+5",
+      " 2020-01-01T00:00:00",
+      "2020-01-01T00:00:00 ",
+    ]) {
+      expect(isXsdDateTime(text), text).toBe(false);
+    }
+  });
+
+  it("[U2] accepts a date as UD writes lastUpdated: YYYY-MM-DD, with a day of that month", () => {
+    // 2004-07-04 is the lastUpdated of 1EdTech's usageData/example.xml.
+    for (const text of ["2004-07-04", "2024-02-29", "0001-01-01", "9999-12-31"])
+      expect(isXsdDate(text), text).toBe(true);
+  });
+
+  it("[R5][U2][N] rejects a value that is not text", () => {
+    for (const value of [json("5"), json("null"), json('["2004-07-04"]'), json('{"a":1}')]) {
+      expect(isXsdDate(value)).toBe(false);
+      expect(isXsdDateTime(value)).toBe(false);
+    }
+  });
+
+  it("[U2][N] rejects what the pattern of DateDType or the calendar does not allow", () => {
+    for (const text of [
+      "",
+      "2023-02-29",
+      "2004-7-4",
+      "2004-07-04Z",
+      "04-07-04",
+      "2004-07-32",
+      "0000-01-01",
+      "2004-07-04T00:00:00",
+    ]) {
+      expect(isXsdDate(text), text).toBe(false);
+    }
+  });
+});
+
+describe("ISO 8601 durations", () => {
+  it("[T10] reads the durations that 1EdTech's example of a result writes", () => {
+    // results/conformance-use-case-1.xml.
+    expect(parseIsoDuration("PT2M0.049722S")).toBe(120.049722);
+    expect(parseIsoDuration("PT9.590316S")).toBe(9.590316);
+    expect(parseIsoDuration("-P1DT1H")).toBe(-90_000);
   });
 });
 

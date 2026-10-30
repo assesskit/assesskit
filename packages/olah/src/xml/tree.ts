@@ -4,6 +4,9 @@ export const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 /** The namespace of the `xmlns` attributes that declare namespaces (Namespaces in XML 1.0 §3). */
 export const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
 
+/** The namespace of the attributes that schema-validated documents use, such as `xsi:schemaLocation` (XML Schema Part 1, 2.6). */
+export const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+
 /** The namespace of XInclude (XInclude 1.0 §2). */
 export const XINCLUDE_NAMESPACE = "http://www.w3.org/2001/XInclude";
 

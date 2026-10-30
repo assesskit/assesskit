@@ -29,7 +29,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB2 | merged | 26 |
 | OB3 | merged | 3 |
 | OB4 | merged | 149 |
-| OB5 | pending | 77 |
+| OB5 | merged | 77 |
 | OB6 | pending | 67 |
 | OB7 | pending | 185 |
 | OB8 | pending | 59 |
@@ -463,7 +463,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | S10 | `response-identifier` | INFO §2.2.2.2 | interactions, validate | S N | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | S11 | `role` and 46 `aria-*` attributes of `ARIABase` | INFO §2.13.3, INFO §5.2 | asi, validate | R X N | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | S12 | `data-*` attributes on the classes of §10.1.7 | INFO §10.1.7, BIND §6.7, BPIG §3.7.12 | asi, pci | R X S | OB4 | [asi.test.ts](../test/asi.test.ts) |
-| S13 | Namespaces, `xsi:schemaLocation` | BIND §3, INFO §7, BPIG §5 | xml, asi, pnp | R X N | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [xml.corpus.test.ts](../test/xml.corpus.test.ts), [xml.test.ts](../test/xml.test.ts) |
+| S13 | Namespaces, `xsi:schemaLocation` | BIND §3, INFO §7, BPIG §5 | xml, asi, pnp | R X N | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts), [xml.corpus.test.ts](../test/xml.corpus.test.ts), [xml.test.ts](../test/xml.test.ts) |
 | S14 | Extension elements and attributes in other namespaces (`Selection`, `Ordering`, `CustomOperator`, `CustomInteraction`, `CompanionMaterialsInfo`; strict or lax) | INFO §10.1.1–10.1.5, BIND §6.1–6.5 | asi | R X | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | S15 | Vocabulary extension terms `ext:…` for `support` and `use` | INFO §10.1.6, BIND §6.6 | asi, content | R X V | OB4 | [asi.test.ts](../test/asi.test.ts) |
 
@@ -671,7 +671,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B66 | Adaptive section (CAT): `qti-adaptive-selection` excludes `qti-selection` and `qti-ordering`; no nested sections; top-level only; branch rules and pre-conditions on its items, and branch rules targeting its items, are ignored; stages appended in order | CAT §2.1, INFO §2.3, INFO §4.2 | delivery, validate | S N | OB16 |  |
 | B67 | CAT item flow: response and outcome processing before Submit Results; CAT outcome values merged into results; results per presented item with `sequenceIndex`, skipped items `initial` | CAT §2.4, INFO §4.3.1 | delivery, cat | S | OB16 |  |
 | B68 | Catalogs: one card per support in a catalog; card or card entry has HTML content or file references; card entry chosen by `xml:lang`, else `default` | BPIG §3.7.10 | content, validate | S N | OB10 |  |
-| B69 | PNP sets: activate as option, activate at initialization, prohibit; a prohibited support is not assigned | BPIG §5.3 | pnp | S N | OB5 |  |
+| B69 | PNP sets: activate as option, activate at initialization, prohibit; a prohibited support is not assigned | BPIG §5.3 | pnp | S N | OB5 | [pnp.test.ts](../test/pnp.test.ts) |
 | B70 | Answered status from validity: answered, attempted, presented, notpresented | RR §2.7.1 | interactions, delivery | S | OB10 |  |
 | B71 | Math operators: domains give NULL; reciprocal and `atan2` rules; `signum`, `floor`, `ceil` integer results | INFO §2.11.3.39, INFO §8.21 | processing | S P | OB8 |  |
 | B72 | Rounding: `round` to n for [n − 0.5, n + 0.5); `truncate` toward zero; NaN gives NULL; `round`, `truncate`, `floor`, `ceil` of ±INF give NULL (D4) | INFO §2.11.3.37–38, INFO §8.21 | processing | S P | OB8 |  |
@@ -897,93 +897,93 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| U1 | `usageData` (`glossary`), namespace `http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0` | UD §2.3.1 | usage | R X C | OB5 |  |
-| U2 | `ordinaryStatistic` (`name!`, `glossary`, `context!`, `caseCount`, `stdError`, `stdDeviation`, `lastUpdated`), `targetObject`+, `value` | UD §2.4.3 | usage | R X C | OB5 |  |
-| U3 | `categorizedStatistic` (same attributes), `targetObject`+, `mapping` | UD §2.4.1 | usage | R X | OB5 |  |
-| U4 | `targetObject` (`identifier!`, `partIdentifier`, `objectType`) | UD §2.6.4 | usage | R X | OB5 |  |
-| U5 | `mapping` (`lowerBound`, `upperBound`, `defaultValue`), `mapEntry` (`mapKey!`, `mappedValue!`, `caseSensitive`) | UD §2.4.2, INFO §2.6.3 | usage | R X | OB5 |  |
-| U6 | `value` (`fieldIdentifier`, `baseType`) | UD §2.6.5 | usage, values | R X | OB5 |  |
-| U7 | Vocabulary ObjectTypeEnum: test, testpart, section, item, outcome, interaction, choice | UD §2.7.2 | usage | V | OB5 |  |
-| U8 | External vocabulary Distractor Statistics: AISResponse, NumberChoosingResponse, PTbis-Response, PercentChoosingResponse | UD §2.8.1 | usage | V | OB5 |  |
-| U9 | External vocabulary Item Statistics: A-Param, AIS, B-Param, C-Param, D-Param, Fifths_Table_{Highest, Second_Highest, Middle, Second_Lowest, Lowest}, P-value, PHI, PTbis, Polyserial, Score_Conversion, rbis | UD §2.8.2 | usage | V | OB5 |  |
+| U1 | `usageData` (`glossary`), namespace `http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0` | UD §2.3.1 | usage | R X C | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U2 | `ordinaryStatistic` (`name!`, `glossary`, `context!`, `caseCount`, `stdError`, `stdDeviation`, `lastUpdated`), `targetObject`+, `value` | UD §2.4.3 | usage | R X C | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts), [values.test.ts](../test/values.test.ts) |
+| U3 | `categorizedStatistic` (same attributes), `targetObject`+, `mapping` | UD §2.4.1 | usage | R X | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U4 | `targetObject` (`identifier!`, `partIdentifier`, `objectType`) | UD §2.6.4 | usage | R X | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U5 | `mapping` (`lowerBound`, `upperBound`, `defaultValue`), `mapEntry` (`mapKey!`, `mappedValue!`, `caseSensitive`) | UD §2.4.2, INFO §2.6.3 | usage | R X | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U6 | `value` (`fieldIdentifier`, `baseType`) | UD §2.6.5 | usage, values | R X | OB5 | [usage.corpus.test.ts](../test/usage.corpus.test.ts), [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U7 | Vocabulary ObjectTypeEnum: test, testpart, section, item, outcome, interaction, choice | UD §2.7.2 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U8 | External vocabulary Distractor Statistics: AISResponse, NumberChoosingResponse, PTbis-Response, PercentChoosingResponse | UD §2.8.1 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
+| U9 | External vocabulary Item Statistics: A-Param, AIS, B-Param, C-Param, D-Param, Fifths_Table_{Highest, Second_Highest, Middle, Second_Lowest, Lowest}, P-value, PHI, PTbis, Polyserial, Score_Conversion, rbis | UD §2.8.2 | usage | V | OB5 | [usage.test.ts](../test/usage.test.ts), [usage.xsd.test.ts](../test/usage.xsd.test.ts) |
 | U10 | Usage data as CAT pool input (`qti-usagedata-ref`) | CAT §2.2 | cat | S | OB9 |  |
 
 ### R: Results Reporting
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| R1 | `assessmentResult` (namespace `http://www.imsglobal.org/xsd/imsqti_result_v3p0`) | RR §2.3.1, RR XSD | results | R X C | OB5 |  |
-| R2 | `context` (`sourcedId`) | RR §2.4.2 | results | R X | OB5 |  |
-| R3 | `sessionIdentifier` (`sourceID!`, `identifier!`) | RR §2.6.3 | results | R X | OB5 |  |
-| R4 | `testResult` (`identifier!`, `datestamp!`) | RR §2.4.9 | results, delivery | R X S | OB5 |  |
-| R5 | `itemResult` (`identifier!`, `sequenceIndex`, `datestamp!`, `sessionStatus!`) | RR §2.4.5 | results, delivery | R X S | OB5 |  |
-| R6 | `responseVariable` (`identifier!`, `cardinality!`, `baseType`, `choiceSequence`, `scoreStatus`, `answeredStatus`) | RR §2.4.8 | results, delivery | R X S | OB5 |  |
-| R7 | `correctResponse` (`interpretation`) | RR §2.4.4 | results | R X | OB5 |  |
-| R8 | `candidateResponse` | RR §2.4.1 | results | R X | OB5 |  |
-| R9 | `outcomeVariable` (`identifier!`, `cardinality!`, `baseType`, `view`, `interpretation`, `longInterpretation`, `normalMaximum`, `normalMinimum`, `masteryValue`, `external-scored`, `variable-identifier-ref`) | RR §2.4.7 | results, delivery | R X S | OB5 |  |
-| R10 | `outcomeInformation` | RR §2.4.6 | results | R X | OB5 |  |
-| R11 | `templateVariable` | RR §2.4.3 | results | R X S | OB5 |  |
-| R12 | `contextVariable` | RR §2.4.3 | results | R X | OB5 |  |
-| R13 | `value` (`fieldIdentifier`, `baseType`) | RR §2.6.6, RR XSD | results, values | R X | OB5 |  |
-| R14 | `candidateComment` | RR §2.4.5 | results, delivery | R X | OB5 |  |
-| R15 | `support` (`name!`, `assignment!`, `value`, `xml:lang`) | RR §2.6.4 | results, pnp | R X | OB5 |  |
-| R16 | Vocabulary SessionStatusEnum (5 terms) | RR §2.7.7 | results | V | OB5 |  |
-| R17 | Vocabulary AnsweredStatusEnum: answered, attempted, presented, notpresented | RR §2.7.1 | results | V | OB5 |  |
-| R18 | Vocabulary ScoreStatusEnum: notscored, scored | RR §2.7.6 | results | V | OB5 |  |
-| R19 | Vocabulary AssignmentEnum: assigned, inherit, prohibited, universal | RR §2.7.2 | results | V | OB5 |  |
+| R1 | `assessmentResult` (namespace `http://www.imsglobal.org/xsd/imsqti_result_v3p0`) | RR §2.3.1, RR XSD | results | R X C | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R2 | `context` (`sourcedId`) | RR §2.4.2 | results | R X | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R3 | `sessionIdentifier` (`sourceID!`, `identifier!`) | RR §2.6.3 | results | R X | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R4 | `testResult` (`identifier!`, `datestamp!`) | RR §2.4.9 | results, delivery | R X S | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts), [values.test.ts](../test/values.test.ts) |
+| R5 | `itemResult` (`identifier!`, `sequenceIndex`, `datestamp!`, `sessionStatus!`) | RR §2.4.5 | results, delivery | R X S | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts), [values.test.ts](../test/values.test.ts) |
+| R6 | `responseVariable` (`identifier!`, `cardinality!`, `baseType`, `choiceSequence`, `scoreStatus`, `answeredStatus`) | RR §2.4.8 | results, delivery | R X S | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R7 | `correctResponse` (`interpretation`) | RR §2.4.4 | results | R X | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R8 | `candidateResponse` | RR §2.4.1 | results | R X | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R9 | `outcomeVariable` (`identifier!`, `cardinality!`, `baseType`, `view`, `interpretation`, `longInterpretation`, `normalMaximum`, `normalMinimum`, `masteryValue`, `external-scored`, `variable-identifier-ref`) | RR §2.4.7 | results, delivery | R X S | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R10 | `outcomeInformation` | RR §2.4.6 | results | R X | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R11 | `templateVariable` | RR §2.4.3 | results | R X S | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R12 | `contextVariable` | RR §2.4.3 | results | R X | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R13 | `value` (`fieldIdentifier`, `baseType`) | RR §2.6.6, RR XSD | results, values | R X | OB5 | [results.corpus.test.ts](../test/results.corpus.test.ts), [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R14 | `candidateComment` | RR §2.4.5 | results, delivery | R X | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R15 | `support` (`name!`, `assignment!`, `value`, `xml:lang`) | RR §2.6.4 | results, pnp | R X | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R16 | Vocabulary SessionStatusEnum (5 terms) | RR §2.7.7 | results | V | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R17 | Vocabulary AnsweredStatusEnum: answered, attempted, presented, notpresented | RR §2.7.1 | results | V | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R18 | Vocabulary ScoreStatusEnum: notscored, scored | RR §2.7.6 | results | V | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
+| R19 | Vocabulary AssignmentEnum: assigned, inherit, prohibited, universal | RR §2.7.2 | results | V | OB5 | [results.test.ts](../test/results.test.ts), [results.xsd.test.ts](../test/results.xsd.test.ts) |
 
 ### P: PNP
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| P1 | `hazard-avoidance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P2 | `input-requirements` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P3 | `language-of-interface` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P4 | `linguistic-guidance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P5 | `keyword-emphasis` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P6 | `keyword-translation` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P7 | `simplified-language-portions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P8 | `simplified-graphics` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P9 | `item-translation` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P10 | `sign-language` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P11 | `encouragement` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P12 | `additional-testing-time` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P13 | `line-reader` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P14 | `invert-display-polarity` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P15 | `magnification` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P16 | `spoken` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P17 | `tactile` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P18 | `braille` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P19 | `answer-masking` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P20 | `keyboard-directions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P21 | `additional-directions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P22 | `long-description` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P23 | `captions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P24 | `environment` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P25 | `transcript` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P26 | `alternative-text` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P27 | `audio-description` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P28 | `high-contrast` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P29 | `layout-single-column` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P30 | `text-appearance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P31 | `calculator-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P32 | `dictionary-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P33 | `glossary-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P34 | `thesaurus-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P35 | `homophone-checker-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P36 | `note-taking-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P37 | `visual-organizer-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P38 | `outliner-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P39 | `peer-interaction-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P40 | `spell-checker-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P41 | `activate-at-initialization-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P42 | `activate-as-option-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P43 | `prohibit-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P44 | `access-for-all-pnp` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P45 | `access-for-all-pnp-records` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P46 | `access-for-all-pnp-record` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P47 | `person-sourced-id` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
-| P48 | `appointment-id` | PNP XSD, BPIG §5 | pnp | R X S | OB5 |  |
+| P1 | `hazard-avoidance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P2 | `input-requirements` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P3 | `language-of-interface` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P4 | `linguistic-guidance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P5 | `keyword-emphasis` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P6 | `keyword-translation` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P7 | `simplified-language-portions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P8 | `simplified-graphics` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P9 | `item-translation` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P10 | `sign-language` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P11 | `encouragement` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P12 | `additional-testing-time` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P13 | `line-reader` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P14 | `invert-display-polarity` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P15 | `magnification` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P16 | `spoken` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P17 | `tactile` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P18 | `braille` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P19 | `answer-masking` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P20 | `keyboard-directions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P21 | `additional-directions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P22 | `long-description` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P23 | `captions` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P24 | `environment` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P25 | `transcript` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P26 | `alternative-text` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P27 | `audio-description` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P28 | `high-contrast` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P29 | `layout-single-column` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P30 | `text-appearance` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P31 | `calculator-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P32 | `dictionary-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P33 | `glossary-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P34 | `thesaurus-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P35 | `homophone-checker-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P36 | `note-taking-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P37 | `visual-organizer-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P38 | `outliner-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P39 | `peer-interaction-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P40 | `spell-checker-on-screen` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P41 | `activate-at-initialization-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P42 | `activate-as-option-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P43 | `prohibit-set` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P44 | `access-for-all-pnp` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P45 | `access-for-all-pnp-records` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P46 | `access-for-all-pnp-record` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P47 | `person-sourced-id` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
+| P48 | `appointment-id` | PNP XSD, BPIG §5 | pnp | R X S | OB5 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
 
 ### C: CAT
 
@@ -1085,7 +1085,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | L12 | `olah validate <path>`: a zip, an unpacked package directory (symlinks contained) or a single XML document (ASI, manifest, results, usage data, PNP), detected by root element; every document through `parseXml`, then the XSD checks with one compiled schema set, then all semantic checks |  | cli | S | OB18 |  |
 | L13 | Output: text by default, `--format json` gives `{ tool, version, target, valid, summary: { errors, warnings }, issues: Issue[] }`; exit codes 0 valid, 1 issues with errors, 2 usage, I/O or missing schemas |  | cli | S | OB18 |  |
 | L14 | `olah schemas fetch [--dir]`: downloads the files of `SCHEMA_FILES` into a cache directory and checks their SHA-256; the only network access anywhere in olah |  | cli | S N | OB18 |  |
-| L15 | PNP documents in the two namespaces 1EdTech's own documents use (BPIG §5, BIND §7) are read, written in the XSD namespace, and reported as errors | D6 | validate, pnp | N | OB14 |  |
+| L15 | PNP documents in the two namespaces 1EdTech's own documents use (BPIG §5, BIND §7) are read, written in the XSD namespace, and reported as errors | D6 | validate, pnp | N | OB14 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts) |
 
 ### G: Spec gaps
 
@@ -1100,7 +1100,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 |  |
 | G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 |  |
 | G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b |  |
-| G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
+| G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 |  |
 | G13 | Population variance and SD require more than one value | INFO §8.31 | processing | S | OB8 |  |
@@ -1126,7 +1126,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G33 | `random-float` with min > max | INFO §7.33 | processing, validate | S | OB8 |  |
 | G34 | `tolerance` items may be variable references (`ToleranceList` items are string or double) | INFO §5.46.2, XSD | processing | S | OB8 |  |
 | G35 | `test-variables` with a weight and `base-type="integer"` is undefined | INFO §7.39.5 | processing, validate | S | OB8 |  |
-| G36 | RR `value` is `xs:normalizedString`; newlines in essay responses are lost to schema-aware consumers | RR XSD | results | S | OB8 |  |
+| G36 | RR `value` is `xs:normalizedString`; newlines in essay responses are lost to schema-aware consumers | RR XSD | results | S | OB8 | [results.test.ts](../test/results.test.ts) |
 | G37 | PCI JSON record fields may be `"base":  null`, but record fields are single values | BPIG App. C.3 | values, pci | S | OB8 |  |
 | G38 | Mapping of PCI `intOrIdentifier` to a value | BPIG App. C.1 | values, pci | S | OB8 | [values.test.ts](../test/values.test.ts) |
 | G39 | BPIG's duration example uses years and months | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |

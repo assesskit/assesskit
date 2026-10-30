@@ -17,3 +17,9 @@ and outcome processing, with their declarations, test structure, rules and all 6
 written by `writeAsi`. The model, the reader, the writer and the generators of the tests all read one element table
 that `pnpm asi-table` generates from the official ASI schema. `readScoreCovers` and `scoreCoversBlock` read and build the
 rubric block that names the responses an externally scored outcome of a test covers.
+
+Readers and writers for the companion specifications: Results Reporting (`results`), usage data and item statistics
+(`usage`) and the QTI profile of Personal Needs and Preferences 3.0 (`pnp`), with `resolveSupports` for what a profile
+asks for. Everything written validates against the official schemas. `xml` has `ElementReader`, which maps a document to a model
+and reports what the model leaves unread, and `buildElement`; `values` has the lexical forms of `xs:date`, `xs:dateTime`
+and ISO 8601 durations.

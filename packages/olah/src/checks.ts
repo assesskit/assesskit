@@ -82,7 +82,11 @@ export function checkBoolean(value: unknown, label: string): asserts value is bo
  * @param label - Names the value in the error message, such as `The option severity`.
  * @throws `DataError` when it is not.
  */
-export function checkChoice(value: unknown, label: string, choices: readonly string[]): void {
+export function checkChoice<T extends string>(
+  value: unknown,
+  label: string,
+  choices: readonly T[],
+): asserts value is T {
   if (!choices.some((choice) => choice === value)) {
     const quoted = choices.map((choice) => JSON.stringify(choice));
     const list = `${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}`;

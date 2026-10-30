@@ -1,9 +1,13 @@
+// cspell:ignore waytoolongsubtag
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  buildElement,
   DataError,
   DEFAULT_XML_LIMITS,
+  ElementReader,
   type Issue,
+  isXmlLanguage,
   parseXml,
   ReadError,
   resolveIncludes,
@@ -15,6 +19,7 @@ import {
   type XmlAttribute,
   type XmlElement,
   type XmlNode,
+  XSI_NAMESPACE,
 } from "../src/index.js";
 
 const XSI = "http://www.w3.org/2001/XMLSchema-instance";
@@ -837,6 +842,266 @@ describe("resolveIncludes", () => {
     expect(() =>
       resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse('{"kind":"text","value":"x"}')),
     ).toThrow(DataError);
+  });
+});
+
+describe("buildElement", () => {
+  it("builds an element in a namespace and leaves out the attributes that are undefined", () => {
+    const built = buildElement("urn:a", "item", { id: "x", title: undefined, "xml:lang": "en", "xsi:nil": "true" }, [
+      "text",
+      "",
+      element("b"),
+    ]);
+    expect(built).toEqual({
+      kind: "element",
+      namespace: "urn:a",
+      name: "item",
+      attributes: [
+        { namespace: "", name: "id", value: "x" },
+        { namespace: XML_NAMESPACE, prefix: "xml", name: "lang", value: "en" },
+        { namespace: XSI_NAMESPACE, prefix: "xsi", name: "nil", value: "true" },
+      ],
+      children: [text("text"), element("b")],
+    });
+    expect(serializeXml(built)).toBe(
+      `${DECLARATION}<item id="x" xml:lang="en" xsi:nil="true" xmlns="urn:a" xmlns:xsi="${XSI_NAMESPACE}">text<b xmlns=""/></item>`,
+    );
+  });
+
+  it("builds an element with no attributes and no children by default", () => {
+    expect(buildElement("", "a")).toEqual({ kind: "element", namespace: "", name: "a", attributes: [], children: [] });
+  });
+
+  it("rejects arguments of other types", () => {
+    expect(() => buildElement(JSON.parse("5"), "a")).toThrow("The namespace of an element must be a string, found 5.");
+    expect(() => buildElement("", JSON.parse("null"))).toThrow("The name of an element must be a string, found null.");
+    expect(() => buildElement("", "a", JSON.parse("null"))).toThrow(
+      "The attributes of an element must be an object, found null.",
+    );
+    expect(() => buildElement("", "a", {}, JSON.parse('{"0":"x"}'))).toThrow(
+      "The children of an element must be an array, found an object.",
+    );
+  });
+});
+
+describe("ElementReader", () => {
+  const Ns = "urn:demo";
+  const rules = { module: "demo", source: "DEMO XSD", namespaces: [Ns] };
+  const open = (xml: string): ElementReader => ElementReader.open(xml, rules, "The demo");
+  const failure = (run: () => unknown): ReadError => thrownAs(ReadError, run);
+
+  describe("open", () => {
+    it("takes text, bytes and an element, and names the document in the error for anything else", () => {
+      const xml = `<a xmlns="${Ns}"/>`;
+      expect(open(xml).name).toBe("a");
+      expect(ElementReader.open(new TextEncoder().encode(xml), rules, "The demo").name).toBe("a");
+      expect(ElementReader.open(parseXml(xml), rules, "The demo").name).toBe("a");
+      expect(() => ElementReader.open(JSON.parse("null"), rules, "The demo")).toThrow(
+        "The demo to read must be a string, a Uint8Array or an XmlElement, found null.",
+      );
+      expect(() => ElementReader.open(JSON.parse('{"kind":"text","value":"x"}'), rules, "The demo")).toThrow(DataError);
+    });
+
+    it("lets parseXml report a document that is not well-formed", () => {
+      expect(() => open("<a>")).toThrow(ReadError);
+    });
+
+    it("rejects rules that are not rules", () => {
+      const element = parseXml(`<a xmlns="${Ns}"/>`);
+      expect(() => new ElementReader(element, JSON.parse("null"))).toThrow(
+        "The rules of a reader must be an object, found null.",
+      );
+      expect(() => new ElementReader(element, JSON.parse('{"module":5,"source":"s","namespaces":[]}'))).toThrow(
+        "The module of the rules of a reader must be a string, found 5.",
+      );
+      expect(() => new ElementReader(element, JSON.parse('{"module":"m","source":null,"namespaces":[]}'))).toThrow(
+        DataError,
+      );
+      expect(() => new ElementReader(element, JSON.parse('{"module":"m","source":"s","namespaces":"urn:a"}'))).toThrow(
+        'The namespaces of the rules of a reader must be an array, found "urn:a".',
+      );
+    });
+  });
+
+  describe("attributes", () => {
+    it("reads attributes in no namespace, and converts them with a function that throws DataError", () => {
+      const reader = open(`<a xmlns="${Ns}" n="12" word="x" xml:lang="en"/>`);
+      expect(reader.attribute("word")).toBe("x");
+      expect(reader.attribute("n", Number)).toBe(12);
+      expect(reader.attribute("missing")).toBeUndefined();
+      expect(reader.attribute("missing", Number)).toBeUndefined();
+      expect(reader.required("word")).toBe("x");
+      expect(reader.language()).toBe("en");
+      expect(reader.requiredLanguage()).toBe("en");
+      expect(() => reader.done()).not.toThrow();
+    });
+
+    it("reports a missing attribute and one that cannot be converted, with the position and the element path", () => {
+      const reader = open(`<a xmlns="${Ns}">\n  <b n="x"/></a>`);
+      const child = reader.require("b");
+      const missing = issueOf(failure(() => child.required("id")));
+      expect(missing).toEqual({
+        severity: "error",
+        code: "olah/demo/missing-attribute",
+        message: "The element b needs the attribute id.",
+        source: "DEMO XSD",
+        location: { line: 2, column: 3, element: "a/b" },
+      });
+      const invalid = failure(() =>
+        child.attribute("n", (value) => {
+          throw new DataError(`The text ${JSON.stringify(value)} is not a number.`);
+        }),
+      );
+      expect(invalid.message).toBe(
+        'The attribute n of the element b is invalid. The text "x" is not a number. (line 2, column 3)',
+      );
+      expect(issueOf(invalid).code).toBe("olah/demo/invalid-attribute");
+    });
+
+    it("does not catch an error that is not a DataError", () => {
+      const reader = open(`<a xmlns="${Ns}" n="x"/>`);
+      expect(() =>
+        reader.attribute("n", () => {
+          throw new RangeError("boom");
+        }),
+      ).toThrow(RangeError);
+    });
+
+    it("reads an attribute that is one of some terms, and names the terms when it is another", () => {
+      const reader = open(`<a xmlns="${Ns}" kind="b" bad="z"/>`);
+      expect(reader.term("kind", ["a", "b"])).toBe("b");
+      expect(reader.requiredTerm("kind", ["a", "b"])).toBe("b");
+      expect(reader.term("none", ["a", "b"])).toBeUndefined();
+      expect(() => reader.requiredTerm("none", ["a", "b"])).toThrow("The element a needs the attribute none.");
+      expect(() => reader.term("bad", ["a", "b"])).toThrow(
+        'The attribute bad of the element a is invalid. The attribute bad must be "a" or "b", found "z".',
+      );
+    });
+
+    it("rejects an xml:lang that is not a language tag, and a missing one where it is required", () => {
+      expect(() => open(`<a xmlns="${Ns}" xml:lang="en_US"/>`).language()).toThrow(
+        'The attribute xml:lang of the element a is invalid. The text "en_US" is not a language tag such as en or pt-BR.',
+      );
+      expect(() => open(`<a xmlns="${Ns}"/>`).requiredLanguage()).toThrow(
+        "The element a needs the attribute xml:lang.",
+      );
+      expect(open(`<a xmlns="${Ns}" xml:lang=""/>`).language()).toBe("");
+    });
+  });
+
+  describe("children", () => {
+    const xml = `<a xmlns="${Ns}" xmlns:x="urn:other"><b/><c/><c/><x:ext/><d/></a>`;
+
+    it("takes the children in order: a named one, a run of them, and the extensions", () => {
+      const reader = open(xml);
+      expect(reader.take("c")).toBeUndefined();
+      expect(reader.take("b")?.name).toBe("b");
+      expect(reader.takeAny(["z", "d"])).toBeUndefined();
+      expect(reader.takeAll("c").map((child) => child.name)).toEqual(["c", "c"]);
+      expect(reader.takeAll("c")).toEqual([]);
+      expect(reader.takeForeign().map((child) => child.name)).toEqual(["ext"]);
+      expect(reader.require("d").name).toBe("d");
+      expect(reader.next()).toBeUndefined();
+      expect(() => reader.done()).not.toThrow();
+    });
+
+    it("reads every child in order with next, and tells an extension by foreign", () => {
+      const reader = open(xml);
+      const seen: [string, boolean, string][] = [];
+      for (let child = reader.next(); child !== undefined; child = reader.next()) {
+        seen.push([child.name, child.foreign, child.qualifiedName]);
+      }
+      expect(seen).toEqual([
+        ["b", false, "b"],
+        ["c", false, "c"],
+        ["c", false, "c"],
+        ["ext", true, "{urn:other}ext"],
+        ["d", false, "d"],
+      ]);
+    });
+
+    it("requires a child by name and says what it found instead", () => {
+      const reader = open(xml);
+      expect(() => reader.require("c")).toThrow("The element a needs the element c, found the element b.");
+      const empty = open(`<a xmlns="${Ns}"/>`);
+      expect(issueOf(failure(() => empty.require("c"))).code).toBe("olah/demo/missing-element");
+      expect(() => empty.require("c")).toThrow("found no more elements.");
+    });
+
+    it("treats elements of the other namespaces as extensions, not as model elements", () => {
+      const reader = ElementReader.open(`<a xmlns="${Ns}"><b xmlns="urn:other"/></a>`, rules, "The demo");
+      expect(reader.take("b")).toBeUndefined();
+      expect(reader.takeForeign()).toHaveLength(1);
+    });
+
+    it("accepts several namespaces for the model", () => {
+      const both = { ...rules, namespaces: [Ns, "urn:old"] };
+      const reader = ElementReader.open(`<a xmlns="${Ns}"><b xmlns="urn:old"/></a>`, both, "The demo");
+      expect(reader.require("b").foreign).toBe(false);
+    });
+  });
+
+  describe("text", () => {
+    it("joins text and CDATA sections without comments, and converts the result", () => {
+      const reader = open(`<a xmlns="${Ns}">1<!-- c --><![CDATA[2]]>3</a>`);
+      expect(reader.text()).toBe("123");
+      expect(reader.text(Number)).toBe(123);
+      expect(() => reader.done()).not.toThrow();
+    });
+
+    it("reports text that cannot be converted, and an element where only text may be", () => {
+      expect(() =>
+        open(`<a xmlns="${Ns}">x</a>`).text(() => {
+          throw new DataError("It is not a number.");
+        }),
+      ).toThrow("The text of the element a is invalid. It is not a number.");
+      expect(() => open(`<a xmlns="${Ns}"><b/></a>`).text()).toThrow(
+        "The element a has the element b, but it contains text only.",
+      );
+    });
+  });
+
+  describe("done", () => {
+    it("rejects an attribute that was not read, but not a namespace declaration or an xsi attribute", () => {
+      const reader = open(`<a xmlns="${Ns}" xmlns:xsi="${XSI_NAMESPACE}" xsi:schemaLocation="u v" id="1" extra="2"/>`);
+      reader.required("id");
+      expect(issueOf(failure(() => reader.done()))).toMatchObject({
+        code: "olah/demo/unexpected-attribute",
+        message: "The element a has the attribute extra, which the schema does not define for it.",
+      });
+      expect(() => open(`<a xmlns="${Ns}" xmlns:p="urn:p" p:x="1"/>`).done()).toThrow(
+        "The element a has the attribute p:x, which the schema does not define for it.",
+      );
+    });
+
+    it("rejects a child that was not taken and text where only elements may be", () => {
+      expect(() => open(`<a xmlns="${Ns}"><b/></a>`).done()).toThrow(
+        "The element b is not allowed in a at this place. (line 1, column 21)",
+      );
+      expect(() => open(`<a xmlns="${Ns}">text<b/></a>`).done()).toThrow(
+        "The element a has text, but it contains elements only.",
+      );
+      expect(() => open(`<a xmlns="${Ns}">  <b/>  </a>`).require("b")).not.toThrow();
+    });
+
+    it("rejects an element that is not an element of the tree", () => {
+      expect(() => new ElementReader(JSON.parse('{"kind":"text","value":"x"}'), rules)).toThrow(
+        "The element to read must be an element of the tree that parseXml returns.",
+      );
+    });
+  });
+});
+
+describe("isXmlLanguage", () => {
+  it("accepts language tags of letters and digits in subtags of up to eight, and the empty string", () => {
+    for (const tag of ["en", "pt-BR", "es-419", "zh-Hant-TW", "ase", "x-private", ""])
+      expect(isXmlLanguage(tag), tag).toBe(true);
+  });
+
+  it("rejects what is not a tag", () => {
+    for (const tag of ["en_US", "-en", "en-", "en--US", "123", "waytoolongsubtag", " en"])
+      expect(isXmlLanguage(tag), tag).toBe(false);
+    expect(isXmlLanguage(JSON.parse("5"))).toBe(false);
   });
 });
 
