@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
 import { encodeBase64 } from "@luthfanwakan/olah/values";
-import { checkHttpsUrl, checkNonEmptyString, checkProperties, checkRecord, describe } from "../checks.js";
+import * as v from "valibot";
+import { checkRecord, describe, httpsUrlSchema, nonEmptyStringSchema, type Schema } from "../checks.js";
 import { ServiceError } from "../errors.js";
 
 /** A request of the REST client: the part of `RequestInit` that it uses. */
@@ -46,21 +47,13 @@ export interface OAuthClientCredentials {
   readonly scope: string;
 }
 
-const CREDENTIALS = ["tokenUrl", "clientId", "clientSecret", "scope"];
-
-/**
- * Checks OAuth client credentials, as a host passes them from JavaScript.
- *
- * @throws `DataError` when they are not an object with an `https` token URL and non-empty client identifier, secret and scope.
- */
-export function checkCredentials(value: unknown): asserts value is OAuthClientCredentials {
-  checkRecord(value, "The option credentials must be an object");
-  checkProperties(value, "The option credentials", CREDENTIALS);
-  checkHttpsUrl(value.tokenUrl, "The tokenUrl of the credentials");
-  checkNonEmptyString(value.clientId, "The clientId of the credentials");
-  checkNonEmptyString(value.clientSecret, "The clientSecret of the credentials");
-  checkNonEmptyString(value.scope, "The scope of the credentials");
-}
+/** The schema of OAuth client credentials. */
+export const oauthCredentialsSchema: Schema<OAuthClientCredentials> = v.strictObject({
+  tokenUrl: httpsUrlSchema,
+  clientId: nonEmptyStringSchema,
+  clientSecret: nonEmptyStringSchema,
+  scope: nonEmptyStringSchema,
+});
 
 /** A client of a REST service that authorizes with OAuth 2.0 client credentials. */
 export interface RestClient {

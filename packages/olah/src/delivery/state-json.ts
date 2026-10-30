@@ -1,16 +1,16 @@
+import * as v from "valibot";
 import {
-  checkArray,
-  checkChoice,
-  checkFinite,
-  checkNonNegative,
-  checkPositiveInteger,
-  checkRecord,
   checkString,
-  describe,
+  finiteSchema,
+  nonNegativeSchema,
+  parseWith,
+  positiveIntegerSchema,
+  type Schema,
+  transformWith,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { isSupportName, PNP_HAZARDS, type SupportName, type TestingTime } from "../pnp/index.js";
-import { type RandomState, restoreRandom } from "../random.js";
+import { PNP_HAZARDS, type TestingTime } from "../pnp/index.js";
+import { restoreRandom } from "../random.js";
 import {
   type CandidateNeeds,
   checkState,
@@ -18,22 +18,18 @@ import {
   type DeliveryState,
   EXPIRIES,
   type ScopeClock,
-  type SessionSupport,
   STATE_VERSION,
 } from "./delivery-state.js";
-import { readEntries, readValues, valuesToJson } from "./entries-json.js";
-import { checkKey, type ItemKey } from "./item-key.js";
-import { itemSessionFromJson, itemSessionToJson } from "./item-session-json.js";
+import { valuesSchema, valuesToJson } from "./entries-json.js";
+import { itemKeySchema } from "./item-key.js";
+import { itemSessionSchema, itemSessionToJson } from "./item-session-json.js";
 import { DELIVERY_STATUSES } from "./names.js";
-import { catFromJson, catToJson, reportFromJson, scoringFromJson, scoringToJson } from "./pending-json.js";
+import { catSchema, catToJson, reportSchema, scoringSchema, scoringToJson } from "./pending-json.js";
 import type { PlannedChild, PlannedPart, TestPlan } from "./plan.js";
-import { readSessionSupport } from "./support-json.js";
+import { supportNameSchema, supportsSchema } from "./support-json.js";
 
 /** The kinds of scope of a clock, for the checks. */
 const CLOCK_SCOPES: readonly ScopeClock["scope"][] = ["test", "part", "section"];
-
-/** The kinds of extra testing time, for the checks. */
-const TESTING_TIMES: readonly TestingTime["kind"][] = ["time-multiplier", "fixed-minutes", "unlimited"];
 
 function itemToJson(item: DeliveredItem): unknown {
   const { variant, submittedAt, expired } = item;
@@ -75,128 +71,80 @@ export function serializeState(state: DeliveryState): string {
   });
 }
 
-function readKey(json: unknown): ItemKey {
-  checkKey(json);
-  return { ref: json.ref, instance: json.instance };
-}
+const sectionSchema = v.object({
+  kind: v.literal("section"),
+  identifier: v.string(),
+  instance: positiveIntegerSchema,
+  children: v.array(v.lazy((): Schema<PlannedChild> => childSchema)),
+});
 
-function readChild(json: unknown): PlannedChild {
-  checkRecord(json, "A child of a section of the plan must be an object");
-  if (json.kind === "item") return { kind: "item", key: readKey(json.key) };
-  if (json.kind !== "section") {
-    throw new DataError(
-      `A child of a section of the plan must have the kind "item" or "section", found ${describe(json.kind)}.`,
-    );
-  }
-  checkString(json.identifier, "The identifier of a section of the plan");
-  checkPositiveInteger(json.instance, "The instance of a section of the plan");
-  checkArray(json.children, "The children of a section of the plan must be an array");
-  return {
-    kind: "section",
-    identifier: json.identifier,
-    instance: json.instance,
-    children: json.children.map(readChild),
-  };
-}
+const childSchema: Schema<PlannedChild> = v.variant("kind", [
+  v.object({ kind: v.literal("item"), key: itemKeySchema }),
+  sectionSchema,
+]);
 
-function readPart(json: unknown): PlannedPart {
-  checkRecord(json, "A test part of the plan must be an object");
-  if (json.kind !== "part")
-    throw new DataError(`A test part of the plan must have the kind "part", found ${describe(json.kind)}.`);
-  checkString(json.identifier, "The identifier of a test part of the plan");
-  checkArray(json.children, "The sections of a test part of the plan must be an array");
-  const children = json.children.map((child) => {
-    const section = readChild(child);
-    if (section.kind !== "section") throw new DataError("A test part of the plan must hold sections only.");
-    return section;
-  });
-  return { kind: "part", identifier: json.identifier, children };
-}
+const planSchema: Schema<TestPlan> = v.object({
+  parts: v.array(
+    v.object({
+      kind: v.literal("part"),
+      identifier: v.string(),
+      children: v.array(sectionSchema),
+    }) satisfies Schema<PlannedPart>,
+  ),
+});
 
-function readPlan(json: unknown): TestPlan {
-  checkRecord(json, "The plan of the state must be an object");
-  checkArray(json.parts, "The parts of the plan must be an array");
-  return { parts: json.parts.map(readPart) };
-}
+const expirySchema = v.picklist(EXPIRIES);
 
-function readExpiry(json: unknown): { readonly expired?: ScopeClock["expired"] } {
-  if (json === undefined) return {};
-  checkChoice(json, "An expiry", EXPIRIES);
-  return { expired: json };
-}
+const deliveredItemSchema: Schema<DeliveredItem> = v.object({
+  session: itemSessionSchema,
+  variant: v.optional(v.string()),
+  supports: v.array(supportNameSchema),
+  submittedAt: v.optional(finiteSchema),
+  expired: v.optional(expirySchema),
+});
 
-function readSupportNames(json: unknown, label: string): SupportName[] {
-  checkArray(json, `${label} must be an array of support names`);
-  return json.map((name) => {
-    if (!isSupportName(name)) throw new DataError(`${label} must be support names, found ${describe(name)}.`);
-    return name;
-  });
-}
+const clockSchema: Schema<ScopeClock> = v.object({
+  scope: v.picklist(CLOCK_SCOPES),
+  identifier: v.string(),
+  spent: nonNegativeSchema,
+  expired: v.optional(expirySchema),
+});
 
-function readItem(json: unknown): DeliveredItem {
-  checkRecord(json, "An item of the state must be an object");
-  const { variant, submittedAt } = json;
-  if (variant !== undefined) checkString(variant, "The variant of an item of the state");
-  if (submittedAt !== undefined) checkFinite(submittedAt, "The submittedAt of an item of the state");
-  return {
-    session: itemSessionFromJson(json.session),
-    ...(variant === undefined ? {} : { variant }),
-    supports: readSupportNames(json.supports, "The supports of an item of the state"),
-    ...(submittedAt === undefined ? {} : { submittedAt }),
-    ...readExpiry(json.expired),
-  };
-}
+const testingTimeSchema: Schema<TestingTime> = v.variant("kind", [
+  v.object({ kind: v.literal("time-multiplier"), multiplier: finiteSchema }),
+  v.object({ kind: v.literal("fixed-minutes"), minutes: nonNegativeSchema }),
+  v.object({ kind: v.literal("unlimited") }),
+]);
 
-function readClock(json: unknown): ScopeClock {
-  checkRecord(json, "A clock of the state must be an object");
-  checkChoice(json.scope, "The scope of a clock of the state", CLOCK_SCOPES);
-  checkString(json.identifier, "The identifier of a clock of the state");
-  checkNonNegative(json.spent, "The spent of a clock of the state");
-  return { scope: json.scope, identifier: json.identifier, spent: json.spent, ...readExpiry(json.expired) };
-}
+const needsSchema: Schema<CandidateNeeds> = v.object({
+  testingTime: v.optional(testingTimeSchema),
+  avoidedHazards: v.array(v.picklist(PNP_HAZARDS)),
+  translation: v.optional(v.string()),
+  personalNeeds: v.optional(v.string()),
+});
 
-function readSupports(json: unknown): Map<SupportName, SessionSupport> {
-  const supports = new Map<SupportName, SessionSupport>();
-  for (const [name, support] of readEntries(json, "The supports of the state", readSessionSupport)) {
-    if (!isSupportName(name))
-      throw new DataError(`A support of the state must have a support name, found ${describe(name)}.`);
-    supports.set(name, support);
-  }
-  return supports;
-}
-
-function readTestingTime(json: unknown): TestingTime {
-  checkRecord(json, "The testing time of the state must be an object");
-  checkChoice(json.kind, "The kind of the testing time of the state", TESTING_TIMES);
-  switch (json.kind) {
-    case "time-multiplier":
-      checkFinite(json.multiplier, "The multiplier of the testing time of the state");
-      return { kind: json.kind, multiplier: json.multiplier };
-    case "fixed-minutes":
-      checkNonNegative(json.minutes, "The minutes of the testing time of the state");
-      return { kind: json.kind, minutes: json.minutes };
-    case "unlimited":
-      return { kind: json.kind };
-  }
-}
-
-function readNeeds(json: unknown): CandidateNeeds {
-  checkRecord(json, "The needs of the state must be an object");
-  const { testingTime, translation, personalNeeds } = json;
-  checkArray(json.avoidedHazards, "The avoided hazards of the state must be an array");
-  const avoidedHazards = json.avoidedHazards.map((term) => {
-    checkChoice(term, "An avoided hazard of the state", PNP_HAZARDS);
-    return term;
-  });
-  if (translation !== undefined) checkString(translation, "The translation of the state");
-  if (personalNeeds !== undefined) checkString(personalNeeds, "The personal needs of the state");
-  return {
-    ...(testingTime === undefined ? {} : { testingTime: readTestingTime(testingTime) }),
-    avoidedHazards,
-    ...(translation === undefined ? {} : { translation }),
-    ...(personalNeeds === undefined ? {} : { personalNeeds }),
-  };
-}
+// The version comes first, so that a state of another format is refused for its version, whatever else it holds.
+const stateSchema: Schema<DeliveryState> = v.object({
+  version: v.literal(STATE_VERSION),
+  status: v.picklist(DELIVERY_STATUSES),
+  at: finiteSchema,
+  random: v.pipe(
+    v.strictTuple([v.number(), v.number(), v.number(), v.number()]),
+    // restoreRandom checks the range of the words.
+    transformWith((words) => restoreRandom(words).state()),
+  ),
+  plan: planSchema,
+  current: v.optional(itemKeySchema),
+  items: v.array(deliveredItemSchema),
+  outcomes: valuesSchema,
+  context: valuesSchema,
+  clocks: v.array(clockSchema),
+  supports: supportsSchema,
+  needs: needsSchema,
+  scoring: scoringSchema,
+  cat: catSchema,
+  report: reportSchema,
+});
 
 /**
  * Reads a state that {@link serializeState} wrote, checking it deeply: its version, and the type of every field. A state
@@ -212,34 +160,5 @@ export function deserializeState(text: string): DeliveryState {
   } catch {
     throw new DataError("The state must be the JSON text that serializeState writes, found text that is not JSON.");
   }
-  checkRecord(json, "The state must be a JSON object");
-  if (json.version !== STATE_VERSION) {
-    throw new DataError(
-      `The state has the format version ${describe(json.version)}, and this version of olah reads version ${STATE_VERSION}.`,
-    );
-  }
-  const { status, at, current } = json;
-  checkChoice(status, "The status of the state", DELIVERY_STATUSES);
-  checkFinite(at, "The at of the state");
-  checkArray(json.random, "The random of the state must be an array of four integers");
-  checkArray(json.items, "The items of the state must be an array");
-  checkArray(json.clocks, "The clocks of the state must be an array");
-  return {
-    version: STATE_VERSION,
-    status,
-    at,
-    // restoreRandom checks the words it is given.
-    random: restoreRandom(json.random as RandomState).state(),
-    plan: readPlan(json.plan),
-    ...(current === undefined ? {} : { current: readKey(current) }),
-    items: json.items.map(readItem),
-    outcomes: readValues(json.outcomes, "The outcomes of the state"),
-    context: readValues(json.context, "The context of the state"),
-    clocks: json.clocks.map(readClock),
-    supports: readSupports(json.supports),
-    needs: readNeeds(json.needs),
-    scoring: scoringFromJson(json.scoring),
-    cat: catFromJson(json.cat),
-    report: reportFromJson(json.report),
-  };
+  return parseWith(stateSchema, json, "The state");
 }

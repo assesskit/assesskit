@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import {
   checkArray,
@@ -10,8 +11,19 @@ import {
   checkProperties,
   checkRecord,
   checkString,
+  definedSchema,
   describe as describeValue,
+  functionSchema,
+  httpsUrlSchema,
   isRecord,
+  issueText,
+  looseRecord,
+  mapSchema,
+  methodsSchema,
+  nonNegativeIntegerSchema,
+  parseWith,
+  positiveSchema,
+  strictRecord,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 
@@ -186,6 +198,129 @@ describe("checkFinite", () => {
     for (const value of bad) expect(() => checkFinite(value, "The property scoreGiven")).toThrow(DataError);
     expect(() => checkFinite(Number.NaN, "The property scoreGiven")).toThrow(
       "The property scoreGiven must be a finite number, found NaN.",
+    );
+  });
+});
+
+describe("parseWith", () => {
+  const schema = v.strictObject({
+    name: v.string(),
+    seq: nonNegativeIntegerSchema,
+    kind: v.picklist(["a", "b", "c"]),
+    items: v.array(v.strictObject({ id: v.string() })),
+  });
+  const valid = { name: "n", seq: 2, kind: "a", items: [{ id: "x" }] };
+  const message = (input: unknown): string => {
+    try {
+      parseWith(schema, input, "The thing");
+    } catch (error) {
+      if (error instanceof DataError) return error.message;
+      throw error;
+    }
+    return "";
+  };
+
+  it("returns the output of the schema", () => {
+    expect(parseWith(schema, valid, "The thing")).toEqual(valid);
+  });
+
+  it("names the path and what was expected and found, in a full sentence", () => {
+    expect(message(JSON.parse("null"))).toBe("The thing is invalid: expected an object, found null.");
+    expect(message({ ...valid, name: 5 })).toBe("The thing is invalid at name: expected a string, found 5.");
+    expect(message({ ...valid, seq: -1 })).toBe(
+      "The thing is invalid at seq: expected a value of at least 0, found -1.",
+    );
+    expect(message({ ...valid, kind: "z" })).toBe('The thing is invalid at kind: expected "a", "b" or "c", found "z".');
+    expect(message({ ...valid, items: [{ id: 1 }] })).toBe(
+      "The thing is invalid at items[0].id: expected a string, found 1.",
+    );
+  });
+
+  it("names a property that is missing or unexpected, at its object", () => {
+    expect(message({ name: "n", kind: "a", items: [] })).toBe('The thing is invalid: missing the property "seq".');
+    expect(message({ ...valid, extra: 1 })).toBe('The thing is invalid: unexpected property "extra".');
+    expect(message({ ...valid, items: [{ id: "x", more: true }] })).toBe(
+      'The thing is invalid at items[0]: unexpected property "more".',
+    );
+    const withProto: unknown = JSON.parse(JSON.stringify(valid).replace("{", '{"__proto__":1,'));
+    expect(message(withProto)).toBe('The thing is invalid: unexpected property "__proto__".');
+  });
+
+  it("refuses an array where the object has only optional entries, with strictRecord and looseRecord", () => {
+    for (const options of [
+      strictRecord({ speed: v.optional(v.number()) }),
+      looseRecord({ speed: v.optional(v.number()) }),
+    ]) {
+      expect(parseWith(options, {}, "The options")).toEqual({});
+      expect(() => parseWith(options, [], "The options")).toThrow(
+        new DataError("The options is invalid: expected an object, found an array."),
+      );
+    }
+  });
+
+  it("gives the text of an issue with its path to the message of an issue of the schema that ran it", () => {
+    const result = v.safeParse(schema, { ...valid, items: [{ id: 1 }] });
+    const [issue] = result.issues ?? [];
+    expect(issue === undefined ? "" : issueText(issue)).toBe("items[0].id: expected a string, found 1");
+  });
+});
+
+describe("mapSchema", () => {
+  it("reads every property, a name such as __proto__ included, into a map in the order of the object", () => {
+    const read = parseWith(mapSchema(v.string()), JSON.parse('{"b":"1","__proto__":"2","a":"3"}'), "The assets");
+    expect([...read]).toEqual([
+      ["b", "1"],
+      ["__proto__", "2"],
+      ["a", "3"],
+    ]);
+  });
+
+  it("names the property that is not what the schema asks", () => {
+    expect(() => parseWith(mapSchema(v.string()), JSON.parse('{"a":"1","__proto__":2}'), "The assets")).toThrow(
+      new DataError('The assets is invalid: the property "__proto__" is invalid: expected a string, found 2.'),
+    );
+  });
+});
+
+describe("the schemas of functions and objects with functions", () => {
+  it("accept a function and an object that has the functions, a class instance included", () => {
+    class Store {
+      load(): void {}
+      save(): void {}
+    }
+    expect(parseWith(functionSchema(), () => 1, "The option")).toBeTypeOf("function");
+    const store = new Store();
+    expect(parseWith(methodsSchema<Store>("load", "save"), store, "The store")).toBe(store);
+  });
+
+  it("refuse the rest, and say which functions an object needs", () => {
+    expect(() => parseWith(functionSchema(), 5, "The option fetch")).toThrow(
+      new DataError("The option fetch is invalid: expected a function, found 5."),
+    );
+    expect(() =>
+      parseWith(methodsSchema<{ load(): void; save(): void }>("load", "save"), { load: 1 }, "The store"),
+    ).toThrow(
+      new DataError("The store is invalid: expected an object with the functions load and save, found an object."),
+    );
+  });
+});
+
+describe("httpsUrlSchema, positiveSchema and definedSchema", () => {
+  it("accept an absolute https URL, a positive number and any value but undefined", () => {
+    expect(parseWith(httpsUrlSchema, "https://a.example/b", "The URL")).toBe("https://a.example/b");
+    expect(parseWith(positiveSchema, 0.5, "The length")).toBe(0.5);
+    expect(parseWith(definedSchema, null, "The action")).toBeNull();
+  });
+
+  it("refuse the rest", () => {
+    expect(() => parseWith(httpsUrlSchema, "http://a.example", "The URL")).toThrow(
+      new DataError('The URL is invalid: expected an absolute https URL, found "http://a.example".'),
+    );
+    expect(() => parseWith(positiveSchema, 0, "The length")).toThrow(
+      new DataError("The length is invalid: expected a positive number, found 0."),
+    );
+    expect(() => parseWith(v.object({ action: definedSchema }), { action: undefined }, "The envelope")).toThrow(
+      new DataError("The envelope is invalid at action: expected a value, found undefined."),
     );
   });
 });

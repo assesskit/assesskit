@@ -74,7 +74,7 @@ export function mountContentSupports(root: ContentRoot, options: ContentSupports
 
   return {
     update(supports) {
-      checkSupportViews(supports, "The supports");
+      checkSupportViews(supports, "The list of supports");
       clear();
       const on = supports.filter(({ active }) => active);
       const boundary = (): DOMRect => scope.host.getBoundingClientRect();

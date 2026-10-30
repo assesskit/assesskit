@@ -18,8 +18,18 @@ import {
   viewToJson,
 } from "@luthfanwakan/olah/delivery";
 import type { QtiPackage } from "@luthfanwakan/olah/package";
+import * as v from "valibot";
 import { checkIri } from "../caliper/context.js";
-import { checkChoice, checkFunction, checkNonEmptyString, checkProperties, checkRecord, describe } from "../checks.js";
+import {
+  checkChoice,
+  checkNonEmptyString,
+  checkRecord,
+  describe,
+  functionSchema,
+  methodsSchema,
+  parseWith,
+  recordSchema,
+} from "../checks.js";
 import { AccessError, DataError, ServiceError } from "../errors.js";
 import { type Clock, checkClock, readClock } from "../lti/clock.js";
 import {
@@ -166,34 +176,21 @@ interface Attempt<T> {
 const notBound = (): AccessError =>
   new AccessError("The session does not belong to the caller, or does not exist.", "not-bound");
 
+// The clock, the client actions and the forward options are checked by the functions that read them.
+const hostOptionsSchema = v.strictObject({
+  engine: methodsSchema<Engine>("start", "apply", "view", "deadlines", "pending", "scorerView", "results"),
+  store: methodsSchema<SessionStore>("create", "load", "save"),
+  scheduler: methodsSchema<Scheduler>("schedule"),
+  clock: v.unknown(),
+  gate: methodsSchema<AssetGate>("sign"),
+  packages: functionSchema<(session: string) => Promise<QtiPackage>>(),
+  clientActions: v.optional(v.unknown()),
+  limits: v.optional(recordSchema),
+  forward: v.optional(v.unknown()),
+});
+
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", [
-    "engine",
-    "store",
-    "scheduler",
-    "clock",
-    "gate",
-    "packages",
-    "clientActions",
-    "limits",
-    "forward",
-  ]);
-  checkRecord(options.engine, "The option engine must be an object");
-  for (const name of ["start", "apply", "view", "deadlines", "pending", "scorerView", "results"]) {
-    checkFunction(options.engine[name], `The function ${name} of the option engine must be a function`);
-  }
-  checkRecord(options.store, "The option store must be an object");
-  for (const name of ["create", "load", "save"]) {
-    checkFunction(options.store[name], `The function ${name} of the option store must be a function`);
-  }
-  checkRecord(options.scheduler, "The option scheduler must be an object");
-  checkFunction(options.scheduler.schedule, "The function schedule of the option scheduler must be a function");
-  checkClock(options.clock);
-  checkRecord(options.gate, "The option gate must be an object");
-  checkFunction(options.gate.sign, "The function sign of the option gate must be a function");
-  checkFunction(options.packages, "The option packages must be a function");
-  if (options.limits !== undefined) checkRecord(options.limits, "The option limits must be an object");
+  checkClock(parseWith(hostOptionsSchema, options, "The options object").clock);
 }
 
 /** Returns the action as the log of a session keeps it: candidate actions in olah's JSON form, host actions without their payloads. */

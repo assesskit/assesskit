@@ -6,18 +6,19 @@ import {
   type SupportName,
   type SupportState,
 } from "@luthfanwakan/olah/pnp";
+import * as v from "valibot";
 import {
-  checkArray,
-  checkBoolean,
-  checkChoice,
-  checkFinite,
-  checkNonEmptyString,
-  checkProperties,
-  checkRecord,
-  checkString,
   describe,
+  finiteSchema,
+  guardSchema,
+  issueText,
+  looseRecord,
+  nonEmptyStringSchema,
+  parseWith,
+  recordSchema,
+  type Schema,
+  strictRecord,
 } from "../../checks.js";
-import { DataError } from "../../errors.js";
 
 /** The states of a support for a candidate (BPIG §5.3), as olah's `resolveSupports` gives them. */
 const SUPPORT_STATES = ["prohibited", "active", "option", "assigned"] as const satisfies readonly SupportState[];
@@ -25,129 +26,88 @@ const SUPPORT_STATES = ["prohibited", "active", "option", "assigned"] as const s
 /** The colors of the profile are `#RGB` or `#RRGGBB` (PNP XSD `HexDType`). */
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/iu;
 
-type Settings = Readonly<Record<string, unknown>>;
+const colorSchema = v.pipe(
+  v.string(),
+  v.regex(HEX_COLOR, (issue) => `expected a color as #RGB or #RRGGBB, found ${issue.received}`),
+);
 
-/** Checks a color of the profile. */
-function checkColor(value: unknown, label: string): void {
-  checkString(value, label);
-  if (!HEX_COLOR.test(value)) {
-    throw new DataError(`${label} must be a color as #RGB or #RRGGBB, found ${describe(value)}.`);
-  }
-}
+const optionalColor = v.optional(colorSchema);
+const optionalNumber = v.optional(finiteSchema);
 
-function checkOptional(value: unknown, check: (present: unknown) => void): void {
-  if (value !== undefined) check(value);
-}
+/** A zoom of the profile: `{ zoomAmount? }`. */
+const zoomSchema = looseRecord({ zoomAmount: optionalNumber });
 
-/** Checks a zoom of the profile: `{ zoomAmount? }`. */
-function checkZoom(value: unknown, label: string): void {
-  checkRecord(value, `${label} must be an object`);
-  checkOptional(value.zoomAmount, (amount) => checkFinite(amount, `${label} property zoomAmount`));
-}
+/** The settings that name a language, as the translations and the sign language do. */
+const languageSchema = looseRecord({ language: nonEmptyStringSchema });
 
-function checkFontFace(value: unknown, label: string): void {
-  checkRecord(value, `${label} must be an object`);
-  checkArray(value.fontNames, `${label} property fontNames must be an array`);
-  for (const name of value.fontNames) checkString(name, `A name in ${label} property fontNames`);
-  checkOptional(value.genericFontFace, (face) =>
-    checkChoice(face, `${label} property genericFontFace`, PNP_GENERIC_FONT_FACES),
-  );
-}
+/** A property of the text appearance that is true when it is present. */
+const presentSchema = v.optional(
+  v.literal(true, (issue) => `expected true when it is present, found ${issue.received}`),
+);
 
-function checkTextAppearance(settings: Settings, label: string): void {
-  checkOptional(settings.backgroundColor, (color) => checkColor(color, `${label} property backgroundColor`));
-  checkOptional(settings.fontColor, (color) => checkColor(color, `${label} property fontColor`));
-  checkOptional(settings.fontSize, (size) => checkFinite(size, `${label} property fontSize`));
-  checkOptional(settings.fontFace, (face) => checkFontFace(face, `${label} property fontFace`));
-  for (const name of ["lineSpacing", "lineHeight", "letterSpacing", "wordSpacing"]) {
-    checkOptional(settings[name], (number) => checkFinite(number, `${label} property ${name}`));
-  }
-  for (const name of ["uniformFontSizing", "wordWrapping"]) {
-    if (settings[name] !== undefined && settings[name] !== true) {
-      throw new DataError(
-        `${label} property ${name} must be true when it is present, found ${describe(settings[name])}.`,
-      );
-    }
-  }
-}
-
-function checkLanguage(settings: Settings, label: string): void {
-  checkNonEmptyString(settings.language, `${label} property language`);
-}
-
-/** The checks of the settings that the player reads, by the name of the support; olah has checked the rest. */
-const SETTING_CHECKS: ReadonlyMap<string, (settings: Settings, label: string) => void> = new Map([
-  [
-    "line-reader",
-    (settings, label) =>
-      checkOptional(settings.highlightColor, (color) => checkColor(color, `${label} property highlightColor`)),
-  ],
-  [
-    "calculator-on-screen",
-    (settings, label) =>
-      checkOptional(settings.calculatorType, (type) => checkString(type, `${label} property calculatorType`)),
-  ],
-  [
-    "invert-display-polarity",
-    (settings, label) => {
-      checkOptional(settings.foreground, (color) => checkColor(color, `${label} property foreground`));
-      checkOptional(settings.background, (color) => checkColor(color, `${label} property background`));
-    },
-  ],
+/** The schemas of the settings that the player reads, by the name of the support; olah has checked the rest. */
+const SETTING_SCHEMAS: ReadonlyMap<string, Schema<unknown>> = new Map<string, Schema<unknown>>([
+  ["line-reader", looseRecord({ highlightColor: optionalColor })],
+  ["calculator-on-screen", looseRecord({ calculatorType: v.optional(v.string()) })],
+  ["invert-display-polarity", looseRecord({ foreground: optionalColor, background: optionalColor })],
   [
     "magnification",
-    (settings, label) => {
-      for (const name of ["allContent", "text", "nonText"]) {
-        checkOptional(settings[name], (zoom) => checkZoom(zoom, `${label} property ${name}`));
-      }
-    },
+    looseRecord({
+      allContent: v.optional(zoomSchema),
+      text: v.optional(zoomSchema),
+      nonText: v.optional(zoomSchema),
+    }),
   ],
-  ["text-appearance", checkTextAppearance],
   [
-    "braille",
-    (settings, label) =>
-      checkOptional(settings.deliveryMode, (mode) =>
-        checkChoice(mode, `${label} property deliveryMode`, PNP_BRAILLE_DELIVERY_MODES),
+    "text-appearance",
+    looseRecord({
+      backgroundColor: optionalColor,
+      fontColor: optionalColor,
+      fontSize: optionalNumber,
+      fontFace: v.optional(
+        looseRecord({
+          fontNames: v.array(v.string()),
+          genericFontFace: v.optional(v.picklist(PNP_GENERIC_FONT_FACES)),
+        }),
       ),
+      lineSpacing: optionalNumber,
+      lineHeight: optionalNumber,
+      letterSpacing: optionalNumber,
+      wordSpacing: optionalNumber,
+      uniformFontSizing: presentSchema,
+      wordWrapping: presentSchema,
+    }),
   ],
-  [
-    "long-description",
-    (settings, label) =>
-      checkOptional(settings.hideVisually, (hide) => checkBoolean(hide, `${label} property hideVisually`)),
-  ],
-  ["keyword-translation", checkLanguage],
-  ["item-translation", checkLanguage],
-  ["sign-language", checkLanguage],
-  [
-    "language-of-interface",
-    (settings, label) => {
-      checkArray(settings.languages, `${label} property languages must be an array`);
-      settings.languages.forEach((entry, index) => {
-        checkRecord(entry, `${label} property languages[${index}] must be an object`);
-        checkLanguage(entry, `${label} property languages[${index}]`);
-      });
-    },
-  ],
+  ["braille", looseRecord({ deliveryMode: v.optional(v.picklist(PNP_BRAILLE_DELIVERY_MODES)) })],
+  ["long-description", looseRecord({ hideVisually: v.optional(v.boolean()) })],
+  ["keyword-translation", languageSchema],
+  ["item-translation", languageSchema],
+  ["sign-language", languageSchema],
+  ["language-of-interface", looseRecord({ languages: v.array(languageSchema) })],
 ]);
 
-function checkSupportView(value: unknown, label: string): void {
-  checkRecord(value, `${label} must be an object`);
-  checkProperties(value, label, ["name", "state", "active", "settings"]);
-  if (!isSupportName(value.name)) {
-    throw new DataError(`${label} property name must be the name of a support, found ${describe(value.name)}.`);
-  }
-  checkChoice(value.state, `${label} property state`, SUPPORT_STATES);
-  checkBoolean(value.active, `${label} property active`);
-  const { settings } = value;
-  if (settings === undefined) return;
-  checkRecord(settings, `${label} property settings must be an object`);
-  if (settings.name !== value.name) {
-    throw new DataError(
-      `${label} property settings must have the name ${describe(value.name)} of its support, found ${describe(settings.name)}.`,
-    );
-  }
-  SETTING_CHECKS.get(value.name)?.(settings, `${label} property settings`);
-}
+const supportViewShape = strictRecord({
+  name: guardSchema(isSupportName, "the name of a support"),
+  state: v.picklist(SUPPORT_STATES),
+  active: v.boolean(),
+  settings: v.optional(recordSchema),
+});
+
+const supportViewSchema = v.pipe(
+  supportViewShape,
+  v.rawCheck<v.InferOutput<typeof supportViewShape>>(({ dataset, addIssue }) => {
+    if (!dataset.typed || dataset.value.settings === undefined) return;
+    const { name, settings } = dataset.value;
+    if (settings.name !== name) {
+      addIssue({
+        message: `the settings must have the name ${describe(name)} of their support, found ${describe(settings.name)}`,
+      });
+      return;
+    }
+    const result = v.safeParse(SETTING_SCHEMAS.get(name) ?? v.unknown(), settings, { abortEarly: true });
+    if (!result.success) addIssue({ message: `the settings are invalid at ${issueText(result.issues[0])}` });
+  }),
+);
 
 /**
  * Checks the supports of a view, as a host passes them from JavaScript or JSON: olah's `SupportView`s, with the settings
@@ -158,10 +118,7 @@ function checkSupportView(value: unknown, label: string): void {
  * not a support, or settings that are not those of its support or are out of range.
  */
 export function checkSupportViews(value: unknown, label: string): asserts value is readonly SupportView[] {
-  checkArray(value, `${label} must be an array`);
-  value.forEach((support, index) => {
-    checkSupportView(support, `${label}[${index}]`);
-  });
+  parseWith(v.array(supportViewSchema), value, label);
 }
 
 /** Returns the support of the list with the name when it is on, else `undefined`. */

@@ -26,8 +26,10 @@ import {
   type SingleValue,
   single,
   type Value,
+  type ValueDeclaration,
 } from "../src/index.js";
 import { baseType, recordValue, valueArbitrary } from "./arbitraries/values.js";
+import { fuzzJson } from "./fuzz.js";
 
 // Helpers ---------------------------------------------------------------------------------------------------------------
 
@@ -363,12 +365,12 @@ describe("encodePciValue and decodePciValue", () => {
       const declaration = { cardinality: "single", baseType: "file" } as const;
       const decode = (file: string): Value | null =>
         decodePciValue(json(`{"base": {"file": ${file}}}`), declaration, HOST);
-      expect(() => decode('{"mime": "text/plain"}')).toThrow("The data of a file must be a string, found undefined.");
+      expect(() => decode('{"mime": "text/plain"}')).toThrow('A file is invalid: missing the property "data".');
       expect(() => decode('{"data": 1, "mime": "text/plain"}')).toThrow(DataError);
       expect(() => decode('{"data": "AA==", "mime": 1}')).toThrow(DataError);
       expect(() => decode('{"data": "AA==", "mime": "text/plain", "name": 1}')).toThrow(DataError);
       expect(() => decode('{"data": "AA==", "mime": "text/plain", "extra": true}')).toThrow(
-        'A file must be an object with the properties "data", "mime" and optionally "name", found the property "extra".',
+        'A file is invalid: unexpected property "extra".',
       );
       expect(() => decode('{"reference": "f1", "mime": "text/plain"}')).toThrow(DataError);
       expect(() => decode('"AA=="')).toThrow(DataError);
@@ -433,6 +435,17 @@ describe("encodePciValue and decodePciValue", () => {
       }),
     );
   });
+
+  it("[J1] reads or refuses arbitrary JSON from a module with a DataError, and nothing else", () => {
+    const files = { store: () => "reference" };
+    const declarations: readonly [ValueDeclaration, unknown][] = [
+      [{ cardinality: "single", baseType: "integer" }, { base: { integer: 1 } }],
+      [{ cardinality: "single", baseType: "file" }, { base: { file: { data: "AA==", mime: "text/plain" } } }],
+    ];
+    for (const [declaration, example] of declarations) {
+      fuzzJson((json) => decodePciValue(json, declaration, files), [example]);
+    }
+  });
 });
 
 describe("parseModuleResolution", () => {
@@ -465,19 +478,26 @@ describe("parseModuleResolution", () => {
   it("[J4] refuses text that is not the file: not JSON, not an object, a bad waitSeconds, a path that is not a string", () => {
     expect(() => parseModuleResolution("{")).toThrow("The module resolution file must be JSON: ");
     expect(() => parseModuleResolution("[]")).toThrow(
-      "The module resolution file must be a JSON object, found an array.",
+      "The module resolution file is invalid: expected an object, found an array.",
     );
     expect(() => parseModuleResolution('{"waitSeconds": -1}')).toThrow(
-      "The property waitSeconds must be a non-negative number, found -1.",
+      "The module resolution file is invalid at waitSeconds: expected a value of at least 0, found -1.",
     );
     expect(() => parseModuleResolution('{"waitSeconds": "7"}')).toThrow(DataError);
     expect(() => parseModuleResolution('{"waitSeconds": null}')).toThrow(DataError);
     expect(() => parseModuleResolution('{"paths": []}')).toThrow(DataError);
     expect(() => parseModuleResolution('{"paths": {"a": 1}}')).toThrow(
-      'The path of the module "a" must be a non-empty string, found 1.',
+      'The module resolution file is invalid at paths: the property "a" is invalid: expected a string, found 1.',
     );
     expect(() => parseModuleResolution('{"paths": {"a": ""}}')).toThrow(DataError);
     expect(() => parseModuleResolution(json("1"))).toThrow(DataError);
+  });
+
+  it("[J4] reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
+    fuzzJson(
+      (json) => parseModuleResolution(JSON.stringify(json)),
+      [{ waitSeconds: 15, paths: { graph: "https://example.com/js/graph", foo: "foo" } }, {}],
+    );
   });
 });
 

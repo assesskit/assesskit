@@ -1,5 +1,6 @@
 import { type ContentVariables, VIEWS, type View } from "@luthfanwakan/olah/content";
 import type { FileValue } from "@luthfanwakan/olah/values";
+import * as v from "valibot";
 import {
   checkChoice,
   checkFunction,
@@ -8,6 +9,8 @@ import {
   checkRecord,
   checkString,
   describe,
+  looseRecord,
+  parseWith,
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { EN_MESSAGES, type Messages } from "../../messages/index.js";
@@ -81,10 +84,11 @@ const OPTION_NAMES = [
   "fileUrl",
 ];
 
+const messagesSchema = looseRecord(Object.fromEntries(Object.keys(EN_MESSAGES).map((key) => [key, v.string()])));
+
 /** Checks that a value is the messages of the interface: an object with a string for every message of the catalog. */
 export function checkMessages(messages: unknown): asserts messages is Messages {
-  checkRecord(messages, "The option messages must be an object");
-  for (const key of Object.keys(EN_MESSAGES)) checkString(messages[key], `The message ${key} of the option messages`);
+  parseWith(messagesSchema, messages, "The option messages");
 }
 
 function checkInteractions(interactions: unknown): asserts interactions is InteractionRenderers {

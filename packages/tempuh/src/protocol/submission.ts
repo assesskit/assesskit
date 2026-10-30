@@ -1,20 +1,16 @@
 import type { BodyNode } from "@luthfanwakan/olah/asi";
 import type { ItemKey, Scorer, ScoringDeclaration } from "@luthfanwakan/olah/delivery";
-import { BASE_TYPES, CARDINALITIES, type WireValue } from "@luthfanwakan/olah/values";
+import { BASE_TYPES, type WireValue } from "@luthfanwakan/olah/values";
+import * as v from "valibot";
 import {
-  checkArray,
-  checkBoolean,
-  checkChoice,
-  checkFinite,
-  checkNonEmptyString,
-  checkPositiveInteger,
-  checkProperties,
-  checkRecord,
-  checkString,
   describe,
-  isRecord,
+  finiteSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  positiveIntegerSchema,
+  recordSchema,
+  type Schema,
 } from "../checks.js";
-import { DataError } from "../errors.js";
 
 /** A value in a submission: olah's {@link WireValue}, which decodes without a declaration, or `null` for NULL. */
 export type SubmissionValue = WireValue | null;
@@ -109,74 +105,30 @@ const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
 const FIRST_INSTANT = -62_135_596_800_000;
 const LAST_INSTANT = 253_402_300_799_999;
 
-const SUBMISSION_PROPERTIES = [
-  "request",
-  "outcome",
-  "mode",
-  "variableIdentifierRef",
-  "lti",
-  "declaration",
-  "requestedAt",
-  "supplied",
-  "rubric",
-  "parts",
-  "items",
-];
-const DECLARATION_PROPERTIES = [
-  "cardinality",
-  "baseType",
-  "normalMinimum",
-  "normalMaximum",
-  "masteryValue",
-  "interpretation",
-  "longInterpretation",
-];
-const PART_PROPERTIES = ["item", "responseIdentifier", "label", "presented", "interaction", "value"];
-const ITEM_PROPERTIES = ["key", "title", "presented", "body", "templateValues", "correctResponses"];
+/** A time of a submission: epoch milliseconds that a datestamp with a four-digit year can show. */
+const instantSchema = v.pipe(finiteSchema, v.minValue(FIRST_INSTANT), v.maxValue(LAST_INSTANT));
 
-/** Checks a time of a submission: epoch milliseconds that a datestamp with a four-digit year can show. */
-function checkInstant(value: unknown, label: string): asserts value is number {
-  checkFinite(value, label);
-  if (value < FIRST_INSTANT || value > LAST_INSTANT) {
-    throw new DataError(
-      `${label} must be epoch milliseconds from the year 1 to the year 9999, found ${describe(value)}.`,
-    );
-  }
-}
+const optionalString = v.optional(v.string());
+const optionalFinite = v.optional(finiteSchema);
 
-/** Checks an optional string, and an optional finite number. */
-function checkOptionalString(value: unknown, label: string): void {
-  if (value !== undefined) checkString(value, label);
-}
+/** The entries of a declaration that its cardinality does not change. */
+const declarationRest = {
+  normalMinimum: optionalFinite,
+  normalMaximum: optionalFinite,
+  masteryValue: optionalFinite,
+  interpretation: optionalString,
+  longInterpretation: optionalString,
+};
 
-function checkOptionalFinite(value: unknown, label: string): void {
-  if (value !== undefined) checkFinite(value, label);
-}
-
-/** Checks the key of an item instance; `name` says which, such as `key of an item of a submission`. */
-function checkItemKey(key: unknown, name: string): asserts key is ItemKey {
-  checkRecord(key, `The ${name} must be an object`);
-  checkProperties(key, `The ${name}`, ["ref", "instance"]);
-  checkNonEmptyString(key.ref, `The ref of the ${name}`);
-  checkPositiveInteger(key.instance, `The instance of the ${name}`);
-}
-
-/** Checks a value: NULL or an object, which `fromWireValue` of olah reads when the value is shown. */
-function checkValue(value: unknown, label: string): asserts value is SubmissionValue {
-  if (value !== null && !isRecord(value)) {
-    throw new DataError(`${label} must be a wire value or null, found ${describe(value)}.`);
-  }
-}
-
-/** Checks the nodes of content: an array of objects that each have a `kind`. */
-function checkNodes(nodes: unknown, label: string): asserts nodes is readonly BodyNode[] {
-  checkArray(nodes, `${label} must be an array of nodes`);
-  for (const node of nodes) {
-    if (!isRecord(node) || typeof node.kind !== "string") {
-      throw new DataError(`${label} must hold nodes, each an object with a string kind, found ${describe(node)}.`);
-    }
-  }
-}
+// A record has no base type, so the property is not allowed beside it.
+const declarationSchema: Schema<ScoringDeclaration> = v.variant("cardinality", [
+  v.strictObject({ cardinality: v.literal("record"), ...declarationRest }),
+  v.strictObject({
+    cardinality: v.picklist(["multiple", "ordered", "single"]),
+    baseType: v.picklist(BASE_TYPES),
+    ...declarationRest,
+  }),
+]);
 
 /**
  * Checks the declaration of an outcome as a scoring request carries it: its cardinality and base type, which a record
@@ -185,58 +137,74 @@ function checkNodes(nodes: unknown, label: string): asserts nodes is readonly Bo
  * @throws `DataError` when it is not.
  */
 export function checkDeclaration(declaration: unknown): asserts declaration is ScoringDeclaration {
-  checkRecord(declaration, "The property declaration of a submission must be an object");
-  checkProperties(declaration, "The declaration of a submission", DECLARATION_PROPERTIES);
-  checkChoice(declaration.cardinality, "The cardinality of the declaration of a submission", CARDINALITIES);
-  if (declaration.cardinality === "record") {
-    if (declaration.baseType !== undefined) {
-      throw new DataError(`A record has no base type, found ${describe(declaration.baseType)}.`);
-    }
-  } else {
-    checkChoice(declaration.baseType, "The base type of the declaration of a submission", BASE_TYPES);
-  }
-  checkOptionalFinite(declaration.normalMinimum, "The normalMinimum of the declaration of a submission");
-  checkOptionalFinite(declaration.normalMaximum, "The normalMaximum of the declaration of a submission");
-  checkOptionalFinite(declaration.masteryValue, "The masteryValue of the declaration of a submission");
-  checkOptionalString(declaration.interpretation, "The interpretation of the declaration of a submission");
-  checkOptionalString(declaration.longInterpretation, "The longInterpretation of the declaration of a submission");
+  parseWith(declarationSchema, declaration, "The declaration of a submission");
 }
 
-/** Checks a list of variables; `name` says which, such as `correctResponses of an item of a submission`. */
-function checkVariables(variables: unknown, name: string): asserts variables is readonly SubmissionVariable[] {
-  checkArray(variables, `The ${name} must be an array`);
-  for (const variable of variables) {
-    checkRecord(variable, `An entry of the ${name} must be an object`);
-    checkProperties(variable, `An entry of the ${name}`, ["identifier", "value"]);
-    checkString(variable.identifier, `An identifier of the ${name}`);
-    checkValue(variable.value, `The value of ${describe(variable.identifier)} in the ${name}`);
-  }
-}
+/** A value: NULL or an object, which `fromWireValue` of olah reads when the value is shown. */
+const valueSchema = v.nullable(recordSchema);
 
-function checkPart(part: unknown): asserts part is SubmissionPart {
-  checkRecord(part, "A part of a submission must be an object");
-  checkProperties(part, "A part of a submission", PART_PROPERTIES);
-  checkItemKey(part.item, "item of a part of a submission");
-  checkString(part.responseIdentifier, "The responseIdentifier of a part of a submission");
-  checkOptionalString(part.label, "The label of a part of a submission");
-  checkBoolean(part.presented, "The presented of a part of a submission");
-  checkOptionalString(part.interaction, "The interaction of a part of a submission");
-  checkValue(part.value, "The value of a part of a submission");
-}
+/** The nodes of content: an array of objects that each have a `kind`. */
+const nodesSchema = v.array(v.looseObject({ kind: v.string() }));
 
-function checkItem(item: unknown): asserts item is SubmissionItem {
-  checkRecord(item, "An item of a submission must be an object");
-  checkProperties(item, "An item of a submission", ITEM_PROPERTIES);
-  checkItemKey(item.key, "key of an item of a submission");
-  checkString(item.title, "The title of an item of a submission");
-  checkBoolean(item.presented, "The presented of an item of a submission");
-  checkNodes(item.body, "The body of an item of a submission");
-  checkVariables(item.templateValues, "templateValues of an item of a submission");
-  checkVariables(item.correctResponses, "correctResponses of an item of a submission");
-}
+const itemKeySchema = v.strictObject({ ref: nonEmptyStringSchema, instance: positiveIntegerSchema });
+
+/** A list of variables, as entries so that an identifier such as `__proto__` stays data. */
+const variablesSchema = v.array(v.strictObject({ identifier: v.string(), value: valueSchema }));
+
+const partSchema = v.strictObject({
+  item: itemKeySchema,
+  responseIdentifier: v.string(),
+  label: optionalString,
+  presented: v.boolean(),
+  interaction: optionalString,
+  value: valueSchema,
+});
+
+const itemSchema = v.strictObject({
+  key: itemKeySchema,
+  title: v.string(),
+  presented: v.boolean(),
+  body: nodesSchema,
+  templateValues: variablesSchema,
+  correctResponses: variablesSchema,
+});
 
 /** Whether two keys name the same item instance. */
 const sameKey = (a: ItemKey, b: ItemKey): boolean => a.ref === b.ref && a.instance === b.instance;
+
+const submissionShape = v.strictObject({
+  request: nonEmptyStringSchema,
+  outcome: nonEmptyStringSchema,
+  mode: v.picklist(SCORERS),
+  variableIdentifierRef: optionalString,
+  lti: v.optional(v.literal(true)),
+  declaration: declarationSchema,
+  requestedAt: instantSchema,
+  supplied: v.optional(v.strictObject({ value: valueSchema, at: instantSchema, scorer: v.picklist(SCORERS) })),
+  rubric: nodesSchema,
+  parts: v.array(partSchema),
+  items: v.array(itemSchema),
+});
+
+const submissionSchema = v.pipe(
+  submissionShape,
+  v.rawCheck<v.InferOutput<typeof submissionShape>>(({ dataset, addIssue }) => {
+    if (!dataset.typed) return;
+    const { items, parts } = dataset.value;
+    items.forEach(({ key }, index) => {
+      if (items.slice(0, index).some((other) => sameKey(other.key, key))) {
+        addIssue({ message: `has the item ${describe(key.ref)} instance ${key.instance} twice` });
+      }
+    });
+    for (const { item } of parts) {
+      if (!items.some(({ key }) => sameKey(key, item))) {
+        addIssue({
+          message: `A part names the item ${describe(item.ref)} instance ${item.instance}, which the submission lacks`,
+        });
+      }
+    }
+  }),
+);
 
 /**
  * Checks a submission that arrived as JSON: every property of its form and no other, the type of every field, the content
@@ -245,41 +213,5 @@ const sameKey = (a: ItemKey, b: ItemKey): boolean => a.ref === b.ref && a.instan
  * @throws `DataError` when it is not a submission.
  */
 export function checkSubmission(value: unknown): asserts value is Submission {
-  checkRecord(value, "A submission must be an object");
-  checkProperties(value, "A submission", SUBMISSION_PROPERTIES);
-  checkNonEmptyString(value.request, "The request of a submission");
-  checkNonEmptyString(value.outcome, "The outcome of a submission");
-  checkChoice(value.mode, "The mode of a submission", SCORERS);
-  checkOptionalString(value.variableIdentifierRef, "The variableIdentifierRef of a submission");
-  if (value.lti !== undefined && value.lti !== true) {
-    throw new DataError(`The lti of a submission must be true or absent, found ${describe(value.lti)}.`);
-  }
-  checkDeclaration(value.declaration);
-  checkInstant(value.requestedAt, "The requestedAt of a submission");
-  const { supplied } = value;
-  if (supplied !== undefined) {
-    checkRecord(supplied, "The supplied of a submission must be an object");
-    checkProperties(supplied, "The supplied of a submission", ["value", "at", "scorer"]);
-    checkValue(supplied.value, "The value of the supplied of a submission");
-    checkInstant(supplied.at, "The time of the supplied of a submission");
-    checkChoice(supplied.scorer, "The scorer of the supplied of a submission", SCORERS);
-  }
-  checkNodes(value.rubric, "The rubric of a submission");
-  checkArray(value.parts, "The parts of a submission must be an array");
-  checkArray(value.items, "The items of a submission must be an array");
-  value.parts.forEach(checkPart);
-  value.items.forEach(checkItem);
-  const items = value.items as readonly SubmissionItem[];
-  items.forEach(({ key }, index) => {
-    if (items.slice(0, index).some((other) => sameKey(other.key, key))) {
-      throw new DataError(`A submission has the item ${describe(key.ref)} instance ${key.instance} twice.`);
-    }
-  });
-  for (const { item } of value.parts as readonly SubmissionPart[]) {
-    if (!items.some(({ key }) => sameKey(key, item))) {
-      throw new DataError(
-        `A part of a submission names the item ${describe(item.ref)} instance ${item.instance}, which the submission lacks.`,
-      );
-    }
-  }
+  parseWith(submissionSchema, value, "A submission");
 }

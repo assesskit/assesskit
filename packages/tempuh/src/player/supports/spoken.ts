@@ -98,7 +98,7 @@ function readableWords(content: Node, read: (range: Range) => SpeechRequest | un
 function spokenOf(
   supports: readonly SupportView[],
 ): (SpeechSettings & { readonly readingType: ReadingType }) | undefined {
-  checkSupportViews(supports, "The supports");
+  checkSupportViews(supports, "The list of supports");
   const support = activeSupport(supports, "spoken");
   if (support === undefined) return undefined;
   const given = support.settings?.name === "spoken" ? support.settings : undefined;

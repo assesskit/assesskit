@@ -1,4 +1,5 @@
-import { checkNonEmptyString, checkRecord } from "../checks.js";
+import * as v from "valibot";
+import { nonEmptyStringSchema, parseWith, type Schema } from "../checks.js";
 
 /**
  * The identity that the host's authentication gives to a request. It never comes from the client: envelopes carry no
@@ -11,13 +12,13 @@ export interface Caller {
   readonly principal: string;
 }
 
+const callerSchema: Schema<Caller> = v.object({ session: nonEmptyStringSchema, principal: nonEmptyStringSchema });
+
 /**
  * Checks a caller, as a host passes it from JavaScript.
  *
  * @throws `DataError` when it is not an object with a non-empty `session` and `principal`.
  */
 export function checkCaller(value: unknown): asserts value is Caller {
-  checkRecord(value, "The caller must be an object");
-  checkNonEmptyString(value.session, "The session of a caller");
-  checkNonEmptyString(value.principal, "The principal of a caller");
+  parseWith(callerSchema, value, "The caller");
 }

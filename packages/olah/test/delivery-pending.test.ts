@@ -1249,22 +1249,22 @@ describe("the state with pending work", () => {
 
   it("[E2] refuses a state whose pending work is not in the format", () => {
     expect(damaged((json) => (json.scoring = JSON.parse("{}")))).toThrow(
-      "The scoring of the state must be an array, found an object.",
+      "The state is invalid at scoring: expected an array, found an object.",
     );
     expect(damaged((json) => (json.cat = JSON.parse('[{"section":"A"}]')))).toThrow(
-      "The instance of a CAT session must be a positive integer, found undefined.",
+      'The state is invalid at cat[0]: missing the property "instance".',
     );
     expect(damaged((json) => (firstSession(json).status = "gone"))).toThrow(
-      'The status of a CAT session must be "running", "leaving" or "ended", found "gone".',
+      'The state is invalid at cat[0].status: expected "running", "leaving" or "ended", found "gone".',
     );
     expect(damaged((json) => (json.report = JSON.parse("null")))).toThrow(
-      "The report of the state must be an object, found null.",
+      "The state is invalid at report: expected an object, found null.",
     );
     expect(damaged((json) => ((json.needs as { personalNeeds: unknown }).personalNeeds = 5))).toThrow(
-      "The personal needs of the state must be a string, found 5.",
+      "The state is invalid at needs.personalNeeds: expected a string, found 5.",
     );
     expect(damaged((json) => (firstSession(json).moving = false))).toThrow(
-      "The moving of a CAT session must be true, found false.",
+      "The state is invalid at cat[0].moving: expected true, found false.",
     );
   });
 });

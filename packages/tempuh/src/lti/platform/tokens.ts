@@ -1,5 +1,6 @@
 import type { webcrypto } from "node:crypto";
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
+import { looseRecord } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import {
   type Claims,
@@ -7,7 +8,6 @@ import {
   NUMBER,
   POSITIVE_INTEGER,
   POSITIVE_NUMBER,
-  RECORD,
   required,
   STRING,
   STRING_ARRAY,
@@ -68,8 +68,8 @@ export interface Access {
 }
 
 function readItem(source: Claims): ItemKey {
-  const item = required(source, "item", OWNER, RECORD);
-  return { ref: required(item, "ref", OWNER, STRING), instance: required(item, "instance", OWNER, POSITIVE_INTEGER) };
+  const { ref, instance } = required(source, "item", OWNER, looseRecord({ ref: STRING, instance: POSITIVE_INTEGER }));
+  return { ref, instance };
 }
 
 /** Seals the hint of a launch. */
@@ -92,7 +92,7 @@ export async function openHint(token: string, key: webcrypto.CryptoKey): Promise
       principal: required(claims, "principal", OWNER, IDENTIFIER),
       client: required(claims, "client", OWNER, STRING),
       target: required(claims, "target", OWNER, STRING),
-      custom: required(claims, "custom", OWNER, STRING_RECORD),
+      custom: Object.fromEntries(required(claims, "custom", OWNER, STRING_RECORD)),
       title: required(claims, "title", OWNER, STRING),
       scoreMaximum: required(claims, "scoreMaximum", OWNER, POSITIVE_NUMBER),
       jti: required(claims, "jti", OWNER, STRING),

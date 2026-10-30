@@ -3,25 +3,24 @@ import {
   assessmentResultToJson,
   type CatPort,
   type CreateSessionRequest,
-  type CreateSessionResponse,
   itemStageFromJson,
   type SectionData,
-  type SubmitResultsResponse,
 } from "@luthfanwakan/olah/cat";
+import * as v from "valibot";
 import {
-  checkArray,
-  checkBoolean,
-  checkFunction,
-  checkHttpsUrl,
   checkNonEmptyString,
-  checkPositive,
-  checkProperties,
-  checkRecord,
   checkString,
   describe,
+  functionSchema,
+  httpsUrlSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  positiveSchema,
+  recordSchema,
+  type Schema,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { type CatFetch, checkCredentials, createRestClient, type OAuthClientCredentials } from "./rest-client.js";
+import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
 import { readSectionData } from "./section-data.js";
 
 /** Options of {@link restCatPort}. */
@@ -41,10 +40,16 @@ export interface RestCatPortOptions {
   readonly sharePnp?: boolean;
 }
 
-const OPTIONS = ["fetch", "endpoint", "credentials", "timeoutMs", "sharePnp"];
-
 /** The milliseconds after which a request to the engine is aborted, unless the host says otherwise. */
 const DEFAULT_TIMEOUT_MS = 10_000;
+
+const optionsSchema = v.strictObject({
+  fetch: functionSchema<CatFetch>(),
+  endpoint: httpsUrlSchema,
+  credentials: oauthCredentialsSchema,
+  timeoutMs: v.optional(positiveSchema, DEFAULT_TIMEOUT_MS),
+  sharePnp: v.optional(v.boolean(), false),
+});
 
 /** Removes the slashes that end a URL, so that a prefix with and without one is the same prefix. */
 function withoutTrailingSlashes(url: string): string {
@@ -53,15 +58,19 @@ function withoutTrailingSlashes(url: string): string {
   return url.slice(0, end);
 }
 
+const sessionRequestSchema: Schema<CreateSessionRequest> = v.object({
+  personalNeedsAndPreferences: v.optional(v.string()),
+  demographics: v.optional(v.string()),
+  priorData: v.optional(v.array(v.object({ name: v.string(), value: v.unknown() }))),
+});
+
 /** Returns the body of Create Session in the binding (§5.2.4): the prior data are key and value pairs of text. */
 function sessionBody(request: CreateSessionRequest, sharePnp: boolean): unknown {
-  checkRecord(request, "The request to create a session must be an object");
-  const { personalNeedsAndPreferences, demographics, priorData } = request;
-  if (personalNeedsAndPreferences !== undefined) {
-    checkString(personalNeedsAndPreferences, "The personalNeedsAndPreferences of the request");
-  }
-  if (demographics !== undefined) checkString(demographics, "The demographics of the request");
-  if (priorData !== undefined) checkArray(priorData, "The priorData of the request must be an array");
+  const { personalNeedsAndPreferences, demographics, priorData } = parseWith(
+    sessionRequestSchema,
+    request,
+    "The request to create a session",
+  );
   return {
     ...(sharePnp && personalNeedsAndPreferences !== undefined ? { personalNeedsAndPreferences } : {}),
     ...(demographics === undefined ? {} : { demographics }),
@@ -69,8 +78,6 @@ function sessionBody(request: CreateSessionRequest, sharePnp: boolean): unknown 
       ? {}
       : {
           priorData: priorData.map((entry) => {
-            checkRecord(entry, "An entry of the priorData must be an object");
-            checkString(entry.name, "The name of an entry of the priorData");
             // The binding's value is text: a text stays as it is, and any other value is its JSON.
             const value = typeof entry.value === "string" ? entry.value : JSON.stringify(entry.value);
             if (value === undefined) {
@@ -84,56 +91,38 @@ function sessionBody(request: CreateSessionRequest, sharePnp: boolean): unknown 
   };
 }
 
-function optionalText(
-  body: Readonly<Record<string, unknown>>,
-  name: string,
-  label: string,
-): { readonly [key: string]: string } {
-  const value = body[name];
-  if (value === undefined) return {};
-  checkString(value, `The ${name} of ${label}`);
-  return { [name]: value };
-}
+// olah reads the stage and the assessment result, and its errors pass through unchanged, so the schemas leave them whole.
+// The binding allows a `qtiMetadata` object in the section of a Get Section answer. It is a QTI metadata record, not the
+// metadata file that `SectionData` holds, so it is checked and not returned.
+const bindingSectionSchema: Schema<SectionData> = v.pipe(
+  v.strictObject({
+    sectionConfiguration: v.string(),
+    qtiUsagedata: v.optional(v.string()),
+    qtiMetadata: v.optional(recordSchema),
+  }),
+  v.transform(({ sectionConfiguration, qtiUsagedata }) => ({
+    sectionConfiguration,
+    ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
+  })),
+);
 
-/**
- * Reads the `section` of a Get Section answer. The binding allows a `qtiMetadata` object there; it is a QTI metadata
- * record, not the metadata file that `SectionData` holds, so it is checked and not returned.
- */
-function readBindingSection(section: unknown): SectionData {
-  checkRecord(section, "The section of the answer to Get Section must be an object");
-  const { qtiMetadata, ...files } = section;
-  if (qtiMetadata !== undefined)
-    checkRecord(qtiMetadata, "The qtiMetadata of the answer to Get Section must be an object");
-  return readSectionData(files);
-}
+const getSectionSchema = v.object({ section: bindingSectionSchema, items: v.optional(v.unknown()) });
 
-function readCreateSession(body: unknown): CreateSessionResponse {
-  const label = "the answer to Create Session";
-  checkRecord(body, `The answer to Create Session must be an object`);
-  checkNonEmptyString(body.sessionIdentifier, `The sessionIdentifier of ${label}`);
-  return {
-    sessionIdentifier: body.sessionIdentifier,
-    // A missing stage ends the session (CAT §4.2).
-    nextItems:
-      body.nextItems === undefined
-        ? { itemIdentifiers: [], stageLength: 0 }
-        : itemStageFromJson(body.nextItems, `nextItems of ${label}`),
-    ...optionalText(body, "sessionState", label),
-  };
-}
+const createSectionSchema = v.object({ sectionIdentifier: nonEmptyStringSchema });
 
-function readSubmitResults(body: unknown): SubmitResultsResponse {
-  const label = "the answer to Submit Results";
-  checkRecord(body, `The answer to Submit Results must be an object`);
-  const { nextItems, assessmentResult } = body;
-  return {
-    ...(nextItems === undefined
-      ? {}
-      : { nextItems: nextItems === null ? null : itemStageFromJson(nextItems, `nextItems of ${label}`) }),
-    ...(assessmentResult === undefined ? {} : { assessmentResult: assessmentResultFromJson(assessmentResult) }),
-    ...optionalText(body, "sessionState", label),
-  };
-}
+const createSessionSchema = v.object({
+  sessionIdentifier: nonEmptyStringSchema,
+  nextItems: v.optional(v.unknown()),
+  sessionState: v.optional(v.string()),
+});
+
+const submitResultsSchema = v.object({
+  nextItems: v.optional(v.unknown()),
+  assessmentResult: v.optional(v.unknown()),
+  sessionState: v.optional(v.string()),
+});
+
+const submitRequestSchema = v.pipe(recordSchema, v.object({ sessionState: v.optional(v.string()) }));
 
 /**
  * Returns a CAT engine that speaks the REST/JSON binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind) to one
@@ -154,14 +143,7 @@ function readSubmitResults(body: unknown): SubmitResultsResponse {
  * @throws `DataError` when an option has the wrong type, or an URL is not an `https` URL.
  */
 export function restCatPort(options: RestCatPortOptions): CatPort {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTIONS);
-  const { fetch, endpoint, credentials, timeoutMs = DEFAULT_TIMEOUT_MS, sharePnp = false } = options;
-  checkFunction(fetch, "The option fetch must be a function of a URL and a request");
-  checkHttpsUrl(endpoint, "The option endpoint");
-  checkCredentials(credentials);
-  checkPositive(timeoutMs, "The option timeoutMs");
-  checkBoolean(sharePnp, "The option sharePnp");
+  const { fetch, endpoint, credentials, timeoutMs, sharePnp } = parseWith(optionsSchema, options, "The options object");
 
   const base = withoutTrailingSlashes(endpoint);
   const client = createRestClient({ fetch, credentials, timeoutMs });
@@ -189,35 +171,59 @@ export function restCatPort(options: RestCatPortOptions): CatPort {
       const { sectionConfiguration, qtiUsagedata } = readSectionData(data);
       const section = { sectionConfiguration, ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }) };
       const body = await client.send("POST", url(prefix, "sections"), section);
-      checkRecord(body, "The answer to Create Section must be an object");
-      checkNonEmptyString(body.sectionIdentifier, "The sectionIdentifier of the answer to Create Section");
-      return { sectionIdentifier: body.sectionIdentifier };
+      return parseWith(createSectionSchema, body, "The answer to Create Section");
     },
 
     async getSection(prefix, sectionIdentifier) {
       const body = await client.send("GET", section(prefix, sectionIdentifier));
-      checkRecord(body, "The answer to Get Section must be an object");
-      return {
-        sectionData: readBindingSection(body.section),
-        items: itemStageFromJson(body.items, "items of the answer to Get Section"),
-      };
+      const { section: sectionData, items } = parseWith(getSectionSchema, body, "The answer to Get Section");
+      return { sectionData, items: itemStageFromJson(items, "items of the answer to Get Section") };
     },
 
     async createSession(prefix, sectionIdentifier, request) {
       const target = `${section(prefix, sectionIdentifier)}/sessions`;
-      return readCreateSession(await client.send("POST", target, sessionBody(request, sharePnp)));
+      const body = await client.send("POST", target, sessionBody(request, sharePnp));
+      const { sessionIdentifier, nextItems, sessionState } = parseWith(
+        createSessionSchema,
+        body,
+        "The answer to Create Session",
+      );
+      return {
+        sessionIdentifier,
+        // A missing stage ends the session (CAT §4.2).
+        nextItems:
+          nextItems === undefined
+            ? { itemIdentifiers: [], stageLength: 0 }
+            : itemStageFromJson(nextItems, "nextItems of the answer to Create Session"),
+        ...(sessionState === undefined ? {} : { sessionState }),
+      };
     },
 
     async submitResults(prefix, sectionIdentifier, sessionIdentifier, request) {
-      checkRecord(request, "The request to submit results must be an object");
-      const { assessmentResult, sessionState } = request;
-      if (sessionState !== undefined) checkString(sessionState, "The sessionState of the request");
+      const { sessionState } = parseWith(submitRequestSchema, request, "The request to submit results");
       const body = {
-        assessmentResult: assessmentResultToJson(assessmentResult),
+        assessmentResult: assessmentResultToJson(request.assessmentResult),
         ...(sessionState === undefined ? {} : { sessionState }),
       };
       const target = `${session(prefix, sectionIdentifier, sessionIdentifier)}/results`;
-      return readSubmitResults(await client.send("POST", target, body));
+      const answer = parseWith(
+        submitResultsSchema,
+        await client.send("POST", target, body),
+        "The answer to Submit Results",
+      );
+      const { nextItems } = answer;
+      return {
+        ...(nextItems === undefined
+          ? {}
+          : {
+              nextItems:
+                nextItems === null ? null : itemStageFromJson(nextItems, "nextItems of the answer to Submit Results"),
+            }),
+        ...(answer.assessmentResult === undefined
+          ? {}
+          : { assessmentResult: assessmentResultFromJson(answer.assessmentResult) }),
+        ...(answer.sessionState === undefined ? {} : { sessionState: answer.sessionState }),
+      };
     },
 
     async endSession(prefix, sectionIdentifier, sessionIdentifier) {

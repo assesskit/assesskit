@@ -86,7 +86,8 @@
   "dependencies": {
     "@luthfanwakan/olah": "workspace:^",
     "jose": "6.2.12",
-    "uuid": "14.0.3"
+    "uuid": "14.0.3",
+    "valibot": "1.5.0"
   },
   "peerDependencies": {
     "@luthfanwakan/takar": "^1.0.0"

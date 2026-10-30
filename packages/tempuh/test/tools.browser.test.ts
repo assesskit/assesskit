@@ -1747,10 +1747,10 @@ describe("input of other types", () => {
     const mount = (overrides: Record<string, unknown>) => () =>
       mountTools(scene.host, { ...options(scene), ...overrides } as never);
     expect(mount({ messages: JSON.parse("null") })).toThrow(
-      new DataError("The option messages must be an object, found null."),
+      new DataError("The option messages is invalid: expected an object, found null."),
     );
     expect(mount({ messages: { ...EN_MESSAGES, toolRule: 5 } })).toThrow(
-      new DataError("The message toolRule of the option messages must be a string, found 5."),
+      new DataError("The option messages is invalid at toolRule: expected a string, found 5."),
     );
     expect(mount({ language: 5 })).toThrow(new DataError("The option language must be a string, found 5."));
     expect(mount({ stage: JSON.parse("{}") })).toThrow(
@@ -1784,10 +1784,10 @@ describe("input of other types", () => {
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
     expect(() => scene.tools.update(JSON.parse('{"companion": 1, "supports": []}'))).toThrow(
-      new DataError("The property companion must be the companion materials of olah's model or null, found 1."),
+      new DataError("The tools input is invalid at companion: expected an object, found 1."),
     );
     expect(() => scene.tools.update(JSON.parse("null"))).toThrow(
-      new DataError("The tools input must be an object, found null."),
+      new DataError("The tools input is invalid: expected an object, found null."),
     );
     expect(overlayOf(scene, "Ruler")).not.toBeNull();
   });

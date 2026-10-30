@@ -1,4 +1,12 @@
-import { checkNonEmptyString, checkRecord, checkString, describe } from "../checks.js";
+import * as v from "valibot";
+import {
+  checkString,
+  describe,
+  looseRecord,
+  nonEmptyStringSchema,
+  nonNegativeIntegerSchema,
+  parseWith,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 
 /** The step of a session that made the events: its start, or the version of the session record that the step saved. */
@@ -45,17 +53,25 @@ export function checkIri(value: unknown, label: string): asserts value is string
   }
 }
 
-/**
- * Checks the parties of a session, as a host passes them from JavaScript.
- *
- * @throws `DataError` when they are not an object whose `actor`, `assessment` and `edApp` are absolute IRIs.
- */
-function checkParties(value: unknown): asserts value is CaliperParties {
-  checkRecord(value, "The Caliper parties must be an object");
-  checkIri(value.actor, "The actor of the Caliper parties");
-  checkIri(value.assessment, "The assessment of the Caliper parties");
-  checkIri(value.edApp, "The edApp of the Caliper parties");
-}
+/** The schema of an absolute IRI. */
+export const iriSchema = v.pipe(
+  v.string(),
+  v.check(
+    (text) => URL.canParse(text),
+    (issue) => `expected an absolute IRI, found ${issue.received}`,
+  ),
+);
+
+const contextSchema = looseRecord({
+  session: nonEmptyStringSchema,
+  step: v.union(
+    [v.literal(START_STEP), nonNegativeIntegerSchema],
+    (issue) => `expected "start" or a non-negative integer, found ${issue.received}`,
+  ),
+  actor: iriSchema,
+  assessment: iriSchema,
+  edApp: iriSchema,
+});
 
 /**
  * Checks a context, as a host passes it from JavaScript.
@@ -64,13 +80,5 @@ function checkParties(value: unknown): asserts value is CaliperParties {
  * integer, and the parties.
  */
 export function checkContext(value: unknown): asserts value is CaliperContext {
-  checkRecord(value, "The Caliper context must be an object");
-  checkNonEmptyString(value.session, "The session of the Caliper context");
-  const { step } = value;
-  if (step !== START_STEP && !(typeof step === "number" && Number.isSafeInteger(step) && step >= 0)) {
-    throw new DataError(
-      `The step of the Caliper context must be "start" or a non-negative integer, found ${describe(step)}.`,
-    );
-  }
-  checkParties(value);
+  parseWith(contextSchema, value, "The Caliper context");
 }

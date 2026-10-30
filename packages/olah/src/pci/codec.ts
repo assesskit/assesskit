@@ -1,5 +1,5 @@
-import { checkFunction, checkRecord, checkString, isRecord } from "../checks.js";
-import { DataError } from "../errors.js";
+import * as v from "valibot";
+import { checkFunction, checkRecord, checkString, isRecord, parseWith } from "../checks.js";
 import { fromJsonValue, type JsonValue, toJsonValue, type Value, type ValueDeclaration } from "../values/index.js";
 
 /**
@@ -51,7 +51,7 @@ function isPciJson(json: unknown): json is PciJson {
   return isRecord(json) && ["base", "list", "record"].some((key) => Object.hasOwn(json, key));
 }
 
-const FILE_PROPERTIES = ["data", "mime", "name"];
+const inlineFileSchema = v.strictObject({ data: v.string(), mime: v.string(), name: v.optional(v.string()) });
 
 /** Turns the file of the JSON of a value, a reference as `toJsonValue` writes it, into App. C's inline file. */
 function inlineFile(file: unknown, files: PciFileLoader): unknown {
@@ -65,16 +65,7 @@ function inlineFile(file: unknown, files: PciFileLoader): unknown {
 
 /** Turns the inline file of a PCI into the reference of a file in the host's storage. */
 function storedFile(file: unknown, files: PciFileStore): unknown {
-  const expected = 'an object with the properties "data", "mime" and optionally "name"';
-  checkRecord(file, `A file must be ${expected}`);
-  const unexpected = Object.keys(file).find((key) => !FILE_PROPERTIES.includes(key));
-  if (unexpected !== undefined) {
-    throw new DataError(`A file must be ${expected}, found the property ${JSON.stringify(unexpected)}.`);
-  }
-  const { data, mime, name } = file;
-  checkString(data, "The data of a file");
-  checkString(mime, "The mime type of a file");
-  if (name !== undefined) checkString(name, "The name of a file");
+  const { data, mime, name } = parseWith(inlineFileSchema, file, "A file");
   const reference: unknown = name === undefined ? files.store(data, mime) : files.store(data, mime, name);
   checkString(reference, "The reference that the function store returns");
   return { reference, mime, ...(name === undefined ? {} : { name }) };

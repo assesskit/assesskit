@@ -58,6 +58,7 @@ import {
   USAGE_REF,
   usageXml,
 } from "./cat-fixture.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = <T = never>(text: string): T => JSON.parse(text);
@@ -366,30 +367,48 @@ describe("section", () => {
     const rejects = async (data: unknown, message: RegExp): Promise<void> => {
       await expect(readAdaptiveSection(data), JSON.stringify(data)).rejects.toThrow(message);
     };
-    await rejects(json("null"), /^The section data must be an object, found null\.$/);
-    await rejects({ sectionConfiguration: 5 }, /^The sectionConfiguration of the section data must be a string/);
+    await rejects(json("null"), /^The section data is invalid: expected an object, found null/);
+    await rejects(
+      { sectionConfiguration: 5 },
+      /^The section data is invalid at sectionConfiguration: expected a string, found 5/,
+    );
     await rejects(
       { sectionConfiguration: "e30=", qtiUsagedata: null },
-      /^The qtiUsagedata of the section data must be a string/,
+      /^The section data is invalid at qtiUsagedata: expected a string, found null/,
     );
-    await rejects({ sectionConfiguration: "e30=", extra: 1 }, /^The section data has the properties/);
-    await rejects(sectionDataOf({}), /^The length of the settings must be a positive integer, found undefined\.$/);
-    await rejects(sectionDataOf({ length: 0 }), /^The length of the settings must be a positive integer, found 0\.$/);
-    await rejects(sectionDataOf({ length: 2, speed: 1 }), /^The settings of an adaptive section has the properties/);
+    await rejects(
+      { sectionConfiguration: "e30=", extra: 1 },
+      /^The section data is invalid: unexpected property "extra"/,
+    );
+    await rejects(sectionDataOf({}), /^The settings of an adaptive section is invalid: missing the property "length"/);
+    await rejects(
+      sectionDataOf({ length: 0 }),
+      /^The settings of an adaptive section is invalid at length: expected a value of at least 1, found 0/,
+    );
+    await rejects(
+      sectionDataOf({ length: 2, speed: 1 }),
+      /^The settings of an adaptive section is invalid: unexpected property "speed"/,
+    );
     await rejects(
       sectionDataOf({ length: 2, contentTargets: { a: "x" } }),
-      /^The content target of the area "a" must be a number/,
+      /^The settings of an adaptive section is invalid at contentTargets: the property "a" is invalid: expected a number, found "x"/,
     );
     await rejects(
       sectionDataOf({ length: 2, contentTargets: [] }),
-      /^The contentTargets of the settings must be an object/,
+      /^The settings of an adaptive section is invalid at contentTargets: expected an object, found an array/,
     );
     await rejects(
       sectionDataOf({ length: 2, enemies: [["a", 5]] }),
-      /^An item identifier of an enemy set must be a non-empty string/,
+      /^The settings of an adaptive section is invalid at enemies\[0\]\[1\]: expected a string, found 5/,
     );
-    await rejects(sectionDataOf({ length: 2, enemies: "a" }), /^The enemies of the settings must be an array/);
-    await rejects(sectionDataOf([]), /^The settings of an adaptive section must be a JSON object/);
+    await rejects(
+      sectionDataOf({ length: 2, enemies: "a" }),
+      /^The settings of an adaptive section is invalid at enemies: expected an array, found "a"/,
+    );
+    await rejects(
+      sectionDataOf([]),
+      /^The settings of an adaptive section is invalid at length: expected a value of at least 1, found 0/,
+    );
   });
 
   it("[T100] reads the stages and modules of a panel, and checks that the usage data has the items", async () => {
@@ -679,7 +698,7 @@ describe("takarCatPort", () => {
       port.createSection(PREFIX, sectionDataOf({ length: 2, enemies: [["q1", "nope"]] }, BANK)),
     ).rejects.toThrow(TakarDataError);
     expect(await rejection(port.createSection(PREFIX, json('{"qtiUsagedata":"x"}')))).toMatch(
-      /^The sectionConfiguration/,
+      /^The section data is invalid: missing the property "sectionConfiguration"/,
     );
     const wrongPool = takarCatPort({ sections: memoryStore(), seeds, pool: () => json('"x"') });
     expect(await rejection(wrongPool.createSection(PREFIX, data))).toMatch(
@@ -689,23 +708,34 @@ describe("takarCatPort", () => {
 
   it("[T99] checks its options", () => {
     const sections = memoryStore();
-    expect(() => takarCatPort(json("null"))).toThrow(new DataError("The options must be an object, found null."));
-    expect(() => takarCatPort({ sections, seeds: 1 } as never)).toThrow(/^The option seeds must be a function/);
+    expect(() => takarCatPort(json("null"))).toThrow(
+      new DataError("The options object is invalid: expected an object, found null."),
+    );
+    expect(() => takarCatPort({ sections, seeds: 1 } as never)).toThrow(
+      /^The options object is invalid at seeds: expected a function, found 1/,
+    );
     expect(() => takarCatPort({ seeds } as never)).toThrow(
-      /^The option sections must be an object with the methods put and get/,
+      /^The options object is invalid: missing the property "sections"/,
     );
     expect(() => takarCatPort({ sections: {} as SectionStore, seeds })).toThrow(DataError);
-    expect(() => takarCatPort({ sections, seeds, pool: null as never })).toThrow(/^The option pool must be a function/);
+    expect(() => takarCatPort({ sections, seeds, pool: null as never })).toThrow(
+      /^The options object is invalid at pool: expected a function, found null/,
+    );
     expect(() => takarCatPort({ sections, seeds, category: null as never })).toThrow(
-      /^The option category must be a function/,
+      /^The options object is invalid at category: expected a function, found null/,
     );
     expect(() => takarCatPort({ sections, seeds, scalingConstant: 0 })).toThrow(
-      new DataError("The option scalingConstant must be a positive number, found 0."),
+      new DataError("The options object is invalid at scalingConstant: expected a positive number, found 0."),
     );
     expect(() => takarCatPort({ sections, seeds, scalingConstant: null as never })).toThrow(DataError);
     expect(() => takarCatPort({ sections, seeds, speed: 1 } as never)).toThrow(
-      /^The options has the properties "sections", "seeds"/,
+      /^The options object is invalid: unexpected property "speed"/,
     );
+  });
+
+  it("[T99] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+    fuzzJson((options) => takarCatPort(options as never));
+    fuzzJson((options) => takarPanelPort(options as never));
   });
 });
 
@@ -868,7 +898,9 @@ describe("takarPanelPort", () => {
     const noPanel = takarPanelPort({ sections, panels: () => json("null") });
     expect(await rejection(noPanel.getSection(PREFIX, section))).toMatch(/^The option panels must return an object/);
     expect(() => takarPanelPort(json("null"))).toThrow(DataError);
-    expect(() => takarPanelPort({ sections, panels: 3 as never })).toThrow(/^The option panels must be a function/);
+    expect(() => takarPanelPort({ sections, panels: 3 as never })).toThrow(
+      /^The options object is invalid at panels: expected a function, found 3/,
+    );
     expect(() => takarPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }), scalingConstant: -1 })).toThrow(
       DataError,
     );

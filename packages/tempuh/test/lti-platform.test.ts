@@ -1149,7 +1149,7 @@ describe("ltiPlatformAuthorize", () => {
         () => ltiPlatformAuthorize(get, { ...ctx.authorize, once: JSON.parse('"x"') }),
       ],
       [
-        "The caller must be an object, found 5.",
+        "The caller is invalid: expected an object, found 5.",
         () => ltiPlatformAuthorize(get, { ...ctx.authorize, caller: JSON.parse("5") }),
       ],
     ];
@@ -1635,9 +1635,12 @@ describe("ltiPlatformLogin", () => {
   it("throws DataError for arguments and options of other types", async () => {
     const ctx = setup();
     const cases: readonly [string, () => Promise<unknown>][] = [
-      ["The caller must be an object, found null.", () => ltiPlatformLogin(JSON.parse("null"), item, link, ctx.login)],
       [
-        'The principal of a caller must be a non-empty string, found "".',
+        "The caller is invalid: expected an object, found null.",
+        () => ltiPlatformLogin(JSON.parse("null"), item, link, ctx.login),
+      ],
+      [
+        "The caller is invalid at principal: expected a length of at least 1, found 0.",
         () => ltiPlatformLogin({ ...caller, principal: "" }, item, link, ctx.login),
       ],
       [

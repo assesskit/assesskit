@@ -1,7 +1,8 @@
-import { checkRecord, describe } from "../checks.js";
+import * as v from "valibot";
+import { checkRecord, describe, parseWith } from "../checks.js";
 import { DataError } from "../errors.js";
-import { type BaseType, checkBaseType, isBaseType } from "./base-type.js";
-import { type Cardinality, checkCardinality } from "./cardinality.js";
+import { type BaseType, baseTypeSchema, isBaseType } from "./base-type.js";
+import type { Cardinality } from "./cardinality.js";
 import { formatIsoDuration, parseIsoDuration } from "./duration.js";
 import { formatDouble } from "./lexical.js";
 import { isFileValue, isTuple, type Primitive } from "./primitive.js";
@@ -61,16 +62,14 @@ const NON_JSON_NUMBERS: ReadonlyMap<string, number> = new Map([
 /** The name that App. C gives a base type that is an integer or an identifier, by the JSON type of the value (G38). */
 const INT_OR_IDENTIFIER = "intOrIdentifier";
 
+const declarationSchema = v.variant("cardinality", [
+  v.object({ cardinality: v.literal("record"), baseType: v.optional(baseTypeSchema) }),
+  v.object({ cardinality: v.picklist(["single", "multiple", "ordered"]), baseType: baseTypeSchema }),
+]);
+
 function readDeclaration(declaration: unknown): Declared {
-  checkRecord(declaration, "The declaration must be an object");
-  const { cardinality, baseType } = declaration;
-  checkCardinality(cardinality);
-  if (cardinality === "record") {
-    if (baseType !== undefined) checkBaseType(baseType);
-    return { cardinality };
-  }
-  checkBaseType(baseType);
-  return { cardinality, baseType };
+  const declared = parseWith(declarationSchema, declaration, "The declaration");
+  return declared.cardinality === "record" ? { cardinality: "record" } : declared;
 }
 
 const isPlainNumber = (value: number): boolean => Number.isFinite(value) && !Object.is(value, -0);
@@ -140,17 +139,9 @@ function describeKind(value: Declared | Value): string {
 /** Names the properties of an object for a message. */
 const propertiesOf = (keys: readonly string[]): string => keys.map(describe).join(", ") || "none";
 
-/** Returns the only property of an object, if it is named `key`. */
-function onlyMember(json: unknown, key: string, what: string): unknown {
-  checkRecord(json, `${what} must be an object with the one property ${describe(key)}`);
-  const keys = Object.keys(json);
-  if (keys.length !== 1 || keys[0] !== key) {
-    throw new DataError(
-      `${what} must be an object with the one property ${describe(key)}, found the properties ${propertiesOf(keys)}.`,
-    );
-  }
-  return json[key];
-}
+const singleSchema = v.strictObject({ base: v.unknown() });
+const recordSchema = v.strictObject({ record: v.unknown() });
+const listSchema = v.strictObject({ list: v.unknown() });
 
 /** Returns the base type for the App. C name `intOrIdentifier`, which names no base type (G38). */
 function resolveIntOrIdentifier(declared: BaseType | undefined, content: unknown): BaseType | undefined {
@@ -194,19 +185,22 @@ function decodeDuration(json: unknown): number {
   return NON_JSON_NUMBERS.get(json) ?? parseIsoDuration(json);
 }
 
-/** Reads the JSON of a file into the properties of a `FileValue`; `normalizePrimitive` checks their types. */
-function decodeFile(json: unknown): unknown {
-  const expected = 'an object with the properties "reference", "mime" and optionally "name"';
-  checkRecord(json, `A file must be ${expected}`);
-  if (Object.hasOwn(json, "data")) {
-    throw new DataError(
+const fileSchema = v.strictObject({
+  // A file is a reference to bytes that the host stores, so the inline "data" of the appendix is refused.
+  data: v.optional(
+    v.never(
       'A file must be a reference, not inline "data": the host stores the bytes, and the file is the reference to them.',
-    );
-  }
-  const unexpected = Object.keys(json).find((key) => !["reference", "mime", "name"].includes(key));
-  if (unexpected !== undefined)
-    throw new DataError(`A file must be ${expected}, found the property ${describe(unexpected)}.`);
-  return { reference: json.reference, mimeType: json.mime, fileName: json.name };
+    ),
+  ),
+  reference: v.string(),
+  mime: v.string(),
+  name: v.optional(v.string()),
+});
+
+/** Reads the JSON of a file into the properties of a `FileValue`. */
+function decodeFile(json: unknown): unknown {
+  const { reference, mime, name } = parseWith(fileSchema, json, "A file");
+  return { reference, mimeType: mime, fileName: name };
 }
 
 function decodeItem(baseType: BaseType, json: unknown): unknown {
@@ -229,30 +223,22 @@ function decodeSingle(json: unknown, what: string, declared: BaseType | undefine
 
 function decodeList(json: unknown, cardinality: Cardinality, declared: BaseType): ContainerValue | null {
   const [baseType, content] = typedContent(json, declared, "The list of a container");
-  if (!Array.isArray(content)) {
-    throw new DataError(`The list of base type ${baseType} must be an array, found ${describe(content)}.`);
-  }
+  const items = parseWith(v.array(v.unknown()), content, `The list of base type ${baseType}`);
   return buildContainer(
     cardinality,
     baseType,
-    content.map((item) => decodeItem(baseType, item)),
+    items.map((item) => decodeItem(baseType, item)),
   );
 }
 
+const fieldsSchema = v.array(v.strictObject({ name: v.string(), base: v.unknown() }));
+
 function decodeRecord(json: unknown): RecordValue | null {
-  if (!Array.isArray(json)) throw new DataError(`The fields of a record must be an array, found ${describe(json)}.`);
-  const fields: [unknown, SingleValue][] = [];
-  for (const entry of json) {
-    checkRecord(entry, 'A field of a record must be an object with the properties "name" and "base"');
-    if (!(Object.keys(entry).length === 2 && Object.hasOwn(entry, "name") && Object.hasOwn(entry, "base"))) {
-      throw new DataError(
-        `A field of a record must have exactly the properties "name" and "base", found ${propertiesOf(Object.keys(entry))}.`,
-      );
-    }
+  const fields: [string, SingleValue][] = [];
+  for (const { name, base } of parseWith(fieldsSchema, json, "A record")) {
     // A field without a value is NULL, and a record holds no NULL, so it is left out (G37).
-    const field =
-      entry.base === null ? null : decodeSingle(entry.base, `The base of the field ${describe(entry.name)}`, undefined);
-    if (field !== null) fields.push([entry.name, field]);
+    const field = base === null ? null : decodeSingle(base, `The base of the field ${describe(name)}`, undefined);
+    if (field !== null) fields.push([name, field]);
   }
   return buildRecord(fields);
 }
@@ -272,13 +258,13 @@ function decodeRecord(json: unknown): RecordValue | null {
 export function fromJsonValue(json: unknown, declaration: ValueDeclaration): Value | null {
   const declared = readDeclaration(declaration);
   if (declared.cardinality === "single") {
-    const body = onlyMember(json, "base", "The JSON of a single value");
-    return body === null ? null : decodeSingle(body, "The base of a single value", declared.baseType);
+    const { base } = parseWith(singleSchema, json, "The JSON of a single value");
+    return base === null ? null : decodeSingle(base, "The base of a single value", declared.baseType);
   }
   if (declared.cardinality === "record") {
-    const body = onlyMember(json, "record", "The JSON of a record");
-    return body === null ? null : decodeRecord(body);
+    const { record } = parseWith(recordSchema, json, "The JSON of a record");
+    return record === null ? null : decodeRecord(record);
   }
-  const body = onlyMember(json, "list", `The JSON of a ${declared.cardinality} container`);
-  return body === null ? null : decodeList(body, declared.cardinality, declared.baseType);
+  const { list } = parseWith(listSchema, json, `The JSON of a ${declared.cardinality} container`);
+  return list === null ? null : decodeList(list, declared.cardinality, declared.baseType);
 }

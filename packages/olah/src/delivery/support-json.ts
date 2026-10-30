@@ -1,29 +1,40 @@
-import { checkBoolean, checkChoice, checkRecord, describe } from "../checks.js";
+import * as v from "valibot";
+import { describe, isRecord, type Schema, transformWith } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
+  isSupportName,
   type PredefinedSupportName,
   SUPPORT_NAMES,
+  type SupportName,
   type SupportSetting,
   type SupportState,
   writePnp,
 } from "../pnp/index.js";
+import type { SupportView } from "./candidate-view.js";
 import type { SessionSupport } from "./delivery-state.js";
+import { entriesSchema } from "./entries-json.js";
 
 /** The states of a support, for the checks. */
 const SUPPORT_STATES: readonly SupportState[] = ["prohibited", "active", "option", "assigned"];
 
+/** The schema of the name of a support: a predefined one, or `ext:` and at least one character. */
+export const supportNameSchema: Schema<SupportName> = v.custom<SupportName>(
+  isSupportName,
+  "The name of a support must be the name of a support of a PNP.",
+);
+
 /**
- * Reads the settings of a support from JSON: an object whose `name` is the support's and whose parameters `writePnp` accepts
- * for that support.
+ * Checks the settings of a support: an object whose `name` is the support's and whose parameters `writePnp` accepts for
+ * that support.
  *
  * @throws `DataError` when the settings are not those of a predefined support of that name.
  */
 function readSupportSetting(json: unknown, name: string): SupportSetting {
-  checkRecord(json, `The settings of the support ${describe(name)} must be an object`);
   const predefined: PredefinedSupportName | undefined = SUPPORT_NAMES.find((known) => known === name);
-  if (predefined === undefined || json.name !== name) {
+  if (predefined === undefined || !isRecord(json) || json.name !== name) {
+    const found = isRecord(json) ? json.name : json;
     throw new DataError(
-      `The settings of the support ${describe(name)} must name a predefined support and have the name ${describe(name)}, found ${describe(json.name)}.`,
+      `The settings of the support ${describe(name)} must name a predefined support and have the name ${describe(name)}, found ${describe(found)}.`,
     );
   }
   // The cast is checked at once: writePnp reads every parameter of the setting and throws when one does not fit.
@@ -38,24 +49,45 @@ function readSupportSetting(json: unknown, name: string): SupportSetting {
   return setting;
 }
 
-/**
- * Reads the state of a support session from JSON: its state, whether it is on, and its settings when it has any.
- *
- * @throws `DataError` when it is not one.
- */
-export function readSessionSupport(json: unknown, name: string): SessionSupport {
-  checkRecord(json, `The support ${describe(name)} must be an object`);
-  checkChoice(json.state, `The state of the support ${describe(name)}`, SUPPORT_STATES);
-  checkBoolean(json.active, `The active of the support ${describe(name)}`);
-  if (json.universal !== undefined && json.universal !== true) {
-    throw new DataError(
-      `The universal of the support ${describe(name)} must be true, found ${describe(json.universal)}.`,
-    );
-  }
-  return {
-    state: json.state,
-    active: json.active,
-    ...(json.settings === undefined ? {} : { settings: readSupportSetting(json.settings, name) }),
-    ...(json.universal === undefined ? {} : { universal: true as const }),
-  };
-}
+/** The schema of a support in a view; its settings are those of its name. */
+export const supportViewSchema: Schema<SupportView> = v.pipe(
+  v.strictObject({
+    name: supportNameSchema,
+    state: v.picklist(SUPPORT_STATES),
+    active: v.boolean(),
+    settings: v.optional(v.unknown()),
+  }),
+  transformWith(({ name, state, active, settings }) => ({
+    name,
+    state,
+    active,
+    ...(settings === undefined ? {} : { settings: readSupportSetting(settings, name) }),
+  })),
+);
+
+const sessionSupportSchema = v.object({
+  state: v.picklist(SUPPORT_STATES),
+  active: v.boolean(),
+  settings: v.optional(v.unknown()),
+  universal: v.optional(v.literal(true)),
+});
+
+/** The schema of the supports of a state, by name; the settings of each are those of its name. */
+export const supportsSchema: Schema<Map<SupportName, SessionSupport>> = v.pipe(
+  entriesSchema(sessionSupportSchema),
+  transformWith((entries) => {
+    const supports = new Map<SupportName, SessionSupport>();
+    for (const [name, { state, active, settings, universal }] of entries) {
+      if (!isSupportName(name)) {
+        throw new DataError(`A support of the state must have a support name, found ${describe(name)}.`);
+      }
+      supports.set(name, {
+        state,
+        active,
+        ...(settings === undefined ? {} : { settings: readSupportSetting(settings, name) }),
+        ...(universal === undefined ? {} : { universal }),
+      });
+    }
+    return supports;
+  }),
+);

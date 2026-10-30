@@ -33,6 +33,7 @@ import {
   ruleScale,
   unitSymbol,
 } from "../src/player/tools/scale.js";
+import { fuzzJson } from "./fuzz.js";
 import { supportView } from "./supports-fixture.js";
 import {
   calculatorXml,
@@ -321,22 +322,13 @@ describe("check-input", () => {
     const rejects = (value: unknown, message: string): void => {
       expect(() => checkToolsInput(value)).toThrow(new DataError(message));
     };
-    rejects(JSON.parse("null"), "The tools input must be an object, found null.");
-    rejects(JSON.parse("[]"), "The tools input must be an object, found an array.");
-    rejects(
-      { supports: [] },
-      "The property companion must be the companion materials of olah's model or null, found undefined.",
-    );
-    rejects({ companion: null }, "The property supports must be an array, found undefined.");
-    rejects({ companion: null, supports: {} }, "The property supports must be an array, found an object.");
-    rejects(
-      { companion: null, supports: [], extra: 1 },
-      'The tools input has the properties "companion" and "supports", found "extra".',
-    );
-    rejects(
-      { companion: 1, supports: [] },
-      "The property companion must be the companion materials of olah's model or null, found 1.",
-    );
+    rejects(JSON.parse("null"), "The tools input is invalid: expected an object, found null.");
+    rejects(JSON.parse("[]"), "The tools input is invalid: expected an object, found an array.");
+    rejects({ supports: [] }, 'The tools input is invalid: missing the property "companion".');
+    rejects({ companion: null }, 'The tools input is invalid: missing the property "supports".');
+    rejects({ companion: null, supports: {} }, "The property supports is invalid: expected an array, found an object.");
+    rejects({ companion: null, supports: [], extra: 1 }, 'The tools input is invalid: unexpected property "extra".');
+    rejects({ companion: 1, supports: [] }, "The tools input is invalid at companion: expected an object, found 1.");
   });
 
   it("rejects a material that is not what INFO §5.24 to §5.80 define", () => {
@@ -369,111 +361,116 @@ describe("check-input", () => {
       calculators,
       [...calculator, "calculatorType", "value"],
       "graphic",
-      'The property companion.calculators[0].calculatorType.value must be "basic", "standard", "scientific" or "graphing", found "graphic".',
+      'The tools input is invalid at companion.calculators[0].calculatorType.value: expected "basic", "standard", "scientific" or "graphing", found "graphic".',
     );
     rejects(
       calculators,
       [...calculator, "description"],
       undefined,
-      "The property companion.calculators[0].description must be an element of olah's model, found undefined.",
+      'The tools input is invalid at companion.calculators[0]: missing the property "description".',
     );
     rejects(
       calculators,
       [...calculator, "description", "value"],
       5,
-      "The property companion.calculators[0].description.value must be a string, found 5.",
+      "The tools input is invalid at companion.calculators[0].description.value: expected a string, found 5.",
     );
     rejects(
       { calculators: [calculatorXml("basic", "B", { href: "c.html" })] },
       [...calculator, "calculatorInfo", "fileHref", "value"],
       "",
-      'The property companion.calculators[0].calculatorInfo.fileHref.value must be a non-empty string, found "".',
+      "The tools input is invalid at companion.calculators[0].calculatorInfo.fileHref.value: expected a length of at least 1, found 0.",
     );
     rejects(
       rules,
       [...system, "minimumLength", "value"],
       0,
-      "The property companion.rules[0].ruleSystem.minimumLength.value must be a positive number, found 0.",
+      "The tools input is invalid at companion.rules[0].ruleSystem.minimumLength.value: expected a positive number, found 0.",
     );
     rejects(
       rules,
       [...system, "minimumLength", "value"],
       "10",
-      'The property companion.rules[0].ruleSystem.minimumLength.value must be a positive number, found "10".',
+      'The tools input is invalid at companion.rules[0].ruleSystem.minimumLength.value: expected a number, found "10".',
     );
     rejects(
       rules,
       [...system, "majorIncrement", "unit"],
       "Radian",
-      'The property companion.rules[0].ruleSystem.majorIncrement.unit must be "Millimeter", "Centimeter", "Meter", "Kilometer", "Inch", "Foot", "Yard" or "Mile", found "Radian".',
+      'The tools input is invalid at companion.rules[0].ruleSystem.majorIncrement.unit: expected "Millimeter", "Centimeter", "Meter", "Kilometer", "Inch", "Foot", "Yard" or "Mile", found "Radian".',
     );
     rejects(
       rules,
       [...system, "majorIncrement"],
       null,
-      "The property companion.rules[0].ruleSystem.majorIncrement must be an element of olah's model, found null.",
+      "The tools input is invalid at companion.rules[0].ruleSystem.majorIncrement: expected an object, found null.",
     );
     rejects(
       rules,
       [...system, "minorIncrement", "value"],
       "-1",
-      'The property companion.rules[0].ruleSystem.minorIncrement.value must be a decimal greater than 0, found "-1".',
+      'The tools input is invalid at companion.rules[0].ruleSystem.minorIncrement.value: expected a decimal greater than 0, found "-1".',
     );
     rejects(
       rules,
       [...system, "majorIncrement", "value"],
       "many",
-      'The property companion.rules[0].ruleSystem.majorIncrement.value must be a decimal greater than 0, found "many".',
+      'The tools input is invalid at companion.rules[0].ruleSystem.majorIncrement.value: expected a decimal greater than 0, found "many".',
     );
     rejects(
       rules,
       [...system, "majorIncrement", "value"],
       1,
-      "The property companion.rules[0].ruleSystem.majorIncrement.value must be a string, found 1.",
+      "The tools input is invalid at companion.rules[0].ruleSystem.majorIncrement.value: expected a string, found 1.",
     );
     rejects(
       rules,
       system,
       undefined,
-      "The property companion.rules[0].ruleSystem must be an element of olah's model, found undefined.",
+      'The tools input is invalid at companion.rules[0]: missing the property "ruleSystem".',
     );
     rejects(
       protractors,
       [...increment, "majorIncrement", "unit"],
       "Meter",
-      'The property companion.protractors[0].increment.majorIncrement.unit must be "Radian", "Degree", "Minute" or "Second", found "Meter".',
+      'The tools input is invalid at companion.protractors[0].increment.majorIncrement.unit: expected "Radian", "Degree", "Minute" or "Second", found "Meter".',
     );
     rejects(
       protractors,
       increment,
       [],
-      "The property companion.protractors[0].increment must be an element of olah's model, found an array.",
+      "The tools input is invalid at companion.protractors[0].increment: expected an object, found an array.",
     );
     rejects(
       digital,
       [...file, "fileHref", "value"],
       "",
-      'The property companion.digitalMaterials[0].fileHref.value must be a non-empty string, found "".',
+      "The tools input is invalid at companion.digitalMaterials[0].fileHref.value: expected a length of at least 1, found 0.",
     );
     rejects(
       digital,
       [...file, "label"],
       1,
-      "The property companion.digitalMaterials[0].label must be a string, found 1.",
+      "The tools input is invalid at companion.digitalMaterials[0].label: expected a string, found 1.",
     );
     rejects(
       { digital: [digitalXml("a.png", { icon: "i.png" })] },
       [...file, "resourceIcon", "value"],
       1,
-      "The property companion.digitalMaterials[0].resourceIcon.value must be a string, found 1.",
+      "The tools input is invalid at companion.digitalMaterials[0].resourceIcon.value: expected a string, found 1.",
     );
     rejects(
       { physical: ["Paper."] },
       ["physicalMaterials", 0, "value"],
       1,
-      "The property companion.physicalMaterials[0].value must be a string, found 1.",
+      "The tools input is invalid at companion.physicalMaterials[0].value: expected a string, found 1.",
     );
-    rejects({}, ["digitalMaterials"], {}, "The property companion.digitalMaterials must be an array, found an object.");
+    rejects(
+      {},
+      ["digitalMaterials"],
+      {},
+      "The tools input is invalid at companion.digitalMaterials: expected an array, found an object.",
+    );
   });
 
   it("[T75] accepts any support of the view and ignores the ones that put no tool on the screen", () => {
@@ -488,15 +485,15 @@ describe("check-input", () => {
     };
     rejects(
       [{ name: "bogus", state: "assigned", active: true }],
-      'The property supports[0] property name must be the name of a support, found "bogus".',
+      'The property supports is invalid at [0].name: expected the name of a support, found "bogus".',
     );
     rejects(
       [{ name: "line-reader", state: "on", active: true }],
-      'The property supports[0] property state must be "prohibited", "active", "option" or "assigned", found "on".',
+      'The property supports is invalid at [0].state: expected "prohibited", "active", "option" or "assigned", found "on".',
     );
     rejects(
       [{ name: "line-reader", state: "active", active: "yes" }],
-      'The property supports[0] property active must be true or false, found "yes".',
+      'The property supports is invalid at [0].active: expected true or false, found "yes".',
     );
     rejects(
       [
@@ -507,13 +504,13 @@ describe("check-input", () => {
           settings: { name: "line-reader", highlightColor: "red" },
         },
       ],
-      'The property supports[0] property settings property highlightColor must be a color as #RGB or #RRGGBB, found "red".',
+      'The property supports is invalid at [0]: the settings are invalid at highlightColor: expected a color as #RGB or #RRGGBB, found "red".',
     );
     rejects(
       [{ name: "line-reader", state: "active", active: true, settings: { name: "line-reader", highlightColor: 5 } }],
-      "The property supports[0] property settings property highlightColor must be a string, found 5.",
+      "The property supports is invalid at [0]: the settings are invalid at highlightColor: expected a string, found 5.",
     );
-    rejects([null], "The property supports[0] must be an object, found null.");
+    rejects([null], "The property supports is invalid at [0]: expected an object, found null.");
   });
 
   it("accepts colors as #RGB and #RRGGBB in either case", () => {
@@ -522,6 +519,10 @@ describe("check-input", () => {
         checkToolsInput(json({ companion: null, supports: [support({ name: "line-reader", highlightColor })] })),
       ).not.toThrow();
     }
+  });
+
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson((value) => checkToolsInput(value), [json(valid), { companion: null, supports: [] }]);
   });
 });
 

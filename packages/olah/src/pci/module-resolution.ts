@@ -1,5 +1,16 @@
+import * as v from "valibot";
 import type { PortableCustomInteraction } from "../asi/index.js";
-import { checkRecord, checkString, describe } from "../checks.js";
+import {
+  checkRecord,
+  checkString,
+  describe,
+  mapSchema,
+  nonEmptyStringSchema,
+  nonNegativeSchema,
+  parseWith,
+  recordSchema,
+  type Schema,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 
 /** The seconds to wait for a script when a configuration file gives no `waitSeconds` (BPIG §3.7.12.2, App. D). */
@@ -39,6 +50,14 @@ export interface PciModule {
   readonly packageRelative: boolean;
 }
 
+const resolutionSchema: Schema<ModuleResolution> = v.pipe(
+  recordSchema,
+  v.object({
+    waitSeconds: v.optional(nonNegativeSchema, DEFAULT_WAIT_SECONDS),
+    paths: v.optional(mapSchema(nonEmptyStringSchema), () => new Map()),
+  }),
+);
+
 /** Matches the start of a URL with a scheme, such as `https:` (RFC 3986 §3.1). */
 const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
@@ -69,21 +88,7 @@ export function parseModuleResolution(text: string): ModuleResolution {
       `The module resolution file must be JSON: ${error instanceof Error ? error.message : String(error)}.`,
     );
   }
-  checkRecord(json, "The module resolution file must be a JSON object");
-  const { waitSeconds = DEFAULT_WAIT_SECONDS, paths = {} } = json;
-  if (!(typeof waitSeconds === "number" && Number.isFinite(waitSeconds) && waitSeconds >= 0)) {
-    throw new DataError(`The property waitSeconds must be a non-negative number, found ${describe(waitSeconds)}.`);
-  }
-  checkRecord(paths, "The property paths must be an object from module id to path");
-  const entries = Object.entries(paths).map(([id, path]): [string, string] => {
-    if (typeof path !== "string" || path === "") {
-      throw new DataError(
-        `The path of the module ${JSON.stringify(id)} must be a non-empty string, found ${describe(path)}.`,
-      );
-    }
-    return [id, path];
-  });
-  return { waitSeconds, paths: new Map(entries) };
+  return parseWith(resolutionSchema, json, "The module resolution file");
 }
 
 /** Returns the paths of one loaded configuration file; a file that is absent has none. */

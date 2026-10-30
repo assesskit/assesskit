@@ -1,5 +1,5 @@
-import { checkNonNegativeInteger, checkProperties, checkRecord } from "../checks.js";
-import { DataError } from "../errors.js";
+import * as v from "valibot";
+import { definedSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "../checks.js";
 
 /** What a client sends to a session host: one candidate action in olah's JSON form, with its sequence number. */
 export interface ActionEnvelope {
@@ -12,6 +12,11 @@ export interface ActionEnvelope {
   readonly action: unknown;
 }
 
+const actionEnvelopeSchema: Schema<ActionEnvelope> = v.strictObject({
+  seq: nonNegativeIntegerSchema,
+  action: definedSchema,
+});
+
 /**
  * Checks the shape of an action envelope that arrived as JSON. The action is not read: that is `parseCandidateAction`,
  * with its size limits.
@@ -19,8 +24,5 @@ export interface ActionEnvelope {
  * @throws `DataError` when it is not an object with the properties `seq` and `action` only, `seq` a non-negative integer.
  */
 export function checkActionEnvelope(value: unknown): asserts value is ActionEnvelope {
-  checkRecord(value, "An action envelope must be an object");
-  checkProperties(value, "An action envelope", ["seq", "action"]);
-  checkNonNegativeInteger(value.seq, "The property seq of an action envelope");
-  if (value.action === undefined) throw new DataError('An action envelope must have the property "action".');
+  parseWith(actionEnvelopeSchema, value, "An action envelope");
 }

@@ -11,8 +11,8 @@ any JavaScript runtime; the `node` and `cli` subpaths need Node.js 22 or later.
 npm install @luthfanwakan/olah
 ```
 
-olah has four runtime dependencies, pinned to exact versions: `saxes` and `xmlchars` read XML, `fflate` reads and writes ZIP
-archives, and `libxml2-wasm` validates against the official schemas in the `node` subpath
+olah has five runtime dependencies, pinned to exact versions: `saxes` and `xmlchars` read XML, `fflate` reads and writes ZIP
+archives, `valibot` reads untrusted JSON, and `libxml2-wasm` validates against the official schemas in the `node` subpath
 ([SECURITY](../../SECURITY.md#runtime-dependencies)).
 
 ## Example

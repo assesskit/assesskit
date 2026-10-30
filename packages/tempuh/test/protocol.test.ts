@@ -19,6 +19,7 @@ import {
   viewDocuments,
 } from "../src/protocol/index.js";
 import { markOfficial } from "../src/protocol/official.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
@@ -37,22 +38,22 @@ describe("checkCaller", () => {
 
   it("rejects what is not an object", () => {
     for (const text of ["null", "[]", '"s1"', "5"]) {
-      expect(() => checkCaller(json(text)), text).toThrow(/^The caller must be an object, found /);
+      expect(() => checkCaller(json(text)), text).toThrow(/^The caller is invalid: expected an object, found /);
     }
   });
 
   it("rejects a session or a principal that is missing, empty or not a string", () => {
     expect(() => checkCaller(json('{"principal":"p1"}'))).toThrow(
-      new DataError("The session of a caller must be a non-empty string, found undefined."),
+      new DataError('The caller is invalid: missing the property "session".'),
     );
     expect(() => checkCaller(json('{"session":"","principal":"p1"}'))).toThrow(
-      new DataError('The session of a caller must be a non-empty string, found "".'),
+      new DataError("The caller is invalid at session: expected a length of at least 1, found 0."),
     );
     expect(() => checkCaller(json('{"session":"s1"}'))).toThrow(
-      new DataError("The principal of a caller must be a non-empty string, found undefined."),
+      new DataError('The caller is invalid: missing the property "principal".'),
     );
     expect(() => checkCaller(json('{"session":"s1","principal":7}'))).toThrow(
-      new DataError("The principal of a caller must be a non-empty string, found 7."),
+      new DataError("The caller is invalid at principal: expected a string, found 7."),
     );
   });
 });
@@ -71,28 +72,32 @@ describe("checkActionEnvelope", () => {
 
   it("rejects what is not an object", () => {
     for (const text of ["null", "[]", '"seq"', "5"]) {
-      expect(() => checkActionEnvelope(json(text)), text).toThrow(/^An action envelope must be an object, found /);
+      expect(() => checkActionEnvelope(json(text)), text).toThrow(
+        /^An action envelope is invalid: expected an object, found /,
+      );
     }
   });
 
   it("rejects a session identifier, which an envelope never carries", () => {
     expect(() => checkActionEnvelope(json('{"seq":1,"action":{},"session":"s2"}'))).toThrow(
-      new DataError('An action envelope has the properties "seq" and "action", found "session".'),
+      new DataError('An action envelope is invalid: unexpected property "session".'),
     );
   });
 
   it("rejects a sequence number that is not a non-negative integer", () => {
     for (const text of ['"1"', "-1", "1.5", "null", "1e300"]) {
       expect(() => checkActionEnvelope(json(`{"seq":${text},"action":{}}`)), text).toThrow(
-        /^The property seq of an action envelope must be a non-negative integer, found /,
+        /^An action envelope is invalid at seq: expected /,
       );
     }
-    expect(() => checkActionEnvelope(json('{"action":{}}'))).toThrow("found undefined.");
+    expect(() => checkActionEnvelope(json('{"action":{}}'))).toThrow(
+      'An action envelope is invalid: missing the property "seq".',
+    );
   });
 
   it("rejects an envelope without an action", () => {
     expect(() => checkActionEnvelope(json('{"seq":1}'))).toThrow(
-      new DataError('An action envelope must have the property "action".'),
+      new DataError('An action envelope is invalid: missing the property "action".'),
     );
   });
 });
@@ -111,37 +116,39 @@ describe("checkViewEnvelope", () => {
 
   it("rejects what is not an object", () => {
     for (const text of ["null", "[]", '"view"', "5"]) {
-      expect(() => checkViewEnvelope(json(text)), text).toThrow(/^A view envelope must be an object, found /);
+      expect(() => checkViewEnvelope(json(text)), text).toThrow(
+        /^A view envelope is invalid: expected an object, found /,
+      );
     }
   });
 
   it("rejects a property that an envelope does not have", () => {
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{},"assets":{},"principal":"p1"}'))).toThrow(
-      new DataError(
-        'A view envelope has the properties "seq", "view", "assets", "documents" and "refusal", found "principal".',
-      ),
+      new DataError('A view envelope is invalid: unexpected property "principal".'),
     );
   });
 
   it("rejects a sequence number that is not a non-negative integer", () => {
     expect(() => checkViewEnvelope(json('{"seq":-2,"view":{},"assets":{}}'))).toThrow(
-      new DataError("The property seq of a view envelope must be a non-negative integer, found -2."),
+      new DataError("A view envelope is invalid at seq: expected a value of at least 0, found -2."),
     );
   });
 
   it("rejects an envelope without a view", () => {
     expect(() => checkViewEnvelope(json('{"seq":1,"assets":{}}'))).toThrow(
-      new DataError('A view envelope must have the property "view".'),
+      new DataError('A view envelope is invalid: missing the property "view".'),
     );
   });
 
   it("rejects assets that are not an object of strings", () => {
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{}}'))).toThrow(
-      new DataError("The property assets of a view envelope must be an object, found undefined."),
+      new DataError('A view envelope is invalid: missing the property "assets".'),
     );
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{},"assets":["a/"]}'))).toThrow("found an array.");
     expect(() => checkViewEnvelope(json('{"seq":1,"view":{},"assets":{"items/q1/":5}}'))).toThrow(
-      new DataError('The base URL of the asset prefix "items/q1/" must be a string, found 5.'),
+      new DataError(
+        'A view envelope is invalid at assets: the property "items/q1/" is invalid: expected a string, found 5.',
+      ),
     );
   });
 });
@@ -163,37 +170,43 @@ describe("checkViewEnvelope: documents and refusal", () => {
   it("[T71] rejects documents that are not an object of the test, the item, the stimuli and the lexicons", () => {
     const check = (documents: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"documents":${documents}}`));
-    expect(() => check("[]")).toThrow("The documents of a view envelope must be an object, found an array.");
+    expect(() => check("[]")).toThrow("A view envelope is invalid at documents: expected an object, found an array.");
     expect(() => check('{"test":"","item":"","lexicons":[]}')).toThrow(
-      "The property stimuli of the documents of a view envelope must be an array",
+      'A view envelope is invalid at documents: missing the property "stimuli".',
     );
     expect(() => check('{"test":1,"item":"","stimuli":[],"lexicons":[]}')).toThrow(
-      "The property test of the documents of a view envelope must be a string",
+      "A view envelope is invalid at documents.test: expected a string, found 1.",
     );
-    expect(() => check('{"test":"","item":"","stimuli":[5],"lexicons":[]}')).toThrow("A path of the stimuli");
+    expect(() => check('{"test":"","item":"","stimuli":[5],"lexicons":[]}')).toThrow(
+      "A view envelope is invalid at documents.stimuli[0]: expected a string, found 5.",
+    );
     expect(() => check('{"test":"","item":"","stimuli":[]}')).toThrow(
-      "The property lexicons of the documents of a view envelope must be an array",
+      'A view envelope is invalid at documents: missing the property "lexicons".',
     );
-    expect(() => check('{"test":"","item":"","stimuli":[],"lexicons":[5]}')).toThrow("A path of the lexicons");
+    expect(() => check('{"test":"","item":"","stimuli":[],"lexicons":[5]}')).toThrow(
+      "A view envelope is invalid at documents.lexicons[0]: expected a string, found 5.",
+    );
     expect(() => check('{"test":"","item":"","stimuli":[],"lexicons":[],"other":1}')).toThrow(
-      "The documents of a view envelope has the properties",
+      'A view envelope is invalid at documents: unexpected property "other".',
     );
   });
 
   it("[T71] rejects a refusal that is not one of olah's", () => {
     const check = (refusal: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
-    expect(() => check("5")).toThrow("A refusal must be an object, found 5.");
+    expect(() => check("5")).toThrow("A view envelope is invalid at refusal: expected an object, found 5.");
     expect(() => check('{"code":"nope","message":"m","source":"s"}')).toThrow(
-      'The property code of a refusal must be "attempts-exhausted"',
+      'A view envelope is invalid at refusal.code: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
     );
     expect(() => check('{"code":"ended","message":1,"source":"s"}')).toThrow(
-      "The property message of a refusal must be a string",
+      "A view envelope is invalid at refusal.message: expected a string, found 1.",
     );
     expect(() => check('{"code":"ended","message":"m"}')).toThrow(
-      "The property source of a refusal must be a string, found undefined.",
+      'A view envelope is invalid at refusal: missing the property "source".',
     );
-    expect(() => check('{"code":"ended","message":"m","source":"s","at":1}')).toThrow("A refusal has the properties");
+    expect(() => check('{"code":"ended","message":"m","source":"s","at":1}')).toThrow(
+      'A view envelope is invalid at refusal: unexpected property "at".',
+    );
   });
 });
 
@@ -419,81 +432,81 @@ describe("checkSubmission", () => {
 
   it("[T110] rejects what is not an object, and a property that its form lacks", () => {
     for (const text of ["null", "[]", '"s"', "5"]) {
-      expect(() => checkSubmission(json(text)), text).toThrow(/^A submission must be an object, found /);
+      expect(() => checkSubmission(json(text)), text).toThrow(/^A submission is invalid: expected an object, found /);
     }
     expect(() => checkSubmission(changed(["session"], "s1"))).toThrow(
-      /^A submission has the properties "request", "outcome", .* and "items", found "session"\.$/,
+      /^A submission is invalid: unexpected property "session"\.$/,
     );
     expect(() => checkSubmission(changed(["items", 0, "secret"], 1))).toThrow(
-      /^An item of a submission has the properties .*, found "secret"\.$/,
+      /^A submission is invalid at items\[0\]: unexpected property "secret"\.$/,
     );
   });
 
   it("[T110] rejects a field of another type, and says which", () => {
     const cases: readonly (readonly [readonly Step[], unknown, string | RegExp])[] = [
-      [["request"], "", 'The request of a submission must be a non-empty string, found "".'],
-      [["outcome"], 5, "The outcome of a submission must be a non-empty string, found 5."],
-      [["mode"], "robot", 'The mode of a submission must be "human" or "externalMachine", found "robot".'],
-      [["lti"], false, "The lti of a submission must be true or absent, found false."],
-      [["variableIdentifierRef"], 1, "The variableIdentifierRef of a submission must be a string, found 1."],
-      [["requestedAt"], "now", 'The requestedAt of a submission must be a finite number, found "now".'],
+      [["request"], "", "A submission is invalid at request: expected a length of at least 1, found 0."],
+      [["outcome"], 5, "A submission is invalid at outcome: expected a string, found 5."],
+      [["mode"], "robot", 'A submission is invalid at mode: expected "human" or "externalMachine", found "robot".'],
+      [["lti"], false, "A submission is invalid at lti: expected true, found false."],
+      [["variableIdentifierRef"], 1, "A submission is invalid at variableIdentifierRef: expected a string, found 1."],
+      [["requestedAt"], "now", 'A submission is invalid at requestedAt: expected a number, found "now".'],
       [
         ["requestedAt"],
         253_402_300_800_000,
-        "The requestedAt of a submission must be epoch milliseconds from the year 1 to the year 9999, found 253402300800000.",
+        "A submission is invalid at requestedAt: expected a value of at most 253402300799999, found 253402300800000.",
       ],
-      [["rubric"], {}, "The rubric of a submission must be an array of nodes, found an object."],
-      [
-        ["rubric"],
-        [{ text: "x" }],
-        "The rubric of a submission must hold nodes, each an object with a string kind, found an object.",
-      ],
-      [["parts"], null, "The parts of a submission must be an array, found null."],
-      [["items"], "x", 'The items of a submission must be an array, found "x".'],
-      [["supplied"], 7, "The supplied of a submission must be an object, found 7."],
-      [["supplied", "at"], -1e16, /^The time of the supplied of a submission must be epoch milliseconds/],
+      [["rubric"], {}, "A submission is invalid at rubric: expected an array, found an object."],
+      [["rubric"], [{ text: "x" }], 'A submission is invalid at rubric[0]: missing the property "kind".'],
+      [["parts"], null, "A submission is invalid at parts: expected an array, found null."],
+      [["items"], "x", 'A submission is invalid at items: expected an array, found "x".'],
+      [["supplied"], 7, "A submission is invalid at supplied: expected an object, found 7."],
+      [["supplied", "at"], -1e16, /^A submission is invalid at supplied\.at: expected a value of at least /],
       [
         ["supplied", "scorer"],
         "x",
-        'The scorer of the supplied of a submission must be "human" or "externalMachine", found "x".',
+        'A submission is invalid at supplied.scorer: expected "human" or "externalMachine", found "x".',
       ],
-      [["supplied", "value"], 5, "The value of the supplied of a submission must be a wire value or null, found 5."],
-      [["declaration", "cardinality"], "pair", /^The cardinality of the declaration of a submission must be /],
-      [["declaration", "baseType"], "text", /^The base type of the declaration of a submission must be /],
+      [["supplied", "value"], 5, "A submission is invalid at supplied.value: expected an object, found 5."],
+      [["declaration", "cardinality"], "pair", /^A submission is invalid at declaration\.cardinality: expected /],
+      [["declaration", "baseType"], "text", /^A submission is invalid at declaration\.baseType: expected /],
       [
         ["declaration", "normalMaximum"],
         "10",
-        'The normalMaximum of the declaration of a submission must be a finite number, found "10".',
+        'A submission is invalid at declaration.normalMaximum: expected a number, found "10".',
       ],
       [
         ["declaration", "interpretation"],
         1,
-        "The interpretation of the declaration of a submission must be a string, found 1.",
+        "A submission is invalid at declaration.interpretation: expected a string, found 1.",
       ],
-      [["declaration"], { cardinality: "record", baseType: "float" }, 'A record has no base type, found "float".'],
+      [
+        ["declaration"],
+        { cardinality: "record", baseType: "float" },
+        'A submission is invalid at declaration: unexpected property "baseType".',
+      ],
       [
         ["parts", 0, "item", "instance"],
         0,
-        "The instance of the item of a part of a submission must be a positive integer, found 0.",
+        "A submission is invalid at parts[0].item.instance: expected a value of at least 1, found 0.",
       ],
-      [["parts", 0, "presented"], "yes", 'The presented of a part of a submission must be true or false, found "yes".'],
-      [["parts", 0, "label"], 1, "The label of a part of a submission must be a string, found 1."],
-      [["parts", 0, "value"], [1], "The value of a part of a submission must be a wire value or null, found an array."],
-      [["items", 0, "title"], null, "The title of an item of a submission must be a string, found null."],
       [
-        ["items", 0, "body"],
-        [null],
-        "The body of an item of a submission must hold nodes, each an object with a string kind, found null.",
+        ["parts", 0, "presented"],
+        "yes",
+        'A submission is invalid at parts[0].presented: expected true or false, found "yes".',
       ],
+      [["parts", 0, "label"], 1, "A submission is invalid at parts[0].label: expected a string, found 1."],
+      [["parts", 0, "value"], [1], "A submission is invalid at parts[0].value: expected an object, found an array."],
+      [["items", 0, "title"], null, "A submission is invalid at items[0].title: expected a string, found null."],
+      [["items", 0, "body"], [null], "A submission is invalid at items[0].body[0]: expected an object, found null."],
       [
         ["items", 0, "templateValues"],
         {},
-        "The templateValues of an item of a submission must be an array, found an object.",
+        "A submission is invalid at items[0].templateValues: expected an array, found an object.",
       ],
       [
         ["items", 0, "correctResponses"],
         [{ identifier: 1, value: null }],
-        "An identifier of the correctResponses of an item of a submission must be a string, found 1.",
+        "A submission is invalid at items[0].correctResponses[0].identifier: expected a string, found 1.",
       ],
     ];
     for (const [path, value, message] of cases) {
@@ -506,10 +519,10 @@ describe("checkSubmission", () => {
 
   it("[T110] rejects a part that names an item the submission lacks, and an item that it has twice", () => {
     expect(() => checkSubmission(changed(["parts", 0, "item", "instance"], 2))).toThrow(
-      new DataError('A part of a submission names the item "e" instance 2, which the submission lacks.'),
+      new DataError('A submission is invalid: A part names the item "e" instance 2, which the submission lacks.'),
     );
     expect(() => checkSubmission(changed(["items"], [SUBMISSION.items[0], SUBMISSION.items[0]]))).toThrow(
-      new DataError('A submission has the item "e" instance 1 twice.'),
+      new DataError('A submission is invalid: has the item "e" instance 1 twice.'),
     );
   });
 });
@@ -561,5 +574,21 @@ describe("properties", () => {
         expect(() => checkActionEnvelope(envelope)).toThrow(DataError);
       }),
     );
+  });
+
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson((value) => checkCaller(value), [{ session: "s1", principal: "p1" }]);
+    fuzzJson((value) => checkActionEnvelope(value), [{ seq: 3, action }]);
+    const envelope = { seq: 4, view, assets: { "items/q1/": "https://assets.example/g/token/" } };
+    const documents = {
+      test: "tests/exam.xml",
+      item: "items/q1/item.xml",
+      stimuli: ["stimuli/s1.xml"],
+      lexicons: [],
+    };
+    const refusal = { code: "time-over", message: "The time is over.", source: "INFO §2.8.5" };
+    fuzzJson((value) => checkViewEnvelope(value), [envelope, { ...envelope, documents, refusal }]);
+    fuzzJson((value) => checkRefusal(value), [refusal]);
+    fuzzJson((value) => checkSubmission(value), [SUBMISSION]);
   });
 });

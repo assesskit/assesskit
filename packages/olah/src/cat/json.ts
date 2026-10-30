@@ -1,12 +1,22 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
-import { checkArray, checkNonNegativeInteger, checkRecord, checkString, describe } from "../checks.js";
+import * as v from "valibot";
+import {
+  checkArray,
+  checkRecord,
+  describe,
+  finiteSchema,
+  nonEmptyStringSchema,
+  nonNegativeIntegerSchema,
+  parseWith,
+  type Schema,
+  transformWith,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type AssessmentResult,
   type ItemResult,
   OUTCOME_VIEWS,
   type OutcomeVariable,
-  type OutcomeView,
   type ResponseVariable,
   type ResultContext,
   type ResultVariable,
@@ -16,30 +26,24 @@ import {
   type TemplateVariable,
   type TestResult,
 } from "../results/index.js";
+import { baseTypeSchema } from "../values/base-type.js";
+import { cardinalitySchema } from "../values/cardinality.js";
 import {
   type BaseType,
   container,
   formatPrimitive,
   isBaseType,
-  isCardinality,
   parsePrimitive,
   record,
   type SingleValue,
   single,
   type Value,
 } from "../values/index.js";
-import { checkStage } from "./item-stage.js";
+import { itemStageSchema } from "./item-stage.js";
 import type { ItemStage } from "./model.js";
 
 // The JSON of the public binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind, §5 and Appendix B1.2). Its
 // field names differ from olah's model in `sourceID`, `itemResult` and the three lists of variables of a result.
-
-/** Checks that a value is a string of at least one character, such as an identifier. */
-function checkNonEmptyString(value: unknown, label: string): asserts value is string {
-  if (typeof value !== "string" || value === "") {
-    throw new DataError(`${label} must be a non-empty string, found ${describe(value)}.`);
-  }
-}
 
 /** The `sessionStatus` terms of the binding: those of QTI 2.2 Results Reporting, without `pendingExternalScoring`. */
 const BINDING_STATUSES: readonly SessionStatus[] = [
@@ -174,234 +178,204 @@ export function assessmentResultToJson(result: AssessmentResult): unknown {
   };
 }
 
-type Json = Readonly<Record<string, unknown>>;
-
 /** One value of a variable in the binding, with the parts that a record's field uses. */
 interface ValueEntry {
-  readonly text: string;
-  readonly fieldIdentifier: unknown;
-  readonly baseType: unknown;
+  readonly value: string;
+  readonly fieldIdentifier?: unknown;
+  readonly baseType?: unknown;
 }
 
-function readEntries(entries: unknown, label: string): ValueEntry[] {
-  const list = entries === undefined ? [] : entries;
-  checkArray(list, `The value of ${label} must be an array`);
-  return list.map((entry) => {
-    checkRecord(entry, `A value of ${label} must be an object`);
-    checkString(entry.value, `A value of ${label}`);
-    return { text: entry.value, fieldIdentifier: entry.fieldIdentifier, baseType: entry.baseType };
-  });
+const valueEntriesSchema = v.optional(
+  v.array(v.object({ value: v.string(), fieldIdentifier: v.optional(v.unknown()), baseType: v.optional(v.unknown()) })),
+  [],
+);
+
+const typeEntries = { cardinality: cardinalitySchema, baseType: v.optional(baseTypeSchema) };
+
+function typeOf({ cardinality, baseType }: ResultVariableType): ResultVariableType {
+  return baseType === undefined ? { cardinality } : { cardinality, baseType };
+}
+
+function labelOf(kind: string, identifier: string): string {
+  return `the ${kind} variable ${describe(identifier)}`;
 }
 
 function readField(label: string): (entry: ValueEntry) => readonly [string, SingleValue] {
-  return ({ text, fieldIdentifier, baseType }) => {
-    checkNonEmptyString(fieldIdentifier, `The fieldIdentifier of a field of ${label}`);
+  return ({ value: text, fieldIdentifier, baseType }) => {
+    const name = parseWith(nonEmptyStringSchema, fieldIdentifier, `The fieldIdentifier of a field of ${label}`);
     if (!isBaseType(baseType)) {
       throw new DataError(`The baseType of a field of ${label} must be a base type, found ${describe(baseType)}.`);
     }
     const field = single(baseType, parsePrimitive(text, baseType));
     if (field === null) throw new DataError(`A field of ${label} cannot be an empty string, which is NULL.`);
-    return [fieldIdentifier, field];
+    return [name, field];
   };
 }
 
 /** Reads the values of a variable, which the binding lists apart from its type, as a value or NULL. */
-function readValue(entries: unknown, { cardinality, baseType }: ResultVariableType, label: string): Value | null {
-  const list = readEntries(entries, label);
-  if (cardinality === "record") return record(list.map(readField(label)));
+function readValue(
+  entries: readonly ValueEntry[],
+  { cardinality, baseType }: ResultVariableType,
+  label: string,
+): Value | null {
+  if (cardinality === "record") return record(entries.map(readField(label)));
   if (baseType === undefined)
     throw new DataError(`The baseType of ${label} is required unless its cardinality is record.`);
-  const primitives = list.map(({ text }) => parsePrimitive(text, baseType));
+  const primitives = entries.map(({ value: text }) => parsePrimitive(text, baseType));
   if (cardinality !== "single") return container(cardinality, baseType, primitives);
   const [only, ...more] = primitives;
   if (more.length > 0) throw new DataError(`${label} has the cardinality single and ${primitives.length} values.`);
   return only === undefined ? null : single(baseType, only);
 }
 
-function readType(json: Json, label: string): ResultVariableType {
-  const { cardinality, baseType } = json;
-  if (!isCardinality(cardinality)) {
-    throw new DataError(
-      `The cardinality of ${label} must be single, multiple, ordered or record, found ${describe(cardinality)}.`,
-    );
-  }
-  if (baseType === undefined) return { cardinality };
-  if (!isBaseType(baseType))
-    throw new DataError(`The baseType of ${label} must be a base type, found ${describe(baseType)}.`);
-  return { cardinality, baseType };
+const responseVariableSchema: Schema<ResponseVariable> = v.pipe(
+  v.object({
+    identifier: nonEmptyStringSchema,
+    ...typeEntries,
+    candidateResponse: v.object({ value: valueEntriesSchema }),
+    correctResponse: v.optional(v.object({ value: valueEntriesSchema, interpretation: v.optional(v.string()) })),
+    choiceSequence: v.optional(v.array(v.string())),
+  }),
+  transformWith((json): ResponseVariable => {
+    const label = labelOf("response", json.identifier);
+    const type = typeOf(json);
+    const { correctResponse, choiceSequence } = json;
+    const correct =
+      correctResponse === undefined ? null : readValue(correctResponse.value, type, `the correct response of ${label}`);
+    const { interpretation } = correctResponse ?? {};
+    return {
+      kind: "response",
+      identifier: json.identifier,
+      ...type,
+      candidateResponse: readValue(json.candidateResponse.value, type, label),
+      ...(correct === null
+        ? {}
+        : { correctResponse: { value: correct, ...(interpretation === undefined ? {} : { interpretation }) } }),
+      ...(choiceSequence === undefined ? {} : { choiceSequence }),
+      extensions: [],
+    };
+  }),
+);
+
+const optionalString = v.optional(v.string());
+const optionalNumber = v.optional(finiteSchema);
+
+const outcomeVariableSchema: Schema<OutcomeVariable> = v.pipe(
+  v.object({
+    identifier: nonEmptyStringSchema,
+    ...typeEntries,
+    value: valueEntriesSchema,
+    view: v.optional(v.array(v.picklist(OUTCOME_VIEWS))),
+    interpretation: optionalString,
+    longInterpretation: optionalString,
+    normalMaximum: optionalNumber,
+    normalMinimum: optionalNumber,
+    masteryValue: optionalNumber,
+  }),
+  transformWith((json): OutcomeVariable => {
+    const type = typeOf(json);
+    const { view, interpretation, longInterpretation, normalMaximum, normalMinimum, masteryValue } = json;
+    return {
+      kind: "outcome",
+      identifier: json.identifier,
+      ...type,
+      value: readValue(json.value, type, labelOf("outcome", json.identifier)),
+      ...(view === undefined ? {} : { view }),
+      ...(interpretation === undefined ? {} : { interpretation }),
+      ...(longInterpretation === undefined ? {} : { longInterpretation }),
+      ...(normalMaximum === undefined ? {} : { normalMaximum }),
+      ...(normalMinimum === undefined ? {} : { normalMinimum }),
+      ...(masteryValue === undefined ? {} : { masteryValue }),
+    };
+  }),
+);
+
+const templateVariableSchema: Schema<TemplateVariable> = v.pipe(
+  v.object({ identifier: nonEmptyStringSchema, ...typeEntries, value: valueEntriesSchema }),
+  transformWith((json): TemplateVariable => {
+    const type = typeOf(json);
+    return {
+      kind: "template",
+      identifier: json.identifier,
+      ...type,
+      value: readValue(json.value, type, labelOf("template", json.identifier)),
+    };
+  }),
+);
+
+/** The three lists of variables of a result in the binding, each absent when empty. */
+const variableLists = {
+  responseVariables: v.optional(v.array(responseVariableSchema), []),
+  templateVariables: v.optional(v.array(templateVariableSchema), []),
+  outcomeVariables: v.optional(v.array(outcomeVariableSchema), []),
+};
+
+function joinVariables(lists: {
+  readonly responseVariables: readonly ResultVariable[];
+  readonly templateVariables: readonly ResultVariable[];
+  readonly outcomeVariables: readonly ResultVariable[];
+}): ResultVariable[] {
+  return [...lists.responseVariables, ...lists.templateVariables, ...lists.outcomeVariables];
 }
 
-/** Checks that the value is a variable and returns it with the words that name it in messages. */
-function readVariable(json: unknown, kind: string): { readonly variable: Json; readonly label: string } {
-  checkRecord(json, `The ${kind} variables must be objects`);
-  checkNonEmptyString(json.identifier, `The identifier of every ${kind} variable`);
-  return { variable: json, label: `the ${kind} variable ${describe(json.identifier)}` };
-}
-
-function readStrings(value: unknown, label: string, itemLabel: string): string[] {
-  checkArray(value, `${label} must be an array`);
-  return value.map((item) => {
-    checkString(item, itemLabel);
-    return item;
-  });
-}
-
-function optionalString(value: unknown, label: string): string | undefined {
-  if (value !== undefined) checkString(value, label);
-  return value;
-}
-
-function optionalNumber(value: unknown, label: string): number | undefined {
-  if (value !== undefined && !(typeof value === "number" && Number.isFinite(value))) {
-    throw new DataError(`${label} must be a number, found ${describe(value)}.`);
-  }
-  return value;
-}
-
-function readResponseVariable(json: unknown): ResponseVariable {
-  const { variable, label } = readVariable(json, "response");
-  const type = readType(variable, label);
-  checkRecord(variable.candidateResponse, `The candidateResponse of ${label} must be an object`);
-  const { choiceSequence, correctResponse } = variable;
-  const correct = correctResponse === undefined ? null : readCorrectResponse(correctResponse, type, label);
-  return {
-    kind: "response",
-    identifier: String(variable.identifier),
-    ...type,
-    candidateResponse: readValue(variable.candidateResponse.value, type, label),
-    ...(correct === null ? {} : { correctResponse: correct }),
-    ...(choiceSequence === undefined
-      ? {}
-      : { choiceSequence: readStrings(choiceSequence, `The choiceSequence of ${label}`, `A choice of ${label}`) }),
-    extensions: [],
-  };
-}
-
-function readCorrectResponse(
-  json: unknown,
-  type: ResultVariableType,
-  label: string,
-): ResponseVariable["correctResponse"] | null {
-  checkRecord(json, `The correctResponse of ${label} must be an object`);
-  const value = readValue(json.value, type, `the correct response of ${label}`);
-  const interpretation = optionalString(json.interpretation, `The interpretation of the correct response of ${label}`);
-  return value === null ? null : { value, ...(interpretation === undefined ? {} : { interpretation }) };
-}
-
-function isOutcomeView(value: unknown): value is OutcomeView {
-  return OUTCOME_VIEWS.some((view) => view === value);
-}
-
-function readViews(value: unknown, label: string): OutcomeView[] {
-  checkArray(value, `The view of ${label} must be an array`);
-  return value.map((term) => {
-    if (!isOutcomeView(term)) {
-      throw new DataError(`A view of ${label} must be one of ${OUTCOME_VIEWS.join(", ")}, found ${describe(term)}.`);
-    }
-    return term;
-  });
-}
-
-function readOutcomeVariable(json: unknown): OutcomeVariable {
-  const { variable, label } = readVariable(json, "outcome");
-  const type = readType(variable, label);
-  const interpretation = optionalString(variable.interpretation, `The interpretation of ${label}`);
-  const longInterpretation = optionalString(variable.longInterpretation, `The longInterpretation of ${label}`);
-  const normalMaximum = optionalNumber(variable.normalMaximum, `The normalMaximum of ${label}`);
-  const normalMinimum = optionalNumber(variable.normalMinimum, `The normalMinimum of ${label}`);
-  const masteryValue = optionalNumber(variable.masteryValue, `The masteryValue of ${label}`);
-  return {
-    kind: "outcome",
-    identifier: String(variable.identifier),
-    ...type,
-    value: readValue(variable.value, type, label),
-    ...(variable.view === undefined ? {} : { view: readViews(variable.view, label) }),
-    ...(interpretation === undefined ? {} : { interpretation }),
-    ...(longInterpretation === undefined ? {} : { longInterpretation }),
-    ...(normalMaximum === undefined ? {} : { normalMaximum }),
-    ...(normalMinimum === undefined ? {} : { normalMinimum }),
-    ...(masteryValue === undefined ? {} : { masteryValue }),
-  };
-}
-
-function readTemplateVariable(json: unknown): TemplateVariable {
-  const { variable, label } = readVariable(json, "template");
-  const type = readType(variable, label);
-  return {
-    kind: "template",
-    identifier: String(variable.identifier),
-    ...type,
-    value: readValue(variable.value, type, label),
-  };
-}
-
-function readList<T>(json: Json, name: string, read: (item: unknown) => T): T[] {
-  const list = json[name] === undefined ? [] : json[name];
-  checkArray(list, `The ${name} of a result must be an array`);
-  return list.map(read);
-}
-
-function readVariables(json: Json): ResultVariable[] {
-  return [
-    ...readList(json, "responseVariables", readResponseVariable),
-    ...readList(json, "templateVariables", readTemplateVariable),
-    ...readList(json, "outcomeVariables", readOutcomeVariable),
-  ];
-}
-
-function isSessionStatus(value: unknown): value is SessionStatus {
-  return SESSION_STATUSES.some((status) => status === value);
-}
-
-function readItemResult(json: unknown): ItemResult {
-  checkRecord(json, "An itemResult must be an object");
-  const { identifier, sequenceIndex, datestamp, sessionStatus, candidateComment } = json;
-  checkNonEmptyString(identifier, "The identifier of an itemResult");
-  checkString(datestamp, "The datestamp of an itemResult");
-  if (!isSessionStatus(sessionStatus)) {
-    throw new DataError(
-      `The sessionStatus of an itemResult must be one of ${SESSION_STATUSES.join(", ")}, found ${describe(sessionStatus)}.`,
-    );
-  }
-  const comment = optionalString(candidateComment, "The candidateComment of an itemResult");
-  return {
-    identifier,
-    ...(sequenceIndex === undefined ? {} : { sequenceIndex: readIndex(sequenceIndex) }),
-    datestamp,
-    sessionStatus,
-    variables: readVariables(json),
-    ...(comment === undefined ? {} : { candidateComment: comment }),
-    supports: [],
-  };
-}
-
-function readIndex(value: unknown): number {
-  checkNonNegativeInteger(value, "The sequenceIndex of an itemResult");
-  return value;
-}
-
-function readTestResult(json: unknown): TestResult {
-  checkRecord(json, "The testResult must be an object");
-  checkNonEmptyString(json.identifier, "The identifier of the testResult");
-  checkString(json.datestamp, "The datestamp of the testResult");
-  return { identifier: json.identifier, datestamp: json.datestamp, variables: readVariables(json), supports: [] };
-}
-
-function readContext(json: unknown): ResultContext {
-  checkRecord(json, "The context must be an object");
-  const sourcedId = optionalString(json.sourcedId, "The sourcedId of the context");
-  const identifiers = json.sessionIdentifiers === undefined ? [] : json.sessionIdentifiers;
-  checkArray(identifiers, "The sessionIdentifiers of the context must be an array");
-  return {
-    ...(sourcedId === undefined ? {} : { sourcedId }),
-    sessionIdentifiers: identifiers.map((entry) => {
-      checkRecord(entry, "A session identifier of the context must be an object");
-      checkString(entry.sourceID, "The sourceID of a session identifier");
-      checkString(entry.identifier, "The identifier of a session identifier");
-      return { sourceId: entry.sourceID, identifier: entry.identifier };
+const itemResultSchema: Schema<ItemResult> = v.pipe(
+  v.object({
+    identifier: nonEmptyStringSchema,
+    sequenceIndex: v.optional(nonNegativeIntegerSchema),
+    datestamp: v.string(),
+    sessionStatus: v.picklist(SESSION_STATUSES),
+    candidateComment: optionalString,
+    ...variableLists,
+  }),
+  v.transform(
+    (json): ItemResult => ({
+      identifier: json.identifier,
+      ...(json.sequenceIndex === undefined ? {} : { sequenceIndex: json.sequenceIndex }),
+      datestamp: json.datestamp,
+      sessionStatus: json.sessionStatus,
+      variables: joinVariables(json),
+      ...(json.candidateComment === undefined ? {} : { candidateComment: json.candidateComment }),
+      supports: [],
     }),
-  };
-}
+  ),
+);
+
+const testResultSchema: Schema<TestResult> = v.pipe(
+  v.object({ identifier: nonEmptyStringSchema, datestamp: v.string(), ...variableLists }),
+  v.transform(
+    (json): TestResult => ({
+      identifier: json.identifier,
+      datestamp: json.datestamp,
+      variables: joinVariables(json),
+      supports: [],
+    }),
+  ),
+);
+
+const contextSchema: Schema<ResultContext> = v.pipe(
+  v.object({
+    sourcedId: optionalString,
+    sessionIdentifiers: v.optional(v.array(v.object({ sourceID: v.string(), identifier: v.string() })), []),
+  }),
+  v.transform(({ sourcedId, sessionIdentifiers }) => ({
+    ...(sourcedId === undefined ? {} : { sourcedId }),
+    sessionIdentifiers: sessionIdentifiers.map(({ sourceID, identifier }) => ({ sourceId: sourceID, identifier })),
+  })),
+);
+
+// An engine may leave out the context, which the model requires: the result then has no session identifiers (CAT §4.3.2).
+const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
+  v.object({
+    context: v.optional(contextSchema, { sessionIdentifiers: [] }),
+    testResult: v.optional(testResultSchema),
+    itemResult: v.optional(v.array(itemResultSchema), []),
+  }),
+  v.transform(({ context, testResult, itemResult }) => ({
+    context,
+    ...(testResult === undefined ? {} : { testResult }),
+    itemResults: itemResult,
+  })),
+);
 
 /**
  * Reads an assessment result that a CAT engine returned in the JSON of the binding, with the three lists of variables of a
@@ -412,13 +386,7 @@ function readContext(json: unknown): ResultContext {
  * its base type.
  */
 export function assessmentResultFromJson(json: unknown): AssessmentResult {
-  checkRecord(json, "The assessmentResult must be an object");
-  const { context, testResult } = json;
-  return {
-    context: context === undefined ? { sessionIdentifiers: [] } : readContext(context),
-    ...(testResult === undefined ? {} : { testResult: readTestResult(testResult) }),
-    itemResults: readList(json, "itemResult", readItemResult),
-  };
+  return parseWith(assessmentResultSchema, json, "The assessmentResult");
 }
 
 /**
@@ -430,7 +398,5 @@ export function assessmentResultFromJson(json: unknown): AssessmentResult {
  * @throws `DataError` when it is not an item stage.
  */
 export function itemStageFromJson(json: unknown, noun: string): ItemStage {
-  checkStage(json, noun);
-  const { itemIdentifiers = null, stageLength = null } = json;
-  return { itemIdentifiers, stageLength };
+  return parseWith(itemStageSchema, json, `The ${noun}`);
 }

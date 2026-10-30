@@ -1,12 +1,13 @@
 import type { SectionData } from "@luthfanwakan/olah/cat";
 import { decodeBase64 } from "@luthfanwakan/olah/values";
+import * as v from "valibot";
 import {
-  checkArray,
-  checkNonEmptyString,
-  checkPositiveInteger,
-  checkProperties,
-  checkRecord,
   describe,
+  finiteSchema,
+  mapSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  positiveIntegerSchema,
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { readSectionData } from "../section-data.js";
@@ -81,28 +82,12 @@ async function readParts(input: unknown): Promise<SectionParts> {
   };
 }
 
-function readTargets(value: unknown): StoredAdaptiveSection["contentTargets"] {
-  checkRecord(value, "The contentTargets of the settings must be an object of area and target");
-  return Object.entries(value).map(([area, target]) => {
-    if (typeof target !== "number" || !Number.isFinite(target)) {
-      throw new DataError(
-        `The content target of the area ${describe(area)} must be a number, found ${describe(target)}.`,
-      );
-    }
-    return [area, target] as const;
-  });
-}
-
-function readEnemies(value: unknown): StoredAdaptiveSection["enemies"] {
-  checkArray(value, "The enemies of the settings must be an array of enemy sets");
-  return value.map((set) => {
-    checkArray(set, "An enemy set of the settings must be an array of item identifiers");
-    return set.map((item) => {
-      checkNonEmptyString(item, "An item identifier of an enemy set");
-      return item;
-    });
-  });
-}
+// The areas of the content targets are data, `__proto__` included, so they are read into a map.
+const adaptiveSettingsSchema = v.strictObject({
+  length: positiveIntegerSchema,
+  contentTargets: v.optional(mapSchema(finiteSchema), () => new Map<string, number>()),
+  enemies: v.optional(v.array(v.array(nonEmptyStringSchema)), []),
+});
 
 /**
  * Reads the section data of an item-level adaptive section. The settings file is JSON `{ length, contentTargets,
@@ -115,10 +100,11 @@ function readEnemies(value: unknown): StoredAdaptiveSection["enemies"] {
  */
 export async function readAdaptiveSection(data: unknown): Promise<ReadSection<StoredAdaptiveSection>> {
   const { identifier, data: sectionData, settings, items } = await readParts(data);
-  checkRecord(settings, "The settings of an adaptive section must be a JSON object");
-  checkProperties(settings, "The settings of an adaptive section", ["length", "contentTargets", "enemies"]);
-  const { length, contentTargets = {}, enemies = [] } = settings;
-  checkPositiveInteger(length, "The length of the settings");
+  const { length, contentTargets, enemies } = parseWith(
+    adaptiveSettingsSchema,
+    settings,
+    "The settings of an adaptive section",
+  );
   return {
     identifier,
     section: {
@@ -126,33 +112,19 @@ export async function readAdaptiveSection(data: unknown): Promise<ReadSection<St
       data: sectionData,
       items,
       length,
-      contentTargets: readTargets(contentTargets),
-      enemies: readEnemies(enemies),
+      contentTargets: [...contentTargets],
+      enemies,
     },
   };
 }
 
-function readModule(value: unknown): StoredModule {
-  checkRecord(value, "A module of the settings must be an object");
-  checkProperties(value, "A module of the settings", ["id", "items"]);
-  const { id, items } = value;
-  checkNonEmptyString(id, "The id of a module");
-  checkArray(items, `The items of the module ${describe(id)} must be an array`);
-  return {
-    id,
-    items: items.map((item) => {
-      checkNonEmptyString(item, `An item identifier of the module ${describe(id)}`);
-      return item;
+const panelSettingsSchema = v.strictObject({
+  stages: v.array(
+    v.strictObject({
+      modules: v.array(v.strictObject({ id: nonEmptyStringSchema, items: v.array(nonEmptyStringSchema) })),
     }),
-  };
-}
-
-function readStage(value: unknown): readonly StoredModule[] {
-  checkRecord(value, "A stage of the settings must be an object");
-  checkProperties(value, "A stage of the settings", ["modules"]);
-  checkArray(value.modules, "The modules of a stage must be an array");
-  return value.modules.map(readModule);
-}
+  ),
+});
 
 /**
  * Reads the section data of a multistage panel. The settings file is JSON `{ stages: [{ modules: [{ id, items }] }] }`:
@@ -165,10 +137,9 @@ function readStage(value: unknown): readonly StoredModule[] {
  */
 export async function readPanelSection(data: unknown): Promise<ReadSection<StoredPanelSection>> {
   const { identifier, data: sectionData, settings, items } = await readParts(data);
-  checkRecord(settings, "The settings of a panel must be a JSON object");
-  checkProperties(settings, "The settings of a panel", ["stages"]);
-  checkArray(settings.stages, "The stages of the settings must be an array");
-  const stages = settings.stages.map(readStage);
+  const stages = parseWith(panelSettingsSchema, settings, "The settings of a panel").stages.map(
+    ({ modules }): readonly StoredModule[] => modules,
+  );
   const known = new Set(items.map(({ id }) => id));
   for (const { id, items: listed } of stages.flat()) {
     const missing = listed.find((item) => !known.has(item));

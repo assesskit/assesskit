@@ -1,5 +1,5 @@
 import type { SectionData } from "@luthfanwakan/olah/cat";
-import { checkRecord, describe } from "../../checks.js";
+import { checkRecord, describe, guardSchema, isRecord, type Schema } from "../../checks.js";
 import { DataError } from "../../errors.js";
 
 /**
@@ -74,18 +74,12 @@ export interface SectionStore {
   get(identifier: string): Promise<StoredSection | undefined>;
 }
 
-/**
- * Checks a section store, as a host passes it from JavaScript.
- *
- * @param label - Names the store in the error message, such as `The option sections`.
- * @throws `DataError` when it is not an object with the methods `put` and `get`.
- */
-export function checkSectionStore(value: unknown, label: string): asserts value is SectionStore {
-  checkRecord(value, `${label} must be an object with the methods put and get`);
-  if (typeof value.put !== "function" || typeof value.get !== "function") {
-    throw new DataError(`${label} must be an object with the methods put and get, found ${describe(value)}.`);
-  }
-}
+/** The schema of a section store, as a host passes it from JavaScript: an object with the methods `put` and `get`. */
+export const sectionStoreSchema: Schema<SectionStore> = guardSchema(
+  (value): value is SectionStore =>
+    isRecord(value) && typeof value.put === "function" && typeof value.get === "function",
+  "an object with the methods put and get",
+);
 
 /** Returns whether a stored section is of a kind. */
 function isKind<TKind extends StoredSection["kind"]>(

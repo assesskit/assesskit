@@ -3,19 +3,19 @@
 olah is one package with a subpath per module. These principles hold for every module; Biome enforces the ones marked
 lint, and the rest are checked in review.
 
-| Principle              | Rule                                                                                                                                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pure core              | Every module except `node` and `cli` uses ECMAScript 2023 and no platform API: no `node:*`, `fetch`, timers, `window`, `document` or `process` (lint). It runs in any JavaScript runtime.           |
-| Deterministic          | Randomness comes from a `Random` the caller passes, time from an argument the caller passes. `Math.random`, `Date.now()`, `new Date()` and `performance.now()` fail lint.                           |
-| No backtracking regexp | `new RegExp` and `RegExp(` fail lint everywhere in `src/`. Patterns that authors write run on olah's linear-time automaton, never on a backtracking engine.                                         |
-| No code execution      | No `eval` (lint) and no code loading. Extension points are functions the caller registers.                                                                                                          |
-| Untrusted input        | Every input is untrusted: documents, packages, actions, and what resolvers return. Entry points validate deeply; inner functions validate shallowly, so a call does not cost the size of the model. |
-| Cited rules            | Every semantic rule cites the specification section that defines it, and every inventory row has a test ([evidence](evidence.md)).                                                                  |
+| Principle              | Rule                                                                                                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure core              | Every module except `node` and `cli` uses ECMAScript 2023 and no platform API: no `node:*`, `fetch`, timers, `window`, `document` or `process` (lint). It runs in any JavaScript runtime.                                                                |
+| Deterministic          | Randomness comes from a `Random` the caller passes, time from an argument the caller passes. `Math.random`, `Date.now()`, `new Date()` and `performance.now()` fail lint.                                                                                |
+| No backtracking regexp | `new RegExp` and `RegExp(` fail lint everywhere in `src/`. Patterns that authors write run on olah's linear-time automaton, never on a backtracking engine.                                                                                              |
+| No code execution      | No `eval` (lint) and no code loading. Extension points are functions the caller registers.                                                                                                                                                               |
+| Untrusted input        | Every input is untrusted: documents, packages, actions, and what resolvers return. Entry points validate deeply, and the JSON they read is read with valibot schemas; inner functions validate shallowly, so a call does not cost the size of the model. |
+| Cited rules            | Every semantic rule cites the specification section that defines it, and every inventory row has a test ([evidence](evidence.md)).                                                                                                                       |
 
 ## Layers
 
 A module imports only from lower layers, and imports never form cycles (lint). Every module may import `errors.ts`,
-`checks.ts` and `random.ts`; `checks.ts` imports `errors.ts` only, and `random.ts` imports `errors.ts` and `checks.ts`.
+`checks.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, and `random.ts` imports `errors.ts` and `checks.ts`.
 `delivery` is the top library layer, and no olah module imports it. `packages/olah` never imports `tempuh`, and
 `tempuh` imports olah only through its published subpaths, never by relative path.
 

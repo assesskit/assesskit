@@ -7,20 +7,21 @@ import {
   type PoolItem,
   testLength,
 } from "@luthfanwakan/takar/cat";
+import * as v from "valibot";
 import {
   checkArray,
-  checkFunction,
-  checkPositive,
-  checkProperties,
   checkRecord,
   checkString,
   describe,
+  functionSchema,
+  parseWith,
+  positiveSchema,
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
 import { type CategoryOfOutcomes, responseTo, scoreCategory } from "./response.js";
 import { readAdaptiveSection } from "./section.js";
-import { checkSectionStore, loadSection, type SectionStore, type StoredAdaptiveSection } from "./section-store.js";
+import { loadSection, type SectionStore, type StoredAdaptiveSection, sectionStoreSchema } from "./section-store.js";
 import { checkSessionSeed, parseSessionState, readProgress, stepSeed } from "./session-state.js";
 
 /** Options of {@link takarCatPort}. */
@@ -48,10 +49,17 @@ export interface TakarCatPortOptions {
   readonly scalingConstant?: number;
 }
 
-const OPTIONS = ["sections", "seeds", "pool", "category", "scalingConstant"];
-
 /** The pool of a host that gives no items of its own. */
 const NO_ITEMS = (): readonly PoolItem[] => [];
+
+const optionsSchema = v.strictObject({
+  sections: sectionStoreSchema,
+  seeds: functionSchema<() => number>(),
+  // A function as the default of valibot is called to make the default, so these return the functions.
+  pool: v.optional(functionSchema<(section: string) => readonly PoolItem[]>(), () => NO_ITEMS),
+  category: v.optional(functionSchema<CategoryOfOutcomes>(), () => scoreCategory),
+  scalingConstant: v.optional(positiveSchema, DEFAULT_SCALING_CONSTANT),
+});
 
 /** Returns the stage that presents one item, or the empty stage that ends the session when there is none. */
 function stageOf(next: string | null): ItemStage {
@@ -89,20 +97,7 @@ function adaptiveTestOf(section: StoredAdaptiveSection, pool: readonly PoolItem[
  * @throws `DataError` when an option has the wrong type or is out of range.
  */
 export function takarCatPort(options: TakarCatPortOptions): CatPort {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTIONS);
-  const {
-    sections,
-    seeds,
-    pool = NO_ITEMS,
-    category = scoreCategory,
-    scalingConstant = DEFAULT_SCALING_CONSTANT,
-  } = options;
-  checkSectionStore(sections, "The option sections");
-  checkFunction(seeds, "The option seeds must be a function that returns a session seed");
-  checkFunction(pool, "The option pool must be a function of a section identifier");
-  checkFunction(category, "The option category must be a function of an item and its outcomes");
-  checkPositive(scalingConstant, "The option scalingConstant");
+  const { sections, seeds, pool, category, scalingConstant } = parseWith(optionsSchema, options, "The options object");
 
   const poolFor = (identifier: string, section: StoredAdaptiveSection): PoolItem[] => {
     const hostItems = pool(identifier);

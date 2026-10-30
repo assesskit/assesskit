@@ -1,20 +1,20 @@
+import * as v from "valibot";
 import {
-  checkBoolean,
   checkChoice,
   checkOptions,
   checkPositiveInteger,
   checkRecord,
-  checkString,
   describe,
   isRecord,
+  parseWith,
+  type Schema,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { isSupportName } from "../pnp/index.js";
 import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
-import { readEntries, readValues, valuesToJson } from "./entries-json.js";
-import { checkKey, type ItemKey } from "./item-key.js";
-import { checkShape } from "./json-checks.js";
+import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
+import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
+import { supportNameSchema } from "./support-json.js";
 
 /** The limits of {@link parseCandidateAction}, which keep a client from sending an action that is too large to handle. */
 export interface ActionLimits {
@@ -71,9 +71,48 @@ function checkSize(json: unknown, limit: number): void {
   }
 }
 
-function readItemRef(json: Readonly<Record<string, unknown>>): ItemKey {
-  checkKey(json.item);
-  return { ref: json.item.ref, instance: json.item.instance };
+const itemSchema = { item: itemKeySchema };
+
+const actionSchema: Schema<CandidateAction> = v.variant("type", [
+  v.strictObject({
+    type: v.literal("set-responses"),
+    ...itemSchema,
+    responses: valuesSchema,
+    pciStates: v.optional(entriesSchema(v.string())),
+  }),
+  v.strictObject({ type: v.picklist(["submit", "skip", "next-attempt", "review", "solution"]), ...itemSchema }),
+  v.strictObject({ type: v.literal("end-attempt"), ...itemSchema, interaction: v.string() }),
+  v.strictObject({ type: v.literal("comment"), ...itemSchema, text: v.string() }),
+  v.strictObject({
+    type: v.literal("move"),
+    to: v.union(
+      [v.picklist(MOVES), itemKeySchema],
+      'The place of move must be "next", "previous" or an item instance.',
+    ),
+  }),
+  v.strictObject({ type: v.literal("support"), name: supportNameSchema, active: v.boolean() }),
+  v.strictObject({ type: v.picklist(["end-part", "end-test", "suspend", "resume"]) }),
+]);
+
+/** Refuses an action of the host (E22), which a candidate never sends. */
+function refuseHostAction(json: unknown): void {
+  if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {
+    throw new DataError(
+      `The type ${describe(json.type)} is an action of the host, and a candidate does not send it; the type of an action of a candidate is ${CANDIDATE_ACTION_TYPES.map((type) => JSON.stringify(type)).join(", ")}.`,
+    );
+  }
+}
+
+/** Checks the length of every PCI state against the limit (E29), which is the caller's and not the form's. */
+function checkPciStates(action: CandidateAction, limit: number): void {
+  if (action.type !== "set-responses" || action.pciStates === undefined) return;
+  for (const [identifier, state] of action.pciStates) {
+    if (state.length > limit) {
+      throw new DataError(
+        `The PCI state of ${describe(identifier)} has ${state.length} code units, more than the limit maxPciStateLength of ${limit}.`,
+      );
+    }
+  }
 }
 
 /**
@@ -90,81 +129,10 @@ function readItemRef(json: Readonly<Record<string, unknown>>): ItemKey {
 export function parseCandidateAction(json: unknown, limits: Partial<ActionLimits> = {}): CandidateAction {
   const { maxActionSize, maxPciStateLength } = readLimits(limits);
   checkSize(json, maxActionSize);
-  checkRecord(json, "The action must be an object with a type");
-  if (typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {
-    throw new DataError(
-      `The type ${describe(json.type)} is an action of the host, and a candidate does not send it; the type of an action of a candidate is ${CANDIDATE_ACTION_TYPES.map((type) => JSON.stringify(type)).join(", ")}.`,
-    );
-  }
-  checkChoice(json.type, "The type of the action", CANDIDATE_ACTION_TYPES);
-  switch (json.type) {
-    case "set-responses": {
-      checkShape(json, "A set-responses action", ["type", "item", "responses"], ["pciStates"]);
-      const pciStates =
-        json.pciStates === undefined
-          ? undefined
-          : readEntries(json.pciStates, "The pciStates of set-responses", (state, identifier) => {
-              checkString(state, `The PCI state of ${describe(identifier)}`);
-              if (state.length > maxPciStateLength) {
-                throw new DataError(
-                  `The PCI state of ${describe(identifier)} has ${state.length} code units, more than the limit maxPciStateLength of ${maxPciStateLength}.`,
-                );
-              }
-              return state;
-            });
-      return {
-        type: json.type,
-        item: readItemRef(json),
-        responses: readValues(json.responses, "The responses of set-responses"),
-        ...(pciStates === undefined ? {} : { pciStates }),
-      };
-    }
-    case "submit":
-    case "skip":
-    case "next-attempt":
-    case "review":
-    case "solution":
-      checkShape(json, `A ${json.type} action`, ["type", "item"]);
-      return { type: json.type, item: readItemRef(json) };
-    case "end-attempt":
-      checkShape(json, "An end-attempt action", ["type", "item", "interaction"]);
-      checkString(json.interaction, "The interaction of end-attempt");
-      return { type: json.type, item: readItemRef(json), interaction: json.interaction };
-    case "comment":
-      checkShape(json, "A comment action", ["type", "item", "text"]);
-      checkString(json.text, "The text of comment");
-      return { type: json.type, item: readItemRef(json), text: json.text };
-    case "move": {
-      checkShape(json, "A move action", ["type", "to"]);
-      if (typeof json.to !== "string") {
-        checkKey(json.to);
-        return { type: json.type, to: { ref: json.to.ref, instance: json.to.instance } };
-      }
-      const word = MOVES.find((move) => move === json.to);
-      if (word === undefined) {
-        throw new DataError(
-          `The place of move must be "next", "previous" or an item instance, found ${describe(json.to)}.`,
-        );
-      }
-      return { type: json.type, to: word };
-    }
-    case "support": {
-      checkShape(json, "A support action", ["type", "name", "active"]);
-      if (!isSupportName(json.name)) {
-        throw new DataError(
-          `The name of support must be the name of a support of a PNP, found ${describe(json.name)}.`,
-        );
-      }
-      checkBoolean(json.active, "The active of support");
-      return { type: json.type, name: json.name, active: json.active };
-    }
-    case "end-part":
-    case "end-test":
-    case "suspend":
-    case "resume":
-      checkShape(json, `A ${json.type} action`, ["type"]);
-      return { type: json.type };
-  }
+  refuseHostAction(json);
+  const action = parseWith(actionSchema, json, "The action");
+  checkPciStates(action, maxPciStateLength);
+  return action;
 }
 
 /** The limits that let {@link actionToJson} check the form it writes without refusing a large action. */

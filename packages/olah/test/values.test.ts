@@ -42,7 +42,7 @@ import {
   type XsdPattern,
 } from "../src/values/index.js";
 import { mutateText, mutationsOf } from "./arbitraries/xml.js";
-import { FUZZ } from "./fuzz.js";
+import { FUZZ, fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1149,12 +1149,14 @@ describe("JSON codec of BPIG Appendix C", () => {
   it("[N] refuses JSON of another shape than its declaration", () => {
     const decode = (value: unknown, declaration: ValueDeclaration): unknown => fromJsonValue(value, declaration);
     expect(() => decode({ list: null }, declare("single", "integer"))).toThrow(
-      'The JSON of a single value must be an object with the one property "base", found the properties "list".',
+      'The JSON of a single value is invalid: missing the property "base".',
     );
     expect(() => decode({ base: null }, declare("multiple", "integer"))).toThrow(DataError);
     expect(() => decode({ base: null }, { cardinality: "record" })).toThrow(DataError);
     expect(() => decode({ base: { integer: 1 }, list: null }, declare("single", "integer"))).toThrow(DataError);
-    expect(() => decode({}, declare("single", "integer"))).toThrow("found the properties none");
+    expect(() => decode({}, declare("single", "integer"))).toThrow(
+      'The JSON of a single value is invalid: missing the property "base".',
+    );
     expect(() => decode({ base: { float: 1 } }, declare("single", "integer"))).toThrow(
       'The base of a single value must have the property "integer", found "float".',
     );
@@ -1162,7 +1164,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => decode({ base: {} }, declare("single", "integer"))).toThrow(DataError);
     expect(() => decode({ base: { unknown: 1 } }, declare("single", "integer"))).toThrow(DataError);
     expect(() => decode({ list: { integer: 1 } }, declare("multiple", "integer"))).toThrow(
-      "The list of base type integer must be an array, found 1.",
+      "The list of base type integer is invalid: expected an array, found 1.",
     );
     expect(() => decode({ list: { integer: [1, "2"] } }, declare("multiple", "integer"))).toThrow(DataError);
     expect(() => decode({ list: { string: ["a", ""] } }, declare("multiple", "string"))).toThrow("empty string");
@@ -1175,11 +1177,9 @@ describe("JSON codec of BPIG Appendix C", () => {
 
   it("[N] refuses a record of another shape", () => {
     const decode = (value: unknown): unknown => fromJsonValue({ record: value }, { cardinality: "record" });
-    expect(() => decode({})).toThrow("The fields of a record must be an array, found an object.");
+    expect(() => decode({})).toThrow("A record is invalid: expected an array, found an object.");
     expect(() => decode([5])).toThrow(DataError);
-    expect(() => decode([{ name: "a" }])).toThrow(
-      'A field of a record must have exactly the properties "name" and "base"',
-    );
+    expect(() => decode([{ name: "a" }])).toThrow('A record is invalid at [0]: missing the property "base".');
     expect(() => decode([{ name: "a", base: null, extra: 1 }])).toThrow(DataError);
     expect(() => decode([{ name: "not an id", base: { integer: 1 } }])).toThrow(DataError);
     expect(() => decode([{ name: 5, base: { integer: 1 } }])).toThrow(DataError);
@@ -1219,10 +1219,23 @@ describe("JSON codec of BPIG Appendix C", () => {
   it("[N] ignores a base type declared for a record and refuses a declaration that is not one", () => {
     expect(toJsonValue(null, { cardinality: "record", baseType: "integer" })).toEqual({ record: null });
     expect(() => toJsonValue(null, { cardinality: "record", baseType: json('"unknown"') })).toThrow(DataError);
-    expect(() => toJsonValue(null, json("null"))).toThrow("The declaration must be an object, found null.");
+    expect(() => toJsonValue(null, json("null"))).toThrow(
+      "The declaration is invalid: expected an object, found null.",
+    );
     expect(() => toJsonValue(null, json('{"cardinality":"list","baseType":"integer"}'))).toThrow(DataError);
     expect(() => toJsonValue(null, json('{"cardinality":"single"}'))).toThrow(DataError);
     expect(() => fromJsonValue({ base: null }, json("5"))).toThrow(DataError);
+  });
+
+  it("[J1] reads or refuses arbitrary JSON with a DataError, and nothing else, whatever the declaration", () => {
+    const declarations: readonly [ValueDeclaration, unknown][] = [
+      [declare("single", "integer"), { base: { integer: 1 } }],
+      [declare("multiple", "float"), { list: { float: [1.5, "NaN"] } }],
+      [declare("ordered", "duration"), { list: { duration: ["PT1S"] } }],
+      [declare("single", "file"), { base: { file: { reference: "r", mime: "text/plain" } } }],
+      [{ cardinality: "record" }, { record: [{ name: "a", base: { integer: 1 } }] }],
+    ];
+    for (const [declaration, example] of declarations) fuzzJson((json) => fromJsonValue(json, declaration), [example]);
   });
 });
 
@@ -1299,17 +1312,17 @@ describe("wire values", () => {
   });
 
   it("[E30][N] refuses what is not a wire value", () => {
-    expect(() => fromWireValue(json("null"))).toThrow("A wire value must be an object, found null.");
+    expect(() => fromWireValue(json("null"))).toThrow("A wire value is invalid: expected an object, found null.");
     expect(() => fromWireValue(json("[]"))).toThrow(DataError);
     expect(() => fromWireValue({ baseType: "integer", value: null })).toThrow(DataError);
     expect(() => fromWireValue({ cardinality: "list", baseType: "integer", value: null })).toThrow(DataError);
     expect(() => fromWireValue({ cardinality: "single", value: null })).toThrow(DataError);
     expect(() => fromWireValue({ cardinality: "single", baseType: "unknown", value: null })).toThrow(DataError);
     expect(() => fromWireValue({ cardinality: "record", baseType: "integer", value: null })).toThrow(
-      "A record has no base type",
+      'A wire value is invalid: unexpected property "baseType".',
     );
     expect(() => fromWireValue({ cardinality: "single", baseType: "integer" })).toThrow(
-      'must have the property "value"',
+      'A wire value is invalid: missing the property "value".',
     );
     expect(() => fromWireValue({ cardinality: "single", baseType: "integer", value: null, extra: 1 })).toThrow(
       DataError,
@@ -1328,6 +1341,16 @@ describe("wire values", () => {
   it("[E30][N] refuses a value that differs from its declaration", () => {
     expect(() => toWireValue(single("integer", 1), declare("single", "string"))).toThrow(DataError);
     expect(() => toWireValue(null, json("{}"))).toThrow(DataError);
+  });
+
+  it("[E30] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson(fromWireValue, [
+      toWireValue(single("integer", 1), declare("single", "integer")),
+      toWireValue(container("ordered", "identifier", ["a", "b"]), declare("ordered", "identifier")),
+      toWireValue(record([["a", single("float", 1.5)]]), { cardinality: "record" }),
+      toWireValue(single("duration", 2.5), declare("single", "duration")),
+      toWireValue(null, declare("multiple", "float")),
+    ]);
   });
 });
 

@@ -1,4 +1,5 @@
-import { checkProperties, checkRecord, checkString, describe } from "../checks.js";
+import * as v from "valibot";
+import { checkString, mapSchema, parseWith, recordSchema } from "../checks.js";
 import { EN_MESSAGES } from "./en.js";
 import { ID_MESSAGES } from "./id.js";
 import type { Messages } from "./messages.js";
@@ -9,26 +10,13 @@ const CATALOGS: ReadonlyMap<string, Messages> = new Map([
   ["id", ID_MESSAGES],
 ]);
 
-/** The message keys, which a catalog of the overrides may have. */
-const MESSAGE_KEYS = Object.keys(EN_MESSAGES);
-
-/** Reads the overrides by language tag: each catalog may have message keys only, and each message is a string. */
-function readOverrides(
-  overrides: Readonly<Record<string, unknown>>,
-): ReadonlyMap<string, Readonly<Record<string, string>>> {
-  const byTag = new Map<string, Readonly<Record<string, string>>>();
-  for (const [tag, catalog] of Object.entries(overrides)) {
-    checkRecord(catalog, `The overrides for the language ${describe(tag)} must be an object`);
-    checkProperties(catalog, `The catalog for the language ${describe(tag)}`, MESSAGE_KEYS);
-    const messages: Record<string, string> = {};
-    for (const [key, text] of Object.entries(catalog)) {
-      checkString(text, `The message ${describe(key)} for the language ${describe(tag)}`);
-      messages[key] = text;
-    }
-    byTag.set(tag.toLowerCase(), messages);
-  }
-  return byTag;
-}
+// A catalog of the overrides may have message keys only, and each message is a string. The language tags are data.
+const overridesSchema = mapSchema(
+  v.pipe(
+    recordSchema,
+    v.strictObject(Object.fromEntries(Object.keys(EN_MESSAGES).map((key) => [key, v.optional(v.string())]))),
+  ),
+);
 
 /**
  * Selects the messages for the language of the interface: the English messages, replaced by the shipped catalog of the
@@ -46,8 +34,9 @@ export function selectMessages(
   overrides: Readonly<Record<string, Partial<Messages>>> = {},
 ): Messages {
   checkString(language, "The language");
-  checkRecord(overrides, "The overrides must be an object");
-  const byTag = readOverrides(overrides);
+  const byTag = new Map(
+    [...parseWith(overridesSchema, overrides, "The overrides")].map(([tag, catalog]) => [tag.toLowerCase(), catalog]),
+  );
   const tag = language.toLowerCase();
   const primary = tag.split("-")[0] ?? tag;
   return { ...EN_MESSAGES, ...CATALOGS.get(primary), ...byTag.get(primary), ...byTag.get(tag) };

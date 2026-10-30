@@ -1,14 +1,15 @@
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
+import * as v from "valibot";
 import {
-  checkChoice,
-  checkFinite,
-  checkNonEmptyString,
-  checkNonNegativeInteger,
-  checkPositiveInteger,
-  checkRecord,
+  finiteSchema,
+  looseRecord,
+  nonEmptyStringSchema,
+  nonNegativeIntegerSchema,
+  parseWith,
+  positiveIntegerSchema,
 } from "../checks.js";
 import { buildEvent } from "./build.js";
-import { type CaliperContext, checkContext, checkIri } from "./context.js";
+import { type CaliperContext, checkContext, iriSchema } from "./context.js";
 import { itemAttempt, testAttempt } from "./entities.js";
 import type { CaliperEntity, CaliperEvent } from "./model.js";
 import { caliperTime } from "./time.js";
@@ -32,7 +33,15 @@ export interface CaliperGrade {
   readonly scoredBy: string;
 }
 
-const SCORERS = ["human", "externalMachine"] as const;
+// The time `at` is checked where the event is built.
+const gradeSchema = looseRecord({
+  index: nonNegativeIntegerSchema,
+  scoreGiven: finiteSchema,
+  maxScore: v.optional(finiteSchema),
+  item: v.optional(looseRecord({ ref: nonEmptyStringSchema, instance: positiveIntegerSchema })),
+  scorer: v.picklist(["human", "externalMachine"]),
+  scoredBy: iriSchema,
+});
 
 /**
  * Checks a grade, as a host passes it from JavaScript.
@@ -41,18 +50,7 @@ const SCORERS = ["human", "externalMachine"] as const;
  * a `scorer`, an IRI as `scoredBy`, and, when present, an item instance as `item` and a finite `maxScore`.
  */
 function checkGrade(value: unknown): asserts value is CaliperGrade {
-  checkRecord(value, "The Caliper grade must be an object");
-  checkNonNegativeInteger(value.index, "The index of the Caliper grade");
-  checkFinite(value.scoreGiven, "The scoreGiven of the Caliper grade");
-  const { maxScore, item } = value;
-  if (maxScore !== undefined) checkFinite(maxScore, "The maxScore of the Caliper grade");
-  if (item !== undefined) {
-    checkRecord(item, "The item of the Caliper grade must be an object");
-    checkNonEmptyString(item.ref, "The ref of the item of the Caliper grade");
-    checkPositiveInteger(item.instance, "The instance of the item of the Caliper grade");
-  }
-  checkChoice(value.scorer, "The scorer of the Caliper grade", SCORERS);
-  checkIri(value.scoredBy, "The scoredBy of the Caliper grade");
+  parseWith(gradeSchema, value, "The Caliper grade");
 }
 
 /**

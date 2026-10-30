@@ -46,7 +46,9 @@ packages/olah/            the library
   src/errors.ts           OlahError, DataError, ReadError, SecurityError, ProcessingError; Issue
   src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
                           checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
-                          checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous
+                          checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous; and the
+                          valibot side: parseWith, transformWith, mapSchema, recordSchema and the schemas of a
+                          number or a string
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
@@ -57,7 +59,8 @@ packages/tempuh/          the player
   src/errors.ts           TempuhError, DataError, AccessError, LtiError, ServiceError
   src/checks.ts           describe, isRecord, and checkRecord, checkArray, checkFunction, checkProperties, checkString,
                           checkNonEmptyString, checkNonNegativeInteger, checkPositiveInteger, checkBoolean, checkPositive,
-                          checkChoice
+                          checkChoice; and the valibot side: parseWith, mapSchema, recordSchema, guardSchema,
+                          methodsSchema, functionSchema and the schemas of a number or a string
   src/messages/           Messages, the English and Indonesian catalogs, selectMessages
   src/protocol/           Caller, ActionEnvelope, ViewEnvelope and Submission, with their checks
   src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
@@ -173,6 +176,16 @@ olah owns everything QTI defines that is not presentation or platform; tempuh ow
   string option with `checkChoice`: `<Label> must be a positive integer, found <value>.` An option's label is
   `The option <name>`. Inner functions validate shallowly, so that a call does not cost the size of the model. Other
   messages show values with `describe`.
+- JSON and objects that a host passes in are read with a valibot schema, named `<name>Schema`, and not with a chain of
+  `check` calls; those stay for the arguments of inner functions and for the options of the player, which hold DOM
+  objects and callbacks whose results are checked. `parseWith(schema, input, label)` throws the `DataError` for the
+  first issue, naming its path:
+  `<Label> is invalid at items[0].name: expected a string, found 5.` A rule that a schema cannot express is a `check` or
+  a `rawCheck` with a message of its own, or code after the parse; code that throws `DataError` joins a schema with
+  `transformWith`. Use `strictObject` where nothing else is allowed, `mapSchema` where property names are data (valibot's
+  `record` skips `__proto__`), and `recordSchema` before an object whose entries are all optional (valibot reads an array
+  as such an object). A function that valibot calls to make a default is wrapped, `() => fn`. Not the actions that count
+  graphemes (`graphemes`, `minGraphemes`, `maxGraphemes`): they use `Intl.Segmenter`, which the browser baseline bans.
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected,
   never taken as absent.
 - Validation returns `Issue`s and does not throw; each issue cites the rule that defines it.

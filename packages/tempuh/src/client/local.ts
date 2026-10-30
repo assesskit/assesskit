@@ -10,7 +10,15 @@ import type {
   TestStructure,
 } from "@luthfanwakan/olah/delivery";
 import { resolveReference } from "@luthfanwakan/olah/package";
-import { checkFunction, checkNonEmptyString, checkProperties, checkRecord } from "../checks.js";
+import * as v from "valibot";
+import {
+  checkFunction,
+  functionSchema,
+  methodsSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  recordSchema,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   type DispatchResult,
@@ -19,7 +27,7 @@ import {
   type ViewDocuments,
   viewDocuments,
 } from "../protocol/index.js";
-import { BROWSER_CLOCK, type Clock, checkClock } from "./clock.js";
+import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
 
 /** The longest delay that `setTimeout` takes; a longer one fires at once. */
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
@@ -59,7 +67,18 @@ export interface LocalSessionOptions {
   readonly clock?: Clock;
 }
 
-const OPTION_NAMES = ["definition", "engine", "start", "store", "session", "seed", "assets", "lexicons", "clock"];
+// The engine reads the definition, the engine options, the start options and the seed with their own checks.
+const optionsSchema = v.strictObject({
+  definition: recordSchema,
+  engine: v.optional(v.unknown()),
+  start: v.optional(v.unknown()),
+  store: methodsSchema<LocalStore>("load", "save"),
+  session: nonEmptyStringSchema,
+  seed: v.unknown(),
+  assets: functionSchema<(path: string) => string>(),
+  lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
+  clock: v.optional(clockSchema),
+});
 
 /** Returns the paths of the stimuli an item names, resolved against its document. */
 const stimulusPaths = (item: AssessmentItem, path: string): readonly string[] =>
@@ -104,17 +123,8 @@ function sourceOf(
  * @throws `DataError` when an option has the wrong type, the engine cannot be created, or the session cannot start.
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<SessionClient> {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
+  parseWith(optionsSchema, options, "The options object");
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
-  checkRecord(definition, "The option definition must be an object");
-  checkRecord(store, "The option store must be an object");
-  checkFunction(store.load, "The function load of the option store must be a function");
-  checkFunction(store.save, "The function save of the option store must be a function");
-  checkNonEmptyString(session, "The option session");
-  checkFunction(assets, "The option assets must be a function");
-  checkFunction(lexicons, "The option lexicons must be a function");
-  checkClock(clock);
 
   const delivery = await import("@luthfanwakan/olah/delivery");
   const engine = delivery.createEngine(definition, options.engine);

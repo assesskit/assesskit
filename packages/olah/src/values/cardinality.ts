@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { checkChoice } from "../checks.js";
 
 /** A cardinality of QTI values: a term of `CardinalityEnum` (INFO §8.16). */
@@ -19,3 +20,6 @@ export function isCardinality(value: unknown): value is Cardinality {
 export function checkCardinality(value: unknown): asserts value is Cardinality {
   checkChoice(value, "The cardinality", CARDINALITIES);
 }
+
+/** The schema of a cardinality. */
+export const cardinalitySchema = v.picklist(CARDINALITIES);

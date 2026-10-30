@@ -1,5 +1,6 @@
 import type { CandidateView } from "@luthfanwakan/olah/delivery";
-import { checkArray, checkProperties, checkRecord, checkString } from "../checks.js";
+import * as v from "valibot";
+import type { Schema } from "../checks.js";
 
 /**
  * The documents that the content of a view comes from, as paths in the package. A reference in content is written
@@ -19,22 +20,13 @@ export interface ViewDocuments {
   readonly lexicons: readonly string[];
 }
 
-/**
- * Checks documents that arrived as JSON.
- *
- * @throws `DataError` when they are not an object with the properties `test`, `item`, `stimuli` and `lexicons` only, the
- * first two strings and the last two arrays of strings.
- */
-export function checkViewDocuments(value: unknown): asserts value is ViewDocuments {
-  checkRecord(value, "The documents of a view envelope must be an object");
-  checkProperties(value, "The documents of a view envelope", ["test", "item", "stimuli", "lexicons"]);
-  checkString(value.test, "The property test of the documents of a view envelope");
-  checkString(value.item, "The property item of the documents of a view envelope");
-  checkArray(value.stimuli, "The property stimuli of the documents of a view envelope must be an array");
-  for (const path of value.stimuli) checkString(path, "A path of the stimuli of the documents of a view envelope");
-  checkArray(value.lexicons, "The property lexicons of the documents of a view envelope must be an array");
-  for (const path of value.lexicons) checkString(path, "A path of the lexicons of the documents of a view envelope");
-}
+/** The schema of the documents of a view. */
+export const viewDocumentsSchema: Schema<ViewDocuments> = v.strictObject({
+  test: v.string(),
+  item: v.string(),
+  stimuli: v.array(v.string()),
+  lexicons: v.array(v.string()),
+});
 
 /** The documents of an item that a test names: its own, and those of the stimuli it names. */
 export interface ItemDocuments {

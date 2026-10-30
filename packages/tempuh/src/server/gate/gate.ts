@@ -1,14 +1,16 @@
 import type { webcrypto } from "node:crypto";
 import { type QtiPackage, resolveReference } from "@luthfanwakan/olah/package";
 import type { FileValue } from "@luthfanwakan/olah/values";
+import * as v from "valibot";
 import {
-  checkFunction,
   checkNonNegativeInteger,
-  checkPositiveInteger,
-  checkProperties,
   checkRecord,
   checkString,
   describe,
+  functionSchema,
+  methodsSchema,
+  parseWith,
+  positiveIntegerSchema,
 } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { isHmacKey } from "../../lti/keys.js";
@@ -112,20 +114,20 @@ function checkOrigin(value: unknown): asserts value is string {
   }
 }
 
+const gateOptionsSchema = v.strictObject({
+  key: v.custom<webcrypto.CryptoKey>(
+    isHmacKey,
+    "The option key must be an HMAC key with SHA-256 for signing and verifying.",
+  ),
+  origin: v.unknown(),
+  packages: functionSchema<AssetGateOptions["packages"]>(),
+  files: methodsSchema<FileStore>("put", "read"),
+  ttlSeconds: v.optional(positiveIntegerSchema, DEFAULT_TTL_SECONDS),
+  uploadTtlSeconds: v.optional(positiveIntegerSchema, DEFAULT_UPLOAD_TTL_SECONDS),
+});
+
 function checkGateOptions(options: unknown): asserts options is AssetGateOptions {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["key", "origin", "packages", "files", "ttlSeconds", "uploadTtlSeconds"]);
-  if (!isHmacKey(options.key)) {
-    throw new DataError("The option key must be an HMAC key with SHA-256 for signing and verifying.");
-  }
-  checkOrigin(options.origin);
-  checkFunction(options.packages, "The option packages must be a function");
-  checkRecord(options.files, "The option files must be an object");
-  checkFunction(options.files.put, "The function put of the option files must be a function");
-  checkFunction(options.files.read, "The function read of the option files must be a function");
-  const { ttlSeconds = DEFAULT_TTL_SECONDS, uploadTtlSeconds = DEFAULT_UPLOAD_TTL_SECONDS } = options;
-  checkPositiveInteger(ttlSeconds, "The option ttlSeconds");
-  checkPositiveInteger(uploadTtlSeconds, "The option uploadTtlSeconds");
+  checkOrigin(parseWith(gateOptionsSchema, options, "The options object").origin);
 }
 
 /** Checks that a prefix is a directory in normal form: empty, or segments each followed by a slash. */

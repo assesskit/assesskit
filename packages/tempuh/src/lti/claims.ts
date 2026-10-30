@@ -1,89 +1,52 @@
-import { describe, isRecord } from "../checks.js";
+import * as v from "valibot";
+import {
+  finiteSchema,
+  httpsUrlSchema,
+  issueText,
+  mapSchema,
+  positiveIntegerSchema,
+  positiveSchema,
+} from "../checks.js";
 import { LtiError } from "../errors.js";
 
 /** The claims of a token: a JSON object. */
 export type Claims = Readonly<Record<string, unknown>>;
 
-/** The kinds of claim value that the readers accept: what a value must be, and the test for it. */
-export interface Shape<T> {
-  /** Says what the value must be, completing the sentence "must have the claim as ...". */
-  readonly expected: string;
-  /** Returns whether a value has the shape. */
-  readonly accepts: (value: unknown) => value is T;
-}
-
 /** The most characters of an identifier of a deployment, a resource link or a user (LTI 1.3 Core §5.3.3, §5.3.5, §5.3.6). */
 export const MAX_IDENTIFIER_LENGTH = 255;
 
 /** A string. */
-export const STRING: Shape<string> = {
-  expected: "a string",
-  accepts: (value): value is string => typeof value === "string",
-};
+export const STRING = v.string();
 
 /** A non-empty string of at most 255 characters, such as a `deployment_id` or a `sub`. */
-export const IDENTIFIER: Shape<string> = {
-  expected: "a string of 1 to 255 characters",
-  accepts: (value): value is string =>
-    typeof value === "string" && value.length >= 1 && value.length <= MAX_IDENTIFIER_LENGTH,
-};
+export const IDENTIFIER = v.pipe(v.string(), v.minLength(1), v.maxLength(MAX_IDENTIFIER_LENGTH));
 
 /** A finite number, such as `exp`. */
-export const NUMBER: Shape<number> = {
-  expected: "a number",
-  accepts: (value): value is number => typeof value === "number" && Number.isFinite(value),
-};
+export const NUMBER = finiteSchema;
 
 /** A finite number above 0, such as a maximum score. */
-export const POSITIVE_NUMBER: Shape<number> = {
-  expected: "a number above 0",
-  accepts: (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0,
-};
+export const POSITIVE_NUMBER = positiveSchema;
 
 /** A safe integer of at least 1, such as the number of an item instance. */
-export const POSITIVE_INTEGER: Shape<number> = {
-  expected: "an integer of at least 1",
-  accepts: (value): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 1,
-};
+export const POSITIVE_INTEGER = positiveIntegerSchema;
 
 /** A boolean. */
-export const BOOLEAN: Shape<boolean> = {
-  expected: "a boolean",
-  accepts: (value): value is boolean => typeof value === "boolean",
-};
+export const BOOLEAN = v.boolean();
 
 /** An absolute `https` URL: LTI requires HTTPS for every URL of a message (LTI 1.3 Core §3.5). */
-export const HTTPS_URL: Shape<string> = {
-  expected: "an absolute https URL",
-  accepts: (value): value is string =>
-    typeof value === "string" && URL.canParse(value) && new URL(value).protocol === "https:",
-};
+export const HTTPS_URL = httpsUrlSchema;
 
 /** An array of strings. */
-export const STRING_ARRAY: Shape<readonly string[]> = {
-  expected: "an array of strings",
-  accepts: (value): value is readonly string[] =>
-    Array.isArray(value) && value.every((item) => typeof item === "string"),
-};
-
-/** An object. */
-export const RECORD: Shape<Claims> = {
-  expected: "an object",
-  accepts: isRecord,
-};
+export const STRING_ARRAY = v.array(v.string());
 
 /** An object whose values are strings, such as `custom` (LTI 1.3 Core §5.4.6: a custom value is always a string). */
-export const STRING_RECORD: Shape<Readonly<Record<string, string>>> = {
-  expected: "an object of strings",
-  accepts: (value): value is Readonly<Record<string, string>> =>
-    isRecord(value) && Object.values(value).every((item) => typeof item === "string"),
-};
+export const STRING_RECORD = mapSchema(v.string());
 
-/** Builds the error for a claim that is missing or has the wrong shape. */
-function invalid(owner: string, name: string, expected: string, found: unknown): LtiError {
+/** The failure of a claim: `claim-missing` when it is absent, else `claim-invalid`. */
+function invalid(owner: string, name: string, issue: v.BaseIssue<unknown>): LtiError {
   return new LtiError(
-    `${owner} must have ${JSON.stringify(name)} as ${expected}, found ${describe(found)}.`,
-    found === undefined ? "claim-missing" : "claim-invalid",
+    `${owner} is invalid at ${JSON.stringify(name)}: ${issueText(issue)}.`,
+    issue.received === "undefined" ? "claim-missing" : "claim-invalid",
   );
 }
 
@@ -91,25 +54,34 @@ function invalid(owner: string, name: string, expected: string, found: unknown):
  * Reads a property that must be present.
  *
  * @param owner - Names the object in the error message, such as `The id_token`.
+ * @param schema - What the value must be.
  * @throws `LtiError` (`claim-missing`) when it is absent and (`claim-invalid`) when it has another shape.
  */
-export function required<T>(source: Claims, name: string, owner: string, shape: Shape<T>): T {
-  const value = source[name];
-  if (!shape.accepts(value)) throw invalid(owner, name, shape.expected, value);
-  return value;
+export function required<TSchema extends v.GenericSchema>(
+  source: Claims,
+  name: string,
+  owner: string,
+  schema: TSchema,
+): v.InferOutput<TSchema> {
+  const result = v.safeParse(schema, source[name], { abortEarly: true });
+  if (!result.success) throw invalid(owner, name, result.issues[0]);
+  return result.output;
 }
 
 /**
  * Reads a property that may be absent.
  *
  * @param owner - Names the object in the error message, such as `The id_token`.
+ * @param schema - What the value must be, when it is there.
  * @throws `LtiError` (`claim-invalid`) when it is present with another shape.
  */
-export function optional<T>(source: Claims, name: string, owner: string, shape: Shape<T>): T | undefined {
-  const value = source[name];
-  if (value === undefined) return undefined;
-  if (!shape.accepts(value)) throw invalid(owner, name, shape.expected, value);
-  return value;
+export function optional<TSchema extends v.GenericSchema>(
+  source: Claims,
+  name: string,
+  owner: string,
+  schema: TSchema,
+): v.InferOutput<TSchema> | undefined {
+  return source[name] === undefined ? undefined : required(source, name, owner, schema);
 }
 
 /** The claims of LTI messages that the tool reads, by the URI that names each. */

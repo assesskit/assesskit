@@ -50,7 +50,7 @@ name another candidate's session.
 import { checkActionEnvelope } from "@luthfanwakan/tempuh/protocol";
 
 checkActionEnvelope(JSON.parse('{"seq":1,"action":{},"session":"s2"}'));
-// DataError: An action envelope has the properties "seq" and "action", found "session".
+// DataError: An action envelope is invalid: unexpected property "session".
 ```
 
 ## Refusal
@@ -119,5 +119,5 @@ it ([scoring](scoring.md) lists its properties). It holds the correct responses 
 import { checkSubmission } from "@luthfanwakan/tempuh/protocol";
 
 checkSubmission(JSON.parse('{"request":"item:essay:1:SCORE","outcome":"SCORE","mode":"robot"}'));
-// DataError: The mode of a submission must be "human" or "externalMachine", found "robot".
+// DataError: A submission is invalid at mode: expected "human" or "externalMachine", found "robot".
 ```

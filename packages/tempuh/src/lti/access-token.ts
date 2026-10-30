@@ -1,4 +1,6 @@
+// biome-ignore-all lint/style/useNamingConvention: The names of the OAuth parameters are those of RFC 6749.
 import { SignJWT } from "jose";
+import * as v from "valibot";
 import {
   checkArray,
   checkFunction,
@@ -6,6 +8,10 @@ import {
   checkPositiveInteger,
   checkRecord,
   describe,
+  looseRecord,
+  nonEmptyStringSchema,
+  parseWith,
+  positiveIntegerSchema,
 } from "../checks.js";
 import { DataError } from "../errors.js";
 import { CLAIM } from "./claims.js";
@@ -31,6 +37,20 @@ export interface AccessToken {
   readonly scopes: readonly string[];
 }
 
+const tokenResponseSchema = looseRecord({
+  access_token: nonEmptyStringSchema,
+  token_type: v.pipe(
+    v.string(),
+    v.check(
+      (type) => type.toLowerCase() === "bearer",
+      (issue) => `expected "Bearer", found ${issue.received}`,
+    ),
+  ),
+  expires_in: positiveIntegerSchema,
+  // RFC 6749 §5.1: the response names the scope when it differs from the request.
+  scope: v.optional(nonEmptyStringSchema),
+});
+
 /** Reads the token response of RFC 6749 §5.1 and Security Framework §4.1. */
 function readToken(body: string, requested: readonly string[], now: number): AccessToken {
   let payload: unknown;
@@ -39,22 +59,12 @@ function readToken(body: string, requested: readonly string[], now: number): Acc
   } catch {
     throw new DataError("The token response must be JSON.");
   }
-  checkRecord(payload, "The token response must be an object");
-  checkNonEmptyString(payload.access_token, "The property access_token of the token response");
-  if (typeof payload.token_type !== "string" || payload.token_type.toLowerCase() !== "bearer") {
-    throw new DataError(
-      `The property token_type of the token response must be "Bearer", found ${describe(payload.token_type)}.`,
-    );
-  }
-  checkPositiveInteger(payload.expires_in, "The property expires_in of the token response");
-  // RFC 6749 §5.1: the response names the scope when it differs from the request.
-  const scope = payload.scope;
-  if (scope !== undefined) checkNonEmptyString(scope, "The property scope of the token response");
-  return {
-    value: payload.access_token,
-    expiresAt: now + payload.expires_in * 1000,
-    scopes: scope === undefined ? requested : scope.split(" "),
-  };
+  const {
+    access_token: value,
+    expires_in: expiresIn,
+    scope,
+  } = parseWith(tokenResponseSchema, payload, "The token response");
+  return { value, expiresAt: now + expiresIn * 1000, scopes: scope === undefined ? requested : scope.split(" ") };
 }
 
 /** Checks the scopes the host asks for. */

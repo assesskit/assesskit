@@ -1,17 +1,8 @@
-import {
-  checkArray,
-  checkBoolean,
-  checkChoice,
-  checkFinite,
-  checkNonNegativeInteger,
-  checkRecord,
-  checkString,
-  describe,
-} from "../checks.js";
+import * as v from "valibot";
+import { finiteSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "../checks.js";
 import type { ItemVariables } from "../processing/index.js";
-import type { Value } from "../values/index.js";
-import { readEntries, readValues, type ValueJson, valuesToJson } from "./entries-json.js";
-import { checkKey } from "./item-key.js";
+import { entriesSchema, type ValueJson, valuesSchema, valuesToJson } from "./entries-json.js";
+import { itemKeySchema } from "./item-key.js";
 import type { ItemSession } from "./item-session.js";
 import { ITEM_SESSION_STATUSES } from "./names.js";
 
@@ -65,16 +56,29 @@ export function itemSessionToJson(session: ItemSession): ItemSessionJson {
   };
 }
 
-function readOrders(json: unknown, identifier: string): readonly (readonly string[])[] {
-  checkArray(json, `The choice orders of ${describe(identifier)} must be an array of lists`);
-  return json.map((set) => {
-    checkArray(set, `A list of the choice orders of ${describe(identifier)} must be an array`);
-    return set.map((choice) => {
-      checkString(choice, `A choice of the choice orders of ${describe(identifier)}`);
-      return choice;
-    });
-  });
-}
+/** The schema of an item session that {@link itemSessionToJson} wrote. */
+export const itemSessionSchema: Schema<ItemSession> = v.object({
+  key: itemKeySchema,
+  status: v.picklist(ITEM_SESSION_STATUSES),
+  attempting: v.boolean(),
+  countedAttempts: nonNegativeIntegerSchema,
+  variables: v.object({
+    contexts: valuesSchema,
+    responses: valuesSchema,
+    outcomes: valuesSchema,
+    templates: valuesSchema,
+    correctResponses: valuesSchema,
+    defaults: valuesSchema,
+  }) satisfies Schema<ItemVariables>,
+  drafts: valuesSchema,
+  processingFailed: v.boolean(),
+  choiceOrders: entriesSchema(v.array(v.array(v.string()))),
+  pciStates: entriesSchema(v.string()),
+  comment: v.optional(v.string()),
+  spent: finiteSchema,
+  since: v.nullable(finiteSchema),
+  updatedAt: finiteSchema,
+});
 
 /**
  * Reads an item session that {@link itemSessionToJson} wrote, as `JSON.parse` returns it.
@@ -82,44 +86,5 @@ function readOrders(json: unknown, identifier: string): readonly (readonly strin
  * @throws `DataError` when the data is not such a session.
  */
 export function itemSessionFromJson(json: unknown): ItemSession {
-  checkRecord(json, "An item session must be an object");
-  const { key, status, attempting, countedAttempts, variables, comment, spent, since, updatedAt } = json;
-  checkKey(key);
-  checkChoice(status, "The status of the item session", ITEM_SESSION_STATUSES);
-  checkBoolean(attempting, "The attempting of the item session");
-  checkNonNegativeInteger(countedAttempts, "The countedAttempts of the item session");
-  checkRecord(variables, "The variables of the item session must be an object");
-  const read = (kind: VariableKind): Map<string, Value | null> =>
-    readValues(variables[kind], `The ${kind} of the item session`);
-  const itemVariables: ItemVariables = {
-    contexts: read("contexts"),
-    responses: read("responses"),
-    outcomes: read("outcomes"),
-    templates: read("templates"),
-    correctResponses: read("correctResponses"),
-    defaults: read("defaults"),
-  };
-  checkBoolean(json.processingFailed, "The processingFailed of the item session");
-  if (comment !== undefined) checkString(comment, "The comment of the item session");
-  checkFinite(spent, "The spent of the item session");
-  if (since !== null) checkFinite(since, "The since of the item session");
-  checkFinite(updatedAt, "The updatedAt of the item session");
-  return {
-    key: { ref: key.ref, instance: key.instance },
-    status,
-    attempting,
-    countedAttempts,
-    variables: itemVariables,
-    drafts: readValues(json.drafts, "The drafts of the item session"),
-    processingFailed: json.processingFailed,
-    choiceOrders: readEntries(json.choiceOrders, "The choiceOrders of the item session", readOrders),
-    pciStates: readEntries(json.pciStates, "The pciStates of the item session", (state, identifier) => {
-      checkString(state, `The PCI state of ${describe(identifier)}`);
-      return state;
-    }),
-    ...(comment === undefined ? {} : { comment }),
-    spent,
-    since,
-    updatedAt,
-  };
+  return parseWith(itemSessionSchema, json, "The item session");
 }

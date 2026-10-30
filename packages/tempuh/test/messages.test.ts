@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DataError, EN_MESSAGES, ID_MESSAGES, type Messages, selectMessages } from "../src/index.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Passes overrides to `selectMessages` as JSON delivers them, which TypeScript does not check. */
 const select = (language: string, overrides: unknown = {}): Messages =>
@@ -85,26 +86,30 @@ describe("selectMessages", () => {
 
   it("rejects overrides that are not an object of catalogs of strings", () => {
     expect(() => selectMessages("id", JSON.parse("null"))).toThrow(
-      new DataError("The overrides must be an object, found null."),
+      new DataError("The overrides is invalid: expected an object, found null."),
     );
     expect(() => select("id", { id: [] })).toThrow(
-      new DataError('The overrides for the language "id" must be an object, found an array.'),
+      new DataError('The overrides is invalid: the property "id" is invalid: expected an object, found an array.'),
     );
     expect(() => select("id", { id: { toolRule: 5 } })).toThrow(
-      new DataError('The message "toolRule" for the language "id" must be a string, found 5.'),
+      new DataError('The overrides is invalid: the property "id" at toolRule is invalid: expected a string, found 5.'),
     );
   });
 
   it("rejects a message key that the catalog does not have", () => {
-    const last = Object.keys(EN_MESSAGES).at(-1);
     expect(() => select("id", { id: { toolRulers: "x" } })).toThrow(
-      new RegExp(
-        `^The catalog for the language "id" has the properties "interactiveQuestion", .* and "${last}", found "toolRulers"\\.$`,
-      ),
+      new DataError('The overrides is invalid: the property "id" is invalid: unexpected property "toolRulers".'),
     );
   });
 
   it("checks the overrides of every language, not only the chosen one", () => {
     expect(() => select("en", { jv: { toolRule: 5 } })).toThrow(DataError);
+  });
+
+  it("reads or refuses arbitrary JSON overrides with a DataError, and nothing else", () => {
+    fuzzJson(
+      (overrides) => selectMessages("id", overrides as Record<string, Partial<Messages>>),
+      [{}, { id: { toolRule: "Penggaris" }, "id-ID": {} }],
+    );
   });
 });

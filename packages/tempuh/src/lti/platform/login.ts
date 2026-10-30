@@ -1,5 +1,6 @@
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
 import type { LtiLink } from "@luthfanwakan/olah/package";
+import * as v from "valibot";
 import { checkHttpsUrl, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
 import { DataError, LtiError } from "../../errors.js";
 import { type Caller, checkCaller, LTI_STORAGE_FRAME, type LtiFrame } from "../../protocol/index.js";
@@ -90,7 +91,7 @@ async function prepare(caller: Caller, item: ItemKey, link: LtiLink, options: Pl
   const target = launchUrlOf(link);
   refuseOwnOrigins([target, registration.loginUrl, ...registration.redirectUris], config);
   const scoreMaximum = await options.scoreMaximum(item);
-  if (!POSITIVE_NUMBER.accepts(scoreMaximum)) {
+  if (!v.is(POSITIVE_NUMBER, scoreMaximum)) {
     throw new DataError(`The highest score of the item must be a number above 0, found ${describe(scoreMaximum)}.`);
   }
   const hint = await sealHint(

@@ -1,7 +1,7 @@
-import { checkRecord, describe } from "../checks.js";
-import { DataError } from "../errors.js";
-import { type BaseType, checkBaseType } from "./base-type.js";
-import { type Cardinality, checkCardinality } from "./cardinality.js";
+import * as v from "valibot";
+import { parseWith, type Schema, transformWith } from "../checks.js";
+import { type BaseType, baseTypeSchema } from "./base-type.js";
+import type { Cardinality } from "./cardinality.js";
 import { fromJsonValue, type JsonValue, toJsonValue, type ValueDeclaration } from "./json.js";
 import type { Value } from "./value.js";
 
@@ -34,6 +34,25 @@ export function toWireValue(value: Value | null, declaration: ValueDeclaration):
   return { ...typed, value: value === null ? null : json };
 }
 
+// A record has no base type, so the property is not allowed beside it.
+const wireSchema = v.variant("cardinality", [
+  v.strictObject({ cardinality: v.literal("record"), value: v.unknown() }),
+  v.strictObject({
+    cardinality: v.picklist(["multiple", "ordered", "single"]),
+    baseType: baseTypeSchema,
+    value: v.unknown(),
+  }),
+]);
+
+/** The schema of a {@link WireValue}, which reads it into a value, or `null` for NULL. */
+export const wireValueSchema: Schema<Value | null> = v.pipe(
+  wireSchema,
+  transformWith((wire) => {
+    if (wire.value === null) return null;
+    return fromJsonValue(wire.value, wire.cardinality === "record" ? { cardinality: "record" } : wire);
+  }),
+);
+
 /**
  * Reads a value, or NULL, from a {@link WireValue} that `toWireValue` writes.
  *
@@ -43,20 +62,5 @@ export function toWireValue(value: Value | null, declaration: ValueDeclaration):
  * duration with years or months (G14).
  */
 export function fromWireValue(json: unknown): Value | null {
-  checkRecord(json, "A wire value must be an object");
-  const unexpected = Object.keys(json).find((key) => !["cardinality", "baseType", "value"].includes(key));
-  if (unexpected !== undefined) {
-    throw new DataError(
-      `A wire value has the properties "cardinality", "baseType" and "value", found ${describe(unexpected)}.`,
-    );
-  }
-  const { cardinality, baseType, value } = json;
-  checkCardinality(cardinality);
-  if (cardinality === "record") {
-    if (baseType !== undefined) throw new DataError(`A record has no base type, found ${describe(baseType)}.`);
-  } else {
-    checkBaseType(baseType);
-  }
-  if (value === undefined) throw new DataError('A wire value must have the property "value", which is null for NULL.');
-  return value === null ? null : fromJsonValue(value, { cardinality, baseType });
+  return parseWith(wireValueSchema, json, "A wire value");
 }

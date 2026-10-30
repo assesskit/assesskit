@@ -10,6 +10,7 @@ import { checkSupportViews } from "../src/player/supports/check.js";
 import { supportLabel } from "../src/player/supports/names.js";
 import { checkPresentation } from "../src/player/supports/presentation.js";
 import { TOOL_SUPPORT_NAMES } from "../src/player/tools/model.js";
+import { fuzzJson } from "./fuzz.js";
 import { onSupport, supportView } from "./supports-fixture.js";
 
 const settings = <T extends SupportSetting>(setting: T): T => setting;
@@ -46,98 +47,106 @@ describe("check", () => {
       supportView("magnification", { state: "option", settings: { name: "magnification", replaceAccessModes: [] } }),
       supportView("ext:kxz-glossary", { state: "assigned" }),
     ];
-    expect(() => checkSupportViews(supports, "The supports")).not.toThrow();
-    expect(() => checkSupportViews(json(supports), "The supports")).not.toThrow();
-    expect(() => checkSupportViews([], "The supports")).not.toThrow();
+    expect(() => checkSupportViews(supports, "The list of supports")).not.toThrow();
+    expect(() => checkSupportViews(json(supports), "The list of supports")).not.toThrow();
+    expect(() => checkSupportViews([], "The list of supports")).not.toThrow();
   });
 
   it("rejects a list or a support of the wrong type, in a full sentence", () => {
     const rejects = (value: unknown, message: string): void => {
-      expect(() => checkSupportViews(json(value), "The supports")).toThrow(new DataError(message));
+      expect(() => checkSupportViews(json(value), "The list of supports")).toThrow(new DataError(message));
     };
-    rejects({}, "The supports must be an array, found an object.");
-    rejects([null], "The supports[0] must be an object, found null.");
+    rejects({}, "The list of supports is invalid: expected an array, found an object.");
+    rejects([null], "The list of supports is invalid at [0]: expected an object, found null.");
     rejects(
       [{ name: "spoken", state: "active" }],
-      "The supports[0] property active must be true or false, found undefined.",
+      'The list of supports is invalid at [0]: missing the property "active".',
     );
     rejects(
       [{ name: "spoken", state: "active", active: true, extra: 1 }],
-      'The supports[0] has the properties "name", "state", "active" and "settings", found "extra".',
+      'The list of supports is invalid at [0]: unexpected property "extra".',
     );
     rejects(
       [{ name: 5, state: "active", active: true }],
-      "The supports[0] property name must be the name of a support, found 5.",
+      "The list of supports is invalid at [0].name: expected the name of a support, found 5.",
     );
     rejects(
       [{ name: "ext:", state: "active", active: true }],
-      'The supports[0] property name must be the name of a support, found "ext:".',
+      'The list of supports is invalid at [0].name: expected the name of a support, found "ext:".',
     );
     rejects(
       [{ name: "spoken", state: "active", active: true, settings: [] }],
-      "The supports[0] property settings must be an object, found an array.",
+      "The list of supports is invalid at [0].settings: expected an object, found an array.",
     );
     rejects(
       [{ name: "spoken", state: "active", active: true, settings: { name: "braille" } }],
-      'The supports[0] property settings must have the name "spoken" of its support, found "braille".',
+      'The list of supports is invalid at [0]: the settings must have the name "spoken" of their support, found "braille".',
     );
   });
 
   it("[T89] checks the settings that the player reads: colors, numbers, terms and flags", () => {
-    const rejects = (settings: unknown, message: string, name: string = (settings as { name: string }).name): void => {
+    const rejects = (settings: unknown, where: string, detail: string): void => {
+      const { name } = settings as { name: string };
       expect(() =>
-        checkSupportViews(json([{ name, state: "active", active: true, settings }]), "The supports"),
-      ).toThrow(new DataError(message));
+        checkSupportViews(json([{ name, state: "active", active: true, settings }]), "The list of supports"),
+      ).toThrow(
+        new DataError(`The list of supports is invalid at [0]: the settings are invalid at ${where}: ${detail}.`),
+      );
     };
-    const label = "The supports[0] property settings property";
-    rejects(
-      { name: "text-appearance", fontColor: "red" },
-      `${label} fontColor must be a color as #RGB or #RRGGBB, found "red".`,
-    );
-    rejects({ name: "text-appearance", backgroundColor: 1 }, `${label} backgroundColor must be a string, found 1.`);
-    rejects({ name: "text-appearance", fontSize: "big" }, `${label} fontSize must be a finite number, found "big".`);
-    rejects({ name: "text-appearance", lineHeight: "2" }, `${label} lineHeight must be a finite number, found "2".`);
+    const color = "expected a color as #RGB or #RRGGBB, found";
+    rejects({ name: "text-appearance", fontColor: "red" }, "fontColor", `${color} "red"`);
+    rejects({ name: "text-appearance", backgroundColor: 1 }, "backgroundColor", "expected a string, found 1");
+    rejects({ name: "text-appearance", fontSize: "big" }, "fontSize", 'expected a number, found "big"');
+    rejects({ name: "text-appearance", lineHeight: "2" }, "lineHeight", 'expected a number, found "2"');
     rejects(
       { name: "text-appearance", wordWrapping: false },
-      `${label} wordWrapping must be true when it is present, found false.`,
+      "wordWrapping",
+      "expected true when it is present, found false",
     );
     rejects(
       { name: "text-appearance", fontFace: { fontNames: [1] } },
-      `A name in ${label} fontFace property fontNames must be a string, found 1.`,
+      "fontFace.fontNames[0]",
+      "expected a string, found 1",
     );
     rejects(
       { name: "text-appearance", fontFace: { fontNames: [], genericFontFace: "gothic" } },
-      `${label} fontFace property genericFontFace must be "serif", "sans serif", "monospaced", "cursive" or "fantasy", found "gothic".`,
+      "fontFace.genericFontFace",
+      'expected "serif", "sans serif", "monospaced", "cursive" or "fantasy", found "gothic"',
     );
-    rejects(
-      { name: "invert-display-polarity", foreground: "#12" },
-      `${label} foreground must be a color as #RGB or #RRGGBB, found "#12".`,
-    );
-    rejects(
-      { name: "magnification", text: { zoomAmount: "2" } },
-      `${label} text property zoomAmount must be a finite number, found "2".`,
-    );
-    rejects(
-      { name: "line-reader", highlightColor: "#ggg" },
-      `${label} highlightColor must be a color as #RGB or #RRGGBB, found "#ggg".`,
-    );
+    rejects({ name: "invert-display-polarity", foreground: "#12" }, "foreground", `${color} "#12"`);
+    rejects({ name: "magnification", text: { zoomAmount: "2" } }, "text.zoomAmount", 'expected a number, found "2"');
+    rejects({ name: "line-reader", highlightColor: "#ggg" }, "highlightColor", `${color} "#ggg"`);
     rejects(
       { name: "braille", deliveryMode: "loud" },
-      `${label} deliveryMode must be "refreshable" or "embossed", found "loud".`,
+      "deliveryMode",
+      'expected "refreshable" or "embossed", found "loud"',
     );
-    rejects(
-      { name: "long-description", hideVisually: "yes" },
-      `${label} hideVisually must be true or false, found "yes".`,
-    );
-    rejects({ name: "sign-language", language: "" }, `${label} language must be a non-empty string, found "".`);
-    rejects({ name: "language-of-interface", languages: {} }, `${label} languages must be an array, found an object.`);
+    rejects({ name: "long-description", hideVisually: "yes" }, "hideVisually", 'expected true or false, found "yes"');
+    rejects({ name: "sign-language", language: "" }, "language", "expected a length of at least 1, found 0");
+    rejects({ name: "language-of-interface", languages: {} }, "languages", "expected an array, found an object");
   });
 
   it("accepts colors as #RGB and #RRGGBB in either case", () => {
     for (const fontColor of ["#369", "#336699", "#AbCdEf"]) {
       const settings: SupportSetting = { name: "text-appearance", replaceAccessModes: [], fontColor };
-      expect(() => checkSupportViews([supportView("text-appearance", { settings })], "The supports")).not.toThrow();
+      expect(() =>
+        checkSupportViews([supportView("text-appearance", { settings })], "The list of supports"),
+      ).not.toThrow();
     }
+  });
+
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    const supports = [
+      onSupport("spoken", {
+        name: "spoken",
+        replaceAccessModes: [],
+        restrictionTypes: ["word-by-word"],
+        speechRate: 150,
+      }),
+      supportView("magnification", { state: "option", settings: { name: "magnification", replaceAccessModes: [] } }),
+      supportView("ext:kxz-glossary", { state: "assigned" }),
+    ];
+    fuzzJson((value) => checkSupportViews(value, "The list of supports"), [json(supports), []]);
   });
 });
 
@@ -315,9 +324,15 @@ describe("appearance", () => {
   });
 
   it("[T75] rejects supports that are not a list of olah's views", () => {
-    expect(() => presentationOf(json({}))).toThrow(new DataError("The supports must be an array, found an object."));
-    expect(() => mediaScaleOf(json([1]))).toThrow(new DataError("The supports[0] must be an object, found 1."));
-    expect(() => presentationOf(json(null))).toThrow(new DataError("The supports must be an array, found null."));
+    expect(() => presentationOf(json({}))).toThrow(
+      new DataError("The list of supports is invalid: expected an array, found an object."),
+    );
+    expect(() => mediaScaleOf(json([1]))).toThrow(
+      new DataError("The list of supports is invalid at [0]: expected an object, found 1."),
+    );
+    expect(() => presentationOf(json(null))).toThrow(
+      new DataError("The list of supports is invalid: expected an array, found null."),
+    );
   });
 });
 

@@ -124,7 +124,7 @@ const APPLIERS: ReadonlyMap<SupportName, Applier> = new Map<SupportName, Applier
  * @throws `DataError` when `supports` is not a list of olah's `SupportView`s.
  */
 export function presentationOf(supports: readonly SupportView[]): Presentation {
-  checkSupportViews(supports, "The supports");
+  checkSupportViews(supports, "The list of supports");
   const out: Writer = { attributes: new Map(), properties: new Map() };
   for (const [name, apply] of APPLIERS) {
     const support = activeSupport(supports, name);
@@ -140,7 +140,7 @@ export function presentationOf(supports: readonly SupportView[]): Presentation {
  * @throws `DataError` when `supports` is not a list of olah's `SupportView`s.
  */
 export function mediaScaleOf(supports: readonly SupportView[]): number {
-  checkSupportViews(supports, "The supports");
+  checkSupportViews(supports, "The list of supports");
   const magnification = activeSupport(supports, "magnification");
   return magnification === undefined ? 1 : zoomsOf(magnification).nonText;
 }

@@ -605,10 +605,10 @@ describe("caliperEvents", () => {
         expect(() => caliperEvents(valid, context as never), name).toThrow(DataError);
       }
       expect(() => caliperEvents(valid, { ...contextAt(1), step: "later" } as never)).toThrow(
-        'The step of the Caliper context must be "start" or a non-negative integer, found "later".',
+        'The Caliper context is invalid at step: expected "start" or a non-negative integer, found "later".',
       );
       expect(() => caliperEvents(valid, { ...contextAt(1), actor: "candidate-1" })).toThrow(
-        'The actor of the Caliper parties must be an absolute IRI, found "candidate-1".',
+        'The Caliper context is invalid at actor: expected an absolute IRI, found "candidate-1".',
       );
     });
 
@@ -774,7 +774,7 @@ describe("caliperGrade", () => {
       expect(() => caliperGrade(value as never, contextAt(7)), name).toThrow(DataError);
     }
     expect(() => caliperGrade({ ...grade, scorer: "machine" } as never, contextAt(7))).toThrow(
-      'The scorer of the Caliper grade must be "human" or "externalMachine", found "machine".',
+      'The Caliper grade is invalid at scorer: expected "human" or "externalMachine", found "machine".',
     );
     expect(() => caliperGrade(grade, { ...contextAt(7), session: "" })).toThrow(DataError);
   });

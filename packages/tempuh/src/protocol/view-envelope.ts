@@ -1,8 +1,8 @@
 import type { Refusal } from "@luthfanwakan/olah/delivery";
-import { checkNonNegativeInteger, checkProperties, checkRecord, checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
-import { checkViewDocuments, type ViewDocuments } from "./documents.js";
-import { checkRefusal } from "./refusal.js";
+import * as v from "valibot";
+import { definedSchema, mapSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "../checks.js";
+import { type ViewDocuments, viewDocumentsSchema } from "./documents.js";
+import { refusalSchema } from "./refusal.js";
 
 /** What a session host answers: the candidate view in olah's JSON form, with the sequence number it answers. */
 export interface ViewEnvelope {
@@ -21,6 +21,15 @@ export interface ViewEnvelope {
   readonly refusal?: Refusal;
 }
 
+const viewEnvelopeSchema: Schema<unknown> = v.strictObject({
+  seq: nonNegativeIntegerSchema,
+  view: definedSchema,
+  // The prefixes are data, `__proto__` included, so the record of valibot, which skips such a name, does not read them.
+  assets: mapSchema(v.string()),
+  documents: v.optional(viewDocumentsSchema),
+  refusal: v.optional(refusalSchema),
+});
+
 /**
  * Checks the shape of a view envelope that arrived as JSON. The view is not read: that is `viewFromJson`.
  *
@@ -29,15 +38,5 @@ export interface ViewEnvelope {
  * and `refusal` a refusal of olah.
  */
 export function checkViewEnvelope(value: unknown): asserts value is ViewEnvelope {
-  checkRecord(value, "A view envelope must be an object");
-  checkProperties(value, "A view envelope", ["seq", "view", "assets", "documents", "refusal"]);
-  checkNonNegativeInteger(value.seq, "The property seq of a view envelope");
-  if (value.view === undefined) throw new DataError('A view envelope must have the property "view".');
-  const { assets, documents, refusal } = value;
-  checkRecord(assets, "The property assets of a view envelope must be an object");
-  for (const [prefix, base] of Object.entries(assets)) {
-    checkString(base, `The base URL of the asset prefix ${describe(prefix)}`);
-  }
-  if (documents !== undefined) checkViewDocuments(documents);
-  if (refusal !== undefined) checkRefusal(refusal);
+  parseWith(viewEnvelopeSchema, value, "A view envelope");
 }

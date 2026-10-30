@@ -441,7 +441,7 @@ describe("mountSupportPanel", () => {
     );
     const panel = mountSupportPanel(host, valid);
     expect(() => panel.update(JSON.parse("{}"))).toThrow(
-      new DataError("The supports must be an array, found an object."),
+      new DataError("The list of supports is invalid: expected an array, found an object."),
     );
     panel.destroy();
   });
@@ -961,7 +961,7 @@ describe("mountContentSupports", () => {
     it("rejects supports, a root and options of the wrong type", async () => {
       const { root, supports } = await openSupported();
       expect(() => supports.update(JSON.parse("{}"))).toThrow(
-        new DataError("The supports must be an array, found an object."),
+        new DataError("The list of supports is invalid: expected an array, found an object."),
       );
       expect(() => mountContentSupports(JSON.parse("null"), { messages: EN_MESSAGES })).toThrow(
         new DataError("The content root must be an object, found null."),
@@ -1189,7 +1189,7 @@ describe("mountSpoken", () => {
       new DataError("The option lexicons must be an array, found an object."),
     );
     expect(() => spoken.update(JSON.parse("{}"))).toThrow(
-      new DataError("The supports must be an array, found an object."),
+      new DataError("The list of supports is invalid: expected an array, found an object."),
     );
     expect(() => spoken.update([reading({ pitch: 2 })])).toThrow(
       new DataError("The pitch must be a number from 0 to 1, found 2."),

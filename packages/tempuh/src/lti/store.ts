@@ -1,4 +1,5 @@
-import { checkFunction, checkNonEmptyString, checkNonNegativeInteger, checkRecord } from "../checks.js";
+import * as v from "valibot";
+import { looseRecord, methodsSchema, nonEmptyStringSchema, nonNegativeIntegerSchema, parseWith } from "../checks.js";
 
 /** What the tool remembers of a login between the authentication request and the launch. */
 export interface LoginRecord {
@@ -33,11 +34,16 @@ export interface LtiStore {
  * @throws `DataError` when it is not an object with the functions `put`, `get` and `delete`.
  */
 export function checkLtiStore(value: unknown): asserts value is LtiStore {
-  checkRecord(value, "The option store must be an object");
-  checkFunction(value.put, "The function put of the option store must be a function");
-  checkFunction(value.get, "The function get of the option store must be a function");
-  checkFunction(value.delete, "The function delete of the option store must be a function");
+  parseWith(methodsSchema<LtiStore>("put", "get", "delete"), value, "The option store");
 }
+
+const loginRecordSchema = looseRecord({
+  nonce: nonEmptyStringSchema,
+  issuer: nonEmptyStringSchema,
+  clientId: nonEmptyStringSchema,
+  storageTarget: v.optional(nonEmptyStringSchema),
+  expiresAt: nonNegativeIntegerSchema,
+});
 
 /**
  * Checks a record that the store returned, because the store is the host's code.
@@ -45,12 +51,5 @@ export function checkLtiStore(value: unknown): asserts value is LtiStore {
  * @throws `DataError` when it is not a login record.
  */
 export function checkLoginRecord(value: unknown): asserts value is LoginRecord {
-  checkRecord(value, "The login record must be an object");
-  checkNonEmptyString(value.nonce, "The nonce of a login record");
-  checkNonEmptyString(value.issuer, "The issuer of a login record");
-  checkNonEmptyString(value.clientId, "The client identifier of a login record");
-  if (value.storageTarget !== undefined) {
-    checkNonEmptyString(value.storageTarget, "The storage target of a login record");
-  }
-  checkNonNegativeInteger(value.expiresAt, "The expiry of a login record");
+  parseWith(loginRecordSchema, value, "The login record");
 }

@@ -251,25 +251,25 @@ describe("ltiAccessToken", () => {
     const { options, platform } = setup();
     const answers: readonly [string, () => Response][] = [
       ["The token response must be JSON.", () => new Response("<html>")],
-      ["The token response must be an object, found an array.", () => Response.json([])],
+      ["The token response is invalid: expected an object, found an array.", () => Response.json([])],
       [
-        "The property access_token of the token response must be a non-empty string, found undefined.",
+        'The token response is invalid: missing the property "access_token".',
         () => Response.json({ token_type: "Bearer", expires_in: 60 }),
       ],
       [
-        'The property token_type of the token response must be "Bearer", found "mac".',
+        'The token response is invalid at token_type: expected "Bearer", found "mac".',
         () => Response.json({ access_token: "t", token_type: "mac", expires_in: 60 }),
       ],
       [
-        "The property expires_in of the token response must be a positive integer, found undefined.",
+        'The token response is invalid: missing the property "expires_in".',
         () => Response.json({ access_token: "t", token_type: "Bearer" }),
       ],
       [
-        'The property expires_in of the token response must be a positive integer, found "3600".',
+        'The token response is invalid at expires_in: expected a number, found "3600".',
         () => Response.json({ access_token: "t", token_type: "Bearer", expires_in: "3600" }),
       ],
       [
-        "The property scope of the token response must be a non-empty string, found 5.",
+        "The token response is invalid at scope: expected a string, found 5.",
         () => Response.json({ access_token: "t", token_type: "Bearer", expires_in: 60, scope: 5 }),
       ],
     ];
@@ -1168,11 +1168,11 @@ describe("ltiLaunch", () => {
           () => ltiLaunch(post, { ...ctx.options, registration: JSON.parse("null") }),
         ],
         [
-          "The option store must be an object, found null.",
+          "The option store is invalid: expected an object with the functions put, get and delete, found null.",
           () => ltiLaunch(post, { ...ctx.options, store: JSON.parse("null") }),
         ],
         [
-          "The function delete of the option store must be a function, found null.",
+          "The option store is invalid: expected an object with the functions put, get and delete, found an object.",
           () =>
             ltiLaunch(post, {
               ...ctx.options,
@@ -1197,12 +1197,12 @@ describe("ltiLaunch", () => {
         get: async () => JSON.parse(JSON.stringify({ ...record, nonce: 5 })),
       };
       await expect(ltiLaunch(post, { ...ctx.options, store })).rejects.toThrow(
-        new DataError("The nonce of a login record must be a non-empty string, found 5."),
+        new DataError("The login record is invalid at nonce: expected a string, found 5."),
       );
       const http = { ...ctx.registration, jwksUrl: "http://lms.example.edu/jwks" };
       await expect(ltiLaunch(post, { ...ctx.options, registration: async () => http })).rejects.toThrow(
         new DataError(
-          'The key set URL of a registration must be an absolute https URL, found "http://lms.example.edu/jwks".',
+          'The registration is invalid at jwksUrl: expected an absolute https URL, found "http://lms.example.edu/jwks".',
         ),
       );
       const other = { ...ctx.registration, issuer: "https://other.example" };
@@ -1569,7 +1569,7 @@ describe("ltiLogin", () => {
         () => ltiLogin(initiation, { ...ctx.options, clock: JSON.parse("5") }),
       ],
       [
-        "The option store must be an object, found null.",
+        "The option store is invalid: expected an object with the functions put, get and delete, found null.",
         () =>
           ltiLogin(initiation, {
             registration: ctx.options.registration,
@@ -1584,46 +1584,47 @@ describe("ltiLogin", () => {
   it("throws DataError when the registration is not one", async () => {
     const ctx = setup();
     const { registration } = ctx;
-    const key = "The signing key of a registration must be a private RSASSA-PKCS1-v1_5 key with SHA-256 for signing";
+    const key =
+      "The registration is invalid at signingKey: expected a private RSASSA-PKCS1-v1_5 key with SHA-256 for signing";
     const bad: readonly [string, PlatformRegistration][] = [
-      ["The registration must be an object, found null.", JSON.parse("null")],
+      ["The registration is invalid: expected an object, found null.", JSON.parse("null")],
       [
-        'The issuer of a registration must be an absolute https URL, found "http://lms.example.edu".',
+        'The registration is invalid at issuer: expected an absolute https URL, found "http://lms.example.edu".',
         { ...registration, issuer: "http://lms.example.edu" },
       ],
       [
-        'The issuer of a registration must not have a query or a fragment, found "https://lms.example.edu/?a=1".',
+        'The registration is invalid at issuer: expected an issuer without a query or a fragment, found "https://lms.example.edu/?a=1".',
         { ...registration, issuer: `${ISSUER}/?a=1` },
       ],
       [
-        'The client identifier of a registration must be a non-empty string, found "".',
+        "The registration is invalid at clientId: expected a length of at least 1, found 0.",
         { ...registration, clientId: "" },
       ],
       [
-        "The deployment identifiers of a registration must have at least one deployment.",
+        "The registration is invalid at deploymentIds: expected a length of at least 1, found 0.",
         { ...registration, deploymentIds: [] },
       ],
       [
-        "A deployment identifier of a registration must be a non-empty string, found 5.",
+        "The registration is invalid at deploymentIds[0]: expected a string, found 5.",
         { ...registration, deploymentIds: [JSON.parse("5")] },
       ],
       [
-        'The authentication URL of a registration must be an absolute https URL, found "/auth".',
+        'The registration is invalid at authenticationUrl: expected an absolute https URL, found "/auth".',
         { ...registration, authenticationUrl: "/auth" },
       ],
       [
-        "The access token URL of a registration must be a string, found 5.",
+        "The registration is invalid at accessTokenUrl: expected a string, found 5.",
         { ...registration, accessTokenUrl: JSON.parse("5") },
       ],
       [
-        'The redirect URI of a registration must be an absolute https URL, found "http://tool.example/l".',
+        'The registration is invalid at redirectUri: expected an absolute https URL, found "http://tool.example/l".',
         { ...registration, redirectUri: "http://tool.example/l" },
       ],
       [
-        "The key identifier of a registration must be a non-empty string, found null.",
+        "The registration is invalid at keyId: expected a string, found null.",
         { ...registration, keyId: JSON.parse("null") },
       ],
-      [`${key}, found an object.`, { ...registration, signingKey: toolKey.publicKey }],
+      [`${key}, found CryptoKey.`, { ...registration, signingKey: toolKey.publicKey }],
       [`${key}, found "key".`, { ...registration, signingKey: JSON.parse('"key"') }],
     ];
     for (const [message, found] of bad) {

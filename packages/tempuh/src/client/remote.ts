@@ -1,6 +1,7 @@
 import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@luthfanwakan/olah/delivery";
 import type { Value } from "@luthfanwakan/olah/values";
-import { checkFunction, checkProperties, checkRecord } from "../checks.js";
+import * as v from "valibot";
+import { checkFunction, parseWith, recordSchema } from "../checks.js";
 import { AccessError, DataError, isDataError } from "../errors.js";
 import {
   type ActionEnvelope,
@@ -11,7 +12,7 @@ import {
   type ViewEnvelope,
 } from "../protocol/index.js";
 import { assetResolver } from "./assets.js";
-import { BROWSER_CLOCK, type Clock, checkClock } from "./clock.js";
+import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
 
 /** How long the client waits after the last change of a response before it sends the responses (tempuh design §2.3, F-m10). */
 export const AUTOSAVE_MS = 1000;
@@ -30,6 +31,8 @@ export interface RemoteSessionOptions {
   /** The clock that times a view's age. Default: the clock of the browser. */
   readonly clock?: Clock;
 }
+
+const remoteOptionsSchema = v.pipe(recordSchema, v.strictObject({ clock: v.optional(clockSchema) }));
 
 const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [], lexicons: [] };
 
@@ -80,10 +83,8 @@ export function createRemoteSession(
 ): SessionClient {
   checkFunction(transport, "The transport must be a function");
   checkViewEnvelope(initial);
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["clock"]);
+  parseWith(remoteOptionsSchema, options, "The options object");
   const { clock = BROWSER_CLOCK } = options;
-  checkClock(clock);
 
   const listeners = new Set<(view: CandidateView) => void>();
   let sequence = initial.seq;

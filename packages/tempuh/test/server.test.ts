@@ -53,6 +53,7 @@ import {
   packageOf,
   recordingScheduler,
 } from "./exam-fixture.js";
+import { fuzzJson } from "./fuzz.js";
 
 const SECOND = 1000;
 
@@ -828,11 +829,19 @@ describe("the asset gate", () => {
     for (const origin of lookalikes) expect(() => make({ origin }), origin).toThrow(DataError);
     expect(() => make({ origin: "https://assets.example/path" })).toThrow("an origin without a path");
     expect(() => make({ key: "secret" })).toThrow("HMAC key");
-    expect(() => make({ ttlSeconds: 0 })).toThrow("The option ttlSeconds must be a positive integer, found 0.");
-    expect(() => make({ uploadTtlSeconds: null })).toThrow("The option uploadTtlSeconds");
-    expect(() => make({ packages: null })).toThrow("The option packages must be a function");
-    expect(() => make({ files: {} })).toThrow("The function put");
-    expect(() => make({ extra: 1 })).toThrow("The options has the properties");
+    expect(() => make({ ttlSeconds: 0 })).toThrow(
+      "The options object is invalid at ttlSeconds: expected a value of at least 1, found 0.",
+    );
+    expect(() => make({ uploadTtlSeconds: null })).toThrow(
+      "The options object is invalid at uploadTtlSeconds: expected a number, found null.",
+    );
+    expect(() => make({ packages: null })).toThrow(
+      "The options object is invalid at packages: expected a function, found null.",
+    );
+    expect(() => make({ files: {} })).toThrow(
+      "The options object is invalid at files: expected an object with the functions put and read, found an object.",
+    );
+    expect(() => make({ extra: 1 })).toThrow('The options object is invalid: unexpected property "extra".');
     await expect(gate.sign(JSON.parse("5"), [], NOW)).rejects.toThrow("The session must be a string");
     await expect(gate.sign("s1", JSON.parse('["a/"]'), -1)).rejects.toThrow("The time now");
     await expect(gate.signFile("s1", JSON.parse('{"reference":1}'), NOW)).rejects.toThrow("The reference of the file");
@@ -1320,30 +1329,49 @@ describe("createSessionHost", () => {
       packages: async () => good.pkg,
     };
     const make = (changes: Record<string, unknown>): unknown => createSessionHost({ ...options, ...changes });
-    expect(() => createSessionHost(JSON.parse("null"))).toThrow("The options must be an object");
-    expect(() => make({ engine: {} })).toThrow("The function start of the option engine");
-    expect(() => make({ store: null })).toThrow("The option store must be an object");
-    expect(() => make({ scheduler: { schedule: 1 } })).toThrow("The function schedule of the option scheduler");
+    expect(() => createSessionHost(JSON.parse("null"))).toThrow(
+      "The options object is invalid: expected an object, found null.",
+    );
+    expect(() => make({ engine: {} })).toThrow(
+      "The options object is invalid at engine: expected an object with the functions start, apply, view, deadlines, pending, scorerView and results, found an object.",
+    );
+    expect(() => make({ store: null })).toThrow(
+      "The options object is invalid at store: expected an object with the functions create, load and save, found null.",
+    );
+    expect(() => make({ scheduler: { schedule: 1 } })).toThrow(
+      "The options object is invalid at scheduler: expected an object with the function schedule, found an object.",
+    );
     expect(() => make({ clock: {} })).toThrow("The function now of the option clock");
-    expect(() => make({ gate: {} })).toThrow("The function sign of the option gate");
-    expect(() => make({ packages: null })).toThrow("The option packages must be a function");
+    expect(() => make({ gate: {} })).toThrow(
+      "The options object is invalid at gate: expected an object with the function sign, found an object.",
+    );
+    expect(() => make({ packages: null })).toThrow(
+      "The options object is invalid at packages: expected a function, found null.",
+    );
     expect(() => make({ clientActions: ["suspend", "fly"] })).toThrow(
       'A type of the option clientActions must be "set-responses"',
     );
     expect(() => make({ clientActions: "move" })).toThrow("The option clientActions must be an array");
-    expect(() => make({ limits: 5 })).toThrow("The option limits must be an object");
-    expect(() => make({ other: 1 })).toThrow("The options has the properties");
+    expect(() => make({ limits: 5 })).toThrow("The options object is invalid at limits: expected an object, found 5.");
+    expect(() => make({ other: 1 })).toThrow('The options object is invalid: unexpected property "other".');
     await expect(good.host.start(JSON.parse('{"session":"s"}'), { seed: 1 })).rejects.toThrow(
-      "The principal of a caller",
+      'The caller is invalid: missing the property "principal".',
     );
     await expect(good.host.start(ALICE, JSON.parse("null"))).rejects.toThrow("The options of start must be an object");
-    await expect(good.host.handle(ALICE, JSON.parse('{"seq":1}'))).rejects.toThrow('must have the property "action"');
+    await expect(good.host.handle(ALICE, JSON.parse('{"seq":1}'))).rejects.toThrow(
+      'An action envelope is invalid: missing the property "action".',
+    );
     await expect(good.host.handle(JSON.parse("null"), { seq: 1, action: {} })).rejects.toThrow(
-      "The caller must be an object",
+      "The caller is invalid: expected an object, found null.",
     );
     await expect(good.host.host(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
       "The type of a host action",
     );
+  });
+
+  it("[T67] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+    fuzzJson((options) => createSessionHost(options as never));
+    fuzzJson((options) => createAssetGate(options as never));
   });
 });
 

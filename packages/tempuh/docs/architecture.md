@@ -10,13 +10,13 @@ ones marked lint, and the rest are checked in review.
 | Browser baseline       | Shared and browser code stays inside the [baseline](baseline.md) (lint, and `pnpm compat`).                                                                                                         |
 | Deterministic          | `Math.random` fails lint. `Date.now`, `new Date()` and `performance.now()` fail lint except in `client/clock.ts` and `server/clock.ts`; time comes from a clock that the caller passes.             |
 | No hidden network      | `fetch` appears only as an option parameter (lint), so that a caller can replace it. Only `cat/takar/` imports takar (lint).                                                                        |
-| Untrusted input        | Every input is untrusted: envelopes, tokens, payloads and messages. Entry points validate their input and throw `DataError`; inner functions validate shallowly.                                    |
+| Untrusted input        | Every input is untrusted: envelopes, tokens, payloads and messages. Entry points validate their input, with valibot schemas for JSON, and throw `DataError`; inner functions validate shallowly.    |
 | Cited rules            | Every inventory row and WCAG criterion has a test ([evidence](evidence.md)).                                                                                                                        |
 
 ## Layers
 
 A folder imports only the folders in its row, and imports never form cycles (lint). `errors.ts` and `checks.ts` are
-below every folder; `checks.ts` imports `errors.ts` only. The lint knows every folder of the table, so a folder is held
+below every folder; `checks.ts` imports `errors.ts` and valibot only. The lint knows every folder of the table, so a folder is held
 to its row from its first file.
 
 | Layer | Folders                                | Side    | Imports                          |

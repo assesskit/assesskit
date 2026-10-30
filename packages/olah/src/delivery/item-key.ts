@@ -1,4 +1,5 @@
-import { checkPositiveInteger, checkRecord, checkString } from "../checks.js";
+import * as v from "valibot";
+import { parseWith, positiveIntegerSchema, type Schema } from "../checks.js";
 
 /**
  * One occurrence of an item reference in a session: the identifier of the item reference and the instance, counted
@@ -12,15 +13,16 @@ export interface ItemKey {
   readonly instance: number;
 }
 
+/** The schema of an item instance in JSON; it reads the two properties and no other. */
+export const itemKeySchema: Schema<ItemKey> = v.object({ ref: v.string(), instance: positiveIntegerSchema });
+
 /**
  * Checks an item instance.
  *
  * @throws `DataError` when it is not an object with a string `ref` and a positive integer `instance`.
  */
 export function checkKey(key: unknown): asserts key is ItemKey {
-  checkRecord(key, "The item instance must be an object with a ref and an instance");
-  checkString(key.ref, "The ref of the item instance");
-  checkPositiveInteger(key.instance, "The instance of the item instance");
+  parseWith(itemKeySchema, key, "The item instance");
 }
 
 /** Whether two keys name the same item instance. */

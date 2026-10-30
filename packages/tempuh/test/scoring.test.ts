@@ -197,7 +197,7 @@ describe("toSubmission", () => {
       toSubmission({ ...view, request: { ...view.request, covers: json("[null]") as ScoringRequest["covers"] } }),
     ).toThrow(new DataError("A cover of the scorer view must be an object, found null."));
     expect(() => toSubmission({ ...view, request: { ...view.request, id: json("5") as string } })).toThrow(
-      new DataError("The request of a submission must be a non-empty string, found 5."),
+      new DataError("A submission is invalid at request: expected a string, found 5."),
     );
   });
 });
@@ -294,7 +294,7 @@ describe("toSupplyScores", () => {
     );
     expect(() =>
       toSupplyScores({ ...request, declaration: json('{"cardinality":"single"}') as never }, 1, "human"),
-    ).toThrow(/^The base type of the declaration of a submission must be /);
+    ).toThrow(/^The declaration of a submission is invalid: missing the property "baseType"/);
     expect(() => toSupplyScores(request, 1, json('"robot"') as "human")).toThrow(
       new DataError('The scorer must be "human" or "externalMachine", found "robot".'),
     );

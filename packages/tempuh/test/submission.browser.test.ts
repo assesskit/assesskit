@@ -443,7 +443,7 @@ describe("mountSubmission", () => {
     const shown = el(shadow, "article");
     expect(() => mounted.update(json('{"request":"x"}') as Submission)).toThrow(DataError);
     const bad = submission({ parts: [part({ value: json('{"cardinality":"single"}') as SubmissionValue })] });
-    expect(() => mounted.update(bad)).toThrow(/^The base type must be /);
+    expect(() => mounted.update(bad)).toThrow(/^A wire value is invalid: missing the property "baseType"/);
     expect(el(shadow, "article")).toBe(shown);
     expect(answer(shadow)).toBe("Another answer");
     expect(contents(shadow)[0]?.textContent).toContain("Write about your town.");

@@ -88,10 +88,10 @@ describe("createBodyRenderer", () => {
     expect(() => create(json('"options"'))).toThrow('The options must be an object, found "options".');
     expect(() => create({ ...valid, extra: 1 })).toThrow(/^The options has the properties .* found "extra"\.$/u);
     expect(() => create({ ...valid, messages: json("null") })).toThrow(
-      "The option messages must be an object, found null.",
+      "The option messages is invalid: expected an object, found null.",
     );
     expect(() => create({ ...valid, messages: { ...EN_MESSAGES, toolOpenFile: json("1") } })).toThrow(
-      "The message toolOpenFile of the option messages must be a string, found 1.",
+      "The option messages is invalid at toolOpenFile: expected a string, found 1.",
     );
     expect(() => create({ ...valid, assets: json('"assets"') })).toThrow(
       'The option assets must be a function, found "assets".',

@@ -1,6 +1,7 @@
-import { checkArray, checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
-import { fromWireValue, toWireValue, type Value, type WireValue } from "../values/index.js";
+import * as v from "valibot";
+import { describe, type Schema } from "../checks.js";
+import type { Value } from "../values/index.js";
+import { toWireValue, type WireValue, wireValueSchema } from "../values/wire.js";
 
 /** A value in the JSON form of a session: its wire value, or `null` for NULL. */
 export type ValueJson = WireValue | null;
@@ -22,42 +23,30 @@ export function valuesToJson(values: ReadonlyMap<string, Value | null>): (readon
 }
 
 /**
- * Reads an array of entries `[identifier, value]` into a map, each identifier once.
+ * The schema of an array of entries `[identifier, value]` that reads into a map, each identifier once; an identifier
+ * such as `__proto__` stays data.
  *
- * @throws `DataError` when the data is not such an array, or an identifier repeats.
+ * @param value - The schema of the value of an entry.
  */
-export function readEntries<T>(
-  json: unknown,
-  label: string,
-  read: (value: unknown, identifier: string) => T,
-): Map<string, T> {
-  checkArray(json, `${label} must be an array of entries`);
-  const entries = new Map<string, T>();
-  for (const entry of json) {
-    checkArray(entry, `An entry of ${label} must be an array of an identifier and a value`);
-    const [identifier, value] = entry;
-    checkString(identifier, `An identifier of ${label}`);
-    if (entry.length !== 2) throw new DataError(`An entry of ${label} must have 2 elements, found ${entry.length}.`);
-    if (entries.has(identifier)) throw new DataError(`${label} has the identifier ${describe(identifier)} twice.`);
-    entries.set(identifier, read(value, identifier));
-  }
-  return entries;
+export function entriesSchema<TOutput>(value: Schema<TOutput>): Schema<Map<string, TOutput>> {
+  return v.pipe(
+    v.array(v.strictTuple([v.string(), value])),
+    v.rawTransform(({ dataset, addIssue, NEVER }) => {
+      const entries = new Map<string, TOutput>();
+      for (const [identifier, member] of dataset.value) {
+        if (entries.has(identifier)) {
+          addIssue({ message: `the identifier ${describe(identifier)} occurs twice` });
+          return NEVER;
+        }
+        entries.set(identifier, member);
+      }
+      return entries;
+    }),
+  );
 }
 
-/**
- * Reads a value that {@link valueToJson} wrote.
- *
- * @throws `DataError` when the data is not a wire value or `null`.
- */
-export function valueFromJson(json: unknown): Value | null {
-  return json === null ? null : fromWireValue(json);
-}
+/** The schema of a value in the JSON form of a session: a wire value, or `null` for NULL. */
+export const valueJsonSchema: Schema<Value | null> = v.nullable(wireValueSchema);
 
-/**
- * Reads entries that {@link valuesToJson} wrote.
- *
- * @throws `DataError` when the data is not such entries.
- */
-export function readValues(json: unknown, label: string): Map<string, Value | null> {
-  return readEntries(json, label, valueFromJson);
-}
+/** The schema of values by identifier that {@link valuesToJson} writes. */
+export const valuesSchema: Schema<Map<string, Value | null>> = entriesSchema(valueJsonSchema);

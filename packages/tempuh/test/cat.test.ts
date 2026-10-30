@@ -11,8 +11,10 @@ import {
   type CatFetchRequest,
   deployCatSections,
   type OAuthClientCredentials,
+  type RestCatPortOptions,
   restCatPort,
 } from "../src/cat/index.js";
+import { readSectionData } from "../src/cat/section-data.js";
 import { DataError, ServiceError } from "../src/index.js";
 import {
   ASI,
@@ -32,6 +34,7 @@ import {
   USAGE_REF,
   usageXml,
 } from "./cat-fixture.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = <T = never>(text: string): T => JSON.parse(text);
@@ -235,14 +238,16 @@ describe("restCatPort", () => {
       nextItems: { itemIdentifiers: [], stageLength: 0 },
     });
     expect(await rejection(answer({ nextItems: { itemIdentifiers: ["i1"] } }))).toMatch(
-      /^The sessionIdentifier of the answer to Create Session/,
+      /^The answer to Create Session is invalid: missing the property "sessionIdentifier"/,
     );
     // The stage is read by olah, whose errors pass through tempuh unchanged.
     const badStage = answer({ sessionIdentifier: "s1", nextItems: { itemIdentifiers: [1] } });
     await expect(badStage).rejects.toThrow(OlahDataError);
-    await expect(badStage).rejects.toThrow(/^An item identifier of the nextItems/);
+    await expect(badStage).rejects.toThrow(
+      /^The nextItems of the answer to Create Session is invalid at itemIdentifiers\[0\]: expected a string/,
+    );
     expect(await rejection(answer({ sessionIdentifier: "s1", sessionState: 5 }))).toMatch(
-      /^The sessionState of the answer/,
+      /^The answer to Create Session is invalid at sessionState: expected a string, found 5/,
     );
   });
 
@@ -455,7 +460,9 @@ describe("restCatPort", () => {
     expect(() =>
       restCatPort({ fetch: service.fetch, endpoint: "http://cat.example/ims/cat/v1p0", credentials: CREDENTIALS }),
     ).toThrow(
-      new DataError('The option endpoint must be an absolute https URL, found "http://cat.example/ims/cat/v1p0".'),
+      new DataError(
+        'The options object is invalid at endpoint: expected an absolute https URL, found "http://cat.example/ims/cat/v1p0".',
+      ),
     );
     expect(() =>
       restCatPort({
@@ -463,7 +470,7 @@ describe("restCatPort", () => {
         endpoint: PREFIX,
         credentials: { ...CREDENTIALS, tokenUrl: "http://auth.example/token" },
       }),
-    ).toThrow(/^The tokenUrl of the credentials must be an absolute https URL/);
+    ).toThrow(/^The options object is invalid at credentials\.tokenUrl: expected an absolute https URL/);
   });
 
   it("[T101] takes the global fetch as it is", () => {
@@ -474,37 +481,47 @@ describe("restCatPort", () => {
     const service = fakeService();
     const options = { fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS };
     const port = restCatPort(options);
-    expect(() => restCatPort(json("null"))).toThrow(new DataError("The options must be an object, found null."));
-    expect(() => restCatPort({ ...options, fetch: json("5") })).toThrow(/^The option fetch must be a function/);
-    expect(() => restCatPort({ ...options, endpoint: json("5") })).toThrow(/^The option endpoint must be a string/);
+    expect(() => restCatPort(json("null"))).toThrow(
+      new DataError("The options object is invalid: expected an object, found null."),
+    );
+    expect(() => restCatPort({ ...options, fetch: json("5") })).toThrow(
+      /^The options object is invalid at fetch: expected a function/,
+    );
+    expect(() => restCatPort({ ...options, endpoint: json("5") })).toThrow(
+      /^The options object is invalid at endpoint: expected a string/,
+    );
     expect(() => restCatPort({ ...options, credentials: json("null") })).toThrow(
-      /^The option credentials must be an object/,
+      /^The options object is invalid at credentials: expected an object/,
     );
     for (const property of ["clientId", "clientSecret", "scope"]) {
       expect(() => restCatPort({ ...options, credentials: { ...CREDENTIALS, [property]: "" } }), property).toThrow(
-        new DataError(`The ${property} of the credentials must be a non-empty string, found "".`),
+        new DataError(
+          `The options object is invalid at credentials.${property}: expected a length of at least 1, found 0.`,
+        ),
       );
     }
     expect(() => restCatPort({ ...options, credentials: { ...CREDENTIALS, extra: 1 } as never })).toThrow(DataError);
     expect(() => restCatPort({ ...options, timeoutMs: 0 })).toThrow(
-      new DataError("The option timeoutMs must be a positive number, found 0."),
+      new DataError("The options object is invalid at timeoutMs: expected a positive number, found 0."),
     );
     expect(() => restCatPort({ ...options, timeoutMs: json("null") })).toThrow(DataError);
     expect(() => restCatPort({ ...options, sharePnp: json('"yes"') })).toThrow(
-      new DataError('The option sharePnp must be true or false, found "yes".'),
+      new DataError('The options object is invalid at sharePnp: expected true or false, found "yes".'),
     );
-    expect(() => restCatPort({ ...options, speed: 1 } as never)).toThrow(/^The options has the properties/);
+    expect(() => restCatPort({ ...options, speed: 1 } as never)).toThrow(
+      /^The options object is invalid: unexpected property "speed"/,
+    );
     expect(await rejection(port.createSection(PREFIX, json('{"sectionConfiguration":5}')))).toMatch(
-      /^The sectionConfiguration/,
+      /^The section data is invalid at /,
     );
     expect(await rejection(port.createSession(PREFIX, "sec1", json("null")))).toMatch(
-      /^The request to create a session must be an object/,
+      /^The request to create a session is invalid: expected an object/,
     );
     expect(await rejection(port.createSession(PREFIX, "sec1", json('{"priorData":{}}')))).toMatch(
-      /^The priorData of the request must be an array/,
+      /^The request to create a session is invalid at priorData: expected an array, found an object/,
     );
     expect(await rejection(port.createSession(PREFIX, "sec1", json('{"demographics":5}')))).toMatch(
-      /^The demographics of the request/,
+      /^The request to create a session is invalid at demographics: expected a string, found 5/,
     );
     expect(
       await rejection(port.createSession(PREFIX, "sec1", { priorData: [{ name: "x", value: undefined }] })),
@@ -516,7 +533,7 @@ describe("restCatPort", () => {
       /^The session identifier must be a non-empty string/,
     );
     expect(await rejection(port.submitResults(PREFIX, "sec1", "s1", json('{"sessionState":5}')))).toMatch(
-      /^The sessionState of the request/,
+      /^The request to submit results is invalid at sessionState: expected a string, found 5/,
     );
     expect(await rejection(port.getSection(json("5"), "sec1"))).toMatch(/^The prefix must be a string/);
     expect(service.calls).toEqual([]);
@@ -536,12 +553,22 @@ describe("restCatPort", () => {
       items: { itemIdentifiers: ["i1"], stageLength: null },
     });
     expect(await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: "bWV0YQ==" }))).toBe(
-      'The qtiMetadata of the answer to Get Section must be an object, found "bWV0YQ==".',
+      'The answer to Get Section is invalid at section.qtiMetadata: expected an object, found "bWV0YQ==".',
     );
-    expect(await rejection(answer({ qtiUsagedata: "PD94" }))).toMatch(/^The sectionConfiguration of the section data/);
+    expect(await rejection(answer({ qtiUsagedata: "PD94" }))).toMatch(
+      /^The answer to Get Section is invalid at section: missing the property "sectionConfiguration"/,
+    );
     expect(await rejection(answer(json("null")))).toBe(
-      "The section of the answer to Get Section must be an object, found null.",
+      "The answer to Get Section is invalid at section: expected an object, found null.",
     );
+  });
+
+  it("[T101] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+    fuzzJson((options) => restCatPort(options as RestCatPortOptions));
+  });
+
+  it("[T101] reads or refuses arbitrary JSON as section data with a DataError, and nothing else", () => {
+    fuzzJson(readSectionData, [sectionData, { sectionConfiguration: "e30=" }]);
   });
 });
 

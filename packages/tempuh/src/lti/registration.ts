@@ -1,6 +1,6 @@
 import type { webcrypto } from "node:crypto";
-import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import * as v from "valibot";
+import { guardSchema, httpsUrlSchema, looseRecord, nonEmptyStringSchema, parseWith } from "../checks.js";
 import { isRsaKey } from "./keys.js";
 
 /** The host's record of one platform that the tool trusts, as the platform's administrator and the tool agreed on it. */
@@ -25,6 +25,27 @@ export interface PlatformRegistration {
   readonly signingKey: webcrypto.CryptoKey;
 }
 
+const registrationSchema = looseRecord({
+  issuer: v.pipe(
+    httpsUrlSchema,
+    v.check(
+      (issuer) => new URL(issuer).search === "" && new URL(issuer).hash === "",
+      (issue) => `expected an issuer without a query or a fragment, found ${issue.received}`,
+    ),
+  ),
+  clientId: nonEmptyStringSchema,
+  deploymentIds: v.pipe(v.array(nonEmptyStringSchema), v.minLength(1)),
+  authenticationUrl: httpsUrlSchema,
+  jwksUrl: httpsUrlSchema,
+  accessTokenUrl: httpsUrlSchema,
+  redirectUri: httpsUrlSchema,
+  keyId: nonEmptyStringSchema,
+  signingKey: guardSchema(
+    (key): key is webcrypto.CryptoKey => isRsaKey(key, "sign"),
+    "a private RSASSA-PKCS1-v1_5 key with SHA-256 for signing",
+  ),
+});
+
 /**
  * Checks a registration that the host's lookup returned.
  *
@@ -32,30 +53,5 @@ export interface PlatformRegistration {
  * issuer has a query or a fragment, or the signing key is not a private RSA key for RS256.
  */
 export function checkPlatformRegistration(value: unknown): asserts value is PlatformRegistration {
-  checkRecord(value, "The registration must be an object");
-  checkHttpsUrl(value.issuer, "The issuer of a registration");
-  const issuer = new URL(value.issuer);
-  if (issuer.search !== "" || issuer.hash !== "") {
-    throw new DataError(
-      `The issuer of a registration must not have a query or a fragment, found ${describe(value.issuer)}.`,
-    );
-  }
-  checkNonEmptyString(value.clientId, "The client identifier of a registration");
-  checkArray(value.deploymentIds, "The deployment identifiers of a registration must be an array");
-  if (value.deploymentIds.length === 0) {
-    throw new DataError("The deployment identifiers of a registration must have at least one deployment.");
-  }
-  for (const deploymentId of value.deploymentIds) {
-    checkNonEmptyString(deploymentId, "A deployment identifier of a registration");
-  }
-  checkHttpsUrl(value.authenticationUrl, "The authentication URL of a registration");
-  checkHttpsUrl(value.jwksUrl, "The key set URL of a registration");
-  checkHttpsUrl(value.accessTokenUrl, "The access token URL of a registration");
-  checkHttpsUrl(value.redirectUri, "The redirect URI of a registration");
-  checkNonEmptyString(value.keyId, "The key identifier of a registration");
-  if (!isRsaKey(value.signingKey, "sign")) {
-    throw new DataError(
-      `The signing key of a registration must be a private RSASSA-PKCS1-v1_5 key with SHA-256 for signing, found ${describe(value.signingKey)}.`,
-    );
-  }
+  parseWith(registrationSchema, value, "The registration");
 }

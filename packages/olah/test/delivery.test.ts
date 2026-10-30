@@ -88,6 +88,7 @@ import {
   viewToJson,
 } from "../src/index.js";
 import { identifier as identifierArbitrary, recordValue, valueArbitrary } from "./arbitraries/values.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -1431,7 +1432,7 @@ describe("Engine.apply", () => {
       'The place of move must be "next", "previous" or an item instance, found "up".',
     );
     expect(() => engine.apply(state, json('{"type":"move","to":{"ref":"a"},"at":1}'))).toThrow(
-      "The instance of the item instance must be a positive integer, found undefined.",
+      'The item instance is invalid: missing the property "instance".',
     );
     expect(() => engine.apply(state, json('{"type":"support","name":"chocolate","active":true,"at":1}'))).toThrow(
       'The name of support must be the name of a support of a PNP, found "chocolate".',
@@ -2547,7 +2548,7 @@ describe("startItemSession", () => {
   it("refuses arguments of other types", () => {
     const context = contextOf(counterItem());
     expect(() => startItemSession(json("null"), 0, context)).toThrow(
-      "The item instance must be an object with a ref and an instance, found null.",
+      "The item instance is invalid: expected an object, found null.",
     );
     expect(() => startItemSession(KEY, json('"0"'), context)).toThrow('The time must be a finite number, found "0".');
     expect(() => startItemSession(KEY, 0, json("null"))).toThrow(DataError);
@@ -2751,7 +2752,7 @@ describe("itemSessionToJson", () => {
   it("refuses data that is not a session", () => {
     const context = contextOf(counterItem());
     const written = JSON.parse(JSON.stringify(itemSessionToJson(presented(context))));
-    expect(() => itemSessionFromJson(null)).toThrow("An item session must be an object, found null.");
+    expect(() => itemSessionFromJson(null)).toThrow("The item session is invalid: expected an object, found null.");
     expect(() => itemSessionFromJson({ ...written, status: "paused" })).toThrow(DataError);
     expect(() =>
       itemSessionFromJson({
@@ -2761,13 +2762,18 @@ describe("itemSessionToJson", () => {
           ["RESPONSE", null],
         ],
       }),
-    ).toThrow('The drafts of the item session has the identifier "RESPONSE" twice.');
+    ).toThrow('The item session is invalid at drafts: the identifier "RESPONSE" occurs twice.');
     expect(() => itemSessionFromJson({ ...written, drafts: [["RESPONSE", { value: 1 }]] })).toThrow(DataError);
     expect(() => itemSessionFromJson({ ...written, pciStates: [["R", 1]] })).toThrow(DataError);
     expect(() => itemSessionFromJson({ ...written, choiceOrders: [["R", "A"]] })).toThrow(DataError);
     expect(() => itemSessionFromJson({ ...written, variables: { ...written.variables, outcomes: {} } })).toThrow(
       DataError,
     );
+  });
+
+  it("[E2] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    const written: unknown = JSON.parse(JSON.stringify(itemSessionToJson(presented(contextOf(counterItem())))));
+    fuzzJson(itemSessionFromJson, [written]);
   });
 });
 
@@ -3057,10 +3063,10 @@ describe("nextItem", () => {
       'The plan has no item instance "a" 2.',
     );
     expect(() => nextItem(structure, testPlan, json('{"ref":"a","instance":0}'), rules())).toThrow(
-      "The instance of the item instance must be a positive integer, found 0.",
+      "The item instance is invalid at instance: expected a value of at least 1, found 0.",
     );
     expect(() => nextItem(structure, testPlan, json('{"ref":1,"instance":1}'), rules())).toThrow(
-      "The ref of the item instance must be a string, found 1.",
+      "The item instance is invalid at ref: expected a string, found 1.",
     );
     expect(() => nextItem(structure, testPlan, json("null"), rules())).toThrow(DataError);
     expect(() => nextItem(json("null"), testPlan, undefined, rules())).toThrow(DataError);
@@ -3800,20 +3806,18 @@ describe("viewToJson", () => {
   it("[E20] writes the properties of a view and no other, and refuses a view that has another", () => {
     const view = engine.view(state, 0);
     expect(() => viewToJson(Object.assign({}, view, { correct: "LEAK-X" }))).toThrow(
-      /^The view has the properties "status", "test", .*, found "correct"\.$/,
+      /^The view is invalid: unexpected property "correct"\.$/,
     );
     const item = view.current ?? fail("No item.");
     expect(() => viewToJson({ ...view, current: Object.assign({}, item, { correctResponses: [] }) })).toThrow(
-      /^The item of the view has the properties .*, found "correctResponses"\.$/,
+      /^The view is invalid at current: unexpected property "correctResponses"\.$/,
     );
     expect(() =>
       viewToJson({
         ...view,
         timers: [Object.assign({}, { scope: "test", identifier: "T", late: false } as const, { key: 1 })],
       }),
-    ).toThrow(
-      /^A timer has the properties "scope", "identifier", "late", "remaining" and "minimumRemaining", found "key"\.$/,
-    );
+    ).toThrow(/^The view is invalid at timers\[0\]: unexpected property "key"\.$/);
   });
 
   it("[E30] refuses JSON that is not the form of a view", () => {
@@ -3823,26 +3827,26 @@ describe("viewToJson", () => {
       edit(copy);
       return copy;
     };
-    expect(() => viewFromJson(json("null"))).toThrow("The view must be an object, found null.");
+    expect(() => viewFromJson(json("null"))).toThrow("The view is invalid: expected an object, found null.");
     expect(() => viewFromJson(change((view) => delete view.timers))).toThrow(
-      'The view must have the property "timers".',
+      'The view is invalid: missing the property "timers".',
     );
     expect(() => viewFromJson(change((view) => (view.status = "paused")))).toThrow(
-      'The status of the view must be "in-progress", "suspended" or "ended", found "paused".',
+      'The view is invalid at status: expected "in-progress", "suspended" or "ended", found "paused".',
     );
-    expect(() => viewFromJson(change((view) => (view.answer = 1)))).toThrow(/found "answer"\.$/);
+    expect(() => viewFromJson(change((view) => (view.answer = 1)))).toThrow(/unexpected property "answer"\.$/);
     expect(() => viewFromJson(change((view) => (view.actions = ["time"])))).toThrow(
-      /^An action of the view must be "set-responses", .*, found "time"\.$/,
+      /^The view is invalid at actions\[0\]: expected "set-responses", .*, found "time"\.$/,
     );
     expect(() => viewFromJson(change((view) => (view.rubric = [{ text: "no kind" }])))).toThrow(
-      "The rubric of the view must hold nodes, each an object with a string kind, found an object.",
+      'The view is invalid at rubric[0]: missing the property "kind".',
     );
     expect(() => viewFromJson(change((view) => (view.rubric = [{ kind: "p", children: [null] }])))).toThrow(
-      /^The rubric of the view must hold only strings, finite numbers, booleans, arrays and objects, found null\.$/,
+      /^The view is invalid at rubric: must hold only strings, finite numbers, booleans, arrays and objects, found null\.$/,
     );
     expect(() =>
       viewFromJson(change((view) => (view.supports = [{ name: "chocolate", state: "option", active: false }]))),
-    ).toThrow('The name of a support must be the name of a support of a PNP, found "chocolate".');
+    ).toThrow("The view is invalid at supports[0].name: The name of a support must be the name of a support of a PNP.");
     expect(() =>
       viewFromJson(
         change((view) => {
@@ -3850,33 +3854,39 @@ describe("viewToJson", () => {
           item.responses = [item.responses[0], item.responses[0]];
         }),
       ),
-    ).toThrow('The responses of the item has the identifier "RESPONSE" twice.');
+    ).toThrow('The view is invalid at current.responses: the identifier "RESPONSE" occurs twice.');
     expect(() =>
       viewFromJson(change((view) => ((view.current as { interactions: unknown[] }).interactions = [{ kind: "x" }]))),
-    ).toThrow(/^The response identifier of an interaction descriptor must be a string/);
+    ).toThrow(
+      /^The view is invalid at current\.interactions\[0\]: The response identifier of an interaction descriptor must be a string/,
+    );
   });
 
   it("[E30] refuses content that JSON cannot carry or that nests too deep", () => {
     const view = engine.view(state, 0);
     const node = (value: unknown): CandidateView => ({ ...view, rubric: json(JSON.stringify([{ kind: "p", value }])) });
     expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: Number.NaN } as never] })).toThrow(
-      "The rubric of the view holds NaN, which JSON cannot carry.",
+      "The view is invalid at rubric: holds NaN, which JSON cannot carry.",
     );
     expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: new Map() } as never] })).toThrow(
-      /^The rubric of the view must hold only strings, finite numbers, booleans, arrays and objects, found an object\.$/,
+      /^The view is invalid at rubric: must hold only strings, finite numbers, booleans, arrays and objects, found an object\.$/,
     );
     let deep: unknown = "x";
     for (let level = 0; level < 300; level++) deep = [deep];
     expect(() => viewToJson({ ...view, rubric: [{ kind: "p", deep } as never] })).toThrow(
-      "The rubric of the view nests deeper than 256 levels.",
+      "The view is invalid at rubric: nests deeper than 256 levels.",
     );
-    expect(() => viewFromJson(json('{"__proto__":1}'))).toThrow(/^The view has the properties/);
+    expect(() => viewFromJson(json('{"__proto__":1}'))).toThrow(/^The view is invalid: /);
     expect(node("fine").rubric).toHaveLength(1);
   });
 
   it("refuses a view of other types", () => {
     expect(() => viewToJson(json("null"))).toThrow("The view must be an object, found null.");
-    expect(() => viewToJson(json('{"status":"in-progress"}'))).toThrow(/^The view must have the property/);
+    expect(() => viewToJson(json('{"status":"in-progress"}'))).toThrow(/^The navigation of the view must be an array/);
+  });
+
+  it("[E30] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson(viewFromJson, views().map(viewToJson));
   });
 });
 
@@ -3944,10 +3954,10 @@ describe("parseCandidateAction", () => {
       );
     }
     expect(() => parseCandidateAction({ type: "submit", item: { ref: "a", instance: 1 }, at: 1 })).toThrow(
-      'A submit action has the properties "type" and "item", found "at".',
+      'The action is invalid: unexpected property "at".',
     );
     expect(() => parseCandidateAction({ type: "suspend", at: 1 })).toThrow(
-      'A suspend action has the property "type", found "at".',
+      'The action is invalid: unexpected property "at".',
     );
   });
 
@@ -3955,43 +3965,49 @@ describe("parseCandidateAction", () => {
     const refuses = (input: string, message: string | RegExp): void => {
       expect(() => parseCandidateAction(json(input))).toThrow(message);
     };
-    refuses("null", "The action must be an object with a type, found null.");
-    refuses("[]", "The action must be an object with a type, found an array.");
-    refuses('{"type":"dance"}', /^The type of the action must be "set-responses", .* or "resume", found "dance"\.$/);
-    refuses('{"type":"submit"}', 'A submit action must have the property "item".');
+    refuses("null", "The action is invalid: expected an object, found null.");
+    refuses("[]", /^The action is invalid at type: expected "set-responses", .* or "resume", found undefined\.$/);
+    refuses(
+      '{"type":"dance"}',
+      /^The action is invalid at type: expected "set-responses", .* or "resume", found "dance"\.$/,
+    );
+    refuses('{"type":"submit"}', 'The action is invalid: missing the property "item".');
     refuses(
       '{"type":"submit","item":{"ref":"a","instance":0}}',
-      "The instance of the item instance must be a positive integer, found 0.",
+      "The action is invalid at item.instance: expected a value of at least 1, found 0.",
     );
-    refuses('{"type":"submit","item":{"ref":"a","instance":1},"answer":"B"}', /found "answer"\.$/);
+    refuses('{"type":"submit","item":{"ref":"a","instance":1},"answer":"B"}', /unexpected property "answer"\.$/);
     refuses(
       '{"type":"comment","item":{"ref":"a","instance":1},"text":5}',
-      "The text of comment must be a string, found 5.",
+      "The action is invalid at text: expected a string, found 5.",
     );
     refuses(
       '{"type":"end-attempt","item":{"ref":"a","instance":1}}',
-      'An end-attempt action must have the property "interaction".',
+      'The action is invalid: missing the property "interaction".',
     );
     refuses(
       '{"type":"move","to":"left"}',
-      'The place of move must be "next", "previous" or an item instance, found "left".',
+      'The action is invalid at to: The place of move must be "next", "previous" or an item instance.',
     );
-    refuses('{"type":"move","to":5}', "The item instance must be an object with a ref and an instance, found 5.");
+    refuses(
+      '{"type":"move","to":5}',
+      'The action is invalid at to: The place of move must be "next", "previous" or an item instance.',
+    );
     refuses(
       '{"type":"support","name":"chocolate","active":true}',
-      'The name of support must be the name of a support of a PNP, found "chocolate".',
+      "The action is invalid at name: The name of a support must be the name of a support of a PNP.",
     );
     refuses(
       '{"type":"support","name":"line-reader","active":"yes"}',
-      'The active of support must be a boolean, found "yes".',
+      'The action is invalid at active: expected true or false, found "yes".',
     );
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}',
-      "The responses of set-responses must be an array of entries, found an object.",
+      "The action is invalid at responses: expected an array, found an object.",
     );
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",null],["R",null]]}',
-      'The responses of set-responses has the identifier "R" twice.',
+      'The action is invalid at responses: the identifier "R" occurs twice.',
     );
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[["R",{"cardinality":"single","baseType":"integer","value":{"base":{"integer":"x"}}}]]}',
@@ -3999,7 +4015,7 @@ describe("parseCandidateAction", () => {
     );
     refuses(
       '{"type":"set-responses","item":{"ref":"a","instance":1},"responses":[],"pciStates":[["R",5]]}',
-      'The PCI state of "R" must be a string, found 5.',
+      "The action is invalid at pciStates[0][1]: expected a string, found 5.",
     );
   });
 
@@ -4040,7 +4056,7 @@ describe("parseCandidateAction", () => {
   it("[E22] counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
     let deep: unknown = [];
     for (let level = 0; level < 200_000; level++) deep = [deep];
-    expect(() => parseCandidateAction(deep)).toThrow("The action must be an object with a type, found an array.");
+    expect(() => parseCandidateAction(deep)).toThrow(/^The action is invalid at type: /);
     const cycle: unknown[] = [];
     cycle.push(cycle);
     expect(() => parseCandidateAction(cycle, { maxActionSize: 10_000 })).toThrow(
@@ -4068,6 +4084,10 @@ describe("parseCandidateAction", () => {
     const step = engine.apply(state, stamped);
     expect(step.ok && step.state.items[0]?.session.status).toBe("closed");
   });
+
+  it("[E22] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson(parseCandidateAction, actions.map(actionToJson));
+  });
 });
 
 describe("actionToJson", () => {
@@ -4077,7 +4097,7 @@ describe("actionToJson", () => {
       /^The type of the action must be "set-responses", .* or "resume", found "time"\.$/,
     );
     expect(() => actionToJson(json('{"type":"submit","item":{"ref":"a"}}'))).toThrow(
-      "The instance of the item instance must be a positive integer, found undefined.",
+      'The item instance is invalid: missing the property "instance".',
     );
     expect(() => actionToJson(json('{"type":"set-responses","item":{"ref":"a","instance":1},"responses":{}}'))).toThrow(
       "The responses of set-responses must be a Map from response identifier to value, found an object.",
@@ -4086,7 +4106,7 @@ describe("actionToJson", () => {
       actionToJson({ type: "set-responses", item: key("a"), responses: new Map(), pciStates: json('{"R":"s"}') }),
     ).toThrow("The pciStates of set-responses must be a Map from response identifier to state, found an object.");
     expect(() => actionToJson(json('{"type":"comment","item":{"ref":"a","instance":1},"text":5}'))).toThrow(
-      "The text of comment must be a string, found 5.",
+      "The action is invalid at text: expected a string, found 5.",
     );
   });
 });
@@ -4109,7 +4129,7 @@ describe("stamp", () => {
     expect(stamp(state, submit, 9)).toEqual({ type: "submit", item: key("a"), at: 9 });
     expect(() => stamp(state, json('{"type":"fly"}'), 1)).toThrow(/^The type of the action must be /);
     expect(() => stamp(state, json('{"type":"submit"}'), 1)).toThrow(
-      "The item instance must be an object with a ref and an instance, found undefined.",
+      "The item instance is invalid: expected an object, found undefined.",
     );
   });
 
@@ -4182,7 +4202,7 @@ describe("serializeState", () => {
     };
     expect(() => deserializeState(edited('"zoomAmount":2', '"zoomAmount":"two"'))).toThrow(DataError);
     expect(() => deserializeState(edited('"name":"magnification"', '"name":"spoken"'))).toThrow(
-      'The settings of the support "magnification" must name a predefined support and have the name "magnification", found "spoken".',
+      'The state is invalid at supports: The settings of the support "magnification" must name a predefined support and have the name "magnification", found "spoken".',
     );
     expect(() => deserializeState(edited('"settings":{"name":"spoken"', '"settings":{"name":"ext:x"'))).toThrow(
       DataError,
@@ -4208,32 +4228,37 @@ describe("serializeState", () => {
     expect(() => deserializeState("{")).toThrow(
       "The state must be the JSON text that serializeState writes, found text that is not JSON.",
     );
-    expect(() => deserializeState("null")).toThrow("The state must be a JSON object, found null.");
+    expect(() => deserializeState("null")).toThrow("The state is invalid: expected an object, found null.");
     expect(() => deserializeState(text({ version: 2 }))).toThrow(
-      "The state has the format version 2, and this version of olah reads version 1.",
+      "The state is invalid at version: expected 1, found 2.",
     );
     expect(() => deserializeState(text({ status: "paused" }))).toThrow(
-      'The status of the state must be "in-progress", "suspended" or "ended", found "paused".',
+      'The state is invalid at status: expected "in-progress", "suspended" or "ended", found "paused".',
     );
     expect(() => deserializeState(text({ random: [0, 0, 0, 0] }))).toThrow(
       "A random state must be four integers from 0 to 4294967295, not all 0, found an array.",
     );
     expect(() => deserializeState(text({ plan: { parts: [{ kind: "section" }] } }))).toThrow(
-      'A test part of the plan must have the kind "part", found "section".',
+      'The state is invalid at plan.parts[0].kind: expected "part", found "section".',
     );
     expect(() => deserializeState(text({ supports: [["chocolate", { state: "option", active: true }]] }))).toThrow(
       'A support of the state must have a support name, found "chocolate".',
     );
     expect(() => deserializeState(text({ clocks: [{ scope: "test", identifier: "T", spent: -1 }] }))).toThrow(
-      "The spent of a clock of the state must be a non-negative number, found -1.",
+      "The state is invalid at clocks[0].spent: expected a value of at least 0, found -1.",
     );
     expect(() => deserializeState(text({ needs: { avoidedHazards: ["glare"] } }))).toThrow(
-      'An avoided hazard of the state must be "flashing", "sound", "olfactory-hazard" or "motion-simulation", found "glare".',
+      'The state is invalid at needs.avoidedHazards[0]: expected "flashing", "sound", "olfactory-hazard" or "motion-simulation", found "glare".',
     );
     expect(() => deserializeState(json("1"))).toThrow("The state must be a string, found 1.");
     expect(() => serializeState(json("null"))).toThrow(
       "The state must be an object from Engine.start or deserializeState, found null.",
     );
+  });
+
+  it("[E2] reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
+    const written: unknown = JSON.parse(serializeState(rich()));
+    fuzzJson((json) => deserializeState(JSON.stringify(json)), [written]);
   });
 });
 

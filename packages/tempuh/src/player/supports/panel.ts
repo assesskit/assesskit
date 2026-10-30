@@ -84,7 +84,7 @@ export function mountSupportPanel(host: HTMLElement, options: SupportPanelOption
 
   return {
     update(supports) {
-      checkSupportViews(supports, "The supports");
+      checkSupportViews(supports, "The list of supports");
       const shown = supports.flatMap((support) => {
         const label = support.state === "prohibited" ? undefined : supportLabel(support.name, messages);
         return label === undefined ? [] : [{ support, label, option: support.state === "option" }];

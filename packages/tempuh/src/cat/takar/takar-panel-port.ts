@@ -6,12 +6,13 @@ import {
   multistageTest,
 } from "@luthfanwakan/takar/cat";
 import type { TestItem } from "@luthfanwakan/takar/irt";
-import { checkFunction, checkPositive, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
+import * as v from "valibot";
+import { checkRecord, checkString, describe, functionSchema, parseWith, positiveSchema } from "../../checks.js";
 import { DataError } from "../../errors.js";
 import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
 import { responseTo, scoreCategory } from "./response.js";
 import { readPanelSection } from "./section.js";
-import { checkSectionStore, loadSection, type SectionStore, type StoredPanelSection } from "./section-store.js";
+import { loadSection, type SectionStore, type StoredPanelSection, sectionStoreSchema } from "./section-store.js";
 import { parseSessionState, readProgress } from "./session-state.js";
 
 /** What the host knows of a panel that its settings file does not say. */
@@ -37,7 +38,11 @@ export interface TakarPanelPortOptions {
   readonly scalingConstant?: number;
 }
 
-const OPTIONS = ["sections", "panels", "scalingConstant"];
+const optionsSchema = v.strictObject({
+  sections: sectionStoreSchema,
+  panels: functionSchema<(section: string) => PanelParameters>(),
+  scalingConstant: v.optional(positiveSchema, DEFAULT_SCALING_CONSTANT),
+});
 
 /** Returns the stage that presents a module, or the empty stage that ends the session when there is none. */
 function stageOf(module: MultistageModule | undefined): ItemStage {
@@ -88,12 +93,7 @@ function multistageTestOf(
  * @throws `DataError` when an option has the wrong type or is out of range.
  */
 export function takarPanelPort(options: TakarPanelPortOptions): CatPort {
-  checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTIONS);
-  const { sections, panels, scalingConstant = DEFAULT_SCALING_CONSTANT } = options;
-  checkSectionStore(sections, "The option sections");
-  checkFunction(panels, "The option panels must be a function of a section identifier");
-  checkPositive(scalingConstant, "The option scalingConstant");
+  const { sections, panels, scalingConstant } = parseWith(optionsSchema, options, "The options object");
 
   const testOf = (identifier: string, section: StoredPanelSection): MultistageTest => {
     const parameters: unknown = panels(identifier);

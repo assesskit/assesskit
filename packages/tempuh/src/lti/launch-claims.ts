@@ -1,4 +1,6 @@
-import { describe } from "../checks.js";
+// biome-ignore-all lint/style/useNamingConvention: The names of the claims are those of the LTI specifications.
+import * as v from "valibot";
+import { describe, looseRecord } from "../checks.js";
 import { LtiError } from "../errors.js";
 import {
   BOOLEAN,
@@ -9,7 +11,6 @@ import {
   LTI_VERSION,
   MESSAGE_TYPE,
   optional,
-  RECORD,
   required,
   STRING,
   STRING_ARRAY,
@@ -22,42 +23,55 @@ const MESSAGE = "The id_token";
 
 /** Reads the resource link claim (LTI 1.3 Core §5.3.5). */
 function readResourceLink(claims: Claims): ResourceLink {
-  const link = required(claims, CLAIM.resourceLink, MESSAGE, RECORD);
-  const owner = `The claim ${JSON.stringify(CLAIM.resourceLink)}`;
-  return {
-    id: required(link, "id", owner, IDENTIFIER),
-    title: optional(link, "title", owner, STRING),
-    description: optional(link, "description", owner, STRING),
-  };
+  const { id, title, description } = required(
+    claims,
+    CLAIM.resourceLink,
+    MESSAGE,
+    looseRecord({ id: IDENTIFIER, title: v.optional(STRING), description: v.optional(STRING) }),
+  );
+  return { id, title, description };
 }
 
-/** Reads an endpoint of the grade services; LTI AGS 2.0 §3.1 lets a platform leave `lineitem` blank. */
-function readEndpointUrl(endpoint: Claims, name: string, owner: string): string | undefined {
-  const value = endpoint[name];
-  return value === "" || value === null ? undefined : optional(endpoint, name, owner, HTTPS_URL);
-}
+/** An endpoint of the grade services; LTI AGS 2.0 §3.1 lets a platform leave `lineitem` blank. */
+const endpointUrl = v.pipe(
+  v.optional(v.nullable(v.string())),
+  v.check(
+    (url) => url === undefined || url === null || url === "" || v.is(HTTPS_URL, url),
+    (issue) => `expected an absolute https URL, found ${issue.received}`,
+  ),
+  v.transform((url) => (url === null || url === "" ? undefined : url)),
+);
 
 /** Reads the grade services claim (LTI AGS 2.0 §3.1), or returns `undefined` when the platform offers none. */
 function readAgs(claims: Claims): AgsEndpoint | undefined {
-  const endpoint = optional(claims, CLAIM.agsEndpoint, MESSAGE, RECORD);
+  const endpoint = optional(
+    claims,
+    CLAIM.agsEndpoint,
+    MESSAGE,
+    looseRecord({ scope: v.optional(STRING_ARRAY), lineitems: endpointUrl, lineitem: endpointUrl }),
+  );
   if (endpoint === undefined) return undefined;
-  const owner = `The claim ${JSON.stringify(CLAIM.agsEndpoint)}`;
-  return {
-    scopes: optional(endpoint, "scope", owner, STRING_ARRAY) ?? [],
-    lineitems: readEndpointUrl(endpoint, "lineitems", owner),
-    lineitem: readEndpointUrl(endpoint, "lineitem", owner),
-  };
+  return { scopes: endpoint.scope ?? [], lineitems: endpoint.lineitems, lineitem: endpoint.lineitem };
 }
 
 /** Reads the Deep Linking settings claim (Deep Linking 2.0 §4.4.1). */
 function readSettings(claims: Claims): DeepLinkingSettings {
-  const settings = required(claims, CLAIM.deepLinkingSettings, MESSAGE, RECORD);
-  const owner = `The claim ${JSON.stringify(CLAIM.deepLinkingSettings)}`;
+  const settings = required(
+    claims,
+    CLAIM.deepLinkingSettings,
+    MESSAGE,
+    looseRecord({
+      deep_link_return_url: HTTPS_URL,
+      accept_types: STRING_ARRAY,
+      accept_multiple: v.optional(BOOLEAN),
+      data: v.optional(STRING),
+    }),
+  );
   return {
-    returnUrl: required(settings, "deep_link_return_url", owner, HTTPS_URL),
-    acceptTypes: required(settings, "accept_types", owner, STRING_ARRAY),
-    acceptMultiple: optional(settings, "accept_multiple", owner, BOOLEAN),
-    data: optional(settings, "data", owner, STRING),
+    returnUrl: settings.deep_link_return_url,
+    acceptTypes: settings.accept_types,
+    acceptMultiple: settings.accept_multiple,
+    data: settings.data,
   };
 }
 
@@ -84,7 +98,7 @@ function readBase(claims: Claims, registration: PlatformRegistration): LaunchBas
     targetLinkUri: required(claims, CLAIM.targetLinkUri, MESSAGE, HTTPS_URL),
     subject: optional(claims, "sub", MESSAGE, IDENTIFIER),
     roles: required(claims, CLAIM.roles, MESSAGE, STRING_ARRAY),
-    custom: new Map(Object.entries(optional(claims, CLAIM.custom, MESSAGE, STRING_RECORD) ?? {})),
+    custom: optional(claims, CLAIM.custom, MESSAGE, STRING_RECORD) ?? new Map<string, string>(),
   };
 }
 

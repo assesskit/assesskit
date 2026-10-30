@@ -1,6 +1,15 @@
-import { checkArray, checkRecord, checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import * as v from "valibot";
+import { nonNegativeIntegerSchema, parseWith, recordSchema, type Schema } from "../checks.js";
 import type { ItemStage } from "./model.js";
+
+/** The schema of an item stage; a field that is absent is `null`. */
+export const itemStageSchema: Schema<ItemStage> = v.pipe(
+  recordSchema,
+  v.object({
+    itemIdentifiers: v.optional(v.nullable(v.array(v.string())), null),
+    stageLength: v.optional(v.nullable(nonNegativeIntegerSchema), null),
+  }),
+);
 
 /**
  * Checks that a value is an item stage: an object whose `itemIdentifiers` are absent, `null` or an array of strings and
@@ -10,20 +19,7 @@ import type { ItemStage } from "./model.js";
  * @throws `DataError` when it is not.
  */
 export function checkStage(stage: unknown, noun: string): asserts stage is ItemStage {
-  checkRecord(stage, `The ${noun} must be an object`);
-  const { itemIdentifiers = null, stageLength = null } = stage;
-  if (itemIdentifiers !== null) {
-    checkArray(itemIdentifiers, `The itemIdentifiers of the ${noun} must be an array or null`);
-    for (const identifier of itemIdentifiers) checkString(identifier, `An item identifier of the ${noun}`);
-  }
-  if (
-    stageLength !== null &&
-    !(typeof stageLength === "number" && Number.isSafeInteger(stageLength) && stageLength >= 0)
-  ) {
-    throw new DataError(
-      `The stageLength of the ${noun} must be a non-negative integer or null, found ${describe(stageLength)}.`,
-    );
-  }
+  parseWith(itemStageSchema, stage, `The ${noun}`);
 }
 
 /**

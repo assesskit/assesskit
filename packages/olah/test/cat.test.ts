@@ -33,6 +33,7 @@ import {
   writeResults,
 } from "../src/index.js";
 import { qtiMetadata } from "./arbitraries/metadata.js";
+import { fuzzJson } from "./fuzz.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -161,15 +162,15 @@ describe("checkPool", () => {
     expect(() =>
       checkPool(json('{"identifier":"s","children":[{"kind":"assessment-item-ref","identifier":5}]}'), pool),
     ).toThrow("The identifier of an item reference must be a string, found 5.");
-    expect(() => checkPool(SAMPLE, json("null"))).toThrow("The pool must be an object, found null.");
+    expect(() => checkPool(SAMPLE, json("null"))).toThrow("The pool is invalid: expected an object, found null.");
     expect(() => checkPool(SAMPLE, json('{"itemIdentifiers":"a"}'))).toThrow(
-      'The itemIdentifiers of the pool must be an array or null, found "a".',
+      'The pool is invalid at itemIdentifiers: expected an array, found "a".',
     );
     expect(() => checkPool(SAMPLE, json('{"itemIdentifiers":[1]}'))).toThrow(
-      "An item identifier of the pool must be a string, found 1.",
+      "The pool is invalid at itemIdentifiers[0]: expected a string, found 1.",
     );
     expect(() => checkPool(SAMPLE, json('{"stageLength":"1"}'))).toThrow(
-      'The stageLength of the pool must be a non-negative integer or null, found "1".',
+      'The pool is invalid at stageLength: expected a number, found "1".',
     );
   });
 });
@@ -305,17 +306,17 @@ describe("isSessionEnd", () => {
   });
 
   it("[C8] throws a DataError for a stage of another type", () => {
-    expect(() => isSessionEnd(json('"a"'))).toThrow('The stage must be an object, found "a".');
-    expect(() => isSessionEnd(json("[]"))).toThrow("The stage must be an object, found an array.");
+    expect(() => isSessionEnd(json('"a"'))).toThrow('The stage is invalid: expected an object, found "a".');
+    expect(() => isSessionEnd(json("[]"))).toThrow("The stage is invalid: expected an object, found an array.");
     expect(() => isSessionEnd(json('{"itemIdentifiers":"a"}'))).toThrow(
-      'The itemIdentifiers of the stage must be an array or null, found "a".',
+      'The stage is invalid at itemIdentifiers: expected an array, found "a".',
     );
     expect(() => isSessionEnd(json('{"itemIdentifiers":["a",2]}'))).toThrow(
-      "An item identifier of the stage must be a string, found 2.",
+      "The stage is invalid at itemIdentifiers[1]: expected a string, found 2.",
     );
     for (const stageLength of ['"1"', "-1", "1.5", "true"]) {
       expect(() => isSessionEnd(json(`{"stageLength":${stageLength}}`))).toThrow(
-        "The stageLength of the stage must be a non-negative integer or null",
+        /^The stage is invalid at stageLength: expected /,
       );
     }
   });
@@ -706,23 +707,35 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
       itemResult: [{ ...itemResult, outcomeVariables: [outcome] }],
     });
     const rejects: readonly (readonly [unknown, RegExp])[] = [
-      [json("null"), /^The assessmentResult must be an object/],
-      [{ itemResult: "x" }, /^The itemResult of a result must be an array/],
+      [json("null"), /^The assessmentResult is invalid: expected an object, found null\./],
+      [{ itemResult: "x" }, /^The assessmentResult is invalid at itemResult: expected an array/],
       [
         { itemResult: [{ ...itemResult, sessionStatus: "done" }] },
-        /^The sessionStatus of an itemResult must be one of/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.sessionStatus: expected /,
       ],
       [
         { itemResult: [{ ...itemResult, sequenceIndex: -1 }] },
-        /^The sequenceIndex of an itemResult must be a non-negative integer/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.sequenceIndex: expected a value of at least 0/,
       ],
-      [{ itemResult: [{ identifier: "", datestamp: DATESTAMP }] }, /^The identifier of an itemResult/],
-      [{ testResult: { identifier: "t" } }, /^The datestamp of the testResult/],
-      [{ context: { sessionIdentifiers: [{ identifier: "s" }] } }, /^The sourceID of a session identifier/],
-      [withOutcome({ ...variable, cardinality: "many" }), /^The cardinality of the outcome variable "V" must be/],
+      [
+        { itemResult: [{ identifier: "", datestamp: DATESTAMP }] },
+        /^The assessmentResult is invalid at itemResult\[0\]\.identifier: /,
+      ],
+      [
+        { testResult: { identifier: "t" } },
+        /^The assessmentResult is invalid at testResult: missing the property "datestamp"/,
+      ],
+      [
+        { context: { sessionIdentifiers: [{ identifier: "s" }] } },
+        /^The assessmentResult is invalid at context\.sessionIdentifiers\[0\]: missing the property "sourceID"/,
+      ],
+      [
+        withOutcome({ ...variable, cardinality: "many" }),
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.cardinality: expected /,
+      ],
       [
         withOutcome({ ...variable, baseType: "number" }),
-        /^The baseType of the outcome variable "V" must be a base type/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.baseType: expected /,
       ],
       [withOutcome({ ...variable, baseType: undefined }), /is required unless its cardinality is record/],
       [
@@ -730,17 +743,29 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
         /has the cardinality single and 2 values/,
       ],
       [withOutcome({ ...variable, value: [{ value: "one" }] }), /is not a float/],
-      [withOutcome({ ...variable, value: [{ value: 1 }] }), /^A value of the outcome variable "V" must be a string/],
-      [withOutcome({ ...variable, value: "1" }), /^The value of the outcome variable "V" must be an array/],
-      [withOutcome({ ...variable, view: ["everyone"] }), /^A view of the outcome variable "V" must be one of/],
+      [
+        withOutcome({ ...variable, value: [{ value: 1 }] }),
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.value\[0\]\.value: expected a string/,
+      ],
+      [
+        withOutcome({ ...variable, value: "1" }),
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.value: expected an array/,
+      ],
+      [
+        withOutcome({ ...variable, view: ["everyone"] }),
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.view\[0\]: expected /,
+      ],
       [
         withOutcome({ ...variable, normalMaximum: "1" }),
-        /^The normalMaximum of the outcome variable "V" must be a number/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]\.normalMaximum: expected a number/,
       ],
-      [withOutcome({ ...variable, cardinality: "record", value: [{ value: "1" }] }), /^The fieldIdentifier of a field/],
+      [
+        withOutcome({ ...variable, cardinality: "record", value: [{ value: "1" }] }),
+        /The fieldIdentifier of a field of the outcome variable "V"/,
+      ],
       [
         withOutcome({ ...variable, cardinality: "record", value: [{ fieldIdentifier: "f", value: "1" }] }),
-        /^The baseType of a field/,
+        /The baseType of a field of the outcome variable "V" must be a base type/,
       ],
       [
         withOutcome({
@@ -750,10 +775,13 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
         }),
         /cannot be an empty string/,
       ],
-      [withOutcome(5), /^The outcome variables must be objects/],
+      [
+        withOutcome(5),
+        /^The assessmentResult is invalid at itemResult\[0\]\.outcomeVariables\[0\]: expected an object/,
+      ],
       [
         { itemResult: [{ ...itemResult, responseVariables: [{ ...variable, candidateResponse: 5 }] }] },
-        /^The candidateResponse of the response variable "V"/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.responseVariables\[0\]\.candidateResponse: expected an object/,
       ],
       [
         {
@@ -761,7 +789,7 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
             { ...itemResult, responseVariables: [{ ...variable, candidateResponse: {}, choiceSequence: [5] }] },
           ],
         },
-        /^A choice of the response variable "V" must be a string/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.responseVariables\[0\]\.choiceSequence\[0\]: expected a string/,
       ],
       [
         {
@@ -769,7 +797,7 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
             { ...itemResult, responseVariables: [{ ...variable, candidateResponse: {}, correctResponse: 5 }] },
           ],
         },
-        /^The correctResponse of the response variable/,
+        /^The assessmentResult is invalid at itemResult\[0\]\.responseVariables\[0\]\.correctResponse: expected an object/,
       ],
     ];
     for (const [result, message] of rejects) {
@@ -789,8 +817,13 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
       itemIdentifiers: ["a"],
       stageLength: 1,
     });
-    expect(() => itemStageFromJson({ stageLength: -1 }, "stage")).toThrow(/^The stageLength of the stage/);
+    expect(() => itemStageFromJson({ stageLength: -1 }, "stage")).toThrow(/^The stage is invalid at stageLength: /);
     expect(() => itemStageFromJson(json("[]"), "stage")).toThrow(DataError);
+  });
+
+  it("[C9] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+    fuzzJson(assessmentResultFromJson, [JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)))]);
+    fuzzJson((json) => itemStageFromJson(json, "stage"), [{}, { itemIdentifiers: ["a"], stageLength: 1 }]);
   });
 });
 

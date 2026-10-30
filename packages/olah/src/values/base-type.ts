@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { checkChoice } from "../checks.js";
 
 /** A base type of QTI values: a term of `BaseTypeEnum` (INFO §8.13). */
@@ -42,3 +43,6 @@ export function isBaseType(value: unknown): value is BaseType {
 export function checkBaseType(value: unknown): asserts value is BaseType {
   checkChoice(value, "The base type", BASE_TYPES);
 }
+
+/** The schema of a base type. */
+export const baseTypeSchema = v.picklist(BASE_TYPES);

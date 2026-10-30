@@ -253,12 +253,14 @@ describe("createRemoteSession", () => {
     const options = (text: string): { readonly clock?: never } => JSON.parse(text);
     expect(() => createRemoteSession(JSON.parse("null"), initial)).toThrow("The transport must be a function");
     expect(() => createRemoteSession(transport, JSON.parse('{"seq":1}'))).toThrow("A view envelope");
-    expect(() => createRemoteSession(transport, initial, options("null"))).toThrow("The options must be an object");
+    expect(() => createRemoteSession(transport, initial, options("null"))).toThrow(
+      "The options object is invalid: expected an object, found null.",
+    );
     expect(() => createRemoteSession(transport, initial, options('{"timers":1}'))).toThrow(
-      'The options has the property "clock", found "timers".',
+      'The options object is invalid: unexpected property "timers".',
     );
     expect(() => createRemoteSession(transport, initial, options('{"clock":{}}'))).toThrow(
-      "The function now of the option clock",
+      "The options object is invalid at clock: expected an object with the function now, found an object.",
     );
     const client = createRemoteSession(transport, initial);
     expect(() => client.subscribe(JSON.parse("5"))).toThrow("The listener must be a function");
@@ -413,15 +415,31 @@ describe("createLocalSession", () => {
   it("[T70] checks its options", async () => {
     const { options } = localOptions();
     const make = (changes: string): Promise<unknown> => createLocalSession({ ...options, ...JSON.parse(changes) });
-    await expect(createLocalSession(JSON.parse("null"))).rejects.toThrow("The options must be an object");
-    await expect(make('{"store":null}')).rejects.toThrow("The option store must be an object");
-    await expect(make('{"store":{"load":1,"save":1}}')).rejects.toThrow("The function load of the option store");
-    await expect(make('{"session":""}')).rejects.toThrow("The option session must be a non-empty string");
-    await expect(make('{"assets":null}')).rejects.toThrow("The option assets must be a function");
-    await expect(make('{"lexicons":[]}')).rejects.toThrow("The option lexicons must be a function");
-    await expect(make('{"clock":{}}')).rejects.toThrow("The function now of the option clock");
-    await expect(make('{"definition":5}')).rejects.toThrow("The option definition must be an object");
-    await expect(make('{"extra":1}')).rejects.toThrow("The options has the properties");
+    await expect(createLocalSession(JSON.parse("null"))).rejects.toThrow(
+      "The options object is invalid: expected an object, found null.",
+    );
+    await expect(make('{"store":null}')).rejects.toThrow(
+      "The options object is invalid at store: expected an object with the functions load and save, found null.",
+    );
+    await expect(make('{"store":{"load":1,"save":1}}')).rejects.toThrow(
+      "The options object is invalid at store: expected an object with the functions load and save",
+    );
+    await expect(make('{"session":""}')).rejects.toThrow(
+      "The options object is invalid at session: expected a length of at least 1, found 0.",
+    );
+    await expect(make('{"assets":null}')).rejects.toThrow(
+      "The options object is invalid at assets: expected a function, found null.",
+    );
+    await expect(make('{"lexicons":[]}')).rejects.toThrow(
+      "The options object is invalid at lexicons: expected a function, found an array.",
+    );
+    await expect(make('{"clock":{}}')).rejects.toThrow(
+      "The options object is invalid at clock: expected an object with the function now",
+    );
+    await expect(make('{"definition":5}')).rejects.toThrow(
+      "The options object is invalid at definition: expected an object, found 5.",
+    );
+    await expect(make('{"extra":1}')).rejects.toThrow('The options object is invalid: unexpected property "extra".');
     await expect(make('{"seed":1.5}')).rejects.toThrow("seed");
     const client = await createLocalSession(options);
     await expect(client.dispatch(JSON.parse('{"type":"nope"}'))).rejects.toThrow("The type of the action");

@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import {
   checkArray,
@@ -14,7 +15,16 @@ import {
   checkString,
   checkSynchronous,
   describe as describeValue,
+  finiteSchema,
   isRecord,
+  mapSchema,
+  nonEmptyStringSchema,
+  nonNegativeIntegerSchema,
+  nonNegativeSchema,
+  parseWith,
+  positiveIntegerSchema,
+  recordSchema,
+  transformWith,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 
@@ -163,5 +173,149 @@ describe("checkSeed", () => {
     expect(() => checkSeed(-7)).not.toThrow();
     expect(() => checkSeed(1.5)).toThrow("A seed must be a safe integer, found 1.5.");
     expect(() => checkSeed(JSON.parse('"5"'))).toThrow('A seed must be a safe integer, found "5".');
+  });
+});
+
+describe("parseWith", () => {
+  const schema = v.strictObject({
+    name: v.string(),
+    count: nonNegativeIntegerSchema,
+    kind: v.picklist(["a", "b", "c"]),
+    items: v.array(v.strictObject({ id: v.string() })),
+  });
+  const valid = { name: "n", count: 2, kind: "a", items: [{ id: "x" }] };
+  const message = (input: unknown): string => {
+    try {
+      parseWith(schema, input, "The thing");
+    } catch (error) {
+      if (error instanceof DataError) return error.message;
+      throw error;
+    }
+    return "";
+  };
+
+  it("returns the output of the schema", () => {
+    expect(parseWith(schema, valid, "The thing")).toEqual(valid);
+  });
+
+  it("names the path and what was expected and found, in a full sentence", () => {
+    expect(message(JSON.parse("null"))).toBe("The thing is invalid: expected an object, found null.");
+    expect(message({ ...valid, name: 5 })).toBe("The thing is invalid at name: expected a string, found 5.");
+    expect(message({ ...valid, count: -1 })).toBe(
+      "The thing is invalid at count: expected a value of at least 0, found -1.",
+    );
+    expect(message({ ...valid, count: 1.5 })).toBe(
+      "The thing is invalid at count: expected a safe integer, found 1.5.",
+    );
+    expect(message({ ...valid, kind: "z" })).toBe('The thing is invalid at kind: expected "a", "b" or "c", found "z".');
+    expect(message({ ...valid, items: [{ id: 1 }] })).toBe(
+      "The thing is invalid at items[0].id: expected a string, found 1.",
+    );
+    expect(message({ ...valid, items: {} })).toBe("The thing is invalid at items: expected an array, found an object.");
+  });
+
+  it("names a property that is missing or unexpected, at its object", () => {
+    expect(message({ ...valid, count: undefined })).toBe(
+      "The thing is invalid at count: expected a number, found undefined.",
+    );
+    expect(message({ name: "n", kind: "a", items: [] })).toBe('The thing is invalid: missing the property "count".');
+    expect(message({ ...valid, extra: 1 })).toBe('The thing is invalid: unexpected property "extra".');
+    expect(message({ ...valid, items: [{ id: "x", more: true }] })).toBe(
+      'The thing is invalid at items[0]: unexpected property "more".',
+    );
+    const withProto: unknown = JSON.parse(JSON.stringify(valid).replace("{", '{"__proto__":1,'));
+    expect(message(withProto)).toBe('The thing is invalid: unexpected property "__proto__".');
+  });
+
+  it("writes a name that is not an identifier in brackets, and uses the message of a rule", () => {
+    const named = v.strictObject({
+      "a b": v.pipe(
+        v.string(),
+        v.check((text) => text === "ok", "must be ok"),
+      ),
+    });
+    expect(() => parseWith(named, { "a b": "no" }, "The input")).toThrow(
+      new DataError('The input is invalid at ["a b"]: must be ok.'),
+    );
+  });
+
+  it("refuses an array where the object has only optional entries, behind the record schema", () => {
+    const options = v.pipe(recordSchema, v.object({ speed: v.optional(v.number()) }));
+    expect(parseWith(options, {}, "The options")).toEqual({});
+    expect(() => parseWith(options, [], "The options")).toThrow(
+      new DataError("The options is invalid: expected an object, found an array."),
+    );
+  });
+});
+
+describe("transformWith", () => {
+  const schema = v.object({
+    value: v.pipe(
+      v.number(),
+      transformWith((number) => {
+        if (number < 0) throw new DataError("A value cannot be negative");
+        return number * 2;
+      }),
+    ),
+  });
+
+  it("applies the code to the output of the steps before it", () => {
+    expect(parseWith(schema, { value: 2 }, "The input")).toEqual({ value: 4 });
+  });
+
+  it("turns a DataError of the code into an issue at the path of the value", () => {
+    expect(() => parseWith(schema, { value: -1 }, "The input")).toThrow(
+      new DataError("The input is invalid at value: A value cannot be negative."),
+    );
+  });
+
+  it("lets any other error through", () => {
+    const failing = v.pipe(
+      v.string(),
+      transformWith(() => {
+        throw new RangeError("not a data error");
+      }),
+    );
+    expect(() => parseWith(failing, "x", "The input")).toThrow(RangeError);
+  });
+});
+
+describe("mapSchema", () => {
+  it("reads every property, a name such as __proto__ included, into a map in the order of the object", () => {
+    const read = parseWith(mapSchema(v.string()), JSON.parse('{"b":"1","__proto__":"2","a":"3"}'), "The paths");
+    expect([...read]).toEqual([
+      ["b", "1"],
+      ["__proto__", "2"],
+      ["a", "3"],
+    ]);
+  });
+
+  it("names the property that is not what the schema asks", () => {
+    expect(() => parseWith(mapSchema(v.string()), JSON.parse('{"a":"1","__proto__":2}'), "The paths")).toThrow(
+      new DataError('The paths is invalid: the property "__proto__" is invalid: expected a string, found 2.'),
+    );
+    expect(() => parseWith(mapSchema(v.string()), JSON.parse("[]"), "The paths")).toThrow(
+      new DataError("The paths is invalid: expected an object, found an array."),
+    );
+  });
+});
+
+describe("the schemas of numbers and strings", () => {
+  it("accept what the check functions accept", () => {
+    expect(parseWith(finiteSchema, -1.5, "N")).toBe(-1.5);
+    expect(parseWith(nonNegativeSchema, 0, "N")).toBe(0);
+    expect(parseWith(nonNegativeIntegerSchema, 7, "N")).toBe(7);
+    expect(parseWith(positiveIntegerSchema, 1, "N")).toBe(1);
+    expect(parseWith(nonEmptyStringSchema, "x", "N")).toBe("x");
+  });
+
+  it("refuse what they refuse", () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, "1", null]) {
+      expect(() => parseWith(finiteSchema, bad, "N")).toThrow(DataError);
+    }
+    expect(() => parseWith(nonNegativeSchema, -0.5, "N")).toThrow(DataError);
+    expect(() => parseWith(nonNegativeIntegerSchema, 2 ** 53, "N")).toThrow(DataError);
+    expect(() => parseWith(positiveIntegerSchema, 0, "N")).toThrow(DataError);
+    expect(() => parseWith(nonEmptyStringSchema, "", "N")).toThrow(DataError);
   });
 });
