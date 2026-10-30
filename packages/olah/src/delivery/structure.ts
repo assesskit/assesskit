@@ -5,7 +5,7 @@ import type {
   AssessmentTest,
   TestPart,
 } from "../asi/index.js";
-import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
+import { checkFunction, checkRecord, checkString, checkSynchronous, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type Resolvers, resolveReference } from "../package/index.js";
 
@@ -209,6 +209,7 @@ class Builder {
   /** Resolves a `qti-assessment-section-ref` to its section and the path of that document (INFO §7.5, BIND §8.2). */
   private reference(ref: AssessmentSectionRef, base: string): { model: AssessmentSection; holder: string } {
     const model = this.resolvers.sections(ref.href, base);
+    checkSynchronous(model, "The resolver sections");
     checkRecord(
       model,
       `The section that ${describe(ref.href)} names must be an object of the model of qti-assessment-section`,
@@ -242,8 +243,8 @@ class Builder {
  * @param resolvers - Only `sections` is called, as `packageResolvers` provides it.
  * @throws `DataError` when an argument has the wrong type; when two test parts, sections or item references share an
  * identifier, which a section reference to one document from two places also does; when a section reference and the
- * section it names have different identifiers; when a section holds an `xi:include`; or when a reference is outside the
- * package.
+ * section it names have different identifiers; when a section holds an `xi:include`; when a reference is outside the
+ * package; or when the resolver returns a promise.
  * @throws `ReadError` from the resolver, when a reference names no section.
  */
 export function resolveStructure(

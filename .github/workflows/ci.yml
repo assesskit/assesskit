@@ -9,6 +9,31 @@ permissions:
   contents: read
 
 jobs:
+  # Whether the change touches olah, its harness or this workflow. The xsd, corpus, differential and bench jobs run only
+  # then. A job that is skipped passes a required check. A change that cannot be compared with its base, such as the
+  # first push of a branch, counts as touching olah.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      olah: ${{ steps.filter.outputs.olah }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # olah, the harness (conformance/, differential/, scripts/, validation/ and the files of the root that configure
+          # it) and this workflow.
+          OLAH_PATHS: ^(packages/olah/|conformance/|differential/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
+        run: |
+          changed="$RUNNER_TEMP/changed.txt"
+          if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Eq "$OLAH_PATHS" "$changed"; then
+            echo "olah=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "olah=true" >> "$GITHUB_OUTPUT"
+          fi
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -53,6 +78,8 @@ jobs:
   # The benchmarks of olah on generated inputs. The job fails when the fastest sample of a benchmark is above its budget
   # (packages/olah/docs/architecture.md#performance).
   bench:
+    needs: changes
+    if: needs.changes.outputs.olah == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -64,7 +91,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm bench
 
-  # The rendering tests of tempuh, in the current Chromium, Firefox and WebKit.
+  # The rendering tests of tempuh, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
+  # WebKit.
   browsers:
     runs-on: ubuntu-latest
     steps:
@@ -79,6 +107,7 @@ jobs:
       - run: pnpm corpus
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:browser
+      - run: pnpm test:corpus --project '!olah*'
 
   # The built code of tempuh in the oldest browsers of its baseline, in the container images of the Playwright
   # releases that ship them (docs/baseline.md).
@@ -95,9 +124,11 @@ jobs:
       - run: pnpm build
       - run: pnpm compat:engines
 
-  # Tests that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
-  # that conformance/corpus.lock.json pins.
+  # Tests of olah that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
+  # that conformance/corpus.lock.json pins. The tests of tempuh that read them run in the browsers job.
   corpus:
+    needs: changes
+    if: needs.changes.outputs.olah == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -107,13 +138,31 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm corpus
-      - run: pnpm test:corpus
+      - run: pnpm test:corpus --project '!tempuh*'
+
+  # The comparison of olah with the Longsight qti3-core on items and item sessions, on the generated items and on the
+  # 1EdTech examples (packages/olah/docs/evidence.md#differential-tests).
+  differential:
+    needs: changes
+    if: needs.changes.outputs.olah == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm corpus
+      - run: pnpm test:differential
 
   # Tests that validate against the official XSDs, downloaded at the hashes that
   # packages/olah/src/node/schema-files.json pins, and that read the 1EdTech examples.
   xsd:
+    needs: changes
+    if: needs.changes.outputs.olah == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -5,7 +5,7 @@ import type {
   AssessmentTest,
   TestPart,
 } from "../asi/index.js";
-import { describe } from "../checks.js";
+import { checkSynchronous, describe } from "../checks.js";
 import { type Resolvers, resolveReference } from "../package/index.js";
 import { failureIssues } from "./failures.js";
 import type { Findings } from "./findings.js";
@@ -45,6 +45,31 @@ export interface PlacedPart {
 
 /** A node of the placed structure. */
 export type Placed = PlacedPart | PlacedSection | PlacedItemRef;
+
+/** Returns the test part that holds a node. */
+export function partOf(node: Placed): PlacedPart {
+  let at: Placed = node;
+  while (at.kind !== "part") at = at.parent;
+  return at;
+}
+
+/** Returns whether a node may be presented several times, because a section above it selects with replacement (INFO §5.98). */
+export function mayRepeat(node: Placed): boolean {
+  if (node.kind === "part") return false;
+  for (let at: Placed = node.parent; at.kind !== "part"; at = at.parent) {
+    if (at.model.selection?.withReplacement === true) return true;
+  }
+  return false;
+}
+
+/**
+ * Returns whether `ITEM.VAR`, with no instance number, names no value for an item reference: selection with replacement
+ * can repeat it and its test part submits each item alone. In a part that submits simultaneously the value is that of the
+ * instance submitted last (INFO §2.11.1.2, G9).
+ */
+export function hasUndefinedInstance(node: PlacedItemRef): boolean {
+  return mayRepeat(node) && partOf(node).model.submissionMode !== "simultaneous";
+}
 
 /** The test with its section references resolved, and the section documents it read. */
 export interface PlacedTest {
@@ -158,25 +183,28 @@ class Builder {
     this.complete = this.resolvers !== undefined && this.complete;
     if (this.resolvers === undefined) return undefined;
     const path = resolveReference(base, ref.href);
+    let model: AssessmentSection;
     try {
-      const model = this.resolvers.sections(ref.href, base);
-      if (model.identifier !== ref.identifier) {
-        const message = `The section reference ${describe(ref.identifier)} names ${describe(ref.href)}, whose section has the identifier ${describe(model.identifier)}; the two must be equal.`;
-        this.findings.error(
-          "olah/validate/identifier-mismatch",
-          message,
-          "INFO §7.5",
-          "qti-assessment-test/qti-assessment-section-ref",
-        );
-      }
-      const holder = path ?? base;
-      this.sectionDocuments.push({ path: holder, section: model });
-      return { model, holder };
+      model = this.resolvers.sections(ref.href, base);
     } catch (error) {
       this.complete = false;
       this.findings.adopt(failureIssues(error, base));
       return undefined;
     }
+    // Outside the try: a promise is a defect of the host and not a finding.
+    checkSynchronous(model, "The resolver sections");
+    if (model.identifier !== ref.identifier) {
+      const message = `The section reference ${describe(ref.identifier)} names ${describe(ref.href)}, whose section has the identifier ${describe(model.identifier)}; the two must be equal.`;
+      this.findings.error(
+        "olah/validate/identifier-mismatch",
+        message,
+        "INFO §7.5",
+        "qti-assessment-test/qti-assessment-section-ref",
+      );
+    }
+    const holder = path ?? base;
+    this.sectionDocuments.push({ path: holder, section: model });
+    return { model, holder };
   }
 }
 

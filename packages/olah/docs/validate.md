@@ -140,6 +140,7 @@ is unknown, and an unknown type passes every check, so a finding is a defect and
 | `olah/validate/random-bounds`              | `qti-random-integer` or `qti-random-float` with `min` above `max`: the result is always NULL (G32, G33).                                                      | INFO §7.33, §7.34            |
 | `olah/validate/weight-with-integer`        | `qti-test-variables` with a `weight-identifier` and `base-type` integer (G35).                                                                                | INFO §7.39.5                 |
 | `olah/validate/weight-undefined`           | A weight that no `qti-weight` of the item reference defines, or one named in an item (L9). Warning: the weight is 1.                                          | INFO §7.47.2                 |
+| `olah/validate/item-variable-undefined`    | `ITEM.VAR` of an item reference that selection with replacement can repeat in a test part that submits each item alone (G9). Warning.                         | INFO §2.11.1.2               |
 | `olah/validate/missing-mapping`            | `qti-map-response` of a variable without `qti-mapping`, or `qti-map-response-point` of one without `qti-area-mapping` or of a base type other than point.     | INFO §2.11.1.5, §2.11.1.6    |
 | `olah/validate/pattern`                    | A `qti-pattern-match` pattern or a `pattern-mask` that `compileXsdRegex` rejects.                                                                             | INFO §5.104.1, §5.162.5      |
 | `olah/validate/outcome-only-expression`    | An expression that reads the item sessions of a test, such as `qti-number-correct`, outside outcome processing (B87).                                         | INFO §2.11.2                 |
@@ -211,6 +212,7 @@ Where the specifications are silent or ambiguous, the validator reads them like 
 | L3       | A type that cannot be known statically passes: custom operators, record fields and variables without a base type are never reported.                     |
 | G40, T23 | A standard outcome of another base type is a warning, as content varies and still runs.                                                                  |
 | G24      | A rule that sets an externally scored outcome is a warning: it replaces the supplied score on every run.                                                 |
+| G9       | `ITEM.VAR` of an item reference that selection with replacement can repeat, in an individual part, is a warning: its value is undefined.                 |
 | G43, G17 | A QTI 2.x template address is a warning; a template that is neither standard nor resolved is an error only for an item with no rules.                    |
 | L9       | A weight with no definition is a warning, because the weight 1 applies.                                                                                  |
 | L6       | Content is reported as never shown or hidden only when every assignment to its controlling variable is a constant.                                       |

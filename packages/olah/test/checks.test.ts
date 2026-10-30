@@ -12,6 +12,7 @@ import {
   checkRecord,
   checkSeed,
   checkString,
+  checkSynchronous,
   describe as describeValue,
   isRecord,
 } from "../src/checks.js";
@@ -70,6 +71,22 @@ describe("checkFunction", () => {
     expect(() => checkFunction(JSON.parse('"x"'), "The resolver must be a function")).toThrow(
       'The resolver must be a function, found "x".',
     );
+  });
+});
+
+describe("checkSynchronous", () => {
+  it("accepts any value that is not a promise", () => {
+    for (const value of [{ resource: "a" }, [], "a", 1, null, undefined, JSON.parse('{"then":1}')]) {
+      expect(() => checkSynchronous(value, "The resolver items")).not.toThrow();
+    }
+  });
+
+  it("rejects a promise and any other thenable", () => {
+    const message = "The resolver items must return its value synchronously, found a promise.";
+    expect(() => checkSynchronous(Promise.resolve(1), "The resolver items")).toThrow(message);
+    // biome-ignore lint/suspicious/noThenProperty: the test needs a thenable that is not a Promise.
+    const thenable = { then: () => undefined };
+    expect(() => checkSynchronous(thenable, "The resolver items")).toThrow(DataError);
   });
 });
 

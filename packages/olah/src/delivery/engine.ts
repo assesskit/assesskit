@@ -270,7 +270,8 @@ function start(course: Course, options: StartOptions): Step {
  *
  * @param definition - What to deliver; see {@link DeliveryDefinition}.
  * @param options - See {@link EngineOptions}.
- * @throws `DataError` when an argument has the wrong type, or the static checks find an error; the message lists them.
+ * @throws `DataError` when an argument has the wrong type, the static checks find an error (the message lists them), or a
+ * resolver returns a promise.
  * @throws `ReadError` from a resolver, when a reference cannot be resolved.
  */
 export function createEngine(definition: DeliveryDefinition, options: EngineOptions = {}): Engine {

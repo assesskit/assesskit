@@ -1222,6 +1222,38 @@ describe("validateTest: the variables a test reads", () => {
     expect(only(validated({ sections: twice }), "olah/validate/duplicate-identifier")).toHaveLength(1);
   });
 
+  it("[G9] warns when ITEM.VAR names an item that selection with replacement can repeat in a part that submits each item alone", () => {
+    const repeated = section("S", `<qti-selection select="2" with-replacement="true"/>${itemRef("I1")}`);
+    const issues = (expression: string, sections = repeated, partAttributes?: string): readonly Issue[] =>
+      validated({
+        declarations: testOutcomes,
+        sections,
+        partAttributes,
+        processing: outcomeRules(setOutcome("TOTAL", expression)),
+      });
+    const warned = (expression: string, sections = repeated, partAttributes?: string): readonly Issue[] =>
+      only(issues(expression, sections, partAttributes), "olah/validate/item-variable-undefined");
+    const found = warned(variable("I1.SCORE"));
+    expect(found).toMatchObject([{ severity: "warning", source: "INFO §2.11.1.2" }]);
+    expect(found[0]?.message).toContain('selection with replacement can repeat the item reference "I1"');
+    expect(found[0]?.message).toContain('"I1.1.SCORE"');
+    // An instance number names the value; INFO §2.11.1.2 leaves only the lookup without one undefined.
+    expect(warned(variable("I1.2.SCORE"))).toEqual([]);
+    const once = section("S", `<qti-selection select="1"/>${itemRef("I1")}`);
+    expect(warned(variable("I1.SCORE"), once)).toEqual([]);
+    const nested = section("S", `<qti-selection select="1" with-replacement="true"/>${section("In", itemRef("I1"))}`);
+    expect(warned(variable("I1.SCORE"), nested)).toHaveLength(1);
+    // A simultaneous part takes the value of the instance submitted last (INFO §2.11.1.2).
+    const simultaneous = 'navigation-mode="nonlinear" submission-mode="simultaneous"';
+    expect(warned(variable("I1.SCORE"), repeated, simultaneous)).toEqual([]);
+    expect(warned(`<qti-default identifier="I1.SCORE"/>`)).toEqual([]);
+    expect(warned('<qti-sum><qti-test-variables variable-identifier="SCORE"/></qti-sum>')).toEqual([]);
+    expect(issues('<qti-variable identifier="I1.SCORE" weight-identifier="W"/>').map(({ code }) => code)).toEqual([
+      "olah/validate/weight-undefined",
+      "olah/validate/item-variable-undefined",
+    ]);
+  });
+
   it("[L8] reports the duration of an item that is not time dependent", () => {
     const processing = outcomeRules(
       setOutcome("FLAG", `<qti-duration-gte>${variable("I1.duration")}${base("duration", "1")}</qti-duration-gte>`),
@@ -2254,6 +2286,31 @@ describe("the entry points", () => {
       },
     };
     expect(() => validateTest(testOf(testXml()), "t.xml", crashing)).toThrow(TypeError);
+  });
+
+  it("[L12] refuse a resolver that returns a promise instead of reporting it, because it is a defect of the host", () => {
+    const stimulus = `<qti-assessment-stimulus ${NS} identifier="St" title="St"><qti-stimulus-body><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`;
+    const withStimulus = itemXml({ identifier: "I1", declarations: single("string"), body: textEntry("") }).replace(
+      "<qti-item-body>",
+      '<qti-assessment-stimulus-ref identifier="St" href="St.xml"/><qti-item-body>',
+    );
+    const files = {
+      "I1.xml": withStimulus,
+      "St.xml": stimulus,
+      "S1.xml": section("S1", itemRef("I1")).replace("<qti-assessment-section ", `<qti-assessment-section ${NS} `),
+    };
+    const xml = testXml({ sections: '<qti-assessment-section-ref identifier="S1" href="S1.xml"/>' });
+    const resolvers = resolversOf(files);
+    const validate = (replaced: Partial<Resolvers>): readonly Issue[] =>
+      validateTest(testOf(xml), "test.xml", { ...resolvers, ...replaced });
+    expect(validate({})).toEqual([]);
+    for (const name of ["items", "sections", "stimuli"] as const) {
+      const resolve = resolvers[name];
+      // The promise is the value of the resolver, as a host's asynchronous function in JavaScript returns it.
+      expect(() =>
+        validate({ [name]: (href: string, base: string) => Promise.resolve(resolve(href, base)) as never }),
+      ).toThrow(`The resolver ${name} must return its value synchronously, found a promise.`);
+    }
   });
 
   it("[L12] report a resolver's error of olah as an issue of the reference", () => {

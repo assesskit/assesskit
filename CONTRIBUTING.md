@@ -33,7 +33,13 @@ Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip` and `pnpm conformanc
 `pnpm check:packages`, `pnpm compat` and `pnpm docs:api`. A change to the code that runs in a browser also runs
 `pnpm test:browser`, which needs the browsers of `pnpm exec playwright install`, the schemas of `pnpm schemas` and the corpus of `pnpm corpus`, and `pnpm compat:engines`, which needs
 Docker ([baseline](packages/tempuh/docs/baseline.md)). The tests that read the corpus run with `pnpm corpus` and `pnpm test:corpus` (those of tempuh also need the browsers of `pnpm exec playwright install`),
-and the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`.
+the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`, and the comparison with
+Longsight `qti3-core` with `pnpm corpus` and `pnpm test:differential`.
+
+CI runs the jobs `xsd`, `corpus`, `differential` and `bench` only when a change touches `packages/olah/`, the harness
+(`conformance/`, `differential/`, `scripts/`, `validation/` and the configuration files at the root) or `.github/workflows/ci.yml`;
+the other jobs run on every change.
+
 A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with
 `pnpm changeset` when none is pending ([AGENTS.md](AGENTS.md#releases)).
 

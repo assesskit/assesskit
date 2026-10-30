@@ -12,8 +12,10 @@ export interface Problem {
   readonly source: string;
 }
 
-/** What an expression's variable is: its type, which may come with a warning about naming it, or the problem with naming it. */
-export type Lookup = { readonly type: StaticType; readonly warning?: Problem } | { readonly problem: Problem };
+/** What an expression's variable is: its type, which may come with warnings about naming it, or the problem with naming it. */
+export type Lookup =
+  | { readonly type: StaticType; readonly warnings?: readonly Problem[] }
+  | { readonly problem: Problem };
 
 /** What a response variable is: its declaration when the check can see it, or the problem with naming it. */
 export type ResponseLookup = { readonly declaration?: ResponseDeclaration } | { readonly problem: Problem };

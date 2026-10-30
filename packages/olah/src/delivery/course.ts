@@ -7,7 +7,15 @@ import {
   readScoreCovers,
   type ScoreCover,
 } from "../asi/index.js";
-import { checkFunction, checkOptions, checkPositiveInteger, checkRecord, checkString, describe } from "../checks.js";
+import {
+  checkFunction,
+  checkOptions,
+  checkPositiveInteger,
+  checkRecord,
+  checkString,
+  checkSynchronous,
+  describe,
+} from "../checks.js";
 import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
 import { DataError, type Issue } from "../errors.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
@@ -259,10 +267,9 @@ function stimuliOf(
   if (resolvers === undefined) return [];
   return item.stimulusRefs.map((ref) => {
     const stimulusPath = path === undefined ? undefined : resolveReference(path, ref.href);
-    return {
-      stimulus: resolvers.stimuli(ref.href, path ?? ""),
-      ...(stimulusPath === undefined ? {} : { path: stimulusPath }),
-    };
+    const stimulus = resolvers.stimuli(ref.href, path ?? "");
+    checkSynchronous(stimulus, "The resolver stimuli");
+    return { stimulus, ...(stimulusPath === undefined ? {} : { path: stimulusPath }) };
   });
 }
 
@@ -413,6 +420,7 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
   for (const node of itemRefsOf(structure)) {
     const path = resolveReference(node.base, node.model.href) ?? node.model.href;
     const item = resolved.get(path) ?? resolvers.items(node.model.href, node.base);
+    checkSynchronous(item, "The resolver items");
     resolved.set(path, item);
     items.set(node.model.identifier, {
       node,

@@ -1,4 +1,5 @@
-import { type AssessmentItem, type AssessmentTest, walkDocument } from "../asi/index.js";
+import { type AssessmentItem, type AssessmentStimulus, type AssessmentTest, walkDocument } from "../asi/index.js";
+import { checkSynchronous } from "../checks.js";
 import { type DeliverableItem, type ResolvedItem, type Resolvers, resolveReference } from "../package/index.js";
 import { AttributeReferences } from "./attribute-references.js";
 import { BindRuleSets } from "./bind-rule-sets.js";
@@ -19,7 +20,14 @@ import type { Reports } from "./reports.js";
 import { RuleChecker } from "./rules.js";
 import { describeStatic, fitsVariable, typeOfVariable } from "./static-type.js";
 import { type ItemRefInfo, TEST_BUILT_IN, TestScope } from "./test-scope.js";
-import { type Placed, type PlacedItemRef, type PlacedSection, type PlacedTest, placeTest } from "./test-structure.js";
+import {
+  hasUndefinedInstance,
+  type Placed,
+  type PlacedItemRef,
+  type PlacedSection,
+  type PlacedTest,
+  placeTest,
+} from "./test-structure.js";
 import { checkTestStructure } from "./test-structure-checks.js";
 
 const ROOT = "qti-assessment-test";
@@ -53,13 +61,18 @@ function resolveItems(placed: PlacedTest, resolvers: Resolvers, reports: Reports
   const add = (item: AssessmentItem | undefined, path: string | undefined): void => {
     if (item !== undefined && !items.has(item)) items.set(item, path);
   };
-  for (const { model, base } of placed.itemRefs) {
+  for (const node of placed.itemRefs) {
+    const { model, base } = node;
     const path = resolveReference(base, model.href) ?? model.href;
     if (!byPath.has(path)) byPath.set(path, resolveItem(resolvers, model.href, base, reports));
     const resolved = byPath.get(path);
     const item = qtiItemOf(resolved?.deliverable);
     if (!refs.has(model.identifier))
-      refs.set(model.identifier, { ref: model, ...(item === undefined ? {} : { item }) });
+      refs.set(model.identifier, {
+        ref: model,
+        undefinedInstance: hasUndefinedInstance(node),
+        ...(item === undefined ? {} : { item }),
+      });
     add(item, path);
     // The engine may present a variant instead of the item, so a variant is as reachable as the item.
     for (const variant of resolved?.variants ?? []) add(qtiItemOf(variant.deliverable), undefined);
@@ -69,12 +82,16 @@ function resolveItems(placed: PlacedTest, resolvers: Resolvers, reports: Reports
 
 /** Resolves one item reference; a reference that cannot be resolved is reported and gives `undefined`. */
 function resolveItem(resolvers: Resolvers, href: string, base: string, reports: Reports): ResolvedItem | undefined {
+  let resolved: ResolvedItem;
   try {
-    return resolvers.items(href, base);
+    resolved = resolvers.items(href, base);
   } catch (error) {
     reports.of(base).adopt(failureIssues(error, base));
     return undefined;
   }
+  // Outside the try: a promise is a defect of the host and not a finding.
+  checkSynchronous(resolved, "The resolver items");
+  return resolved;
 }
 
 /**
@@ -250,12 +267,15 @@ function checkItemsAndStimuli(
       const stimulusPath = path === undefined ? ref.href : (resolveReference(path, ref.href) ?? ref.href);
       if (stimuli.has(stimulusPath)) continue;
       stimuli.add(stimulusPath);
+      let stimulus: AssessmentStimulus;
       try {
-        const stimulus = resolvers.stimuli(ref.href, path ?? "");
-        checkElements({ kind: "stimulus", stimulus }, reports.of(stimulusPath));
+        stimulus = resolvers.stimuli(ref.href, path ?? "");
       } catch (error) {
         reports.of(path).adopt(failureIssues(error, path));
+        continue;
       }
+      checkSynchronous(stimulus, "The resolver stimuli");
+      checkElements({ kind: "stimulus", stimulus }, reports.of(stimulusPath));
     }
   }
 }

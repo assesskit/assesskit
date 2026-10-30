@@ -10,6 +10,8 @@ export interface ItemRefInfo {
   readonly ref: AssessmentItemRef;
   /** The item; absent when it could not be resolved or is a link to a tool, whose variables are then not known. */
   readonly item?: AssessmentItem;
+  /** Whether `ITEM.VAR`, with no instance number, names no value of the item reference (INFO §2.11.1.2, G9). */
+  readonly undefinedInstance: boolean;
 }
 
 /** What the expressions of a test can name besides its own variables: the item references, and the parts and sections. */
@@ -31,6 +33,18 @@ function weightProblem(weightIdentifier: string, owner: string): Problem {
     code: "olah/validate/weight-undefined",
     message: `An expression names the weight ${JSON.stringify(weightIdentifier)}, but ${owner} has no qti-weight with that identifier, so the weight 1 applies.`,
     source: "INFO §7.47.2",
+  };
+}
+
+/**
+ * The problem with a value that an expression reads without naming the instance of an item that selection with
+ * replacement can repeat (INFO §2.11.1.2).
+ */
+function instanceProblem(identifier: string, head: string, name: string): Problem {
+  return {
+    code: "olah/validate/item-variable-undefined",
+    message: `The expression reads ${JSON.stringify(identifier)}, but selection with replacement can repeat the item reference ${JSON.stringify(head)} in a test part that submits each item alone, so the specification leaves the value undefined and olah reads the instance whose attempt ended last. Name an instance, as in ${JSON.stringify(`${head}.1.${name}`)}.`,
+    source: "INFO §2.11.1.2",
   };
 }
 
@@ -75,12 +89,17 @@ export class TestScope implements RuleScope {
     };
   }
 
-  /** Splits `ITEM.VAR` and `ITEM.n.VAR` into the item reference and the variable; `undefined` for any other identifier. */
-  private static prefixed(identifier: string): { readonly head: string; readonly name: string } | undefined {
+  /**
+   * Splits `ITEM.VAR` and `ITEM.n.VAR` into the item reference and the variable, and says whether an instance is named;
+   * `undefined` for any other identifier.
+   */
+  private static prefixed(
+    identifier: string,
+  ): { readonly head: string; readonly name: string; readonly instance: boolean } | undefined {
     const [head = "", middle = "", last = "", ...rest] = identifier.split(".");
     if (rest.length > 0 || middle === "") return undefined;
-    if (last === "") return { head, name: middle };
-    return INSTANCE.test(middle) ? { head, name: last } : undefined;
+    if (last === "") return { head, name: middle, instance: false };
+    return INSTANCE.test(middle) ? { head, name: last, instance: true } : undefined;
   }
 
   private variablesOf(item: AssessmentItem): ReadonlyMap<string, DeclaredVariable> {
@@ -129,7 +148,7 @@ export class TestScope implements RuleScope {
     const undefinedWeight =
       weightIdentifier !== undefined && !info.ref.weights.some(({ identifier: each }) => each === weightIdentifier);
     return undefinedWeight
-      ? { type, warning: weightProblem(weightIdentifier, `the item reference ${JSON.stringify(head)}`) }
+      ? { type, warnings: [weightProblem(weightIdentifier, `the item reference ${JSON.stringify(head)}`)] }
       : { type };
   }
 
@@ -139,19 +158,31 @@ export class TestScope implements RuleScope {
     return { ...type, baseType: "float" };
   }
 
-  variable(identifier: string, weightIdentifier: string | undefined): Lookup {
+  /** Looks up the variable that an identifier names, whichever instance of an item it is read from. */
+  private find(identifier: string, weightIdentifier: string | undefined): Lookup {
     const own = this.own(identifier);
     if (own !== undefined) {
       const type = typeOfVariable(own.type);
-      return weightIdentifier === undefined ? { type } : { type, warning: weightProblem(weightIdentifier, "the test") };
+      return weightIdentifier === undefined
+        ? { type }
+        : { type, warnings: [weightProblem(weightIdentifier, "the test")] };
     }
     const split = TestScope.prefixed(identifier);
     if (split === undefined) return { problem: this.problem(identifier, "variable") };
     return this.prefixedVariable(identifier, split.head, split.name, weightIdentifier);
   }
 
+  variable(identifier: string, weightIdentifier: string | undefined): Lookup {
+    const found = this.find(identifier, weightIdentifier);
+    const split = this.own(identifier) === undefined ? TestScope.prefixed(identifier) : undefined;
+    if ("problem" in found || split === undefined || split.instance) return found;
+    if (this.context?.itemRefs.get(split.head)?.undefinedInstance !== true) return found;
+    return { ...found, warnings: [...(found.warnings ?? []), instanceProblem(identifier, split.head, split.name)] };
+  }
+
+  /** Looks up the variable that `qti-default` names: a default value does not depend on the instance. */
   declared(identifier: string): Lookup {
-    return this.variable(identifier, undefined);
+    return this.find(identifier, undefined);
   }
 
   weight(weightIdentifier: string): Problem | undefined {

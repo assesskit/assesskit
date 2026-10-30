@@ -57,6 +57,7 @@ import {
   type Refusal,
   type RefusalCode,
   type ResolvedItem,
+  type Resolvers,
   type RuleContext,
   readAsi,
   readPnp,
@@ -542,6 +543,14 @@ function withVariants(
   };
 }
 
+/**
+ * A resolver as a host writes it in JavaScript when its documents are in a store: it returns a promise, which the type of
+ * a resolver does not allow.
+ */
+function awaiting<T>(resolver: (href: string, base: string) => T): (href: string, base: string) => T {
+  return (href, base) => Promise.resolve(resolver(href, base)) as never;
+}
+
 describe("createEngine", () => {
   it("[E26] refuses content that the static checks find an error in, and lists the errors", () => {
     const adaptive = counterItem({ adaptive: true });
@@ -561,6 +570,38 @@ describe("createEngine", () => {
     expect(() => createEngine({ kind: "item", item: custom, base: "x.xml" })).toThrow(
       /^The item cannot be delivered: the static checks found an error\. olah\/validate\/custom-operator in x\.xml/,
     );
+  });
+
+  it("[E26] refuses a resolver that returns a promise, whichever resolver it is", () => {
+    const refused = (name: string): string =>
+      `The resolver ${name} must return its value synchronously, found a promise.`;
+    const stimulus = readAsi(
+      `<qti-assessment-stimulus xmlns="${ASI_NAMESPACE}" identifier="passage" title="Passage"><qti-stimulus-body><p>Read</p></qti-stimulus-body></qti-assessment-stimulus>`,
+    );
+    if (stimulus.kind !== "stimulus") return fail(`Expected a stimulus, found ${stimulus.kind}.`);
+    const named = itemOf(
+      'time-dependent="false"',
+      '<qti-assessment-stimulus-ref identifier="passage" href="passage.xml"/><qti-item-body><p>Q</p></qti-item-body>',
+    );
+    const resolvers: Resolvers = {
+      items: () => resolution(named),
+      sections: () => sectionOf(section("S1", refs("a"))),
+      stimuli: () => stimulus.stimulus,
+    };
+    const test = testDocument(
+      testPart("P", '<qti-assessment-section-ref identifier="S1" href="s1.xml"/>', "nonlinear"),
+    );
+    const create = (replaced: Partial<Resolvers>): Engine =>
+      createEngine({ kind: "test", test, base: "test.xml", resolvers: { ...resolvers, ...replaced } });
+    expect(() => create({})).not.toThrow();
+    expect(() => create({ items: awaiting(resolvers.items) })).toThrow(refused("items"));
+    expect(() => create({ sections: awaiting(resolvers.sections) })).toThrow(refused("sections"));
+    expect(() => create({ stimuli: awaiting(resolvers.stimuli) })).toThrow(refused("stimuli"));
+    const alone = (stimuli: Resolvers["stimuli"]): Engine =>
+      createEngine({ kind: "item", item: named, base: "item.xml", resolvers: { stimuli } });
+    expect(() => alone(resolvers.stimuli)).not.toThrow();
+    expect(() => alone(awaiting(resolvers.stimuli))).toThrow(DataError);
+    expect(() => alone(awaiting(resolvers.stimuli))).toThrow(refused("stimuli"));
   });
 
   it("[E12] delivers an item alone as one item of a nonlinear part, with its feedback and review shown", () => {
@@ -4239,6 +4280,17 @@ describe("resolveStructure", () => {
       { "s1.xml": required },
     );
     for (let seed = 1; seed <= 20; seed++) expect(outlineOf(plan(structure, seed))).toBe("P{W[S1[a b]]}");
+  });
+
+  it("[B25] refuses a section resolver that returns a promise", () => {
+    const sections = new Map([["s1.xml", sectionOf(section("S1", refs("a")))]]);
+    const resolvers = {
+      sections: awaiting((href: string) => sections.get(href) ?? fail(`The test has no document ${href}.`)),
+    };
+    const referencing = testOf(part("P", '<qti-assessment-section-ref identifier="S1" href="s1.xml"/>'));
+    expect(() => resolveStructure(referencing, "test.xml", resolvers)).toThrow(
+      "The resolver sections must return its value synchronously, found a promise.",
+    );
   });
 
   it("[B25] refuses a reference whose identifier is not that of the section it names", () => {

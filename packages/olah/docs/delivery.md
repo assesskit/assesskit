@@ -190,7 +190,8 @@ that holds it.
 | `stimuli(href, base)`  | The `AssessmentStimulus` that a `qti-assessment-stimulus-ref` names.                                           |
 
 `packageResolvers(pkg)` builds them from a `QtiPackage`. A resolver reports a reference it cannot resolve by throwing, and
-the error leaves `createEngine`. A resolver returns its value and never a promise. `createEngine` calls each resolver while
+the error leaves `createEngine`. A resolver returns its value and never a promise: `createEngine` throws a `DataError` that
+names the resolver, and `validateTest` and `resolveStructure` do the same. `createEngine` calls each resolver while
 it builds the engine and the engine never calls one again, so a host whose documents are in a store loads those the test can
 reach, a pool of an adaptive section included, before it calls `createEngine`, and returns them from memory. One engine
 serves every session of a test, and a session does no I/O.
@@ -1025,7 +1026,7 @@ Where the specifications are silent or contradict themselves:
 | E26          | A failed response processing leaves the outcomes it started from: the reset values of a non-adaptive item, the earlier outcomes of an adaptive one.                                                                                                |
 | B2           | An item with an externally scored outcome is `pendingExternalScoring` after response processing, until the scores are supplied (E17).                                                                                                              |
 | B41, B100    | An item session starts at the first presentation of its instance: the variant is chosen and the template defaults are evaluated then. An instance not yet presented reads as a session before template processing.                                 |
-| B38, G9      | `ITEM.VAR` reads the instance whose attempt ended last, in both submission modes.                                                                                                                                                                  |
+| B38, G9      | `ITEM.VAR` reads the instance whose attempt ended last, in both submission modes. `validateTest` warns when a test reads it for an item that selection with replacement can repeat in a part that submits each item alone.                         |
 | E9           | Leaving an item of a linear part with individual submission submits its open attempt, with the checks, and closes it. `end-part` and `end-test` work from any item, and end open attempts without the checks.                                      |
 | B29          | The branch rules of a test part are evaluated after the part ended, so after the submission of a simultaneous group.                                                                                                                               |
 | E7, D9       | After a time-out the candidate goes on as after leaving the scope, in both navigation modes. Minimum times bind the candidate's moves, not time-outs.                                                                                              |

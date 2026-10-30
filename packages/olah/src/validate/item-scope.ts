@@ -94,7 +94,7 @@ export class ItemScope implements RuleScope {
     }
     const type = typeOfVariable(found.type);
     if (weightIdentifier === undefined) return { type };
-    return { type, warning: this.weightProblem(weightIdentifier) };
+    return { type, warnings: [this.weightProblem(weightIdentifier)] };
   }
 
   /** An item has no item sessions to weigh, and the expressions that read them are reported as outcome-only. */

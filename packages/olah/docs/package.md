@@ -196,6 +196,7 @@ way and keep the DRD of their link, so that the engine can choose among them at 
 The resolvers choose nothing. They throw a `ReadError` for a reference outside the package (`olah/package/outside-package`), one that
 no item resource names (`olah/package/unknown-resource`), a missing file (`olah/package/missing-file`), a document of another kind
 (`olah/package/document-kind`), and a variant whose resource has no main file inside the package (`olah/package/resource-href`).
+They are synchronous, as the package holds its files; a resolver that a host writes returns its value and never a promise.
 
 ## Dependencies
 

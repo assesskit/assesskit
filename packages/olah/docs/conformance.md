@@ -1103,7 +1103,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G6 | Case-insensitive comparison method | INFO §5.138, INFO §5.139, INFO §7.21.3 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts), [validate.test.ts](../test/validate.test.ts) |
 | G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 | [delivery.test.ts](../test/delivery.test.ts) |
-| G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b | [delivery.test.ts](../test/delivery.test.ts) |
+| G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery, validate | S | OB13b | [delivery.test.ts](../test/delivery.test.ts), [validate.test.ts](../test/validate.test.ts) |
 | G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |

@@ -98,8 +98,8 @@ below.
 
 `pnpm corpus` downloads the sources into `.cache/corpus/<source>/` unless the files there already match their hashes, and
 fails without writing when a download does not. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
-which `pnpm test` leaves out so that it runs offline. A corpus test calls `requireCorpus` of `scripts/corpus.ts`, which
-fails with an instruction when the corpus is missing.
+which `pnpm test` leaves out so that it runs offline; those of `differential/` run with `pnpm test:differential`. A corpus
+test calls `requireCorpus` of `scripts/corpus.ts`, which fails with an instruction when the corpus is missing.
 
 The regular expression tests (`packages/olah/test/values.corpus.test.ts`) apply the patterns of `msData/regex/` to the
 instances that `msMeta/Regex_w3c.xml` names. They follow XML Schema 1.0, which INFO cites, and Unicode 6.0.0 where the
@@ -239,6 +239,9 @@ The oracle also reads interactions. `differential/test/interactions.test.ts` com
 (choices, order, associations, inline choices) and the record of numeric text, and `interactions.corpus.test.ts` the
 interactions of the corpus items: response variables, shuffling and choices. They agree, apart from the integer value of a
 number that ends in its point (`5.`), which INFO §2.4.2.2 gives and the oracle does not; the test states it.
+
+`pnpm test:differential` runs all of these, and `pnpm test` leaves them out. The tests that read the corpus need
+`pnpm corpus` first.
 
 ## Fixtures from oracles
 

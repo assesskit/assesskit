@@ -1,6 +1,14 @@
 import type { BranchRule, Expression } from "../asi/index.js";
 import type { Findings } from "./findings.js";
-import type { Placed, PlacedItemRef, PlacedPart, PlacedSection, PlacedTest } from "./test-structure.js";
+import {
+  mayRepeat,
+  type Placed,
+  type PlacedItemRef,
+  type PlacedPart,
+  type PlacedSection,
+  type PlacedTest,
+  partOf,
+} from "./test-structure.js";
 
 /** The targets of a branch rule that name no identifier (INFO §5.23.1). */
 const EXIT_SECTION = "EXIT_SECTION";
@@ -11,12 +19,6 @@ const EXITS = new Set([EXIT_SECTION, EXIT_TESTPART, EXIT_TEST]);
 /** A node that carries branch rules and pre-conditions. */
 type Ruled = PlacedPart | PlacedSection | PlacedItemRef;
 
-function partOf(node: Placed): PlacedPart {
-  let at: Placed = node;
-  while (at.kind !== "part") at = at.parent;
-  return at;
-}
-
 /** Returns whether a branch rule always branches: its expression is the constant true. */
 function always({ expression }: { readonly expression: Expression }): boolean {
   return (
@@ -24,15 +26,6 @@ function always({ expression }: { readonly expression: Expression }): boolean {
     expression.baseType === "boolean" &&
     ["true", "1"].includes(expression.value.trim())
   );
-}
-
-/** Returns whether a node may be presented several times, because a section above it selects with replacement (INFO §5.98). */
-function mayRepeat(node: Placed): boolean {
-  if (node.kind === "part") return false;
-  for (let at: Placed = node.parent; at.kind !== "part"; at = at.parent) {
-    if (at.model.selection?.withReplacement === true) return true;
-  }
-  return false;
 }
 
 function insideAdaptive(node: Placed): boolean {

@@ -52,7 +52,11 @@ export interface ResolvedItem {
   readonly variants: readonly ResolvedVariant[];
 }
 
-/** The functions that resolve the references of a test to what they name. Each takes the `href` as written and the path of the document that holds it. */
+/**
+ * The functions that resolve the references of a test to what they name. Each takes the `href` as written and the path of
+ * the document that holds it, and returns its value, never a promise: the engine and the validators throw a `DataError`
+ * for a promise.
+ */
 export interface Resolvers {
   /** Resolves the `href` of a `qti-assessment-item-ref`. */
   readonly items: (href: string, base: string) => ResolvedItem;

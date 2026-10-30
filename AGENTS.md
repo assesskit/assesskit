@@ -46,7 +46,7 @@ packages/olah/            the library
   src/errors.ts           OlahError, DataError, ReadError, SecurityError, ProcessingError; Issue
   src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
                           checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
-                          checkNonNegativeInteger, checkPositiveInteger, checkSeed
+                          checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
@@ -79,23 +79,24 @@ biome/                    Biome GritQL plugins
 
 ```bash
 pnpm install
-pnpm lint             # Biome and cspell; `pnpm format` fixes formatting
-pnpm typecheck        # tsc over every package and the tooling
-pnpm test             # Vitest, offline
-pnpm test:browser     # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
-pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
-pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
-pnpm bench            # the benchmarks of olah against their budgets
-pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
-pnpm unicode          # regenerates the Unicode tables of `values` from the pinned files
-pnpm asi-table        # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
-pnpm knip             # unused files, exports and dependencies
-pnpm conformance      # every row of a merged unit has a test; docs/conformance.md is current
-pnpm compat           # the built JavaScript and the CSS of tempuh stay inside the browser baseline; run `pnpm build` first
-pnpm compat:engines   # the smoke test in the pinned old browsers, in Docker; run `pnpm build` first
-pnpm build            # tsc -b after deleting dist/, so that no stale output ships
-pnpm check:packages   # builds, then publint and Are the Types Wrong on the packed packages
-pnpm docs:api         # TypeDoc into docs/api; fails on undocumented exports
+pnpm lint               # Biome and cspell; `pnpm format` fixes formatting
+pnpm typecheck          # tsc over every package and the tooling
+pnpm test               # Vitest, offline
+pnpm test:browser       # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
+pnpm test:corpus        # tests that read the corpus; run `pnpm corpus` first
+pnpm test:differential  # olah against Longsight `qti3-core` on items and item sessions; run `pnpm corpus` first
+pnpm test:xsd           # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
+pnpm bench              # the benchmarks of olah against their budgets
+pnpm schemas            # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
+pnpm unicode            # regenerates the Unicode tables of `values` from the pinned files
+pnpm asi-table          # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
+pnpm knip               # unused files, exports and dependencies
+pnpm conformance        # every row of a merged unit has a test; docs/conformance.md is current
+pnpm compat             # the built JavaScript and the CSS of tempuh stay inside the browser baseline; run `pnpm build` first
+pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; run `pnpm build` first
+pnpm build              # tsc -b after deleting dist/, so that no stale output ships
+pnpm check:packages     # builds, then publint and Are the Types Wrong on the packed packages
+pnpm docs:api           # TypeDoc into docs/api; fails on undocumented exports
 ```
 
 Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `conformance/`,
@@ -253,7 +254,8 @@ describes how the baseline is tested.
   finds gets a regression test with the input that exposed it.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of tempuh that
-  also need a browser are named `*.browser.corpus.test.ts`.
+  also need a browser are named `*.browser.corpus.test.ts`. The tests of `differential/` run with `pnpm test:differential`,
+  and `pnpm test` leaves them out.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
 - Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
   builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them

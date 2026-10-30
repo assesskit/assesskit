@@ -6234,7 +6234,7 @@
       "id": "G9",
       "construct": "Item variable of a with-replacement item in individual submission is \"undefined\"",
       "source": "INFO §2.11.1.2",
-      "modules": ["delivery"],
+      "modules": ["delivery", "validate"],
       "evidence": ["S"],
       "unit": "OB13b"
     },

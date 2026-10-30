@@ -68,10 +68,11 @@ for walking content.
 Validation (`validate`): `validateAsi`, `validateTest`, `validatePackage`, `validateResults`, `validatePnp` and
 `validatePnpNamespace` return `Issue`s for what a schema cannot state. They check the rule sets of BIND §5, the
 constraints of the Information Model, the static types of every expression and rule against `OPERATOR_SIGNATURES`, the
-variables, the structure of a test (selection, adaptive sections, branch rules and what no path reaches), the covers of
-externally scored outcomes, the files and resources of a package, Results Reporting and personal needs profiles.
-`validateTest` is the static gate of a delivery engine. `asi` has `walkDocument` and `scoreCoverBlocks`, and
-`processing` has the types and built-ins that the checks read.
+variables (with a warning for `ITEM.VAR` of an item that selection with replacement can repeat, whose value the
+specification leaves undefined), the structure of a test (selection, adaptive sections, branch rules and what no path
+reaches), the covers of externally scored outcomes, the files and resources of a package, Results Reporting and personal
+needs profiles. `validateTest` is the static gate of a delivery engine. `asi` has `walkDocument` and `scoreCoverBlocks`,
+and `processing` has the types and built-ins that the checks read.
 
 The command line (`cli`), installed as the program `olah` and exported as `runCli`: `olah validate <path>` checks a package, a
 package directory or an XML document against the official schemas, which it compiles once, and with the semantic checks of
@@ -88,13 +89,13 @@ interactions, the item duration, and template and response processing failures r
 `standaloneSessionControl` the control of an item delivered alone.
 
 The delivery engine (`delivery`): `createEngine` runs the static checks over everything a session of a test, or of an item
-delivered alone, can reach, and gives an engine whose `start` and `apply` are a pure reducer of candidate sessions as plain
-data: actions with their times, refusals as values, navigation in linear and nonlinear parts, individual and simultaneous
-submission, outcome processing after each submission, pre-conditions and branch rules, template defaults, context values,
-time limits with `deadlines`, time-outs and late submission, suspension, supports, variants chosen by hazards and language,
-events, and processing failures reported as events. `stamp` stamps actions monotonically, and `serializeState` and
-`deserializeState` write and read states in a versioned JSON format. `startItemSession` takes the template defaults of a
-test.
+delivered alone, can reach, refuses a resolver that returns a promise, and gives an engine whose `start` and `apply` are a
+pure reducer of candidate sessions as plain data: actions with their times, refusals as values, navigation in linear and
+nonlinear parts, individual and simultaneous submission, outcome processing after each submission, pre-conditions and
+branch rules, template defaults, context values, time limits with `deadlines`, time-outs and late submission, suspension,
+supports, variants chosen by hazards and language, events, and processing failures reported as events. `stamp` stamps
+actions monotonically, and `serializeState` and `deserializeState` write and read states in a versioned JSON format.
+`startItemSession` takes the template defaults of a test.
 
 The candidate side of the engine: `Engine.view` gives the view of a state at a time, with the maximum times that passed
 applied, built so that no answer key, processing or hidden content reaches it: the navigation map, the item after

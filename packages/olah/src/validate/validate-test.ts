@@ -24,8 +24,8 @@ const TEST_KIND = "assessment-test";
  * error of olah for a reference that cannot be resolved.
  * @param options - See {@link ValidateOptions}; its `path` is not used: issues name the file each document is at.
  * @returns The issues, document by document: those of the test, then of the sections, items and stimuli it names.
- * @throws `DataError` when an argument has the wrong type, or the test is not an object of the model of
- * `qti-assessment-test`.
+ * @throws `DataError` when an argument has the wrong type, the test is not an object of the model of
+ * `qti-assessment-test`, or a resolver returns a promise, which is a defect of the host and not a finding.
  */
 export function validateTest(
   test: AssessmentTest,

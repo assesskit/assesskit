@@ -156,9 +156,7 @@ export class ExpressionChecker {
       this.findings.error(found.problem.code, found.problem.message, found.problem.source, here);
       return UNKNOWN;
     }
-    if (found.warning !== undefined) {
-      this.findings.warning(found.warning.code, found.warning.message, found.warning.source, here);
-    }
+    for (const { code, message, source } of found.warnings ?? []) this.findings.warning(code, message, source, here);
     return found.type;
   }
 

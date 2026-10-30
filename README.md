@@ -42,23 +42,24 @@ Node.js 22.18+ and pnpm 12 are required.
 
 ```bash
 pnpm install
-pnpm lint            # Biome and cspell
-pnpm typecheck       # every package, and the tooling at the root
-pnpm test            # Vitest; runs offline
-pnpm test:browser    # the tests of tempuh that need a browser; run pnpm exec playwright install first
-pnpm knip            # unused files, exports and dependencies
-pnpm conformance     # every row of a merged unit has a test; the matrix is current
-pnpm build           # the built packages
-pnpm check:packages  # publint and Are the Types Wrong on the packed packages
-pnpm compat          # the built code of tempuh stays inside its browser baseline; run pnpm build first
-pnpm compat:engines  # the smoke test in the pinned old browsers, in Docker; run pnpm build first
-pnpm docs:api        # TypeDoc into docs/api; fails on undocumented exports
-pnpm corpus          # downloads the 1EdTech examples and the W3C regular expression suite
-pnpm test:corpus     # tests that read the corpus
-pnpm unicode         # regenerates the Unicode tables of the regular expressions
-pnpm schemas         # downloads the official XSDs (about 140 MB) into .cache/schemas
-pnpm test:xsd        # tests that validate against the XSDs
-pnpm bench           # the benchmarks of olah against their budgets
+pnpm lint               # Biome and cspell
+pnpm typecheck          # every package, and the tooling at the root
+pnpm test               # Vitest; runs offline
+pnpm test:browser       # the tests of tempuh that need a browser; run pnpm exec playwright install first
+pnpm knip               # unused files, exports and dependencies
+pnpm conformance        # every row of a merged unit has a test; the matrix is current
+pnpm build              # the built packages
+pnpm check:packages     # publint and Are the Types Wrong on the packed packages
+pnpm compat             # the built code of tempuh stays inside its browser baseline; run pnpm build first
+pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; run pnpm build first
+pnpm docs:api           # TypeDoc into docs/api; fails on undocumented exports
+pnpm corpus             # downloads the 1EdTech examples and the W3C regular expression suite
+pnpm test:corpus        # tests that read the corpus
+pnpm test:differential  # olah against Longsight qti3-core on items; run pnpm corpus first
+pnpm unicode            # regenerates the Unicode tables of the regular expressions
+pnpm schemas            # downloads the official XSDs (about 140 MB) into .cache/schemas
+pnpm test:xsd           # tests that validate against the XSDs
+pnpm bench              # the benchmarks of olah against their budgets
 ```
 
 [AGENTS.md](AGENTS.md) states the conventions, [CONTRIBUTING.md](CONTRIBUTING.md) the process and
