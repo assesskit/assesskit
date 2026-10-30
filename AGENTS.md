@@ -85,6 +85,7 @@ pnpm test             # Vitest, offline
 pnpm test:browser     # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
 pnpm test:corpus      # tests that read the corpus; run `pnpm corpus` first
 pnpm test:xsd         # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
+pnpm bench            # the benchmarks of olah against their budgets
 pnpm schemas          # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
 pnpm unicode          # regenerates the Unicode tables of `values` from the pinned files
 pnpm asi-table        # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
@@ -254,6 +255,9 @@ describes how the baseline is tested.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of tempuh that
   also need a browser are named `*.browser.corpus.test.ts`.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
+- Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
+  builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them
+  ([architecture.md](packages/olah/docs/architecture.md#performance)).
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 - Test names describe behavior: `it("shares the places at a tied boundary equally")`.

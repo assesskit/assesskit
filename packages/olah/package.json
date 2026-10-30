@@ -117,6 +117,7 @@
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
     "build": "pnpm clean && tsc -b tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
+    "bench": "vitest bench --run --root ../.. --project 'olah-bench*' --reporter verbose",
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
   },
   "devDependencies": {

@@ -100,6 +100,22 @@ export default defineConfig({
         },
       },
       {
+        // The benchmarks and budgets of olah: `pnpm bench` runs them with `vitest bench`, which gives the project the
+        // suffix "(bench)". A test builds its input and runs benchmarks of seconds, so it may take longer than the default.
+        test: {
+          name: "olah-bench",
+          include: [],
+          testTimeout: 120_000,
+          hookTimeout: 120_000,
+          benchmark: {
+            include: ["packages/olah/test/**/*.bench.ts"],
+            // Vitest counts the export getters that a benchmark reads and warns about them. The counting makes the
+            // benchmarks of the engine two to three times slower, so the project turns it off.
+            suppressExportGetterWarnings: true,
+          },
+        },
+      },
+      {
         // Compiling the 18.8 MB ASI schema takes seconds.
         test: {
           name: "olah-xsd",

@@ -50,6 +50,20 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  # The benchmarks of olah on generated inputs. The job fails when the fastest sample of a benchmark is above its budget
+  # (packages/olah/docs/architecture.md#performance).
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bench
+
   # The rendering tests of tempuh, in the current Chromium, Firefox and WebKit.
   browsers:
     runs-on: ubuntu-latest

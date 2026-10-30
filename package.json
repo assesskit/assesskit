@@ -10,6 +10,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "vitest run --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*'",
+    "bench": "pnpm -r bench",
     "test:browser": "vitest run --project '*-browser*'",
     "test:corpus": "vitest run --project '*-corpus*'",
     "test:xsd": "vitest run --project '*-xsd'",

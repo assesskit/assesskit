@@ -284,6 +284,8 @@ Item variables are read with the weights and variable mappings of the item refer
 as drafts (B96). The template defaults of an item reference are evaluated in the test when the item is first presented,
 and replace the defaults of its template variables before template processing (B41).
 
+The cost of outcome processing is stated in [architecture](architecture.md#outcome-processing).
+
 ### Time limits
 
 Time runs in the test, the test part and the sections of the item presented, and in the item while its session is

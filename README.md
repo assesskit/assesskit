@@ -58,6 +58,7 @@ pnpm test:corpus     # tests that read the corpus
 pnpm unicode         # regenerates the Unicode tables of the regular expressions
 pnpm schemas         # downloads the official XSDs (about 140 MB) into .cache/schemas
 pnpm test:xsd        # tests that validate against the XSDs
+pnpm bench           # the benchmarks of olah against their budgets
 ```
 
 [AGENTS.md](AGENTS.md) states the conventions, [CONTRIBUTING.md](CONTRIBUTING.md) the process and

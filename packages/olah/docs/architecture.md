@@ -95,6 +95,48 @@ session replays to the same state and events from its seed and its actions.
 - A `SchemaSet` is compiled once and reused for every document.
 - Entry points validate deeply and inner functions shallowly, so that a call does not cost the size of the model.
 
+No compiled or indexed form of the model exists, because the budgets below hold.
+
+### Outcome processing
+
+Outcome processing runs after every submission in individual mode (INFO §2.9). The expressions that read item sessions
+(`qti-number-*`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables`) visit every instance of the plan,
+keep the ones that their `section-identifier`, `include-category` and `exclude-category` select, and read each one kept.
+The cost of a submission is therefore the rules that read item sessions times the matching items, and no less than the
+size of the plan for each such rule. The benchmark has 101 such rules over 800 instances, one for each of 100 sections and
+one for the test, and a submission halfway through its session takes about 14 ms. The cost grows with the rules, and with
+the instances delivered so far, which a rule looks up for each match.
+
+### Budgets
+
+`pnpm bench` runs the benchmarks of `packages/olah/test/*.bench.ts` with Vitest, on inputs that the arbitraries and builders
+of the tests generate with a fixed seed. A benchmark fails when its fastest sample is above its budget, and the `bench` job of
+the CI workflow runs them. The budgets are in `packages/olah/test/budgets.ts`.
+
+| Benchmark                               | Input                                                                                                                 | Measured (fastest) | Budget        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
+| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource     | 55 ms              | 300 ms        |
+| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                 | 1.7 ms             | 9 ms          |
+| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                               | 0.39 ms            | 2 ms          |
+| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                     | 16 ms              | 80 ms         |
+| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules | 280 ms             | 2,000 ms      |
+| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                     | 0.95 ms            | 5 ms          |
+| Size of that state                      | The same state as JSON text                                                                                           | 118,699 bytes      | 150,000 bytes |
+
+The replay test also checks that the replayed state equals the state of the session (E3).
+
+A benchmark takes at least 10 samples, and the gate is the fastest of them, which the other work of a shared machine
+affects least. The measurement is the median of that sample over several runs on a laptop with an Apple M5 and Node.js 26.8;
+the median of the samples of a run was up to 3 times higher on a busy laptop. The budget of a time is five times its
+measurement, rounded up to one significant digit, and that of the size 1.25 times the size. The factor allows for CI hardware
+two to three times slower than the laptop, and for the noise of shared machines. It is far below the cost of the changes
+that the budgets exist to catch: a reader that parsed every item would take about ten times as long. A budget changes only
+with the reason in the commit that changes it.
+
+Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
+so the project turns the counting off (`suppressExportGetterWarnings`). `readPackage` takes the same time on the built
+package, 52 ms.
+
 ## Security
 
 Every input is untrusted. The controls are structural. Limits with defaults bound documents, archives, processing and
