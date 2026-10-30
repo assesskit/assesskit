@@ -238,6 +238,13 @@ importers:
       '@longsightgroup/qti3-core':
         specifier: 0.13.3
         version: 0.13.3
+      '@luthfanwakan/olah':
+        specifier: workspace:*
+        version: link:../packages/olah
+    devDependencies:
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
 
   packages/olah:
     dependencies:

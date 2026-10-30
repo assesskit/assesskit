@@ -114,16 +114,22 @@ generators of `asi` are driven by its element table instead (`asi-arbitraries.ts
 
 `differential/` is a private package, not a dependency of olah, that compares olah with Longsight `qti3-core`
 (`@longsightgroup/qti3-core`, pinned to one version), which processes items. A case is an item document, responses and a
-seed; an `Implementation` runs it and reports the outcome and template values as `Observed` values. `compare` runs two
+seed; an `Implementation` runs it and reports the outcome and template values as `Observed` values. `longsight` is the
+oracle and `olah` the subject: olah's run gives the responses as the first attempt of a session (`numAttempts` 1,
+`completionStatus` `unknown`, defaults for the responses a case leaves out), and draws from `longsightRandom`, the
+oracle's generator, so that both draw the same template values by the draw procedures they share. `compare` runs two
 implementations on a list of cases and reports
 
 - the cases both accept, whose variables it compares;
 - the cases both reject;
 - the differences, including an item that only one accepts.
 
-`corpusCases` builds cases from the item documents of a directory of the corpus. A difference that the specification
-settles goes into `conformance/accepted-differences.json` with the item, the variable, the reason and the source; it
-shows in the matrix as accepted and not as a difference.
+`corpusCases` builds cases from the item documents below a directory of the corpus, named by their paths: each item
+without responses, and with the correct responses the oracle reads from it. `differential/test/generated.test.ts` compares
+items that fast-check generates for arithmetic, rounding, tolerances, logic, containers, mapping and random draws. A
+difference that the specification settles goes into `conformance/accepted-differences.json` with the item, the variable
+(empty when only one implementation accepts the item), the reason and the source; it shows in the matrix as accepted and
+not as a difference.
 
 ## Fixtures from oracles
 

@@ -51,10 +51,13 @@ describe("renderMatrix", () => {
   });
 
   it("lists accepted differences", () => {
-    const accepted = [{ item: "choice.xml", variable: "SCORE", reason: "NULL gives NULL.", source: "INFO §2.11.1.5" }];
-    expect(renderMatrix({ ...input, accepted })).toContain(
-      "| choice.xml | SCORE | NULL gives NULL. | INFO §2.11.1.5 |",
-    );
+    const accepted = [
+      { item: "choice.xml", variable: "SCORE", reason: "NULL gives NULL.", source: "INFO §2.11.1.5" },
+      { item: "match.xml", variable: "", reason: "The template is standard.", source: "INFO §2.5.1" },
+    ];
+    const rendered = renderMatrix({ ...input, accepted });
+    expect(rendered).toContain("| choice.xml | SCORE | NULL gives NULL. | INFO §2.11.1.5 |");
+    expect(rendered).toContain("| match.xml | (acceptance) | The template is standard. | INFO §2.5.1 |");
   });
 
   it("renders the same document for the same input", () => {

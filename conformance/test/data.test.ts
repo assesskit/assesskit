@@ -53,11 +53,13 @@ describe("loadAcceptedDifferences", () => {
     const entry = { item: "choice.xml", variable: "SCORE", reason: "NULL gives NULL.", source: "INFO §2.11.1.5" };
     expect(loadAcceptedDifferences(file("accepted.json", [entry]))).toEqual([entry]);
     expect(loadAcceptedDifferences(file("none.json", []))).toEqual([]);
+    const acceptance = { ...entry, variable: "" };
+    expect(loadAcceptedDifferences(file("acceptance.json", [acceptance]))).toEqual([acceptance]);
   });
 
   it("rejects an entry without a field", () => {
     expect(() => loadAcceptedDifferences(file("bad-entry.json", [{ item: "choice.xml" }]))).toThrow(
-      "[0]: variable should be a non-empty string.\n- [0]: reason should be a non-empty string.\n- [0]: source should be a non-empty string.",
+      "[0]: variable should be a string.\n- [0]: reason should be a non-empty string.\n- [0]: source should be a non-empty string.",
     );
     expect(() => loadAcceptedDifferences(file("bad-list.json", {}))).toThrow("must be an array");
   });

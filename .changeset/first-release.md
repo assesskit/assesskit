@@ -35,3 +35,9 @@ Computer adaptive testing (`cat`): `CatPort`, the six requests of a CAT 1.0 engi
 of their bodies and answers, `sectionData` for the section data of an adaptive section, `isSessionEnd` for item stages,
 `checkPool` for the agreement of the item references with the engine's pool, and `catMetadata` for the metadata JSON of CAT
 Appendix B. `metadata` has `checkQtiMetadata`.
+
+Template, response and outcome processing (`processing`): `createItemVariables`, a tree interpreter for all 64
+expressions and every rule with the semantics of the Information Model, the constraint loop of template processing, lookup
+tables, the six standard response processing templates as models with their URIs normalized, custom operators that the
+caller registers, the test scope through which outcome processing reads item sessions, and `OPERATOR_SIGNATURES` for static
+checks.

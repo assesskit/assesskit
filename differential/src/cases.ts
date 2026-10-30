@@ -9,14 +9,15 @@ export const CORPUS_SEED = 1;
 const ITEM_ROOT = "<qti-assessment-item";
 
 /**
- * Builds cases from the item documents of a directory, leaving out other documents: each item once without responses, and once with the correct
- * responses its response declarations carry when the oracle accepts it.
+ * Builds cases from the item documents below a directory, leaving out other documents: each item once without responses, and once with the correct
+ * responses its response declarations carry when the oracle accepts it. A case is named by the path of its file below the directory.
  *
- * @param directory - A directory of item documents, such as `qtiv3-examples/packaging/items` of the corpus.
+ * @param directory - A directory of item documents, such as `qtiv3-examples` of the corpus.
  */
 export function corpusCases(directory: string): ItemCase[] {
-  return readdirSync(directory)
+  return readdirSync(directory, { recursive: true, encoding: "utf8" })
     .filter((file) => file.endsWith(".xml"))
+    .map((file) => file.split("\\").join("/"))
     .sort()
     .flatMap((file) => {
       const xml = readFileSync(join(directory, file), "utf8");

@@ -21,6 +21,10 @@ Points to be aware of when deploying olah:
   `compileXsdRegex` limits the size of the automaton (`maxStates`) and the nesting of the pattern (`maxDepth`); both have
   defaults and a `DataError` reports a pattern above them. The time of a match is linear in the text and the memory a
   match keeps is bounded, whatever the pattern.
+- **Processing.** Processing runs no code it is given: a custom operator is a function the caller registers, and what it
+  returns is checked like any input. `qti-template-constraint` runs template processing at most 100 times (INFO §5.150),
+  and a container that an expression builds, such as the result of `qti-repeat`, is limited by `maxContainerSize`; a
+  larger one is a `SecurityError`.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
   entity expansion, BPIG §6.7). It reads only the five predefined entities and character references. It also limits the
   document before and while it builds the tree. `resolveIncludes` calls only the resolver the caller passes, rejects
@@ -43,15 +47,16 @@ Points to be aware of when deploying olah:
 
 Every limit is a positive integer that a caller can replace per call with the option `limits`. The defaults are about
 1,000 times the largest document of the 1EdTech QTI 3.0 examples for size and node count, 16 times its depth and 20 times
-its attributes on an element.
+its attributes on an element, and about 1,000 times the largest container of the examples, a mapping of 9 entries.
 
-| Limit             | Default    | Applies to                                                                  |
-| ----------------- | ---------- | --------------------------------------------------------------------------- |
-| `maxBytes`        | 33,554,432 | The bytes of one XML document.                                              |
-| `maxDepth`        | 256        | The nesting of elements in a document, and in a document with its includes. |
-| `maxAttributes`   | 256        | The attributes on one element.                                              |
-| `maxNodes`        | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.              |
-| `maxIncludeDepth` | 8          | The nesting of `xi:include`.                                                |
+| Limit              | Default    | Applies to                                                                  |
+| ------------------ | ---------- | --------------------------------------------------------------------------- |
+| `maxBytes`         | 33,554,432 | The bytes of one XML document.                                              |
+| `maxDepth`         | 256        | The nesting of elements in a document, and in a document with its includes. |
+| `maxAttributes`    | 256        | The attributes on one element.                                              |
+| `maxNodes`         | 1,000,000  | The nodes of a tree, and of a tree with its includes resolved.              |
+| `maxIncludeDepth`  | 8          | The nesting of `xi:include`.                                                |
+| `maxContainerSize` | 10,000     | The values of a container that a processing expression builds.              |
 
 The limits of archives and package directories, `ZipLimits`, are about 1,000 times the entries of the largest package of the
 examples (99), 100 times its largest entry (5.0 MiB), 200 times its size (11.0 MB) and 9 times its largest compression ratio

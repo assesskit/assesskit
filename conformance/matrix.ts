@@ -86,11 +86,14 @@ function unitTable(input: MatrixInput): string {
   return table([["Unit", "Status", "Rows"], ...body]);
 }
 
+/** The variable column of a difference in whether an item is accepted at all. */
+const ACCEPTANCE = "(acceptance)";
+
 function acceptedTable(accepted: readonly AcceptedDifference[]): string {
   if (accepted.length === 0) return "None.";
   return table([
     ["Item", "Variable", "Reason", "Source"],
-    ...accepted.map((entry) => [entry.item, entry.variable, entry.reason, entry.source]),
+    ...accepted.map((entry) => [entry.item, entry.variable || ACCEPTANCE, entry.reason, entry.source]),
   ]);
 }
 

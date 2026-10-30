@@ -9,6 +9,10 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@longsightgroup/qti3-core": "0.13.3"
+    "@longsightgroup/qti3-core": "0.13.3",
+    "@luthfanwakan/olah": "workspace:*"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
   }
 }

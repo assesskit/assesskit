@@ -1,4 +1,11 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
+
+/** Resolves olah and its subpaths to their sources, so that the differential tests run the code and not a build. */
+const OLAH_SOURCES = [
+  { find: /^@luthfanwakan\/olah$/, replacement: resolve(import.meta.dirname, "packages/olah/src/index.ts") },
+  { find: /^@luthfanwakan\/olah\/(.+)$/, replacement: resolve(import.meta.dirname, "packages/olah/src/$1/index.ts") },
+];
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
@@ -24,6 +31,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias: OLAH_SOURCES },
         test: {
           name: "differential",
           include: ["differential/test/**/*.test.ts"],
@@ -31,6 +39,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias: OLAH_SOURCES },
         test: {
           name: "differential-corpus",
           include: ["differential/test/**/*.corpus.test.ts"],

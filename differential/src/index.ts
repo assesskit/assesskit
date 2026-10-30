@@ -5,5 +5,6 @@
  */
 export { CORPUS_SEED, corpusCases } from "./cases.ts";
 export { compare, type Difference, type Report, sameValue } from "./compare.ts";
-export { correctResponses, longsight } from "./longsight.ts";
+export { correctResponses, longsight, longsightRandom } from "./longsight.ts";
 export type { Implementation, ItemCase, Observation, Observed, Run, Scalar } from "./model.ts";
+export { olah } from "./olah.ts";

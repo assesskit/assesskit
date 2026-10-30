@@ -32,7 +32,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB5 | merged | 77 |
 | OB6 | merged | 67 |
 | OB7 | pending | 185 |
-| OB8 | pending | 59 |
+| OB8 | merged | 59 |
 | OB9 | merged | 8 |
 | OB10 | pending | 43 |
 | OB11 | pending | 15 |
@@ -269,111 +269,111 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | A23 | `qti-adaptive-settings-ref` | INFO §7.3 | asi, cat, delivery | R X S | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A24 | `qti-metadata-ref` | INFO §7.3 | asi, cat, delivery | R X S | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A25 | `qti-usagedata-ref` | INFO §7.3 | asi, cat, delivery | R X S | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A26 | `qti-area-map-entry` | INFO §7.4 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A27 | `qti-area-mapping` | INFO §5.5 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A26 | `qti-area-map-entry` | INFO §7.4 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A27 | `qti-area-mapping` | INFO §5.5 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A28 | `qti-context-declaration` | INFO §5.34 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A29 | `qti-correct-response` | INFO §5.35 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A30 | `qti-default-value` | INFO §5.41 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A31 | `qti-interpolation-table` | INFO §5.78 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A32 | `qti-interpolation-table-entry` | INFO §7.18 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A33 | `qti-map-entry` | INFO §7.21 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A34 | `qti-mapping` | INFO §5.88 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A35 | `qti-match-table` | INFO §5.90 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A36 | `qti-match-table-entry` | INFO §7.23 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A30 | `qti-default-value` | INFO §5.41 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A31 | `qti-interpolation-table` | INFO §5.78 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A32 | `qti-interpolation-table-entry` | INFO §7.18 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A33 | `qti-map-entry` | INFO §7.21 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A34 | `qti-mapping` | INFO §5.88 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A35 | `qti-match-table` | INFO §5.90 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A36 | `qti-match-table-entry` | INFO §7.23 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A37 | `qti-outcome-declaration` | INFO §4.5 | asi, values, processing | R X S P D | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A38 | `qti-response-declaration` | INFO §5.115 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A39 | `qti-template-declaration` | INFO §5.151 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A40 | `qti-value` | INFO §7.46 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A41 | `qti-exit-response` | INFO §6.39.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A42 | `qti-exit-template` | INFO §6.50.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A43 | `qti-exit-test` | INFO §6.32.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A44 | `qti-lookup-outcome-value` | INFO §5.87, 6.32.1, 6.39.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A40 | `qti-value` | INFO §7.46 | asi, values, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A41 | `qti-exit-response` | INFO §6.39.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A42 | `qti-exit-template` | INFO §6.50.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A43 | `qti-exit-test` | INFO §6.32.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A44 | `qti-lookup-outcome-value` | INFO §5.87, 6.32.1, 6.39.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A45 | `qti-outcome-condition` | INFO §5.99, 6.32.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A46 | `qti-outcome-else` | INFO §5.100 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A47 | `qti-outcome-else-if` | INFO §5.101 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
 | A48 | `qti-outcome-if` | INFO §5.101 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A49 | `qti-outcome-processing` | INFO §5.102 | asi, processing | R X S P D | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A49 | `qti-outcome-processing` | INFO §5.102 | asi, processing | R X S P D | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A50 | `qti-outcome-processing-fragment` | INFO §5.103, 6.32.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A51 | `qti-response-condition` | INFO §5.114, 6.39.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A51 | `qti-response-condition` | INFO §5.114, 6.39.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A52 | `qti-response-else` | INFO §5.116 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A53 | `qti-response-else-if` | INFO §5.117 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A54 | `qti-response-if` | INFO §5.117 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A55 | `qti-response-processing` | INFO §4.6 | asi, processing | R X S P D | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A56 | `qti-response-processing-fragment` | INFO §5.118, 6.39.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A57 | `qti-set-correct-response` | INFO §5.130, 6.50.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A58 | `qti-set-default-value` | INFO §5.130, 6.50.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A59 | `qti-set-outcome-value` | INFO §5.130, 6.32.3, 6.39.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A60 | `qti-set-template-value` | INFO §5.130, 6.50.1 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A61 | `qti-template-condition` | INFO §5.149, 6.50.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A62 | `qti-template-constraint` | INFO §5.150, 6.50.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A63 | `qti-template-else` | INFO §5.153 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A64 | `qti-template-else-if` | INFO §5.154 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A65 | `qti-template-if` | INFO §5.154 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A66 | `qti-template-processing` | INFO §5.156 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A67 | `qti-and` | INFO §2.11, 6.9.1 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A68 | `qti-any-n` | INFO §2.11, 6.9.29 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A69 | `qti-base-value` | INFO §2.11, 6.9.44 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A70 | `qti-container-size` | INFO §2.11, 6.9.26 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A71 | `qti-contains` | INFO §2.11, 6.9.25 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A72 | `qti-correct` | INFO §2.11, 6.9.27 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A73 | `qti-custom-operator` | INFO §2.11, 6.9.15 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A74 | `qti-default` | INFO §2.11, 6.9.28 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A75 | `qti-delete` | INFO §2.11, 6.9.20 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A76 | `qti-divide` | INFO §2.11, 6.9.12 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A77 | `qti-duration-gte` | INFO §2.11, 6.9.10 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A78 | `qti-duration-lt` | INFO §2.11, 6.9.9 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A79 | `qti-equal` | INFO §2.11, 6.9.24 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A80 | `qti-equal-rounded` | INFO §2.11, 6.9.18 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A81 | `qti-field-value` | INFO §2.11, 6.9.37 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A82 | `qti-gcd` | INFO §2.11, 6.9.52 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A83 | `qti-gt` | INFO §2.11, 6.9.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A84 | `qti-gte` | INFO §2.11, 6.9.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A85 | `qti-index` | INFO §2.11, 6.9.22 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A86 | `qti-inside` | INFO §2.11, 6.9.43 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A87 | `qti-integer-divide` | INFO §2.11, 6.9.30 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A88 | `qti-integer-modulus` | INFO §2.11, 6.9.31 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A89 | `qti-integer-to-float` | INFO §2.11, 6.9.42 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A90 | `qti-is-null` | INFO §2.11, 6.9.32 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A91 | `qti-lcm` | INFO §2.11, 6.9.51 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A92 | `qti-lt` | INFO §2.11, 6.9.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A93 | `qti-lte` | INFO §2.11, 6.9.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A94 | `qti-map-response` | INFO §2.11, 6.9.47 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A95 | `qti-map-response-point` | INFO §2.11, 6.9.46 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A96 | `qti-match` | INFO §2.11, 6.9.21 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A97 | `qti-math-constant` | INFO §2.11, 6.9.55 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A98 | `qti-math-operator` | INFO §2.11, 6.9.57 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A99 | `qti-max` | INFO §2.11, 6.9.54 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A100 | `qti-member` | INFO §2.11, 6.9.33 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A101 | `qti-min` | INFO §2.11, 6.9.53 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A102 | `qti-multiple` | INFO §2.11, 6.9.13 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A103 | `qti-not` | INFO §2.11, 6.9.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A104 | `qti-null` | INFO §2.11, 6.9.19 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A105 | `qti-or` | INFO §2.11, 6.9.7 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A106 | `qti-ordered` | INFO §2.11, 6.9.14 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A107 | `qti-pattern-match` | INFO §2.11, 6.9.45 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A108 | `qti-power` | INFO §2.11, 6.9.23 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A109 | `qti-product` | INFO §2.11, 6.9.34 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A110 | `qti-random` | INFO §2.11, 6.9.16 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A111 | `qti-random-float` | INFO §2.11, 6.9.39 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A112 | `qti-random-integer` | INFO §2.11, 6.9.38 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A113 | `qti-repeat` | INFO §2.11, 6.9.49 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A114 | `qti-round` | INFO §2.11, 6.9.35 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A115 | `qti-round-to` | INFO §2.11, 6.9.50 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A116 | `qti-stats-operator` | INFO §2.11, 6.9.56 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A117 | `qti-string-match` | INFO §2.11, 6.9.48 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A118 | `qti-substring` | INFO §2.11, 6.9.17 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A119 | `qti-subtract` | INFO §2.11, 6.9.11 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A120 | `qti-sum` | INFO §2.11, 6.9.8 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A121 | `qti-truncate` | INFO §2.11, 6.9.36 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A122 | `qti-variable` | INFO §2.11, 6.9.40 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A123 | `qti-number-correct` | INFO §2.11, 6.9.58 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A124 | `qti-number-incorrect` | INFO §2.11, 6.9.59 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A125 | `qti-number-presented` | INFO §2.11, 6.9.60 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A126 | `qti-number-responded` | INFO §2.11, 6.9.61 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A127 | `qti-number-selected` | INFO §2.11, 6.9.62 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A128 | `qti-outcome-maximum` | INFO §2.11, 6.9.64 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A129 | `qti-outcome-minimum` | INFO §2.11, 6.9.63 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
-| A130 | `qti-test-variables` | INFO §2.11, 6.9.41 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts) |
+| A53 | `qti-response-else-if` | INFO §5.117 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A54 | `qti-response-if` | INFO §5.117 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A55 | `qti-response-processing` | INFO §4.6 | asi, processing | R X S P D | OB4 | [asi.corpus.test.ts](../test/asi.corpus.test.ts), [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A56 | `qti-response-processing-fragment` | INFO §5.118, 6.39.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A57 | `qti-set-correct-response` | INFO §5.130, 6.50.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A58 | `qti-set-default-value` | INFO §5.130, 6.50.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A59 | `qti-set-outcome-value` | INFO §5.130, 6.32.3, 6.39.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A60 | `qti-set-template-value` | INFO §5.130, 6.50.1 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A61 | `qti-template-condition` | INFO §5.149, 6.50.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A62 | `qti-template-constraint` | INFO §5.150, 6.50.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A63 | `qti-template-else` | INFO §5.153 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A64 | `qti-template-else-if` | INFO §5.154 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A65 | `qti-template-if` | INFO §5.154 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A66 | `qti-template-processing` | INFO §5.156 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A67 | `qti-and` | INFO §2.11, 6.9.1 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A68 | `qti-any-n` | INFO §2.11, 6.9.29 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A69 | `qti-base-value` | INFO §2.11, 6.9.44 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A70 | `qti-container-size` | INFO §2.11, 6.9.26 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A71 | `qti-contains` | INFO §2.11, 6.9.25 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A72 | `qti-correct` | INFO §2.11, 6.9.27 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A73 | `qti-custom-operator` | INFO §2.11, 6.9.15 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A74 | `qti-default` | INFO §2.11, 6.9.28 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A75 | `qti-delete` | INFO §2.11, 6.9.20 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A76 | `qti-divide` | INFO §2.11, 6.9.12 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A77 | `qti-duration-gte` | INFO §2.11, 6.9.10 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A78 | `qti-duration-lt` | INFO §2.11, 6.9.9 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A79 | `qti-equal` | INFO §2.11, 6.9.24 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A80 | `qti-equal-rounded` | INFO §2.11, 6.9.18 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A81 | `qti-field-value` | INFO §2.11, 6.9.37 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A82 | `qti-gcd` | INFO §2.11, 6.9.52 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A83 | `qti-gt` | INFO §2.11, 6.9.2 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A84 | `qti-gte` | INFO §2.11, 6.9.5 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A85 | `qti-index` | INFO §2.11, 6.9.22 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A86 | `qti-inside` | INFO §2.11, 6.9.43 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A87 | `qti-integer-divide` | INFO §2.11, 6.9.30 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A88 | `qti-integer-modulus` | INFO §2.11, 6.9.31 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A89 | `qti-integer-to-float` | INFO §2.11, 6.9.42 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A90 | `qti-is-null` | INFO §2.11, 6.9.32 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A91 | `qti-lcm` | INFO §2.11, 6.9.51 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A92 | `qti-lt` | INFO §2.11, 6.9.4 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A93 | `qti-lte` | INFO §2.11, 6.9.6 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A94 | `qti-map-response` | INFO §2.11, 6.9.47 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A95 | `qti-map-response-point` | INFO §2.11, 6.9.46 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A96 | `qti-match` | INFO §2.11, 6.9.21 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A97 | `qti-math-constant` | INFO §2.11, 6.9.55 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A98 | `qti-math-operator` | INFO §2.11, 6.9.57 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A99 | `qti-max` | INFO §2.11, 6.9.54 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A100 | `qti-member` | INFO §2.11, 6.9.33 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A101 | `qti-min` | INFO §2.11, 6.9.53 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A102 | `qti-multiple` | INFO §2.11, 6.9.13 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A103 | `qti-not` | INFO §2.11, 6.9.3 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A104 | `qti-null` | INFO §2.11, 6.9.19 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A105 | `qti-or` | INFO §2.11, 6.9.7 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A106 | `qti-ordered` | INFO §2.11, 6.9.14 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A107 | `qti-pattern-match` | INFO §2.11, 6.9.45 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A108 | `qti-power` | INFO §2.11, 6.9.23 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A109 | `qti-product` | INFO §2.11, 6.9.34 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A110 | `qti-random` | INFO §2.11, 6.9.16 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A111 | `qti-random-float` | INFO §2.11, 6.9.39 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A112 | `qti-random-integer` | INFO §2.11, 6.9.38 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A113 | `qti-repeat` | INFO §2.11, 6.9.49 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A114 | `qti-round` | INFO §2.11, 6.9.35 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A115 | `qti-round-to` | INFO §2.11, 6.9.50 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A116 | `qti-stats-operator` | INFO §2.11, 6.9.56 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A117 | `qti-string-match` | INFO §2.11, 6.9.48 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A118 | `qti-substring` | INFO §2.11, 6.9.17 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A119 | `qti-subtract` | INFO §2.11, 6.9.11 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A120 | `qti-sum` | INFO §2.11, 6.9.8 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A121 | `qti-truncate` | INFO §2.11, 6.9.36 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A122 | `qti-variable` | INFO §2.11, 6.9.40 | asi, processing | R X S P D | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A123 | `qti-number-correct` | INFO §2.11, 6.9.58 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A124 | `qti-number-incorrect` | INFO §2.11, 6.9.59 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A125 | `qti-number-presented` | INFO §2.11, 6.9.60 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A126 | `qti-number-responded` | INFO §2.11, 6.9.61 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A127 | `qti-number-selected` | INFO §2.11, 6.9.62 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A128 | `qti-outcome-maximum` | INFO §2.11, 6.9.64 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A129 | `qti-outcome-minimum` | INFO §2.11, 6.9.63 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| A130 | `qti-test-variables` | INFO §2.11, 6.9.41 | asi, processing, delivery | R X S P | OB4 | [asi.test.ts](../test/asi.test.ts), [asi.xsd.test.ts](../test/asi.xsd.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | A131 | `qti-associate-interaction` | INFO §5.8 | asi, interactions | R X S P C D | OB7 |  |
 | A132 | `qti-choice-interaction` | INFO §5.30 | asi, interactions | R X S P C D | OB7 |  |
 | A133 | `qti-custom-interaction` | INFO §5.36 | asi, interactions | R X S P C D | OB7 |  |
@@ -575,7 +575,7 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
 | T1 | `boolean` | INFO §8.13, BIND §2.9 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
-| T2 | `integer` | INFO §8.13, BIND §2.9 | values, delivery | S P N | OB2 | [values.test.ts](../test/values.test.ts) |
+| T2 | `integer` | INFO §8.13, BIND §2.9 | values, delivery | S P N | OB2 | [processing.test.ts](../test/processing.test.ts), [values.test.ts](../test/values.test.ts) |
 | T3 | `float` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T4 | `string` | INFO §8.13, INFO §2.2.2 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T5 | `identifier` | INFO §8.13, INFO §4.1.1 | values | S P N | OB2 | [values.test.ts](../test/values.test.ts) |
@@ -583,19 +583,19 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | T7 | `point` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T8 | `pair` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T9 | `directedPair` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
-| T10 | `duration` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
+| T10 | `duration` | INFO §8.13 | values | S P | OB2 | [processing.test.ts](../test/processing.test.ts), [values.test.ts](../test/values.test.ts) |
 | T11 | `file` | INFO §8.13 | values | S P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T12 | `single` | INFO §8.16 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T13 | `multiple` | INFO §8.16, RR §2.7.4 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T14 | `ordered` | INFO §8.16 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
 | T15 | `record` | INFO §8.16, INFO §5.34.3 | values | P | OB2 | [values.test.ts](../test/values.test.ts) |
-| T16 | NULL | INFO §2.2.2, INFO §2.11.3.34 | values, processing | P | OB2 | [values.test.ts](../test/values.test.ts) |
-| T17 | Type promotion | INFO §2.11.1.2, INFO §7.47.2, INFO §7.39.6 | values, processing | P S | OB2 | [values.test.ts](../test/values.test.ts) |
-| T18 | `numAttempts` | INFO §2.2.2.2 | delivery | S P N | OB13a |  |
-| T19 | `duration` (item) | INFO §2.2.2.2 | delivery, processing | S P N | OB13a |  |
-| T20 | `completionStatus` | INFO §2.2.2.3 | delivery | S | OB13a |  |
-| T21 | `QTI_CONTEXT` | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery, processing | S | OB13a |  |
-| T22 | `duration` at test, part, section | INFO §2.8.5 | delivery, processing | S P | OB13b |  |
+| T16 | NULL | INFO §2.2.2, INFO §2.11.3.34 | values, processing | P | OB2 | [processing.test.ts](../test/processing.test.ts), [values.test.ts](../test/values.test.ts) |
+| T17 | Type promotion | INFO §2.11.1.2, INFO §7.47.2, INFO §7.39.6 | values, processing | P S | OB2 | [processing.test.ts](../test/processing.test.ts), [values.test.ts](../test/values.test.ts) |
+| T18 | `numAttempts` | INFO §2.2.2.2 | delivery | S P N | OB13a | [processing.test.ts](../test/processing.test.ts) |
+| T19 | `duration` (item) | INFO §2.2.2.2 | delivery, processing | S P N | OB13a | [processing.test.ts](../test/processing.test.ts) |
+| T20 | `completionStatus` | INFO §2.2.2.3 | delivery | S | OB13a | [processing.test.ts](../test/processing.test.ts) |
+| T21 | `QTI_CONTEXT` | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery, processing | S | OB13a | [processing.test.ts](../test/processing.test.ts) |
+| T22 | `duration` at test, part, section | INFO §2.8.5 | delivery, processing | S P | OB13b | [processing.test.ts](../test/processing.test.ts) |
 | T23 | `SCORE`, `MAXSCORE`, `PASSED` | INFO §2.2.2.3, BPIG §3.5 | validate | N | OB14 |  |
 | T24 | Reserved identifiers | INFO §5.151.1, INFO §2.2.2.2 | validate | N | OB14 |  |
 
@@ -609,12 +609,12 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B4 | Item `duration` from `at` timestamps: candidate sessions summed, suspended time excluded, truncated to 0.001 s resolution | INFO §2.2.2.2 | delivery | S P | OB13a |  |
 | B5 | `completionStatus` not_attempted → unknown at first attempt; set by response processing; adaptive `completed` closes the session | INFO §2.2.2.3, INFO §2.5 | delivery | S | OB13a |  |
 | B6 | Response variables NULL at start; declared default applied at the start of the first attempt; never applied when never attempted | INFO §2.2.2.2 | delivery | S | OB13a |  |
-| B7 | Outcome initial value: declared default, else 0 for integer and float, else NULL | INFO §2.2.2.3 | processing, delivery | S P | OB13a |  |
+| B7 | Outcome initial value: declared default, else 0 for integer and float, else NULL | INFO §2.2.2.3 | processing, delivery | S P | OB13a | [processing.test.ts](../test/processing.test.ts) |
 | B8 | Non-adaptive items: outcomes reset to defaults before each response processing; with one attempt the first outcomes are reported; when item session control allows more attempts, the last outcomes are reported | INFO §2.5 | delivery | S | OB13a |  |
 | B9 | Adaptive items: outcomes kept between attempts; last outcomes reported; `max-attempts` ignored | INFO §2.5, INFO §7.19.1 | delivery | S | OB13a |  |
 | B10 | End attempt interaction: its response is true when it ended the attempt, false otherwise; its default is ignored; with `count-attempt="false"` the attempt it ends is left out of the `max-attempts` budget while `numAttempts` still increments; absent means true (D8) | INFO §2.4.5, INFO §5.45.3, INFO §2.2.2.2 | delivery, interactions | S | OB13a |  |
-| B11 | Template processing once at session start; `qti-template-constraint` restarts processing with defaults until true, at most 100 times, then keeps defaults | INFO §2.7.3, INFO §5.150 | processing, delivery | S P | OB8 |  |
-| B12 | Operator attributes as variable references: integer and float unions take a bare identifier; `pattern` takes `{identifier}` and is literal when no such variable exists; `n` and `number-repeats` take an identifier | INFO §2.7.2, INFO §9.3, XSD unions | processing | S P | OB8 |  |
+| B11 | Template processing once at session start; `qti-template-constraint` restarts processing with defaults until true, at most 100 times, then keeps defaults | INFO §2.7.3, INFO §5.150 | processing, delivery | S P | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B12 | Operator attributes as variable references: integer and float unions take a bare identifier; `pattern` takes `{identifier}` and is literal when no such variable exists; `n` and `number-repeats` take an identifier | INFO §2.7.2, INFO §9.3, XSD unions | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | B13 | `param-variable` substitutes `object/param` values; `math-variable` substitutes MathML identifiers | INFO §5.151.4–5 | content | S | OB10 |  |
 | B14 | Choice visibility through `template-identifier` and `show-hide` on choices, hotspots, gaps, hottext | INFO §2.7.1, INFO §5.132.2 | content, interactions | S P | OB10 |  |
 | B15 | Feedback, template block and inline visibility: shown when `show-hide="show"` and the variable matches or contains the identifier; inverted for `hide` | INFO §5.93.2, INFO §2.3.4 | content | S P | OB10 |  |
@@ -639,20 +639,20 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B34 | `allow-review`, `show-feedback`, `show-solution`, `allow-comment` gate review, feedback, solution and comment actions | INFO §7.19.2–5 | delivery | S | OB13a |  |
 | B35 | Time limits `min-time`, `max-time`, `allow-late-submission` at item, section, part and test; minimum only in linear mode for items and sections; part and test time include navigation | INFO §2.8.5, INFO §7.40 | delivery | S P | OB11 |  |
 | B36 | PNP additional testing time: `time-multiplier` scales every maximum time, `fixed-minutes` extends the outermost maximum, `unlimited` removes maximum times; minimum times unchanged (G41) | INFO §2.8.5, PNP XSD, BPIG §5.2.4 | delivery, pnp | S | OB11 |  |
-| B37 | Outcome processing after each submission (individual) or group (simultaneous), after response processing; test outcomes reset to defaults before each run | INFO §2.9 | delivery, processing | S P | OB13b |  |
-| B38 | Item variable lookup `ITEM.VAR` and `ITEM.n.VAR` for with-replacement instances; last submitted instance in simultaneous mode (else per G9); response variables give the last submitted value, never drafts (B96) | INFO §2.11.1.2 | processing, delivery | S | OB13b |  |
-| B39 | Weights: `weight-identifier` scales numeric item variables, missing weight is 1.0, result float | INFO §7.47.2, INFO §7.50 | processing | S P | OB13b |  |
-| B40 | Variable mappings rename item outcomes for the test | INFO §5.6.12, INFO §7.48 | delivery | S | OB13b |  |
-| B41 | Template defaults from the test override item template defaults before template processing | INFO §5.6.14, INFO §5.152 | delivery | S | OB13b |  |
-| B42 | Subsets for outcome-only expressions: `section-identifier` (including sub-sections), `include-category`, `exclude-category` | INFO §7.27, INFO §7.28, INFO §7.39 | processing | S P | OB8 |  |
-| B43 | `number-correct`, `-incorrect`, `-presented`, `-responded`, `-selected` as defined | INFO §2.11.2.1–5 | processing | S P | OB8 |  |
-| B44 | `outcome-minimum` ignores items without a minimum; `outcome-maximum` is NULL if any item lacks a maximum; `test-variables` skips NULLs and, with `base-type`, matches only variables of that base type; integer unless any float; a weight is defined only with `base-type` float or omitted (weight with integer is a validate error) | INFO §2.11.2.6–8, INFO §7.39.5–6 | processing, validate | S P N | OB8 |  |
-| B45 | Response processing templates: the six RPT files are built in as model constants; URIs are normalized (`.xml` optional, `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or `www.imsglobal.org/question/qti_v3p0/rptemplates/`); QTI 2.x template URIs map to the same three algorithms with a validate warning (G43); internal rules win when both are given; `template-location` through the resolver | INFO §2.5.1, INFO §4.6.1–2, BPIG examples | processing, validate | S D N | OB8 |  |
-| B46 | `exit-response`, `exit-template`, `exit-test` end the current processing run | INFO §6.39.5, INFO §6.50.2, INFO §6.32.5 | processing | S | OB8 |  |
-| B47 | Conditions: a NULL or false condition skips its branch | INFO §5.117, INFO §5.114 | processing | S P | OB8 |  |
-| B48 | Assignment checks base type and cardinality against the declaration, with promotion per D5 | INFO §5.130.2 | processing | S N | OB8 |  |
-| B49 | `lookup-outcome-value`: interpolation table takes the first entry whose `source-value` ≤ value (strict when `include-boundary` is false); match table takes the exact integer; otherwise `default-value` or NULL | INFO §5.78, INFO §5.90, INFO §5.87, INFO §7.18 | processing | S P | OB8 |  |
-| B50 | Context declarations in items and tests; delivery engine supplies values before processing | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery | S | OB13b |  |
+| B37 | Outcome processing after each submission (individual) or group (simultaneous), after response processing; test outcomes reset to defaults before each run | INFO §2.9 | delivery, processing | S P | OB13b | [processing.test.ts](../test/processing.test.ts) |
+| B38 | Item variable lookup `ITEM.VAR` and `ITEM.n.VAR` for with-replacement instances; last submitted instance in simultaneous mode (else per G9); response variables give the last submitted value, never drafts (B96) | INFO §2.11.1.2 | processing, delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
+| B39 | Weights: `weight-identifier` scales numeric item variables, missing weight is 1.0, result float | INFO §7.47.2, INFO §7.50 | processing | S P | OB13b | [processing.test.ts](../test/processing.test.ts) |
+| B40 | Variable mappings rename item outcomes for the test | INFO §5.6.12, INFO §7.48 | delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
+| B41 | Template defaults from the test override item template defaults before template processing | INFO §5.6.14, INFO §5.152 | delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
+| B42 | Subsets for outcome-only expressions: `section-identifier` (including sub-sections), `include-category`, `exclude-category` | INFO §7.27, INFO §7.28, INFO §7.39 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B43 | `number-correct`, `-incorrect`, `-presented`, `-responded`, `-selected` as defined | INFO §2.11.2.1–5 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B44 | `outcome-minimum` ignores items without a minimum; `outcome-maximum` is NULL if any item lacks a maximum; `test-variables` skips NULLs and, with `base-type`, matches only variables of that base type; integer unless any float; a weight is defined only with `base-type` float or omitted (weight with integer is a validate error) | INFO §2.11.2.6–8, INFO §7.39.5–6 | processing, validate | S P N | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B45 | Response processing templates: the six RPT files are built in as model constants; URIs are normalized (`.xml` optional, `http` or `https`, `purl.imsglobal.org/spec/qti/v3p0/rptemplates/` or `www.imsglobal.org/question/qti_v3p0/rptemplates/`); QTI 2.x template URIs map to the same three algorithms with a validate warning (G43); internal rules win when both are given; `template-location` through the resolver | INFO §2.5.1, INFO §4.6.1–2, BPIG examples | processing, validate | S D N | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B46 | `exit-response`, `exit-template`, `exit-test` end the current processing run | INFO §6.39.5, INFO §6.50.2, INFO §6.32.5 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B47 | Conditions: a NULL or false condition skips its branch | INFO §5.117, INFO §5.114 | processing | S P | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B48 | Assignment checks base type and cardinality against the declaration, with promotion per D5 | INFO §5.130.2 | processing | S N | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B49 | `lookup-outcome-value`: interpolation table takes the first entry whose `source-value` ≤ value (strict when `include-boundary` is false); match table takes the exact integer; otherwise `default-value` or NULL | INFO §5.78, INFO §5.90, INFO §5.87, INFO §7.18 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B50 | Context declarations in items and tests; delivery engine supplies values before processing | INFO §2.2.2.1, BPIG §3.7.11, INFO §4.7.1 | delivery | S | OB13b | [processing.test.ts](../test/processing.test.ts) |
 | B51 | Identifier syntax: letter or `_` first; letters, digits, `_`, `-`, `.`; period reserved for prefixes; case-sensitive; 32 characters recommended | INFO §4.1.1 | values, validate | P N | OB2 | [values.test.ts](../test/values.test.ts) |
 | B52 | Response binding per interaction: base type and cardinality allowed for each of the 23 interactions | INFO §2.4.1–2.4.5 | interactions, validate | S N | OB10 |  |
 | B53 | Text and extended text: record fields `stringValue`, `floatValue`, `integerValue`, `leftDigits`, `rightDigits`, `ndp`, `nsf`, `exponent`; `string-identifier` keeps the raw text; `base` | INFO §2.4.2.2–3 | interactions | S P | OB10 |  |
@@ -666,29 +666,29 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | B61 | External scoring: `external-scored` (human, externalMachine), `variable-identifier-ref`; session waits in pendingExternalScoring until scores applied | INFO §4.5.10–11, BPIG §3.4.5, RR §2.7.7 | delivery, results | S | OB16 |  |
 | B62 | Shared stimulus through `qti-assessment-stimulus-ref` and package dependencies | BPIG §3.7.7, BIND §8.5 | asi, package | C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
 | B63 | Companion materials (calculator, rule, protractor, digital and physical materials) as data | INFO §10.1.1, BPIG §3.7.8 | content | U | OB10 |  |
-| B64 | Custom operators: dispatch to a registered function by `definition`, else `class`; unregistered is a ProcessingError (G7) | INFO §2.11.3.2, INFO §10.1.5 | processing | S N | OB8 |  |
+| B64 | Custom operators: dispatch to a registered function by `definition`, else `class`; unregistered is a ProcessingError (G7) | INFO §2.11.3.2, INFO §10.1.5 | processing | S N | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | B65 | Custom interaction (deprecated): data kept; response binding unchecked | INFO §2.4.4.5, INFO §10.1.4 | asi, interactions | R | OB10 |  |
 | B66 | Adaptive section (CAT): `qti-adaptive-selection` excludes `qti-selection` and `qti-ordering`; no nested sections; top-level only; branch rules and pre-conditions on its items, and branch rules targeting its items, are ignored; stages appended in order | CAT §2.1, INFO §2.3, INFO §4.2 | delivery, validate | S N | OB16 |  |
 | B67 | CAT item flow: response and outcome processing before Submit Results; CAT outcome values merged into results; results per presented item with `sequenceIndex`, skipped items `initial` | CAT §2.4, INFO §4.3.1 | delivery, cat | S | OB16 |  |
 | B68 | Catalogs: one card per support in a catalog; card or card entry has HTML content or file references; card entry chosen by `xml:lang`, else `default` | BPIG §3.7.10 | content, validate | S N | OB10 |  |
 | B69 | PNP sets: activate as option, activate at initialization, prohibit; a prohibited support is not assigned | BPIG §5.3 | pnp | S N | OB5 | [pnp.test.ts](../test/pnp.test.ts) |
 | B70 | Answered status from validity: answered, attempted, presented, notpresented | RR §2.7.1 | interactions, delivery | S | OB10 |  |
-| B71 | Math operators: domains give NULL; reciprocal and `atan2` rules; `signum`, `floor`, `ceil` integer results | INFO §2.11.3.39, INFO §8.21 | processing | S P | OB8 |  |
-| B72 | Rounding: `round` to n for [n − 0.5, n + 0.5); `truncate` toward zero; NaN gives NULL; `round`, `truncate`, `floor`, `ceil` of ±INF give NULL (D4) | INFO §2.11.3.37–38, INFO §8.21 | processing | S P | OB8 |  |
-| B73 | `round-to` and `equal-rounded` by the deciding digit of the decimal representation, significant figures ≥ 1, decimal places ≥ 0 | INFO §2.11.3.43, INFO §5.47.2, INFO §5.119.2 | processing | S P | OB8 |  |
-| B74 | Division by zero and results outside the float range give NULL (`divide`, `power`) | INFO §2.11.3.19, INFO §2.11.3.30, INFO §6.9.12 | processing | S P | OB8 |  |
-| B75 | `equal` tolerance: exact, absolute [x − t0, x + t1], relative [x(1 − t0/100), x(1 + t1/100)], bound inclusion flags | INFO §5.46 | processing | S P | OB8 |  |
-| B76 | `map-response`: single maps one value; containers sum distinct values once; `default-value` for unmapped keys; bounds; `case-sensitive` keys default false | INFO §2.11.1.5, INFO §5.88, INFO §7.21.3 | processing | S P D | OB8 |  |
-| B77 | `map-response-point`: areas tested in order, each area counted once; bounds | INFO §2.11.1.6, INFO §5.5.4 | processing | S P D | OB8 |  |
-| B78 | Shapes and coordinates for `inside` and area maps: circle, rect, poly, ellipse, default; percentages | INFO §5.75.2, `CoordsDType` | processing | S P | OB8 |  |
-| B79 | `pattern-match` in XML Schema regex syntax, matching the whole string | INFO §5.104.1 | values, processing | S P | OB8 | [values.corpus.test.ts](../test/values.corpus.test.ts), [values.test.ts](../test/values.test.ts) |
-| B80 | `string-match` with `case-sensitive`; deprecated `substring` flag; `substring` operator | INFO §5.138, INFO §5.139 | processing | S P | OB8 |  |
-| B81 | `stats-operator`: mean; sample and population variance and SD require more than one value | INFO §2.11.3.44, INFO §8.31 | processing | S P | OB8 |  |
-| B82 | Integer arithmetic: `integer-divide` floors, `integer-modulus` is x − z·y, zero divisor gives NULL; `gcd`/`lcm` zero rules; `sum`, `product`, `min`, `max`, `subtract` integer only when all operands are | INFO §2.11.3.11–31, .40 | processing | S P | OB8 |  |
-| B83 | Three-valued logic: `and`, `or`, `not`, `any-n` with NULL | INFO §2.11.3.1, .10, .15, .35 | processing | S P | OB8 |  |
-| B84 | Containers: `multiple` and `ordered` flatten and drop NULLs; `repeat`; `index` from 1; `random`; `container-size` of NULL is 0; `delete`; `member`; `contains` (multiset or subsequence) | INFO §2.11.3.6–9, .17–18, .29, .32, .36, .42 | processing | S P | OB8 |  |
-| B85 | `correct` and `default` look up declarations, with item prefixes in outcome processing | INFO §2.11.1.3–4 | processing | S | OB8 |  |
-| B86 | `match` compares equal values (pair unordered); should not be used for float, must not for duration | INFO §2.11.3.28 | processing, validate | S P N | OB8 |  |
+| B71 | Math operators: domains give NULL; reciprocal and `atan2` rules; `signum`, `floor`, `ceil` integer results | INFO §2.11.3.39, INFO §8.21 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B72 | Rounding: `round` to n for [n − 0.5, n + 0.5); `truncate` toward zero; NaN gives NULL; `round`, `truncate`, `floor`, `ceil` of ±INF give NULL (D4) | INFO §2.11.3.37–38, INFO §8.21 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B73 | `round-to` and `equal-rounded` by the deciding digit of the decimal representation, significant figures ≥ 1, decimal places ≥ 0 | INFO §2.11.3.43, INFO §5.47.2, INFO §5.119.2 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B74 | Division by zero and results outside the float range give NULL (`divide`, `power`) | INFO §2.11.3.19, INFO §2.11.3.30, INFO §6.9.12 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B75 | `equal` tolerance: exact, absolute [x − t0, x + t1], relative [x(1 − t0/100), x(1 + t1/100)], bound inclusion flags | INFO §5.46 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B76 | `map-response`: single maps one value; containers sum distinct values once; `default-value` for unmapped keys; bounds; `case-sensitive` keys default false | INFO §2.11.1.5, INFO §5.88, INFO §7.21.3 | processing | S P D | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B77 | `map-response-point`: areas tested in order, each area counted once; bounds | INFO §2.11.1.6, INFO §5.5.4 | processing | S P D | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B78 | Shapes and coordinates for `inside` and area maps: circle, rect, poly, ellipse, default; percentages | INFO §5.75.2, `CoordsDType` | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B79 | `pattern-match` in XML Schema regex syntax, matching the whole string | INFO §5.104.1 | values, processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts), [values.corpus.test.ts](../test/values.corpus.test.ts), [values.test.ts](../test/values.test.ts) |
+| B80 | `string-match` with `case-sensitive`; deprecated `substring` flag; `substring` operator | INFO §5.138, INFO §5.139 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B81 | `stats-operator`: mean; sample and population variance and SD require more than one value | INFO §2.11.3.44, INFO §8.31 | processing | S P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B82 | Integer arithmetic: `integer-divide` floors, `integer-modulus` is x − z·y, zero divisor gives NULL; `gcd`/`lcm` zero rules; `sum`, `product`, `min`, `max`, `subtract` integer only when all operands are | INFO §2.11.3.11–31, .40 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B83 | Three-valued logic: `and`, `or`, `not`, `any-n` with NULL | INFO §2.11.3.1, .10, .15, .35 | processing | S P | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B84 | Containers: `multiple` and `ordered` flatten and drop NULLs; `repeat`; `index` from 1; `random`; `container-size` of NULL is 0; `delete`; `member`; `contains` (multiset or subsequence) | INFO §2.11.3.6–9, .17–18, .29, .32, .36, .42 | processing | S P | OB8 | [corpus.corpus.test.ts](../../../differential/test/corpus.corpus.test.ts), [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| B85 | `correct` and `default` look up declarations, with item prefixes in outcome processing | INFO §2.11.1.3–4 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| B86 | `match` compares equal values (pair unordered); should not be used for float, must not for duration | INFO §2.11.3.28 | processing, validate | S P N | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | B87 | Outcome-only expressions are errors in response processing: `outcome-minimum`, `outcome-maximum`, `test-variables` (BIND rule set), and the `number-*` expressions (INFO "only in outcomes processing") | BIND §5.3.2, INFO §2.11.2 | validate | N | OB14 |  |
 | B88 | End of attempt only on a candidate action or an expected event, such as the end of the test | INFO §2.5 | delivery | S | OB13b |  |
 | B89 | Package rules: one resource per item, section, test, stimulus; single-item packages put metadata on the resource; `cp:organization` and `cp:item` prohibited; schema and version values; auxiliary files listed or shared through dependencies | BIND §8.1–8.8 | package, validate | S N C | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
@@ -727,25 +727,25 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W17 | `DIR` | INFO §8.17 | asi | V X | OB7 |  |
 | W18 | `ExternalScoredEnum` | INFO §8.18 | delivery, results | V X | OB16 |  |
 | W19 | `KindValueEnum` | INFO §8.19 | asi | V X | OB7 |  |
-| W20 | `MathConstantsEnum` | INFO §8.20 | processing | V X P | OB8 |  |
-| W21 | `MathOperatorNameEnum` | INFO §8.21 | processing | V X P | OB8 |  |
+| W20 | `MathConstantsEnum` | INFO §8.20 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| W21 | `MathOperatorNameEnum` | INFO §8.21 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W22 | `NavigationModeEnum` | INFO §8.22 | delivery | V X | OB13b |  |
 | W23 | `OrientationEnum` | INFO §8.23 | interactions | V X | OB10 |  |
 | W24 | `ParamTypeEnum` | INFO §8.24 | asi | V X | OB7 |  |
 | W25 | `PreLoadValueEnum` | INFO §8.25 | asi | V X | OB7 |  |
-| W26 | `RoundingModeEnum` | INFO §8.26 | processing | V X P | OB8 |  |
+| W26 | `RoundingModeEnum` | INFO §8.26 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W27 | `SIRadialUnitTypeEnum` | INFO §8.27 | content | V X | OB10 |  |
 | W28 | `SIUnitTypeEnum` | INFO §8.28 | content | V X | OB10 |  |
-| W29 | `ShapeEnum` | INFO §8.29 | processing | V X P | OB8 |  |
+| W29 | `ShapeEnum` | INFO §8.29 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W30 | `ShowHideEnum` | INFO §8.30 | content | V X | OB10 |  |
-| W31 | `StatsOperatorNameEnum` | INFO §8.31 | processing | V X P | OB8 |  |
+| W31 | `StatsOperatorNameEnum` | INFO §8.31 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W32 | `SubmissionModeEnum` | INFO §8.32 | delivery | V X | OB13b |  |
 | W33 | `SupportEnum` | INFO §8.33 | content, pnp | V X | OB10 |  |
 | W34 | `SuppressTTSEnum` | INFO §8.34 | asi | V X | OB7 |  |
 | W35 | `TableCellScopeEnum` | INFO §8.35 | asi | V X | OB7 |  |
 | W36 | `TestFeedbackAccessEnum` | INFO §8.36 | content | V X | OB10 |  |
 | W37 | `TextFormatEnum` | INFO §8.37 | interactions | V X | OB10 |  |
-| W38 | `ToleranceModeEnum` | INFO §8.38 | processing | V X P | OB8 |  |
+| W38 | `ToleranceModeEnum` | INFO §8.38 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W39 | `USRadialUnitTypeEnum` | INFO §8.39 | content | V X | OB10 |  |
 | W40 | `USUnitTypeEnum` | INFO §8.40 | content | V X | OB10 |  |
 | W41 | `UseEnum` | INFO §8.41 | content | V X | OB10 |  |
@@ -754,13 +754,13 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | W44 | `IntegerList` | INFO §9.1.2 | values | V X P | OB2 | [values.test.ts](../test/values.test.ts) |
 | W45 | `MimeTypeList` | INFO §9.1.3 | interactions | V X | OB10 |  |
 | W46 | `StringList` | INFO §9.1.4 | asi | V X | OB7 |  |
-| W47 | `ToleranceList` | INFO §9.1.5 | processing | V X P | OB8 |  |
+| W47 | `ToleranceList` | INFO §9.1.5 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W48 | `ARIARelevantList` | INFO §9.2.1 | asi | V X | OB7 |  |
 | W49 | `ViewEnum` | INFO §9.2.2 | content | V X | OB10 |  |
-| W50 | `FloatOrVariableRef` | INFO §9.3.1 | processing | V X P | OB8 |  |
-| W51 | `IntOrIdentifier` | INFO §9.3.2 | processing | V X P | OB8 |  |
-| W52 | `IntegerOrVariableRef` | INFO §9.3.3 | processing | V X P | OB8 |  |
-| W53 | `StringOrVariableRef` | INFO §9.3.4 | processing | V X P | OB8 |  |
+| W50 | `FloatOrVariableRef` | INFO §9.3.1 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| W51 | `IntOrIdentifier` | INFO §9.3.2 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| W52 | `IntegerOrVariableRef` | INFO §9.3.3 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| W53 | `StringOrVariableRef` | INFO §9.3.4 | processing | V X P | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | W54 | `SupportEnumExt` | INFO §9.3.5 | content, pnp | V X | OB10 |  |
 | W55 | `UseEnumExt` | INFO §9.3.6 | content | V X | OB10 |  |
 
@@ -1091,23 +1091,23 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 
 | Row | Construct | Source | Modules | Evidence | Unit | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| G1 | `round`, `truncate`, `floor` and `ceil` return integers but "INF gives INF" | INFO §2.11.3.37–38, Table 8.21 | processing | S | OB8 |  |
+| G1 | `round`, `truncate`, `floor` and `ceil` return integers but "INF gives INF" | INFO §2.11.3.37–38, Table 8.21 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G2 | Base type integer maps to `xs:integer` (unbounded) | BIND §2.9 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
-| G3 | "Effective base-type" of assigned expressions is not defined | INFO §5.130.2 | processing | S | OB8 |  |
-| G4 | Relative tolerance with negative x gives a lower bound above the upper bound | INFO §5.46.2 | processing | S | OB8 |  |
-| G5 | `map-response` of a NULL response; bounds stated for containers only | INFO §2.11.1.5, INFO §5.88.1–2 | processing | S | OB8 |  |
-| G6 | Case-insensitive comparison method | INFO §5.138, INFO §5.139, INFO §7.21.3 | processing | S | OB8 |  |
-| G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 |  |
+| G3 | "Effective base-type" of assigned expressions is not defined | INFO §5.130.2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G4 | Relative tolerance with negative x gives a lower bound above the upper bound | INFO §5.46.2 | processing | S | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
+| G5 | `map-response` of a NULL response; bounds stated for containers only | INFO §2.11.1.5, INFO §5.88.1–2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G6 | Case-insensitive comparison method | INFO §5.138, INFO §5.139, INFO §7.21.3 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G7 | Behavior for an unsupported custom operator | INFO §2.11.3.2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G8 | Probability distribution of selection | INFO §5.129 | delivery | S | OB11 |  |
 | G9 | Item variable of a with-replacement item in individual submission is "undefined" | INFO §2.11.1.2 | delivery | S | OB13b |  |
 | G10 | Lexical form of `file` values in XML | INFO §8.13, RR §2.6.6 | values | S | OB2 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
 | G11 | 3.0.1 XSD gives `normal-minimum` a default of 0.0, while `outcome-minimum` ignores items with no minimum | INFO §2.11.2.6, XSD | asi | S | OB4 | [asi.test.ts](../test/asi.test.ts) |
 | G12 | Namespaces in spec samples differ from the XSDs | INFO §0 | asi, results, usage, pnp, metadata, package | S | OB6 | [package.corpus.test.ts](../test/package.corpus.test.ts), [package.test.ts](../test/package.test.ts) |
-| G13 | Population variance and SD require more than one value | INFO §8.31 | processing | S | OB8 |  |
+| G13 | Population variance and SD require more than one value | INFO §8.31 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G14 | ISO 8601 durations with years or months have no fixed length in seconds; BPIG App. C.1's own example `P10Y3M20DT4H30M25S` has both | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
-| G15 | Range of `random-float` and admissible values of `random-integer` | INFO §7.33–7.34 | processing | S | OB8 |  |
+| G15 | Range of `random-float` and admissible values of `random-integer` | INFO §7.33–7.34 | processing | S | OB8 | [generated.test.ts](../../../differential/test/generated.test.ts), [processing.test.ts](../test/processing.test.ts) |
 | G16 | `count-attempt` is boolean but described as a number of attempts | INFO §5.45.3 | delivery | S | OB13a |  |
-| G17 | Unknown template URI with no internal rules and no resolver | INFO §4.6.1–2 | processing | S | OB8 |  |
+| G17 | Unknown template URI with no internal rules and no resolver | INFO §4.6.1–2 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
 | G18 | `match` on floats "should not" be used | INFO §2.11.3.28 | validate | S | OB14 |  |
 | G19 | Shuffling with choices hidden by template variables | INFO §2.7.1, INFO §5.30.1 | interactions | S | OB10 |  |
 | G20 | Item duration resolution ("at least 1 s, should be 0.1 s or smaller") | INFO §2.2.2.2 | delivery | S | OB13a |  |
@@ -1118,22 +1118,22 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | G25 | Whether item response processing runs again after external scores arrive | INFO §4.5.10, BPIG §3.4.5 | delivery | S | OB16 |  |
 | G26 | When a test-level external score can be requested |  | delivery | S | OB16 |  |
 | G27 | Action timestamps that go backward |  | delivery | S | OB13b |  |
-| G28 | `ln` and `log` of 0: NULL in INFO §2.11.3.39 ("outside the natural domain"), −INF in Table 8.21 | INFO §2.11.3.39, INFO §8.21 | processing | S | OB8 |  |
-| G29 | `floor` and `ceil` of ±INF give INF but return integers | INFO §8.21 | processing | S | OB8 |  |
-| G30 | Ordered `contains`: "strict sub-sequence", contiguous or not | INFO §2.11.3.17 | processing | S | OB8 |  |
-| G31 | `index` with n ≤ 0 | INFO §2.11.3.6 | processing | S | OB8 |  |
-| G32 | `random-integer` with min > max or step ≤ 0 | INFO §7.34 | processing, validate | S | OB8 |  |
-| G33 | `random-float` with min > max | INFO §7.33 | processing, validate | S | OB8 |  |
-| G34 | `tolerance` items may be variable references (`ToleranceList` items are string or double) | INFO §5.46.2, XSD | processing | S | OB8 |  |
-| G35 | `test-variables` with a weight and `base-type="integer"` is undefined | INFO §7.39.5 | processing, validate | S | OB8 |  |
-| G36 | RR `value` is `xs:normalizedString`; newlines in essay responses are lost to schema-aware consumers | RR XSD | results | S | OB8 | [results.test.ts](../test/results.test.ts) |
-| G37 | PCI JSON record fields may be `"base":  null`, but record fields are single values | BPIG App. C.3 | values, pci | S | OB8 |  |
+| G28 | `ln` and `log` of 0: NULL in INFO §2.11.3.39 ("outside the natural domain"), −INF in Table 8.21 | INFO §2.11.3.39, INFO §8.21 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G29 | `floor` and `ceil` of ±INF give INF but return integers | INFO §8.21 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G30 | Ordered `contains`: "strict sub-sequence", contiguous or not | INFO §2.11.3.17 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G31 | `index` with n ≤ 0 | INFO §2.11.3.6 | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G32 | `random-integer` with min > max or step ≤ 0 | INFO §7.34 | processing, validate | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G33 | `random-float` with min > max | INFO §7.33 | processing, validate | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G34 | `tolerance` items may be variable references (`ToleranceList` items are string or double) | INFO §5.46.2, XSD | processing | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G35 | `test-variables` with a weight and `base-type="integer"` is undefined | INFO §7.39.5 | processing, validate | S | OB8 | [processing.test.ts](../test/processing.test.ts) |
+| G36 | RR `value` is `xs:normalizedString`; newlines in essay responses are lost to schema-aware consumers | RR XSD | results | S | OB8 | [results.test.ts](../test/results.test.ts), [values.test.ts](../test/values.test.ts) |
+| G37 | PCI JSON record fields may be `"base":  null`, but record fields are single values | BPIG App. C.3 | values, pci | S | OB8 | [values.test.ts](../test/values.test.ts) |
 | G38 | Mapping of PCI `intOrIdentifier` to a value | BPIG App. C.1 | values, pci | S | OB8 | [values.test.ts](../test/values.test.ts) |
 | G39 | BPIG's duration example uses years and months | BPIG App. C.1 | values | S | OB2 | [values.test.ts](../test/values.test.ts) |
 | G40 | `SCORE`, `MAXSCORE` must be float and `PASSED` boolean, yet content in the field varies | INFO §2.2.2.3, BPIG §3.5 | validate | S | OB14 |  |
 | G41 | PNP `fixed-minutes` and `unlimited` with nested time limits (BPIG speaks of the test's time) | BPIG §5.2.4 | delivery | S | OB11 |  |
 | G42 | How an LTI-launched item's grade maps to QTI outcomes | BPIG §6.2.9 | delivery | S | OB16 |  |
-| G43 | QTI 2.x response processing template URIs in 3.0 content | BPIG §2.5.1 (3.0 URIs only) | processing | S | OB8 |  |
+| G43 | QTI 2.x response processing template URIs in 3.0 content | BPIG §2.5.1 (3.0 URIs only) | processing | S | OB8 | [processing.corpus.test.ts](../test/processing.corpus.test.ts), [processing.test.ts](../test/processing.test.ts) |
 
 ## Out of scope
 
@@ -1164,4 +1164,30 @@ Constructs that olah leaves to the system that owns them.
 
 Differences between olah and Longsight qti3-core that the specification settles.
 
-None.
+| Item | Variable | Reason | Source |
+| --- | --- | --- | --- |
+| items/shared-vocabulary/Items/Item_QTI3_Gap_Match_01/gap-match-qti3.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| items/shared-vocabulary/Items/Item_QTI3_Gap_Match_02/gap-match-qti3.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| items/shared-vocabulary/Items/Item_QTI3_Gap_Match_03/gap-match-qti3.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| packaging/BBQsTest/id-f8e13982226c/jumble-gapMatch.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| packaging/items/gap_match.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| packaging/items/multi-input.xml (no responses) | (acceptance) | Longsight rejects a blockquote directly in qti-gap-match-interaction, which the ASI schema allows; the content model does not affect processing, which olah runs. | INFO §5.57 |
+| items/shared-vocabulary/Items/Item_QTI3_Hotspot_01/hotspot-qti3.xml (no responses) | (acceptance) | Longsight requires a single interaction bound to RESPONSE for a standard template; INFO §2.5.1 requires only that RESPONSE and SCORE are declared, so olah runs the template. | INFO §2.5.1 |
+| packaging/items/media_coords.xml (no responses) | (acceptance) | Longsight requires a single interaction bound to RESPONSE for a standard template; INFO §2.5.1 requires only that RESPONSE and SCORE are declared, so olah runs the template. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_102010.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_102011.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_102012.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_102013.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_102015.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_104045.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_104047.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_104048.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_104049.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/ccPackage/testitems/QUE_104051.xml (no responses) | (acceptance) | Longsight does not support the standard template CC2_match, one of the six of INFO §2.5.1, which olah has built in. | INFO §2.5.1 |
+| packaging/BBQsTest/id-bd44a757f562/SineRule-001.xml (no responses) | (acceptance) | The item uses the custom operator org.qtitools.mathassess.CasProcess, which is not registered; olah raises a ProcessingError (G7) where Longsight goes on. | INFO §2.11.3.2 |
+| packaging/BBQsTest/id-bd44a757f562/SineRule-001.xml (correct responses) | (acceptance) | The item uses the custom operator org.qtitools.mathassess.CasProcess, which is not registered; olah raises a ProcessingError (G7) where Longsight goes on. | INFO §2.11.3.2 |
+| packaging/items/data-attributes.xml (no responses) | (acceptance) | The item's rubric block has no use, which INFO §5.120.1 requires; validate reports content, and olah runs the processing, which the rubric block does not affect. | INFO §5.120.1 |
+| packaging/items/feedback_adaptive.xml (no responses) | (acceptance) | Longsight rejects the item because one rule sets the multiple FEEDBACK to a single value; olah checks a value when its rule runs (D5), which this case does not reach, and validate reports the rule. | INFO §5.130.2 |
+| packaging/items/mc_calc3.xml (no responses) | (acceptance) | qti-index names its n with the template variable i, which IntOrIdentifier allows; Longsight rejects the reference. | INFO §5.72, §2.7.2 |
+| packaging/items/mc_stat2.xml (no responses) | (acceptance) | qti-repeat names its number-repeats with the template variable n, which IntOrIdentifier allows; Longsight rejects the reference. | INFO §5.113.1, §2.7.2 |
+| packaging/items/template.xml (no responses) | (acceptance) | qti-set-correct-response sets the float RESPONSE to an integer, which olah promotes to a float on assignment (D5, G3); Longsight rejects the rule. | INFO §5.130.2 |

@@ -889,7 +889,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     });
   }
 
-  it("[J3] writes and reads the record of C.3 without its NULL field (G37)", () => {
+  it("[J3][G37] writes and reads the record of C.3 without its NULL field", () => {
     const appendix = {
       record: [
         { name: "rock", base: { boolean: true } },
@@ -1146,6 +1146,12 @@ describe("JSON codec of BPIG Appendix C", () => {
 });
 
 describe("wire values", () => {
+  it("[G36] keeps a string exactly, line breaks included, so that an essay travels in state as written", () => {
+    const essay = nonNull(single("string", "Dear Ana,\r\n\n  I arrived.\t"));
+    const wire = toWireValue(essay, declare("single", "string"));
+    expect(fromWireValue(JSON.parse(JSON.stringify(wire)))).toEqual(essay);
+  });
+
   it("[E30] wraps the JSON of a value in its cardinality and base type", () => {
     expect(toWireValue(single("integer", 5), declare("single", "integer"))).toEqual({
       cardinality: "single",

@@ -1,5 +1,25 @@
 import { createItemSession, parseQtiXml, type QtiDiagnostic, type QtiDocument } from "@longsightgroup/qti3-core";
+import type { Random } from "@luthfanwakan/olah";
 import type { Implementation, ItemCase, Observed } from "./model.ts";
+
+/** The multiplier and increment of the oracle's generator, a linear congruential generator (Numerical Recipes). */
+const LCG_MULTIPLIER = 1664525;
+const LCG_INCREMENT = 1013904223;
+const TWO_TO_32 = 2 ** 32;
+
+/**
+ * Returns the generator that the oracle draws template values with for a numeric seed (`seededRandom` of its
+ * `processing-random.js`), as an olah `Random`, so that olah can draw the values that the oracle draws.
+ */
+export function longsightRandom(seed: number): Random {
+  let state = seed >>> 0;
+  return {
+    uniform: () => {
+      state = (LCG_MULTIPLIER * state + LCG_INCREMENT) >>> 0;
+      return state / TWO_TO_32;
+    },
+  };
+}
 
 /** Parses an item with the oracle, or returns why it does not accept it. */
 function parse(xml: string): QtiDocument | string {

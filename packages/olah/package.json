@@ -58,6 +58,10 @@
       "types": "./dist/package/index.d.ts",
       "default": "./dist/package/index.js"
     },
+    "./processing": {
+      "types": "./dist/processing/index.d.ts",
+      "default": "./dist/processing/index.js"
+    },
     "./values": {
       "types": "./dist/values/index.d.ts",
       "default": "./dist/values/index.js"

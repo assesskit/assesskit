@@ -4,7 +4,8 @@ A QTI 3.0 runtime for JavaScript and TypeScript: it reads, writes, validates and
 content packages and results, and runs a test session without presentation. It is under development; this version has
 the foundation, the `values` module, a secure XML reader and writer, validation against the official XSD schemas, the typed
 model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
-and preferences, QTI content packages with their metadata, and the port to computer adaptive testing engines.
+and preferences, QTI content packages with their metadata, the port to computer adaptive testing engines, and template,
+response and outcome processing.
 The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
 
 ```bash
@@ -80,21 +81,48 @@ writeAsi(document).includes(
 ); // true
 ```
 
+Template and response processing run on the model, with the six standard templates built in:
+
+```ts
+import { createRandom } from "@luthfanwakan/olah";
+import { readAsi } from "@luthfanwakan/olah/asi";
+import { createItemVariables, runResponseProcessing } from "@luthfanwakan/olah/processing";
+import { single } from "@luthfanwakan/olah/values";
+
+const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="capital" title="Capital" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>paris</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body><p>Which city is the capital of France?</p></qti-item-body>
+  <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>
+</qti-assessment-item>`);
+if (document.kind === "item") {
+  const { item } = document;
+  const variables = createItemVariables(item);
+  const responses = new Map(variables.responses).set("RESPONSE", single("identifier", "paris"));
+  const { outcomes } = runResponseProcessing(item, { ...variables, responses }, { random: createRandom(1) });
+  outcomes.get("SCORE"); // { cardinality: "single", baseType: "float", value: 1 }
+}
+```
+
 ## API
 
-| Import                        | Contents                                                                                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@luthfanwakan/olah`          | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                           |
-| `@luthfanwakan/olah/asi`      | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`             |
-| `@luthfanwakan/olah/results`  | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                  |
-| `@luthfanwakan/olah/usage`    | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                          |
-| `@luthfanwakan/olah/pnp`      | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                           |
-| `@luthfanwakan/olah/metadata` | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant |
-| `@luthfanwakan/olah/package`  | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                  |
-| `@luthfanwakan/olah/cat`      | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                            |
-| `@luthfanwakan/olah/values`   | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex` |
-| `@luthfanwakan/olah/xml`      | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                      |
-| `@luthfanwakan/olah/node`     | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                     |
+| Import                          | Contents                                                                                                                                                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@luthfanwakan/olah`            | Everything below except `node`; `createRandom`, `restoreRandom`, `Random`, `SeededRandom`; `Issue`; `OlahError` and its subclasses                                                                                |
+| `@luthfanwakan/olah/asi`        | `readAsi`, `writeAsi`, `AsiDocument`, the model of every assessment element, `Expression`, the rule types, `readScoreCovers`, `scoreCoversBlock`                                                                  |
+| `@luthfanwakan/olah/results`    | `readResults`, `writeResults` and the model of a Results Reporting document                                                                                                                                       |
+| `@luthfanwakan/olah/usage`      | `readUsageData`, `writeUsageData`, the model of usage data, and the vocabularies of item statistics                                                                                                               |
+| `@luthfanwakan/olah/pnp`        | `readPnp`, `writePnp`, `resolveSupports` and the model of a personal needs and preferences profile                                                                                                                |
+| `@luthfanwakan/olah/metadata`   | `readResourceMetadata`, `writeResourceMetadata`, `deriveQtiMetadata`, QTI metadata, LOM, curriculum standards and the accessibility description of a variant                                                      |
+| `@luthfanwakan/olah/package`    | `readManifest`, `readPackage`, `writePackage`, `packageResolvers`, `dependencyClosure`, `readLtiLink`, `DEFAULT_ZIP_LIMITS`                                                                                       |
+| `@luthfanwakan/olah/cat`        | `CatPort`, `sectionData`, `isSessionEnd`, `checkPool`, `catMetadata` and the models of the requests and responses of a CAT engine                                                                                 |
+| `@luthfanwakan/olah/processing` | `createItemVariables`, `runTemplateProcessing`, `runResponseProcessing`, `runOutcomeProcessing`, `evaluate`, `evaluateTestExpression`, `TestScope`, `STANDARD_TEMPLATES`, `OPERATOR_SIGNATURES`, custom operators |
+| `@luthfanwakan/olah/values`     | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
+| `@luthfanwakan/olah/xml`        | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
+| `@luthfanwakan/olah/node`       | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                                                                          |
 
 The errors are `DataError` for a wrong argument, `ReadError` for a document that cannot be read, `SecurityError` for
 input that breaks a limit and `ProcessingError` for a condition that processing does not define as NULL. Validation does
@@ -104,6 +132,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 
 - [Architecture](docs/architecture.md): principles, layers, errors and determinism.
 - [ASI](docs/asi.md): the model of assessment documents, the reader and the writer, the covers of external scores, and the element table.
+- [Processing](docs/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
 - [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
 - [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
 - [Results](docs/results.md): the model of a Results Reporting document, its values and its rules.

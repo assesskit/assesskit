@@ -3,7 +3,11 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@luthfanwakan/olah": ["../packages/olah/src/index.ts"],
+      "@luthfanwakan/olah/*": ["../packages/olah/src/*/index.ts"]
+    }
   },
   "include": ["src", "test"]
 }

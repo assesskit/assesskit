@@ -8,7 +8,7 @@ import type { ContainerValue, RecordValue, SingleValue, Value } from "./value.js
  * `SameValueZero`: `NaN` equals `NaN`, and `0` equals `-0`. A pair is unordered and a directed pair is ordered
  * (INFO §8.13).
  */
-function identity(baseType: BaseType, primitive: Primitive): string {
+export function primitiveKey(baseType: BaseType, primitive: Primitive): string {
   if (isFileValue(primitive))
     return JSON.stringify([primitive.reference, primitive.mimeType, primitive.fileName ?? null]);
   if (baseType === "pair" && isTuple(primitive)) return primitive.map(String).toSorted().join("\0");
@@ -16,13 +16,13 @@ function identity(baseType: BaseType, primitive: Primitive): string {
 }
 
 function matchSingle(a: SingleValue, b: SingleValue): boolean {
-  return a.baseType === b.baseType && identity(a.baseType, a.value) === identity(b.baseType, b.value);
+  return a.baseType === b.baseType && primitiveKey(a.baseType, a.value) === primitiveKey(b.baseType, b.value);
 }
 
 function matchContainers(a: ContainerValue, b: ContainerValue): boolean {
   if (a.baseType !== b.baseType || a.values.length !== b.values.length) return false;
-  const left = a.values.map((primitive) => identity(a.baseType, primitive));
-  const right = b.values.map((primitive) => identity(b.baseType, primitive));
+  const left = a.values.map((primitive) => primitiveKey(a.baseType, primitive));
+  const right = b.values.map((primitive) => primitiveKey(b.baseType, primitive));
   if (a.cardinality === "ordered") return left.every((item, index) => item === right[index]);
   // A multiple container is a multiset: the same values the same number of times.
   const counts = new Map<string, number>();
