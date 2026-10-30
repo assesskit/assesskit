@@ -169,12 +169,35 @@ function recordInteraction(base: number): QtiInteraction {
   return interaction;
 }
 
-/** The fields of the record that olah makes for a text, by name, and those of the oracle that are not NULL. */
-function numericFields(text: string, base: number): { readonly subject: unknown; readonly oracle: unknown } {
+/** The fields of the record that the oracle makes for a text, by name, without those that are NULL. */
+function oracleFields(text: string, base: number): Record<string, unknown> {
+  const captured = captureQtiTextResponse(recordInteraction(base), text);
+  return Object.fromEntries(Object.entries(captured ?? {}).filter(([, value]) => value !== null));
+}
+
+/** The fields that are floats; the others are integers. */
+const FLOAT_FIELDS = new Set(["stringValue", "floatValue"]);
+
+/**
+ * The fields of the record that olah makes for a text, by name, and those of the oracle that are not NULL. An integer has
+ * no sign of zero in olah (T2), and the oracle's `integerValue` and `exponent` are `-0` for the text `-0` and `e-0`, so
+ * the integers of the oracle are compared without it.
+ */
+function numericFields(
+  text: string,
+  base: number,
+): {
+  readonly subject: Record<string, unknown>;
+  readonly oracle: Record<string, unknown>;
+} {
   const made = numericRecord(text, base);
   const subject = Object.fromEntries([...(made?.fields ?? [])].map(([name, field]) => [name, field.value]));
-  const captured = captureQtiTextResponse(recordInteraction(base), text);
-  const oracle = Object.fromEntries(Object.entries(captured ?? {}).filter(([, value]) => value !== null));
+  const oracle = Object.fromEntries(
+    Object.entries(oracleFields(text, base)).map(([name, value]) => [
+      name,
+      typeof value === "number" && !FLOAT_FIELDS.has(name) ? value + 0 : value,
+    ]),
+  );
   return { subject, oracle };
 }
 
@@ -216,7 +239,20 @@ describe("olah against the oracle on numeric text", () => {
       ["-12.", -12],
     ] as const) {
       const { subject, oracle } = numericFields(text, 10);
-      expect(subject, text).toEqual({ ...(oracle as object), integerValue: value });
+      expect(subject, text).toEqual({ ...oracle, integerValue: value });
+    }
+  });
+
+  it("[B53][D] differ in the sign of a zero integer: olah has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
+    expect(Object.is(oracleFields("-0", 10).integerValue, -0)).toBe(true);
+    expect(Object.is(oracleFields("1e-0", 10).exponent, -0)).toBe(true);
+    const { subject } = numericFields("-0", 10);
+    expect(Object.is(subject.floatValue, -0)).toBe(true);
+    expect(Object.is(subject.integerValue, 0)).toBe(true);
+    expect(Object.is(numericFields("1e-0", 10).subject.exponent, 0)).toBe(true);
+    for (const text of ["-0", "-00", "+0", "-.0e5", "1e-0", "-0e-0"]) {
+      const { subject: made, oracle } = numericFields(text, 10);
+      expect(made, text).toEqual(oracle);
     }
   });
 
