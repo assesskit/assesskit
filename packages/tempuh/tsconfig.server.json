@@ -2,6 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "paths": {
+      "@luthfanwakan/olah": ["../olah/src/index.ts"],
+      "@luthfanwakan/olah/*": ["../olah/src/*/index.ts"]
+    },
     "types": ["node"]
   },
   "include": [

@@ -20,3 +20,9 @@ materials that olah reads and the supports of a candidate's profile.
 The tool role of LTI 1.3 in `@luthfanwakan/tempuh/lti`: the third-party initiated login with a state cookie or with the
 platform's browser storage (LTI Client Side OIDC), the validation of the launch, a key set cache, the response to a Deep
 Linking request and the access token of the client-credentials grant.
+
+Computer adaptive testing on the server (`cat`): `takarCatPort` and `takarPanelPort` implement olah's `CatPort` in process over
+takar, for item-level adaptive sections and multistage panels, with the `SectionStore` of parsed sections and the
+`scalingConstant` of a bank on the normal-ogive metric. `restCatPort` speaks the REST/JSON binding of CAT 1.0 to one remote
+engine over HTTPS with OAuth 2.0 client credentials, and `deployCatSections` creates the sections of a package's adaptive
+selections at the engine and checks their pool. takar is a runtime dependency.

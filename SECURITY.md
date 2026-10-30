@@ -86,6 +86,23 @@ key, to the tool's client and deployment, and to one use.
 - The tool's private key is the host's to keep. It signs client assertions and Deep Linking responses, which expire after
   five minutes.
 
+## tempuh: CAT engines
+
+`restCatPort` sends a candidate's results and an OAuth bearer token to a remote engine, so it is built to send them to one
+place only.
+
+- It serves the one `endpoint` that the host configures. The `qti-adaptive-engine-ref` of a package is the package's word:
+  a request for another prefix is a `DataError`, and nothing leaves. Give each trusted engine its own port.
+- The endpoint and the token URL must be `https`. Redirects are errors, so a redirect cannot carry the token to another
+  address or from HTTPS to HTTP. Every request is aborted after `timeoutMs`.
+- The personal needs and preferences of a candidate go to the engine only with `sharePnp: true`.
+- The client secret goes only to the token URL, as HTTP Basic credentials.
+
+`takarCatPort` and `takarPanelPort` run in process and send nothing. The session seed travels in the `sessionState`, which
+olah keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
+parameters of the items and the settings of the test: keep it on the server. takar is a runtime dependency of tempuh, and
+only `cat/` imports it.
+
 ## Default limits
 
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;

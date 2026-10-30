@@ -11,7 +11,9 @@ root. It also has the frame of portable custom interactions: a sandboxed frame w
 RequireJS loading with fallback locations, and the communication bridge of the QTI 3.0 Best Practices and Implementation
 Guide (§3.7.12). It also has the tools of an item: a rule, a protractor, basic and standard calculators, a line reader, answer
 masking, materials, and slots for the tools that the host provides. It also has the tool role of LTI 1.3: the launch of a test by a learning platform, with its login, Deep Linking
-response and access token.
+response and access token. On the server it has the CAT engines for olah's `CatPort`:
+item-level adaptive sections and multistage panels over takar, a client of the REST binding of CAT 1.0, and the deployment of a
+package's adaptive sections.
 
 ## Browser baseline
 
@@ -39,6 +41,7 @@ envelope.seq; // 3
 | `@luthfanwakan/tempuh/player`      | `mountPciFrame`, `PciFrame`, `PciFrameOptions`, `PciModules`, `PciEvent`, `MIN_PCI_HEIGHT`, `MAX_PCI_HEIGHT`; `mountTools`, `ToolsInput`, `ToolSupport`, `ToolsOptions`, `ToolSlots`, `SlotTool`; the types of their fields |
 | `@luthfanwakan/tempuh/protocol`    | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `checkCaller`, `checkActionEnvelope`, `checkViewEnvelope`                                                                                                                    |
 | `@luthfanwakan/tempuh/lti`         | `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `createJwksCache` and the types of their arguments and results                                                                                               |
+| `@luthfanwakan/tempuh/cat`         | `takarCatPort`, `takarPanelPort`, `restCatPort`, `deployCatSections`; `SectionStore`, `StoredSection`, `PanelParameters`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                      |
 | `@luthfanwakan/tempuh/player.css`  | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                              |
 | `@luthfanwakan/tempuh/pci-frame/*` | The static files of the frame: `frame.html`, `require.js` and `bridge.js`                                                                                                                                                   |
 
@@ -49,6 +52,7 @@ envelope.seq; // 3
 - [Portable custom interactions](docs/pci.md): the frame, its policy, loading, events and serving the files.
 - [Protocol](docs/protocol.md): the caller and the envelopes.
 - [LTI](docs/lti.md): the tool role of LTI 1.3, its checks and its deployment.
+- [CAT](docs/cat.md): the CAT engines over takar and over REST, the section store and the deployment of a package.
 - [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
 - [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
 - [Tools](docs/tools.md): the tools of an item, how they are shown and operated.

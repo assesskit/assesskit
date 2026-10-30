@@ -279,6 +279,9 @@ importers:
       '@luthfanwakan/olah':
         specifier: workspace:^
         version: link:../olah
+      '@luthfanwakan/takar':
+        specifier: ^1.0.0
+        version: 1.0.0
     devDependencies:
       axe-core:
         specifier: ^4.14.0
