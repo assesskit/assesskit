@@ -5,7 +5,8 @@ Model, the static types of processing, the structure of a test, the covers of ex
 package, and the rules of Results Reporting and personal needs profiles. It reports what would fail or misbehave when
 content runs, before it does. It imports every module below it in the layers (`xml`, `values`, `asi`, `results`,
 `usage`, `pnp`, `metadata`, `processing`, `interactions`, `pci`, `content`, `cat`, `package`) and runs in any JavaScript
-runtime. Validating a document against the official XSD schemas is `validateXmlFiles` of [node](node.md).
+runtime. Validating a document against the official XSD schemas is `validateXmlFiles` of [node](node.md); `olah validate` of the
+[command line](cli.md) runs both.
 
 | Export                                          | Purpose                                                                                              |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

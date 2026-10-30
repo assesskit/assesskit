@@ -1,45 +1,17 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { isCurrent, loadList, requireSchemas, type SchemaFile, schemaDirectory, sha256 } from "../schemas.ts";
+import { loadList, requireSchemas, schemaDirectory } from "../schemas.ts";
 
 let directory = "";
 
 beforeAll(() => {
   directory = mkdtempSync(join(tmpdir(), "olah-schemas-"));
-  writeFileSync(join(directory, "x.xsd"), "x");
 });
 
 afterAll(() => {
   rmSync(directory, { recursive: true, force: true });
-});
-
-const X = "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881";
-const EMPTY = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
-describe("sha256", () => {
-  it("hashes bytes", () => {
-    expect(sha256(new TextEncoder().encode("x"))).toBe(X);
-    expect(sha256(new Uint8Array())).toBe(EMPTY);
-  });
-});
-
-describe("isCurrent", () => {
-  const schema = (sha: string, file = "x.xsd"): SchemaFile => ({
-    url: `https://example.org/${file}`,
-    file,
-    sha256: sha,
-  });
-
-  it("is true for a file with its pinned hash", () => {
-    expect(isCurrent(directory, schema(X))).toBe(true);
-  });
-
-  it("is false for a file with another hash, and for a missing file", () => {
-    expect(isCurrent(directory, schema(EMPTY))).toBe(false);
-    expect(isCurrent(directory, schema(X, "missing.xsd"))).toBe(false);
-  });
 });
 
 describe("the list", () => {

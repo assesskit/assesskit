@@ -6,8 +6,8 @@ the foundation, the `values` module, a secure XML reader and writer, validation 
 model of assessment documents with its reader and writer, the readers and writers of results, usage data and personal needs
 and preferences, QTI content packages with their metadata, the port to computer adaptive testing engines, template,
 response and outcome processing, the planning of a test session, the interactions with their rules of validity, portable
-custom interactions, and the content an item shows.
-The core runs in any JavaScript runtime; the `node` subpath needs Node.js 22 or later.
+custom interactions, the content an item shows, the validator, and the command line `olah` that validates packages and
+documents. The core runs in any JavaScript runtime; the `node` and `cli` subpaths need Node.js 22 or later.
 
 ```bash
 npm install @luthfanwakan/olah
@@ -108,6 +108,33 @@ if (document.kind === "item") {
 }
 ```
 
+## CLI
+
+The package installs the program `olah`. It validates a package or an XML document against the official schemas, which it
+downloads once, and with the semantic checks of `validate`:
+
+```bash
+npx olah schemas fetch
+npx olah validate packaging/simple/simple.zip
+```
+
+```text
+packaging/simple/simple.zip: valid (0 errors, 0 warnings)
+```
+
+| Command              | Argument or option    | Default                                                                                             |
+| -------------------- | --------------------- | --------------------------------------------------------------------------------------------------- |
+| `olah validate`      | `<path>`              | required: a ZIP file, an unpacked package directory or one XML document                             |
+|                      | `--schemas <dir>`     | `olah/schemas/<version>` in the user cache directory, where `olah schemas fetch` writes the schemas |
+|                      | `--format text\|json` | `text`                                                                                              |
+| `olah schemas fetch` | `--dir <dir>`         | the same cache directory                                                                            |
+| `olah --help`        |                       | prints the commands                                                                                 |
+
+The exit code is 0 when the content has no issue with severity error, 1 when it has one, and 2 when the command line is
+wrong, the path cannot be read or is refused, or the schemas are missing. `--format json` prints
+`{ tool, version, target, valid, summary: { errors, warnings }, issues }`. `olah schemas fetch` is the only code in olah that
+uses the network. [CLI](docs/cli.md) has the checks, the output and the cache directory of each platform.
+
 ## API
 
 | Import                            | Contents                                                                                                                                                                                                          |
@@ -129,6 +156,7 @@ if (document.kind === "item") {
 | `@luthfanwakan/olah/values`       | Base types, cardinalities, values and NULL, lexical forms, `matchValues`, `promote`, the JSON codec of BPIG Appendix C and the wire value, `compileXsdRegex`                                                      |
 | `@luthfanwakan/olah/xml`          | `parseXml`, `serializeXml`, `resolveIncludes`, `ElementReader`, `buildElement`, `DEFAULT_XML_LIMITS` and the tree types                                                                                           |
 | `@luthfanwakan/olah/node`         | Node.js only: `SCHEMA_FILES`, `loadSchemaSet`, `validateXmlFiles`, `readPackageFile`, `writePackageFile`                                                                                                          |
+| `@luthfanwakan/olah/cli`          | Node.js only: `runCli` and `RunCliOptions`, the command line `olah`                                                                                                                                               |
 
 The errors are `DataError` for a wrong argument, `ReadError` for a document that cannot be read, `SecurityError` for
 input that breaks a limit and `ProcessingError` for a condition that processing does not define as NULL. Validation does
@@ -153,6 +181,7 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 - [Package](docs/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
 - [CAT](docs/cat.md): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
 - [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
+- [CLI](docs/cli.md): `olah validate` and `olah schemas fetch`, their checks, output, exit codes and defaults.
 - [Evidence](docs/evidence.md): how every construct is tested, and how to refresh the corpus and the fixtures.
 - [Conformance](docs/conformance.md): the inventory, the certification features and the accepted differences.
 

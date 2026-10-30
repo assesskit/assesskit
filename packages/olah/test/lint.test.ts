@@ -51,7 +51,7 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
     "validate",
   ],
   node: ["xml", "package", "validate"],
-  cli: ["node", "validate", "package"],
+  cli: ["xml", "asi", "results", "usage", "pnp", "node", "validate", "package"],
 };
 const MODULES = Object.keys(LAYERS);
 const SHARED = ["errors", "checks", "random"];

@@ -64,8 +64,9 @@ does not write unpacked directories. Both functions throw a `DataError` for a pa
 
 ## Getting the schemas
 
-Download each `url` of `SCHEMA_FILES` into one directory under its `file` name. In this repository, `pnpm schemas` does that
-into `.cache/schemas` and checks every hash (the files are about 140 MB); `pnpm schemas:pin` writes new hashes into
+Download each `url` of `SCHEMA_FILES` into one directory under its `file` name. `olah schemas fetch` of the [command line](cli.md)
+does that into the user cache directory and checks every hash; in this repository, `pnpm schemas` runs the same code
+into `.cache/schemas` (the files are about 140 MB); `pnpm schemas:pin` writes new hashes into
 `packages/olah/src/node/schema-files.json` when a schema changes. `loadSchemaSet` throws a `DataError` that lists every file
 that is missing, unreadable or has another hash. The files read during a compilation are checked again, so a file changed
 after loading is never compiled.

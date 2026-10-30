@@ -7,7 +7,8 @@ Points to be aware of when deploying olah:
 - **No I/O.** The olah core reads no files, makes no network requests, reads no environment variables, reads no clock and
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.
 - **No fetching.** Absolute URLs in content are data. The core never fetches them, and callers supply the callbacks that
-  resolve references.
+  resolve references. The only network access in olah is the command `olah schemas fetch`: it downloads the addresses of
+  `SCHEMA_FILES`, which the command line cannot change, and writes a file only when its SHA-256 is the pinned one.
 - **CAT engines.** The core never calls a CAT engine. `qti-adaptive-engine-ref` names the URL prefix of an engine, so a
   document chooses where a host sends a candidate's results. A host that implements `CatPort` checks the prefix against
   the engines it trusts before it sends a request.
@@ -43,6 +44,9 @@ Points to be aware of when deploying olah:
   `SCHEMA_FILES`, and again when it compiles a file. `validateXmlFiles` parses every document with `parseXml` first and
   runs libxml2 with network access and external entities off. A document has no way to name another schema file than the
   pinned ones.
+- **Command line.** `olah validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
+  of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
+  `maxBytes` of `parseXml` before it reads the file, with the exit code 2.
 - **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (§2.6, BPIG §6.7). An archive
   entry whose name is absolute, leaves the package with `..`, or has a backslash, a drive letter or a control character
   rejects the archive (zip-slip), as do two entries with one normalized name, a symbolic link, and an encrypted entry. The

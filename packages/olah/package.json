@@ -25,6 +25,9 @@
   "bugs": "https://github.com/luthfanwakan/olah/issues",
   "type": "module",
   "sideEffects": false,
+  "bin": {
+    "olah": "./dist/cli/bin.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -93,6 +96,10 @@
     "./node": {
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "default": "./dist/cli/index.js"
     }
   },
   "files": [

@@ -95,7 +95,11 @@ Tests that validate against the schemas are in files named `*.xsd.test.ts`, whic
 offline. `pnpm test:xsd` runs them: it needs `pnpm schemas`, and `pnpm corpus` when a test reads the examples. A file loads
 one `SchemaSet` with `loadSchemaSet` in `beforeAll` and closes it in `afterAll`; compiling the ASI schema takes about 2
 seconds, and each schema is compiled once per set. Every test of a writer passes the output to `validateXmlFiles`
-([node](node.md) lists the evidence on the schemas).
+([node](node.md) lists the evidence on the schemas). `cli.xsd.test.ts` runs the command line on the examples of 1EdTech and
+compares its report with the issues of the libraries it composes; its tests of `olah schemas fetch` serve the files of
+`.cache/schemas` from a server on `127.0.0.1` and download them into a temporary directory, so that no test uses the network.
+`pnpm schemas` runs the code of `olah schemas fetch` (`packages/olah/src/cli/fetch-schemas.ts`), which `cli.test.ts` tests
+against a server of small files.
 
 `packages/olah/src/asi/element-table.ts` is generated from the pinned ASI schema by `scripts/asi-table.ts` (`pnpm asi-table`).
 `asi.xsd.test.ts` generates the table again and fails when the committed file differs. The same file validates documents that

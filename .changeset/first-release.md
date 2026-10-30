@@ -72,3 +72,9 @@ variables, the structure of a test (selection, adaptive sections, branch rules a
 externally scored outcomes, the files and resources of a package, Results Reporting and personal needs profiles.
 `validateTest` is the static gate of a delivery engine. `asi` has `walkDocument` and `scoreCoverBlocks`, and
 `processing` has the types and built-ins that the checks read.
+
+The command line (`cli`), installed as the program `olah` and exported as `runCli`: `olah validate <path>` checks a package, a
+package directory or an XML document against the official schemas, which it compiles once, and with the semantic checks of
+`validate`, and prints text or JSON with the exit codes 0 for valid, 1 for errors and 2 for a command line, input or schema
+set that it cannot use; `olah schemas fetch` downloads the pinned schemas into the user cache directory and checks their
+SHA-256, and is the only network access in olah.

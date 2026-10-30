@@ -33,12 +33,12 @@ A module imports only from lower layers, and imports never form cycles (lint). E
 | 6     | `validate/`                            | every module of layers 2 to 5                                                                                              |
 | 7     | `delivery/`                            | `values/`, `asi/`, `results/`, `pnp/`, `processing/`, `interactions/`, `pci/`, `content/`, `cat/`, `package/`, `validate/` |
 | 8     | `node/`                                | `xml/`, `package/`, `validate/`, `node:*`                                                                                  |
-| 9     | `cli/`                                 | `node/`, `validate/`, `package/`, `node:*`                                                                                 |
+| 9     | `cli/`                                 | `xml/`, `asi/`, `results/`, `usage/`, `pnp/`, `package/`, `validate/`, `node/`, `node:*`                                   |
 
 ## Subpaths
 
 Each module is a folder of `src/` with an `index.ts` and a subpath of `exports`. The root `.` re-exports every module
-except `node`, so the root stays portable. `bin` maps `olah` to the CLI.
+except `node` and `cli`, so the root stays portable. `bin` maps `olah` to the CLI.
 
 ## Errors and issues
 

@@ -40,7 +40,7 @@ A test names its rows in brackets, such as `[A79]`. A row needs a test once its 
 | OB13a | pending | 26 |
 | OB14 | merged | 79 |
 | OB13b | pending | 28 |
-| OB18 | pending | 3 |
+| OB18 | merged | 3 |
 | OB16 | pending | 26 |
 | OB17 | pending | 5 |
 | OB19 | pending | 0 |
@@ -1082,10 +1082,10 @@ does. A feature that is not yet mapped has no capabilities, owner or rows.
 | L9 | Weights referenced but not defined on the item ref | INFO §7.47.2 | validate | N | OB14 | [validate.corpus.test.ts](../test/validate.corpus.test.ts), [validate.test.ts](../test/validate.test.ts) |
 | L10 | Template-constraint variables without defaults | INFO §5.150 | validate | N | OB14 | [validate.corpus.test.ts](../test/validate.corpus.test.ts), [validate.test.ts](../test/validate.test.ts) |
 | L11 | Unknown response processing template without internal rules (G17) | INFO §4.6.1–2 | validate | N | OB14 | [validate.test.ts](../test/validate.test.ts) |
-| L12 | `olah validate <path>`: a zip, an unpacked package directory (symlinks contained) or a single XML document (ASI, manifest, results, usage data, PNP), detected by root element; every document through `parseXml`, then the XSD checks with one compiled schema set, then all semantic checks |  | cli | S | OB18 | [validate.test.ts](../test/validate.test.ts) |
-| L13 | Output: text by default, `--format json` gives `{ tool, version, target, valid, summary: { errors, warnings }, issues: Issue[] }`; exit codes 0 valid, 1 issues with errors, 2 usage, I/O or missing schemas |  | cli | S | OB18 |  |
-| L14 | `olah schemas fetch [--dir]`: downloads the files of `SCHEMA_FILES` into a cache directory and checks their SHA-256; the only network access anywhere in olah |  | cli | S N | OB18 |  |
-| L15 | PNP documents in the two namespaces 1EdTech's own documents use (BPIG §5, BIND §7) are read, written in the XSD namespace, and reported as errors | D6 | validate, pnp | N | OB14 | [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts), [validate.test.ts](../test/validate.test.ts) |
+| L12 | `olah validate <path>`: a zip, an unpacked package directory (symlinks contained) or a single XML document (ASI, manifest, results, usage data, PNP), detected by root element; every document through `parseXml`, then the XSD checks with one compiled schema set, then all semantic checks |  | cli | S | OB18 | [cli.test.ts](../test/cli.test.ts), [cli.xsd.test.ts](../test/cli.xsd.test.ts), [validate.test.ts](../test/validate.test.ts) |
+| L13 | Output: text by default, `--format json` gives `{ tool, version, target, valid, summary: { errors, warnings }, issues: Issue[] }`; exit codes 0 valid, 1 issues with errors, 2 usage, I/O or missing schemas |  | cli | S | OB18 | [cli.test.ts](../test/cli.test.ts), [cli.xsd.test.ts](../test/cli.xsd.test.ts) |
+| L14 | `olah schemas fetch [--dir]`: downloads the files of `SCHEMA_FILES` into a cache directory and checks their SHA-256; the only network access anywhere in olah |  | cli | S N | OB18 | [cli.test.ts](../test/cli.test.ts), [cli.xsd.test.ts](../test/cli.xsd.test.ts) |
+| L15 | PNP documents in the two namespaces 1EdTech's own documents use (BPIG §5, BIND §7) are read, written in the XSD namespace, and reported as errors | D6 | validate, pnp | N | OB14 | [cli.xsd.test.ts](../test/cli.xsd.test.ts), [pnp.test.ts](../test/pnp.test.ts), [pnp.xsd.test.ts](../test/pnp.xsd.test.ts), [validate.test.ts](../test/validate.test.ts) |
 
 ### G: Spec gaps
 

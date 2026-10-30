@@ -1,0 +1,187 @@
+# cli
+
+`@luthfanwakan/olah/cli` is the command line of olah, for Node.js 22 and later. The package installs it as the program `olah`.
+It validates a content package or an XML document against the official schemas and with the semantic checks of
+[validate](validate.md), and it downloads the schemas, which olah does not ship. `olah schemas fetch` is the only code in olah
+that uses the network.
+
+| Command                                                        | Purpose                                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `olah validate <path> [--schemas <dir>] [--format text\|json]` | Validates a package or a document and reports the issues.         |
+| `olah schemas fetch [--dir <dir>]`                             | Downloads the schemas of `SCHEMA_FILES` and checks their SHA-256. |
+| `olah --help`                                                  | Prints the commands to the standard output, and exits with 0.     |
+
+```bash
+npm install @luthfanwakan/olah
+npx olah schemas fetch
+npx olah validate packaging/items/feedback_adaptive.xml
+```
+
+## olah validate
+
+| Argument or option    | Default                                 | Meaning                                                                                                   |
+| --------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `<path>`              | required                                | A ZIP file, an unpacked package directory, or one XML document. A path that starts with `-` follows `--`. |
+| `--schemas <dir>`     | the directory `schemas fetch` writes to | The directory that holds the schemas, under the file names of `SCHEMA_FILES`.                             |
+| `--format text\|json` | `text`                                  | `text` prints a line for each issue and a verdict; `json` prints one report.                              |
+
+What the path is decides what is validated:
+
+| Path                                   | Validated as                                                                                               |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| A directory                            | A package, read as [`readPackageFile`](node.md#package-files) reads a directory: symbolic links refused.   |
+| A file that starts with the bytes `PK` | A package, read as `readPackageFile` reads a ZIP file.                                                     |
+| Any other file                         | One XML document, read whole; a file above `maxBytes` of `parseXml` (32 MiB) is refused before it is read. |
+
+The checks run in this order, and the report lists their issues in the same order.
+
+1. **Schema check.** Every document goes through `parseXml`, so that a DOCTYPE, a limit and a document that is not well-formed
+   are reported without libxml2 seeing the document. Then `validateXmlFiles` validates it against its schema, with one
+   `SchemaSet` that is compiled once for the whole run.
+2. **Semantic checks.** The document is read into its model and checked by `validate`.
+
+A defect that the schema and the reader both find, such as a missing attribute, is reported twice, once with the code
+`olah/node/xsd-invalid` and once with the code of the reader.
+
+### A document
+
+The root element decides how a document is read. The schema check applies to every kind with a schema (see
+[Choosing the schema](node.md#choosing-the-schema)); the semantic checks are these.
+
+| Root element                                                                                              | Semantic checks                                                                                                             |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Any element of the ASI namespace: item, test, section, stimulus, outcome declaration, response processing | `readAsi`, then `validateAsi`: a test is checked by its own document, without its items.                                    |
+| `assessmentResult`                                                                                        | `readResults`, then `validateResults`.                                                                                      |
+| `access-for-all-pnp`, `access-for-all-pnp-records`                                                        | `readPnp`, then `validatePnp` for each profile, and `validatePnpNamespace` (the two namespaces of the examples are errors). |
+| `usageData`                                                                                               | `readUsageData`.                                                                                                            |
+| `manifest`                                                                                                | `readManifest`.                                                                                                             |
+| Any other element                                                                                         | None; the schema check reports a namespace without a schema as `olah/node/no-schema`.                                       |
+
+A document is checked alone: an `xi:include` in it is not resolved and `validateAsi` reports it as unresolved
+(`olah/validate/unresolved-include`), and a test's items are not read. Validate the package to check them together.
+
+### A package
+
+1. `readPackageFile` reads the package. A manifest that cannot be read ends the validation with the issues of its reader.
+2. Every file of the package with the extension `.xml` goes through the schema check, one file at a time. An XML file whose
+   root is in a namespace without a schema, such as an LTI link, is left out.
+3. `validatePackage` checks the files, the resources and every document with the packages around them.
+
+### Output
+
+`--format text` prints a line for each issue, then the verdict. The parts of a location that the issue lacks are left out:
+
+```
+path:line:column (element): severity: message [code, source]
+```
+
+```console
+$ olah validate packaging/items/feedback_adaptive.xml
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-set-outcome-value): error: The variable "FEEDBACK" is a multiple identifier and cannot be set to a single identifier. [olah/validate/assignment-type, INFO §5.130.2]
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes single boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a multiple identifier as operand 1. [olah/validate/operand-type, INFO §2.11.3.29]
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes multiple or ordered boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a single identifier as operand 2. [olah/validate/operand-type, INFO §2.11.3.29]
+packaging/items/feedback_adaptive.xml: invalid (3 errors, 0 warnings)
+```
+
+`--format json` prints one object and a newline, with these fields in this order:
+
+| Field     | Value                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------- |
+| `tool`    | `"olah"`.                                                                                                   |
+| `version` | The version of the olah package.                                                                            |
+| `target`  | The path as the command line gave it.                                                                       |
+| `valid`   | `true` when no issue has the severity `error`.                                                              |
+| `summary` | `{ errors, warnings }`: the number of issues of each severity.                                              |
+| `issues`  | The `Issue`s of [Errors and issues](architecture.md#errors-and-issues), every one with its `location.path`. |
+
+```console
+$ olah validate --format json packaging/items/Example03-feedbackBlock-solution-random.xml
+{
+  "tool": "olah",
+  "version": "0.0.0",
+  "target": "packaging/items/Example03-feedbackBlock-solution-random.xml",
+  "valid": true,
+  "summary": {
+    "errors": 0,
+    "warnings": 1
+  },
+  "issues": [
+    {
+      "severity": "warning",
+      "code": "olah/validate/identifier-style",
+      "message": "The identifier \"Example03-feedbackBlock-solution-random\" of the qti-assessment-item has more than 32 characters, which version 1 of QTI does not take.",
+      "source": "INFO §4.1.1",
+      "location": {
+        "path": "packaging/items/Example03-feedbackBlock-solution-random.xml",
+        "element": "qti-assessment-item"
+      }
+    }
+  ]
+}
+```
+
+### Exit codes
+
+| Code | Meaning                                                                                                                                         |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | The command succeeded. For `validate`: no issue has the severity `error`; warnings do not change the code.                                      |
+| 1    | `validate` found at least one issue with the severity `error`, including a document that is not well-formed and a manifest that cannot be read. |
+| 2    | No verdict: the command line is wrong, the path cannot be read, the schemas are missing or changed, or the input is refused.                    |
+
+The report goes to the standard output; every message of an exit with 2 goes to the standard error as `olah: <message>`, and
+a wrong command line adds the commands. Input is refused with the code 2, before any of its content is checked, when it is a
+package that breaks a rule of the security model (§2.6, SECURITY.md) (a path that leaves the package, a symbolic link, an
+encrypted entry, a size, count or ratio above its limit) or an XML file above `maxBytes`. A DOCTYPE inside a document is an
+issue, not a refusal.
+
+## olah schemas fetch
+
+| Option        | Default             | Meaning                                                            |
+| ------------- | ------------------- | ------------------------------------------------------------------ |
+| `--dir <dir>` | the directory below | The directory to write the schemas to; it is created when missing. |
+
+The command downloads the files of `SCHEMA_FILES` from their fixed addresses, four at a time, and writes a file only when the
+SHA-256 of what it received is the pinned one. A file that is in the directory with its pinned hash is not downloaded again.
+The addresses cannot be changed from the command line. When some downloads fail, the others are written, the command lists the
+failures and exits with 2, and running it again downloads the rest.
+
+```console
+$ olah schemas fetch
+Downloaded 33 schemas to /Users/ada/Library/Caches/olah/schemas/d48c89edf713.
+$ olah schemas fetch
+The schemas in /Users/ada/Library/Caches/olah/schemas/d48c89edf713 are current.
+```
+
+The default directory, for `--dir` and for `--schemas`, is `olah/schemas/<version>` in the user cache directory of the
+platform. `<version>` is the first 12 characters of the SHA-256 of the lines `<file> <sha256>` of `SCHEMA_FILES`, so that a
+release that pins other schemas uses another directory and a release that pins the same schemas shares the first.
+
+| Platform | User cache directory                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| macOS    | `~/Library/Caches`                                                                  |
+| Windows  | `%LOCALAPPDATA%`, else `~\AppData\Local`                                            |
+| Others   | `$XDG_CACHE_HOME`, else `~/.cache`; a value that is not an absolute path is ignored |
+
+`olah validate` without the schemas exits with 2 and says which command downloads them.
+
+## runCli
+
+`runCli(args, options?)` runs the command line and returns the exit code; the program sets it as `process.exitCode`. It is for
+tests and for programs that embed the command.
+
+```ts
+import { runCli } from "@luthfanwakan/olah/cli";
+
+const code = await runCli(["validate", "packaging/simple/simple.zip", "--format", "json"], {
+  schemaDirectory: "./schemas",
+});
+```
+
+| Option            | Default                     | Meaning                                                                                                    |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `stdout`          | `process.stdout.write`      | Receives the report and the messages of success.                                                           |
+| `stderr`          | `process.stderr.write`      | Receives the messages of an exit with 2.                                                                   |
+| `schemaDirectory` | the default directory above | The directory when no `--schemas` or `--dir` is given.                                                     |
+| `fetch`           | the global `fetch`          | Downloads an address for `schemas fetch`; tests pass a function that serves the files from a local server. |
+
+It throws a `DataError` when an argument or an option has the wrong type. Every other failure is an exit code.

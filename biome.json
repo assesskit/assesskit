@@ -734,11 +734,16 @@
                       "!../errors.js",
                       "!../checks.js",
                       "!../random.js",
+                      "!../xml/**",
+                      "!../asi/**",
+                      "!../results/**",
+                      "!../usage/**",
+                      "!../pnp/**",
                       "!../node/**",
                       "!../validate/**",
                       "!../package/**"
                     ],
-                    "message": "cli/ builds on node/, validate/ and package/ only."
+                    "message": "cli/ builds on xml/, asi/, results/, usage/, pnp/, node/, validate/ and package/ only."
                   },
                   {
                     "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
@@ -782,7 +787,7 @@
       }
     },
     {
-      "includes": ["**", "!packages/olah/**"],
+      "includes": ["**", "!packages/olah/**", "!scripts/schemas.ts"],
       "linter": {
         "rules": {
           "style": {

@@ -117,6 +117,8 @@ behavior only, without "now", "no longer", "renamed" or "previously".
   [architecture.md](packages/olah/docs/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
   `random.ts`. Biome enforces the rows, and imports never form cycles.
 - The olah core uses no platform API: no `node:*`, `fetch`, timers, DOM or `process`. Only `node/` and `cli/` may.
+- `scripts/schemas.ts` imports `packages/olah/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
+  `olah schemas fetch` run one implementation. Node runs that file directly, so it imports only `node:*` modules and types.
 - `packages/olah` never imports `tempuh`. `tempuh` and the other packages import olah by package name and subpath, never
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in `packages/olah/package.json`, pinned, and recorded in `SECURITY.md`.

@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts", "src/node/index.ts"],
+  "entryPoints": ["src/index.ts", "src/node/index.ts", "src/cli/index.ts"],
   "tsconfig": "tsconfig.build.json",
   "sourceLinkTemplate": "https://github.com/luthfanwakan/olah/blob/{gitRevision}/packages/olah/{path}#L{line}",
   "validation": {
