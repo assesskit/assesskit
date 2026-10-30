@@ -5,6 +5,7 @@ import { DataError } from "../src/errors.js";
 import { EN_MESSAGES, ID_MESSAGES, type Messages } from "../src/messages/index.js";
 import {
   mountTools,
+  type ToolOptions,
   type ToolSlots,
   type ToolSupport,
   type ToolSupportName,
@@ -998,6 +999,57 @@ describe("the calculators", () => {
     }
   });
 
+  it("[T93] shows the file of a calculator below the keys of the built-in calculator, as the viewer shows a file", async () => {
+    const scene = createScene();
+    scene.show(
+      items({
+        calculators: [
+          calculatorXml("basic", "Basic", {
+            href: "tools/basic.pdf",
+            label: "The calculator of the item",
+            mimeType: "application/pdf",
+          }),
+        ],
+      }),
+    );
+    expect(scene.host.querySelectorAll(".tempuh-tools > .tempuh-row > button")).toHaveLength(1);
+    await userEvent.click(toolbarButton(scene, "Basic calculator"));
+    const panel = found(panelOf(scene, "Basic calculator"), "panel");
+    const group = found(
+      panel.querySelector<HTMLElement>('[role=group][aria-label="The calculator of the item"]'),
+      "file",
+    );
+    const link = found(group.querySelector("a"), "link");
+    expect(link.getAttribute("href")).toBe("/package/tools/basic.pdf");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(
+      group.compareDocumentPosition(found(panel.querySelector(".tempuh-keys"), "keys")) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+    await press(panel, "7", "Add", "8", "Equals");
+    expect(display(panel)).toBe("15");
+  });
+
+  it("[T93] shows no file for a calculator that has none, and loads nothing from a path with a scheme", async () => {
+    const assets = vi.fn((path: string) => `/package/${path}`);
+    const scene = createScene({ assets });
+    scene.show(
+      items({
+        calculators: [
+          calculatorXml("basic", "Basic", { href: "https://example.org/calc.html", mimeType: "text/html" }),
+          calculatorXml("standard", "Standard"),
+        ],
+      }),
+    );
+    await userEvent.click(toolbarButton(scene, "Basic calculator"));
+    const basic = found(panelOf(scene, "Basic calculator"), "panel");
+    expect(basic.querySelector("iframe, a")).toBeNull();
+    expect(basic.textContent).toContain("This tool is not available.");
+    await userEvent.click(toolbarButton(scene, "Standard calculator"));
+    expect(found(panelOf(scene, "Standard calculator"), "panel").textContent).not.toContain("not available");
+    expect(assets).not.toHaveBeenCalled();
+  });
+
   it("[T93] makes one tool of the calculator that the item and the profile both ask for, and turns it on by the profile", async () => {
     const scene = createScene();
     const input = (active: boolean): ToolsInput => ({
@@ -1251,7 +1303,7 @@ describe("the tools of the host", () => {
     for (const [, tool, title] of SlotNames) {
       expect(found(panelOf(scene, title), "panel").textContent).toContain(`The ${tool} of the host`);
     }
-    expect(built).toEqual(SlotNames.map(([, name]) => ({ name, language: "en" })));
+    expect(built).toEqual(SlotNames.map(([, name]) => ({ name, language: "en", file: null })));
     scene.show(input(false));
     expect(unmounted).toEqual(SlotNames.map(([, name]) => name));
     expect(scene.host.querySelectorAll(".tempuh-panel")).toHaveLength(0);
@@ -1276,7 +1328,43 @@ describe("the tools of the host", () => {
     expect(found(panelOf(scene, "Graphing calculator"), "panel").textContent).toContain("This tool is not available.");
   });
 
-  it("[T94] offers the file of a calculator that the host does not provide, in the viewer", async () => {
+  it("[T94] gives the file of a calculator to the tool of the host that builds the calculator", async () => {
+    const options: ToolOptions[] = [];
+    const scene = createScene({
+      slots: {
+        "scientific-calculator": (host, given) => {
+          options.push(given);
+          host.textContent = "Scientific of the host";
+          return () => undefined;
+        },
+      },
+    });
+    scene.show(
+      items({
+        calculators: [
+          calculatorXml("scientific", "Scientific", {
+            href: "tools/sci.html",
+            label: "Scientific file",
+            mimeType: "text/html",
+          }),
+        ],
+      }),
+    );
+    expect(scene.host.querySelectorAll(".tempuh-tools > .tempuh-row > button")).toHaveLength(1);
+    await userEvent.click(toolbarButton(scene, "Scientific calculator"));
+    expect(options).toEqual([
+      {
+        name: "scientific-calculator",
+        language: "en",
+        file: { url: "/package/tools/sci.html", mimeType: "text/html", label: "Scientific file" },
+      },
+    ]);
+    const panel = found(panelOf(scene, "Scientific calculator"), "panel");
+    expect(panel.textContent).toContain("Scientific of the host");
+    expect(panel.querySelector("iframe")).toBeNull();
+  });
+
+  it("[T94] shows the file of a calculator that the host does not provide, below the notice", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1289,15 +1377,13 @@ describe("the tools of the host", () => {
         ],
       }),
     );
-    expect(
-      [...scene.host.querySelectorAll(".tempuh-tools > .tempuh-row > button")].map((button) => button.textContent),
-    ).toEqual(["Graphing calculator", "Graphing file"]);
     await userEvent.click(toolbarButton(scene, "Graphing calculator"));
-    expect(found(panelOf(scene, "Graphing calculator"), "panel").textContent).toContain("This tool is not available.");
-    await userEvent.click(toolbarButton(scene, "Graphing file"));
-    const frameElement = found(found(panelOf(scene, "Graphing file"), "panel").querySelector("iframe"), "frame");
+    const panel = found(panelOf(scene, "Graphing calculator"), "panel");
+    expect(panel.textContent).toContain("This tool is not available.");
+    const frameElement = found(panel.querySelector("iframe"), "frame");
     expect(frameElement.getAttribute("sandbox")).toBe("");
     expect(frameElement.getAttribute("src")).toBe("/package/tools/graph.html");
+    expect(frameElement.getAttribute("title")).toBe("Graphing file");
   });
 
   it("[T94] says that a tool is not available when the host gives none", () => {

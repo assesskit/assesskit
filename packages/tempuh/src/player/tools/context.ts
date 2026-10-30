@@ -1,12 +1,24 @@
 import type { Messages } from "../../messages/index.js";
 import type { SlotTool } from "./model.js";
 
+/** The file at which an item says that a calculator is available (INFO §5.24.3). */
+export interface ToolFile {
+  /** The URL to load the file from, which `assets` made of its path in the package. */
+  readonly url: string;
+  /** The media type of the file, or `null` when the item gives none. */
+  readonly mimeType: string | null;
+  /** A short name of the file, or `null` when the item gives none. */
+  readonly label: string | null;
+}
+
 /** What the host's tool gets besides the element to build in. */
 export interface ToolOptions {
   /** The tool that the host builds. */
   readonly name: SlotTool;
   /** The language of the interface, a BCP 47 tag, such as `en`. */
   readonly language: string;
+  /** For a calculator: the file at which the item says that the calculator is available, or `null` for none. */
+  readonly file: ToolFile | null;
 }
 
 /**

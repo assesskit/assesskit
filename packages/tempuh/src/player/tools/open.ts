@@ -9,7 +9,7 @@ import { openRuler } from "./ruler.js";
 import { openSlot } from "./slot.js";
 
 /** Opens a tool: its panel in the tray and whatever it puts over the item. `close` is called when the candidate closes its panel. */
-export function openTool(context: ToolContext, { spec, description }: ToolEntry, close: () => void): OpenTool {
+export function openTool(context: ToolContext, { spec, description, file }: ToolEntry, close: () => void): OpenTool {
   switch (spec.kind) {
     case "rule":
       return openRuler(context, spec.rule, description, close);
@@ -20,9 +20,9 @@ export function openTool(context: ToolContext, { spec, description }: ToolEntry,
     case "answer-masking":
       return openAnswerMasking(context);
     case "calculator":
-      return openCalculator(context, spec.type, description, close);
+      return openCalculator(context, spec.type, description, file, close);
     case "slot":
-      return openSlot(context, spec.tool, close);
+      return openSlot(context, spec.tool, file, close);
     case "digital":
       return openDigital(context, spec.material, close);
   }

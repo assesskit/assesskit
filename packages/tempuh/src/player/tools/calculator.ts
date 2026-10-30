@@ -1,3 +1,4 @@
+import type { CalculatorInfo } from "@luthfanwakan/olah/asi";
 import type { Messages } from "../../messages/index.js";
 import { html } from "../dom.js";
 import {
@@ -10,7 +11,9 @@ import {
   STANDARD_ONLY_KEYS,
 } from "./calculator-engine.js";
 import type { OpenTool, ToolContext } from "./context.js";
+import { viewFile } from "./file-viewer.js";
 import type { BuiltInCalculator } from "./model.js";
+import { materialName } from "./names.js";
 import { createPanel } from "./panel.js";
 
 /** What a key shows, and the message that names it for assistive technology; the digits name themselves. */
@@ -59,12 +62,14 @@ const COLUMNS = 4;
 /**
  * Opens the basic or the standard calculator (BPIG §3.7.8.1; tempuh design D1). The candidate operates it with the
  * buttons or by typing: digits, the decimal point, the four operations, `=` or Enter, `%`, and Escape or Delete to clear.
- * Typing works while the focus is anywhere in the calculator, but Enter still presses the focused button.
+ * Typing works while the focus is anywhere in the calculator, but Enter still presses the focused button. The file of
+ * the calculator that the item gives, if any, is shown below the keys.
  */
 export function openCalculator(
   context: ToolContext,
   type: BuiltInCalculator,
   description: string | null,
+  file: CalculatorInfo | null,
   close: () => void,
 ): OpenTool {
   const { messages } = context;
@@ -106,6 +111,10 @@ export function openCalculator(
       html("div", { class: "tempuh-screen" }, memory, display),
       keypad,
     ),
+    // The calculator is available at the location of its file (INFO §5.24.3); the viewer shows it without running it.
+    ...(file === null
+      ? []
+      : [html("div", { role: "group", "aria-label": materialName(file) }, viewFile(context, file))]),
   );
   panel.element.addEventListener("keydown", (event) => {
     const key = KEYBOARD_KEYS.get(event.key);

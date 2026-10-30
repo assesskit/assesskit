@@ -618,6 +618,7 @@ describe("resolve", () => {
         key: '{"kind":"answer-masking"}',
         spec: { kind: "answer-masking" },
         description: null,
+        file: null,
         support: { name: "answer-masking", active: true },
       },
     ]);
@@ -675,7 +676,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["rule"]);
   });
 
-  it("[T93] offers the file of a calculator through the viewer, after the calculator (INFO §5.24.3)", () => {
+  it("[T93] keeps the file of a calculator with the calculator, as olah reads it (INFO §5.24.3)", () => {
     const set = resolveTools({
       companion: companion({
         calculators: [
@@ -689,19 +690,32 @@ describe("resolve", () => {
       }),
       supports: [],
     });
-    expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["slot", "digital", "calculator"]);
-    expect(set.tools[1]?.spec).toMatchObject({
-      kind: "digital",
-      material: {
-        kind: "calculator-info",
-        label: "Scientific file",
-        mimeType: "text/html",
-        fileHref: { value: "tools/sci.html" },
-      },
+    expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["slot", "calculator"]);
+    expect(set.tools[0]?.file).toMatchObject({
+      kind: "calculator-info",
+      label: "Scientific file",
+      mimeType: "text/html",
+      fileHref: { value: "tools/sci.html" },
     });
+    expect(set.tools[1]?.file).toBeNull();
   });
 
-  it("[T93] removes the file of a calculator with the calculator, when the profile prohibits calculator-on-screen", () => {
+  it("[T93] keeps the file of the item's calculator when the profile names the same calculator", () => {
+    const set = resolveTools({
+      companion: companion({ calculators: [calculatorXml("standard", "Standard", { href: "tools/standard.pdf" })] }),
+      supports: [support({ name: "calculator-on-screen", calculatorType: "standard", active: true })],
+    });
+    expect(set.tools).toHaveLength(1);
+    expect(set.tools[0]?.file).toMatchObject({ fileHref: { value: "tools/standard.pdf" } });
+    expect(set.tools[0]?.support).toEqual({ name: "calculator-on-screen", active: true });
+  });
+
+  it("[T93] has no file for the calculator of a profile", () => {
+    const set = resolveTools({ companion: null, supports: [support({ name: "calculator-on-screen" })] });
+    expect(set.tools[0]?.file).toBeNull();
+  });
+
+  it("[T93] removes the calculator with its file when the profile prohibits calculator-on-screen", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("basic", "Basic", { href: "tools/basic.html" })] }),
       supports: [support({ name: "calculator-on-screen", state: "prohibited" })],

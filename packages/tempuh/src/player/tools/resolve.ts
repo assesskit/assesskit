@@ -1,4 +1,4 @@
-import type { CompanionMaterialsInfo } from "@luthfanwakan/olah/asi";
+import type { CalculatorInfo, CompanionMaterialsInfo } from "@luthfanwakan/olah/asi";
 import {
   type AngleIncrement,
   type AngleUnit,
@@ -42,7 +42,7 @@ function calculatorSpec(type: CalculatorType): ToolSpec {
 }
 
 /** Adds a tool; a tool that is in force already keeps its place and takes the support when it had none. */
-type Add = (spec: ToolSpec, description: string | null, support: ToolSupport | null) => void;
+type Add = (spec: ToolSpec, description: string | null, support: ToolSupport | null, file?: CalculatorInfo) => void;
 
 /** Reads an increment of a rule: olah keeps the decimal as written, which is text. */
 function lengthIncrement({ value, unit }: { readonly value: string; readonly unit: LengthUnit }): LengthIncrement {
@@ -74,9 +74,7 @@ function addCompanion(add: Add, companion: CompanionMaterialsInfo, prohibitsCalc
   }
   if (!prohibitsCalculators) {
     for (const { calculatorType, description, calculatorInfo } of companion.calculators) {
-      add(calculatorSpec(calculatorType.value), description.value, null);
-      // The calculator is available at the location of its file (INFO §5.24.3); the viewer offers the file.
-      if (calculatorInfo !== undefined) add({ kind: "digital", material: calculatorInfo }, null, null);
+      add(calculatorSpec(calculatorType.value), description.value, null, calculatorInfo);
     }
   }
   for (const material of companion.digitalMaterials) add({ kind: "digital", material }, null, null);
@@ -113,11 +111,11 @@ function addSupport(add: Add, support: ToolSupport): void {
  */
 export function resolveTools({ companion, supports }: ToolsInput): ToolSet {
   const tools = new Map<string, ToolEntry>();
-  const add: Add = (spec, description, support) => {
+  const add: Add = (spec, description, support, file) => {
     const key = JSON.stringify(spec);
     const binding = support === null ? null : { name: support.name, active: support.active };
     const earlier = tools.get(key);
-    if (earlier === undefined) tools.set(key, { key, spec, description, support: binding });
+    if (earlier === undefined) tools.set(key, { key, spec, description, file: file ?? null, support: binding });
     else if (earlier.support === null) tools.set(key, { ...earlier, support: binding });
   };
   const prohibitsCalculators = supports.some(

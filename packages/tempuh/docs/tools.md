@@ -192,6 +192,11 @@ except that Enter presses a focused button:
 | `%`              | percent (standard) |
 | Escape or Delete | clear              |
 
+The item can say where a calculator is available: `qti-calculator-info` names a file of the package, which is content for
+the candidate (INFO §5.24.3, §5.80). The panel of a built-in calculator shows that file below the keys, in the viewer of
+the digital materials, and the panel of a host's tool that has no function shows it below the notice. The tool that the
+host builds gets it in `options.file`. The `description` of the calculator is shown above the keys.
+
 ### Digital materials
 
 A button opens a viewer for the file of the package, by the URL that `assets` gives. The button has the label of the
@@ -204,8 +209,8 @@ material, or the name of its file, and its icon. The viewer shows the file by it
 | `text/html`            | a frame with an empty `sandbox`                                         |
 | anything else, or none | a link that opens in a tab of its own, with `rel="noopener noreferrer"` |
 
-The file of a calculator (`calculatorInfo`) opens the same way, in a button of its own after the calculator. A path with a
-scheme is not a package path: nothing is loaded, and the panel says that the tool is not available.
+A path with a scheme is not a package path: nothing is loaded, and the panel says that the tool is not available. The
+viewer is also the one of the file of a calculator.
 
 ### Physical materials
 
@@ -213,11 +218,17 @@ The descriptions are listed under the heading "Materials to have ready", as text
 
 ### Tools of the host
 
-Each tool of the host has a button and a panel, and `slots[name](host, { name, language })` builds the tool in the panel.
+Each tool of the host has a button and a panel, and `slots[name](host, options)` builds the tool in the panel.
 The names are `scientific-calculator`, `graphing-calculator`, `dictionary`, `thesaurus`, `homophone-checker`,
 `note-taking`, `visual-organizer`, `outliner`, `peer-interaction` and `spell-checker`. The function returns the function
 that takes the tool down, which runs when the tool closes and on `destroy`. A tool without a function says that it is not
 available. Host tools are not built in: tempuh does not test them.
+
+| Option     | Meaning                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`     | The tool that the host builds                                                                                                              |
+| `language` | The language of the interface, a BCP 47 tag                                                                                                |
+| `file`     | For a calculator, the file at which the item says it is available, as `{ url, mimeType, label }` (`url` from `assets`), or `null` for none |
 
 ## Accessibility
 
@@ -237,7 +248,7 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 - A rule is exactly `minimumLength` long, in the unit of the major increment (INFO §5.127.1).
 - The numbers of a rule and a protractor are in the unit of the major increment; the unit symbols are not translated.
 - A protractor measures 180 degrees.
-- The `calculatorInfo` of a calculator, its file (INFO §5.24.3), is offered through the viewer, as a digital material that follows the calculator. tempuh builds the basic and standard calculators in and takes the other types from the host, so it never runs the file.
+- `qti-calculator-info` is content for the candidate: INFO §5.24.3 says that the calculator is available at the location it names, and §5.80 that the file is information "to be made available to the learner". tempuh builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
 - Only `qti-choice-interaction` is masked: BPIG §5.2.9.4 requires masks for choice interactions only.
 - A digital material that is an LTI resource (BPIG §6.2.9.9) is a file here; the LTI launch belongs to the platform role.
 - The display of a calculator uses a decimal point in every language.

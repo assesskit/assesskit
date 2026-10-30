@@ -137,7 +137,7 @@ export type ToolSpec =
   | { readonly kind: "answer-masking" }
   | { readonly kind: "calculator"; readonly type: BuiltInCalculator }
   | { readonly kind: "slot"; readonly tool: SlotTool }
-  | { readonly kind: "digital"; readonly material: FileMaterial };
+  | { readonly kind: "digital"; readonly material: DigitalMaterial };
 
 /** The tie between a tool and the support of the candidate's profile that puts it on the screen. */
 interface SupportBinding {
@@ -155,6 +155,8 @@ export interface ToolEntry {
   readonly spec: ToolSpec;
   /** What the author says the tool offers, or `null`. */
   readonly description: string | null;
+  /** The file at which the item says that a calculator is available (INFO §5.24.3), or `null`. */
+  readonly file: CalculatorInfo | null;
   /** The support that puts the tool on the screen, or `null` for a tool that only the item asks for. */
   readonly support: SupportBinding | null;
 }
