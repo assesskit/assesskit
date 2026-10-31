@@ -138,11 +138,23 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: [
+            {
+              find: /^@assesskit\/runtime$/,
+              replacement: resolve(import.meta.dirname, "packages/runtime/dist/index.js"),
+            },
+          ],
+        },
         // The benchmarks and budgets of the runtime: `pnpm bench` runs them with `vitest bench`, which gives the project the
         // suffix "(bench)". A test builds its input and runs benchmarks of seconds, so it may take longer than the default.
+        // The benchmark against Longsight imports the runtime by name, and the project loads its build natively, as Longsight
+        // loads from node_modules: Vite's rewrite of the imports of a source file makes the runtime about 1.7 times slower than
+        // the code that ships. `pnpm bench` builds first.
         test: {
           name: "runtime-bench",
           include: [],
+          server: { deps: { external: [/\/packages\/runtime\/dist\//] } },
           testTimeout: 120_000,
           hookTimeout: 120_000,
           benchmark: {

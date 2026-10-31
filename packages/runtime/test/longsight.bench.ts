@@ -1,5 +1,3 @@
-import { createItemSession, parseQtiXml, type QtiDocument, type QtiItemSession } from "@longsightgroup/qti3-core";
-import { expect, type TestContext, test } from "vitest";
 import {
   type AssessmentItem,
   applyItemAction,
@@ -11,7 +9,9 @@ import {
   readAsi,
   startItemSession,
   type Value,
-} from "../src/index.js";
+} from "@assesskit/runtime";
+import { createItemSession, parseQtiXml, type QtiDocument, type QtiItemSession } from "@longsightgroup/qti3-core";
+import { expect, type TestContext, test } from "vitest";
 import { BENCH_OPTIONS, expectAgainst, LONGSIGHT_BUDGETS, type LongsightBudget } from "./budgets.js";
 import { EXAMPLES } from "./corpus-items.js";
 import { corpusCases } from "./differential/cases.js";
