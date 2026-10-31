@@ -79,6 +79,27 @@ export function abandonedFiles(): Readonly<Record<string, string>> {
   return { ...files, "tests/exam.xml": test, "imsmanifest.xml": manifest, "items/b1.xml": RATED };
 }
 
+const LINK = `<?xml version="1.0" encoding="UTF-8"?>
+<cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0"
+    xmlns:blti="http://www.imsglobal.org/xsd/imsbasiclti_v1p0">
+  <blti:title>Drawing tool</blti:title>
+  <blti:secure_launch_url>https://tool.example.com/lti/tools/drawing</blti:secure_launch_url>
+</cartridge_basiclti_link>`;
+
+/** The files of {@link abandonedFiles} with a link to a tool, which scores itself, in place of the item that a person scores. */
+export function abandonedToolFiles(): Readonly<Record<string, string>> {
+  const { "items/b1.xml": _essay, ...files } = abandonedFiles();
+  return {
+    ...files,
+    "imsmanifest.xml": (files["imsmanifest.xml"] ?? "").replace(
+      '<resource identifier="b1" type="imsqti_item_xmlv3p0" href="items/b1.xml"><file href="items/b1.xml"/></resource>',
+      '<resource identifier="b1" type="imsbasiclti_xmlv1p3" href="lti/b1.xml"><file href="lti/b1.xml"/></resource>',
+    ),
+    "tests/exam.xml": (files["tests/exam.xml"] ?? "").replace("../items/b1.xml", "../lti/b1.xml"),
+    "lti/b1.xml": LINK,
+  };
+}
+
 /** The definition of the adaptive test, whose section `A` has a CAT engine behind the port. */
 export function adaptiveDefinition(files: Readonly<Record<string, string>>): DeliveryDefinition {
   const definition = examDefinition(packageOf(files));

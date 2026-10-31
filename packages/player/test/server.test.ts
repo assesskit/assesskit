@@ -38,7 +38,14 @@ import {
   type StepEvents,
   type ToolScore,
 } from "../src/server/index.js";
-import { abandonedFiles, adaptiveEngine, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
+import {
+  abandonedFiles,
+  abandonedToolFiles,
+  adaptiveEngine,
+  adaptiveFiles,
+  type ScriptedPort,
+  scriptedPort,
+} from "./adaptive-fixture.js";
 import {
   EXAM_ORIGIN,
   examDefinition,
@@ -1511,6 +1518,71 @@ describe("the option cat of the session host", () => {
       expect((await session.results()).itemResults.find(({ identifier }) => identifier === "b1")?.sessionStatus).toBe(
         "final",
       );
+    });
+
+    describe("and the item that is left is a link to a tool", () => {
+      const scores = () => {
+        const kept = new Map<string, ToolScore>();
+        return {
+          kept,
+          keep: async (_session: string, item: { ref: string }, next: ToolScore) => {
+            kept.set(item.ref, next);
+            return true;
+          },
+          latest: async (_session: string, item: { ref: string }) => kept.get(item.ref),
+        };
+      };
+      const final: ToolScore = { scoreGiven: 7, scoreMaximum: 10, final: true, timestampMs: 1_700_000_000_000 };
+
+      async function leftForTool() {
+        const port = scriptedPort();
+        const files = abandonedToolFiles();
+        const setup = await examHost({ engine: adaptiveEngine(files), cat: port }, files);
+        await setup.host.start(ALICE, { seed: 7 });
+        port.fail("endSession", 100);
+        const moved = await setup.host.handle(ALICE, request(1, { type: "end-part" }));
+        expect(viewOf(moved).current?.lti?.title).toBe("Drawing tool");
+        const store = scores();
+        const intake = createToolScoreIntake({ host: setup.host, scores: store });
+        return { ...setup, port, store, intake, session: setup.host.session(ALICE.session) };
+      }
+
+      it("supplies the score that the tool gives, keeps it, and does not fail the call of the tool", async () => {
+        const { host, port, store, intake, session } = await leftForTool();
+        await host.handle(ALICE, request(2, { type: "submit", item: b1 }));
+        expect((await session.pending()).scoring.map(({ id }) => id)).toEqual([
+          "item:b1:1:SCORE",
+          "item:b1:1:MAXSCORE",
+        ]);
+        await expect(intake.onScore(ALICE.session, b1, final)).resolves.toBeUndefined();
+        expect(store.kept.get("b1")).toEqual(final);
+        expect((await session.pending()).scoring).toEqual([]);
+        // The score is in the session although the CAT engine is down, and the request to the engine still waits.
+        expect((await session.pending()).cat.map(({ kind }) => kind)).toEqual(["end-session"]);
+        const total = (await session.results()).itemResults.find(({ identifier }) => identifier === "b1");
+        expect(total?.sessionStatus).toBe("final");
+        port.fail("endSession", 0);
+        await host.view(ALICE);
+        expect((await session.pending()).cat).toEqual([]);
+      });
+
+      it("supplies a score that the tool gave before the item asked for it, when a step makes the requests, though the engine is down", async () => {
+        const { host, store, intake, session, logged } = await leftForTool();
+        // The item has no requests yet: the intake keeps the score and supplies nothing.
+        await intake.onScore(ALICE.session, b1, final);
+        expect(store.kept.size).toBe(1);
+        expect((await session.pending()).scoring).toEqual([]);
+        await host.handle(ALICE, request(2, { type: "submit", item: b1 }));
+        const made = logged.find(({ events }) => events.some(({ type }) => type === "scoring-requested"));
+        expect(made).toBeDefined();
+        expect((await session.pending()).scoring).toHaveLength(2);
+        await expect(intake.settle(made as StepEvents)).resolves.toBeUndefined();
+        expect((await session.pending()).scoring).toEqual([]);
+        // Settling again, as a retried job would, applies nothing more.
+        const steps = logged.length;
+        await intake.settle(made as StepEvents);
+        expect(logged).toHaveLength(steps);
+      });
     });
 
     it("answers a reload with the view as it is, and finishes the request when the CAT engine answers again", async () => {

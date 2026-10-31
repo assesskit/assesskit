@@ -260,6 +260,27 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
 
+  examples/player/lms-integration:
+    devDependencies:
+      '@assesskit/player':
+        specifier: workspace:^
+        version: link:../../../packages/player
+      '@assesskit/runtime':
+        specifier: workspace:^
+        version: link:../../../packages/runtime
+      '@interopkit/core':
+        specifier: link:../../../../interopkit/packages/core
+        version: link:../../../../interopkit/packages/core
+      '@interopkit/learning-analytics':
+        specifier: link:../../../../interopkit/packages/learning-analytics
+        version: link:../../../../interopkit/packages/learning-analytics
+      '@interopkit/tool-integration':
+        specifier: link:../../../../interopkit/packages/tool-integration
+        version: link:../../../../interopkit/packages/tool-integration
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+
   packages/player:
     dependencies:
       '@assesskit/runtime':
