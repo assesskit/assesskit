@@ -1,6 +1,6 @@
 import type { PoolItem } from "@measurekit/psychometrics/cat";
 import { fourParameterLogistic } from "@measurekit/psychometrics/irt";
-import type { StoredItem } from "./section-store.js";
+import type { StoredItem } from "./section-store.ts";
 
 /**
  * The scaling constant of a bank on measurekit's scale: measurekit's models are in the IRT form of mirt with D = 1 (measurekit,

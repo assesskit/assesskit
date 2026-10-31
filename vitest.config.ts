@@ -16,6 +16,14 @@ const RUNTIME_SOURCES = [
   },
 ];
 
+/** Resolves the subpaths of the player to their sources, for the examples that use them. */
+const PLAYER_SOURCES = [
+  {
+    find: /^@assesskit\/player\/(.+)$/,
+    replacement: resolve(import.meta.dirname, "packages/player/src/$1/index.ts"),
+  },
+];
+
 /**
  * The limit of a test in the projects whose tests do seconds of work on the CPU. It is there to catch a hang, and not to
  * judge speed: a host that runs many test runs at once takes tens of times as long as a quiet one.
@@ -105,6 +113,15 @@ export default defineConfig({
         test: {
           name: "player-xsd",
           include: ["packages/player/test/**/*.xsd.test.ts"],
+        },
+      },
+      {
+        // The runnable examples: each is a package of its own, with the dependencies that only it needs.
+        resolve: { alias: [...RUNTIME_SOURCES, ...PLAYER_SOURCES] },
+        test: {
+          name: "examples",
+          include: ["examples/*/*/test/**/*.test.ts"],
+          testTimeout: HANG_LIMIT,
         },
       },
       {

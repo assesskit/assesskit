@@ -69,6 +69,8 @@ packages/player/          the player
   test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
                           *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
                           commands of the browser tests
+examples/<package>/       runnable examples, one folder each, a package of its own with the dependencies that only it
+                          needs; the `test/` of an example runs it, and `pnpm test` includes it
 docs/runtime/             guides of the runtime, one per module, and architecture, conventions, spec-gaps, evidence and
                           supported; TypeDoc publishes them with the API reference
 docs/player/              guides of the player, with architecture, evidence and supported
@@ -142,9 +144,11 @@ The runtime owns everything QTI defines that is not presentation or platform; th
 - `packages/runtime` never imports `@assesskit/player`. `@assesskit/player` and the other packages import the runtime by package name and subpath, never
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
+- Packages of different families never import each other. A package defines a port (the runtime's `CatPort`) or speaks an open
+  standard, and an adapter to another family's library lives in `examples/`, never in a package.
 - A player folder imports only the folders in its row of the table in
   [architecture.md](docs/player/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
-  of them. Biome enforces the rows. Only `cat/measurekit/` imports measurekit, and `fetch` appears only as an option parameter.
+  of them. Biome enforces the rows. `fetch` appears only as an option parameter.
 - The player's shared folders use no DOM or Node, its browser folders no Node, and its server folders no DOM. Time comes from
   a clock that the caller passes: `Date.now` appears only in `client/clock.ts` and `server/clock.ts`.
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors`, never from the root of the runtime: the root

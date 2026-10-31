@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 
+import { type DeployedCatSection, deployCatSections } from "@assesskit/player/cat";
 import { type CatPort, isSessionEnd, type SectionData } from "@assesskit/runtime/cat";
 import {
   createEngine,
@@ -32,13 +33,13 @@ import {
 } from "@measurekit/psychometrics/irt";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { type DeployedCatSection, deployCatSections } from "../src/cat/index.js";
-import { measurekitCatPort, measurekitPanelPort, type SectionStore } from "../src/cat/measurekit/index.js";
-import { DEFAULT_SCALING_CONSTANT, poolOf } from "../src/cat/measurekit/pool.js";
-import { responseTo, scoreCategory } from "../src/cat/measurekit/response.js";
-import { readAdaptiveSection, readPanelSection, sectionIdentifier } from "../src/cat/measurekit/section.js";
-import { checkSessionSeed, parseSessionState, readProgress, stepSeed } from "../src/cat/measurekit/session-state.js";
-import { readItems } from "../src/cat/measurekit/usage.js";
+import { measurekitCatPort, measurekitPanelPort, type SectionStore } from "../src/index.ts";
+import { memoryStore } from "../src/memory-store.ts";
+import { DEFAULT_SCALING_CONSTANT, poolOf } from "../src/pool.ts";
+import { responseTo, scoreCategory } from "../src/response.ts";
+import { readAdaptiveSection, readPanelSection, sectionIdentifier } from "../src/section.ts";
+import { checkSessionSeed, parseSessionState, readProgress, stepSeed } from "../src/session-state.ts";
+import { readItems } from "../src/usage.ts";
 import {
   ASI,
   adaptiveSection,
@@ -48,7 +49,6 @@ import {
   DEPLOYABLE,
   drive,
   IDS,
-  memoryStore,
   PREFIX,
   packageOf,
   resultsOf,
@@ -58,8 +58,7 @@ import {
   testXml,
   USAGE_REF,
   usageXml,
-} from "./cat-fixture.js";
-import { fuzzJson } from "./fuzz.js";
+} from "./fixture.ts";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = <T = never>(text: string): T => JSON.parse(text);
@@ -429,7 +428,7 @@ describe("section", () => {
     }
   });
 
-  it("rejects files that are not base64, not the canonical base64 of RFC 4648 §3.5, not UTF-8 or not JSON", async () => {
+  it("rejects files that are not base64, not the canonical base64 of RFC 4648, not UTF-8 or not JSON", async () => {
     const withSettings = (sectionConfiguration: string): unknown => ({ sectionConfiguration });
     expect(await rejection(readAdaptiveSection(withSettings("not base64!")))).toBe(
       "The sectionConfiguration of the section data must be base64 text (RFC 4648), found text that is not.",
@@ -735,8 +734,16 @@ describe("measurekitCatPort", () => {
   });
 
   it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
-    fuzzJson((options) => measurekitCatPort(options as never));
-    fuzzJson((options) => measurekitPanelPort(options as never));
+    const outcome = (make: (options: never) => unknown) => (options: unknown) => {
+      try {
+        make(options as never);
+      } catch (error) {
+        expect(error instanceof DataError, String(error)).toBe(true);
+      }
+    };
+    for (const make of [measurekitCatPort, measurekitPanelPort]) {
+      fc.assert(fc.property(fc.jsonValue(), outcome(make as (options: never) => unknown)), { seed: 20_261_030 });
+    }
   });
 });
 
@@ -935,7 +942,7 @@ describe("deployCatSections over measurekit", () => {
   });
 });
 
-/** A choice item whose answer `B` the standard template scores 1 (INFO §5.4, `match_correct`). */
+/** A choice item whose answer `B` the standard template scores 1 (the `match_correct` template). */
 const examItemXml = (id: string): string =>
   `<qti-assessment-item xmlns="${ASI}" identifier="${id}" title="Item ${id}" adaptive="false" time-dependent="false"><qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>B</qti-value></qti-correct-response></qti-response-declaration><qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/><qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice></qti-choice-interaction></qti-item-body><qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/></qti-assessment-item>`;
 

@@ -8,12 +8,12 @@ import {
 } from "@measurekit/psychometrics/cat";
 import type { TestItem } from "@measurekit/psychometrics/irt";
 import * as v from "valibot";
-import { checkRecord, checkString, describe, functionSchema, parseWith, positiveSchema } from "../../checks.js";
-import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
-import { responseTo, scoreCategory } from "./response.js";
-import { readPanelSection } from "./section.js";
-import { loadSection, type SectionStore, type StoredPanelSection, sectionStoreSchema } from "./section-store.js";
-import { parseSessionState, readProgress } from "./session-state.js";
+import { checkRecord, checkString, describe, functionSchema, parseWith, positiveSchema } from "./checks.ts";
+import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.ts";
+import { responseTo, scoreCategory } from "./response.ts";
+import { readPanelSection } from "./section.ts";
+import { loadSection, type SectionStore, type StoredPanelSection, sectionStoreSchema } from "./section-store.ts";
+import { parseSessionState, readProgress } from "./session-state.ts";
 
 /** What the host knows of a panel that its settings file does not say. */
 export interface PanelParameters {

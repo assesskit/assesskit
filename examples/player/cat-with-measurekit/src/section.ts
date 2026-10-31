@@ -2,17 +2,10 @@ import type { SectionData } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
 import { decodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import {
-  describe,
-  finiteSchema,
-  mapSchema,
-  nonEmptyStringSchema,
-  parseWith,
-  positiveIntegerSchema,
-} from "../../checks.js";
-import { readSectionData } from "../section-data.js";
-import type { StoredAdaptiveSection, StoredItem, StoredModule, StoredPanelSection } from "./section-store.js";
-import { readItems } from "./usage.js";
+import { describe, finiteSchema, mapSchema, nonEmptyStringSchema, parseWith, positiveIntegerSchema } from "./checks.ts";
+import { readSectionData } from "./section-data.ts";
+import type { StoredAdaptiveSection, StoredItem, StoredModule, StoredPanelSection } from "./section-store.ts";
+import { readItems } from "./usage.ts";
 
 /** A section read from its data, with the identifier under which the store keeps it. */
 export interface ReadSection<TSection> {
@@ -37,7 +30,7 @@ function toHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(HEX_RADIX).padStart(HEX_DIGITS_PER_BYTE, "0")).join("");
 }
 
-/** Decodes the base64 text of a file of the section data (CAT §4.1) to its bytes. */
+/** Decodes the base64 text of a file of the section data to its bytes. */
 function readFile(encoded: string, label: string): Uint8Array {
   const bytes = decodeBase64(encoded);
   if (bytes === undefined) throw new DataError(`${label} must be base64 text (RFC 4648), found text that is not.`);
@@ -63,7 +56,7 @@ function readJson(encoded: string, label: string): unknown {
 /**
  * Returns the content-addressed identifier of section data: the SHA-256, in lowercase hexadecimal, of the UTF-8 JSON array
  * of `sectionConfiguration`, `qtiUsagedata` and `qtiMetadata`, with `null` for a field that is absent. Equal section data
- * has one identifier in every process and every deployment (CAT §3.1 leaves the identifier to the engine).
+ * has one identifier in every process and every deployment (the CAT service leaves the identifier to the engine).
  */
 export async function sectionIdentifier(data: SectionData): Promise<string> {
   const { sectionConfiguration, qtiUsagedata = null, qtiMetadata = null } = data;

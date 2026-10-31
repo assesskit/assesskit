@@ -1,11 +1,10 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 
-import { readFileSync } from "node:fs";
 import type { AdaptiveSelection } from "@assesskit/runtime/asi";
 import { type CatPort, isSessionEnd, type SectionData } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   type CatFetch,
   type CatFetchRequest,
@@ -713,39 +712,8 @@ describe("deployCatSections", () => {
   });
 });
 
-describe("without measurekit", () => {
-  /** The modules of measurekit that the ports over measurekit load. */
-  const MEASUREKIT_MODULES = [
-    "@measurekit/psychometrics",
-    "@measurekit/psychometrics/cat",
-    "@measurekit/psychometrics/irt",
-  ];
-
-  it("imports the REST port and the deployment without loading a module of measurekit, which only cat/measurekit needs", async () => {
-    const loaded: string[] = [];
-    vi.resetModules();
-    for (const module of MEASUREKIT_MODULES) {
-      vi.doMock(module, () => {
-        loaded.push(module);
-        return {};
-      });
-    }
-    try {
-      expect(Object.keys(await import("../src/cat/index.js")).sort()).toEqual(["deployCatSections", "restCatPort"]);
-      expect(loaded).toEqual([]);
-      // The mocks work: the ports over measurekit do load it.
-      await import("../src/cat/measurekit/index.js").catch(() => undefined);
-      expect(loaded).not.toEqual([]);
-    } finally {
-      for (const module of MEASUREKIT_MODULES) vi.doUnmock(module);
-      vi.resetModules();
-    }
-  });
-
-  it("lists measurekit as an optional peer dependency and not as a dependency", () => {
-    const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-    expect(manifest.dependencies).not.toHaveProperty("@measurekit/psychometrics");
-    expect(manifest.peerDependencies).toHaveProperty("@measurekit/psychometrics");
-    expect(manifest.peerDependenciesMeta["@measurekit/psychometrics"]).toEqual({ optional: true });
+describe("the exports", () => {
+  it("are the REST port and the deployment", async () => {
+    expect(Object.keys(await import("../src/cat/index.js")).sort()).toEqual(["deployCatSections", "restCatPort"]);
   });
 });

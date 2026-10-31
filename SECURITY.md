@@ -161,10 +161,9 @@ place only.
 - The personal needs and preferences of a candidate go to the engine only with `sharePnp: true`.
 - The client secret goes only to the token URL, as HTTP Basic credentials.
 
-`measurekitCatPort` and `measurekitPanelPort` run in process and send nothing. The session seed travels in the `sessionState`, which
-the runtime keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
-parameters of the items and the settings of the test: keep it on the server. measurekit is an optional peer dependency of
-the player, and only `cat/measurekit/` imports it.
+An engine that the host runs in process, behind the runtime's `CatPort`, sends nothing. The `sessionState` that it returns is kept
+in the delivery state, so keep it on the server like the seed of an exam session, and keep the engine's own store of the
+parameters of the items and the settings of the test there too.
 
 ## The player: Caliper
 

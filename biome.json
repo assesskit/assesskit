@@ -756,7 +756,13 @@
       }
     },
     {
-      "includes": ["packages/runtime/src/cli/**", "packages/runtime/test/readme-example.ts", "scripts/**", "compat/**"],
+      "includes": [
+        "packages/runtime/src/cli/**",
+        "packages/runtime/test/readme-example.ts",
+        "scripts/**",
+        "compat/**",
+        "examples/**"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
@@ -806,7 +812,7 @@
       }
     },
     {
-      "includes": ["scripts/**", "compat/**"],
+      "includes": ["scripts/**", "compat/**", "examples/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -947,10 +953,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -975,10 +977,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1003,10 +1001,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1048,10 +1042,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1091,10 +1081,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1136,10 +1122,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1181,10 +1163,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1226,10 +1204,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1271,10 +1245,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1325,7 +1295,7 @@
       }
     },
     {
-      "includes": ["packages/player/src/cat/**", "!packages/player/src/cat/measurekit/**"],
+      "includes": ["packages/player/src/cat/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1353,15 +1323,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": [
-                      "@measurekit/psychometrics",
-                      "@measurekit/psychometrics/**",
-                      "**/measurekit",
-                      "**/measurekit/**"
-                    ],
-                    "message": "Only cat/measurekit/ imports measurekit, so that a host without measurekit can import the rest of the player."
                   }
                 ]
               }
@@ -1399,10 +1360,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1427,10 +1384,6 @@
                   {
                     "group": ["../**/runtime/**"],
                     "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  },
-                  {
-                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
-                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }

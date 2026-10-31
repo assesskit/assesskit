@@ -9,20 +9,12 @@ import {
   testLength,
 } from "@measurekit/psychometrics/cat";
 import * as v from "valibot";
-import {
-  checkArray,
-  checkRecord,
-  checkString,
-  describe,
-  functionSchema,
-  parseWith,
-  positiveSchema,
-} from "../../checks.js";
-import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.js";
-import { type CategoryOfOutcomes, responseTo, scoreCategory } from "./response.js";
-import { readAdaptiveSection } from "./section.js";
-import { loadSection, type SectionStore, type StoredAdaptiveSection, sectionStoreSchema } from "./section-store.js";
-import { checkSessionSeed, parseSessionState, readProgress, stepSeed } from "./session-state.js";
+import { checkArray, checkRecord, checkString, describe, functionSchema, parseWith, positiveSchema } from "./checks.ts";
+import { DEFAULT_SCALING_CONSTANT, poolOf } from "./pool.ts";
+import { type CategoryOfOutcomes, responseTo, scoreCategory } from "./response.ts";
+import { readAdaptiveSection } from "./section.ts";
+import { loadSection, type SectionStore, type StoredAdaptiveSection, sectionStoreSchema } from "./section-store.ts";
+import { checkSessionSeed, parseSessionState, readProgress, stepSeed } from "./session-state.ts";
 
 /** Options of {@link measurekitCatPort}. */
 export interface MeasurekitCatPortOptions {
@@ -66,7 +58,7 @@ function stageOf(next: string | null): ItemStage {
   return next === null ? { itemIdentifiers: [], stageLength: 0 } : { itemIdentifiers: [next], stageLength: 1 };
 }
 
-/** Builds the adaptive test of a section: it ends after the section's length (CAT §2.2 leaves the settings to the engine). */
+/** Builds the adaptive test of a section: it ends after the section's length (the CAT service leaves the settings to the engine). */
 function adaptiveTestOf(section: StoredAdaptiveSection, pool: readonly PoolItem[]): AdaptiveTest {
   const { length, contentTargets, enemies } = section;
   return adaptiveTest({
@@ -79,7 +71,7 @@ function adaptiveTestOf(section: StoredAdaptiveSection, pool: readonly PoolItem[
 
 /**
  * Returns a CAT engine for item-level adaptive sections, in process, over measurekit's `adaptiveTest`. The port keeps no
- * session: the measurekit state of the candidate and the session seed travel in the `sessionState` (CAT §3.3, §3.4), and only
+ * session: the measurekit state of the candidate and the session seed travel in the `sessionState`, and only
  * sections are stored, so that any process of the host answers any request.
  *
  * - **Sections.** Create Section reads the settings (JSON `{ length, contentTargets, enemies }`) and the usage data

@@ -242,6 +242,24 @@ importers:
         specifier: 1.36.2
         version: 1.36.2
 
+  examples/player/cat-with-measurekit:
+    devDependencies:
+      '@assesskit/player':
+        specifier: workspace:^
+        version: link:../../../packages/player
+      '@assesskit/runtime':
+        specifier: workspace:^
+        version: link:../../../packages/runtime
+      '@measurekit/psychometrics':
+        specifier: link:../../../../measurekit/packages/psychometrics
+        version: link:../../../../measurekit/packages/psychometrics
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
+
   packages/player:
     dependencies:
       '@assesskit/runtime':
@@ -257,9 +275,6 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
     devDependencies:
-      '@measurekit/psychometrics':
-        specifier: link:../../../measurekit/packages/psychometrics
-        version: link:../../../measurekit/packages/psychometrics
       axe-core:
         specifier: ^4.14.0
         version: 4.14.0
@@ -297,9 +312,6 @@ importers:
       '@longsightgroup/qti3-core':
         specifier: 0.13.3
         version: 0.13.3
-      '@measurekit/psychometrics':
-        specifier: link:../../../measurekit/packages/psychometrics
-        version: link:../../../measurekit/packages/psychometrics
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2

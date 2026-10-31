@@ -1,0 +1,18 @@
+{
+  "name": "@assesskit/example-cat-with-measurekit",
+  "private": true,
+  "type": "module",
+  "description": "An in-process CAT engine over measurekit, as an implementation of the CatPort of @assesskit/runtime.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "node scenario.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@assesskit/player": "workspace:^",
+    "@assesskit/runtime": "workspace:^",
+    "@measurekit/psychometrics": "link:../../../../measurekit/packages/psychometrics",
+    "fast-check": "^4.10.2",
+    "valibot": "1.5.0"
+  }
+}

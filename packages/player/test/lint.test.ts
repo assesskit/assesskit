@@ -117,13 +117,6 @@ const platform = {
   evaluation: source(`${SRC}/server/evaluation.ts`, ['export const a = eval("1");']),
 };
 
-const measurekit = {
-  inPlayer: source(`${SRC}/player/measurekit.ts`, ['export * from "@measurekit/psychometrics/cat";']),
-  inServer: source(`${SRC}/server/measurekit.ts`, ['export * from "@measurekit/psychometrics";']),
-  inCat: source(`${SRC}/cat/engine.ts`, ['export * from "@measurekit/psychometrics/cat";']),
-  inCatFolder: source(`${SRC}/cat/ports.ts`, ['export * from "./measurekit/index.js";']),
-  inCatMeasurekit: source(`${SRC}/cat/measurekit/engine.ts`, ['export * from "@measurekit/psychometrics/cat";']),
-};
 const official = {
   inPlayer: source(`${SRC}/player/official.ts`, ['export * from "../protocol/official.js";']),
   inClient: source(`${SRC}/client/official.ts`, ['export { markOfficial } from "../protocol/official";']),
@@ -230,14 +223,6 @@ describe("layering", () => {
     expect(linesFor(rootFiles.errors, RESTRICTED_IMPORT)).toEqual([1, 2]);
     expect(linesFor(rootFiles.checks, RESTRICTED_IMPORT)).toEqual([2]);
     expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([2, 4]);
-  });
-
-  it("lets only cat/measurekit/ import measurekit, and the rest of cat/ not even import cat/measurekit/", () => {
-    expect(whatFor(measurekit.inPlayer)).toContain(RESTRICTED_IMPORT);
-    expect(whatFor(measurekit.inServer)).toContain(RESTRICTED_IMPORT);
-    expect(whatFor(measurekit.inCat)).toContain(RESTRICTED_IMPORT);
-    expect(whatFor(measurekit.inCatFolder)).toContain(RESTRICTED_IMPORT);
-    expect(whatFor(measurekit.inCatMeasurekit)).not.toContain(RESTRICTED_IMPORT);
   });
 
   it("lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {

@@ -2,8 +2,8 @@ import { checkArray, checkSeed, describe } from "./checks.js";
 import { DataError } from "./errors.js";
 
 /**
- * A source of random numbers. Functions that draw take one, so that a seeded source reproduces their results. measurekit's
- * `Random` has this shape, so a measurekit generator can be passed wherever the runtime takes a `Random`.
+ * A source of random numbers. Functions that draw take one, so that a seeded source reproduces their results. Any object
+ * with a `uniform` method is one.
  */
 export interface Random {
   /** Returns a uniform draw from [0, 1). */
@@ -27,8 +27,7 @@ const GOLDEN_GAMMA = 0x9e3779b9;
 
 /**
  * Creates a seeded random number generator: xoshiro128** seeded through the MurmurHash3 finalizer. Equal seeds give
- * equal sequences, and the same sequence as measurekit's `createRandom`. Uniform draws have 53 random bits from integer
- * arithmetic, identical in every JavaScript runtime.
+ * equal sequences. Uniform draws have 53 random bits from integer arithmetic, identical in every JavaScript runtime.
  *
  * @param seed - A safe integer.
  * @throws `DataError` when `seed` is not a safe integer.

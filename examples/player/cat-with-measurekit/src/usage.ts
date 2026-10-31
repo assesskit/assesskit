@@ -1,9 +1,9 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { readUsageData, type TargetObject } from "@assesskit/runtime/usage";
-import { describe } from "../../checks.js";
-import type { StoredItem } from "./section-store.js";
+import { describe } from "./checks.ts";
+import type { StoredItem } from "./section-store.ts";
 
-/** The item statistics that give the parameters of a logistic item, by the property of `StoredItem` they set (UD §2.8.2). */
+/** The item statistics that give the parameters of a logistic item, by the property of `StoredItem` they set. */
 const PARAMETERS: ReadonlyMap<string, keyof Omit<StoredItem, "id">> = new Map([
   ["A-Param", "a"],
   ["B-Param", "b"],
@@ -19,7 +19,7 @@ type ItemParameters = Map<keyof Omit<StoredItem, "id">, number>;
 
 /**
  * Returns whether a statistic is about a whole item: its target object names the item and no part of it, and it is not
- * about another kind of object (UD §2.6.4).
+ * about another kind of object.
  */
 function isWholeItem(target: TargetObject): boolean {
   return target.partIdentifier === undefined && (target.objectType === undefined || target.objectType === "item");
@@ -27,7 +27,7 @@ function isWholeItem(target: TargetObject): boolean {
 
 /**
  * Reads the item parameters of a usage data file. Only ordinary statistics about a whole item are read: `A-Param`,
- * `B-Param`, `C-Param` and `D-Param` (UD §2.8.2), as the logistic models of the 1PL to the 4PL use them. An item needs
+ * `B-Param`, `C-Param` and `D-Param`, as the logistic models of the 1PL to the 4PL use them. An item needs
  * its `B-Param`; the other parameters default to a Rasch item (`a = 1`, `c = 0`, `d = 1`). Other statistics are left alone.
  *
  * @throws `DataError` when a parameter is given twice for an item or is not a number, or an item has a parameter and no

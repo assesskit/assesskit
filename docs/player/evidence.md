@@ -92,12 +92,15 @@ take each other's presses, moves and drags. The Firefox instances of `vitest.con
 time; Chromium and WebKit run files at once.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
-repository. The container needs network access to install the dependencies and the browsers. `@measurekit/psychometrics` is a
-dev dependency of the runtime and the player, linked from `../../../measurekit/packages/psychometrics`, so the container mounts
-the built checkout of measurekit (`pnpm install && pnpm build` there) beside the repository at `/measurekit`:
+repository. The container needs network access to install the dependencies and the browsers. The example in
+`examples/player/cat-with-measurekit` has `@measurekit/psychometrics` as a dev dependency, linked from
+`../../../../measurekit/packages/psychometrics`, so the container mounts the built checkout of measurekit
+(`pnpm install && pnpm build` there) beside the repository at `/measurekit`:
+
+<!-- cspell:ignore measurekit -->
 
 ```bash
-docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../measurekit":/measurekit:ro mcr.microsoft.com/playwright:v1.63.0-noble bash -c '
+docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../measurekit":/measurekit:ro mcr.microsoft.com/playwright:v1.64.1-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
   pnpm schemas && pnpm exec playwright install chromium firefox webkit &&

@@ -87,10 +87,10 @@ set in BIND §5), a message and, when known, a location with the file path, line
 
 ## Determinism
 
-`Random` is `{ uniform(): number }`, a structural subset of measurekit's `Random`, so a measurekit generator can be passed
-wherever the runtime takes one. `createRandom(seed)` is measurekit's algorithm, xoshiro128** seeded through the MurmurHash3 finalizer,
-with 53-bit uniform draws from integer arithmetic: equal seeds give equal streams in both libraries and in every runtime.
-A `SeededRandom` also exposes `state()`, four 32-bit words, and `restoreRandom(state)` continues the sequence from it.
+`Random` is `{ uniform(): number }`: any object with that method can be passed wherever the runtime takes one.
+`createRandom(seed)` is xoshiro128** seeded through the MurmurHash3 finalizer, with 53-bit uniform draws from integer
+arithmetic, so equal seeds give equal streams in every runtime. A `SeededRandom` also exposes `state()`, four 32-bit words,
+and `restoreRandom(state)` continues the sequence from it.
 
 ```ts
 import { createRandom, restoreRandom } from "@assesskit/runtime";

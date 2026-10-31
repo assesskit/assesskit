@@ -8,12 +8,14 @@
       "entry": [
         "src/index.ts",
         "src/*/index.ts",
-        "src/cat/measurekit/index.ts",
         "src/player/pci/frame/bridge.ts",
         "src/player/recording/worklet/recorder-worklet.ts"
       ],
       "ignore": ["test/fixtures/**"],
       "ignoreDependencies": ["requirejs", "mathjax"]
+    },
+    "examples/*/*": {
+      "entry": ["src/index.ts"]
     },
     "compat": {
       "entry": ["smoke.ts"],

@@ -1,10 +1,10 @@
 import type { SectionData } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkRecord, describe, guardSchema, isRecord, type Schema } from "../../checks.js";
+import { checkRecord, describe, guardSchema, isRecord, type Schema } from "./checks.ts";
 
 /**
  * The parameters of one item of the usage data, as the item bank states them: the discrimination `a`, the difficulty
- * `b`, the lower asymptote `c` and the upper asymptote `d` of a logistic item (UD §2.8.2). `a` is not yet multiplied by
+ * `b`, the lower asymptote `c` and the upper asymptote `d` of a logistic item. `a` is not yet multiplied by
  * the scaling constant, because a section is shared by every deployment that has its section data.
  */
 export interface StoredItem {

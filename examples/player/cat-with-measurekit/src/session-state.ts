@@ -1,5 +1,5 @@
 import { DataError } from "@assesskit/runtime/errors";
-import { checkArray, checkRecord, describe } from "../../checks.js";
+import { checkArray, checkRecord, describe } from "./checks.ts";
 
 /** The seeds are integers below 2³², and the steps of a session below 2²¹, so that `seed × 2²¹ + step` is a safe integer. */
 const SEED_LIMIT = 2 ** 32;

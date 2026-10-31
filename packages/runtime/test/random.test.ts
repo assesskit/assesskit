@@ -1,4 +1,3 @@
-import { createRandom as createMeasurekitRandom } from "@measurekit/psychometrics";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { createRandom, DataError, type Random, restoreRandom } from "../src/index.js";
@@ -26,16 +25,19 @@ describe("createRandom", () => {
     expect(values.reduce((sum, value) => sum + value, 0) / values.length).toBeCloseTo(0.5, 2);
   });
 
-  it("reproduces the uniform sequence of measurekit's createRandom", () => {
-    fc.assert(
-      fc.property(fc.maxSafeInteger(), (seed) => {
-        expect(draws(createRandom(seed), 50)).toEqual(draws(createMeasurekitRandom(seed), 50));
-      }),
-    );
+  it("gives the first draws that an independent implementation of the algorithm gives for known seeds", () => {
+    const reference: readonly (readonly [number, readonly number[]])[] = [
+      [0, [0.8868539502021594, 0.012474988946590604, 0.032522145755498943]],
+      [1, [0.5686059948349658, 0.8893939367683266, 0.4705824180198359]],
+      [42, [0.6606157208001621, 0.1117019639532224, 0.0791056456144914]],
+      [2 ** 32, [0.6145274621428378, 0.8073018729084823, 0.4122337397154928]],
+      [Number.MAX_SAFE_INTEGER, [0.13490872132119813, 0.9246935279164502, 0.03200266129860907]],
+    ];
+    for (const [seed, expected] of reference) expect(draws(createRandom(seed), 3), String(seed)).toEqual(expected);
   });
 
-  it("is accepted where a Random is taken, as is measurekit's generator", () => {
-    const sources: Random[] = [createRandom(1), createMeasurekitRandom(1)];
+  it("is accepted where a Random is taken, as is any object with a uniform method", () => {
+    const sources: Random[] = [createRandom(1), { uniform: () => 0.5 }];
     expect(sources.every((source) => source.uniform() < 1)).toBe(true);
   });
 

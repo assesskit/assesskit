@@ -15,7 +15,10 @@
     "CONTRIBUTING.md",
     "SECURITY.md",
     "compat/*.ts",
-    "compat/engines/*/*.ts"
+    "compat/engines/*/*.ts",
+    "examples/*/*.md",
+    "examples/*/*/*.{md,ts}",
+    "examples/*/*/{src,test}/*.ts"
   ],
   "words": [
     "acot",
@@ -188,7 +191,6 @@
     "mathml",
     "maxfiles",
     "MAXSCORE",
-    "measurekit",
     "mediagroup",
     "melanjutkan",
     "menerima",

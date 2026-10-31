@@ -1,6 +1,6 @@
 /**
- * Computer adaptive testing on the server: the engine of a remote service over the REST/JSON binding of CAT 1.0, and the
- * deployment of the adaptive sections of a package. Engines in process over measurekit are in `@assesskit/player/cat/measurekit`.
+ * Computer adaptive testing on the server: the client of a remote engine over the REST/JSON binding of CAT 1.0, and the
+ * deployment of the adaptive sections of a package. Both give the runtime's `CatPort`, which any engine can implement.
  *
  * @module @assesskit/player/cat
  */
