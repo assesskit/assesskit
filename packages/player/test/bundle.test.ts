@@ -1,8 +1,7 @@
 import { resolve } from "node:path";
-import { build, type Metafile } from "esbuild";
 import { describe, expect, it } from "vitest";
+import { bundle } from "./bundle.js";
 
-const SRC = resolve(import.meta.dirname, "../src");
 const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
 
 /** The files of the runtime's delivery engine, which hold answer keys, processing and the state of a session. */
@@ -20,36 +19,7 @@ const ENGINE_FILES = [
 ];
 
 /** Bundles a program for a browser, as a host's bundler would, and returns the files that have code in the output. */
-async function bundled(program: string): Promise<string[]> {
-  const result = await build({
-    stdin: { contents: program, resolveDir: SRC, loader: "ts" },
-    bundle: true,
-    write: false,
-    metafile: true,
-    format: "esm",
-    platform: "browser",
-    target: "es2023",
-    logLevel: "silent",
-    alias: {
-      "@assesskit/runtime": `${RUNTIME}/index.ts`,
-      "@assesskit/runtime/errors": `${RUNTIME}/errors.ts`,
-      "@assesskit/runtime/delivery": `${RUNTIME}/delivery/index.ts`,
-      "@assesskit/runtime/asi": `${RUNTIME}/asi/index.ts`,
-      "@assesskit/runtime/content": `${RUNTIME}/content/index.ts`,
-      "@assesskit/runtime/interactions": `${RUNTIME}/interactions/index.ts`,
-      "@assesskit/runtime/package": `${RUNTIME}/package/index.ts`,
-      "@assesskit/runtime/pci": `${RUNTIME}/pci/index.ts`,
-      "@assesskit/runtime/pnp": `${RUNTIME}/pnp/index.ts`,
-      "@assesskit/runtime/values": `${RUNTIME}/values/index.ts`,
-      "@assesskit/runtime/xml": `${RUNTIME}/xml/index.ts`,
-    },
-  });
-  const metafile: Metafile = result.metafile;
-  // `inputs` lists every file the bundler read; the outputs say which of them still have code after tree shaking.
-  return Object.values(metafile.outputs).flatMap((output) =>
-    Object.entries(output.inputs).flatMap(([path, { bytesInOutput }]) => (bytesInOutput > 0 ? [resolve(path)] : [])),
-  );
-}
+const bundled = async (program: string): Promise<readonly string[]> => (await bundle(program)).inputs;
 
 const engineFilesIn = (inputs: readonly string[]): string[] =>
   ENGINE_FILES.filter((file) => inputs.includes(resolve(RUNTIME, file)));
