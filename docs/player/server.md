@@ -111,17 +111,18 @@ records.get("s1").version; // => 1
 
 `createSessionHost(options)` throws `DataError` when an option is not of its type.
 
-| Option          | Type                                         | Meaning                                                                                                          |
-| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                |
-| `store`         | `SessionStore`                               | The storage of sessions.                                                                                         |
-| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                 |
-| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                         |
-| `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                             |
-| `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                |
-| `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).   |
-| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's. |
-| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's log and Caliper. Default: nowhere.                                  |
+| Option          | Type                                         | Meaning                                                                                                                |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                      |
+| `store`         | `SessionStore`                               | The storage of sessions.                                                                                               |
+| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                       |
+| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                               |
+| `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                   |
+| `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                      |
+| `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).         |
+| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's.       |
+| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's log and Caliper. Default: nowhere.                                        |
+| `cat`           | `CatPort`                                    | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none. |
 
 | Method                               | What it does                                                                                                                                                                                                                                                                                  |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -227,6 +228,14 @@ for them.
 
 `create` and `save` of `SessionStore`, and `keep` of `AgsScoreStore`, must be atomic across the host's processes. `state` is the runtime's `serializeState`, `envelope` the JSON of the
 latest `ViewEnvelope`, and `action` of a save the JSON `{ at, action }` of the step that made it: the log of the session.
+
+### CAT requests
+
+With the option `cat` the session host answers the CAT requests of its sessions itself: after `start`, `handle`, `proctor` and the
+time job, as [CAT](cat.md#the-option-cat) shows. An accepted `cat-response` also replaces the stored answer of the latest
+request with the view after it, keeping its sequence number and its refusal, so that a request sent again gets the current
+view. The time job throws when `apply` returns `catFailure`, so that its queue retries. A `log` calls only `session(id)`, and a host
+with several processes routes each session to one of them.
 
 ### Signals
 

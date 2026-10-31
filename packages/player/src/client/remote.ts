@@ -14,8 +14,7 @@ import {
   type ViewDocuments,
   type ViewEnvelope,
 } from "../protocol/index.js";
-import { checkCallOptions, clockSchema } from "../protocol/internal.js";
-import { untilAborted } from "./abort.js";
+import { checkCallOptions, clockSchema, untilAborted } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";

@@ -113,18 +113,19 @@ client.view.current?.title; // => "Question"
 the definition, or the session cannot start, and it rejects with `signal.reason` when the `signal` aborts before the load or the
 first save. A session that was saved stays, and a new call resumes it.
 
-| Option       | Type                                  | Meaning                                                                                                      |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                     |
-| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                |
-| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                            |
-| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.           |
-| `session`    | `string`                              | The identifier of the session in the store.                                                                  |
-| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                      |
-| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                        |
-| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none. |
-| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.    |
-| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                        |
+| Option       | Type                                  | Meaning                                                                                                                                                                 |
+| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                                                                                |
+| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                           |
+| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                       |
+| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.                                                                      |
+| `session`    | `string`                              | The identifier of the session in the store.                                                                                                                             |
+| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                 |
+| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                   |
+| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                            |
+| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                               |
+| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `restCatPort` ([CAT](cat.md#the-option-cat)). Default: none. |
+| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                   |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that

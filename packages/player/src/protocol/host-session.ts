@@ -23,6 +23,14 @@ export interface HostApplyOptions extends SessionCallOptions {
   readonly scoredBy?: string;
 }
 
+/** A failure of the answer loop of the option `cat`, reported as a value. */
+export interface CatFailure {
+  /** The identifier of the CAT request that got no answer; empty when the pending work could not be read. */
+  readonly request: string;
+  /** What went wrong, as the error says it. */
+  readonly message: string;
+}
+
 /** What the host side answers to an action: the events of the step, and the engine's refusal when it did not apply. */
 export interface HostStep {
   /** The events of the step, in order; empty when the action was refused or changed nothing. */
@@ -33,6 +41,12 @@ export interface HostStep {
    * @defaultValue none, the action was applied
    */
   readonly refusal?: Refusal;
+  /**
+   * Why CAT requests still wait after the step, when the option `cat` failed to answer one. The step stands.
+   *
+   * @defaultValue none
+   */
+  readonly catFailure?: CatFailure;
 }
 
 /** The host side of one candidate session, which a session host on a server and a local session on a device both offer. */
@@ -42,7 +56,8 @@ export interface HostSession<TResult extends AssessmentResult = AssessmentResult
    * before the latest step, and saves the state when the engine accepts it. A `time` that finds nothing to do is accepted
    * with no events; it is refused only as `ended` or `suspended`.
    *
-   * @returns The events of the step, or the engine's refusal, which changes nothing.
+   * @returns The events of the step, or the engine's refusal, which changes nothing, and `catFailure` when the option
+   * `cat` failed after the step.
    * @throws `DataError` when the action is not an action of the host or is malformed, the session does not exist, or
    * `scoredBy` is missing where Caliper forwarding needs it.
    * @throws `ServiceError` when a session host cannot save after its retries; a local session rejects with the store's

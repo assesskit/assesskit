@@ -5,6 +5,7 @@ import {
   actionToJson,
   type CandidateAction,
   type CandidateView,
+  type CatRequest,
   type DeliveryEvent,
   type HostAction,
   type RefusalCode,
@@ -17,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
 import readme from "../README.md?raw";
 import { createLocalSession } from "../src/client/index.js";
+import { ServiceError } from "../src/index.js";
 import {
   checkActionEnvelope,
   checkAllowList,
@@ -25,13 +27,21 @@ import {
   checkRefusal,
   checkSubmission,
   checkViewEnvelope,
+  type HostStep,
   isOfficialResult,
   LTI_STORAGE_FRAME,
   LTI_TOOL_FRAME,
   REFUSAL_CODES,
   viewDocuments,
 } from "../src/protocol/index.js";
-import { checkCallOptions, checkHostAction, checkHostApplyOptions, markOfficial } from "../src/protocol/internal.js";
+import {
+  type CatAnswerer,
+  checkCallOptions,
+  checkHostAction,
+  checkHostApplyOptions,
+  createCatLoops,
+  markOfficial,
+} from "../src/protocol/internal.js";
 import { examDefinition, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
@@ -318,6 +328,84 @@ describe("checkHostAction", () => {
       expect(() => checkHostAction(json(text)), text).toThrow(DataError);
     }
     expect(() => checkHostAction(json("null"))).toThrow("The action must be an object with a type, found null.");
+  });
+});
+
+describe("the answer loop of CAT requests", () => {
+  const requestOf = (id: string): CatRequest => JSON.parse(JSON.stringify({ id, kind: "create-session" }));
+
+  /** An answerer over a list of waiting requests, which records what the loop does with them. */
+  function answerer(ids: readonly string[], refuse: (id: string) => HostStep = () => ({ events: [] })) {
+    const waiting = ids.map(requestOf);
+    const log: string[] = [];
+    const made: CatAnswerer = {
+      waiting: async () => [...waiting],
+      ask: async (request) => {
+        log.push(`ask ${request.id}`);
+        if (request.id === "broken") throw new Error("The engine is down.");
+        return JSON.parse("{}");
+      },
+      answer: async (request) => {
+        log.push(`answer ${request.id}`);
+        const step = refuse(request.id);
+        waiting.splice(
+          waiting.findIndex(({ id }) => id === request.id),
+          1,
+        );
+        return step;
+      },
+    };
+    return { made, log };
+  }
+
+  it("answers the requests one at a time, saving each answer before the next request, until none waits", async () => {
+    const { made, log } = answerer(["r1", "r2"]);
+    expect(await createCatLoops().join("k", made)).toBeUndefined();
+    expect(log).toEqual(["ask r1", "answer r1", "ask r2", "answer r2"]);
+  });
+
+  it("reads the pending work again after a refusal unknown-request, which another call caused", async () => {
+    const refusal = { events: [], refusal: { code: "unknown-request", message: "none" } } as const;
+    const { made, log } = answerer(["r1", "r2"], (id) => (id === "r1" ? refusal : { events: [] }));
+    expect(await createCatLoops().join("k", made)).toBeUndefined();
+    expect(log).toEqual(["ask r1", "answer r1", "ask r2", "answer r2"]);
+  });
+
+  it("stops at a request that fails, and returns the failure as a value with a ServiceError", async () => {
+    const { made, log } = answerer(["r1", "broken", "r3"]);
+    const failed = await createCatLoops().join("k", made);
+    expect(failed?.failure).toEqual({ request: "broken", message: "The engine is down." });
+    expect(failed?.error).toBeInstanceOf(ServiceError);
+    expect(failed?.error).toMatchObject({ status: 0 });
+    expect(log).toEqual(["ask r1", "answer r1", "ask broken"]);
+  });
+
+  it("stops at an answer that the engine refuses for another reason than an unknown request", async () => {
+    const refusal = { events: [], refusal: { code: "ended", message: "The test has ended." } } as const;
+    const { made } = answerer(["r1"], () => refusal);
+    const failed = await createCatLoops().join("k", made);
+    expect(failed?.failure).toEqual({ request: "r1", message: "The answer was refused: The test has ended." });
+  });
+
+  it("keeps a ServiceError of the port as it is", async () => {
+    const error = new ServiceError("The engine said no.", 503, "body");
+    const made: CatAnswerer = {
+      waiting: async () => [requestOf("r1")],
+      ask: () => Promise.reject(error),
+      answer: async () => ({ events: [] }),
+    };
+    expect((await createCatLoops().join("k", made))?.error).toBe(error);
+  });
+
+  it("joins the loop that runs for a key, and forgets it when it ends", async () => {
+    const loops = createCatLoops();
+    const { made } = answerer(["r1"]);
+    const first = loops.join("k", made);
+    expect(loops.running("k")).toBe(true);
+    expect(loops.running("other")).toBe(false);
+    expect(loops.join("k", made)).toBe(first);
+    await first;
+    expect(loops.running("k")).toBe(false);
   });
 });
 

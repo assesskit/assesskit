@@ -32,8 +32,10 @@ import {
   EXAM_CLIENT_ACTIONS,
   forwardEvents,
   MAX_SAVE_RETRIES,
+  type SessionHost,
   type StepEvents,
 } from "../src/server/index.js";
+import { adaptiveEngine, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
 import {
   ACTOR,
   APPLICATION,
@@ -1558,6 +1560,185 @@ describe("the signals of the session host", () => {
     expect(reply.refusal).toBeUndefined();
     expect(logged.map(({ step }) => step)).toEqual(["start", 1]);
     expect(base.records.get("exam-1")?.version).toBe(1);
+  });
+});
+
+describe("the option cat of the session host", () => {
+  const item = (ref: string) => ({ ref, instance: 1 });
+  const choose = (ref: string): CandidateAction => ({
+    type: "set-responses",
+    item: item(ref),
+    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  });
+
+  /** A session host over the adaptive test, whose CAT engine is behind the port. */
+  async function adaptiveHost(port: ScriptedPort, limits = "", extra: Parameters<typeof examHost>[0] = {}) {
+    const files = adaptiveFiles(limits);
+    return examHost({ engine: adaptiveEngine(files), cat: port, ...extra }, files);
+  }
+
+  /** Answers the two items of the first stage, and sends the requests of the client in order. */
+  function candidate(host: Awaited<ReturnType<typeof adaptiveHost>>["host"]) {
+    let seq = 0;
+    return (action: CandidateAction) => {
+      seq += 1;
+      return host.handle(ALICE, request(seq, action));
+    };
+  }
+
+  async function finishStage(send: ReturnType<typeof candidate>): Promise<ViewEnvelope> {
+    await send(choose("i1"));
+    await send({ type: "submit", item: item("i1") });
+    await send({ type: "move", to: "next" });
+    await send(choose("i2"));
+    return send({ type: "submit", item: item("i2") });
+  }
+
+  it("answers Create Session within start, and presents the first item", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    const first = await host.start(ALICE, { seed: 7 });
+    expect(port.calls).toEqual(["createSession"]);
+    expect(viewOf(first).current?.key).toEqual(item("i1"));
+  });
+
+  it("sends Submit Results when the candidate finishes a stage, and answers with the view after it", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    const last = await finishStage(candidate(host));
+    expect(port.calls).toEqual(["createSession", "submitResults"]);
+    expect((await host.session(ALICE.session).pending()).cat).toEqual([]);
+    const moved = await host.handle(ALICE, request(6, { type: "move", to: "next" }));
+    expect(moved.refusal).toBeUndefined();
+    expect(viewOf(moved).current?.key).toEqual(item("i3"));
+    expect(last.refusal).toBeUndefined();
+  });
+
+  it("sends Submit Results and End Session when a time-out ends an adaptive section", async () => {
+    const port = scriptedPort();
+    const { host, clock } = await adaptiveHost(port, '<qti-time-limits max-time="600"/>');
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(601 * SECOND);
+    const step = await host.session(ALICE.session).apply({ type: "time" });
+    expect(step.refusal).toBeUndefined();
+    expect(step.catFailure).toBeUndefined();
+    expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]);
+  });
+
+  it("sends Submit Results and End Session when the proctor ends the test", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    const step = await host.proctor(ALICE.session, { type: "end-test" });
+    expect(step.catFailure).toBeUndefined();
+    expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]);
+  });
+
+  it("answers a repeated request with the view after the CAT answer, and keeps its refusal", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    port.fail("createSession", 2);
+    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(ServiceError);
+    await expect(host.handle(ALICE, request(1, choose("i1")))).rejects.toThrow(ServiceError);
+    const again = await host.handle(ALICE, request(1, choose("i1")));
+    expect(again.refusal?.code).toBe("awaiting-cat");
+    expect(viewOf(again).current?.key).toEqual(item("i1"));
+  });
+
+  it("sends the CAT request of a request once, and gets the same view when the request is sent again", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    const send = candidate(host);
+    await send(choose("i1"));
+    await send({ type: "submit", item: item("i1") });
+    await send({ type: "move", to: "next" });
+    await send(choose("i2"));
+    const last = await send({ type: "submit", item: item("i2") });
+    const again = await host.handle(ALICE, request(5, { type: "submit", item: item("i2") }));
+    expect(port.calls).toEqual(["createSession", "submitResults"]);
+    expect(viewOf(again)).toEqual(viewOf(last));
+  });
+
+  it("answers a request first when the CAT engine failed before it, and then applies it", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    const send = candidate(host);
+    await send(choose("i1"));
+    await send({ type: "submit", item: item("i1") });
+    await send({ type: "move", to: "next" });
+    await send(choose("i2"));
+    port.fail("submitResults");
+    const failed = await send({ type: "submit", item: item("i2") });
+    expect(failed.refusal).toBeUndefined();
+    expect((await host.session(ALICE.session).pending()).cat).toHaveLength(1);
+    const moved = await send({ type: "move", to: "next" });
+    expect(moved.refusal).toBeUndefined();
+    expect(viewOf(moved).current?.key).toEqual(item("i3"));
+    expect(port.calls).toEqual(["createSession", "submitResults", "submitResults"]);
+  });
+
+  it("applies the step and reports the failure when End Session fails after the proctor ended the test", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    port.fail("endSession");
+    const step = await host.proctor(ALICE.session, { type: "end-test" });
+    expect(step.refusal).toBeUndefined();
+    expect(step.events.length).toBeGreaterThan(0);
+    expect(step.catFailure).toMatchObject({ message: "The CAT engine is down." });
+    expect(step.catFailure?.request).not.toBe("");
+    expect(viewOf(await host.view(ALICE)).status).toBe("ended");
+  });
+
+  it("applies the time action and reports the failure when End Session fails after a time-out", async () => {
+    const port = scriptedPort();
+    const { host, clock } = await adaptiveHost(port, '<qti-time-limits max-time="600"/>');
+    await host.start(ALICE, { seed: 7 });
+    port.fail("endSession");
+    clock.advance(601 * SECOND);
+    const step = await host.session(ALICE.session).apply({ type: "time" });
+    expect(step.events.map(({ type }) => type)).toContain("time-out");
+    expect(step.catFailure).toMatchObject({ message: "The CAT engine is down." });
+  });
+
+  it("rejects start when Create Session fails and no item is presented, keeps the session, and answers the view", async () => {
+    const port = scriptedPort();
+    const { host, store } = await adaptiveHost(port);
+    port.fail("createSession");
+    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(ServiceError);
+    expect(store.records.has("exam-1")).toBe(true);
+    expect(viewOf(await host.view(ALICE)).current?.key).toEqual(item("i1"));
+    expect(port.calls).toEqual(["createSession", "createSession"]);
+  });
+
+  it("finishes when forward.log calls apply from inside a step of the answer loop", async () => {
+    const port = scriptedPort();
+    const applied: unknown[] = [];
+    const hosts: { current?: SessionHost } = {};
+    const forward = {
+      log: async (step: StepEvents) => {
+        if (step.step === 1) applied.push(await hosts.current?.session(ALICE.session).apply({ type: "time" }));
+      },
+    };
+    const { host } = await adaptiveHost(port, "", { forward });
+    hosts.current = host;
+    await host.start(ALICE, { seed: 7 });
+    expect(port.calls).toEqual(["createSession"]);
+    expect(applied).toEqual([{ events: [] }]);
+  });
+
+  it("makes no request of the port for a caller that is not bound to the session", async () => {
+    const port = scriptedPort();
+    const { host } = await adaptiveHost(port);
+    await host.start(ALICE, { seed: 7 });
+    const before = port.calls.length;
+    const bob = { session: ALICE.session, principal: "bob" };
+    await expect(host.view(bob)).rejects.toThrow(AccessError);
+    await expect(host.handle(bob, request(1, answer("A")))).rejects.toThrow(AccessError);
+    expect(port.calls).toHaveLength(before);
   });
 });
 

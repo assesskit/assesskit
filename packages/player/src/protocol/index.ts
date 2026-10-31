@@ -9,7 +9,7 @@ export { type ActionEnvelope, checkActionEnvelope } from "./action-envelope.js";
 export { type Caller, checkCaller } from "./caller.js";
 export type { Clock } from "./clock.js";
 export { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "./documents.js";
-export type { HostApplyOptions, HostSession, HostStep, SessionCallOptions } from "./host-session.js";
+export type { CatFailure, HostApplyOptions, HostSession, HostStep, SessionCallOptions } from "./host-session.js";
 export {
   checkAllowList,
   checkLtiFrame,

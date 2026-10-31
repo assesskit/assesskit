@@ -3,6 +3,8 @@
  *
  * @module
  */
+export { untilAborted } from "./abort.js";
+export { type CatAnswerer, type CatLoopFailure, createCatLoops } from "./answer-cat-requests.js";
 export { checkClock, clockSchema, readClock } from "./clock.js";
 export { checkHostAction } from "./host-action.js";
 export { checkCallOptions, checkHostApplyOptions } from "./host-session.js";

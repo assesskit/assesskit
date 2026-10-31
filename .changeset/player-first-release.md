@@ -9,6 +9,7 @@ gate that serves package files, scoring for raters, adaptive testing, LTI 1.3 as
 client of a remote CAT engine is the subpath `@assesskit/player/cat-rest`, which stays on servers because it holds an OAuth
 client secret. The session host and a practice session offer the host side of a session (`HostSession`) alike, through
 `session(id)` and `host`: the host supplies external scores and reads pending work, scorer views and results, and a practice
-session reports the events of each step to a listener. Session calls take an `AbortSignal`. The player runs in
+session reports the events of each step to a listener. Session calls take an `AbortSignal`. With the option `cat`, a session host and a local session answer their own CAT
+requests. The player runs in
 Chromium 111, Firefox 115 and Safari 16.4, and later versions, and is tested with axe-core
 at WCAG 2.2 levels A and AA. It is not certified by 1EdTech.

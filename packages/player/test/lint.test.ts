@@ -162,6 +162,9 @@ const runtimeByPath = {
   inBrowser: source(`${SRC}/player/runtime.ts`, ['export * from "../../../runtime/dist/index.js";']),
   inServer: source(`${SRC}/server/runtime.ts`, ['export * from "@assesskit/runtime/xml";']),
   catOfRuntime: source(`${SRC}/cat-rest/runtime-cat.ts`, ['export * from "@assesskit/runtime/cat";']),
+  catInProtocol: source(`${SRC}/protocol/runtime-cat.ts`, ['export type { CatPort } from "@assesskit/runtime/cat";']),
+  catInClient: source(`${SRC}/client/runtime-cat.ts`, ['export type { CatPort } from "@assesskit/runtime/cat";']),
+  catFolderInClient: source(`${SRC}/client/folder-cat.ts`, ['export * from "../cat/index.js";']),
 };
 
 const bans = [
@@ -282,8 +285,11 @@ describe("layering", () => {
     expect(whatFor(runtimeByPath.inServer)).not.toContain(RESTRICTED_IMPORT);
   });
 
-  it("lets cat-rest/ import the cat subpath of the runtime, though it may not import the cat/ folder", () => {
-    expect(whatFor(runtimeByPath.catOfRuntime)).not.toContain(RESTRICTED_IMPORT);
+  it("lets cat-rest/, client/ and protocol/ import the cat subpath of the runtime, though they may not import the cat/ folder", () => {
+    for (const path of [runtimeByPath.catOfRuntime, runtimeByPath.catInProtocol, runtimeByPath.catInClient]) {
+      expect(whatFor(path), path).not.toContain(RESTRICTED_IMPORT);
+    }
+    expect(whatFor(runtimeByPath.catFolderInClient)).toContain(RESTRICTED_IMPORT);
   });
 });
 

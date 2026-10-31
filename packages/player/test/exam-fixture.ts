@@ -330,7 +330,7 @@ export async function examHost(
   origin = EXAM_ORIGIN,
 ) {
   const pkg = packageOf(files);
-  const engine = createEngine(examDefinition(pkg));
+  const engine = extra.engine ?? createEngine(examDefinition(pkg));
   const clock = fakeClock();
   const store = memoryStore();
   const scheduler = recordingScheduler();

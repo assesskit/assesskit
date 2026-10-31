@@ -1,4 +1,5 @@
 import type { AssessmentItem } from "@assesskit/runtime/asi";
+import type { CatPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkFunction,
@@ -28,17 +29,22 @@ import {
   type Clock,
   type DocumentSource,
   type HostSession,
+  type HostStep,
   type SessionCallOptions,
   type SessionClient,
   type ViewDocuments,
   viewDocuments,
 } from "../protocol/index.js";
 import {
+  type CatAnswerer,
+  type CatLoopFailure,
   checkCallOptions,
   checkHostAction,
   checkHostApplyOptions,
   clockSchema,
+  createCatLoops,
   readClock,
+  untilAborted,
 } from "../protocol/internal.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
@@ -107,6 +113,13 @@ export interface LocalSessionOptions extends SessionCallOptions {
    * @defaultValue {@link BROWSER_CLOCK}
    */
   readonly clock?: Clock;
+  /**
+   * The port of the CAT engines of the adaptive sections. Each call then answers the CAT requests that wait, one at a time,
+   * saving each answer before the next request.
+   *
+   * @defaultValue none, so that the host answers with `cat-response` actions itself
+   */
+  readonly cat?: CatPort;
 }
 
 // The engine reads the definition, the engine options, the start options and the seed with their own checks.
@@ -121,6 +134,7 @@ const optionsSchema = v.strictObject({
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
   signal: v.optional(v.unknown()),
+  cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
 });
 
 /** Returns the paths of the stimuli an item names, resolved against its document. */
@@ -173,6 +187,9 @@ export interface LocalSession extends SessionClient {
   readonly host: LocalHostSession;
 }
 
+/** What the host side answers to a step. */
+const hostStep = (step: Step): HostStep => (step.ok ? { events: step.events } : { events: [], refusal: step.refusal });
+
 /** An accepted or refused action, with the view after it. */
 interface Applied {
   readonly step: Step;
@@ -205,7 +222,7 @@ interface Applied {
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");
-  const { signal: creating } = options;
+  const { signal: creating, cat } = options;
   optional(creating, (value) => checkAbortSignal(value, "The option signal"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
   const now = (): number => readClock(clock);
@@ -254,7 +271,10 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     timer = setTimeout(
       () => {
         if (Math.min(...times) > now()) arm();
-        else void run({ type: "time" }, undefined).catch((error: unknown) => reportError(error));
+        else
+          void run({ type: "time" }, undefined)
+            .then(settleTimer)
+            .catch((error: unknown) => reportError(error));
       },
       Math.min(delay, MAX_TIMER_DELAY_MS),
     );
@@ -289,23 +309,73 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     }, signal);
 
   /** Reads the state the actions before it left. */
+  const readState = <T>(from: (state: DeliveryState) => T, signal: AbortSignal | undefined): Promise<T> =>
+    enqueue(() => from(state), signal);
+
   const read = async <T>(
     from: (state: DeliveryState) => T,
     callOptions: SessionCallOptions | undefined,
   ): Promise<T> => {
     checkCallOptions(callOptions);
-    return enqueue(() => from(state), callOptions?.signal);
+    return readState(from, callOptions?.signal);
+  };
+
+  /** What the answer loop uses: the pending requests, the port, and the saved `cat-response` action. The port is called outside the queue. */
+  const answerer: CatAnswerer | undefined =
+    cat === undefined
+      ? undefined
+      : {
+          waiting: async () => (await readState((current) => engine.pending(current), undefined)).cat,
+          ask: (request) => delivery.sendCatRequest(cat, request),
+          answer: async (request, response) =>
+            hostStep((await run({ type: "cat-response", request: request.id, response }, undefined)).step),
+        };
+  const loops = createCatLoops();
+
+  /**
+   * Waits as a call that serves a candidate: joins the answer loop or starts it, and returns its failure as a value. The loop
+   * takes no signal, so an abort ends this wait and never the loop.
+   */
+  const serve = async (signal: AbortSignal | undefined): Promise<CatLoopFailure | undefined> =>
+    answerer === undefined ? undefined : untilAborted(loops.join("", answerer), signal);
+
+  /** Runs the answer loop after a step of the host, unless one runs: that loop reads the pending work again. */
+  const finish = async (step: HostStep): Promise<HostStep> => {
+    if (answerer === undefined || loops.running("")) return step;
+    const failed = await loops.join("", answerer);
+    return failed === undefined ? step : { ...step, catFailure: failed.failure };
+  };
+
+  /** Runs the answer loop after the timer's step; a failure goes to `reportError`, and the next call retries. */
+  const settleTimer = async (): Promise<void> => {
+    if (answerer === undefined || loops.running("")) return;
+    const failed = await loops.join("", answerer);
+    if (failed !== undefined) reportError(failed.error);
+  };
+
+  /** Rejects with the failure of the loop when the candidate has nothing to do: the session is in progress and presents no item. */
+  const rejectStranded = (failure: CatLoopFailure | undefined): void => {
+    if (failure !== undefined && latest.view.status === "in-progress" && latest.view.current === undefined) {
+      throw failure.error;
+    }
   };
 
   arm();
+  try {
+    rejectStranded(await serve(creating));
+  } catch (error) {
+    // No client is returned, so nothing may keep running.
+    closed = true;
+    clearTimeout(timer);
+    throw error;
+  }
 
   const host: LocalHostSession = {
     apply: async (action, options) => {
       checkHostApplyOptions(options);
       if (closed) throw new DataError("The session client is closed.");
       checkHostAction(action);
-      const { step } = await run(action, options?.signal);
-      return step.ok ? { events: step.events } : { events: [], refusal: step.refusal };
+      return finish(hostStep((await run(action, options?.signal)).step));
     },
     pending: (options) => read((current) => engine.pending(current), options),
     scorerView: (request, options) => read((current) => engine.scorerView(current, request), options),
@@ -331,8 +401,12 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       checkCallOptions(options);
       if (closed) throw new DataError("The session client is closed.");
       delivery.actionToJson(action);
-      const { step, view } = await run(action, options?.signal);
-      return { view, ...(step.ok ? {} : { refusal: step.refusal }) };
+      // Without the option cat the action joins the queue at once, in the order of the calls.
+      const before = answerer === undefined ? undefined : await serve(options?.signal);
+      const { step } = await run(action, options?.signal);
+      const failure = before ?? (answerer === undefined ? undefined : await serve(options?.signal));
+      rejectStranded(failure);
+      return { view: latest.view, ...(step.ok ? {} : { refusal: step.refusal }) };
     },
     subscribe: (listener) => {
       checkFunction(listener, "The listener must be a function");

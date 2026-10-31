@@ -1,3 +1,4 @@
+import type { CatPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkChoice,
@@ -20,6 +21,7 @@ import {
   type Engine,
   type HostAction,
   parseCandidateAction,
+  sendCatRequest,
   serializeState,
   stamp,
   viewToJson,
@@ -40,12 +42,16 @@ import {
   type ViewEnvelope,
 } from "../protocol/index.js";
 import {
+  type CatAnswerer,
+  type CatLoopFailure,
   checkCallOptions,
   checkClock,
   checkHostAction,
   checkHostApplyOptions,
+  createCatLoops,
   markOfficial,
   readClock,
+  untilAborted,
 } from "../protocol/internal.js";
 import { forwardEvents, type SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
@@ -81,6 +87,7 @@ const hostOptionsSchema = v.strictObject({
   clientActions: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
   forward: v.optional(v.unknown()),
+  cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
@@ -125,8 +132,9 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  */
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);
-  const { engine, store, scheduler, clock, gate, packages, limits = {}, forward } = options;
+  const { engine, store, scheduler, clock, gate, packages, limits = {}, forward, cat } = options;
   const policy = readClientActions(options.clientActions ?? EXAM_CLIENT_ACTIONS);
+  const loops = createCatLoops();
 
   /** Loads the record of a session, unless the call was aborted before. */
   const load = (session: string, signal: AbortSignal | undefined): Promise<StoredSession | undefined> => {
@@ -174,6 +182,26 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   ): Promise<void> => {
     if (forward === undefined) return;
     await forwardEvents({ session, step, events, ...(supplied === undefined ? {} : { supplied }) }, forward);
+  };
+
+  /**
+   * Replaces the stored answer of the latest request with the view after an answer of the CAT engine, keeping its sequence
+   * number and its refusal, so that a request that is sent again gets the view the candidate needs. When the envelope cannot
+   * be built, the answer is saved with the old one, and `view` gives the current view.
+   */
+  const refreshed = async (
+    session: string,
+    state: DeliveryState,
+    stored: StoredSession,
+    now: number,
+  ): Promise<string> => {
+    try {
+      const previous: unknown = JSON.parse(stored.envelope);
+      checkViewEnvelope(previous);
+      return JSON.stringify(await envelopeOf(session, state, now, stored.seq, undefined, previous.refusal));
+    } catch {
+      return stored.envelope;
+    }
   };
 
   /**
@@ -237,7 +265,8 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
           change: {
             state: step.state,
             seq: stored.seq,
-            envelope: stored.envelope,
+            envelope:
+              action.type === "cat-response" ? await refreshed(session, step.state, stored, now) : stored.envelope,
             action: loggedAction(action, stamped.at),
             events: step.events,
             ...(supplied === undefined ? {} : { supplied }),
@@ -309,6 +338,51 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       return applyRequest(caller, envelope, stored, now, signal);
     });
 
+  /** What the answer loop of a session uses: the pending requests, the port, and the saved `cat-response` action. */
+  const answererOf = (session: string, port: CatPort): CatAnswerer => ({
+    waiting: async () => engine.pending(await stateOf(session, undefined)).cat,
+    ask: (request) => sendCatRequest(port, request),
+    answer: (request, response) =>
+      authority(session, { type: "cat-response", request: request.id, response }, undefined),
+  });
+
+  /**
+   * Waits as a call that serves a candidate: joins the answer loop of the session or starts it, and returns its failure as a
+   * value. The loop takes no signal, so an abort ends this wait and never the loop.
+   */
+  const serve = async (session: string, signal: AbortSignal | undefined): Promise<CatLoopFailure | undefined> =>
+    cat === undefined ? undefined : untilAborted(loops.join(session, answererOf(session, cat)), signal);
+
+  /**
+   * Runs the answer loop after a step of the host, unless one runs: that loop reads the pending work again, and a `log` that
+   * awaits a call of the host from inside a step of the loop must not wait for the loop that waits for it.
+   */
+  const finish = async (session: string, step: HostStep): Promise<HostStep> => {
+    if (cat === undefined || loops.running(session)) return step;
+    const failed = await loops.join(session, answererOf(session, cat));
+    return failed === undefined ? step : { ...step, catFailure: failed.failure };
+  };
+
+  /** Tells whether the candidate has nothing to do: the session is in progress and presents no item. */
+  const stranded = (stored: StoredSession, now: number): boolean => {
+    const view = engine.view(deserializeState(stored.state), now);
+    return view.status === "in-progress" && view.current === undefined;
+  };
+
+  /** Answers a call that serves a candidate with the view the loop left, or rejects with its failure when nothing is left to do. */
+  const settled = async (
+    session: string,
+    answer: ViewEnvelope,
+    failure: CatLoopFailure | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<ViewEnvelope> => {
+    const stored = await load(session, signal);
+    if (stored === undefined) return answer;
+    const now = readClock(clock);
+    if (failure !== undefined && stranded(stored, now)) throw failure.error;
+    return stored.seq === answer.seq ? replay(session, stored, now) : answer;
+  };
+
   return {
     start: async (caller, startOptions) => {
       checkCaller(caller);
@@ -334,7 +408,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       );
       if (!created) throw exists();
       if (forward !== undefined) await forwardEvents({ session, step: "start", events: step.events }, forward);
-      return reply;
+      return cat === undefined ? reply : settled(session, reply, await serve(session, signal), signal);
     },
     check: async (caller, callOptions) => {
       checkCallOptions(callOptions);
@@ -342,27 +416,33 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     },
     view: async (caller, callOptions) => {
       checkCallOptions(callOptions);
-      const stored = await boundTo(caller, callOptions?.signal);
-      return envelopeOf(
-        caller.session,
-        deserializeState(stored.state),
-        readClock(clock),
-        stored.seq,
-        callOptions?.signal,
-      );
+      const signal = callOptions?.signal;
+      let stored = await boundTo(caller, signal);
+      if (cat !== undefined) {
+        await serve(caller.session, signal);
+        stored = (await load(caller.session, signal)) ?? stored;
+      }
+      return envelopeOf(caller.session, deserializeState(stored.state), readClock(clock), stored.seq, signal);
     },
     handle: async (caller, envelope, callOptions) => {
       checkCaller(caller);
       checkActionEnvelope(envelope);
       checkCallOptions(callOptions);
-      return handleRequest(caller, envelope, callOptions?.signal);
+      const signal = callOptions?.signal;
+      if (cat === undefined) return handleRequest(caller, envelope, signal);
+      const bound = await boundTo(caller, signal);
+      const before = await serve(caller.session, signal);
+      const repeated = envelope.seq === bound.seq;
+      const answer = await handleRequest(caller, envelope, signal);
+      const after = repeated || before !== undefined ? undefined : await serve(caller.session, signal);
+      return settled(caller.session, answer, before ?? after, signal);
     },
     proctor: async (session, action, callOptions) => {
       checkNonEmptyString(session, "The session");
       checkRecord(action, "The action must be an object with a type");
       checkChoice(action.type, "The type of a proctor action", PROCTOR_ACTIONS);
       checkCallOptions(callOptions);
-      return authority(session, { type: action.type }, callOptions?.signal);
+      return finish(session, await authority(session, { type: action.type }, callOptions?.signal));
     },
     session: (session) => {
       checkNonEmptyString(session, "The session");
@@ -372,11 +452,12 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
           checkHostAction(action);
           const signal = applyOptions?.signal;
           if (action.type !== "supply-scores" || forward?.caliper === undefined) {
-            return authority(session, action, signal);
+            return finish(session, await authority(session, action, signal));
           }
           const scoredBy = applyOptions?.scoredBy;
           checkIri(scoredBy, "The scoredBy of a supply-scores action");
-          return authority(session, action, signal, { value: action.value, scorer: action.scorer, scoredBy });
+          const supplied = { value: action.value, scorer: action.scorer, scoredBy };
+          return finish(session, await authority(session, action, signal, supplied));
         },
         pending: async (callOptions) => {
           checkCallOptions(callOptions);

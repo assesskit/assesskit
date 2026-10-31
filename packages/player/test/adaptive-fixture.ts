@@ -1,0 +1,128 @@
+import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
+import type { CatPort } from "@assesskit/runtime/cat";
+import { createEngine, type DeliveryDefinition, type Engine } from "@assesskit/runtime/delivery";
+import { examDefinition, packageOf } from "./exam-fixture.js";
+
+const CP = "http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1";
+
+/** The identifiers of the items of the pool. */
+const POOL = ["i1", "i2", "i3", "i4"] as const;
+
+const item = (id: string): string => `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="${id}" title="Item ${id}" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>0</qti-value></qti-default-value></qti-outcome-declaration>
+  <qti-item-body>
+    <qti-choice-interaction response-identifier="RESPONSE" shuffle="false" max-choices="1">
+      <qti-simple-choice identifier="A">Alpha</qti-simple-choice>
+      <qti-simple-choice identifier="B">Beta</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+  <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
+</qti-assessment-item>`;
+
+/** The files of a test of one adaptive section `A` over a pool of four items, with the limits of the section if given. */
+export function adaptiveFiles(limits = ""): Readonly<Record<string, string>> {
+  const refs = POOL.map((id) => `<qti-assessment-item-ref identifier="${id}" href="../items/${id}.xml"/>`).join("");
+  const resources = POOL.map(
+    (id) =>
+      `<resource identifier="${id}" type="imsqti_item_xmlv3p0" href="items/${id}.xml"><file href="items/${id}.xml"/></resource>`,
+  ).join("");
+  return {
+    "imsmanifest.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="${CP}" identifier="adaptive-package">
+  <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+  <organizations/>
+  <resources>
+    <resource identifier="exam" type="imsqti_test_xmlv3p0" href="tests/exam.xml"><file href="tests/exam.xml"/></resource>
+    ${resources}
+  </resources>
+</manifest>`,
+    "tests/exam.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="exam" title="Exam">
+  <qti-test-part identifier="part" navigation-mode="linear" submission-mode="individual">
+    <qti-assessment-section identifier="A" title="A" visible="true">
+      ${limits}
+      <qti-adaptive-selection><qti-adaptive-engine-ref identifier="engine" href="https://cat.example/api"/><qti-adaptive-settings-ref identifier="settings" href="settings.json"/></qti-adaptive-selection>
+      ${refs}
+    </qti-assessment-section>
+  </qti-test-part>
+</qti-assessment-test>`,
+    ...Object.fromEntries(POOL.map((id) => [`items/${id}.xml`, item(id)])),
+  };
+}
+
+/** The definition of the adaptive test, whose section `A` has a CAT engine behind the port. */
+export function adaptiveDefinition(files: Readonly<Record<string, string>>): DeliveryDefinition {
+  const definition = examDefinition(packageOf(files));
+  if (definition.kind !== "test") throw new Error("The fixture is a test.");
+  return {
+    ...definition,
+    catSections: new Map([["A", { prefix: "https://cat.example/api", sectionIdentifier: "section-1" }]]),
+  };
+}
+
+/** The engine of the adaptive test. */
+export function adaptiveEngine(files: Readonly<Record<string, string>>): Engine {
+  return createEngine(adaptiveDefinition(files));
+}
+
+type Method = "createSession" | "submitResults" | "endSession";
+
+/** A port that answers from a script, records its calls and can be made to fail. */
+export interface ScriptedPort extends CatPort {
+  /** The methods that were called, in order. */
+  readonly calls: Method[];
+  /** Makes the next calls of a method reject. */
+  fail(method: Method, times?: number): void;
+  /** Makes the next call of a method wait until the returned function is called. */
+  hold(method: Method): () => void;
+}
+
+/** A port whose Create Session returns the first stage, whose Submit Results returns the stages in turn and then ends. */
+export function scriptedPort(
+  stages: readonly (readonly string[])[] = [["i3"]],
+  first: readonly string[] = ["i1", "i2"],
+): ScriptedPort {
+  const calls: Method[] = [];
+  const failures = new Map<Method, number>();
+  const holds = new Map<Method, Promise<void>>();
+  let step = 0;
+  const call = async (method: Method): Promise<void> => {
+    calls.push(method);
+    await holds.get(method);
+    holds.delete(method);
+    const left = failures.get(method) ?? 0;
+    if (left > 0) {
+      failures.set(method, left - 1);
+      throw new Error("The CAT engine is down.");
+    }
+  };
+  const unused = () => Promise.reject(new Error("The session does not deploy sections."));
+  return {
+    calls,
+    fail: (method, times = 1) => void failures.set(method, times),
+    hold: (method) => {
+      let release: () => void = () => undefined;
+      holds.set(method, new Promise<void>((resolve) => (release = resolve)));
+      return release;
+    },
+    createSection: unused,
+    getSection: unused,
+    endSection: unused,
+    createSession: async () => {
+      await call("createSession");
+      return { sessionIdentifier: "session-1", nextItems: { itemIdentifiers: [...first], stageLength: first.length } };
+    },
+    submitResults: async () => {
+      await call("submitResults");
+      const next = stages[step++];
+      return next === undefined
+        ? { nextItems: null }
+        : { nextItems: { itemIdentifiers: [...next], stageLength: next.length } };
+    },
+    endSession: async () => call("endSession"),
+  };
+}

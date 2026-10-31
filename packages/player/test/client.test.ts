@@ -1,4 +1,4 @@
-import type { DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
+import type { CandidateAction, DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -10,11 +10,14 @@ import {
   type LocalStore,
   UNSIGNED_URL,
 } from "../src/client/index.js";
-import { untilAborted } from "../src/client/internal.js";
+import { ServiceError } from "../src/index.js";
 import { isOfficialResult } from "../src/protocol/index.js";
+import { untilAborted } from "../src/protocol/internal.js";
+import { adaptiveDefinition, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, localStore, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { essay, fail, pick } from "./scoring-fixture.js";
+import { waitFor } from "./wait.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -319,6 +322,122 @@ describe("the host side of a local session", () => {
     expect(() => client.host.subscribeSteps(() => undefined)).toThrow(new DataError("The session client is closed."));
     expect((await client.host.pending()).scoring).toEqual([]);
     expect(await statuses(client)).toEqual(["pendingSubmission"]);
+  });
+});
+
+describe("the option cat of a local session", () => {
+  const item = (ref: string) => ({ ref, instance: 1 });
+  const choose = (ref: string): CandidateAction => ({
+    type: "set-responses",
+    item: item(ref),
+    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  });
+
+  /** A local session over the adaptive test whose CAT engine is behind the port. */
+  function adaptive(port: ScriptedPort, limits = "") {
+    return localOptions({ definition: adaptiveDefinition(adaptiveFiles(limits)), cat: port });
+  }
+
+  async function finishStage(client: Awaited<ReturnType<typeof createLocalSession>>): Promise<void> {
+    await client.dispatch(choose("i1"));
+    await client.dispatch({ type: "submit", item: item("i1") });
+    await client.dispatch({ type: "move", to: "next" });
+    await client.dispatch(choose("i2"));
+    await client.dispatch({ type: "submit", item: item("i2") });
+  }
+
+  it("answers Create Session while it creates the session, and presents the first item", async () => {
+    const port = scriptedPort();
+    const client = await createLocalSession(adaptive(port).options);
+    expect(port.calls).toEqual(["createSession"]);
+    expect(client.view.current?.key).toEqual(item("i1"));
+    client.close();
+  });
+
+  it("sends Submit Results when the candidate finishes a stage, so that the candidate can go on", async () => {
+    const port = scriptedPort();
+    const client = await createLocalSession(adaptive(port).options);
+    await finishStage(client);
+    expect(port.calls).toEqual(["createSession", "submitResults"]);
+    expect((await client.host.pending()).cat).toEqual([]);
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect(moved.refusal).toBeUndefined();
+    expect(moved.view.current?.key).toEqual(item("i3"));
+    client.close();
+  });
+
+  it("sends Submit Results and End Session when the timer ends the adaptive section", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const port = scriptedPort();
+    const { options, clock } = adaptive(port, '<qti-time-limits max-time="600"/>');
+    const client = await createLocalSession(options);
+    clock.advance(600 * SECOND);
+    await vi.advanceTimersByTimeAsync(600 * SECOND);
+    await waitFor(() => expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]));
+    client.close();
+  });
+
+  it("sends End Session when the host ends the test, and reports the failure as a value", async () => {
+    const port = scriptedPort();
+    const client = await createLocalSession(adaptive(port).options);
+    port.fail("endSession", 2);
+    const ended = await client.dispatch({ type: "end-test" });
+    expect(ended.refusal).toBeUndefined();
+    const step = await client.host.apply({ type: "time" });
+    expect(step.catFailure).toMatchObject({ message: "The CAT engine is down." });
+    expect((await client.host.pending()).cat).toHaveLength(1);
+    expect((await client.host.apply({ type: "time" })).catFailure).toBeUndefined();
+    expect(port.calls).toEqual(["createSession", "submitResults", "endSession", "endSession", "endSession"]);
+    client.close();
+  });
+
+  it("rejects the creation when Create Session fails and no item is presented, and a new call resumes the session", async () => {
+    const port = scriptedPort();
+    const setup = adaptive(port);
+    port.fail("createSession");
+    await expect(createLocalSession(setup.options)).rejects.toThrow(ServiceError);
+    expect(setup.store.saved.get("practice-1")).toHaveLength(1);
+    const resumed = await createLocalSession(setup.options);
+    expect(resumed.view.current?.key).toEqual(item("i1"));
+    expect(port.calls).toEqual(["createSession", "createSession"]);
+    resumed.close();
+  });
+
+  it("returns a host call at once while the answer loop runs, and finishes the loop", async () => {
+    const port = scriptedPort();
+    const client = await createLocalSession(adaptive(port).options);
+    await client.dispatch(choose("i1"));
+    await client.dispatch({ type: "submit", item: item("i1") });
+    await client.dispatch({ type: "move", to: "next" });
+    await client.dispatch(choose("i2"));
+    const release = port.hold("submitResults");
+    const submitting = client.dispatch({ type: "submit", item: item("i2") });
+    await waitFor(() => expect(port.calls).toContain("submitResults"));
+    expect(await client.host.apply({ type: "time" })).toEqual({ events: [] });
+    release();
+    await submitting;
+    expect((await client.host.pending()).cat).toEqual([]);
+    client.close();
+  });
+
+  it("ends the wait of a call at its abort, and the loop goes on", async () => {
+    const port = scriptedPort();
+    const client = await createLocalSession(adaptive(port).options);
+    await client.dispatch(choose("i1"));
+    await client.dispatch({ type: "submit", item: item("i1") });
+    await client.dispatch({ type: "move", to: "next" });
+    await client.dispatch(choose("i2"));
+    const release = port.hold("submitResults");
+    const controller = new AbortController();
+    const reason = new Error("The caller left.");
+    const submitting = client.dispatch({ type: "submit", item: item("i2") }, { signal: controller.signal });
+    const rejected = expect(submitting).rejects.toBe(reason);
+    await waitFor(() => expect(port.calls).toContain("submitResults"));
+    controller.abort(reason);
+    await rejected;
+    release();
+    await waitFor(async () => expect((await client.host.pending()).cat).toEqual([]));
+    client.close();
   });
 });
 

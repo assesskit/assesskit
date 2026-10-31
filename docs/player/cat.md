@@ -73,6 +73,57 @@ sequenceDiagram
 | Submit Results    | `drainCat` again, then let the candidate move on                     | After each submitted item                                                             |
 | End Session       | The engine asks for it                                               | Only when the candidate leaves before the port ended the session with the empty stage |
 
+## The option cat
+
+A session host and a local session take the port as the option `cat`, and then answer their own CAT requests, so that no host
+code drains them. A server passes any `CatPort`, such as `restCatPort`; a page passes its own in-browser port, never
+`restCatPort`.
+
+```mermaid
+sequenceDiagram
+  participant C as Candidate
+  participant S as Session host or local session
+  participant P as CatPort
+  C->>S: a request
+  S->>S: apply and save the step
+  loop until no CAT request waits
+    S->>P: the first waiting request
+    P-->>S: the answer
+    S->>S: apply the cat-response and save it
+  end
+  S-->>C: the view after the answers
+```
+
+| Call                                                    | What the session does with the CAT requests                                                                               |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `start`, `createLocalSession`                           | Creates and saves the session, then answers Create Session                                                                |
+| `handle`, `dispatch`                                    | Waits for a running loop first, applies the step, then answers the requests that the step made, and replies with the view |
+| `handle` with a repeated sequence number                | Waits for a running loop, then replays the stored answer, which each accepted answer refreshed                            |
+| `view`                                                  | Waits for a running loop, then builds the envelope                                                                        |
+| `proctor`, `session(id).apply`, `host.apply`, the timer | Applies the step, then starts the loop and waits for it. When a loop runs, the call returns at once                       |
+| `pending`, `scorerView`, `results`, `check`             | Read only, and answer nothing                                                                                             |
+
+One loop runs for each session: it reads the pending requests again until none waits, saves each answer before the next
+request, and takes no signal. An abort ends the wait of the caller that passed it, never the loop. A refusal `unknown-request`
+means that another call answered first, and the loop reads again. A port never calls the session, and a `log` calls only
+`session(id)`, whose `apply` never waits for a running loop.
+
+| Where the loop fails                                                  | Behavior                                                                                                                 |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Before a step                                                         | It never stops the step                                                                                                  |
+| After `proctor`, `session(id).apply` or `host.apply`                  | The step returns with `catFailure` (`request`, `message`) as a value; a time job throws on it for its queue to retry     |
+| After `handle`, `dispatch`, `start`, `createLocalSession` or a replay | Rejects with `ServiceError` only when no item is presented and the session is in progress; otherwise it answers as usual |
+| In `view`                                                             | It answers with the view as it is                                                                                        |
+| In the timer of a local session                                       | The error goes to `reportError`, and the next call retries                                                               |
+
+A port's own `ServiceError` passes through, and any other error is wrapped with status 0. The request stays pending and the
+next call tries it again; saved answers stay saved. A process that crashes after the port answered and before the save loses
+the answer, and the request goes out again; CAT 1.0 has no idempotency key, so the engine may count it twice. Two server
+processes may send one request twice: route each session to one process.
+
+A host without the option reads `pending().cat`, calls `sendCatRequest` and applies the answer with `session(id).apply`, after
+every call that can make a request: `start`, `handle`, `proctor` and the time job.
+
 ## Any other engine
 
 An engine that runs in process implements `CatPort` and nothing else: the player and the runtime do not know it. The

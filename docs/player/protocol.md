@@ -152,12 +152,13 @@ flowchart LR
 | `scorerView(request, options?)` | Returns what a scorer needs to rate a request, the correct responses included.                                                                                                                           |
 | `results(options?)`             | Returns the results report of the session; it is provisional while scoring requests are pending.                                                                                                         |
 
-| Type                 | Property   | Meaning                                                                                                                                                                   |
-| -------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HostStep`           | `events`   | The events of the step, in order; empty when the action was refused or changed nothing.                                                                                   |
-| `HostStep`           | `refusal`  | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                                     |
-| `SessionCallOptions` | `signal`   | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                                           |
-| `HostApplyOptions`   | `scoredBy` | The absolute IRI of the rater or scoring service that supplies a score, for the GradeEvent of Caliper. Only a session host that forwards Caliper reads it. Default: none. |
+| Type                 | Property     | Meaning                                                                                                                                                                   |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HostStep`           | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                                   |
+| `HostStep`           | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                                     |
+| `HostStep`           | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                                       |
+| `SessionCallOptions` | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                                           |
+| `HostApplyOptions`   | `scoredBy`   | The absolute IRI of the rater or scoring service that supplies a score, for the GradeEvent of Caliper. Only a session host that forwards Caliper reads it. Default: none. |
 
 A `time` action that finds nothing to do is accepted with no events; it is refused only as `ended` or `suspended`. A second
 `supply-scores` for one request replaces the first and reports `scores-replaced`. `supply-scores` and `cat-response` are accepted

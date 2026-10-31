@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and JSON fields are those of their specifications.
 
 import { type DeployedCatSection, deployCatSections } from "@assesskit/player/cat";
+import { createLocalSession } from "@assesskit/player/client";
 import { type CatPort, isSessionEnd, type SectionData } from "@assesskit/runtime/cat";
 import {
   createEngine,
@@ -981,6 +982,50 @@ async function examEngine(
   });
   return { engine, catSections };
 }
+
+describe("a local session over measurekit", () => {
+  it("presents the items that measurekit chooses, answering its requests through the option cat", async () => {
+    const log: string[] = [];
+    const port = spied("measurekit", measurekitCatPort({ sections: memoryStore(), seeds: () => 7 }), log);
+    const pkg = examPackage(BANK, { length: 3 });
+    const document = pkg.document("test.xml");
+    if (document.kind !== "test") throw new Error(`Expected a test, found ${document.kind}.`);
+    const saved = new Map<string, string>();
+    const client = await createLocalSession({
+      definition: {
+        kind: "test",
+        test: document.test,
+        base: "test.xml",
+        resolvers: packageResolvers(pkg),
+        catSections: await deployCatSections(pkg, () => port),
+      },
+      cat: port,
+      store: {
+        load: async (session) => saved.get(session),
+        save: async (session, state) => void saved.set(session, state),
+      },
+      session: "practice-1",
+      seed: 1,
+      assets: (path) => path,
+    });
+    const presented: string[] = [];
+    for (let item = client.view.current?.key; item !== undefined; item = client.view.current?.key) {
+      presented.push(item.ref);
+      const responses = new Map([["RESPONSE", single("identifier", "B")]]);
+      await client.dispatch({ type: "set-responses", item, responses });
+      await client.dispatch({ type: "submit", item });
+      if ((await client.dispatch({ type: "move", to: "next" })).refusal !== undefined) break;
+    }
+    expect(presented).toHaveLength(3);
+    await client.dispatch({ type: "end-test" });
+    expect(client.view.status).toBe("ended");
+    expect((await client.host.pending()).cat).toEqual([]);
+    const requests = log.filter((entry) => entry !== "measurekit createSection" && entry !== "measurekit getSection");
+    expect(requests[0]).toBe("measurekit createSession");
+    expect(requests).toContain("measurekit submitResults");
+    client.close();
+  });
+});
 
 /** A port that records the requests it serves, as `name method`. */
 function spied(name: string, port: CatPort, log: string[]): CatPort {
