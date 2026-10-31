@@ -520,6 +520,24 @@ export interface Messages {
   readonly submissionNoValue: string;
   /** The name of a file that the candidate submitted, when it has no name of its own. */
   readonly submissionFile: string;
+  /** The name of the form in which a rater chooses a level for each criterion of a rubric. */
+  readonly ratingForm: string;
+  /** The name of the score that the ratings of a rubric give. */
+  readonly ratingScore: string;
+  /** The word between a score and the highest score that the rubric gives, as in "7 out of 12". */
+  readonly ratingOutOf: string;
+  /** The name of the points of a level of a rubric. */
+  readonly ratingPoints: string;
+  /** The name of the weight of a criterion that counts more or less than the others. */
+  readonly ratingWeight: string;
+  /** What stands for a criterion or a score that has no rating yet. */
+  readonly ratingNotRated: string;
+  /** The message under a criterion that has no rating, which the form shows when it is checked. */
+  readonly ratingChooseLevel: string;
+  /** The level of a checklist criterion that is met. */
+  readonly ratingMet: string;
+  /** The level of a checklist criterion that is not met. */
+  readonly ratingNotMet: string;
   /** The name of the region that holds the supports of the candidate. */
   readonly supportsLabel: string;
   /** The state of a support that the candidate cannot change, when it is on. */

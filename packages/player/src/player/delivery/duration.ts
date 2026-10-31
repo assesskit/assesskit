@@ -1,3 +1,5 @@
+import { numberFormatter } from "../internal.js";
+
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
@@ -18,15 +20,9 @@ export function clockText(milliseconds: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 }
 
-/** Returns a formatter of whole units in a language, such as "3 minutes"; an invalid language tag gives English. */
-function unitFormatter(language: string, unit: "hour" | "minute" | "second"): Intl.NumberFormat {
-  const options = { style: "unit", unit, unitDisplay: "long" } as const;
-  try {
-    return new Intl.NumberFormat(language, options);
-  } catch {
-    return new Intl.NumberFormat("en", options);
-  }
-}
+/** Returns a formatter of whole units in a language, such as "3 minutes". */
+const unitFormatter = (language: string, unit: "hour" | "minute" | "second"): Intl.NumberFormat =>
+  numberFormatter(language, { style: "unit", unit, unitDisplay: "long" });
 
 /**
  * Writes a time left in words in the language, such as "3 minutes 20 seconds", for a screen reader to speak.

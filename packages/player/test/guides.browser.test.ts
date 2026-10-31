@@ -5,6 +5,7 @@ import deliveryGuide from "../../../docs/player/delivery.md?raw";
 import interactionsGuide from "../../../docs/player/interactions.md?raw";
 import mathGuide from "../../../docs/player/math.md?raw";
 import pciGuide from "../../../docs/player/pci.md?raw";
+import ratingGuide from "../../../docs/player/rating.md?raw";
 import speechGuide from "../../../docs/player/speech.md?raw";
 import stylingGuide from "../../../docs/player/styling.md?raw";
 import supportsGuide from "../../../docs/player/supports.md?raw";
@@ -53,6 +54,10 @@ describe("the guides", () => {
 
   it("shows the results that the guide to pci gives", async () => {
     expect(await runGuideSamples(pciGuide, await modules())).toBeGreaterThan(0);
+  });
+
+  it("shows the results that the guide to the rating form gives", async () => {
+    expect(await runGuideSamples(ratingGuide, await modules())).toBeGreaterThan(0);
   });
 
   it("shows the results that the guide to speech gives", async () => {

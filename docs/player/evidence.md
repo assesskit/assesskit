@@ -194,3 +194,27 @@ request the state lacks. A property test takes a candidate's text from the engin
 score, a second score that replaces it and the submission read again. The display has `submission.browser.test.ts`: the
 content roots and their references, the values by cardinality and base type, the files by media type, the themes, and axe at
 WCAG 2.2 A and AA with the contrast of the nested content in every theme.
+
+## The rating form
+
+The oracle of the form is the runtime: the score is `scoreFromRatings`, its highest value `rubricScoreRange`, and a rating that
+does not fit the rubric is the runtime's `DataError`. `rating.browser.test.ts` mounts the form in Chromium, Firefox and WebKit
+for a rubric of each kind ([rating](rating.md)).
+
+| Check                                                                                           | How                                                                                                                |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| One group of radio buttons for each criterion, named by its legend, with a label for each level | The accessible names read from the labels; a checklist offers met and not met, in the order of its levels          |
+| The score, the ratings and `onChange`                                                           | Pointer presses on the labels and the arrow keys on a focused radio button; the score is compared with the runtime |
+| An untouched checklist is incomplete                                                            | `score` is `null`, `ratings` is empty and `reportValidity()` is `false`                                            |
+| `reportValidity`                                                                                | The marks, the link of the message, the first unrated button focused, the mark taken off when it is rated          |
+| The read-only form                                                                              | No control in the shadow root; `reportValidity()` moves no focus and marks nothing                                 |
+| `update`, `destroy` and a refused rubric                                                        | The shadow root as it was after a refusal, no listener after `destroy`, no call of `onChange` for `update`         |
+| A rubric in English with the interface in Indonesian                                            | `lang="en"` and `dir="auto"` on each text of the rubric, `lang="id"` on the form, messages and numbers for `id`    |
+| Text, not markup                                                                                | A rubric whose texts hold markup shows them as characters                                                          |
+| WCAG 2.2 A and AA                                                                               | axe-core for each kind: empty, rated, checked and read-only                                                        |
+| Targets of 24 by 24 CSS pixels (2.5.8) and reflow at 320 CSS pixels (1.4.10)                    | The size of each control and label, and the width of the host                                                      |
+
+Options and ratings of another type, as JSON passes them, are refused with a `DataError`, and a host that is refused is left
+without a shadow root. `bundle.test.ts` shows that a bundle of `mountDelivery` and `createRemoteSession` holds no file of the
+form, and that a bundle of `mountRatingForm` and `toSupplyScores` holds no file of the engine and no element table of the
+runtime.
