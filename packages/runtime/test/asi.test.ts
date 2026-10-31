@@ -14,6 +14,7 @@ import {
   writeElement,
 } from "../src/asi/internal.js";
 import {
+  type AreaShape,
   ASI_NAMESPACE,
   type AsiDocument,
   type AssessmentItem,
@@ -21,6 +22,7 @@ import {
   type AssessmentStimulus,
   type AssessmentTest,
   childNodes,
+  coordinateCountFits,
   DataError,
   descendantNodes,
   type ElementVisit,
@@ -3586,6 +3588,22 @@ describe("the nodes of the content", () => {
       expect(isModelNode(value)).toBe(false);
       expect(isBodyNode(value)).toBe(false);
     }
+  });
+});
+
+describe("the shapes of areas", () => {
+  it("takes the number of coordinates that each shape needs: three, four, an even six or more, or any", () => {
+    const counts = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10];
+    const fitting = (shape: AreaShape): number[] => counts.filter((count) => coordinateCountFits(shape, count));
+    expect(fitting("circle")).toEqual([3]);
+    expect(fitting("rect")).toEqual([4]);
+    expect(fitting("ellipse")).toEqual([4]);
+    expect(fitting("poly")).toEqual([6, 8, 10]);
+    expect(fitting("default")).toEqual(counts);
+  });
+
+  it("takes no coordinates for a shape that the information model does not have", () => {
+    expect(coordinateCountFits(JSON.parse('"triangle"'), 3)).toBe(false);
   });
 });
 

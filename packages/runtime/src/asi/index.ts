@@ -18,5 +18,6 @@ export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi 
 export * from "./model.js";
 export { ASI_NAMESPACE } from "./namespace.js";
 export { childNodes, descendantNodes, isBodyNode, isModelNode, type ModelNode } from "./nodes.js";
+export { type AreaShape, coordinateCountFits } from "./shapes.js";
 export type { AttributeDef, AttributeType, StringFormat } from "./table.js";
 export type { ElementVisit } from "./walk.js";

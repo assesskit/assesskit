@@ -1,26 +1,7 @@
+import { type AreaShape, coordinateCountFits } from "../asi/index.js";
 import { ProcessingError } from "../errors.js";
 import type { Point, Value } from "../values/index.js";
 import { asPoint, booleanResult, primitivesOf } from "./operands.js";
-
-/**
- * The shapes of areas.
- *
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
- */
-export type Shape = "circle" | "default" | "ellipse" | "poly" | "rect";
-
-/**
- * The number of coordinates each shape takes; a polygon takes three points or more.
- *
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
- */
-const COORDINATE_COUNTS: ReadonlyMap<Shape, (count: number) => boolean> = new Map<Shape, (count: number) => boolean>([
-  ["circle", (count) => count === 3],
-  ["default", () => true],
-  ["ellipse", (count) => count === 4],
-  ["poly", (count) => count >= 6 && count % 2 === 0],
-  ["rect", (count) => count === 4],
-]);
 
 /** A coordinate: a non-negative number of pixels (`CoordsDType`). */
 const COORDINATE = /^[0-9]+(?:\.[0-9]+)?$/;
@@ -34,7 +15,7 @@ const COORDINATE = /^[0-9]+(?:\.[0-9]+)?$/;
  * @throws `ProcessingError` when a coordinate is a percentage or not a number, or the count does not fit the shape.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function parseCoords(shape: Shape, coords: string): number[] {
+export function parseCoords(shape: AreaShape, coords: string): number[] {
   const tokens = shape === "default" && coords.trim() === "" ? [] : coords.split(",").map((token) => token.trim());
   for (const token of tokens) {
     if (!COORDINATE.test(token)) {
@@ -44,7 +25,7 @@ export function parseCoords(shape: Shape, coords: string): number[] {
       throw new ProcessingError(`The coordinate ${JSON.stringify(token)} of a ${shape} is ${problem}.`);
     }
   }
-  if (!(COORDINATE_COUNTS.get(shape)?.(tokens.length) ?? false)) {
+  if (!coordinateCountFits(shape, tokens.length)) {
     throw new ProcessingError(`A ${shape} cannot have the ${tokens.length} coordinates ${JSON.stringify(coords)}.`);
   }
   return tokens.map(Number);
@@ -78,7 +59,7 @@ function insidePolygon(point: Point, coords: readonly number[]): boolean {
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function insideShape(shape: Shape, coords: readonly number[], point: Point): boolean {
+export function insideShape(shape: AreaShape, coords: readonly number[], point: Point): boolean {
   const [x, y] = point;
   const [a = 0, b = 0, c = 0, d = 0] = coords;
   switch (shape) {
@@ -104,7 +85,7 @@ export function insideShape(shape: Shape, coords: readonly number[], point: Poin
  * @throws `ProcessingError` when the coordinates do not fit the shape.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-inside}
  */
-export function inside(operand: Value | null, shape: Shape, coords: string): Value | null {
+export function inside(operand: Value | null, shape: AreaShape, coords: string): Value | null {
   const parsed = parseCoords(shape, coords);
   if (operand === null) return null;
   return booleanResult(primitivesOf(operand).some((primitive) => insideShape(shape, parsed, asPoint(primitive))));

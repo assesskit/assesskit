@@ -1,9 +1,7 @@
+import { type AreaShape, coordinateCountFits } from "@assesskit/runtime/asi";
+import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Point } from "@assesskit/runtime/values";
-import { describe } from "../../../checks.js";
-
-/** The shapes of an area. */
-export type AreaShape = "circle" | "default" | "ellipse" | "poly" | "rect";
 
 /** The size of an image in its own units, the pixels of the author: the unit of every coordinate and every point. */
 export interface Size {
@@ -30,18 +28,6 @@ export interface Area {
   /** The corners of a polygon, in the units of the image; empty for the other shapes. */
   readonly corners: readonly Point[];
 }
-
-/** How many coordinates each shape takes; a polygon takes three corners or more. */
-const COORDINATE_COUNTS: ReadonlyMap<AreaShape, (count: number) => boolean> = new Map<
-  AreaShape,
-  (count: number) => boolean
->([
-  ["circle", (count) => count === 3],
-  ["default", () => true],
-  ["ellipse", (count) => count === 4],
-  ["poly", (count) => count >= 6 && count % 2 === 0],
-  ["rect", (count) => count === 4],
-]);
 
 /** A length of the `Coords` type: a number of pixels, or a percentage of the image. */
 const LENGTH = /^(\d+)(%?)$/u;
@@ -72,7 +58,7 @@ export function parseArea(shape: AreaShape, coords: string, size: Size): Area {
   const { width, height } = size;
   const tokens = coords.trim() === "" ? [] : coords.split(",").map((token) => token.trim());
   if (shape === "default") return { shape, box: { x: 0, y: 0, width, height }, corners: [] };
-  if (!(COORDINATE_COUNTS.get(shape)?.(tokens.length) ?? false)) {
+  if (!coordinateCountFits(shape, tokens.length)) {
     throw new DataError(`A ${shape} cannot have the ${tokens.length} coordinates ${describe(coords)}.`);
   }
   const radius = Math.min(width, height);
