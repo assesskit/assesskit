@@ -19,6 +19,11 @@ import type { InteractionDescriptor } from "./descriptor.js";
  */
 export function initialResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
   checkDescriptor(descriptor);
+  return startingResponse(descriptor, defaultValue);
+}
+
+/** Returns the response an interaction starts with, for a descriptor that `describeInteractions` returned. */
+export function startingResponse(descriptor: InteractionDescriptor, defaultValue: Value | null): Value | null {
   const ignored = descriptor.kind === "choice-interaction" || descriptor.kind === "end-attempt-interaction";
   return ignored || defaultValue === null ? null : normalizeValue(defaultValue);
 }

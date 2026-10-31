@@ -47,6 +47,11 @@ export function shuffleChoices(descriptor: InteractionDescriptor, random: Random
   checkDescriptor(descriptor);
   checkRecord(random, "The random source must be an object with a function uniform");
   checkFunction(random.uniform, "The random source must be an object with a function uniform");
+  return drawOrders(descriptor, random);
+}
+
+/** Draws the orders of a descriptor that `describeInteractions` returned, with a source that was checked. */
+export function drawOrders(descriptor: InteractionDescriptor, random: Random): readonly (readonly string[])[] {
   const permuted = descriptor.shuffle ? shuffledSets(descriptor) : 0;
   return setsOf(descriptor).map((set, place) =>
     (place < permuted ? shuffle(set, (choice) => choice.fixed, random) : set).map((choice) => choice.identifier),

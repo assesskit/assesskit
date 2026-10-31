@@ -1,6 +1,7 @@
 import { checkOptions, checkString, describe } from "../checks.js";
 import { AssesskitError, DataError } from "../errors.js";
-import { describeInteractions, initialResponse, shuffleChoices } from "../interactions/index.js";
+import { describeInteractions } from "../interactions/index.js";
+import { drawOrders, startingResponse } from "../interactions/internal.js";
 import { createItemVariables, describeType, type ItemVariables, runTemplateProcessing } from "../processing/index.js";
 import { fitValue } from "../processing/internal.js";
 import { normalizeValue, type Value } from "../values/index.js";
@@ -146,8 +147,8 @@ function drawChoiceOrders(session: ItemSession, context: ItemSessionContext): It
     const { responseIdentifier } = descriptor;
     const preset =
       descriptor.kind === "order-interaction" &&
-      initialResponse(descriptor, session.variables.defaults.get(responseIdentifier) ?? null) !== null;
-    const sets = shuffleChoices(preset ? { ...descriptor, shuffle: false } : descriptor, context.random);
+      startingResponse(descriptor, session.variables.defaults.get(responseIdentifier) ?? null) !== null;
+    const sets = drawOrders(preset ? { ...descriptor, shuffle: false } : descriptor, context.random);
     if (sets.length > 0) orders.set(responseIdentifier, sets);
   }
   return orders;

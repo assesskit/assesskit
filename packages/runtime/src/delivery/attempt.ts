@@ -1,7 +1,8 @@
 import type { AssessmentItem, EndAttemptInteraction, ModelNode } from "../asi/index.js";
 import { withDescendants } from "../asi/internal.js";
 import { AssesskitError } from "../errors.js";
-import { describeInteractions, initialResponse } from "../interactions/index.js";
+import { describeInteractions } from "../interactions/index.js";
+import { startingResponse } from "../interactions/internal.js";
 import {
   COMPLETION_STATUS,
   DURATION,
@@ -143,19 +144,22 @@ export function timed(session: ItemSession, at: number): ItemSession {
  */
 export function startAttempt(session: ItemSession, item: AssessmentItem): ItemSession {
   const numAttempts = attemptsOf(session.variables) + 1;
-  const variables = withResponse(session.variables, NUM_ATTEMPTS, single("integer", numAttempts));
-  if (numAttempts > 1) return { ...session, attempting: true, variables };
+  const counted = single("integer", numAttempts);
+  if (numAttempts > 1) {
+    return { ...session, attempting: true, variables: withResponse(session.variables, NUM_ATTEMPTS, counted) };
+  }
+  const { variables } = session;
   const endAttempts = endAttemptInteractions(item);
   const interactions = new Map(
     describeInteractions(item).map((descriptor) => [descriptor.responseIdentifier, descriptor]),
   );
-  const responses = new Map(variables.responses);
+  const responses = new Map(variables.responses).set(NUM_ATTEMPTS, counted);
   const drafts = new Map<string, Value | null>();
   for (const { identifier } of item.responseDeclarations) {
     const start = endAttempts.has(identifier) ? null : (variables.defaults.get(identifier) ?? null);
     responses.set(identifier, start);
     const descriptor = interactions.get(identifier);
-    drafts.set(identifier, descriptor === undefined ? start : initialResponse(descriptor, start));
+    drafts.set(identifier, descriptor === undefined ? start : startingResponse(descriptor, start));
   }
   const outcomes =
     completionOf(variables) === NOT_ATTEMPTED
