@@ -1741,12 +1741,11 @@ describe("OPERATOR_SIGNATURES", () => {
   it("has a signature for every expression that the ASI schema declares, and for no other", () => {
     expect([...OPERATOR_SIGNATURES.keys()].sort()).toEqual(expressionKinds());
     for (const [kind, signature] of OPERATOR_SIGNATURES) {
-      expect(signature.source, kind).toMatch(/^INFO §\d/);
       expect(signature.minOperands, kind).toBeLessThanOrEqual(signature.maxOperands);
     }
   });
 
-  it("states the operand and result types of INFO §2.11", () => {
+  it("states the operand and result types of the expressions", () => {
     expect(OPERATOR_SIGNATURES.get("sum")).toEqual({
       minOperands: 1,
       maxOperands: Number.POSITIVE_INFINITY,
@@ -1754,7 +1753,6 @@ describe("OPERATOR_SIGNATURES", () => {
       sameBaseType: false,
       sameCardinality: false,
       result: { cardinality: "single", baseType: "numeric" },
-      source: "INFO §2.11.3.40",
     });
     expect(OPERATOR_SIGNATURES.get("member")?.operands.map(({ cardinalities }) => cardinalities)).toEqual([
       ["single"],

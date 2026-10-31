@@ -5,10 +5,8 @@ const CARTRIDGE_NAMESPACES: readonly string[] = ["http://www.imsglobal.org/xsd/i
 const BASIC_LTI_NAMESPACE = "http://www.imsglobal.org/xsd/imsbasiclti_v1p0";
 const LTI_COMMON_NAMESPACE = "http://www.imsglobal.org/xsd/imslticm_v1p0";
 const LTI_PROFILE_NAMESPACE = "http://www.imsglobal.org/xsd/imslticp_v1p0";
-const SOURCE = "BPIG §6.2.9";
 const RULES: ReaderRules = {
   module: "package",
-  source: SOURCE,
   namespaces: [...CARTRIDGE_NAMESPACES, BASIC_LTI_NAMESPACE, LTI_COMMON_NAMESPACE, LTI_PROFILE_NAMESPACE],
 };
 

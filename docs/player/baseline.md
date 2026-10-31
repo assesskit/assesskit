@@ -15,25 +15,30 @@ These features are in all three browsers and the player uses them:
 - WebCrypto;
 - the ES2023 array methods.
 
-## What the baseline bans
+## What the baseline excludes
 
-A feature is banned when at least one of the three browsers lacks it. The table is in the "Browser baseline" section of
-`AGENTS.md`, with the first version of each browser and what to use instead. The first versions come from
-`@mdn/browser-compat-data`, and the pinned browsers confirm that the banned features are missing from them.
+A feature is excluded when at least one of the three browsers lacks it, such as the Popover API, CSS nesting, `:has()`,
+`Intl.Segmenter`, iterator helpers and the ES2025 `Set` methods. The data of caniuse and `@mdn/browser-compat-data` decide,
+through the tools below, and not a list of the repository.
 
-A banned feature is not guarded by a check for its support: the guarded code would be dead in some browsers and untested
-in the others.
+A feature that a baseline browser lacks is not guarded by a check for its support: the guarded code would be dead in some
+browsers and untested in the others.
 
 ## How the baseline is enforced
 
-| Check                                     | Command               | Catches                                                                                                                                                                                                                                                                                                                                 |
-| ----------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tsconfig.browser.json`                   | `pnpm typecheck`      | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                                                                                                                                                                                                                                                        |
-| `biome/baseline.grit`                     | `pnpm lint`           | The banned APIs in TypeScript, and the banned CSS and HTML in strings                                                                                                                                                                                                                                                                   |
-| `biome/baseline-css.grit`                 | `pnpm lint`           | The banned features in stylesheets                                                                                                                                                                                                                                                                                                      |
-| eslint-plugin-compat                      | `pnpm compat`         | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data                                                                                                                                                                                                                                                |
-| stylelint-no-unsupported-browser-features | `pnpm compat`         | Any CSS feature that a baseline browser lacks                                                                                                                                                                                                                                                                                           |
-| The pinned browsers                       | `pnpm compat:engines` | The shared modules, `player.css` styling a content root, a portable custom interaction in its frame, the tools of the player, and a choice, an order, a slider and a text entry answered by keyboard with the recording worklet loaded, running in Chromium 111, Firefox 115 and WebKit 16.4, and the banned features missing from them |
+The `browserslist` of `packages/player/package.json` names the three browsers for the tools that read it, and the bundles of
+`packages/player/scripts/build-static.ts` and `compat/run-engines.ts` have them as esbuild targets.
+
+| Check                                     | Command               | Catches                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tsconfig.browser.json`                   | `pnpm typecheck`      | Built-ins newer than ES2023, because `lib` is `ES2023`, `DOM` and `DOM.Iterable`                                                                                                                                                                                                             |
+| esbuild targets                           | `pnpm build`          | Syntax that a baseline browser cannot parse, in the bundles of the PCI frame and the recording worklet                                                                                                                                                                                       |
+| eslint-plugin-compat                      | `pnpm compat`         | Any API of the built JavaScript that a baseline browser lacks, from caniuse and MDN data                                                                                                                                                                                                     |
+| stylelint-no-unsupported-browser-features | `pnpm compat`         | Any CSS feature that a baseline browser lacks                                                                                                                                                                                                                                                |
+| The pinned browsers                       | `pnpm compat:engines` | The shared modules, `player.css` styling a content root, a portable custom interaction in its frame, the tools of the player, and a choice, an order, a slider and a text entry answered by keyboard with the recording worklet loaded, running in Chromium 111, Firefox 115 and WebKit 16.4 |
+
+The static checks of `pnpm compat` stay because the smoke test runs only the code paths that its cases reach, and the
+linters read every line of the built JavaScript and every stylesheet.
 
 `pnpm compat` lints `dist/`, so it needs `pnpm build` first. It checks the shared and browser folders only, and every
 stylesheet of the package. The stylelint plugin reports `text-indent` as partial for its `each-line` and `hanging`
@@ -58,7 +63,7 @@ The player and the protocol import the runtime by package name, which a browser 
 `compat/.smoke/player.js` and `compat/.smoke/protocol.js`, which the smoke server serves in their place. The containers run on the `node_modules` of the machine, so esbuild, a native program, runs outside them. The smoke
 server also serves MathJax and its fonts from the `mathjax` package that the tests use.
 
-The cases are: the engine is the baseline; the banned features are present or absent as the table says; the shared modules
+The cases are: the engine is the baseline; the shared modules
 run; `player.css` styles a content root; a portable custom interaction runs in its frame and reaches no network; a speech
 request is built from a content root; the supports of a candidate set the look, put a card in place of the content, open a
 popup that stays inside the root and is dismissed by Escape, and turn a button of the panel into a request; MathJax typesets MathML in a shadow root, gives braille and leaves elementary

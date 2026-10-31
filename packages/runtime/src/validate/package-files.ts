@@ -28,14 +28,14 @@ export class Contents {
    *
    * @param what - Says what names the file, such as `The settings file of the adaptive section`.
    */
-  check(path: string | undefined, what: string, source: string, findings: Findings, element: string): void {
+  check(path: string | undefined, what: string, findings: Findings, element: string): void {
     if (path === undefined) return;
     if (!this.present.has(path)) {
       const message = `${what} is ${JSON.stringify(path)}, which the package does not contain.`;
-      findings.error("assesskit/validate/missing-file", message, source, element);
+      findings.error("assesskit/validate/missing-file", message, element);
     } else if (!this.listed.has(path)) {
       const message = `${what} is ${JSON.stringify(path)}, which the manifest does not list.`;
-      findings.error("assesskit/validate/unlisted-file", message, source, element);
+      findings.error("assesskit/validate/unlisted-file", message, element);
     }
   }
 }
@@ -74,17 +74,17 @@ export function checkListedFiles(pkg: QtiPackage, findings: Findings): void {
   for (const { resource, href, path } of listings(pkg.manifest)) {
     if (path === undefined) {
       const message = `The resource ${JSON.stringify(resource.identifier)} lists ${JSON.stringify(href)}, which is outside the package.`;
-      findings.error("assesskit/validate/outside-package", message, "BIND §8.1", element);
+      findings.error("assesskit/validate/outside-package", message, element);
     } else if (!present.has(path)) {
       const message = `The resource ${JSON.stringify(resource.identifier)} lists the file ${JSON.stringify(path)}, which the package does not contain.`;
-      findings.error("assesskit/validate/missing-file", message, "BIND §8.1", element);
+      findings.error("assesskit/validate/missing-file", message, element);
     }
   }
   const listed = listedPaths(pkg.manifest);
   for (const path of pkg.paths) {
     if (listed.has(path) || path === MANIFEST_PATH) continue;
     const message = `The package contains the file ${JSON.stringify(path)}, which the manifest does not list; all files of a package must be listed.`;
-    findings.error("assesskit/validate/unlisted-file", message, "BIND §8.1, CAT §2.6", "manifest/resources");
+    findings.error("assesskit/validate/unlisted-file", message, "manifest/resources");
   }
 }
 
@@ -125,6 +125,6 @@ export function checkForeignDocuments(pkg: QtiPackage, documents: ReadonlySet<st
     if (kind === undefined) continue;
     const what = kind === "pnp" ? "a personal needs profile" : "a results report";
     const message = `The file ${JSON.stringify(path)} is ${what}, which does not belong in a content package.`;
-    findings.error(`assesskit/validate/${kind}-in-package`, message, "BIND §7", "manifest/resources");
+    findings.error(`assesskit/validate/${kind}-in-package`, message, "manifest/resources");
   }
 }

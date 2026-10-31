@@ -486,7 +486,7 @@ describe("readManifest", () => {
       "assesskit/package/dangling-reference",
       "assesskit/package/dangling-reference",
     ]);
-    expect(error.issues[0]).toMatchObject({ source: "BIND §8", location: { line: 1 } });
+    expect(error.issues[0]).toMatchObject({ location: { line: 1 } });
     expect(error.message).toContain("2 such problems");
   });
 

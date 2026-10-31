@@ -54,8 +54,8 @@ function changed(state: DeliveryState, events: readonly DeliveryEvent[] = [], ou
   return { ok: true, state, events, outcomes };
 }
 
-function refused(code: Refusal["code"], message: string, source = "CAT §3"): CatChange {
-  return { ok: false, refusal: refusal(code, message, source) };
+function refused(code: Refusal["code"], message: string): CatChange {
+  return { ok: false, refusal: refusal(code, message) };
 }
 
 /** The event that reports the request a session has just made. */
@@ -284,7 +284,6 @@ function applyStage(
     return refused(
       "unknown-item",
       `The stage names the item ${describe(stranger)}, which the adaptive section ${describe(session.section)} does not list.`,
-      "CAT §4.2",
     );
   }
   const grown = appendedStage(trimmed, session.section, session.instance, refs);
@@ -292,7 +291,6 @@ function applyStage(
     return refused(
       "invalid-response",
       `The stage would make the plan hold more than the ${course.limits.maxPlanNodes} sections and items that the limit maxPlanNodes allows.`,
-      "CAT §4.2",
     );
   }
   const next: CatSession = { ...settled, stage: grown.keys, stageLength: stageLengthOf(stage, grown.keys.length) };
@@ -328,8 +326,7 @@ export function answerCat(
   const answer: Answer = response;
   const wait = session.request;
   if (wait.kind === "end-session") {
-    if (answer.ended !== true)
-      return refused("invalid-response", "The answer to End Session must be { ended: true }.", "CAT §3.5");
+    if (answer.ended !== true) return refused("invalid-response", "The answer to End Session must be { ended: true }.");
     return changed(withCat(state, { ...answered(session), status: "ended" }));
   }
   if (answer.ended === true)
@@ -342,7 +339,6 @@ export function answerCat(
       return refused(
         "invalid-response",
         "The answer to Create Session must give a sessionIdentifier and the first stage in nextItems.",
-        "CAT §3.3",
       );
     }
     const started: CatSession = {

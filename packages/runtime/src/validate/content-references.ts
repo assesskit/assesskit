@@ -87,12 +87,12 @@ export class ContentReferences {
     const here = elementPath(visit);
     if (found === undefined) {
       const message = `The attribute ${attribute} of the ${visit.name} names ${JSON.stringify(identifier)}, which the ${this.owner} does not declare. Declare it as ${kinds.join(" or ")} variable.`;
-      this.findings.error("assesskit/validate/undeclared-variable", message, "INFO §2.2.2", here);
+      this.findings.error("assesskit/validate/undeclared-variable", message, here);
       return undefined;
     }
     if (!kinds.includes(found.kind)) {
       const message = `The attribute ${attribute} of the ${visit.name} names ${JSON.stringify(identifier)}, a ${found.kind} variable, but it must name ${kinds.join(" or ")} variable.`;
-      this.findings.error("assesskit/validate/reference-kind", message, "INFO §7.30.6", here);
+      this.findings.error("assesskit/validate/reference-kind", message, here);
       return undefined;
     }
     return found;
@@ -110,6 +110,6 @@ export class ContentReferences {
     const { cardinality, baseType } = found.type;
     if (baseType === "identifier" && (cardinality === "single" || cardinality === "multiple")) return;
     const message = `The attribute ${attribute} of the ${visit.name} names ${JSON.stringify(identifier)}, which must have the base type identifier and the cardinality single or multiple, found ${cardinality} ${baseType ?? "without a base type"}.`;
-    this.findings.error("assesskit/validate/reference-type", message, "INFO §5.93.1", elementPath(visit));
+    this.findings.error("assesskit/validate/reference-type", message, elementPath(visit));
   }
 }

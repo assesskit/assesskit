@@ -21,7 +21,7 @@ type Kind = "context" | "response" | "outcome" | "template";
 export type Reach = "template-processing" | "item";
 
 function undeclared(identifier: string, kind = "variable"): ProcessingError {
-  return new ProcessingError(`The item declares no ${kind} ${identifier}.`, "INFO §2.2.2", identifier);
+  return new ProcessingError(`The item declares no ${kind} ${identifier}.`, identifier);
 }
 
 /**
@@ -78,7 +78,6 @@ export class ItemScope implements Scope {
     if (this.reach === "template-processing" && (kind === "response" || kind === "outcome")) {
       throw new ProcessingError(
         `Template processing reads the ${kind} variable ${identifier}, but it may read only template and context variables.`,
-        "INFO §6.50",
         identifier,
       );
     }
@@ -137,14 +136,13 @@ export class ItemScope implements Scope {
   }
 
   /** Returns the type of a variable of a kind, or fails naming the rule that sets it. */
-  private typeOf(identifier: string, kinds: readonly Kind[], rule: string, source: string): VariableType {
+  private typeOf(identifier: string, kinds: readonly Kind[], rule: string): VariableType {
     const kind = this.kinds.get(identifier);
     const type = this.types.get(identifier);
     if (kind === undefined || type === undefined || !kinds.includes(kind)) {
       const kindsText = `${kinds[0] === "outcome" ? "an" : "a"} ${kinds.join(" or ")} variable`;
       throw new ProcessingError(
         `The rule ${rule} sets ${identifier}, which is not ${kindsText} of the item.`,
-        source,
         identifier,
       );
     }
@@ -157,13 +155,12 @@ export class ItemScope implements Scope {
    * @throws `ProcessingError` when it is no outcome or the value does not fit it.
    */
   setOutcome(identifier: string, value: Value | null, rule: string): void {
-    const type = this.typeOf(identifier, ["outcome"], rule, "INFO §5.130");
+    const type = this.typeOf(identifier, ["outcome"], rule);
     const assigned = assign(value, type, identifier);
     if (identifier === COMPLETION_STATUS && assigned?.cardinality === "single") {
       if (!COMPLETION_STATUSES.includes(String(assigned.value))) {
         throw new ProcessingError(
           `The outcome completionStatus cannot be ${describe(assigned.value)}; it is one of ${COMPLETION_STATUSES.join(", ")}.`,
-          "INFO §2.2.2.3",
           identifier,
         );
       }
@@ -177,7 +174,7 @@ export class ItemScope implements Scope {
    * @throws `ProcessingError` when it is no template variable or the value does not fit it.
    */
   setTemplate(identifier: string, value: Value | null): void {
-    const type = this.typeOf(identifier, ["template"], "qti-set-template-value", "INFO §6.50.1");
+    const type = this.typeOf(identifier, ["template"], "qti-set-template-value");
     this.templates.set(identifier, assign(value, type, identifier));
   }
 
@@ -187,7 +184,7 @@ export class ItemScope implements Scope {
    * @throws `ProcessingError` when it is no response variable or the value does not fit it.
    */
   setCorrectResponse(identifier: string, value: Value | null): void {
-    const type = this.typeOf(identifier, ["response"], "qti-set-correct-response", "INFO §6.50.5");
+    const type = this.typeOf(identifier, ["response"], "qti-set-correct-response");
     this.correctResponses.set(identifier, assign(value, type, identifier));
   }
 
@@ -198,7 +195,7 @@ export class ItemScope implements Scope {
    * @throws `ProcessingError` when it is neither or the value does not fit it.
    */
   setDefault(identifier: string, value: Value | null): void {
-    const type = this.typeOf(identifier, ["response", "outcome"], "qti-set-default-value", "INFO §6.50.4");
+    const type = this.typeOf(identifier, ["response", "outcome"], "qti-set-default-value");
     const assigned = assign(value, type, identifier);
     this.defaults.set(identifier, assigned);
     const outcome = this.outcomeDeclarations.get(identifier);

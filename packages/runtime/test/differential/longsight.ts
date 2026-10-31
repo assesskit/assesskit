@@ -1,6 +1,6 @@
-import type { Random } from "@assesskit/runtime";
 import { createItemSession, parseQtiXml, type QtiDiagnostic, type QtiDocument } from "@longsightgroup/qti3-core";
-import type { Implementation, ItemCase, Observed, SessionCase, TurnObservation } from "./model.ts";
+import type { Random } from "../../src/index.js";
+import type { Implementation, ItemCase, Observed, SessionCase, TurnObservation } from "./model.js";
 
 /** The multiplier and increment of the oracle's generator, a linear congruential generator (Numerical Recipes). */
 const LCG_MULTIPLIER = 1664525;

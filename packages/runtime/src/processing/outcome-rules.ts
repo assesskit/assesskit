@@ -36,7 +36,6 @@ function runRule(rule: Rule, target: OutcomeTarget): Flow {
         rule.responseElse?.rules,
         target,
         "qti-response-if",
-        "INFO §5.117",
       );
       return rules === undefined ? "continue" : runOutcomeRules(rules, target);
     }
@@ -46,7 +45,6 @@ function runRule(rule: Rule, target: OutcomeTarget): Flow {
         rule.outcomeElse?.rules,
         target,
         "qti-outcome-if",
-        "INFO §5.101",
       );
       return rules === undefined ? "continue" : runOutcomeRules(rules, target);
     }
@@ -71,12 +69,10 @@ function runRule(rule: Rule, target: OutcomeTarget): Flow {
     case "element":
       throw new ProcessingError(
         `The processing has an unresolved ${rule.prefix === undefined ? "" : `${rule.prefix}:`}${rule.name}; resolve includes before processing.`,
-        "INFO §2.12",
       );
     default:
       throw new ProcessingError(
         `The processing has the rule kind ${describe(Reflect.get(rule, "kind"))}, which QTI 3.0 does not define.`,
-        "INFO §6.39",
       );
   }
 }

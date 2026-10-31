@@ -1,7 +1,5 @@
 import { documentName, readError } from "./read-error.js";
 
-/** The rule for the encoding of an entity (XML 1.0 §4.3.3). */
-const SOURCE = "XML 1.0 §4.3.3";
 /** The XML declaration is ASCII and short; its encoding declaration is looked for in this many bytes (XML 1.0 App. F.1). */
 const DECLARATION_LENGTH = 256;
 const ENCODING_DECLARATION = /^<\?xml[ \t\r\n][^>]*?[ \t\r\n]encoding[ \t\r\n]*=[ \t\r\n]*(?:"([^"]*)"|'([^']*)')/;
@@ -48,7 +46,7 @@ function decode(bytes: Uint8Array, encoding: string, path: string | undefined): 
   try {
     return new TextDecoder(encoding, { fatal: true }).decode(bytes);
   } catch {
-    throw readError("assesskit/xml/encoding", `${documentName(path)} is not valid ${encoding}.`, SOURCE, { path });
+    throw readError("assesskit/xml/encoding", `${documentName(path)} is not valid ${encoding}.`, { path });
   }
 }
 
@@ -58,7 +56,7 @@ function decodeMarked(bytes: Uint8Array, mark: ByteOrderMark, path: string | und
   const label = declaredLabel(text.slice(0, DECLARATION_LENGTH));
   if (label !== undefined && family(encodingOf(label)) !== family(mark.encoding)) {
     const message = `${documentName(path)} starts with a ${mark.encoding} byte order mark but declares the encoding ${JSON.stringify(label)}.`;
-    throw readError("assesskit/xml/encoding", message, SOURCE, { path });
+    throw readError("assesskit/xml/encoding", message, { path });
   }
   return text;
 }
@@ -79,7 +77,7 @@ export function decodeXml(bytes: Uint8Array, path: string | undefined): string {
   if (encoding === undefined || encoding.startsWith("utf-16")) {
     const reason = encoding === undefined ? "this runtime does not support it" : "UTF-16 needs a byte order mark";
     const message = `${documentName(path)} declares the encoding ${JSON.stringify(label)}, but ${reason}.`;
-    throw readError("assesskit/xml/encoding", message, SOURCE, { path });
+    throw readError("assesskit/xml/encoding", message, { path });
   }
   return decode(bytes, encoding, path);
 }

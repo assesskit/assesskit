@@ -107,7 +107,7 @@ export class ExpressionChecker {
     const signature = OPERATOR_SIGNATURES.get(expression.kind);
     if (signature === undefined) {
       const message = `The model has the expression kind ${describe(expression.kind)}, which QTI 3.0 does not define.`;
-      this.findings.error("assesskit/validate/unknown-expression", message, "INFO §2.11", here);
+      this.findings.error("assesskit/validate/unknown-expression", message, here);
       return UNKNOWN;
     }
     const operands = operandsOf(expression).map((operand) => this.check(operand, here));
@@ -126,7 +126,7 @@ export class ExpressionChecker {
     const count = operands.length;
     if (count < signature.minOperands || count > signature.maxOperands) {
       const message = `The operator ${operator} takes ${describeCount(signature)} operands, found ${count}.`;
-      this.findings.error("assesskit/validate/operand-count", message, signature.source, here);
+      this.findings.error("assesskit/validate/operand-count", message, here);
     }
     operands.forEach((type, index) => {
       const expected = signature.operands[Math.min(index, signature.operands.length - 1)];
@@ -136,27 +136,27 @@ export class ExpressionChecker {
         type.baseType === undefined || expected.baseTypes === undefined || expected.baseTypes.includes(type.baseType);
       if (!(cardinalityFits && baseTypeFits)) {
         const message = `The operator ${operator} takes ${describeOperand(expected)} operands, found ${describeStatic(type)} as operand ${index + 1}.`;
-        this.findings.error("assesskit/validate/operand-type", message, signature.source, here);
+        this.findings.error("assesskit/validate/operand-type", message, here);
       }
     });
     const baseTypes = new Set(known(operands.map(({ baseType }) => baseType)));
     if (signature.sameBaseType && baseTypes.size > 1) {
       const message = `The operator ${operator} takes operands of one base type, found ${[...baseTypes].join(" and ")}.`;
-      this.findings.error("assesskit/validate/operand-type", message, signature.source, here);
+      this.findings.error("assesskit/validate/operand-type", message, here);
     }
     const cardinalities = new Set(known(operands.map(({ cardinality }) => cardinality)));
     if (signature.sameCardinality && cardinalities.size > 1) {
       const message = `The operator ${operator} takes operands of one cardinality, found ${[...cardinalities].join(" and ")}.`;
-      this.findings.error("assesskit/validate/operand-type", message, signature.source, here);
+      this.findings.error("assesskit/validate/operand-type", message, here);
     }
   }
 
   private lookup(found: Lookup, here: string): StaticType {
     if ("problem" in found) {
-      this.findings.error(found.problem.code, found.problem.message, found.problem.source, here);
+      this.findings.error(found.problem.code, found.problem.message, here);
       return UNKNOWN;
     }
-    for (const { code, message, source } of found.warnings ?? []) this.findings.warning(code, message, source, here);
+    for (const { code, message } of found.warnings ?? []) this.findings.warning(code, message, here);
     return found.type;
   }
 
@@ -183,7 +183,7 @@ export class ExpressionChecker {
         if (operands.some(({ baseType }) => baseType === "float")) {
           const message =
             "The operator qti-match compares floats, which it should not: floats are rarely exactly equal. Use qti-equal with a tolerance.";
-          this.findings.warning("assesskit/validate/match-float", message, "INFO §2.11.3.28", here);
+          this.findings.warning("assesskit/validate/match-float", message, here);
         }
         return UNKNOWN;
       case "random-integer":
@@ -199,7 +199,7 @@ export class ExpressionChecker {
         if (expression.weightIdentifier !== undefined && expression.baseType === "integer") {
           const message =
             "The expression qti-test-variables has a weight-identifier and base-type integer, for which a weight is undefined.";
-          this.findings.error("assesskit/validate/weight-with-integer", message, "INFO §7.39.5", here);
+          this.findings.error("assesskit/validate/weight-with-integer", message, here);
         }
         this.checkOutcomeOnly(expression, here);
         return UNKNOWN;
@@ -221,10 +221,10 @@ export class ExpressionChecker {
     if (table === undefined) {
       const element = kind === "map-response" ? "qti-mapping" : "qti-area-mapping";
       const message = `The expression qti-${kind} names the response variable ${JSON.stringify(identifier)}, which has no ${element} to map its value with.`;
-      this.findings.error("assesskit/validate/missing-mapping", message, "INFO §2.11.1.5", here);
+      this.findings.error("assesskit/validate/missing-mapping", message, here);
     } else if (kind === "map-response-point" && declaration.baseType !== "point") {
       const message = `The expression qti-map-response-point names the response variable ${JSON.stringify(identifier)}, whose base type must be point, found ${declaration.baseType ?? "none"}.`;
-      this.findings.error("assesskit/validate/missing-mapping", message, "INFO §2.11.1.6", here);
+      this.findings.error("assesskit/validate/missing-mapping", message, here);
     }
   }
 
@@ -237,14 +237,14 @@ export class ExpressionChecker {
         ? "no definition or class"
         : `the definition or class ${names.map((name) => JSON.stringify(name)).join(" or ")}`;
     const message = `No custom operator is registered for qti-custom-operator with ${named}. Register one in the option customOperators.`;
-    this.findings.error("assesskit/validate/custom-operator", message, "INFO §2.11.3.2", here);
+    this.findings.error("assesskit/validate/custom-operator", message, here);
   }
 
   private checkRandomFloat(expression: Extract<Expression, { kind: "random-float" }>, here: string): void {
     const { min = DEFAULT_RANDOM_MIN, max } = expression;
     if (typeof max === "number" && typeof min === "number" && min > max) {
       const message = `The operator qti-random-float has min ${min} above max ${max}, so it is always NULL.`;
-      this.findings.error("assesskit/validate/random-bounds", message, "INFO §7.33", here);
+      this.findings.error("assesskit/validate/random-bounds", message, here);
     }
   }
 
@@ -252,11 +252,11 @@ export class ExpressionChecker {
     const { min = DEFAULT_RANDOM_MIN, max, step = DEFAULT_RANDOM_STEP } = expression;
     if (typeof max === "number" && typeof min === "number" && min > max) {
       const message = `The operator qti-random-integer has min ${min} above max ${max}, so it is always NULL.`;
-      this.findings.error("assesskit/validate/random-bounds", message, "INFO §7.34", here);
+      this.findings.error("assesskit/validate/random-bounds", message, here);
     }
     if (typeof step === "number" && step <= 0) {
       const message = `The operator qti-random-integer has step ${step}, which must be above 0, so it is always NULL.`;
-      this.findings.error("assesskit/validate/random-bounds", message, "INFO §7.34", here);
+      this.findings.error("assesskit/validate/random-bounds", message, here);
     }
   }
 
@@ -264,7 +264,7 @@ export class ExpressionChecker {
   private checkPattern(pattern: string, here: string): void {
     const identifier = BRACED.exec(pattern)?.[1];
     if (identifier !== undefined && this.scope.reference(identifier) !== undefined) return;
-    checkPatternText(this.findings, pattern, "The pattern of qti-pattern-match", "INFO §5.104.1", here);
+    checkPatternText(this.findings, pattern, "The pattern of qti-pattern-match", here);
   }
 
   private checkOutcomeOnly(expression: Expression, here: string): void {
@@ -272,16 +272,16 @@ export class ExpressionChecker {
     if (this.scope.processing === "outcome") {
       const weight = "weightIdentifier" in expression ? expression.weightIdentifier : undefined;
       const problem = weight === undefined ? undefined : this.scope.weight(weight);
-      if (problem !== undefined) this.findings.warning(problem.code, problem.message, problem.source, here);
+      if (problem !== undefined) this.findings.warning(problem.code, problem.message, here);
       return;
     }
     if (this.scope.processing === "response" && BIND_OUTCOME_ONLY.has(expression.kind)) {
       const message = `The expression qti-${expression.kind} must NOT be used in ResponseProcessing.`;
-      this.findings.error("RULE_SET_GENERAL_1", message, "BIND §5.3.2", here);
+      this.findings.error("RULE_SET_GENERAL_1", message, here);
       return;
     }
     const message = `The expression qti-${expression.kind} reads the item sessions of a test, so only outcome processing may use it.`;
-    this.findings.error("assesskit/validate/outcome-only-expression", message, "INFO §2.11.2", here);
+    this.findings.error("assesskit/validate/outcome-only-expression", message, here);
   }
 
   private resultOf(
@@ -327,17 +327,11 @@ export class ExpressionChecker {
  * Compiles the text of a pattern of the regular expression dialect of XML Schema and reports it when it is not in the
  * dialect or too large.
  */
-export function checkPatternText(
-  findings: Findings,
-  pattern: string,
-  what: string,
-  source: string,
-  element: string,
-): void {
+export function checkPatternText(findings: Findings, pattern: string, what: string, element: string): void {
   try {
     compileXsdRegex(pattern);
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
-    findings.error("assesskit/validate/pattern", `${what} is not valid: ${error.message}`, source, element);
+    findings.error("assesskit/validate/pattern", `${what} is not valid: ${error.message}`, element);
   }
 }

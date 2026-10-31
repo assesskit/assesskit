@@ -488,7 +488,6 @@ describe("checkBindings", () => {
         code: "assesskit/interactions/binding",
         message:
           'The interaction qti-choice-interaction is bound to "R", a variable with the type single string, but it accepts single identifier or multiple identifier here.',
-        source: "INFO §2.4.1.1",
         location: { element: "qti-choice-interaction" },
       },
     ]);
@@ -510,7 +509,7 @@ describe("checkBindings", () => {
 
   it("reports a response variable that the item does not declare", () => {
     const [issue] = checkBindings(itemOf(Choice, ""));
-    expect(issue).toMatchObject({ code: "assesskit/interactions/response-undeclared", source: "INFO §2.2.2.2" });
+    expect(issue).toMatchObject({ code: "assesskit/interactions/response-undeclared" });
     expect(issue?.message).toBe(
       'The interaction qti-choice-interaction is bound to the response variable "R", which the item does not declare. Declare it with a qti-response-declaration.',
     );

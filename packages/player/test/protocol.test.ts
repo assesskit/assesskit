@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { CandidateView, RefusalCode } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
@@ -163,7 +165,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
       stimuli: ["stimuli/s1.xml"],
       lexicons: ["items/q1/words.pls"],
     };
-    const refusal = { code: "time-over", message: "The time is over.", source: "INFO §2.8.5" };
+    const refusal = { code: "time-over", message: "The time is over." };
     expect(() => checkViewEnvelope(json(JSON.stringify({ ...base, documents, refusal })))).not.toThrow();
   });
 
@@ -195,16 +197,16 @@ describe("checkViewEnvelope: documents and refusal", () => {
     const check = (refusal: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
     expect(() => check("5")).toThrow("A view envelope is invalid at refusal: expected an object, found 5.");
-    expect(() => check('{"code":"nope","message":"m","source":"s"}')).toThrow(
+    expect(() => check('{"code":"nope","message":"m"}')).toThrow(
       'A view envelope is invalid at refusal.code: expected "attempts-exhausted", "awaiting-cat", "clock-regression", "comment-not-allowed", "ended", "invalid-response", "item-closed", "linear-backward", "min-time-not-reached", "not-current", "review-not-allowed", "score-type-mismatch", "skipping-not-allowed", "solution-not-allowed", "support-not-available", "suspended", "time-over", "unknown-item", "unknown-request", "value-out-of-range" or "wrong-submission-mode", found "nope".',
     );
-    expect(() => check('{"code":"ended","message":1,"source":"s"}')).toThrow(
+    expect(() => check('{"code":"ended","message":1}')).toThrow(
       "A view envelope is invalid at refusal.message: expected a string, found 1.",
     );
-    expect(() => check('{"code":"ended","message":"m"}')).toThrow(
-      'A view envelope is invalid at refusal: missing the property "source".',
+    expect(() => check('{"code":"ended"}')).toThrow(
+      'A view envelope is invalid at refusal: missing the property "message".',
     );
-    expect(() => check('{"code":"ended","message":"m","source":"s","at":1}')).toThrow(
+    expect(() => check('{"code":"ended","message":"m","at":1}')).toThrow(
       'A view envelope is invalid at refusal: unexpected property "at".',
     );
   });
@@ -236,7 +238,13 @@ describe("REFUSAL_CODES", () => {
       "wrong-submission-mode": true,
     };
     expect([...REFUSAL_CODES].sort()).toEqual(Object.keys(every).sort());
-    for (const code of REFUSAL_CODES) expect(() => checkRefusal({ code, message: "m", source: "s" })).not.toThrow();
+    for (const code of REFUSAL_CODES) expect(() => checkRefusal({ code, message: "m" })).not.toThrow();
+  });
+
+  it("are the codes that the table of refusal codes in the delivery guide of the runtime lists", () => {
+    const guide = readFileSync(resolve(import.meta.dirname, "../../../docs/runtime/delivery.md"), "utf8");
+    const listed = [...guide.matchAll(/^\| `([a-z-]+)` +\| [^|]+ \|$/gm)].map(([, code = ""]) => code);
+    for (const code of REFUSAL_CODES) expect(listed, code).toContain(code);
   });
 });
 
@@ -586,7 +594,7 @@ describe("properties", () => {
       stimuli: ["stimuli/s1.xml"],
       lexicons: [],
     };
-    const refusal = { code: "time-over", message: "The time is over.", source: "INFO §2.8.5" };
+    const refusal = { code: "time-over", message: "The time is over." };
     fuzzJson((value) => checkViewEnvelope(value), [envelope, { ...envelope, documents, refusal }]);
     fuzzJson((value) => checkRefusal(value), [refusal]);
     fuzzJson((value) => checkSubmission(value), [SUBMISSION]);

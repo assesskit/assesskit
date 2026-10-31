@@ -77,6 +77,11 @@
     "player.css",
     "NOTICE"
   ],
+  "browserslist": [
+    "chrome >= 111",
+    "firefox >= 115",
+    "safari >= 16.4"
+  ],
   "engines": {
     "node": ">=22"
   },

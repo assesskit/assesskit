@@ -13,7 +13,6 @@ import {
 
 const RULES: ReaderRules = {
   module: "pnp",
-  source: "PNP XSD",
   namespaces: [PNP_NAMESPACE, ...PNP_ALTERNATE_NAMESPACES],
 };
 
@@ -151,7 +150,7 @@ export function readPnp(input: string | Uint8Array | XmlElement): PersonalNeedsP
   if (!reader.foreign && reader.name === "access-for-all-pnp") return readProfile(reader);
   if (reader.foreign || reader.name !== "access-for-all-pnp-records") {
     const message = `The root element must be access-for-all-pnp or access-for-all-pnp-records in the namespace ${PNP_NAMESPACE}, found ${reader.qualifiedName}.`;
-    throw reader.fail("not-pnp", message, "BPIG §5");
+    throw reader.fail("not-pnp", message);
   }
   const records = reader.takeAll("access-for-all-pnp-record").map(readRecord);
   if (records.length === 0) {

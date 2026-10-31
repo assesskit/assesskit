@@ -93,7 +93,6 @@ describe("checkPool", () => {
         message: expect.stringContaining(
           'lists the item "item365", which the item pool of the CAT engine does not contain',
         ),
-        source: "CAT §2.1, §2.2",
         location: { element: "qti-assessment-section/qti-assessment-item-ref" },
       },
     ]);
@@ -106,7 +105,6 @@ describe("checkPool", () => {
         severity: "error",
         code: "assesskit/cat/item-not-in-section",
         message: expect.stringContaining('contains the item "item999", which the adaptive section "sec" does not list'),
-        source: "CAT §2.1, §2.2",
         location: { element: "qti-assessment-section" },
       },
     ]);

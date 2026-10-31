@@ -178,7 +178,6 @@ export function readAccessForAllResource(element: XmlElement, path?: string): Ac
   checkReadArguments(element, path);
   const reader = new ElementReader(element, {
     module: "metadata",
-    source: "DRD XSD",
     namespaces: [DRD_NAMESPACE],
     path,
   });

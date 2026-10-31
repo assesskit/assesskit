@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ReadError, readAsi } from "@assesskit/runtime";
-import { describeInteractions, type InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { correctResponses, longsightRandom } from "./longsight.ts";
-import type { ItemCase, Observed, SessionCase, Turn } from "./model.ts";
+import { ReadError, readAsi } from "../../src/index.js";
+import { describeInteractions, type InteractionDescriptor } from "../../src/interactions/index.js";
+import { correctResponses, longsightRandom } from "./longsight.js";
+import type { ItemCase, Observed, SessionCase, Turn } from "./model.js";
 
 /** The seed that corpus cases draw their template values with. */
-export const CORPUS_SEED = 1;
+const CORPUS_SEED = 1;
 
 const ITEM_ROOT = "<qti-assessment-item";
 

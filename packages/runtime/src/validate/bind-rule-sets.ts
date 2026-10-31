@@ -87,20 +87,13 @@ const DATA_ATTRIBUTE = /^data-[a-zA-Z0-9_.-]+$/;
 const FIGURE = {
   name: "figure",
   code: "assesskit/validate/figure-multiplicity",
-  source: "BIND §5.1.1",
   once: ["figcaption"],
 };
 const RUBY = {
   name: "ruby",
   code: "assesskit/validate/ruby-multiplicity",
-  source: "BIND §5.1.2",
   once: ["rp", "rt", "rtc"],
 };
-
-/** The sections of BIND §5.3 of the rule sets `RULE_SET_INTERACTION_<number>A` and `B`: 5.3.<2n + 1> and 5.3.<2n + 2>. */
-function section(number: number, part: "A" | "B"): string {
-  return `BIND §5.3.${2 * number + (part === "A" ? 1 : 2)}`;
-}
 
 /** Returns the property of the model for an attribute name: `max-choices` becomes `maxChoices`. */
 function camelCase(attribute: string): string {
@@ -159,8 +152,8 @@ export class BindRuleSets {
     if (visit.attributeWildcard === "any" || visit.name === CONSTRAINED_FOREIGN) this.extensionAttributes(visit);
   }
 
-  private error(code: string, message: string, source: string, visit: ElementVisit): void {
-    this.findings.error(code, message, source, elementPath(visit));
+  private error(code: string, message: string, visit: ElementVisit): void {
+    this.findings.error(code, message, elementPath(visit));
   }
 
   /** 5.1.1 and 5.1.2: the elements of a `figure` and a `ruby` that occur at most once. */
@@ -172,7 +165,7 @@ export class BindRuleSets {
       const count = kinds.filter((kind) => kind === element).length;
       if (count > 1) {
         const message = `The ${visit.name} has ${count} ${element} elements, but the multiplicity of ${element} must be 0 or 1.`;
-        this.error(rule.code, message, rule.source, visit);
+        this.error(rule.code, message, visit);
       }
     }
   }
@@ -182,15 +175,10 @@ export class BindRuleSets {
     const role = visit.model.role;
     if (role === undefined) return;
     if (visit.name === "source") {
-      this.error(
-        "RULE_SET_ARIA_ROLES_1",
-        "The 'source' tag must not have an ARIA role attribute.",
-        "BIND §5.3.1",
-        visit,
-      );
+      this.error("RULE_SET_ARIA_ROLES_1", "The 'source' tag must not have an ARIA role attribute.", visit);
     } else if (visit.name === "h1" && !H1_ROLES.has(String(role))) {
       const message = `The 'h1' tag may have an ARIA role value of 'heading' or 'tab' or 'presentation' only, found ${JSON.stringify(role)}.`;
-      this.error("RULE_SET_ARIA_ROLES_1", message, "BIND §5.3.1", visit);
+      this.error("RULE_SET_ARIA_ROLES_1", message, visit);
     }
   }
 
@@ -219,7 +207,7 @@ export class BindRuleSets {
     const number = INTERACTION_RULE_SETS.get(container.name);
     if (number === undefined) return;
     const message = `The ${container.name} must not contain the ${name}: an interaction may not be nested within another interaction.`;
-    this.error(ruleSet(number, "A"), message, section(number, "A"), visit);
+    this.error(ruleSet(number, "A"), message, visit);
   }
 
   /** The rule sets B of the interactions: their attributes, and the base type of their response. */
@@ -228,8 +216,7 @@ export class BindRuleSets {
     const number = INTERACTION_RULE_SETS.get(name);
     if (number === undefined) return;
     const code = ruleSet(number, "B");
-    const source = section(number, "B");
-    const report = (message: string): void => this.error(code, message, source, visit);
+    const report = (message: string): void => this.error(code, message, visit);
     if (CHOICE_LIMITS.has(name)) this.checkRange(visit, report, ["max-choices", "min-choices"], true);
     if (ASSOCIATION_LIMITS.has(name)) this.checkRange(visit, report, ["max-associations", "min-associations"], true);
     if (name === "qti-media-interaction") this.checkRange(visit, report, ["max-plays", "min-plays"], false);
@@ -282,7 +269,7 @@ export class BindRuleSets {
     const number = MATCH_LIMITS.get(visit.name);
     if (number === undefined || max === undefined || min === undefined || max === 0 || max >= min) return;
     const message = `The match-max attribute value, provided it is not 0, must not be less than the match-min value, found ${max} and ${min} in the ${visit.name}.`;
-    this.error(`RULE_SET_INTERACTION-RELATED_${number}`, message, `BIND §5.3.${42 + number}`, visit);
+    this.error(`RULE_SET_INTERACTION-RELATED_${number}`, message, visit);
   }
 
   /** 5.3.47 RULE_SET_RUBRICBLOCK, and INFO §2.8.6: a rubric block holds no rubric block and no interaction. */
@@ -291,7 +278,7 @@ export class BindRuleSets {
       if (at.name !== "qti-rubric-block") continue;
       const message =
         "The qti-rubric-block must not be a child of a qti-rubric-block: rubric blocks may not be nested.";
-      this.error("RULE_SET_RUBRICBLOCK", message, "BIND §5.3.47", visit);
+      this.error("RULE_SET_RUBRICBLOCK", message, visit);
       return;
     }
   }
@@ -305,11 +292,11 @@ export class BindRuleSets {
     const name = JSON.stringify(visit.model.identifier);
     if (minimum !== undefined && mastery < minimum) {
       const message = `The mastery-value ${mastery} of the outcome ${name} must not be less than its normal-minimum ${minimum}.`;
-      this.error("RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", message, "BIND §5.3.48", visit);
+      this.error("RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", message, visit);
     }
     if (maximum !== undefined && mastery > maximum) {
       const message = `The mastery-value ${mastery} of the outcome ${name} must not be greater than its normal-maximum ${maximum}.`;
-      this.error("RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", message, "BIND §5.3.48", visit);
+      this.error("RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", message, visit);
     }
   }
 
@@ -323,7 +310,7 @@ export class BindRuleSets {
     const declaration = this.context?.responses.get(String(visit.model.responseIdentifier));
     if (max === undefined || max === 1 || declaration?.cardinality !== "single") return;
     const message = `The response variable ${JSON.stringify(declaration.identifier)} has the cardinality single, which is inconsistent with the max-choices ${max} of the qti-choice-interaction bound to it.`;
-    this.error("RULE_SET_SPECIFIC_CLASS_RESPONSEDEC", message, "BIND §5.3.49", visit);
+    this.error("RULE_SET_SPECIFIC_CLASS_RESPONSEDEC", message, visit);
   }
 
   /** 5.3.42 RULE_SET_INTERACTION_20B: the variables a portable custom interaction passes are declared by the item. */
@@ -337,7 +324,7 @@ export class BindRuleSets {
     if (declared) return;
     const kind = isContext ? "context" : "template";
     const message = `The '${visit.name}' ${JSON.stringify(identifier)} does NOT have a value defined by a '${kind}-declaration' in the parent AssessmentItem.`;
-    this.error("RULE_SET_INTERACTION_20B", message, "BIND §5.3.42", visit);
+    this.error("RULE_SET_INTERACTION_20B", message, visit);
   }
 
   /** 5.2: the attributes beyond the schema's on an element of the list are `data-` attributes of no namespace. */
@@ -346,7 +333,7 @@ export class BindRuleSets {
       if (attribute.namespace === "" && DATA_ATTRIBUTE.test(attribute.name)) continue;
       const qualified = attribute.prefix === undefined ? attribute.name : `${attribute.prefix}:${attribute.name}`;
       const message = `The attribute ${qualified} of the ${visit.name} is not defined by the schema, and an extension attribute must be named data- followed by letters, digits, underscores, hyphens or periods.`;
-      this.error("assesskit/validate/extension-attribute", message, "BIND §5.2", visit);
+      this.error("assesskit/validate/extension-attribute", message, visit);
     }
   }
 }

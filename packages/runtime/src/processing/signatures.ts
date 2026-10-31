@@ -39,7 +39,7 @@ export interface ResultSignature {
   readonly baseType: BaseType | "numeric" | "operand" | "declared" | "attribute" | "name" | "unknown";
 }
 
-/** The operands and the result of an operator, as the Information Model defines them (INFO §2.11). */
+/** The operands and the result of an operator, as the Information Model defines them. */
 export interface OperatorSignature {
   /** The fewest operands. */
   readonly minOperands: number;
@@ -53,8 +53,6 @@ export interface OperatorSignature {
   readonly sameCardinality: boolean;
   /** The type of the result. */
   readonly result: ResultSignature;
-  /** The section of the Information Model that defines the operator. */
-  readonly source: string;
 }
 
 const SINGLE: readonly Cardinality[] = ["single"];
@@ -80,16 +78,9 @@ interface Shape {
   readonly operands?: readonly OperandSignature[];
   readonly same?: "base-type" | "both";
   readonly result: ResultSignature;
-  readonly source: string;
 }
 
-function signature({
-  count: [minOperands, maxOperands],
-  operands = [],
-  same,
-  result: type,
-  source,
-}: Shape): OperatorSignature {
+function signature({ count: [minOperands, maxOperands], operands = [], same, result: type }: Shape): OperatorSignature {
   return {
     minOperands,
     maxOperands,
@@ -97,7 +88,6 @@ function signature({
     sameBaseType: same !== undefined,
     sameCardinality: same === "both",
     result: type,
-    source,
   };
 }
 
@@ -111,8 +101,8 @@ const STRINGS = [operand(SINGLE, ["string"])];
 const DURATIONS = [operand(SINGLE, ["duration"])];
 const MEMBERSHIP = [operand(SINGLE, COMPARABLE), operand(CONTAINER, COMPARABLE)];
 
-const compare = (source: string): Shape => ({ count: [2, 2], operands: NUMBERS, result: BOOLEAN, source });
-const none = (type: ResultSignature, source: string): Shape => ({ count: [0, 0], result: type, source });
+const COMPARISON: Shape = { count: [2, 2], operands: NUMBERS, result: BOOLEAN };
+const none = (type: ResultSignature): Shape => ({ count: [0, 0], result: type });
 
 /**
  * The operands and result of every expression of QTI 3.0, by its `kind`: what static checks infer types from, and what
@@ -121,16 +111,15 @@ const none = (type: ResultSignature, source: string): Shape => ({ count: [0, 0],
 export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignature> = new Map(
   (
     [
-      ["and", { count: [1, MANY], operands: LOGIC, result: BOOLEAN, source: "INFO §2.11.3.10" }],
-      ["any-n", { count: [1, MANY], operands: LOGIC, result: BOOLEAN, source: "INFO §2.11.3.1" }],
-      ["base-value", none(result("single", "attribute"), "INFO §2.11.1.1")],
+      ["and", { count: [1, MANY], operands: LOGIC, result: BOOLEAN }],
+      ["any-n", { count: [1, MANY], operands: LOGIC, result: BOOLEAN }],
+      ["base-value", none(result("single", "attribute"))],
       [
         "container-size",
         {
           count: [1, 1],
           operands: [operand(CONTAINER)],
           result: result("single", "integer"),
-          source: "INFO §2.11.3.32",
         },
       ],
       [
@@ -140,20 +129,18 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: [operand(CONTAINER, COMPARABLE)],
           same: "both",
           result: BOOLEAN,
-          source: "INFO §2.11.3.17",
         },
       ],
-      ["correct", none(result("declared", "declared"), "INFO §2.11.1.4")],
+      ["correct", none(result("declared", "declared"))],
       [
         "custom-operator",
         {
           count: [0, MANY],
           operands: [operand(CARDINALITIES)],
           result: result("unknown", "unknown"),
-          source: "INFO §2.11.3.2",
         },
       ],
-      ["default", none(result("declared", "declared"), "INFO §2.11.1.3")],
+      ["default", none(result("declared", "declared"))],
       [
         "delete",
         {
@@ -161,21 +148,19 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: MEMBERSHIP,
           same: "base-type",
           result: result("operand", "operand"),
-          source: "INFO §2.11.3.18",
         },
       ],
-      ["divide", { count: [2, 2], operands: NUMBERS, result: result("single", "float"), source: "INFO §2.11.3.19" }],
-      ["duration-gte", { count: [2, 2], operands: DURATIONS, result: BOOLEAN, source: "INFO §2.11.3.20" }],
-      ["duration-lt", { count: [2, 2], operands: DURATIONS, result: BOOLEAN, source: "INFO §2.11.3.21" }],
-      ["equal", compare("INFO §2.11.3.3")],
-      ["equal-rounded", compare("INFO §2.11.3.4")],
+      ["divide", { count: [2, 2], operands: NUMBERS, result: result("single", "float") }],
+      ["duration-gte", { count: [2, 2], operands: DURATIONS, result: BOOLEAN }],
+      ["duration-lt", { count: [2, 2], operands: DURATIONS, result: BOOLEAN }],
+      ["equal", COMPARISON],
+      ["equal-rounded", COMPARISON],
       [
         "field-value",
         {
           count: [1, 1],
           operands: [operand(["record"])],
           result: result("single", "unknown"),
-          source: "INFO §2.11.3.5",
         },
       ],
       [
@@ -184,18 +169,16 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           count: [1, MANY],
           operands: [operand(SINGLE_OR_CONTAINER, ["integer"])],
           result: result("single", "integer"),
-          source: "INFO §2.11.3.11",
         },
       ],
-      ["gt", compare("INFO §2.11.3.22")],
-      ["gte", compare("INFO §2.11.3.23")],
+      ["gt", COMPARISON],
+      ["gte", COMPARISON],
       [
         "index",
         {
           count: [1, 1],
           operands: [operand(["ordered"])],
           result: result("single", "operand"),
-          source: "INFO §2.11.3.6",
         },
       ],
       [
@@ -204,35 +187,24 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           count: [1, 1],
           operands: [operand(SINGLE_OR_CONTAINER, ["point"])],
           result: BOOLEAN,
-          source: "INFO §2.11.3.7",
         },
       ],
-      [
-        "integer-divide",
-        { count: [2, 2], operands: INTEGERS, result: result("single", "integer"), source: "INFO §2.11.3.24" },
-      ],
-      [
-        "integer-modulus",
-        { count: [2, 2], operands: INTEGERS, result: result("single", "integer"), source: "INFO §2.11.3.25" },
-      ],
-      [
-        "integer-to-float",
-        { count: [1, 1], operands: INTEGERS, result: result("single", "float"), source: "INFO §2.11.3.33" },
-      ],
-      ["is-null", { count: [1, 1], operands: [operand(CARDINALITIES)], result: BOOLEAN, source: "INFO §2.11.3.34" }],
+      ["integer-divide", { count: [2, 2], operands: INTEGERS, result: result("single", "integer") }],
+      ["integer-modulus", { count: [2, 2], operands: INTEGERS, result: result("single", "integer") }],
+      ["integer-to-float", { count: [1, 1], operands: INTEGERS, result: result("single", "float") }],
+      ["is-null", { count: [1, 1], operands: [operand(CARDINALITIES)], result: BOOLEAN }],
       [
         "lcm",
         {
           count: [1, MANY],
           operands: [operand(SINGLE_OR_CONTAINER, ["integer"])],
           result: result("single", "integer"),
-          source: "INFO §2.11.3.12",
         },
       ],
-      ["lt", compare("INFO §2.11.3.26")],
-      ["lte", compare("INFO §2.11.3.27")],
-      ["map-response", none(result("single", "float"), "INFO §2.11.1.5")],
-      ["map-response-point", none(result("single", "float"), "INFO §2.11.1.6")],
+      ["lt", COMPARISON],
+      ["lte", COMPARISON],
+      ["map-response", none(result("single", "float"))],
+      ["map-response-point", none(result("single", "float"))],
       [
         "match",
         {
@@ -240,34 +212,25 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: [operand(CARDINALITIES, COMPARABLE)],
           same: "both",
           result: BOOLEAN,
-          source: "INFO §2.11.3.28",
         },
       ],
-      ["math-constant", none(result("single", "float"), "INFO §2.11.1.7")],
-      [
-        "math-operator",
-        { count: [1, 2], operands: NUMBERS, result: result("single", "name"), source: "INFO §2.11.3.39" },
-      ],
+      ["math-constant", none(result("single", "float"))],
+      ["math-operator", { count: [1, 2], operands: NUMBERS, result: result("single", "name") }],
       [
         "max",
         {
           count: [1, MANY],
           operands: NUMBERS_OR_CONTAINERS,
           result: result("single", "numeric"),
-          source: "INFO §2.11.3.14",
         },
       ],
-      [
-        "member",
-        { count: [2, 2], operands: MEMBERSHIP, same: "base-type", result: BOOLEAN, source: "INFO §2.11.3.29" },
-      ],
+      ["member", { count: [2, 2], operands: MEMBERSHIP, same: "base-type", result: BOOLEAN }],
       [
         "min",
         {
           count: [1, MANY],
           operands: NUMBERS_OR_CONTAINERS,
           result: result("single", "numeric"),
-          source: "INFO §2.11.3.13",
         },
       ],
       [
@@ -277,17 +240,16 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: [operand(["single", "multiple"])],
           same: "base-type",
           result: result("multiple", "operand"),
-          source: "INFO §2.11.3.8",
         },
       ],
-      ["not", { count: [1, 1], operands: LOGIC, result: BOOLEAN, source: "INFO §2.11.3.35" }],
-      ["null", none(result("unknown", "unknown"), "INFO §6.9.19")],
-      ["number-correct", none(result("single", "integer"), "INFO §2.11.2.1")],
-      ["number-incorrect", none(result("single", "integer"), "INFO §2.11.2.2")],
-      ["number-presented", none(result("single", "integer"), "INFO §2.11.2.3")],
-      ["number-responded", none(result("single", "integer"), "INFO §2.11.2.4")],
-      ["number-selected", none(result("single", "integer"), "INFO §2.11.2.5")],
-      ["or", { count: [1, MANY], operands: LOGIC, result: BOOLEAN, source: "INFO §2.11.3.15" }],
+      ["not", { count: [1, 1], operands: LOGIC, result: BOOLEAN }],
+      ["null", none(result("unknown", "unknown"))],
+      ["number-correct", none(result("single", "integer"))],
+      ["number-incorrect", none(result("single", "integer"))],
+      ["number-presented", none(result("single", "integer"))],
+      ["number-responded", none(result("single", "integer"))],
+      ["number-selected", none(result("single", "integer"))],
+      ["or", { count: [1, MANY], operands: LOGIC, result: BOOLEAN }],
       [
         "ordered",
         {
@@ -295,20 +257,18 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: [operand(["single", "ordered"])],
           same: "base-type",
           result: result("ordered", "operand"),
-          source: "INFO §2.11.3.9",
         },
       ],
-      ["outcome-maximum", none(result("multiple", "float"), "INFO §2.11.2.7")],
-      ["outcome-minimum", none(result("multiple", "float"), "INFO §2.11.2.6")],
-      ["pattern-match", { count: [1, 1], operands: STRINGS, result: BOOLEAN, source: "INFO §2.11.3.41" }],
-      ["power", { count: [2, 2], operands: NUMBERS, result: result("single", "float"), source: "INFO §2.11.3.30" }],
+      ["outcome-maximum", none(result("multiple", "float"))],
+      ["outcome-minimum", none(result("multiple", "float"))],
+      ["pattern-match", { count: [1, 1], operands: STRINGS, result: BOOLEAN }],
+      ["power", { count: [2, 2], operands: NUMBERS, result: result("single", "float") }],
       [
         "product",
         {
           count: [1, MANY],
           operands: NUMBERS_OR_CONTAINERS,
           result: result("single", "numeric"),
-          source: "INFO §2.11.3.16",
         },
       ],
       [
@@ -317,11 +277,10 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           count: [1, 1],
           operands: [operand(CONTAINER)],
           result: result("single", "operand"),
-          source: "INFO §2.11.3.36",
         },
       ],
-      ["random-float", none(result("single", "float"), "INFO §7.33")],
-      ["random-integer", none(result("single", "integer"), "INFO §7.34")],
+      ["random-float", none(result("single", "float"))],
+      ["random-integer", none(result("single", "integer"))],
       [
         "repeat",
         {
@@ -329,41 +288,32 @@ export const OPERATOR_SIGNATURES: ReadonlyMap<Expression["kind"], OperatorSignat
           operands: [operand(["single", "ordered"])],
           same: "base-type",
           result: result("ordered", "operand"),
-          source: "INFO §2.11.3.42",
         },
       ],
-      ["round", { count: [1, 1], operands: NUMBERS, result: result("single", "integer"), source: "INFO §2.11.3.37" }],
-      ["round-to", { count: [1, 1], operands: NUMBERS, result: result("single", "float"), source: "INFO §2.11.3.43" }],
+      ["round", { count: [1, 1], operands: NUMBERS, result: result("single", "integer") }],
+      ["round-to", { count: [1, 1], operands: NUMBERS, result: result("single", "float") }],
       [
         "stats-operator",
         {
           count: [1, 1],
           operands: [operand(CONTAINER, NUMERIC)],
           result: result("single", "float"),
-          source: "INFO §2.11.3.44",
         },
       ],
-      ["string-match", { count: [2, 2], operands: STRINGS, result: BOOLEAN, source: "INFO §2.11.3.45" }],
-      ["substring", { count: [2, 2], operands: STRINGS, result: BOOLEAN, source: "INFO §2.11.3.46" }],
-      [
-        "subtract",
-        { count: [2, 2], operands: NUMBERS, result: result("single", "numeric"), source: "INFO §2.11.3.31" },
-      ],
+      ["string-match", { count: [2, 2], operands: STRINGS, result: BOOLEAN }],
+      ["substring", { count: [2, 2], operands: STRINGS, result: BOOLEAN }],
+      ["subtract", { count: [2, 2], operands: NUMBERS, result: result("single", "numeric") }],
       [
         "sum",
         {
           count: [1, MANY],
           operands: NUMBERS_OR_CONTAINERS,
           result: result("single", "numeric"),
-          source: "INFO §2.11.3.40",
         },
       ],
-      ["test-variables", none(result("multiple", "attribute"), "INFO §2.11.2.8")],
-      [
-        "truncate",
-        { count: [1, 1], operands: NUMBERS, result: result("single", "integer"), source: "INFO §2.11.3.38" },
-      ],
-      ["variable", none(result("declared", "declared"), "INFO §2.11.1.2")],
+      ["test-variables", none(result("multiple", "attribute"))],
+      ["truncate", { count: [1, 1], operands: NUMBERS, result: result("single", "integer") }],
+      ["variable", none(result("declared", "declared"))],
     ] satisfies readonly (readonly [Expression["kind"], Shape])[]
   ).map(([kind, shape]) => [kind, signature(shape)]),
 );
@@ -377,8 +327,8 @@ export function describeCount({ minOperands, maxOperands }: OperatorSignature): 
   return minOperands === maxOperands ? String(minOperands) : `${minOperands} to ${maxOperands}`;
 }
 
-function mismatch(kind: string, signature: OperatorSignature, problem: string): ProcessingError {
-  return new ProcessingError(`The operator qti-${kind} ${problem}.`, signature.source);
+function mismatch(kind: string, problem: string): ProcessingError {
+  return new ProcessingError(`The operator qti-${kind} ${problem}.`);
 }
 
 /** Describes what an operand takes, such as `single or multiple integer`. */
@@ -396,7 +346,7 @@ function checkOperand(kind: string, signature: OperatorSignature, value: Value, 
     expected.cardinalities.includes(value.cardinality) &&
     (expected.baseTypes === undefined || baseType === undefined || expected.baseTypes.includes(baseType));
   if (!fits) {
-    throw mismatch(kind, signature, `takes ${describeOperand(expected)} operands, found ${describeType(value)}`);
+    throw mismatch(kind, `takes ${describeOperand(expected)} operands, found ${describeType(value)}`);
   }
 }
 
@@ -410,7 +360,6 @@ function signatureOf(kind: string): OperatorSignature {
   if (found !== undefined) return found;
   throw new ProcessingError(
     `The model has the expression kind ${JSON.stringify(kind)}, which QTI 3.0 does not define.`,
-    "INFO §2.11",
   );
 }
 
@@ -423,24 +372,16 @@ function signatureOf(kind: string): OperatorSignature {
 export function checkOperands(kind: string, operands: readonly (Value | null)[]): void {
   const signature = signatureOf(kind);
   if (operands.length < signature.minOperands || operands.length > signature.maxOperands) {
-    throw mismatch(kind, signature, `takes ${describeCount(signature)} operands, found ${operands.length}`);
+    throw mismatch(kind, `takes ${describeCount(signature)} operands, found ${operands.length}`);
   }
   const present = operands.filter((value) => value !== null);
   operands.forEach((value, index) => {
     if (value !== null) checkOperand(kind, signature, value, index);
   });
   if (signature.sameBaseType && new Set(present.map(baseTypeOf).filter((type) => type !== undefined)).size > 1) {
-    throw mismatch(
-      kind,
-      signature,
-      `takes operands of one base type, found ${present.map(describeType).join(" and ")}`,
-    );
+    throw mismatch(kind, `takes operands of one base type, found ${present.map(describeType).join(" and ")}`);
   }
   if (signature.sameCardinality && new Set(present.map((value) => value.cardinality)).size > 1) {
-    throw mismatch(
-      kind,
-      signature,
-      `takes operands of one cardinality, found ${present.map(describeType).join(" and ")}`,
-    );
+    throw mismatch(kind, `takes operands of one cardinality, found ${present.map(describeType).join(" and ")}`);
   }
 }

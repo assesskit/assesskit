@@ -8,7 +8,6 @@
     "packages/*/test/*.ts",
     "packages/*/README.md",
     "docs/*/*.md",
-    "differential/**",
     "scripts/*",
     "validation/*",
     "README.md",
@@ -16,7 +15,6 @@
     "CONTRIBUTING.md",
     "SECURITY.md",
     "compat/*.ts",
-    "compat/test/*.ts",
     "compat/engines/*/*.ts"
   ],
   "words": [

@@ -51,7 +51,6 @@ export function assign(value: Value | null, type: VariableType, identifier: stri
   if (fitted === undefined) {
     throw new ProcessingError(
       `The variable ${identifier} is ${describeType(type)} and cannot be set to ${describeType(value)}.`,
-      "INFO §5.130.2",
       identifier,
     );
   }

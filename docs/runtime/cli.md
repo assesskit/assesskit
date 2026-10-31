@@ -72,7 +72,7 @@ A document is checked alone: an `xi:include` in it is not resolved and `validate
 `--format text` prints a line for each issue, then the verdict. The parts of a location that the issue lacks are left out:
 
 ```
-path:line:column (element): severity: message [code, source]
+path:line:column (element): severity: message [code]
 ```
 
 ```console
@@ -110,7 +110,6 @@ $ assesskit validate --format json packaging/items/Example03-feedbackBlock-solut
       "severity": "warning",
       "code": "assesskit/validate/identifier-style",
       "message": "The identifier \"Example03-feedbackBlock-solution-random\" of the qti-assessment-item has more than 32 characters, which version 1 of QTI does not take.",
-      "source": "INFO §4.1.1",
       "location": {
         "path": "packaging/items/Example03-feedbackBlock-solution-random.xml",
         "element": "qti-assessment-item"

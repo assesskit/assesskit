@@ -40,7 +40,7 @@ export function checkAdaptiveFiles(contents: Contents, document: AsiDocument, pa
       const href = isRecord(ref) && typeof ref.href === "string" ? ref.href : undefined;
       if (href === undefined || !isPackageRelative(href)) continue;
       const what = `The ${property.replace(/Ref$/, "")} file of the adaptive section`;
-      contents.check(contents.pkg.resolve(path, href), what, "CAT §2.6", findings, `${elementPath(visit)}/${property}`);
+      contents.check(contents.pkg.resolve(path, href), what, findings, `${elementPath(visit)}/${property}`);
     }
   });
 }
@@ -62,7 +62,6 @@ function readConfiguration(
   contents.check(
     path,
     "A module resolution file of a portable custom interaction",
-    "BPIG §3.7.12.2",
     findings,
     "qti-portable-custom-interaction",
   );
@@ -73,7 +72,6 @@ function readConfiguration(
     findings.error(
       "assesskit/validate/module-resolution",
       `The module resolution file ${JSON.stringify(path)} is not valid: ${error.message}`,
-      "BPIG §3.7.12.2",
       "qti-portable-custom-interaction",
     );
     return undefined;
@@ -100,8 +98,8 @@ function checkModuleFiles(contents: Contents, module: PciModule, itemPath: strin
   const present = files.filter((path) => path !== undefined && contents.has(path));
   const what = `The file of the module ${JSON.stringify(module.id)}`;
   const element = "qti-portable-custom-interaction";
-  if (files.length > 0 && present.length === 0) contents.check(files[0], what, "BPIG §3.7.12.2", findings, element);
-  for (const path of present) contents.check(path, what, "BPIG §3.7.12.2", findings, element);
+  if (files.length > 0 && present.length === 0) contents.check(files[0], what, findings, element);
+  for (const path of present) contents.check(path, what, findings, element);
 }
 
 /**

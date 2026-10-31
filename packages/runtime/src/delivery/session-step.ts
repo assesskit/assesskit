@@ -56,7 +56,6 @@ function minimumNotReached(scopes: readonly RunningScope[]): Refusal | undefined
   return refusal(
     "min-time-not-reached",
     `The ${name} ${describe(early.identifier)} has a minimum time of ${early.limits.minTime} s, of which ${early.spent / MILLISECONDS_PER_SECOND} s are spent.`,
-    "INFO §7.40",
   );
 }
 
@@ -118,20 +117,19 @@ export class SessionStep {
     const { at } = action;
     // The host answers scoring and CAT requests in any state, also after the test ended (E15, E18).
     const answer = action.type === "supply-scores" || action.type === "cat-response";
-    if (this.ended() && !answer) return refusal("ended", "The test has ended.", "INFO §2.8");
+    if (this.ended() && !answer) return refusal("ended", "The test has ended.");
     if (at < this.state.at) {
       const message = `The action at ${at} is earlier than the latest step of the session at ${this.state.at}.`;
-      return refusal("clock-regression", message, "INFO §2.2.2.2");
+      return refusal("clock-regression", message);
     }
     if (this.state.status === "suspended" && action.type !== "resume" && !answer) {
-      return refusal("suspended", "The candidate session is suspended; it goes on when it is resumed.", "INFO §2.2.1");
+      return refusal("suspended", "The candidate session is suspended; it goes on when it is resumed.");
     }
     const expired = this.expireUntil(at);
     if (expired !== undefined) return expired;
     this.advance(at);
     if (this.ended() && !answer) {
-      if (action.type !== "time")
-        return refusal("time-over", "The test ended when a maximum time passed.", "INFO §7.40.3");
+      if (action.type !== "time") return refusal("time-over", "The test ended when a maximum time passed.");
       this.reconcile(at);
       return undefined;
     }
@@ -427,20 +425,16 @@ export class SessionStep {
     const { item: key, at } = action;
     const placement = planIndex(this.state.plan).placement(key);
     if (placement === undefined) {
-      return refusal(
-        "unknown-item",
-        `The test has no item instance ${describe(key.ref)} ${key.instance}.`,
-        "INFO §2.8",
-      );
+      return refusal("unknown-item", `The test has no item instance ${describe(key.ref)} ${key.instance}.`);
     }
     if (this.expiries(placement).includes("closed")) return this.timeOver(key);
     const { current } = this.state;
     if (current === undefined || !sameKey(key, current)) {
-      return refusal("not-current", "The action names an item that is not the one presented.", "INFO §2.2.1");
+      return refusal("not-current", "The action names an item that is not the one presented.");
     }
     if (SUBMISSIONS.has(action.type) && this.submissionMode(placement) === "simultaneous") {
       const message = "The test part submits its items together at its end, so an item is not submitted alone.";
-      return refusal("wrong-submission-mode", message, "INFO §2.8.2");
+      return refusal("wrong-submission-mode", message);
     }
     const item = this.delivered(key);
     const refused = this.settle(item, applyItemAction(item.session, action, this.itemContext(key)));
@@ -451,7 +445,7 @@ export class SessionStep {
 
   private timeOver(key: ItemKey): Refusal {
     const message = `The item instance ${describe(key.ref)} ${key.instance} was closed when a maximum time passed.`;
-    return refusal("time-over", message, "INFO §7.40.3");
+    return refusal("time-over", message);
   }
 
   private move(to: "next" | "previous" | ItemKey, at: number): Refusal | undefined {
@@ -462,17 +456,17 @@ export class SessionStep {
       if (linear) return this.backward();
       const previous = previousItem(this.course.structure, this.state.plan, here.key);
       if (previous === undefined) {
-        return refusal("unknown-item", "The test part has no item before the one presented.", "INFO §2.8.2");
+        return refusal("unknown-item", "The test part has no item before the one presented.");
       }
       return this.goTo(here, previous, at);
     }
     const target = planIndex(this.state.plan).placement(to);
     if (target === undefined) {
-      return refusal("unknown-item", `The test has no item instance ${describe(to.ref)} ${to.instance}.`, "INFO §2.8");
+      return refusal("unknown-item", `The test has no item instance ${describe(to.ref)} ${to.instance}.`);
     }
     if (target.part !== here.part) {
       const message = "The candidate moves within the test part presented; a test part is left at its end.";
-      return refusal("not-current", message, "INFO §2.8.2");
+      return refusal("not-current", message);
     }
     if (sameKey(target.key, here.key)) return undefined;
     if (!linear) return this.goTo(here, target.key, at);
@@ -481,11 +475,11 @@ export class SessionStep {
     if (refused !== undefined) return refused;
     const { current } = this.state;
     if (current !== undefined && sameKey(current, target.key)) return undefined;
-    return refusal("not-current", "In a linear test part the candidate moves to the next item only.", "INFO §2.8.2");
+    return refusal("not-current", "In a linear test part the candidate moves to the next item only.");
   }
 
   private backward(): Refusal {
-    return refusal("linear-backward", "The test part is linear, so the candidate moves forward only.", "INFO §2.8.2");
+    return refusal("linear-backward", "The test part is linear, so the candidate moves forward only.");
   }
 
   /** Moves within a nonlinear test part: the item presented is suspended, with its attempt open (INFO §2.2.1). */
@@ -508,11 +502,7 @@ export class SessionStep {
     const early = minimumNotReached(running.filter((scope) => scope.scope === "item"));
     if (early !== undefined) return early;
     if (this.waitsForCat(here)) {
-      return refusal(
-        "awaiting-cat",
-        "The adaptive section waits for the CAT engine to send the next items.",
-        "CAT §3.4, §2.4",
-      );
+      return refusal("awaiting-cat", "The adaptive section waits for the CAT engine to send the next items.");
     }
     const refused = this.leave(here, at);
     if (refused !== undefined) return refused;
@@ -831,11 +821,7 @@ export class SessionStep {
     const support = this.state.supports.get(name);
     if (support?.state !== "option") {
       const why = support === undefined ? "is not offered" : `is ${support.state}`;
-      return refusal(
-        "support-not-available",
-        `The support ${name} ${why}, so the candidate cannot turn it on or off.`,
-        "BPIG §5.3",
-      );
+      return refusal("support-not-available", `The support ${name} ${why}, so the candidate cannot turn it on or off.`);
     }
     if (support.active === active) return undefined;
     this.state = { ...this.state, supports: new Map(this.state.supports).set(name, { ...support, active }) };
@@ -868,11 +854,7 @@ export class SessionStep {
       case "end-test":
         return this.end(TEST_END, at);
       default:
-        return refusal(
-          "awaiting-cat",
-          "The adaptive section waits for the CAT engine to send its first items.",
-          "CAT §3.3",
-        );
+        return refusal("awaiting-cat", "The adaptive section waits for the CAT engine to send its first items.");
     }
   }
 
@@ -902,14 +884,13 @@ export class SessionStep {
     const { at } = action;
     const request = this.state.scoring.find(({ id }) => id === action.request);
     if (request === undefined) {
-      return refusal("unknown-request", `The state has no scoring request ${describe(action.request)}.`, "RR §2.7.7");
+      return refusal("unknown-request", `The state has no scoring request ${describe(action.request)}.`);
     }
     const value = fitScore(request, action.value === null ? null : normalizeValue(action.value));
     if (value === undefined) {
       return refusal(
         "score-type-mismatch",
         `The outcome ${request.outcome} is ${describeType(request.declaration)}, found ${describe(action.value)}.`,
-        "RR §2.7.7",
       );
     }
     const replaced = request.supplied !== undefined;

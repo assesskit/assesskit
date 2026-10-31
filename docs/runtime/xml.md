@@ -15,7 +15,7 @@ documents that are not well-formed and reads no DTD.
 | `isXmlLanguage(value)`                                                                | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                                      | Replaces each `xi:include` with the root element of the document it names. |
 | `childElements(element)`, `attributeOf(element, name, namespace?)`, `textOf(element)` | The child elements, an attribute and the text of an element.               |
-| `readError(code, message, source, location?)`, `locationOf(element, path)`            | Build the `ReadError` of one problem, and the location of an element.      |
+| `readError(code, message, location?)`, `locationOf(element, path)`                    | Build the `ReadError` of one problem, and the location of an element.      |
 | `DEFAULT_XML_LIMITS`, `XmlLimits`                                                     | The limits on size, depth, attributes, nodes and include nesting.          |
 | `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`             | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`         | The tree.                                                                  |
@@ -144,7 +144,7 @@ part of a document is dropped without notice.
 ```ts
 import { ElementReader } from "@assesskit/runtime/xml";
 
-const rules = { module: "demo", source: "DEMO XSD", namespaces: ["urn:demo"] };
+const rules = { module: "demo", namespaces: ["urn:demo"] };
 const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b/></a>', rules, "The demo");
 reader.attribute("n", Number); // 12
 reader.done(); // ReadError: The element b is not allowed in a at this place. (line 1, column 28)
@@ -160,10 +160,10 @@ reader.done(); // ReadError: The element b is not allowed in a at this place. (l
 | `next()`, `foreign`                                 | Consume the next child whatever it is, and tell an extension: an element outside the namespaces of the rules.                                    |
 | `takeForeign()`, `extension()`                      | Consume the extensions, which must be in a namespace of their own.                                                                               |
 | `text(parse?)`, `leaf(parse)`                       | The text of an element that has no child elements; `leaf` also finishes the element.                                                             |
-| `fail(code, message, source?)`, `attempt(...)`      | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                          |
+| `fail(code, message)`, `attempt(...)`               | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                          |
 | `done()`                                            | Fail on an attribute, child or text that was not read. Namespace declarations and `xsi:` attributes never count.                                 |
 
-`ReaderRules` names the module, whose issue codes are `assesskit/<module>/<name>`, the schema every issue cites, the
+`ReaderRules` names the module, whose issue codes are `assesskit/<module>/<name>`, the
 namespaces of the schema's elements and, optionally, the path of the document. `termOf(terms)` makes the conversion for `text`
 and `attribute` that accepts one of some terms. A reader takes the children in the order of the schema. An issue has the line and column of the element and its path, such as
 `assessmentResult/itemResult`.

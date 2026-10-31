@@ -51,7 +51,8 @@ packages/runtime/         the QTI 3.0 runtime
                           number or a string
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
-  test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
+  test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output; differential/ holds the harness that
+                          compares the runtime with Longsight qti3-core, a development dependency
 packages/player/          the player
   src/index.ts            re-exports the errors and the messages
   src/errors.ts           AccessError, LtiError, ServiceError; they extend the runtime's AssesskitError, and the player throws the
@@ -71,8 +72,7 @@ packages/player/          the player
 docs/runtime/             guides of the runtime, one per module, and architecture, conventions, spec-gaps, evidence and
                           supported; TypeDoc publishes them with the API reference
 docs/player/              guides of the player, with architecture, evidence and supported
-differential/             the runtime against Longsight qti3-core
-compat/                   the browser baseline: the lint of the built code, the banned features, the pinned engines
+compat/                   the browser baseline: the lint of the built code, the smoke test and the pinned engines
 scripts/                  corpus and schema downloads, the pinned corpus, Unicode and element table generators
 validation/               Python scripts that write fixtures
 biome/                    Biome GritQL plugins
@@ -87,7 +87,6 @@ pnpm typecheck          # tsc over every package and the tooling
 pnpm test               # Vitest, offline
 pnpm test:browser       # the browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
 pnpm test:corpus        # tests that read the corpus; run `pnpm corpus` first
-pnpm test:differential  # the runtime against Longsight `qti3-core` on items and item sessions; run `pnpm corpus` first
 pnpm test:xsd           # tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm bench              # the benchmarks of the runtime against their budgets
 pnpm schemas            # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
@@ -189,7 +188,9 @@ The runtime owns everything QTI defines that is not presentation or platform; th
   graphemes (`graphemes`, `minGraphemes`, `maxGraphemes`): they use `Intl.Segmenter`, which the browser baseline bans.
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected,
   never taken as absent.
-- Validation returns `Issue`s and does not throw; each issue cites the rule that defines it.
+- Validation returns `Issue`s and does not throw. An issue has a stable `code` and a message; a refusal of the engine is its
+  `code` and a message, and the codes are in the table of the delivery guide. The specification section of a rule is in the
+  comment of the code that applies it, and not in the issue.
 - Never use `Math.random`, read a clock, or construct a `RegExp`. Take a `Random` or a time from the caller, and compile
   author patterns with the linear-time automaton of `values`. `pnpm lint` fails on all three in `packages/runtime/src`.
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
@@ -201,37 +202,17 @@ The runtime owns everything QTI defines that is not presentation or platform; th
 
 The player runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. This covers the shared and browser folders:
 `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/` and `client/`, and every stylesheet. The `lib` of the browser
-tsconfig is `ES2023`, `DOM` and `DOM.Iterable`, so that TypeScript rejects later built-ins. These features are in the
-baseline and used: custom elements and open shadow roots, constructed stylesheets, `<dialog>`, `inert`, `:focus-visible`,
-container queries, `color-mix()`, `ResizeObserver`, `MediaRecorder`, `AudioWorklet`, WebCrypto and the ES2023 array
-methods.
+tsconfig is `ES2023`, `DOM` and `DOM.Iterable`, so that TypeScript rejects later built-ins; the `browserslist` of
+`packages/player/package.json` and the esbuild targets of the bundles name the three browsers.
 
-These are banned. `pnpm lint` fails on them (`baseline.grit` for TypeScript, `baseline-css.grit` for CSS), and
-`pnpm compat` fails on any other feature that a baseline browser lacks (eslint-plugin-compat on the built JavaScript,
-stylelint-no-unsupported-browser-features on the CSS). Do not guard a banned feature with a support check: the code
-would be dead in some browsers and untested in the others.
+- `pnpm compat` lints the built JavaScript with eslint-plugin-compat and the stylesheets with
+  stylelint-no-unsupported-browser-features, for the browsers of the `browserslist`: it fails on a feature that one of them
+  lacks, on the data of caniuse and MDN. It runs after `pnpm build`.
+- `pnpm compat:engines` runs the smoke test of `compat/smoke.ts` in Chromium 111, Firefox 115 and WebKit 16.4, in Docker.
+  [baseline.md](docs/player/baseline.md) describes both.
 
-| Feature                                                              | First versions (Chromium, Firefox, Safari) | Use instead                                                                              |
-| -------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| The Popover API                                                      | 114, 125, 17                               | a dialog, or an element that script positions                                            |
-| CSS nesting                                                          | 112, 117, 16.5                             | flat selectors                                                                           |
-| The `:has()` selector                                                | 105, 121, 15.4                             | a class that script sets                                                                 |
-| ARIA reflection through `ElementInternals`                           | 81, 119, 16.4                              | `aria-*` attributes                                                                      |
-| The RegExp `v` flag                                                  | 112, 116, 17                               | the `u` flag; author patterns go through `compileXsdRegex`                               |
-| `Intl.Segmenter`                                                     | 87, 125, 14.1                              | counters that count code points                                                          |
-| Declarative shadow DOM (`shadowrootmode`)                            | 111, 123, 16.4                             | `attachShadow`                                                                           |
-| `Object.groupBy`, `Map.groupBy` and `Promise.withResolvers`          | 117–119, 119–121, 17.4                     | plain loops                                                                              |
-| CSS `@scope`, anchor positioning, `text-wrap: balance` and `subgrid` | outside at least one engine                | a shadow root to scope styles, script to position elements, and plain wrapping and grids |
-| The ES2025 `Set` methods                                             | 122, 127, 17                               | loops over the sets                                                                      |
-| Iterator helpers                                                     | 122, 131, 18.4                             | an array: spread the iterator first                                                      |
-| `Array.fromAsync`                                                    | 121, 115, 16.4                             | `for await`                                                                              |
-| `AbortSignal.any`                                                    | 116, 124, 17.4                             | one controller that each source signal aborts                                            |
-| `text-wrap: pretty` and `@starting-style`                            | outside at least one engine                | plain wrapping, and transitions without entry styles                                     |
-
-A new banned feature is a row of `compat/banned-features.ts` with the code that the lint must report and a probe for the
-pinned engines, a pattern in the `.grit` files with the message of that row, and a row of this table; the tests in
-`compat/test/` and `packages/player/test/lint.test.ts` fail until the three agree. [baseline.md](docs/player/baseline.md)
-describes how the baseline is tested.
+Do not guard a feature that a baseline browser lacks with a support check: the code would be dead in some browsers and
+untested in the others.
 
 ## Comments and docs
 
@@ -243,6 +224,8 @@ describes how the baseline is tested.
   show their imports. Values shown in samples come from running them. No marketing language, emojis or filler. The Example
   of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails when the README
   shows other code or other output.
+- Diagrams are Mermaid in Markdown. GitHub renders them, and the Mermaid plugin of TypeDoc renders them on the docs site
+  (`typedoc.json` pins the version of Mermaid that the site loads).
 - Each document has one purpose: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the contribution
   process, `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for running the
   fixture scripts.
@@ -270,8 +253,7 @@ describes how the baseline is tested.
   finds gets a regression test with the input that exposed it.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of the player that
-  also need a browser are named `*.browser.corpus.test.ts`. The tests of `differential/` run with `pnpm test:differential`,
-  and `pnpm test` leaves them out.
+  also need a browser are named `*.browser.corpus.test.ts`.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`. They wait for a
   condition with `waitFor` of `test/wait.ts`, never with `vi.waitFor`, whose limit of one second a busy host does not
   meet, and for media they wait for the events of the recording and move the timers by hand, never for a time.
@@ -296,4 +278,4 @@ describes how the baseline is tested.
   [spec-gaps.md](docs/runtime/spec-gaps.md), a test, and a mention in the guide of the module.
 - Something the runtime defines because QTI does not: [conventions.md](docs/runtime/conventions.md), built from QTI's own
   elements so that documents stay valid.
-- A difference from Longsight `qti3-core` that the specification settles: `differential/accepted-differences.json`.
+- A difference from Longsight `qti3-core` that the specification settles: the list in `packages/runtime/test/differential/accepted.ts`.

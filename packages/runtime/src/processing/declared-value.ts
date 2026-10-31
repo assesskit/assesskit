@@ -13,9 +13,6 @@ import {
 } from "../values/index.js";
 import type { VariableType } from "./assign.js";
 
-/** The source of the lexical forms of values (BIND §2.9). */
-const LEXICAL_SOURCE = "BIND §2.9";
-
 /**
  * Reads the text of a value of a base type.
  *
@@ -27,10 +24,7 @@ export function readPrimitive(text: string, baseType: BaseType, what: string): P
     return parsePrimitive(text, baseType);
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
-    throw new ProcessingError(
-      `${what} has the text ${describe(text)}, which is not a value of base type ${baseType}.`,
-      LEXICAL_SOURCE,
-    );
+    throw new ProcessingError(`${what} has the text ${describe(text)}, which is not a value of base type ${baseType}.`);
   }
 }
 
@@ -46,10 +40,7 @@ export function readSingle(text: string, baseType: BaseType, what: string): Sing
 function readField(element: ValueElement, what: string): readonly [string, SingleValue] | undefined {
   const { fieldIdentifier, baseType } = element;
   if (fieldIdentifier === undefined || baseType === undefined) {
-    throw new ProcessingError(
-      `${what} is a record, so each of its values needs a field-identifier and a base-type.`,
-      "INFO §7.46",
-    );
+    throw new ProcessingError(`${what} is a record, so each of its values needs a field-identifier and a base-type.`);
   }
   const field = readSingle(element.value, baseType, what);
   return field === null ? undefined : [fieldIdentifier, field];
@@ -75,14 +66,13 @@ export function declaredValue(
     return record(elements.map((element) => readField(element, what)).filter((field) => field !== undefined));
   }
   const { baseType } = type;
-  if (baseType === undefined)
-    throw new ProcessingError(`${what} belongs to a variable without a base type.`, "INFO §5.115");
+  if (baseType === undefined) throw new ProcessingError(`${what} belongs to a variable without a base type.`);
   const primitives = elements
     .map((element) => readPrimitive(element.value, baseType, what))
     .filter((primitive) => !(baseType === "string" && primitive === ""));
   if (type.cardinality !== "single") return container(type.cardinality, baseType, primitives);
   if (elements.length > 1) {
-    throw new ProcessingError(`${what} has ${elements.length} values, but its variable is single.`, "INFO §7.46");
+    throw new ProcessingError(`${what} has ${elements.length} values, but its variable is single.`);
   }
   const [primitive] = primitives;
   return primitive === undefined ? null : single(baseType, primitive);

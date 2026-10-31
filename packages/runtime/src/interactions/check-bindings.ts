@@ -2,15 +2,8 @@ import type { AssessmentItem } from "../asi/index.js";
 import { describe } from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { ValueDeclaration } from "../values/index.js";
-import { BINDING_SOURCES } from "./bindings.js";
 import { describeInteractions } from "./describe.js";
 import type { Binding, InteractionDescriptor } from "./descriptor.js";
-
-/** The section that says a response variable is declared and bound to one interaction only (INFO §2.2.2.2). */
-const RESPONSE_VARIABLES = "INFO §2.2.2.2";
-
-/** The section that says what the second variable of a string interaction holds (INFO §5.162.3, §5.48.2). */
-const STRING_IDENTIFIER = "INFO §5.162.3, §5.48.2";
 
 /** Names a binding for a message, such as `single identifier` or `record`. */
 function nameBinding(cardinality: string, baseType: string | undefined): string {
@@ -36,8 +29,8 @@ function accepts(bindings: readonly Binding[], declaration: ValueDeclaration): b
   );
 }
 
-function issue(code: string, message: string, source: string, descriptor: InteractionDescriptor): Issue {
-  return { severity: "error", code, message, source, location: { element: `qti-${descriptor.kind}` } };
+function issue(code: string, message: string, descriptor: InteractionDescriptor): Issue {
+  return { severity: "error", code, message, location: { element: `qti-${descriptor.kind}` } };
 }
 
 /**
@@ -68,7 +61,6 @@ export function checkBindings(item: AssessmentItem): readonly Issue[] {
         issue(
           "assesskit/interactions/response-bound-twice",
           `The response variable ${describe(identifier)} is bound to more than one interaction, but each response variable may be bound to one and only one interaction.`,
-          RESPONSE_VARIABLES,
           descriptor,
         ),
       );
@@ -77,14 +69,12 @@ export function checkBindings(item: AssessmentItem): readonly Issue[] {
   };
   for (const descriptor of descriptors) {
     const { responseIdentifier, declaration, stringIdentifier, kind } = descriptor;
-    const source = BINDING_SOURCES[kind];
     bind(descriptor, responseIdentifier);
     if (declaration === undefined) {
       issues.push(
         issue(
           "assesskit/interactions/response-undeclared",
           `The interaction qti-${kind} is bound to the response variable ${describe(responseIdentifier)}, which the item does not declare. Declare it with a qti-response-declaration.`,
-          RESPONSE_VARIABLES,
           descriptor,
         ),
       );
@@ -93,7 +83,6 @@ export function checkBindings(item: AssessmentItem): readonly Issue[] {
         issue(
           "assesskit/interactions/binding",
           `The interaction qti-${kind} is bound to ${describe(responseIdentifier)}, a variable with the type ${nameBinding(declaration.cardinality, declaration.baseType)}, but it accepts ${listBindings(descriptor.bindings)} here.`,
-          source,
           descriptor,
         ),
       );
@@ -106,7 +95,6 @@ export function checkBindings(item: AssessmentItem): readonly Issue[] {
         issue(
           "assesskit/interactions/string-identifier",
           `The attribute string-identifier of qti-${kind} names ${describe(stringIdentifier)}, which must be a response variable declared with cardinality single and base type string.`,
-          STRING_IDENTIFIER,
           descriptor,
         ),
       );

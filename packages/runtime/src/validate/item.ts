@@ -75,12 +75,7 @@ export function checkItem(item: AssessmentItem, findings: Findings, options: Che
   for (const { identifier } of item.responseDeclarations) {
     if (bound.has(identifier)) continue;
     const message = `The response variable ${JSON.stringify(identifier)} is bound to no interaction, so the candidate cannot give it a value.`;
-    findings.warning(
-      "assesskit/validate/unbound-response",
-      message,
-      "INFO §2.2.2.2",
-      `${TRAIL}/qti-response-declaration`,
-    );
+    findings.warning("assesskit/validate/unbound-response", message, `${TRAIL}/qti-response-declaration`);
   }
   const templateRules = item.templateProcessing?.rules ?? [];
   new RuleChecker(

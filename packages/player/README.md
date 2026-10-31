@@ -31,7 +31,7 @@ says what it draws and operates, how WCAG 2.2 levels A and AA are checked, and w
 ## Browser baseline
 
 The browser code runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md) lists
-what that allows, the features it bans and how the baseline is tested.
+what that allows and how the baseline is tested.
 
 ## Example
 
@@ -74,7 +74,7 @@ envelope.seq; // 3
 ## Documentation
 
 - [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/player/architecture.md): principles, layers and errors.
-- [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md): the browser baseline, the banned features and how they are tested.
+- [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md): the browser baseline and how it is tested.
 - [Content](https://github.com/assesskit/assesskit/blob/main/docs/player/content.md): the renderer, the content root, references, stylesheets, cards and feedback.
 - [Portable custom interactions](https://github.com/assesskit/assesskit/blob/main/docs/player/pci.md): the frame, its policy, loading, events and serving the files.
 - [Mathematics](https://github.com/assesskit/assesskit/blob/main/docs/player/math.md): MathJax by URL, shadow roots, elementary math and braille.

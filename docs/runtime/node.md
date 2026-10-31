@@ -30,7 +30,6 @@ try {
   //   severity: "error",
   //   code: "assesskit/node/xsd-invalid",
   //   message: "Element '{http://www.imsglobal.org/xsd/imsqtiasi_v3p0}qti-assessment-item': The attribute 'time-dependent' is required but missing.",
-  //   source: "imsqti_asiv3p0p1_v1p0.xsd",
   //   location: { path: "items/capital.xml", line: 1 }
   // }]
 } finally {

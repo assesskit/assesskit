@@ -15,7 +15,7 @@ import type {
 import { USAGE_NAMESPACE } from "./namespace.js";
 import { STATISTIC_OBJECT_TYPES } from "./vocabularies.js";
 
-const RULES: ReaderRules = { module: "usage", source: "UD XSD", namespaces: [USAGE_NAMESPACE] };
+const RULES: ReaderRules = { module: "usage", namespaces: [USAGE_NAMESPACE] };
 
 const STATISTIC_ELEMENTS = ["ordinaryStatistic", "categorizedStatistic"];
 
@@ -52,7 +52,7 @@ function readStatisticValue(reader: ElementReader): StatisticValue {
   const text = reader.text();
   reader.done();
   const lead = baseType === undefined ? "The value of an ordinary statistic without a baseType is a float. " : "";
-  const value = reader.attempt("invalid-value", () => parsePrimitive(text, baseType ?? "float"), "INFO §8.13", lead);
+  const value = reader.attempt("invalid-value", () => parsePrimitive(text, baseType ?? "float"), lead);
   return {
     value,
     ...(baseType !== undefined && { baseType }),
@@ -142,7 +142,7 @@ export function readUsageData(input: string | Uint8Array | XmlElement): UsageDat
   const reader = ElementReader.open(input, RULES, "The usage data");
   if (reader.foreign || reader.name !== "usageData") {
     const message = `The root element must be usageData in the namespace ${USAGE_NAMESPACE}, found ${reader.qualifiedName}.`;
-    throw reader.fail("not-usage-data", message, "UD §2.3.1");
+    throw reader.fail("not-usage-data", message);
   }
   const glossary = reader.attribute("glossary");
   const statistics: ItemStatistic[] = [];

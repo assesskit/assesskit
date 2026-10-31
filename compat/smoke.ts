@@ -3,7 +3,7 @@ import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname, extname, resolve, sep } from "node:path";
-import { BANNED_FEATURES, BASELINE, type Engine } from "./banned-features.ts";
+import { BASELINE, type Engine } from "./engines.ts";
 
 /** What a smoke case uses of a Playwright page; every release of `engines/` has it. */
 interface SmokePage {
@@ -617,22 +617,6 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
     title: "is the engine of the baseline",
     async run({ engine, version }) {
       assert(version.startsWith(BASELINE[engine]), `${engine} is ${version}, not ${BASELINE[engine]}`);
-    },
-  },
-  {
-    title: "has and lacks the banned features as the table of AGENTS.md says",
-    async run({ page, engine }) {
-      const { url, stop } = await serve();
-      try {
-        await page.goto(url);
-        for (const { feature, probes } of BANNED_FEATURES) {
-          for (const { expression, absentIn } of probes) {
-            assert.equal(await page.evaluate(expression), !absentIn.includes(engine), `${feature}: ${expression}`);
-          }
-        }
-      } finally {
-        await stop();
-      }
     },
   },
   {

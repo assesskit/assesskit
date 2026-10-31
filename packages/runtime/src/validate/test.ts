@@ -103,9 +103,7 @@ function checkIdentifiers(placed: PlacedTest, refs: ReadonlyMap<string, ItemRefI
     const item = refs.get(model.identifier)?.item;
     if (item === undefined || item.identifier === model.identifier) continue;
     const message = `The item reference ${JSON.stringify(model.identifier)} names an item with the identifier ${JSON.stringify(item.identifier)}; when an item is referenced the two identifiers should be the same.`;
-    reports
-      .of(base)
-      .warning("assesskit/validate/identifier-mismatch", message, "INFO §4.1.1", `${ROOT}/qti-assessment-item-ref`);
+    reports.of(base).warning("assesskit/validate/identifier-mismatch", message, `${ROOT}/qti-assessment-item-ref`);
   }
 }
 
@@ -123,12 +121,12 @@ function checkItemRef(
   for (const mapping of model.variableMappings) {
     if (targets.has(mapping.targetIdentifier)) {
       const message = `The item reference ${JSON.stringify(model.identifier)} maps two variables to ${JSON.stringify(mapping.targetIdentifier)}; the target of a variable mapping must be unique.`;
-      findings.error("assesskit/validate/duplicate-identifier", message, "INFO §7.48", `${here}/qti-variable-mapping`);
+      findings.error("assesskit/validate/duplicate-identifier", message, `${here}/qti-variable-mapping`);
     }
     targets.add(mapping.targetIdentifier);
     if (variables !== undefined && !variables.has(mapping.sourceIdentifier)) {
       const message = `The item reference ${JSON.stringify(model.identifier)} maps the variable ${JSON.stringify(mapping.sourceIdentifier)}, which its item declares no variable for.`;
-      findings.error("assesskit/validate/undeclared-variable", message, "INFO §7.48.1", `${here}/qti-variable-mapping`);
+      findings.error("assesskit/validate/undeclared-variable", message, `${here}/qti-variable-mapping`);
     }
   }
   for (const given of model.templateDefaults) {
@@ -139,10 +137,10 @@ function checkItemRef(
     );
     if (info?.item !== undefined && declaration === undefined) {
       const message = `The item reference ${JSON.stringify(model.identifier)} sets the default of ${JSON.stringify(given.templateIdentifier)}, which its item declares no template variable for.`;
-      findings.error("assesskit/validate/undeclared-variable", message, "INFO §5.152.1", at);
+      findings.error("assesskit/validate/undeclared-variable", message, at);
     } else if (declaration !== undefined && !fitsVariable(value, declaration)) {
       const message = `The template variable ${JSON.stringify(given.templateIdentifier)} is ${describeStatic(typeOfVariable(declaration))} and cannot be given the default ${describeStatic(value)}.`;
-      findings.error("assesskit/validate/assignment-type", message, "INFO §5.152.2", at);
+      findings.error("assesskit/validate/assignment-type", message, at);
     }
   }
 }
@@ -175,10 +173,10 @@ function checkNodeRules(
     const rules = rulesFor(reports.of(holder));
     const element = `${ROOT}/${ELEMENTS[node.kind]}`;
     for (const condition of node.model.preConditions) {
-      rules.condition(condition.operand, "qti-pre-condition", "INFO §5.86", `${element}/qti-pre-condition`);
+      rules.condition(condition.operand, "qti-pre-condition", `${element}/qti-pre-condition`);
     }
     for (const rule of node.model.branchRules) {
-      rules.condition(rule.expression, "qti-branch-rule", "INFO §5.23", `${element}/qti-branch-rule`);
+      rules.condition(rule.expression, "qti-branch-rule", `${element}/qti-branch-rule`);
     }
     if (node.kind === "item-ref") checkItemRef(node, refs.get(node.model.identifier), rules, reports.of(holder));
   }

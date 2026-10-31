@@ -57,9 +57,6 @@ function compiled(pattern: string): XsdPattern {
     return compileXsdRegex(pattern);
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
-    throw new ProcessingError(
-      `The operator qti-pattern-match cannot use its pattern: ${error.message}`,
-      "INFO §5.104.1",
-    );
+    throw new ProcessingError(`The operator qti-pattern-match cannot use its pattern: ${error.message}`);
   }
 }

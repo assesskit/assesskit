@@ -13,14 +13,14 @@ function checkVariables(variables: readonly ResultVariable[], owner: string, fin
     const here = `${ROOT}/${owner}/${variable.kind}Variable`;
     if (seen.has(variable.identifier)) {
       const message = `The ${owner} reports the variable ${JSON.stringify(variable.identifier)} twice; the identifiers of its variables must be unique.`;
-      findings.error("assesskit/validate/duplicate-identifier", message, "RR §2.4.5", here);
+      findings.error("assesskit/validate/duplicate-identifier", message, here);
     }
     seen.add(variable.identifier);
     if (variable.kind !== "outcome") continue;
     checkStandardOutcome(findings, variable.identifier, variable.baseType, here);
     if (variable.normalMaximum !== undefined && variable.normalMaximum <= 0) {
       const message = `The outcome ${variable.identifier} has the normal-maximum ${variable.normalMaximum}, which must be a positive value.`;
-      findings.error("assesskit/validate/normal-maximum", message, "RR §2.4.7", here);
+      findings.error("assesskit/validate/normal-maximum", message, here);
     }
   }
 }
@@ -30,7 +30,7 @@ function checkSupports(supports: readonly SupportUse[], owner: string, findings:
   for (const support of supports) {
     if (support.assignment !== "prohibited" || support.value === undefined) continue;
     const message = `The support ${support.name} is prohibited, so the ${owner} must not report a value for it.`;
-    findings.error("assesskit/validate/support-value", message, "RR §2.6.4", `${ROOT}/${owner}/support`);
+    findings.error("assesskit/validate/support-value", message, `${ROOT}/${owner}/support`);
   }
 }
 
@@ -44,13 +44,13 @@ function checkSequence(itemResults: readonly ItemResult[], findings: Findings): 
     const here = `${ROOT}/itemResult`;
     if (sequenceIndex === undefined) {
       const message = `The item result ${JSON.stringify(identifier)} is part of a test result, so it must have a sequenceIndex, the position of the item in the session.`;
-      findings.error("assesskit/validate/sequence-index", message, "RR §2.4.5", here);
+      findings.error("assesskit/validate/sequence-index", message, here);
       continue;
     }
     const earlier = places.get(sequenceIndex);
     if (earlier !== undefined && earlier !== identifier) {
       const message = `The item result ${JSON.stringify(identifier)} has the sequenceIndex ${sequenceIndex}, which the item result ${JSON.stringify(earlier)} has; each item instance of the session has its own position.`;
-      findings.error("assesskit/validate/sequence-index", message, "RR §2.4.5", here);
+      findings.error("assesskit/validate/sequence-index", message, here);
     }
     places.set(sequenceIndex, earlier ?? identifier);
   }

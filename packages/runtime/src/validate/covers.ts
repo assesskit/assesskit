@@ -2,7 +2,6 @@ import { type AssessmentTest, SCORE_COVERS_CLASS, type ScoreCoverBlock, scoreCov
 import type { Findings } from "./findings.js";
 import type { ItemRefInfo } from "./test-scope.js";
 
-const CONVENTION = "runtime convention §4.16";
 const ELEMENT = "qti-assessment-test/qti-rubric-block";
 
 /**
@@ -35,12 +34,12 @@ export function checkCovers(
   for (const block of scoreCoverBlocks(test)) {
     if (!block.block.view.includes("scorer") || block.block.view.includes("candidate")) {
       const message = `The rubric block of the class ${SCORE_COVERS_CLASS} must be shown to scorers and hidden from candidates: its view must contain scorer and not candidate, found ${block.block.view.join(" ")}.`;
-      findings.error("assesskit/covers/malformed", message, "INFO §4.4.11", ELEMENT);
+      findings.error("assesskit/covers/malformed", message, ELEMENT);
     }
     const { outcomeIdentifier } = block;
     if (outcomeIdentifier === undefined) {
       const message = `The rubric block of the class ${SCORE_COVERS_CLASS} must name the outcome it covers in data-outcome-identifier.`;
-      findings.error("assesskit/covers/malformed", message, CONVENTION, ELEMENT);
+      findings.error("assesskit/covers/malformed", message, ELEMENT);
     } else {
       checkOutcome(outcomeIdentifier, declared.get(outcomeIdentifier), named, findings);
     }
@@ -59,13 +58,13 @@ function checkEntries(
   for (const { itemRef, responseIdentifier } of entries) {
     if (itemRef === undefined || responseIdentifier === undefined) {
       const message = `A list entry of the covers of ${of} must have both data-item-ref and data-response-identifier.`;
-      findings.error("assesskit/covers/malformed", message, CONVENTION, ELEMENT);
+      findings.error("assesskit/covers/malformed", message, ELEMENT);
       continue;
     }
     const key = JSON.stringify([itemRef, responseIdentifier]);
     if (listed.has(key)) {
       const message = `The covers of ${of} list the response ${responseIdentifier} of the item reference ${itemRef} twice.`;
-      findings.error("assesskit/covers/duplicate", message, CONVENTION, ELEMENT);
+      findings.error("assesskit/covers/duplicate", message, ELEMENT);
     }
     listed.add(key);
     if (itemRefs !== undefined) checkCover(itemRef, responseIdentifier, itemRefs, findings);
@@ -80,15 +79,15 @@ function checkOutcome(
 ): void {
   if (named.has(identifier)) {
     const message = `Two rubric blocks of the class ${SCORE_COVERS_CLASS} name the outcome ${identifier}; the covers of an outcome belong in one block.`;
-    findings.error("assesskit/covers/duplicate", message, CONVENTION, ELEMENT);
+    findings.error("assesskit/covers/duplicate", message, ELEMENT);
   }
   named.add(identifier);
   if (declaration === undefined) {
     const message = `A rubric block of the class ${SCORE_COVERS_CLASS} names the outcome ${identifier}, which the test does not declare.`;
-    findings.error("assesskit/covers/undeclared-outcome", message, CONVENTION, ELEMENT);
+    findings.error("assesskit/covers/undeclared-outcome", message, ELEMENT);
   } else if (declaration.externalScored === undefined) {
     const message = `A rubric block of the class ${SCORE_COVERS_CLASS} names the outcome ${identifier}, which is not external-scored, so nobody rates it.`;
-    findings.error("assesskit/covers/not-external", message, "INFO §4.5.10", ELEMENT);
+    findings.error("assesskit/covers/not-external", message, ELEMENT);
   }
 }
 
@@ -101,12 +100,12 @@ function checkCover(
   const info = itemRefs.get(itemRef);
   if (info === undefined) {
     const message = `A cover names the item reference ${itemRef}, which the test does not have.`;
-    findings.error("assesskit/covers/unknown-item-ref", message, CONVENTION, ELEMENT);
+    findings.error("assesskit/covers/unknown-item-ref", message, ELEMENT);
   } else if (
     info.item !== undefined &&
     !info.item.responseDeclarations.some(({ identifier }) => identifier === responseIdentifier)
   ) {
     const message = `A cover names the response ${responseIdentifier} of the item reference ${itemRef}, whose item declares no such response variable.`;
-    findings.error("assesskit/covers/unknown-response", message, CONVENTION, ELEMENT);
+    findings.error("assesskit/covers/unknown-response", message, ELEMENT);
   }
 }

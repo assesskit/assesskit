@@ -4,11 +4,6 @@ import { type PersonalNeedsProfile, PNP_ALTERNATE_NAMESPACES, PNP_NAMESPACE } fr
 import type { XmlElement } from "../xml/index.js";
 import { Findings } from "./findings.js";
 
-/** The sets of a profile (BPIG §5.3). */
-const SETS = "BPIG §5.3";
-/** The prohibit set (BPIG §5.3.3). */
-const PROHIBIT_SET = "BPIG §5.3.3";
-
 /**
  * Validates a personal needs profile (BPIG §5.3): a support in the prohibit set is listed only there. A support that the
  * profile also assigns is a recommendation broken, and one that an activate set also lists is a contradiction. A support
@@ -31,17 +26,17 @@ export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
   for (const name of profile.prohibited) {
     if (profile.activateAsOption.has(name) || profile.activateAtInitialization.has(name)) {
       const message = `The support ${name} is in the prohibit set and in an activate set; the only listing of a prohibited support must be in the prohibit set.`;
-      findings.error("assesskit/validate/pnp-prohibited", message, PROHIBIT_SET, element);
+      findings.error("assesskit/validate/pnp-prohibited", message, element);
     }
     if (profile.supports.has(name)) {
       const message = `The support ${name} is in the prohibit set and the profile also assigns it; a prohibited support should not be assigned.`;
-      findings.warning("assesskit/validate/pnp-prohibited", message, PROHIBIT_SET, element);
+      findings.warning("assesskit/validate/pnp-prohibited", message, element);
     }
   }
   for (const name of profile.activateAsOption) {
     if (!profile.activateAtInitialization.has(name)) continue;
     const message = `The support ${name} is in the activate-as-option set and the activate-at-initialization set; it is either on from the start or an option the candidate turns on.`;
-    findings.warning("assesskit/validate/pnp-sets", message, SETS, element);
+    findings.warning("assesskit/validate/pnp-sets", message, element);
   }
   return findings.issues;
 }
@@ -64,7 +59,7 @@ export function validatePnpNamespace(root: XmlElement): readonly Issue[] {
     const path = `${parent}${element.name}`;
     if (alternate && !parentAlternate) {
       const message = `The element ${element.name} is in the namespace ${element.namespace}, which is not the namespace of the PNP schema. Use ${PNP_NAMESPACE}.`;
-      findings.error("assesskit/validate/pnp-namespace", message, "BPIG §5, BIND §7", path);
+      findings.error("assesskit/validate/pnp-namespace", message, path);
     }
     for (const child of element.children) if (child.kind === "element") visit(child, `${path}/`, alternate);
   };

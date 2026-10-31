@@ -21,10 +21,10 @@ const NAMING_ELEMENTS = new Set([
   "qti-test-part",
 ]);
 
-/** The specification of a reference to an `id` and the element its target must be, by the attribute that holds it. */
-const REFERENCE_TARGETS: ReadonlyMap<string, { readonly source: string; readonly target: string }> = new Map([
-  ["data-catalog-idref", { source: "BPIG §3.7.10.2", target: "qti-catalog" }],
-  ["variable-identifier-ref", { source: "INFO §4.5.11", target: "qti-response-declaration" }],
+/** The element that the target of a reference to an `id` must be, by the attribute that holds it. */
+const REFERENCE_TARGETS: ReadonlyMap<string, { readonly target: string }> = new Map([
+  ["data-catalog-idref", { target: "qti-catalog" }],
+  ["variable-identifier-ref", { target: "qti-response-declaration" }],
 ]);
 
 /** The text or texts that an attribute of a model holds and the format its type gives them. */
@@ -76,14 +76,13 @@ export class FormatChecks {
     for (const { attribute, value, element } of this.references) {
       const target = this.ids.get(value);
       const expected = REFERENCE_TARGETS.get(attribute);
-      const source = expected?.source ?? "ASI XSD, xs:IDREF";
       const here = elementPath(element);
       if (target === undefined) {
         const message = `The attribute ${attribute} of the ${element.name} refers to ${JSON.stringify(value)}, which is the id of no element of the document.`;
-        this.findings.error("assesskit/validate/unresolved-reference", message, source, here);
+        this.findings.error("assesskit/validate/unresolved-reference", message, here);
       } else if (expected !== undefined && target.name !== expected.target) {
         const message = `The attribute ${attribute} of the ${element.name} refers to ${JSON.stringify(value)}, the id of a ${target.name}, but it must name a ${expected.target}.`;
-        this.findings.error("assesskit/validate/unresolved-reference", message, source, here);
+        this.findings.error("assesskit/validate/unresolved-reference", message, here);
       }
     }
   }
@@ -96,17 +95,17 @@ export class FormatChecks {
     if (definition.name !== "identifier" || !NAMING_ELEMENTS.has(visit.name)) return;
     if (text.includes(".")) {
       const message = `The identifier ${JSON.stringify(text)} of the ${visit.name} contains a period, which is reserved for prefixing the identifier of an item reference to a variable.`;
-      this.findings.warning("assesskit/validate/identifier-style", message, "INFO §4.1.1", elementPath(visit));
+      this.findings.warning("assesskit/validate/identifier-style", message, elementPath(visit));
     }
     if ([...text].length > RECOMMENDED_IDENTIFIER_LENGTH) {
       const message = `The identifier ${JSON.stringify(text)} of the ${visit.name} has more than ${RECOMMENDED_IDENTIFIER_LENGTH} characters, which version 1 of QTI does not take.`;
-      this.findings.warning("assesskit/validate/identifier-style", message, "INFO §4.1.1", elementPath(visit));
+      this.findings.warning("assesskit/validate/identifier-style", message, elementPath(visit));
     }
   }
 
   private notIdentifier(visit: ElementVisit, definition: AttributeDef, text: string): void {
     const message = `The attribute ${definition.name} of the ${visit.name} is ${JSON.stringify(text)}, which is not an identifier: it must start with a letter or an underscore and contain only letters, digits, underscores, hyphens and periods.`;
-    this.findings.error("assesskit/validate/identifier-syntax", message, "INFO §4.1.1", elementPath(visit));
+    this.findings.error("assesskit/validate/identifier-syntax", message, elementPath(visit));
   }
 
   private id(visit: ElementVisit, definition: AttributeDef, text: string): void {
@@ -120,6 +119,6 @@ export class FormatChecks {
       return;
     }
     const message = `The id ${JSON.stringify(text)} of the ${visit.name} is also the id of a ${first.name}; an id must be unique in the document.`;
-    this.findings.error("assesskit/validate/duplicate-id", message, "INFO §5.16", elementPath(visit));
+    this.findings.error("assesskit/validate/duplicate-id", message, elementPath(visit));
   }
 }

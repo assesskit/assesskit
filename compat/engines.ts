@@ -1,4 +1,8 @@
-import type { Engine } from "./banned-features.ts";
+/** A browser engine of the baseline, by the name Playwright gives it: Chromium, Firefox and Safari's WebKit. */
+export type Engine = "chromium" | "firefox" | "webkit";
+
+/** The oldest version of each engine that the player supports (docs/player/baseline.md), as `browser.version()` starts. */
+export const BASELINE: Readonly<Record<Engine, string>> = { chromium: "111.", firefox: "115.", webkit: "16.4" };
 
 /**
  * A pinned release of Playwright and the engines of the baseline it provides. A release runs in the container image of

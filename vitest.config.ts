@@ -3,7 +3,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { COMMANDS } from "./packages/player/test/fixtures/commands.js";
 
-/** Resolves the runtime and its subpaths to their sources, so that the differential and the player tests run the code and not a build. */
+/** Resolves the runtime and its subpaths to their sources, so that the player tests run the code and not a build. */
 const RUNTIME_SOURCES = [
   { find: /^@assesskit\/runtime$/, replacement: resolve(import.meta.dirname, "packages/runtime/src/index.ts") },
   {
@@ -105,27 +105,6 @@ export default defineConfig({
         test: {
           name: "player-xsd",
           include: ["packages/player/test/**/*.xsd.test.ts"],
-        },
-      },
-      {
-        test: {
-          name: "compat",
-          include: ["compat/test/**/*.test.ts"],
-        },
-      },
-      {
-        resolve: { alias: RUNTIME_SOURCES },
-        test: {
-          name: "differential",
-          include: ["differential/test/**/*.test.ts"],
-          exclude: ["**/*.corpus.test.ts"],
-        },
-      },
-      {
-        resolve: { alias: RUNTIME_SOURCES },
-        test: {
-          name: "differential-corpus",
-          include: ["differential/test/**/*.corpus.test.ts"],
         },
       },
       {

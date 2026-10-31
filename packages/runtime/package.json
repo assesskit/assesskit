@@ -126,6 +126,7 @@
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only"
   },
   "devDependencies": {
+    "@longsightgroup/qti3-core": "0.13.3",
     "@measurekit/psychometrics": "link:../../../measurekit/packages/psychometrics",
     "fast-check": "^4.10.2"
   },

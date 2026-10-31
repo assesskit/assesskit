@@ -4,7 +4,6 @@ import type { Issue } from "../errors.js";
 import { checkStage } from "./item-stage.js";
 import type { ItemStage } from "./model.js";
 
-const SOURCE = "CAT §2.1, §2.2";
 const SECTION_ELEMENT = "qti-assessment-section";
 
 /** Returns the identifiers of the item references that are children of the section, once each, in document order. */
@@ -50,7 +49,6 @@ export function checkPool(section: AssessmentSection, pool: ItemStage): readonly
       severity: "error",
       code: "assesskit/cat/item-not-in-pool",
       message: `The adaptive section ${name} lists the item ${describe(identifier)}, which the item pool of the CAT engine does not contain, so the engine can never select it. The item references and the pool must agree.`,
-      source: SOURCE,
       location: { element: `${SECTION_ELEMENT}/qti-assessment-item-ref` },
     });
   }
@@ -60,7 +58,6 @@ export function checkPool(section: AssessmentSection, pool: ItemStage): readonly
       severity: "error",
       code: "assesskit/cat/item-not-in-section",
       message: `The item pool of the CAT engine contains the item ${describe(identifier)}, which the adaptive section ${name} does not list, so the engine can select an item that cannot be presented. The item references and the pool must agree.`,
-      source: SOURCE,
       location: { element: SECTION_ELEMENT },
     });
   }

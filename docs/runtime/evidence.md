@@ -59,7 +59,7 @@ GitHub serves for it.
 
 `pnpm corpus` downloads the sources into `.cache/corpus/<source>/` unless they were extracted from the pinned archive, and
 fails without writing when the archive has another hash. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
-which `pnpm test` leaves out so that it runs offline; those of `differential/` run with `pnpm test:differential`. A corpus
+which `pnpm test` leaves out so that it runs offline. A corpus
 test calls `requireCorpus` of `scripts/corpus.ts`, which fails with an instruction when the corpus is missing.
 
 The regular expression tests (`packages/runtime/test/values.corpus.test.ts`) apply the patterns of `msData/regex/` to the
@@ -169,13 +169,13 @@ No answer key reaches the view; the evidence is a property and a structure check
 
 ## Differential tests
 
-`differential/` is a private package, not a dependency of the runtime, that compares the runtime with Longsight `qti3-core`
-(`@longsightgroup/qti3-core`, pinned to one version), which processes items. A case is an item document, responses and a
-seed; an `Implementation` runs it and reports the outcome and template values as `Observed` values. `longsight` is the
-oracle and `runtime` the subject: the runtime's run gives the responses as the first attempt of a session (`numAttempts` 1,
-`completionStatus` `unknown`, defaults for the responses a case leaves out), and draws from `longsightRandom`, the
-oracle's generator, so that both draw the same template values by the draw procedures they share. `compare` runs two
-implementations on a list of cases and reports
+The runtime is compared with Longsight `qti3-core` (`@longsightgroup/qti3-core`, a development dependency pinned to one
+version), which processes items. The harness is in `packages/runtime/test/differential/`, and `differential.test.ts` and
+`differential.corpus.test.ts` run it. A case is an item document, responses and a seed; an `Implementation` runs it and
+reports the outcome and template values as `Observed` values. `longsight` is the oracle and `runtime` the subject: the
+runtime's run gives the responses as the first attempt of a session (`numAttempts` 1, `completionStatus` `unknown`, defaults
+for the responses a case leaves out), and draws from `longsightRandom`, the oracle's generator, so that both draw the same
+template values by the draw procedures they share. `compare` runs two implementations on a list of cases and reports
 
 - the cases both accept, whose variables it compares;
 - the cases both reject;
@@ -190,20 +190,21 @@ and submits them, or ends the attempt with an end attempt interaction. The runti
 processing failure, which the runtime reports as data, makes the case one that the runtime does not accept. `compareSessions` compares
 the turns: whether each is accepted, the outcome values, `numAttempts`, and whether the session closed. `sessionCases`
 gives four turns to each corpus item with interactions that choose identifiers, with choices from the oracle's generator
-and a hint in the second turn when the item has an end attempt interaction; `generated.test.ts` plays adaptive and
-non-adaptive items with generated turns. `differential/test/generated.test.ts` compares
-items that fast-check generates for arithmetic, rounding, tolerances, logic, containers, mapping and random draws. A
-difference that the specification settles goes into `differential/accepted-differences.json` with the item, the variable
-(empty when only one implementation accepts the item), the reason and the source; the report counts it as accepted and
-not as a difference.
+and a hint in the second turn when the item has an end attempt interaction; `differential.test.ts` also plays adaptive and
+non-adaptive items with generated turns, and compares items that fast-check generates for arithmetic, rounding, tolerances,
+logic, containers, mapping and random draws.
 
-The oracle also reads interactions. `differential/test/interactions.test.ts` compares the validity of generated responses
-(choices, order, associations, inline choices) and the record of numeric text, and `interactions.corpus.test.ts` the
-interactions of the corpus items: response variables, shuffling and choices. They agree, apart from the integer value of a
-number that ends in its point (`5.`), which INFO §2.4.2.2 gives and the oracle does not; the test states it.
+A difference that the specification settles goes into the list in `differential/accepted.ts`: a sentence that says what
+differs, the items it shows in and, when only one variable differs, the variable. The report counts it as accepted and not
+as a difference, and the corpus test fails when a listed item no longer shows its difference.
 
-`pnpm test:differential` runs all of these, and `pnpm test` leaves them out. The tests that read the corpus need
-`pnpm corpus` first.
+The oracle also reads interactions. `differential.test.ts` compares the validity of generated responses (choices, order,
+associations, inline choices) and the record of numeric text, and `differential.corpus.test.ts` the interactions of the
+corpus items: response variables, shuffling and choices. They agree, apart from the integer value of a number that ends in
+its point (`5.`), which the information model gives and the oracle does not; the test states it.
+
+`differential.test.ts` runs with `pnpm test`; `differential.corpus.test.ts` needs `pnpm corpus` first and runs with
+`pnpm test:corpus`.
 
 ## Fixtures from oracles
 

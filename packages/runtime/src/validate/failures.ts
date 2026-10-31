@@ -16,7 +16,6 @@ export function failureIssues(error: unknown, path: string | undefined): readonl
       severity: "error",
       code: "assesskit/validate/unresolved-reference",
       message: error.message,
-      source: "BIND §8",
       ...(path === undefined ? {} : { location: { path } }),
     },
   ];

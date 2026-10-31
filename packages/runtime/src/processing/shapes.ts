@@ -30,14 +30,11 @@ export function parseCoords(shape: Shape, coords: string): number[] {
       const problem = token.endsWith("%")
         ? "a percentage of the image, whose size processing does not know"
         : "not a number";
-      throw new ProcessingError(`The coordinate ${JSON.stringify(token)} of a ${shape} is ${problem}.`, "INFO §5.75.2");
+      throw new ProcessingError(`The coordinate ${JSON.stringify(token)} of a ${shape} is ${problem}.`);
     }
   }
   if (!(COORDINATE_COUNTS.get(shape)?.(tokens.length) ?? false)) {
-    throw new ProcessingError(
-      `A ${shape} cannot have the ${tokens.length} coordinates ${JSON.stringify(coords)}.`,
-      "INFO §5.75.2",
-    );
+    throw new ProcessingError(`A ${shape} cannot have the ${tokens.length} coordinates ${JSON.stringify(coords)}.`);
   }
   return tokens.map(Number);
 }

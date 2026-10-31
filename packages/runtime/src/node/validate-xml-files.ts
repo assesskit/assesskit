@@ -2,7 +2,6 @@ import { ParseOption, XmlDocument, XmlLibError, type XsdValidator } from "libxml
 import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import { DataError, type Issue, ReadError, SecurityError } from "../errors.js";
 import { parseXml, type XmlElement } from "../xml/index.js";
-import type { SchemaFile } from "./schema-files.js";
 import { checkSchemaSet, type SchemaSet, validatorFor } from "./schema-set.js";
 import { selectSchema } from "./select-schema.js";
 
@@ -24,13 +23,12 @@ const ENCODER = new TextEncoder();
 const LIBXML2_WARNING = 1;
 
 /** Turns what libxml2 reports for a document into issues of a schema. */
-function issuesOf(error: unknown, code: string, schema: SchemaFile, path: string): Issue[] {
+function issuesOf(error: unknown, code: string, path: string): Issue[] {
   if (!(error instanceof XmlLibError)) throw error;
   return error.details.map((detail) => ({
     severity: detail.level === LIBXML2_WARNING ? "warning" : "error",
     code,
     message: detail.message.trim(),
-    source: schema.file,
     location: {
       path,
       ...(detail.line > 0 ? { line: detail.line } : {}),
@@ -40,7 +38,7 @@ function issuesOf(error: unknown, code: string, schema: SchemaFile, path: string
 }
 
 /** Validates a document that the runtime has parsed against the schema it selected. */
-function validateAgainst(validator: XsdValidator, schema: SchemaFile, file: XmlFile): Issue[] {
+function validateAgainst(validator: XsdValidator, file: XmlFile): Issue[] {
   const { content } = file;
   let document: XmlDocument;
   try {
@@ -49,13 +47,13 @@ function validateAgainst(validator: XsdValidator, schema: SchemaFile, file: XmlF
         ? XmlDocument.fromBuffer(ENCODER.encode(content), { option: TEXT_OPTIONS })
         : XmlDocument.fromBuffer(content, { option: READ_OPTIONS });
   } catch (error) {
-    return issuesOf(error, "assesskit/node/xml-rejected", schema, file.path);
+    return issuesOf(error, "assesskit/node/xml-rejected", file.path);
   }
   try {
     validator.validate(document);
     return [];
   } catch (error) {
-    return issuesOf(error, "assesskit/node/xsd-invalid", schema, file.path);
+    return issuesOf(error, "assesskit/node/xsd-invalid", file.path);
   } finally {
     document.dispose();
   }
@@ -68,13 +66,11 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
   } catch (error) {
     if (error instanceof ReadError) return [...error.issues];
     if (!(error instanceof SecurityError)) throw error;
-    const source = error.limit === "doctype" ? "BPIG §6.7" : "SECURITY.md";
     return [
       {
         severity: "error",
         code: "assesskit/xml/security",
         message: error.message,
-        source,
         location: { path: file.path },
       },
     ];
@@ -88,12 +84,11 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
         severity: "error",
         code: "assesskit/node/no-schema",
         message,
-        source: "SCHEMA_FILES",
         location: { path: file.path },
       },
     ];
   }
-  return validateAgainst(validatorFor(schemas, schema), schema, file);
+  return validateAgainst(validatorFor(schemas, schema), file);
 }
 
 /**
@@ -106,7 +101,7 @@ function validateOne(schemas: SchemaSet, file: XmlFile): Issue[] {
  * @param schemas - The set from {@link loadSchemaSet}.
  * @param files - The documents.
  * @returns The issues of all documents in the order of the files; none when every document is valid. A schema violation
- * has the code `assesskit/node/xsd-invalid`, and its `source` is the schema file that reported it.
+ * has the code `assesskit/node/xsd-invalid`.
  * @throws `DataError` when an argument has the wrong type or the set is closed.
  */
 export async function validateXmlFiles(schemas: SchemaSet, files: readonly XmlFile[]): Promise<readonly Issue[]> {

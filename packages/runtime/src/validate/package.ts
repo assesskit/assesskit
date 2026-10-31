@@ -59,7 +59,7 @@ function checkMetadataIdentifier(resource: Resource, identifier: string, finding
       : lomGeneral(resource.metadata.lom).identifiers.map((each) => each.trim());
   if (identifiers.length === 0 || identifiers.includes(identifier)) return;
   const message = `The item has the identifier ${JSON.stringify(identifier)}, but the LOM metadata of its resource ${JSON.stringify(resource.identifier)} gives ${identifiers.map((each) => JSON.stringify(each)).join(", ")}; the two must be the same.`;
-  findings.error("assesskit/validate/metadata-identifier", message, "INFO §4.1.1", `manifest/resources/resource`);
+  findings.error("assesskit/validate/metadata-identifier", message, `manifest/resources/resource`);
 }
 
 /** Checks the document of a resource with the package around it. */
@@ -133,7 +133,7 @@ export function validatePackage(pkg: QtiPackage, options: ValidateOptions = {}):
     }
     if (document.kind !== kind) {
       const message = `The resource ${JSON.stringify(resource.identifier)} of the type ${resource.type} names ${JSON.stringify(path)}, which holds a ${document.kind}.`;
-      manifestFindings.error("assesskit/validate/resource-type", message, "BIND §8.1", "manifest/resources/resource");
+      manifestFindings.error("assesskit/validate/resource-type", message, "manifest/resources/resource");
       continue;
     }
     checkResource(contents, resource, path, document, reports, checked);

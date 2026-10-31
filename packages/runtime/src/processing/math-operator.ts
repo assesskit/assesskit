@@ -93,14 +93,12 @@ export function mathOperator(name: MathOperatorName, operands: readonly (Value |
   if (compute === undefined) {
     throw new ProcessingError(
       `qti-math-operator has the name ${JSON.stringify(name)}, which Table 8.21 does not define.`,
-      "INFO §8.21",
     );
   }
   const arity = BINARY_FUNCTIONS.has(name) ? 2 : 1;
   if (operands.length !== arity) {
     throw new ProcessingError(
       `The function ${name} of qti-math-operator takes ${arity === 1 ? "one operand" : "two operands"}, found ${operands.length}.`,
-      "INFO §2.11.3.39",
     );
   }
   // A NULL operand is NaN here, since both give NULL.

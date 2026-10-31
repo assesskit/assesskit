@@ -5,6 +5,8 @@
   "entryPoints": ["packages/runtime", "packages/player"],
   "readme": "README.md",
   "out": "docs/api",
+  "plugin": ["typedoc-plugin-mermaid"],
+  "mermaidVersion": "11.17.2",
   "treatWarningsAsErrors": true,
   "highlightLanguages": [
     "bash",

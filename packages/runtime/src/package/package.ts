@@ -77,7 +77,7 @@ class OpenedPackage implements QtiPackage {
     this.xmlLimits = xmlLimits;
     const manifest = this.file(MANIFEST_PATH);
     if (manifest === undefined) {
-      throw readError("assesskit/package/no-manifest", `The package has no ${MANIFEST_PATH} at its root.`, "BIND §8", {
+      throw readError("assesskit/package/no-manifest", `The package has no ${MANIFEST_PATH} at its root.`, {
         path: MANIFEST_PATH,
       });
     }
@@ -98,7 +98,7 @@ class OpenedPackage implements QtiPackage {
       const bytes = this.file(target);
       if (bytes === undefined) {
         const message = `The package has no file ${describe(target)}.`;
-        return readError("assesskit/package/missing-file", message, "BIND §8.4", { path: base });
+        return readError("assesskit/package/missing-file", message, { path: base });
       }
       return parseXml(bytes, { path: target, limits: this.xmlLimits });
     } catch (error) {
@@ -136,7 +136,7 @@ class OpenedPackage implements QtiPackage {
     if (cached !== undefined) return cached;
     const bytes = this.file(path);
     if (bytes === undefined) {
-      throw readError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, "BIND §8", {
+      throw readError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, {
         path,
       });
     }

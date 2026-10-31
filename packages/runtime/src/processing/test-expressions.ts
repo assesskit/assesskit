@@ -23,7 +23,6 @@ export function testOf(scope: Scope, kind: string): TestScope {
   if (scope.test === undefined) {
     throw new ProcessingError(
       `The expression qti-${kind} reads the item sessions of a test, so only outcome processing may use it.`,
-      "INFO §2.11.2",
     );
   }
   return scope.test;

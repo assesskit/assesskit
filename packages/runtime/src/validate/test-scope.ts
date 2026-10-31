@@ -25,14 +25,13 @@ export interface TestContext {
 /** The instance number in `ITEM.n.VAR`: a positive integer (INFO §2.11.1.2). */
 const INSTANCE = /^[1-9][0-9]*$/;
 
-const UNDECLARED = { code: "assesskit/validate/undeclared-variable", source: "INFO §2.2.2" } as const;
+const UNDECLARED = { code: "assesskit/validate/undeclared-variable" } as const;
 
 /** The problem with a weight that an expression names and that is not defined where it is looked up (INFO §7.47.2). */
 function weightProblem(weightIdentifier: string, owner: string): Problem {
   return {
     code: "assesskit/validate/weight-undefined",
     message: `An expression names the weight ${JSON.stringify(weightIdentifier)}, but ${owner} has no qti-weight with that identifier, so the weight 1 applies.`,
-    source: "INFO §7.47.2",
   };
 }
 
@@ -44,7 +43,6 @@ function instanceProblem(identifier: string, head: string, name: string): Proble
   return {
     code: "assesskit/validate/item-variable-undefined",
     message: `The expression reads ${JSON.stringify(identifier)}, but selection with replacement can repeat the item reference ${JSON.stringify(head)} in a test part that submits each item alone, so the specification leaves the value undefined and the runtime reads the instance whose attempt ended last. Name an instance, as in ${JSON.stringify(`${head}.1.${name}`)}.`,
-    source: "INFO §2.11.1.2",
   };
 }
 
@@ -140,7 +138,6 @@ export class TestScope implements RuleScope {
         problem: {
           code: "assesskit/validate/duration-not-time-dependent",
           message: `The expression reads ${JSON.stringify(identifier)}, but the item of the item reference ${JSON.stringify(head)} is not time dependent, so its duration must not be used.`,
-          source: "INFO §2.2.2.2",
         },
       };
     }

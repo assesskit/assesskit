@@ -37,11 +37,11 @@ function runRule(rule: TemplateRule, run: Run): Flow {
       return "continue";
     case "template-condition": {
       const branches = [rule.templateIf, ...rule.templateElseIfs];
-      const rules = chosenRules(branches, rule.templateElse?.rules, scope, "qti-template-if", "INFO §5.154");
+      const rules = chosenRules(branches, rule.templateElse?.rules, scope, "qti-template-if");
       return rules === undefined ? "continue" : runRules(rules, run);
     }
     case "template-constraint":
-      if (holds(rule.expression, scope, "qti-template-constraint", "INFO §5.150")) return "continue";
+      if (holds(rule.expression, scope, "qti-template-constraint")) return "continue";
       if (!run.last) return "restart";
       // The runs are used up: the variables keep their defaults and processing goes on (INFO §5.150).
       scope.restart(run.start);
@@ -51,7 +51,6 @@ function runRule(rule: TemplateRule, run: Run): Flow {
     default:
       throw new ProcessingError(
         `Template processing has the rule kind ${describe(Reflect.get(rule, "kind"))}, which QTI 3.0 does not define.`,
-        "INFO §6.50",
       );
   }
 }

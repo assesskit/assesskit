@@ -128,12 +128,7 @@ class Builder {
     }
     const kinds = { part: "a test part", section: "a section", "item-ref": "an item reference" };
     const message = `The identifier ${describe(identifier)} names ${kinds[earlier.kind]} and ${what}; the identifiers of test parts, sections and item references must be unique in a test.`;
-    this.findings.error(
-      "assesskit/validate/duplicate-identifier",
-      message,
-      "INFO §4.2.1, §5.159.1",
-      `qti-assessment-test/${element}`,
-    );
+    this.findings.error("assesskit/validate/duplicate-identifier", message, `qti-assessment-test/${element}`);
   }
 
   private section(
@@ -198,7 +193,6 @@ class Builder {
       this.findings.error(
         "assesskit/validate/identifier-mismatch",
         message,
-        "INFO §7.5",
         "qti-assessment-test/qti-assessment-section-ref",
       );
     }

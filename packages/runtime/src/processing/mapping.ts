@@ -26,10 +26,9 @@ function distinct(value: Value): Primitive[] {
   return [...seen.values()];
 }
 
-function unmapped(identifier: string, element: string, source: string): ProcessingError {
+function unmapped(identifier: string, element: string): ProcessingError {
   return new ProcessingError(
     `The response variable ${identifier} has no ${element} to map its value with.`,
-    source,
     identifier,
   );
 }
@@ -45,7 +44,7 @@ function unmapped(identifier: string, element: string, source: string): Processi
  */
 export function mapResponse({ declaration, value }: DeclaredResponse): Value | null {
   const { identifier, mapping, baseType } = declaration;
-  if (mapping === undefined || baseType === undefined) throw unmapped(identifier, "qti-mapping", "INFO §2.11.1.5");
+  if (mapping === undefined || baseType === undefined) throw unmapped(identifier, "qti-mapping");
   if (value === null) return null;
   const entries = mapping.mapEntries.map((entry) => {
     const key = readPrimitive(entry.mapKey, baseType, `The map key of ${identifier}`);
@@ -72,8 +71,7 @@ export function mapResponse({ declaration, value }: DeclaredResponse): Value | n
  */
 export function mapResponsePoint({ declaration, value }: DeclaredResponse): Value | null {
   const { identifier, areaMapping, baseType } = declaration;
-  if (areaMapping === undefined || baseType !== "point")
-    throw unmapped(identifier, "qti-area-mapping of points", "INFO §2.11.1.6");
+  if (areaMapping === undefined || baseType !== "point") throw unmapped(identifier, "qti-area-mapping of points");
   if (value === null) return null;
   const areas = areaMapping.areaMapEntries.map((entry) => ({
     shape: entry.shape,

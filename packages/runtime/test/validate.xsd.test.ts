@@ -154,7 +154,7 @@ describe("the fixtures of the rule sets", () => {
         path: `${code}.xml`,
         content: itemXml({ declarations, body }),
       })),
-      ...MATCH_LIMITS.map(([code, , build]) => {
+      ...MATCH_LIMITS.map(([code, build]) => {
         const [declarations, body] = build('match-max="1" match-min="2"');
         return { path: `${code}.xml`, content: itemXml({ declarations, body }) };
       }),

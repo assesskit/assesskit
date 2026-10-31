@@ -756,13 +756,7 @@
       }
     },
     {
-      "includes": [
-        "packages/runtime/src/cli/**",
-        "packages/runtime/test/readme-example.ts",
-        "scripts/**",
-        "differential/**",
-        "compat/**"
-      ],
+      "includes": ["packages/runtime/src/cli/**", "packages/runtime/test/readme-example.ts", "scripts/**", "compat/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -812,7 +806,7 @@
       }
     },
     {
-      "includes": ["scripts/**", "differential/**", "compat/**"],
+      "includes": ["scripts/**", "compat/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -879,8 +873,7 @@
             }
           }
         }
-      },
-      "plugins": ["./biome/baseline.grit"]
+      }
     },
     {
       "includes": ["packages/player/src/player/**", "packages/player/src/client/**"],
@@ -902,7 +895,7 @@
           }
         }
       },
-      "plugins": ["./biome/baseline.grit", "./biome/browser-delivery-imports.grit"]
+      "plugins": ["./biome/browser-delivery-imports.grit"]
     },
     {
       "includes": ["packages/player/**/*.css"],
@@ -911,8 +904,7 @@
           "complexity": { "noImportantStyles": "off" },
           "style": { "noDescendingSpecificity": "off" }
         }
-      },
-      "plugins": ["./biome/baseline-css.grit"]
+      }
     },
     {
       "includes": [

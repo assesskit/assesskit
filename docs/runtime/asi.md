@@ -280,7 +280,7 @@ content, resolve the includes of the tree with `resolveIncludes` of [xml](xml.md
 
 `readAsi` reads the elements of the ASI namespace by name, whatever their prefix, and accepts documents written for 3.0.0 and
 3.0.1, which share the namespace. It ignores `xsi:schemaLocation`. It throws a `ReadError` when it cannot map a document to the
-model; each issue has the code, a sentence, the schema file as `source`, and the path, line, column and element path.
+model; each issue has the code, a sentence, and the path, line, column and element path.
 
 | Code                              | When                                                                                                                          |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |

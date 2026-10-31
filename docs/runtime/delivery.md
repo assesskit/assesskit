@@ -146,7 +146,7 @@ if (!moved.ok) throw new Error(moved.refusal.message);
 moved.state.outcomes.get("TOTAL"); // { cardinality: "single", baseType: "float", value: 1 }
 moved.state.current; // { ref: "q2", instance: 1 }
 engine.apply(moved.state, { type: "move", to: "previous", at: 10_000 });
-// { ok: false, refusal: { code: "linear-backward", message: "The test part is linear, so the candidate moves forward only.", source: "INFO §2.8.2" } }
+// { ok: false, refusal: { code: "linear-backward", message: "The test part is linear, so the candidate moves forward only." } }
 
 const restored = deserializeState(serializeState(moved.state));
 const timedOut = engine.apply(restored, { type: "time", at: 601_000 });
@@ -232,23 +232,32 @@ Every action carries `at`. Before the action, the maximum times that passed by `
 `stamp(state, action, now)` sets `at` to max(`now`, `state.at`), so a server whose clock steps back never has an action
 refused; an action stamped earlier than the latest step is refused `clock-regression` (E5, G27).
 
-| Refusal                        | When                                                                                                        |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `ended`                        | The test has ended.                                                                                         |
-| `clock-regression`             | `at` is before the latest step.                                                                             |
-| `suspended`                    | The session is suspended and the action is not `resume`.                                                    |
-| `time-over`                    | The item, or a scope that holds it, closed at its maximum time; or the test ended at it in this step.       |
-| `unknown-item`                 | The plan has no such item instance, or no item before the first of a nonlinear part.                        |
-| `not-current`                  | An action on an item that is not presented; a move to another part, or past the next item in a linear part. |
-| `linear-backward`              | `previous`, or a move to an earlier item, in a linear part.                                                 |
-| `wrong-submission-mode`        | `submit`, `skip` or `end-attempt` in a part with simultaneous submission.                                   |
-| `min-time-not-reached`         | Leaving an item, section, part or test before its minimum time.                                             |
-| `support-not-available`        | `support` for a support that is not an option.                                                              |
-| `awaiting-cat`                 | The next item depends on a CAT engine that has not answered, or a first stage is awaited.                   |
-| `unknown-request`              | `supply-scores` or `cat-response` names a request the state lacks, or one that waits for no answer.         |
-| `score-type-mismatch`          | `supply-scores` gives a value that does not fit the declaration of the outcome.                             |
-| `invalid-response`             | Also a `cat-response` that does not fit its request, or whose stage exceeds `maxPlanNodes`.                 |
-| the codes of `applyItemAction` | The rules of the item session (see Item sessions).                                                          |
+A refusal is its stable `code` and a `message`. The codes are these; the rules of the item session, which `apply` also
+applies, are listed under Item sessions.
+
+| Refusal code            | When                                                                                                                                                                                                                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attempts-exhausted`    | `next-attempt`, or the first action after an attempt, on an item whose session allows no further attempt.                                                                                                                                                                                                                  |
+| `awaiting-cat`          | The next item depends on a CAT engine that has not answered, or a first stage is awaited.                                                                                                                                                                                                                                  |
+| `clock-regression`      | `at` is before the latest step.                                                                                                                                                                                                                                                                                            |
+| `comment-not-allowed`   | `comment` on an item whose item session control does not allow comments.                                                                                                                                                                                                                                                   |
+| `ended`                 | The test has ended.                                                                                                                                                                                                                                                                                                        |
+| `invalid-response`      | `set-responses` for a variable the candidate does not set, or a value of another type; `end-attempt` or a portable custom interaction state that the item does not have; a `submit` of responses that `validate-responses` rejects; a `cat-response` that does not fit its request, or whose stage exceeds `maxPlanNodes`. |
+| `item-closed`           | `set-responses` or `submit` on a session that is closed.                                                                                                                                                                                                                                                                   |
+| `linear-backward`       | `previous`, or a move to an earlier item, in a linear part.                                                                                                                                                                                                                                                                |
+| `min-time-not-reached`  | Leaving an item, section, part or test before its minimum time.                                                                                                                                                                                                                                                            |
+| `not-current`           | An action on an item that is not presented; a move to another part, or past the next item in a linear part.                                                                                                                                                                                                                |
+| `review-not-allowed`    | `review` before the session closed, or without `allow-review`.                                                                                                                                                                                                                                                             |
+| `score-type-mismatch`   | `supply-scores` gives a value that does not fit the declaration of the outcome.                                                                                                                                                                                                                                            |
+| `skipping-not-allowed`  | `submit` or `skip` without a response on an item under `allow-skipping="false"`.                                                                                                                                                                                                                                           |
+| `solution-not-allowed`  | `solution` before the session closed, or without `show-solution`.                                                                                                                                                                                                                                                          |
+| `support-not-available` | `support` for a support that is not an option.                                                                                                                                                                                                                                                                             |
+| `suspended`             | The session is suspended and the action is not `resume`.                                                                                                                                                                                                                                                                   |
+| `time-over`             | The item, or a scope that holds it, closed at its maximum time; or the test ended at it in this step.                                                                                                                                                                                                                      |
+| `unknown-item`          | The plan has no such item instance, or no item before the first of a nonlinear part.                                                                                                                                                                                                                                       |
+| `unknown-request`       | `supply-scores` or `cat-response` names a request the state lacks, or one that waits for no answer.                                                                                                                                                                                                                        |
+| `value-out-of-range`    | `set-responses` gives an integer outside the safe integers.                                                                                                                                                                                                                                                                |
+| `wrong-submission-mode` | `submit`, `skip` or `end-attempt` in a part with simultaneous submission.                                                                                                                                                                                                                                                  |
 
 ### Navigation and submission
 
@@ -901,7 +910,7 @@ if (document.kind === "item") {
   session.variables.responses.get("duration"); // { cardinality: "single", baseType: "duration", value: 8.5 }
   resultStatus(session, context.item); // "final"
   applyItemAction(session, { ...answer("bandung"), at: 10_000 }, context);
-  // { ok: false, refusal: { code: "item-closed", message: "The item session is closed, so its responses are fixed.", source: "INFO §2.2.1" } }
+  // { ok: false, refusal: { code: "item-closed", message: "The item session is closed, so its responses are fixed." } }
 }
 ```
 

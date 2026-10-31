@@ -50,7 +50,6 @@ export class RuleChecker {
             rule.responseElse?.rules,
             "response-else",
             here,
-            "INFO §5.117",
             (rules, at) => this.outcomeRules(rules, at),
           );
           break;
@@ -60,7 +59,6 @@ export class RuleChecker {
             rule.outcomeElse?.rules,
             "outcome-else",
             here,
-            "INFO §5.101",
             (rules, at) => this.outcomeRules(rules, at),
           );
           break;
@@ -90,20 +88,13 @@ export class RuleChecker {
       const here = `${trail}/qti-${rule.kind}`;
       switch (rule.kind) {
         case "set-template-value":
-          this.assign(rule.identifier, ["template"], "qti-set-template-value", "INFO §6.50.1", rule.expression, here);
+          this.assign(rule.identifier, ["template"], "qti-set-template-value", rule.expression, here);
           break;
         case "set-correct-response":
-          this.assign(rule.identifier, ["response"], "qti-set-correct-response", "INFO §6.50.5", rule.expression, here);
+          this.assign(rule.identifier, ["response"], "qti-set-correct-response", rule.expression, here);
           break;
         case "set-default-value":
-          this.assign(
-            rule.identifier,
-            ["response", "outcome"],
-            "qti-set-default-value",
-            "INFO §6.50.4",
-            rule.expression,
-            here,
-          );
+          this.assign(rule.identifier, ["response", "outcome"], "qti-set-default-value", rule.expression, here);
           break;
         case "template-condition":
           this.branches(
@@ -111,7 +102,6 @@ export class RuleChecker {
             rule.templateElse?.rules,
             "template-else",
             here,
-            "INFO §5.154",
             (rules, at) => this.templateRules(rules, at, true),
           );
           break;
@@ -119,9 +109,9 @@ export class RuleChecker {
           if (nested) {
             const message =
               "A qti-template-constraint may occur only as a child of qti-template-processing, not inside a condition.";
-            this.findings.error("assesskit/validate/template-constraint", message, "INFO §5.150", here);
+            this.findings.error("assesskit/validate/template-constraint", message, here);
           }
-          this.condition(rule.expression, "qti-template-constraint", "INFO §5.150", here);
+          this.condition(rule.expression, "qti-template-constraint", here);
           break;
         default:
           break;
@@ -135,12 +125,12 @@ export class RuleChecker {
   }
 
   /** Checks that the expression of a condition is a single boolean, as the interpreter demands (B47). */
-  condition(expression: Expression, element: string, source: string, trail: string): void {
+  condition(expression: Expression, element: string, trail: string): void {
     const type = this.expressions.check(expression, trail);
     const booleanFits = type.baseType === undefined || type.baseType === "boolean";
     if (!(booleanFits && (type.cardinality === undefined || type.cardinality === "single"))) {
       const message = `The expression of ${element} must be a single boolean, found ${describeStatic(type)}.`;
-      this.findings.error("assesskit/validate/condition-type", message, source, trail);
+      this.findings.error("assesskit/validate/condition-type", message, trail);
     }
   }
 
@@ -149,28 +139,27 @@ export class RuleChecker {
     otherwise: readonly TRule[] | undefined,
     elseKind: string,
     here: string,
-    source: string,
     check: (rules: readonly TRule[], trail: string) => void,
   ): void {
     for (const branch of branches) {
       const at = `${here}/qti-${branch.kind}`;
-      this.condition(branch.condition, `qti-${branch.kind}`, source, at);
+      this.condition(branch.condition, `qti-${branch.kind}`, at);
       check(branch.rules, at);
     }
     if (otherwise !== undefined) check(otherwise, `${here}/qti-${elseKind}`);
   }
 
   private setOutcome(identifier: string, expression: Expression, here: string): void {
-    this.assign(identifier, ["outcome"], "qti-set-outcome-value", "INFO §5.130", expression, here);
+    this.assign(identifier, ["outcome"], "qti-set-outcome-value", expression, here);
     if (this.scope.owner === "test" && this.scope.target(identifier)?.outcome?.externalScored !== undefined) {
       const message = `The rule qti-set-outcome-value sets ${JSON.stringify(identifier)}, which is scored externally; the supplied score is its starting value for every run of outcome processing, and the rule replaces it (G24).`;
-      this.findings.warning("assesskit/validate/external-score-assigned", message, "INFO §2.9", here);
+      this.findings.warning("assesskit/validate/external-score-assigned", message, here);
     }
     if (identifier === COMPLETION_STATUS && expression.kind === "base-value" && expression.baseType === "identifier") {
       const value = expression.value.trim();
       if (!COMPLETION_STATUSES.includes(value)) {
         const message = `The outcome completionStatus cannot be ${JSON.stringify(value)}; it is one of ${COMPLETION_STATUSES.join(", ")}.`;
-        this.findings.error("assesskit/validate/completion-status", message, "INFO §2.2.2.3", here);
+        this.findings.error("assesskit/validate/completion-status", message, here);
       }
     }
   }
@@ -180,7 +169,6 @@ export class RuleChecker {
     identifier: string,
     kinds: readonly VariableKind[],
     rule: string,
-    source: string,
     expression: Expression,
     here: string,
   ): void {
@@ -189,13 +177,13 @@ export class RuleChecker {
     const owner = this.scope.owner;
     if (target === undefined) {
       const message = `The rule ${rule} sets ${JSON.stringify(identifier)}, which the ${owner} does not declare. Declare it as ${article(kinds[0] ?? "")} ${kinds.join(" or ")} variable.`;
-      this.findings.error("assesskit/validate/undeclared-variable", message, "INFO §2.2.2", here);
+      this.findings.error("assesskit/validate/undeclared-variable", message, here);
     } else if (!kinds.includes(target.kind)) {
       const message = `The rule ${rule} sets ${JSON.stringify(identifier)}, which is not ${article(kinds[0] ?? "")} ${kinds.join(" or ")} variable of the ${owner}.`;
-      this.findings.error("assesskit/validate/assignment-target", message, source, here);
+      this.findings.error("assesskit/validate/assignment-target", message, here);
     } else if (!fitsVariable(value, target.type)) {
       const message = `The variable ${JSON.stringify(identifier)} is ${describeStatic(typeOfVariable(target.type))} and cannot be set to ${describeStatic(value)}.`;
-      this.findings.error("assesskit/validate/assignment-type", message, "INFO §5.130.2", here);
+      this.findings.error("assesskit/validate/assignment-type", message, here);
     }
   }
 
@@ -203,13 +191,13 @@ export class RuleChecker {
     const source = this.expressions.check(expression, here);
     const target = this.scope.target(identifier);
     if (target === undefined || target.kind !== "outcome") {
-      this.assign(identifier, ["outcome"], "qti-lookup-outcome-value", "INFO §5.87", expression, here);
+      this.assign(identifier, ["outcome"], "qti-lookup-outcome-value", expression, here);
       return;
     }
     const table = target.outcome?.lookupTable;
     if (target.outcome !== undefined && (table === undefined || target.type.cardinality !== "single")) {
       const message = `The rule qti-lookup-outcome-value sets ${JSON.stringify(identifier)}, which is not a single outcome with a lookup table.`;
-      this.findings.error("assesskit/validate/lookup-table", message, "INFO §5.87", here);
+      this.findings.error("assesskit/validate/lookup-table", message, here);
       return;
     }
     const accepted = table?.kind === "match-table" ? MATCH_SOURCE : INTERPOLATION_SOURCE;
@@ -217,7 +205,7 @@ export class RuleChecker {
     const baseTypeFits = source.baseType === undefined || accepted.includes(source.baseType);
     if (!(cardinalityFits && baseTypeFits)) {
       const message = `The rule qti-lookup-outcome-value for ${JSON.stringify(identifier)} needs a single ${accepted.join(", ")}, found ${describeStatic(source)}.`;
-      this.findings.error("assesskit/validate/lookup-source", message, "INFO §5.87.2", here);
+      this.findings.error("assesskit/validate/lookup-source", message, here);
     }
   }
 }

@@ -26,10 +26,6 @@ interface Context {
   readonly depth: number;
 }
 
-const INFO_INCLUDE = "INFO §2.12";
-const INCLUDE_SYNTAX = "XInclude 1.0 §3.1";
-const FALLBACK_SYNTAX = "XInclude 1.0 §3.2";
-
 /** The start of an absolute reference: a scheme (RFC 3986 §3.1). */
 const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
@@ -101,7 +97,6 @@ class Expander {
       throw readError(
         "assesskit/xml/xinclude-structure",
         "An xi:fallback must be a child of an xi:include.",
-        FALLBACK_SYNTAX,
         locationOf(node, context.base),
       );
     }
@@ -114,28 +109,27 @@ class Expander {
   /** Returns the href of an include after checking its attributes and children. */
   private checkInclude(include: XmlElement, context: Context): string {
     const location = locationOf(include, context.base);
-    const fail = (message: string, source: string, code = "assesskit/xml/xinclude-attribute"): ReadError =>
-      readError(code, message, source, location);
+    const fail = (message: string, code = "assesskit/xml/xinclude-attribute"): ReadError =>
+      readError(code, message, location);
     if (attributeOf(include, "xpointer") !== undefined) {
-      throw fail("An xi:include must not have an xpointer attribute.", INFO_INCLUDE);
+      throw fail("An xi:include must not have an xpointer attribute.");
     }
     const parse = attributeOf(include, "parse") ?? "xml";
     if (parse !== "xml") {
-      throw fail(`An xi:include must include parsed XML, found parse=${JSON.stringify(parse)}.`, INFO_INCLUDE);
+      throw fail(`An xi:include must include parsed XML, found parse=${JSON.stringify(parse)}.`);
     }
     const href = attributeOf(include, "href");
     if (href === undefined || href === "") {
-      throw fail("An xi:include must have a non-empty href attribute.", INCLUDE_SYNTAX);
+      throw fail("An xi:include must have a non-empty href attribute.");
     }
     if (href.includes("#")) {
       const message = `The href ${JSON.stringify(href)} of an xi:include must not have a fragment identifier.`;
-      throw fail(message, INCLUDE_SYNTAX);
+      throw fail(message);
     }
     const foreign = include.children.filter((child) => xincludeName(child) !== undefined);
     if (foreign.length > 1 || foreign.some((child) => !isFallback(child))) {
       throw fail(
         "An xi:include may have one xi:fallback child and no other element of the XInclude namespace.",
-        INCLUDE_SYNTAX,
         "assesskit/xml/xinclude-structure",
       );
     }
@@ -148,12 +142,7 @@ class Expander {
     const key = joinReference(context.base, href);
     if (context.chain.includes(key)) {
       const message = `The xi:include of ${JSON.stringify(href)} includes a document that is already being included.`;
-      throw readError(
-        "assesskit/xml/xinclude-cycle",
-        message,
-        "XInclude 1.0 §4.2.7",
-        locationOf(include, context.base),
-      );
+      throw readError("assesskit/xml/xinclude-cycle", message, locationOf(include, context.base));
     }
     if (context.chain.length > this.limits.maxIncludeDepth) {
       const { maxIncludeDepth } = this.limits;
@@ -184,7 +173,7 @@ function checkTarget(target: XmlElement): XmlElement {
 function resourceError(href: string, error: unknown, location: IssueLocation): ReadError {
   const reason = error instanceof Error ? error.message : describe(error);
   const message = `The document ${JSON.stringify(href)} of an xi:include cannot be read and the include has no xi:fallback: ${reason}`;
-  return readError("assesskit/xml/xinclude-resource", message, "XInclude 1.0 §4.4", location);
+  return readError("assesskit/xml/xinclude-resource", message, location);
 }
 
 /**
@@ -225,7 +214,6 @@ export function resolveIncludes(
     throw readError(
       "assesskit/xml/xinclude-structure",
       "The root of a document must be replaced by exactly one element.",
-      INCLUDE_SYNTAX,
     );
   }
   return expanded;

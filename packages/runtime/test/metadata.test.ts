@@ -159,7 +159,6 @@ describe("readQtiMetadata", () => {
     expect(error.issues[0]).toMatchObject({
       severity: "error",
       code: "assesskit/metadata/invalid-text",
-      source: "MD §2.3.1",
       location: { path: "item.xml", line: 1 },
     });
     expect(error.message).toContain("true or false");

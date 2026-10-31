@@ -11,13 +11,7 @@ export class Findings {
     this.path = path;
   }
 
-  private report(
-    severity: Issue["severity"],
-    code: string,
-    message: string,
-    source: string,
-    element: string | undefined,
-  ): void {
+  private report(severity: Issue["severity"], code: string, message: string, element: string | undefined): void {
     const location = {
       ...(this.path === undefined ? {} : { path: this.path }),
       ...(element === undefined ? {} : { element }),
@@ -26,19 +20,18 @@ export class Findings {
       severity,
       code,
       message,
-      source,
       ...(Object.keys(location).length === 0 ? {} : { location }),
     });
   }
 
   /** Reports content that breaks a rule. */
-  error(code: string, message: string, source: string, element?: string): void {
-    this.report("error", code, message, source, element);
+  error(code: string, message: string, element?: string): void {
+    this.report("error", code, message, element);
   }
 
   /** Reports content that runs but deviates from a recommendation. */
-  warning(code: string, message: string, source: string, element?: string): void {
-    this.report("warning", code, message, source, element);
+  warning(code: string, message: string, element?: string): void {
+    this.report("warning", code, message, element);
   }
 
   /** Adds issues that another check returned, such as `checkBindings`, naming the file when they do not. */

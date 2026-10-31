@@ -679,7 +679,6 @@ describe("errors", () => {
       severity: "error",
       code: "assesskit/results/not-results",
       message: `The root element must be assessmentResult in the namespace ${RESULTS_NAMESPACE}, found {urn:x}usageData.`,
-      source: "RR §2.3.1",
       location: { line: 1, column: 1, element: "usageData" },
     });
     expect(() => readResults(`<result xmlns="${RESULTS_NAMESPACE}"/>`)).toThrow("found result.");
@@ -768,7 +767,6 @@ describe("errors", () => {
       issueOf(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="single"/>'))),
     ).toMatchObject({
       code: "assesskit/results/missing-attribute",
-      source: "RR §2.4.3",
     });
     expect(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="record"/>'))).not.toThrow();
   });
@@ -780,7 +778,6 @@ describe("errors", () => {
       );
     expect(issueOf(() => readResults(outcome("single", "integer", "<value>five</value>")))).toMatchObject({
       code: "assesskit/results/invalid-value",
-      source: "INFO §8.13",
     });
     expect(() => readResults(outcome("single", "boolean", "<value>maybe</value>"))).toThrow("is not a boolean");
     expect(() => readResults(outcome("single", "integer", "<value>1</value><value>2</value>"))).toThrow(

@@ -834,7 +834,6 @@ describe("catalogs and cards", () => {
           code: "assesskit/content/duplicate-default-entry",
           message:
             'More than one qti-card-entry of the qti-card for the support "spoken" is the default, but one may be.',
-          source: "INFO §5.27.2",
           location: { element: "qti-catalog/qti-card/qti-card-entry" },
         },
       ]);

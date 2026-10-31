@@ -683,7 +683,6 @@ describe("checkPortableInteraction", () => {
       code: "assesskit/pci/no-module",
       message:
         'The interaction with the response identifier "R" has neither a module attribute nor a qti-interaction-modules element, so no module can be loaded for it.',
-      source: "BPIG §3.7.12.4",
       location: { element: "qti-portable-custom-interaction" },
     });
   });
@@ -715,7 +714,6 @@ describe("checkPortableInteraction", () => {
     expect(warning).toMatchObject({
       severity: "warning",
       code: "assesskit/pci/type-identifier",
-      source: "BPIG §3.7.12",
     });
     expect(warning?.message).toContain('"urn-fdc-hmhco.com-pci-tapToReveal"');
     expect(codes(interaction("my-pci"), configured)).toEqual(["assesskit/pci/type-identifier"]);

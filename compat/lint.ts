@@ -3,9 +3,6 @@ import { ESLint } from "eslint";
 import compat from "eslint-plugin-compat";
 import stylelint from "stylelint";
 
-/** The baseline of docs/player/baseline.md as browserslist queries. */
-const BROWSERS = ["chrome >= 111", "firefox >= 115", "safari >= 16.4"];
-
 /**
  * The CSS features that the stylelint plugin reports as partial although the baseline browsers have what the stylesheet
  * uses of them. `text-indent` is partial for its `each-line` and `hanging` keywords; a length works everywhere.
@@ -27,7 +24,8 @@ export interface BaselineProblem {
 
 /**
  * Lints the built JavaScript and the CSS of the package for features that the baseline browsers lack: the JavaScript with
- * eslint-plugin-compat and the CSS with stylelint-no-unsupported-browser-features, both on caniuse and MDN data.
+ * eslint-plugin-compat and the CSS with stylelint-no-unsupported-browser-features, both on caniuse and MDN data, for the
+ * browsers that the `browserslist` of the package names.
  *
  * @param packageDirectory - The package whose `dist/` and `*.css` files to lint.
  * @returns the problems, and how many JavaScript files were linted, so that an empty `dist/` is not a pass.
@@ -41,7 +39,6 @@ export async function lintBaseline(
     overrideConfig: [
       { ignores: SERVER_FOLDERS.map((folder) => `dist/${folder}/**`) },
       compat.configs["flat/recommended"],
-      { settings: { browsers: BROWSERS } },
     ],
     errorOnUnmatchedPattern: false,
   });
@@ -55,10 +52,7 @@ export async function lintBaseline(
     config: {
       plugins: ["stylelint-no-unsupported-browser-features"],
       rules: {
-        "plugin/no-unsupported-browser-features": [
-          true,
-          { browsers: BROWSERS, ignore: PARTIAL_BUT_USABLE, severity: "error" },
-        ],
+        "plugin/no-unsupported-browser-features": [true, { ignore: PARTIAL_BUT_USABLE, severity: "error" }],
       },
     },
   });

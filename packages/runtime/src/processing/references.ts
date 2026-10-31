@@ -4,9 +4,6 @@ import { describeType } from "./assign.js";
 import { asNumber, asString, primitiveOf } from "./operands.js";
 import type { Scope } from "./scope.js";
 
-/** The source of the rules for attributes that name variables (INFO §2.7.2). */
-const SOURCE = "INFO §2.7.2";
-
 /** A `stringOrVariableRef` that names a variable: its identifier in braces (INFO §2.7.2, `EncVariableStringDType`). */
 const BRACED = /^\{(.+)\}$/;
 
@@ -26,7 +23,6 @@ function referenced(
   if (value === undefined) {
     throw new ProcessingError(
       `The attribute ${attribute} names ${identifier}, which is no template or outcome variable in reach.`,
-      SOURCE,
       identifier,
     );
   }
@@ -34,7 +30,6 @@ function referenced(
   if (value.cardinality !== "single" || !baseTypes.includes(value.baseType)) {
     throw new ProcessingError(
       `The attribute ${attribute} names ${identifier}, which is ${describeType(value)}, not a single ${baseTypes.join(" or ")}.`,
-      SOURCE,
       identifier,
     );
   }

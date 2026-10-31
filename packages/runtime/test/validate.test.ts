@@ -76,9 +76,7 @@ describe("the unordered classes of BIND §5.1", () => {
   it("allows one figcaption in a figure and reports a second", () => {
     expect(check({ body: "<figure><figcaption>a</figcaption><p>x</p></figure>" })).toEqual([]);
     const issues = check({ body: "<figure><figcaption>a</figcaption><p>x</p><figcaption>b</figcaption></figure>" });
-    expect(issues).toMatchObject([
-      { severity: "error", code: "assesskit/validate/figure-multiplicity", source: "BIND §5.1.1" },
-    ]);
+    expect(issues).toMatchObject([{ severity: "error", code: "assesskit/validate/figure-multiplicity" }]);
     expect(issues[0]?.location?.element).toBe("qti-assessment-item/qti-item-body/figure");
   });
 
@@ -87,7 +85,6 @@ describe("the unordered classes of BIND §5.1", () => {
     for (const repeated of ["<rt>a</rt><rt>b</rt>", "<rp>(</rp><rp>)</rp>"]) {
       const issues = check({ body: `<p><ruby><rb>真</rb>${repeated}</ruby></p>` });
       expect(codesOf(issues)).toEqual(["assesskit/validate/ruby-multiplicity"]);
-      expect(issues[0]?.source).toBe("BIND §5.1.2");
     }
   });
 });
@@ -97,7 +94,7 @@ describe("the explicit rule sets of BIND §5.3: the roles and the general rule",
     for (const role of ["heading", "tab", "presentation"])
       expect(check({ body: `<h1 role="${role}">x</h1>` })).toEqual([]);
     const issues = check({ body: '<h1 role="button">x</h1>' });
-    expect(issues).toMatchObject([{ code: "RULE_SET_ARIA_ROLES_1", source: "BIND §5.3.1", severity: "error" }]);
+    expect(issues).toMatchObject([{ code: "RULE_SET_ARIA_ROLES_1", severity: "error" }]);
   });
 
   it("lets no source have a role", () => {
@@ -114,7 +111,7 @@ describe("the explicit rule sets of BIND §5.3: the roles and the general rule",
       '<qti-test-variables variable-identifier="SCORE"/>',
     ]) {
       const issues = check({ declarations, processing: rules(setOutcome("SCORE", expression)) });
-      expect(only(issues, "RULE_SET_GENERAL_1")).toMatchObject([{ severity: "error", source: "BIND §5.3.2" }]);
+      expect(only(issues, "RULE_SET_GENERAL_1")).toMatchObject([{ severity: "error" }]);
     }
     expect(check({ declarations, processing: rules(setOutcome("SCORE", base("float", "1"))) })).toEqual([]);
   });
@@ -123,9 +120,7 @@ describe("the explicit rule sets of BIND §5.3: the roles and the general rule",
     const declarations = outcome("SCORE", "single", "integer");
     for (const kind of ["correct", "incorrect", "presented", "responded", "selected"]) {
       const issues = check({ declarations, processing: rules(setOutcome("SCORE", `<qti-number-${kind}/>`)) });
-      expect(only(issues, "assesskit/validate/outcome-only-expression")).toMatchObject([
-        { severity: "error", source: "INFO §2.11.2" },
-      ]);
+      expect(only(issues, "assesskit/validate/outcome-only-expression")).toMatchObject([{ severity: "error" }]);
     }
   });
 });
@@ -134,7 +129,7 @@ describe("the explicit rule sets of BIND §5.3: the attributes of the interactio
   it.each(ATTRIBUTE_RULES)("$code: reports the broken fixture once and accepts the kept one", (rule) => {
     const [brokenDeclarations, brokenBody] = rule.broken;
     expect(only(check({ declarations: brokenDeclarations, body: brokenBody }), rule.code)).toMatchObject([
-      { severity: "error", source: rule.source },
+      { severity: "error" },
     ]);
     const [keptDeclarations, keptBody] = rule.kept;
     expect(only(check({ declarations: keptDeclarations, body: keptBody }), rule.code)).toEqual([]);
@@ -214,7 +209,6 @@ describe("the nesting rule sets A of BIND §5.3", () => {
     });
     expect(only(issues, "RULE_SET_INTERACTION_18A")).toMatchObject([
       {
-        source: "BIND §5.3.37",
         location: {
           element: "qti-assessment-item/qti-item-body/qti-gap-match-interaction/p/qti-text-entry-interaction",
         },
@@ -225,7 +219,7 @@ describe("the nesting rule sets A of BIND §5.3", () => {
   it("finds an interaction in the content of a custom interaction, which the model keeps as XML", () => {
     const body = `<qti-custom-interaction response-identifier="R"><qti-text-entry-interaction response-identifier="T"/></qti-custom-interaction>`;
     const issues = check({ declarations: single("string"), body });
-    expect(only(issues, "RULE_SET_INTERACTION_20A")).toMatchObject([{ source: "BIND §5.3.41" }]);
+    expect(only(issues, "RULE_SET_INTERACTION_20A")).toMatchObject([{}]);
   });
 
   it("finds an interaction in the markup of a portable custom interaction", () => {
@@ -238,17 +232,14 @@ describe("the nesting rule sets A of BIND §5.3", () => {
 // The remaining rule sets of BIND §5.3 and the constrained extension of §5.2 ---------------------------------------------
 
 describe("the explicit rule sets of BIND §5.3: the associable elements, the rubric block and the declarations", () => {
-  it.each(MATCH_LIMITS)(
-    "%s: reports a match-max below match-min, but not 0 or a limit that holds",
-    (code, source, build) => {
-      const [declarations, body] = build('match-max="1" match-min="2"');
-      expect(only(check({ declarations, body }), code)).toMatchObject([{ severity: "error", source }]);
-      for (const limits of ['match-max="0" match-min="2"', 'match-max="2" match-min="2"']) {
-        const [kept, markup] = build(limits);
-        expect(only(check({ declarations: kept, body: markup }), code)).toEqual([]);
-      }
-    },
-  );
+  it.each(MATCH_LIMITS)("%s: reports a match-max below match-min, but not 0 or a limit that holds", (code, build) => {
+    const [declarations, body] = build('match-max="1" match-min="2"');
+    expect(only(check({ declarations, body }), code)).toMatchObject([{ severity: "error" }]);
+    for (const limits of ['match-max="0" match-min="2"', 'match-max="2" match-min="2"']) {
+      const [kept, markup] = build(limits);
+      expect(only(check({ declarations: kept, body: markup }), code)).toEqual([]);
+    }
+  });
 
   it("reports a context variable and a template variable of a portable custom interaction that the item does not declare", () => {
     const body = (variables: string): string =>
@@ -262,7 +253,7 @@ describe("the explicit rule sets of BIND §5.3: the associable elements, the rub
       "The 'qti-template-variable' \"T\"",
       "The 'qti-context-variable' \"C\"",
     ]);
-    expect(issues[0]).toMatchObject({ severity: "error", source: "BIND §5.3.42" });
+    expect(issues[0]).toMatchObject({ severity: "error" });
   });
 
   it("reports a rubric block inside a rubric block, and accepts one that stands alone", () => {
@@ -273,7 +264,7 @@ describe("the explicit rule sets of BIND §5.3: the associable elements, the rub
     ).toEqual([]);
     const outer = visitOf("qti-rubric-block");
     expect(ruleSetsOn(visitOf("qti-rubric-block", visitOf("qti-content-body", outer)))).toMatchObject([
-      { code: "RULE_SET_RUBRICBLOCK", severity: "error", source: "BIND §5.3.47" },
+      { code: "RULE_SET_RUBRICBLOCK", severity: "error" },
     ]);
   });
 
@@ -296,9 +287,7 @@ describe("the explicit rule sets of BIND §5.3: the associable elements, the rub
     const below = check({ declarations: declare(' normal-minimum="1" normal-maximum="10" mastery-value="0"') });
     const above = check({ declarations: declare(' normal-minimum="0" normal-maximum="10" mastery-value="11"') });
     for (const issues of [below, above]) {
-      expect(issues).toMatchObject([
-        { code: "RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", severity: "error", source: "BIND §5.3.48" },
-      ]);
+      expect(issues).toMatchObject([{ code: "RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC", severity: "error" }]);
     }
     expect(below[0]?.message).toContain("less than its normal-minimum 1");
     expect(above[0]?.message).toContain("greater than its normal-maximum 10");
@@ -307,9 +296,7 @@ describe("the explicit rule sets of BIND §5.3: the associable elements, the rub
   it("reports a choice interaction with a max-choices other than 1 bound to a single variable", () => {
     const body = (attributes: string): string => interaction("qti-choice-interaction", attributes, choice("A"));
     const broken = check({ declarations: single("identifier"), body: body(' max-choices="2"') });
-    expect(only(broken, "RULE_SET_SPECIFIC_CLASS_RESPONSEDEC")).toMatchObject([
-      { severity: "error", source: "BIND §5.3.49" },
-    ]);
+    expect(only(broken, "RULE_SET_SPECIFIC_CLASS_RESPONSEDEC")).toMatchObject([{ severity: "error" }]);
     for (const [declarations, attributes] of [
       [multiple("identifier"), ' max-choices="2"'],
       [single("identifier"), ' max-choices="1"'],
@@ -330,7 +317,7 @@ describe("the explicit rule sets of BIND §5.3: the associable elements, the rub
         ),
       );
       expect(only(validateAsi(document), "assesskit/validate/extension-attribute")).toMatchObject([
-        { severity: "error", source: "BIND §5.2" },
+        { severity: "error" },
       ]);
     }
   });
@@ -377,16 +364,14 @@ describe("the formats of the text attributes", () => {
         check({ declarations: single("identifier"), body: body(identifier) }),
         "assesskit/validate/identifier-syntax",
       );
-      expect(issues).toMatchObject([{ severity: "error", source: "INFO §4.1.1" }]);
+      expect(issues).toMatchObject([{ severity: "error" }]);
       expect(issues[0]?.message).toContain(`"${identifier}"`);
     }
   });
 
   it("warns about a period in the identifier of an item and about more than 32 characters, but not in a choice", () => {
     const issues = check({ identifier: "a.b" });
-    expect(issues).toMatchObject([
-      { severity: "warning", code: "assesskit/validate/identifier-style", source: "INFO §4.1.1" },
-    ]);
+    expect(issues).toMatchObject([{ severity: "warning", code: "assesskit/validate/identifier-style" }]);
     expect(issues[0]?.message).toContain("period");
     expect(check({ identifier: "a".repeat(32) })).toEqual([]);
     expect(check({ identifier: "a".repeat(33) })[0]?.message).toContain("more than 32 characters");
@@ -400,7 +385,7 @@ describe("the formats of the text attributes", () => {
     expect(check({ body: '<p id="a">x</p><p id="b">y</p>' })).toEqual([]);
     expect(
       only(check({ body: '<p id="a">x</p><div id="a">y</div>' }), "assesskit/validate/duplicate-id"),
-    ).toMatchObject([{ severity: "error", source: "INFO §5.16" }]);
+    ).toMatchObject([{ severity: "error" }]);
     const shared = check({ declarations: single("string"), body: `<p id="R">x</p>${textEntry("")}` });
     expect(only(shared, "assesskit/validate/duplicate-id")).toHaveLength(1);
   });
@@ -414,9 +399,7 @@ describe("the formats of the text attributes", () => {
     );
     expect(validateAsi(read(withCatalog))).toEqual([]);
     const lacking = check({ body: '<p data-catalog-idref="C1">word</p>' });
-    expect(only(lacking, "assesskit/validate/unresolved-reference")).toMatchObject([
-      { severity: "error", source: "BPIG §3.7.10.2" },
-    ]);
+    expect(only(lacking, "assesskit/validate/unresolved-reference")).toMatchObject([{ severity: "error" }]);
     const wrongTarget = check({ body: '<p id="other">a</p><p data-catalog-idref="other">word</p>' });
     expect(only(wrongTarget, "assesskit/validate/unresolved-reference")[0]?.message).toContain(
       "must name a qti-catalog",
@@ -444,9 +427,7 @@ describe("the formats of the text attributes", () => {
       declarations: `${single("string")}${response("EXTRA", "single", "string")}`,
       body: textEntry(""),
     });
-    expect(unbound).toMatchObject([
-      { severity: "warning", code: "assesskit/validate/unbound-response", source: "INFO §2.2.2.2" },
-    ]);
+    expect(unbound).toMatchObject([{ severity: "warning", code: "assesskit/validate/unbound-response" }]);
     expect(unbound[0]?.message).toContain('"EXTRA"');
   });
 });
@@ -463,12 +444,6 @@ describe("the declarations", () => {
       "completionStatus",
       "duration",
     ]);
-    expect(issues.map(({ source }) => source)).toEqual([
-      "INFO §2.2.2.2",
-      "INFO §2.2.2.2",
-      "INFO §2.2.2.3",
-      "INFO §2.2.2.2",
-    ]);
     const context = `<qti-context-declaration identifier="QTI_CONTEXT" cardinality="record"/>`;
     expect(codesOf(check({ declarations: context }))).toEqual(["assesskit/validate/reserved-identifier"]);
   });
@@ -478,8 +453,8 @@ describe("the declarations", () => {
       declarations: `${response("X", "single", "string")}${outcome("X", "single", "float")}${template("X", "single", "float")}`,
     });
     expect(only(issues, "assesskit/validate/duplicate-identifier")).toMatchObject([
-      { severity: "error", source: "INFO §5.34.1" },
-      { severity: "error", source: "INFO §5.34.1" },
+      { severity: "error" },
+      { severity: "error" },
     ]);
     expect(check({ declarations: `${response("X", "single", "string")}${outcome("Y", "single", "float")}` })).toEqual([
       expect.objectContaining({ code: "assesskit/validate/unbound-response" }),
@@ -497,7 +472,7 @@ describe("the declarations", () => {
       declarations: `${outcome("SCORE", "single", "integer")}${outcome("MAXSCORE", "single", "string")}${outcome("PASSED", "single", "float")}`,
     });
     expect(issues).toMatchObject([
-      { code: "assesskit/validate/standard-outcome", severity: "warning", source: "INFO §2.2.2.3, BPIG §3.5" },
+      { code: "assesskit/validate/standard-outcome", severity: "warning" },
       { code: "assesskit/validate/standard-outcome", severity: "warning" },
       { code: "assesskit/validate/standard-outcome", severity: "warning" },
     ]);
@@ -538,7 +513,7 @@ describe("the declarations", () => {
   it("reports an xi:include that was left in the document, and nothing for one that was resolved", () => {
     const include = '<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="body.xml"/>';
     const issues = only(check({ body: include }), "assesskit/validate/unresolved-include");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §2.12" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toContain("qti-item-body");
   });
 });
@@ -568,7 +543,7 @@ describe("the variables that expressions and rules name", () => {
       '<qti-map-response-point identifier="MISSING"/>',
     ]) {
       const issues = only(assigned("SCORE", expression), "assesskit/validate/undeclared-variable");
-      expect(issues, expression).toMatchObject([{ severity: "error", source: "INFO §2.2.2" }]);
+      expect(issues, expression).toMatchObject([{ severity: "error" }]);
       expect(issues[0]?.message).toContain('"MISSING"');
     }
     expect(assigned("SCORE", `<qti-product>${flt("2")}${variable("N")}</qti-product>`)).toEqual([]);
@@ -579,9 +554,7 @@ describe("the variables that expressions and rules name", () => {
     const missing = check({ declarations: OUTCOMES, processing: rules(setOutcome("MISSING", flt("1"))) });
     expect(only(missing, "assesskit/validate/undeclared-variable")[0]?.message).toContain("does not declare");
     const wrongKind = check({ declarations, body: textEntry(""), processing: rules(setOutcome("R", str("a"))) });
-    expect(only(wrongKind, "assesskit/validate/assignment-target")).toMatchObject([
-      { severity: "error", source: "INFO §5.130" },
-    ]);
+    expect(only(wrongKind, "assesskit/validate/assignment-target")).toMatchObject([{ severity: "error" }]);
     const lookup = check({
       declarations: OUTCOMES,
       processing: rules(`<qti-lookup-outcome-value identifier="MISSING">${int("1")}</qti-lookup-outcome-value>`),
@@ -607,7 +580,7 @@ describe("the variables that expressions and rules name", () => {
       check({ declarations: single("string"), body: `${textEntry("")}${printed("R")}` }),
       "assesskit/validate/reference-kind",
     );
-    expect(kinds).toMatchObject([{ severity: "error", source: "INFO §7.30.6" }]);
+    expect(kinds).toMatchObject([{ severity: "error" }]);
     const wrongFeedback = check({ declarations: single("string"), body: `${textEntry("")}${feedback("R")}` });
     expect(only(wrongFeedback, "assesskit/validate/reference-kind")).toHaveLength(1);
   });
@@ -652,7 +625,7 @@ describe("the variables that expressions and rules name", () => {
         check({ declarations, template: rule(name), body: textEntry("") }),
         "assesskit/validate/variable-out-of-reach",
       );
-      expect(issues).toMatchObject([{ severity: "error", source: "INFO §6.50" }]);
+      expect(issues).toMatchObject([{ severity: "error" }]);
     }
   });
 
@@ -662,9 +635,7 @@ describe("the variables that expressions and rules name", () => {
     );
     const declarations = outcome("FLAG", "single", "boolean");
     const used = check({ declarations, processing });
-    expect(only(used, "assesskit/validate/duration-not-time-dependent")).toMatchObject([
-      { severity: "error", source: "INFO §2.2.2.2" },
-    ]);
+    expect(only(used, "assesskit/validate/duration-not-time-dependent")).toMatchObject([{ severity: "error" }]);
     const timed = check({ declarations, processing, attributes: 'adaptive="false" time-dependent="true"' });
     expect(timed).toEqual([]);
   });
@@ -675,7 +646,7 @@ describe("the static types of expressions", () => {
 
   it("reports an operand whose base type the operator does not take, and accepts integers where floats are taken", () => {
     const issues = operand(assigned("SCORE", sum(flt("1"), str("a"))));
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §2.11.3.40" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toBe(
       "The operator qti-sum takes single or multiple or ordered integer or float operands, found a single string as operand 2.",
     );
@@ -706,7 +677,7 @@ describe("the static types of expressions", () => {
     const issues = operand(
       assigned("B", `<qti-match>${base("duration", "1")}${base("duration", "1")}</qti-match>`, declarations),
     );
-    expect(issues.map(({ source }) => source)).toEqual(["INFO §2.11.3.28", "INFO §2.11.3.28"]);
+    expect(issues).toHaveLength(2);
   });
 
   it("reports the wrong number of operands of a model that was built and not read", () => {
@@ -726,7 +697,7 @@ describe("the static types of expressions", () => {
       }),
     );
     const issues = only(validateAsi({ kind: "item", item: built }), "assesskit/validate/operand-count");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §2.11.3.19" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toBe("The operator qti-divide takes 2 operands, found 3.");
   });
 
@@ -772,7 +743,7 @@ describe("the static types of expressions", () => {
 describe("assignments and lookup tables", () => {
   it("reports a value that cannot be set to the variable: another base type, another cardinality", () => {
     const issues = only(assigned("SCORE", str("a")), "assesskit/validate/assignment-type");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §5.130.2" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toBe('The variable "SCORE" is a single float and cannot be set to a single string.');
     const declarations = `${OUTCOMES}${outcome("M", "multiple", "string")}`;
     expect(only(assigned("M", str("a"), declarations), "assesskit/validate/assignment-type")[0]?.message).toContain(
@@ -818,12 +789,8 @@ describe("assignments and lookup tables", () => {
     expect(lookup("WITH", flt("0.5")).filter((issue) => issue.code.startsWith("assesskit/validate/lookup"))).toEqual(
       [],
     );
-    expect(only(lookup("N", int("1")), "assesskit/validate/lookup-table")).toMatchObject([
-      { severity: "error", source: "INFO §5.87" },
-    ]);
-    expect(only(lookup("WITH", str("a")), "assesskit/validate/lookup-source")).toMatchObject([
-      { source: "INFO §5.87.2" },
-    ]);
+    expect(only(lookup("N", int("1")), "assesskit/validate/lookup-table")).toMatchObject([{ severity: "error" }]);
+    expect(only(lookup("WITH", str("a")), "assesskit/validate/lookup-source")).toMatchObject([{}]);
     const exact = only(lookup("EXACT", flt("0.5")), "assesskit/validate/lookup-source");
     expect(exact[0]?.message).toBe(
       'The rule qti-lookup-outcome-value for "EXACT" needs a single integer, found a single float.',
@@ -836,9 +803,7 @@ describe("assignments and lookup tables", () => {
       check({ processing: rules(setOutcome("completionStatus", base("identifier", term))) });
     expect(set("completed")).toEqual([]);
     expect(set("\n  incomplete  \n")).toEqual([]);
-    expect(only(set("done"), "assesskit/validate/completion-status")).toMatchObject([
-      { severity: "error", source: "INFO §2.2.2.3" },
-    ]);
+    expect(only(set("done"), "assesskit/validate/completion-status")).toMatchObject([{ severity: "error" }]);
   });
 
   it("warns about a template variable that a constraint reads and that has no default", () => {
@@ -846,17 +811,13 @@ describe("assignments and lookup tables", () => {
       `<qti-template-processing><qti-set-template-value identifier="A">${int("1")}</qti-set-template-value><qti-template-constraint>${inner}</qti-template-constraint></qti-template-processing>`;
     const gt = `<qti-gt>${variable("A")}${int("0")}</qti-gt>`;
     const without = check({ declarations: template("A", "single", "integer"), template: constraint(gt) });
-    expect(without).toMatchObject([
-      { code: "assesskit/validate/constraint-without-default", severity: "warning", source: "INFO §5.150" },
-    ]);
+    expect(without).toMatchObject([{ code: "assesskit/validate/constraint-without-default", severity: "warning" }]);
     expect(check({ declarations: template("A", "single", "integer", value("1")), template: constraint(gt) })).toEqual(
       [],
     );
     const nested = `<qti-template-processing><qti-template-condition><qti-template-if>${base("boolean", "true")}<qti-template-constraint>${gt}</qti-template-constraint></qti-template-if></qti-template-condition></qti-template-processing>`;
     const issues = check({ declarations: template("A", "single", "integer", value("1")), template: nested });
-    expect(only(issues, "assesskit/validate/template-constraint")).toMatchObject([
-      { severity: "error", source: "INFO §5.150" },
-    ]);
+    expect(only(issues, "assesskit/validate/template-constraint")).toMatchObject([{ severity: "error" }]);
   });
 });
 
@@ -864,9 +825,7 @@ describe("constants and the options", () => {
   it("warns about qti-match on floats, and says nothing for other base types", () => {
     const declarations = `${OUTCOMES}${outcome("B", "single", "boolean")}`;
     const issues = assigned("B", `<qti-match>${flt("1")}${flt("1")}</qti-match>`, declarations);
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/match-float", severity: "warning", source: "INFO §2.11.3.28" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/match-float", severity: "warning" }]);
     expect(assigned("B", `<qti-match>${int("1")}${int("1")}</qti-match>`, declarations)).toEqual([]);
   });
 
@@ -876,15 +835,11 @@ describe("constants and the options", () => {
     const randomFloat = (attributes: string): readonly Issue[] =>
       assigned("SCORE", `<qti-random-float ${attributes}/>`);
     expect(randomInteger('min="1" max="5" step="2"')).toEqual([]);
-    expect(only(randomInteger('min="6" max="5"'), "assesskit/validate/random-bounds")).toMatchObject([
-      { source: "INFO §7.34" },
-    ]);
+    expect(only(randomInteger('min="6" max="5"'), "assesskit/validate/random-bounds")).toMatchObject([{}]);
     expect(only(randomInteger('max="-1"'), "assesskit/validate/random-bounds")).toHaveLength(1);
     expect(only(randomInteger('max="5" step="0"'), "assesskit/validate/random-bounds")).toHaveLength(1);
     expect(randomFloat('min="1" max="5"')).toEqual([]);
-    expect(only(randomFloat('min="6" max="5"'), "assesskit/validate/random-bounds")).toMatchObject([
-      { source: "INFO §7.33" },
-    ]);
+    expect(only(randomFloat('min="6" max="5"'), "assesskit/validate/random-bounds")).toMatchObject([{}]);
     const declarations = `${OUTCOMES}${outcome("LIMIT", "single", "integer")}`;
     expect(assigned("N", '<qti-random-integer min="LIMIT" max="1"/>', declarations)).toEqual([]);
   });
@@ -897,16 +852,12 @@ describe("constants and the options", () => {
         setOutcome("T", '<qti-test-variables variable-identifier="X" base-type="integer" weight-identifier="W"/>'),
       ),
     });
-    expect(only(issues, "assesskit/validate/weight-with-integer")).toMatchObject([
-      { severity: "error", source: "INFO §7.39.5" },
-    ]);
+    expect(only(issues, "assesskit/validate/weight-with-integer")).toMatchObject([{ severity: "error" }]);
   });
 
   it("warns about a weight in an item, where weights are not defined", () => {
     const issues = assigned("SCORE", '<qti-variable identifier="N" weight-identifier="W"/>');
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/weight-undefined", severity: "warning", source: "INFO §7.47.2" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/weight-undefined", severity: "warning" }]);
   });
 
   it("reports a custom operator that no registered operator serves, only when the registered operators are given", () => {
@@ -917,9 +868,7 @@ describe("constants and the options", () => {
     const registered = new Map([["op", () => null]]);
     expect(check({ declarations: OUTCOMES, processing }, { customOperators: registered })).toEqual([]);
     const issues = check({ declarations: OUTCOMES, processing }, { customOperators: new Map() });
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/custom-operator", severity: "error", source: "INFO §2.11.3.2" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/custom-operator", severity: "error" }]);
     expect(issues[0]?.message).toContain('"urn:x:op" or "op"');
   });
 
@@ -927,14 +876,12 @@ describe("constants and the options", () => {
     const body = (pattern: string): string => textEntry(` pattern-mask="${pattern}"`);
     expect(check({ declarations: single("string"), body: body("[a-z]+") })).toEqual([]);
     const issues = only(check({ declarations: single("string"), body: body("[a-") }), "assesskit/validate/pattern");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §5.162.5" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     const match = (pattern: string): string =>
       `<qti-pattern-match pattern="${pattern}">${str("a")}</qti-pattern-match>`;
     const declarations = `${outcome("B", "single", "boolean")}${outcome("P", "single", "string")}`;
     expect(assigned("B", match("[a-z]+"), declarations)).toEqual([]);
-    expect(only(assigned("B", match("(a"), declarations), "assesskit/validate/pattern")).toMatchObject([
-      { source: "INFO §5.104.1" },
-    ]);
+    expect(only(assigned("B", match("(a"), declarations), "assesskit/validate/pattern")).toMatchObject([{}]);
     expect(assigned("B", match("{P}"), declarations)).toEqual([]);
   });
 });
@@ -953,7 +900,7 @@ describe("response processing templates", () => {
       answered('<qti-response-processing template="urn:example:template"/>'),
       "assesskit/validate/unknown-template",
     );
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §4.6.1" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toContain('"urn:example:template"');
     expect(
       only(
@@ -1004,9 +951,7 @@ describe("response processing templates", () => {
   it("warns about the address of a QTI 2.x template, which the runtime applies as the template of the same algorithm", () => {
     const address = "http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct";
     const issues = answered(`<qti-response-processing template="${address}"/>`);
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/legacy-template", severity: "warning", source: "BPIG §2.5.1" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/legacy-template", severity: "warning" }]);
   });
 
   it("checks the rules of a standard template against the declarations of the item", () => {
@@ -1038,7 +983,7 @@ describe("content that its variable can never show", () => {
     const processing = rules(setOutcome("FEEDBACK", base("identifier", "right")));
     expect(unreachable(check({ declarations: declaration(), processing, feedback: feedback("right") }))).toEqual([]);
     const issues = unreachable(check({ declarations: declaration(), processing, feedback: feedback("wrong") }));
-    expect(issues).toMatchObject([{ severity: "warning", source: "INFO §5.93.2" }]);
+    expect(issues).toMatchObject([{ severity: "warning" }]);
     expect(issues[0]?.message).toBe(
       'The qti-modal-feedback is never shown: it shows for the identifier "wrong", but the only values that FEEDBACK can take are "right".',
     );
@@ -1132,12 +1077,9 @@ function resolversOf(files: Files): Resolvers {
     const path = resolveReference(base, href);
     const xml = path === undefined ? undefined : files[path];
     if (xml === undefined)
-      throw readError(
-        "assesskit/package/missing-file",
-        `The package has no file ${JSON.stringify(path ?? href)}.`,
-        "BIND §8",
-        { path: base },
-      );
+      throw readError("assesskit/package/missing-file", `The package has no file ${JSON.stringify(path ?? href)}.`, {
+        path: base,
+      });
     return read(xml);
   };
   return {
@@ -1197,7 +1139,7 @@ describe("validateTest: the variables a test reads", () => {
         "assesskit/validate/undeclared-variable",
       );
     expect(issues("NOPE.SCORE")[0]?.message).toContain("declares no item variable or duration");
-    expect(issues("I1.NOPE")).toMatchObject([{ severity: "error", source: "INFO §2.2.2" }]);
+    expect(issues("I1.NOPE")).toMatchObject([{ severity: "error" }]);
     expect(issues("I1.NOPE")[0]?.message).toContain('declares no variable "NOPE"');
     expect(issues("MISSING")[0]?.message).toContain('The test declares no variable "MISSING"');
     expect(issues("I1.2.3.SCORE")).toHaveLength(1);
@@ -1222,9 +1164,7 @@ describe("validateTest: the variables a test reads", () => {
       "S",
       itemRef("I1", '<qti-variable-mapping source-identifier="NOPE" target-identifier="POINTS"/>'),
     );
-    expect(only(validated({ sections: unknown }), "assesskit/validate/undeclared-variable")).toMatchObject([
-      { source: "INFO §7.48.1" },
-    ]);
+    expect(only(validated({ sections: unknown }), "assesskit/validate/undeclared-variable")).toMatchObject([{}]);
     const twice = section(
       "S",
       itemRef(
@@ -1247,7 +1187,7 @@ describe("validateTest: the variables a test reads", () => {
     const warned = (expression: string, sections = repeated, partAttributes?: string): readonly Issue[] =>
       only(issues(expression, sections, partAttributes), "assesskit/validate/item-variable-undefined");
     const found = warned(variable("I1.SCORE"));
-    expect(found).toMatchObject([{ severity: "warning", source: "INFO §2.11.1.2" }]);
+    expect(found).toMatchObject([{ severity: "warning" }]);
     expect(found[0]?.message).toContain('selection with replacement can repeat the item reference "I1"');
     expect(found[0]?.message).toContain('"I1.1.SCORE"');
     // An instance number names the value; INFO §2.11.1.2 leaves only the lookup without one undefined.
@@ -1297,7 +1237,7 @@ describe("validateTest: the variables a test reads", () => {
       validated({ declarations: testOutcomes, processing: weighted("W") }),
       "assesskit/validate/weight-undefined",
     );
-    expect(issues).toMatchObject([{ severity: "warning", source: "INFO §7.47.2" }]);
+    expect(issues).toMatchObject([{ severity: "warning" }]);
     expect(
       only(
         validated({ declarations: testOutcomes, processing: weighted("W", "COUNT") }),
@@ -1340,9 +1280,7 @@ describe("validateTest: the variables a test reads", () => {
   it("warns when outcome processing sets an outcome that is scored externally", () => {
     const declarations = `${testOutcomes}${outcome("RATED", "single", "float", ' external-scored="human"')}`;
     const issues = validated({ declarations, processing: outcomeRules(setOutcome("RATED", flt("1"))) });
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/external-score-assigned", severity: "warning", source: "INFO §2.9" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/external-score-assigned", severity: "warning" }]);
   });
 });
 
@@ -1357,7 +1295,6 @@ describe("validateTest: the structure of a test", () => {
       'The identifier "I1" names an item reference and an item reference; the identifiers of test parts, sections and item references must be unique in a test.',
       'The identifier "P" names a test part and a section; the identifiers of test parts, sections and item references must be unique in a test.',
     ]);
-    expect(issues[0]?.source).toBe("INFO §4.2.1, §5.159.1");
     expect(only(validated({ sections: two() }), "assesskit/validate/duplicate-identifier")).toEqual([]);
   });
 
@@ -1379,7 +1316,7 @@ describe("validateTest: the structure of a test", () => {
     expect(only(select('select="2"'), "assesskit/validate/selection")).toEqual([]);
     expect(only(select('select="1"'), "assesskit/validate/selection")).toEqual([]);
     const issues = only(select('select="3"'), "assesskit/validate/selection");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §5.129.1" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(only(select('select="3" with-replacement="true"'), "assesskit/validate/selection")).toEqual([]);
   });
 
@@ -1389,7 +1326,7 @@ describe("validateTest: the structure of a test", () => {
       validated({ sections: two("", `<qti-selection select="1"/>${required}`) }),
       "assesskit/validate/selection",
     );
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §4.2.2" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     const inner = section("In", itemRef("I2"), ' visible="true" required="true"');
     const nested = validated({ sections: two("", `<qti-selection select="1"/>${itemRef("I1")}${inner}`) });
     expect(only(nested, "assesskit/validate/selection")).toEqual([]);
@@ -1402,7 +1339,7 @@ describe("validateTest: the structure of a test", () => {
       validated({ partAttributes: simultaneous }, { "I1.xml": adaptive }),
       "assesskit/validate/adaptive-simultaneous",
     );
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §5.159.5" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(only(validated({}, { "I1.xml": adaptive }), "assesskit/validate/adaptive-simultaneous")).toEqual([]);
     const engine =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="E" href="https://cat.example.org"/><qti-adaptive-settings-ref identifier="S1" href="settings.data"/></qti-adaptive-selection>';
@@ -1419,9 +1356,7 @@ describe("validateTest: the structure of a test", () => {
     const flat = validated({ sections: section("A", `${engine}${itemRef("I1")}`) });
     expect(only(flat, "assesskit/validate/adaptive-section")).toEqual([]);
     const withSub = validated({ sections: section("A", `${engine}${section("B", itemRef("I1"))}`) });
-    expect(only(withSub, "assesskit/validate/adaptive-section")).toMatchObject([
-      { severity: "error", source: "CAT §2.3" },
-    ]);
+    expect(only(withSub, "assesskit/validate/adaptive-section")).toMatchObject([{ severity: "error" }]);
     const nested = validated({ sections: section("O", section("A", `${engine}${itemRef("I1")}`)) });
     expect(only(nested, "assesskit/validate/adaptive-section")).toHaveLength(1);
   });
@@ -1430,9 +1365,7 @@ describe("validateTest: the structure of a test", () => {
     const engine =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="E" href="https://cat.example.org"/><qti-adaptive-settings-ref identifier="S1" href="settings.data"/></qti-adaptive-selection>';
     const issues = validated({ sections: section("A", `${engine}${itemRef("I1", branch("EXIT_TEST"))}`) });
-    expect(only(issues, "assesskit/validate/ignored-rule")).toMatchObject([
-      { severity: "warning", source: "CAT §2.1" },
-    ]);
+    expect(only(issues, "assesskit/validate/ignored-rule")).toMatchObject([{ severity: "warning" }]);
   });
 
   it("reports a section reference that the resolvers cannot resolve, and an item reference, once for each document", () => {
@@ -1444,9 +1377,7 @@ describe("validateTest: the structure of a test", () => {
 
   it("reports an item reference whose item has another identifier, as a warning", () => {
     const issues = validated({ sections: section("S", itemRef("Other", "", "I2.xml")) });
-    expect(issues).toMatchObject([
-      { code: "assesskit/validate/identifier-mismatch", severity: "warning", source: "INFO §4.1.1" },
-    ]);
+    expect(issues).toMatchObject([{ code: "assesskit/validate/identifier-mismatch", severity: "warning" }]);
   });
 
   it("checks the template defaults of an item reference against the template variables of its item", () => {
@@ -1463,12 +1394,8 @@ describe("validateTest: the structure of a test", () => {
       );
     expect(given("T", flt("2"))).toEqual([]);
     expect(given("T", int("2"))).toEqual([]);
-    expect(only(given("T", str("a")), "assesskit/validate/assignment-type")).toMatchObject([
-      { source: "INFO §5.152.2" },
-    ]);
-    expect(only(given("NOPE", flt("2")), "assesskit/validate/undeclared-variable")).toMatchObject([
-      { source: "INFO §5.152.1" },
-    ]);
+    expect(only(given("T", str("a")), "assesskit/validate/assignment-type")).toMatchObject([{}]);
+    expect(only(given("NOPE", flt("2")), "assesskit/validate/undeclared-variable")).toMatchObject([{}]);
   });
 
   it("checks the items a test names, each once, with the path of its document, and the stimuli of the items", () => {
@@ -1529,7 +1456,7 @@ describe("validateTest: branch rules and pre-conditions", () => {
       "is no test part, section or item reference",
     );
     const backward = run(section("S", `${itemRef("I1")}${itemRef("I2", branch("I1"))}`));
-    expect(backward).toMatchObject([{ severity: "error", source: "INFO §2.8.3.2" }]);
+    expect(backward).toMatchObject([{ severity: "error" }]);
     expect(backward[0]?.message).toContain("only jumps forward");
     expect(run(section("S", `${itemRef("I1", branch("I1"))}`))).toHaveLength(1);
     expect(run(section("S", `${itemRef("I1")}`, ' visible="true"', branch("S")))).toHaveLength(1);
@@ -1567,7 +1494,7 @@ describe("validateTest: branch rules and pre-conditions", () => {
       validated({ sections: `${section("S", itemRef("I1", branch("I2")))}${repeated}` }),
       "assesskit/validate/branch-to-repeated",
     );
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §5.98" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     const plain = section("R", `<qti-selection select="2"/>${itemRef("I2")}${itemRef("I3")}`);
     expect(
       only(
@@ -1588,7 +1515,7 @@ describe("validateTest: branch rules and pre-conditions", () => {
     const nonlinear = 'navigation-mode="nonlinear" submission-mode="individual"';
     const sections = section("S", `${itemRef("I1", branch("EXIT_TEST"))}${itemRef("I2")}`);
     expect(only(validated({ sections, partAttributes: nonlinear }), "assesskit/validate/ignored-rule")).toMatchObject([
-      { severity: "warning", source: "INFO §2.8.3" },
+      { severity: "warning" },
     ]);
     expect(only(validated({ sections }), "assesskit/validate/ignored-rule")).toEqual([]);
     const condition = `<qti-pre-condition>${base("boolean", "true")}</qti-pre-condition>`;
@@ -1603,7 +1530,7 @@ describe("validateTest: branch rules and pre-conditions", () => {
   it("warns about items, sections and parts that a branch rule that is always true jumps over", () => {
     const items = rules(section("S", `${itemRef("I1", branch("I3"))}${itemRef("I2")}${itemRef("I3")}`));
     expect(only(validated({ sections: items }), "assesskit/validate/unreachable")).toMatchObject([
-      { severity: "warning", source: "INFO §2.8.3.2" },
+      { severity: "warning" },
     ]);
     const conditional = section(
       "S",
@@ -1663,14 +1590,12 @@ describe("validateTest: the covers of externally scored outcomes", () => {
 
   it("reports a block for an outcome that the test does not declare", () => {
     const issues = coversOnly(covers(block("NOPE", entry())), "undeclared-outcome");
-    expect(issues).toMatchObject([{ severity: "error", source: "runtime convention §4.16" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
     expect(issues[0]?.message).toContain("NOPE");
   });
 
   it("reports a block for an outcome that is not external-scored", () => {
-    expect(coversOnly(covers(block("PLAIN", entry())), "not-external")).toMatchObject([
-      { severity: "error", source: "INFO §4.5.10" },
-    ]);
+    expect(coversOnly(covers(block("PLAIN", entry())), "not-external")).toMatchObject([{ severity: "error" }]);
   });
 
   it("reports a cover that names an item reference the test does not have", () => {
@@ -1708,7 +1633,7 @@ describe("validateTest: the covers of externally scored outcomes", () => {
       `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="CONTENT"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block>`,
     );
     const issues = coversOnly(validated({ declarations, sections: inSection }), "malformed");
-    expect(issues).toMatchObject([{ severity: "warning", source: "runtime convention §4.16" }]);
+    expect(issues).toMatchObject([{ severity: "warning" }]);
     const inItem = check({
       body: '<qti-rubric-block view="scorer" use="scoring" class="external-score-covers"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block>',
     });
@@ -1780,12 +1705,10 @@ describe("validatePackage: the manifest and the files", () => {
     );
     const issues = validatePackage(pkg);
     expect(only(issues, "assesskit/validate/missing-file")).toMatchObject([
-      { severity: "error", source: "BIND §8.1", location: { path: "imsmanifest.xml" } },
+      { severity: "error", location: { path: "imsmanifest.xml" } },
     ]);
     expect(only(issues, "assesskit/validate/missing-file")[0]?.message).toContain('"media/gone.png"');
-    expect(only(issues, "assesskit/validate/unlisted-file")).toMatchObject([
-      { severity: "error", source: "BIND §8.1, CAT §2.6" },
-    ]);
+    expect(only(issues, "assesskit/validate/unlisted-file")).toMatchObject([{ severity: "error" }]);
     expect(only(issues, "assesskit/validate/unlisted-file")[0]?.message).toContain('"extra.txt"');
   });
 
@@ -1805,9 +1728,7 @@ describe("validatePackage: the manifest and the files", () => {
   it("reports a resource whose file holds another kind of document than its type says", () => {
     const section_ = `<qti-assessment-section ${NS} identifier="S" title="S" visible="true">${itemRef("Q1")}</qti-assessment-section>`;
     const pkg = packageOf([{ identifier: "q1", type: ITEM_TYPE, href: "s.xml" }], { "s.xml": section_ });
-    expect(only(validatePackage(pkg), "assesskit/validate/resource-type")).toMatchObject([
-      { severity: "error", source: "BIND §8.1" },
-    ]);
+    expect(only(validatePackage(pkg), "assesskit/validate/resource-type")).toMatchObject([{ severity: "error" }]);
     expect(only(validatePackage(pkg), "assesskit/validate/resource-type")[0]?.message).toContain("holds a section");
   });
 
@@ -1831,7 +1752,7 @@ describe("validatePackage: the manifest and the files", () => {
     };
     expect(validatePackage(withLom("Q1"))).toEqual([]);
     const issues = only(validatePackage(withLom("Other")), "assesskit/validate/metadata-identifier");
-    expect(issues).toMatchObject([{ severity: "error", source: "INFO §4.1.1" }]);
+    expect(issues).toMatchObject([{ severity: "error" }]);
   });
 
   it("reports a personal needs profile and a results report in a package, in any of the namespaces", () => {
@@ -1850,9 +1771,7 @@ describe("validatePackage: the manifest and the files", () => {
     };
     const issues = validatePackage(packageOf(entries, files));
     expect(only(issues, "assesskit/validate/pnp-in-package")).toHaveLength(2);
-    expect(only(issues, "assesskit/validate/results-in-package")).toMatchObject([
-      { severity: "error", source: "BIND §7" },
-    ]);
+    expect(only(issues, "assesskit/validate/results-in-package")).toMatchObject([{ severity: "error" }]);
     expect(
       validatePackage(
         packageOf(
@@ -1949,7 +1868,7 @@ describe("validatePackage: the files that documents name", () => {
     const files = { "test.xml": adaptive(refs), "q1.xml": SIMPLE_ITEM, "usage.xml": "<u/>" };
     const issues = validatePackage(packageOf(base_([]), files));
     expect(only(issues, "assesskit/validate/missing-file")).toMatchObject([
-      { severity: "error", source: "CAT §2.6", location: { path: "test.xml" } },
+      { severity: "error", location: { path: "test.xml" } },
     ]);
     expect(only(issues, "assesskit/validate/missing-file")[0]?.message).toContain("settings");
     expect(
@@ -2006,7 +1925,7 @@ describe("validatePackage: the files that documents name", () => {
     ).toContain("modules/tap.js");
     const missing = packageOf([{ identifier: "p1", type: ITEM_TYPE, href: "p1.xml" }], { "p1.xml": pci("", modules) });
     expect(only(validatePackage(missing), "assesskit/validate/missing-file")).toMatchObject([
-      { severity: "error", source: "BPIG §3.7.12.2", location: { path: "p1.xml" } },
+      { severity: "error", location: { path: "p1.xml" } },
     ]);
     const configuration = JSON.stringify({ paths: { tap: "modules/tap", other: "modules/other" } });
     const configured = packageOf(
@@ -2046,9 +1965,7 @@ describe("validatePackage: the files that documents name", () => {
       [{ identifier: "p1", type: ITEM_TYPE, href: "p1.xml", files: ["modules/module_resolution.js"] }],
       { "p1.xml": pci('module="tap"'), "modules/module_resolution.js": "not json" },
     );
-    expect(only(validatePackage(pkg), "assesskit/validate/module-resolution")).toMatchObject([
-      { severity: "error", source: "BPIG §3.7.12.2" },
-    ]);
+    expect(only(validatePackage(pkg), "assesskit/validate/module-resolution")).toMatchObject([{ severity: "error" }]);
   });
 });
 
@@ -2105,9 +2022,7 @@ describe("validateResults", () => {
 
   it("reports an item result of a test result that has no sequenceIndex or shares one", () => {
     const missing = validateResults(report([itemResult("A", undefined)], {}));
-    expect(missing).toMatchObject([
-      { code: "assesskit/validate/sequence-index", severity: "error", source: "RR §2.4.5" },
-    ]);
+    expect(missing).toMatchObject([{ code: "assesskit/validate/sequence-index", severity: "error" }]);
     const shared = validateResults(report([itemResult("A", 1), itemResult("B", 1)], {}));
     expect(shared).toMatchObject([{ code: "assesskit/validate/sequence-index", severity: "error" }]);
     expect(shared[0]?.message).toContain('"B"');
@@ -2117,20 +2032,18 @@ describe("validateResults", () => {
 
   it("reports a variable reported twice in one result", () => {
     const twice = validateResults(report([itemResult("A", 1, [scoreOutcome("float"), scoreOutcome("float")])]));
-    expect(twice).toMatchObject([
-      { code: "assesskit/validate/duplicate-identifier", severity: "error", source: "RR §2.4.5" },
-    ]);
+    expect(twice).toMatchObject([{ code: "assesskit/validate/duplicate-identifier", severity: "error" }]);
   });
 
   it("warns when SCORE is not a float in a report, as in an item", () => {
     expect(validateResults(report([itemResult("A", 1, [scoreOutcome("integer")])]))).toMatchObject([
-      { code: "assesskit/validate/standard-outcome", severity: "warning", source: "INFO §2.2.2.3, BPIG §3.5" },
+      { code: "assesskit/validate/standard-outcome", severity: "warning" },
     ]);
   });
 
   it("reports a normal-maximum that is not positive", () => {
     expect(validateResults(report([itemResult("A", 1, [scoreOutcome("float", { normalMaximum: 0 })])]))).toMatchObject([
-      { code: "assesskit/validate/normal-maximum", severity: "error", source: "RR §2.4.7" },
+      { code: "assesskit/validate/normal-maximum", severity: "error" },
     ]);
     expect(validateResults(report([itemResult("A", 1, [scoreOutcome("float", { normalMaximum: 10 })])]))).toEqual([]);
   });
@@ -2190,17 +2103,13 @@ describe("validatePnp and validatePnpNamespace", () => {
         "<prohibit-set><magnification/></prohibit-set><activate-as-option-set><magnification/></activate-as-option-set>",
       ),
     );
-    expect(listed).toMatchObject([
-      { code: "assesskit/validate/pnp-prohibited", severity: "error", source: "BPIG §5.3.3" },
-    ]);
+    expect(listed).toMatchObject([{ code: "assesskit/validate/pnp-prohibited", severity: "error" }]);
     const assigned = validatePnp(
       profile(
         "<additional-testing-time><unlimited/></additional-testing-time><prohibit-set><additional-testing-time/></prohibit-set>",
       ),
     );
-    expect(assigned).toMatchObject([
-      { code: "assesskit/validate/pnp-prohibited", severity: "warning", source: "BPIG §5.3.3" },
-    ]);
+    expect(assigned).toMatchObject([{ code: "assesskit/validate/pnp-prohibited", severity: "warning" }]);
   });
 
   it("[BPIG §5.3] warns about a support that is both an option and active from the start", () => {
@@ -2209,7 +2118,7 @@ describe("validatePnp and validatePnpNamespace", () => {
         "<activate-as-option-set><spoken/></activate-as-option-set><activate-at-initialization-set><spoken/></activate-at-initialization-set>",
       ),
     );
-    expect(both).toMatchObject([{ code: "assesskit/validate/pnp-sets", severity: "warning", source: "BPIG §5.3" }]);
+    expect(both).toMatchObject([{ code: "assesskit/validate/pnp-sets", severity: "warning" }]);
   });
 
   it("reports the two namespaces that 1EdTech's own documents use, reads them and writes the namespace of the schema", () => {
@@ -2224,7 +2133,6 @@ describe("validatePnp and validatePnpNamespace", () => {
         {
           code: "assesskit/validate/pnp-namespace",
           severity: "error",
-          source: "BPIG §5, BIND §7",
           location: { element: "access-for-all-pnp" },
         },
       ]);

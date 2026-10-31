@@ -3,8 +3,6 @@ import { describe } from "../checks.js";
 import type { Issue } from "../errors.js";
 import { type PciModuleConfiguration, resolvePciModules } from "./module-resolution.js";
 
-const ASSOCIATION = "BPIG §3.7.12.4";
-const TYPE_IDENTIFIER = "BPIG §3.7.12";
 const ELEMENT = "qti-portable-custom-interaction";
 
 /** The start of a Federated Content URN (RFC 4198), the recommended form of `custom-interaction-type-identifier`. */
@@ -41,7 +39,6 @@ export function checkPortableInteraction(
       severity: "error",
       code: "assesskit/pci/no-module",
       message: `The interaction with the response identifier ${describe(interaction.responseIdentifier)} has neither a module attribute nor a qti-interaction-modules element, so no module can be loaded for it.`,
-      source: ASSOCIATION,
       location: { element: ELEMENT },
     });
   }
@@ -55,7 +52,6 @@ export function checkPortableInteraction(
       severity: "error",
       code: "assesskit/pci/module-not-configured",
       message: `The interaction names the module ${describe(id)}, which no module resolution configuration and no qti-interaction-module gives a location. It must name an AMD module that the configuration defines.`,
-      source: ASSOCIATION,
       location: { element: ELEMENT },
     });
   }
@@ -64,7 +60,6 @@ export function checkPortableInteraction(
       severity: "warning",
       code: "assesskit/pci/type-identifier",
       message: `The custom-interaction-type-identifier ${describe(interaction.customInteractionTypeIdentifier)} is not a Federated Content URN such as urn:fdc:example.com:2024:pci:graph, which prevents collisions between the names of different implementers.`,
-      source: TYPE_IDENTIFIER,
       location: { element: ELEMENT },
     });
   }

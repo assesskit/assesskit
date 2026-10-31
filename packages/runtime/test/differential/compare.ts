@@ -1,8 +1,8 @@
-import type { AcceptedDifference } from "./accepted.ts";
-import type { Implementation, ItemCase, Observed, Play, Run, SessionCase, TurnObservation } from "./model.ts";
+import { type AcceptedDifference, isAccepted } from "./accepted.js";
+import type { Implementation, ItemCase, Observed, Play, Run, SessionCase, TurnObservation } from "./model.js";
 
 /** Where two implementations disagree about an item. */
-export interface Difference {
+interface Difference {
   /** The name of the case. */
   readonly item: string;
   /**
@@ -111,10 +111,7 @@ function report(
     if (reference.accepted && subject.accepted) compared++;
     else if (!(reference.accepted || subject.accepted)) rejected.push({ item: result.item, reason: reference.reason });
     for (const difference of result.differences) {
-      const isAccepted = accepted.some(
-        (entry) => entry.item === difference.item && entry.variable === difference.variable,
-      );
-      (isAccepted ? accepts : differences).push(difference);
+      (isAccepted(accepted, difference.item, difference.variable) ? accepts : differences).push(difference);
     }
   }
   return { compared, rejected, differences, accepted: accepts };

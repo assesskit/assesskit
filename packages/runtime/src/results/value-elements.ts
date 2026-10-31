@@ -31,10 +31,6 @@ export function variableType(cardinality: Cardinality, baseType: BaseType | unde
   return baseType === undefined ? undefined : { cardinality, baseType };
 }
 
-/** The specification of the `value` element. */
-const VALUE_SOURCE = "RR §2.6.6";
-/** The specification of the base types and their lexical forms. */
-const BASE_TYPE_SOURCE = "INFO §8.13";
 /** An ISO 8601 duration starts with `P`, after an optional sign. */
 const ISO_DURATION_START = /^-?P/;
 
@@ -72,7 +68,7 @@ function readItem(reader: ElementReader): ValueItem {
 }
 
 function primitiveOf({ reader, text }: ValueItem, baseType: BaseType): Primitive {
-  return reader.attempt("invalid-value", () => readPrimitive(text, baseType), BASE_TYPE_SOURCE);
+  return reader.attempt("invalid-value", () => readPrimitive(text, baseType));
 }
 
 /** Reads a value of a variable that is not a record, which has neither a field identifier nor a base type of its own. */
@@ -81,7 +77,7 @@ function plainPrimitive(item: ValueItem, baseType: BaseType): Primitive {
     item.fieldIdentifier === undefined ? (item.baseType === undefined ? undefined : "baseType") : "fieldIdentifier";
   if (stray !== undefined) {
     const message = `A value of a variable that is not a record has no ${stray}: only the fields of a record have.`;
-    throw item.reader.fail("unexpected-attribute", message, VALUE_SOURCE);
+    throw item.reader.fail("unexpected-attribute", message);
   }
   return primitiveOf(item, baseType);
 }
@@ -91,7 +87,7 @@ function readField(item: ValueItem): readonly [string, SingleValue][] {
   const { reader, fieldIdentifier, baseType } = item;
   if (fieldIdentifier === undefined || baseType === undefined) {
     const message = "A value of a variable of cardinality record needs the attributes fieldIdentifier and baseType.";
-    throw reader.fail("missing-attribute", message, VALUE_SOURCE);
+    throw reader.fail("missing-attribute", message);
   }
   const field = single(baseType, primitiveOf(item, baseType));
   return field === null ? [] : [[fieldIdentifier, field]];
@@ -109,22 +105,18 @@ export function readValue(owner: ElementReader, elements: readonly ElementReader
   const items = elements.map(readItem);
   if (type.cardinality === "record") {
     const fields = items.flatMap(readField);
-    return owner.attempt("invalid-value", () => record(fields), VALUE_SOURCE);
+    return owner.attempt("invalid-value", () => record(fields));
   }
   const { cardinality, baseType } = type;
   if (cardinality === "single") {
     const [first, second] = items;
     if (second !== undefined) {
-      throw second.reader.fail(
-        "repeated-element",
-        "A variable of cardinality single has at most one value.",
-        "INFO §8.16",
-      );
+      throw second.reader.fail("repeated-element", "A variable of cardinality single has at most one value.");
     }
     return first === undefined ? null : single(baseType, plainPrimitive(first, baseType));
   }
   const primitives = items.map((item) => plainPrimitive(item, baseType));
-  return owner.attempt("invalid-value", () => container(cardinality, baseType, primitives), VALUE_SOURCE);
+  return owner.attempt("invalid-value", () => container(cardinality, baseType, primitives));
 }
 
 const valueElement = (text: string, attributes: Readonly<Record<string, string>> = {}): XmlElement =>

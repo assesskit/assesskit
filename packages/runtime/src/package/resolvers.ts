@@ -66,8 +66,6 @@ export interface Resolvers {
   readonly stimuli: (href: string, base: string) => AssessmentStimulus;
 }
 
-const BIND = "BIND §8";
-
 /** The resource types an item reference may name: a QTI item or an LTI link. */
 const ITEM_TYPES: readonly Resource["type"][] = ["imsqti_item_xmlv3p0", "imsbasiclti_xmlv1p3"];
 
@@ -121,7 +119,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
     const path = resolveReference(base, href);
     if (path === undefined) {
       const message = `The reference ${describe(href)} in ${describe(base)} is outside the package.`;
-      throw readError("assesskit/package/outside-package", message, BIND, { path: base });
+      throw readError("assesskit/package/outside-package", message, { path: base });
     }
     return path;
   };
@@ -130,12 +128,12 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
     const path = mainPath(manifest, resource);
     if (path === undefined) {
       const message = `The resource ${describe(resource.identifier)} has no main file inside the package.`;
-      throw readError("assesskit/package/resource-href", message, BIND, { path: base });
+      throw readError("assesskit/package/resource-href", message, { path: base });
     }
     if (resource.type === "imsbasiclti_xmlv1p3") {
       const bytes = pkg.file(path);
       if (bytes === undefined)
-        throw readError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, "BPIG §6.2.9", {
+        throw readError("assesskit/package/missing-file", `The package has no file ${describe(path)}.`, {
           path: base,
         });
       return { kind: "lti", identifier: resource.identifier, link: readLtiLink(bytes, { path }) };
@@ -143,7 +141,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
     const document = pkg.document(path);
     if (document.kind !== "item") {
       const message = `The resource ${describe(resource.identifier)} names ${describe(path)}, which is a ${document.kind}, not an item.`;
-      throw readError("assesskit/package/document-kind", message, BIND, { path });
+      throw readError("assesskit/package/document-kind", message, { path });
     }
     return { kind: "qti", item: document.item };
   };
@@ -154,7 +152,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
       const resource = itemsByPath.get(path);
       if (resource === undefined) {
         const message = `The manifest has no item resource for the reference ${describe(href)} in ${describe(base)}, which names ${describe(path)}.`;
-        throw readError("assesskit/package/unknown-resource", message, BIND, { path: base });
+        throw readError("assesskit/package/unknown-resource", message, { path: base });
       }
       return {
         resource: resource.identifier,
@@ -164,7 +162,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
           const target = resources.get(variant.identifierref);
           if (target === undefined) {
             const message = `The variant ${describe(variant.identifier)} links to ${describe(variant.identifierref)}, which is no resource of the manifest.`;
-            throw readError("assesskit/package/dangling-reference", message, "BIND §8.1.1", { path: base });
+            throw readError("assesskit/package/dangling-reference", message, { path: base });
           }
           return { resource: target.identifier, deliverable: deliverable(target, base), drd: variant.drd };
         }),
@@ -175,7 +173,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
       const document = pkg.document(path);
       if (document.kind !== "section") {
         const message = `The reference ${describe(href)} names ${describe(path)}, which is a ${document.kind}, not a section.`;
-        throw readError("assesskit/package/document-kind", message, BIND, { path });
+        throw readError("assesskit/package/document-kind", message, { path });
       }
       return document.section;
     },
@@ -184,7 +182,7 @@ export function packageResolvers(pkg: QtiPackage): Resolvers {
       const document = pkg.document(path);
       if (document.kind !== "stimulus") {
         const message = `The reference ${describe(href)} names ${describe(path)}, which is a ${document.kind}, not a stimulus.`;
-        throw readError("assesskit/package/document-kind", message, BIND, { path });
+        throw readError("assesskit/package/document-kind", message, { path });
       }
       return document.stimulus;
     },

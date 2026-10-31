@@ -80,7 +80,6 @@ describe("validateXmlFiles", () => {
         severity: "error",
         code: "assesskit/node/xsd-invalid",
         message: `Element '{${ASI}}qti-assessment-item': The attribute 'time-dependent' is required but missing.`,
-        source: "imsqti_asiv3p0_v1p0.xsd",
         location: { path: "choice.xml", line: 3 },
       },
     ]);
@@ -114,19 +113,16 @@ describe("validateXmlFiles", () => {
     expect(issues[0]).toMatchObject({
       severity: "error",
       code: "assesskit/node/xsd-invalid",
-      source: "imsqti_asiv3p0p1_v1p0.xsd",
     });
     expect(issues[0]?.message).toContain("qti-nothing");
   });
 
   it("takes the schema that the document's xsi:schemaLocation names", async () => {
-    const withIssue = item("<qti-nothing/>", ASI_300);
-    expect((await validateXmlFiles(schemas, [withIssue]))[0]?.source).toBe("imsqti_asiv3p0_v1p0.xsd");
-    const single = item(
-      "<qti-nothing/>",
-      "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_itemv3p0p1_v1p0.xsd",
-    );
-    expect((await validateXmlFiles(schemas, [single]))[0]?.source).toBe("imsqti_itemv3p0p1_v1p0.xsd");
+    const single = "https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_itemv3p0p1_v1p0.xsd";
+    for (const hint of [ASI_300, single]) {
+      const issues = await validateXmlFiles(schemas, [item("<qti-nothing/>", hint)]);
+      expect(issues.map(({ code }) => code)).toEqual(["assesskit/node/xsd-invalid"]);
+    }
   });
 
   it("validates a single-document schema's document type: an item schema accepts an item and not a test", async () => {
@@ -147,14 +143,12 @@ describe("validateXmlFiles", () => {
         severity: "error",
         code: "assesskit/node/no-schema",
         message: "The root element {urn:other}a is not in a namespace that the runtime has a schema for.",
-        source: "SCHEMA_FILES",
         location: { path: "x.xml" },
       },
       {
         severity: "error",
         code: "assesskit/node/no-schema",
         message: "The root element b is not in a namespace that the runtime has a schema for.",
-        source: "SCHEMA_FILES",
         location: { path: "y.xml" },
       },
     ]);
@@ -168,10 +162,10 @@ describe("validateXmlFiles", () => {
       { path: "deep.xml", content: deep },
       { path: "broken.xml", content: "<a><b></a>" },
     ]);
-    expect(issues.map(({ code, source, location }) => [code, source, location?.path])).toEqual([
-      ["assesskit/xml/security", "BPIG §6.7", "xxe.xml"],
-      ["assesskit/xml/security", "SECURITY.md", "deep.xml"],
-      ["assesskit/xml/not-well-formed", "XML 1.0 §2.1", "broken.xml"],
+    expect(issues.map(({ code, location }) => [code, location?.path])).toEqual([
+      ["assesskit/xml/security", "xxe.xml"],
+      ["assesskit/xml/security", "deep.xml"],
+      ["assesskit/xml/not-well-formed", "broken.xml"],
     ]);
     expect(issues[0]?.message).toContain("DOCTYPE");
   });
@@ -222,7 +216,6 @@ describe("validateXmlFiles", () => {
   it("compiles each primary schema with the schemas it imports", async () => {
     for (const [namespace, file] of PRIMARY_SCHEMAS) {
       const issues = await validateXmlFiles(schemas, [{ path: "root.xml", content: `<root xmlns="${namespace}"/>` }]);
-      expect(new Set(issues.map(({ source }) => source)), file).toEqual(new Set([file]));
       expect(
         issues.every(({ code }) => code === "assesskit/node/xsd-invalid"),
         file,

@@ -33,8 +33,6 @@ export interface Issue {
   readonly code: string;
   /** A full sentence that says what is wrong and what is expected. */
   readonly message: string;
-  /** The specification reference that defines the rule, such as `INFO §5.150` or `runtime convention §4.16`. */
-  readonly source: string;
   /** Where the problem is, when known. */
   readonly location?: IssueLocation;
 }
@@ -87,19 +85,15 @@ export class SecurityError extends AssesskitError {
 export class ProcessingError extends AssesskitError {
   /** Error class name. */
   override name = "ProcessingError";
-  /** The specification reference that defines the rule, such as `INFO §2.2.2`. */
-  readonly source: string;
   /** The variable, template or operator the error is about, when there is one. */
   readonly identifier?: string;
 
   /**
    * @param message - Says what is wrong and what is expected.
-   * @param source - The specification reference that defines the rule.
    * @param identifier - The variable, template or operator the error is about.
    */
-  constructor(message: string, source: string, identifier?: string) {
+  constructor(message: string, identifier?: string) {
     super(message);
-    this.source = source;
     this.identifier = identifier;
   }
 }

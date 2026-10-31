@@ -20,8 +20,6 @@ export interface ResourceMetadata {
   readonly curriculumStandards?: CurriculumStandardsSet;
 }
 
-const BIND_METADATA = "BIND §8.8";
-
 function isLom(element: XmlElement): boolean {
   return element.namespace === LOM_NAMESPACE && element.name === "lom";
 }
@@ -30,7 +28,6 @@ function isLom(element: XmlElement): boolean {
 function readContainer(element: XmlElement, path: string | undefined): ResourceMetadata {
   const rules = {
     module: "metadata",
-    source: BIND_METADATA,
     namespaces: [QTI_METADATA_NAMESPACE, CSM_NAMESPACE, LOM_NAMESPACE],
     path,
   };
@@ -60,12 +57,7 @@ function onlyChild(
   const [first, second] = found;
   if (second !== undefined) {
     const message = `The metadata file must contain at most one ${name} element.`;
-    throw readError(
-      "assesskit/metadata/duplicate-element",
-      message,
-      BIND_METADATA,
-      locationOf(second, path, element.name),
-    );
+    throw readError("assesskit/metadata/duplicate-element", message, locationOf(second, path, element.name));
   }
   return first;
 }

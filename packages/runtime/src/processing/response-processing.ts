@@ -26,7 +26,6 @@ function responseRules(processing: ResponseProcessing | undefined, environment: 
   if (resolved === undefined) {
     throw new ProcessingError(
       `The response processing template ${JSON.stringify(location)} is not a standard template and the option resolveTemplate does not resolve it.`,
-      "INFO §4.6.1",
       location,
     );
   }

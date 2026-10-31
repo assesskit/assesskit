@@ -23,7 +23,7 @@ A change to semantics cites the specification section in the pull request and ad
 hand except for edge cases derivable exactly: extend the script in `validation/` and regenerate the fixtures as
 [validation/README.md](validation/README.md) describes. Commit the regenerated fixtures; CI runs only the TypeScript
 tests. A difference from Longsight `qti3-core` that the specification settles goes into
-`differential/accepted-differences.json` with its reason. A place where the specifications contradict themselves or are silent
+the list in `packages/runtime/test/differential/accepted.ts` with its reason. A place where the specifications contradict themselves or are silent
 is a gap: it gets a resolution in [spec-gaps.md](docs/runtime/spec-gaps.md) and a test, and changing a resolution
 is a breaking change.
 
@@ -33,11 +33,10 @@ Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm knip`, then `pnpm build`,
 `pnpm check:packages`, `pnpm compat` and `pnpm docs:api`. A change to the code that runs in a browser also runs
 `pnpm test:browser`, which needs the browsers of `pnpm exec playwright install`, the schemas of `pnpm schemas` and the corpus of `pnpm corpus`, and `pnpm compat:engines`, which needs
 Docker ([baseline](docs/player/baseline.md)). The tests that read the corpus run with `pnpm corpus` and `pnpm test:corpus` (those of the player also need the browsers of `pnpm exec playwright install`),
-the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`, and the comparison with
-Longsight `qti3-core` with `pnpm corpus` and `pnpm test:differential`.
+the tests that validate against the official XSDs with `pnpm schemas`, `pnpm corpus` and `pnpm test:xsd`.
 
-CI runs the jobs `xsd`, `corpus`, `differential` and `bench` only when a change touches `packages/runtime/`, the harness
-(`differential/`, `scripts/`, `validation/` and the configuration files at the root) or `.github/workflows/ci.yml`;
+CI runs the jobs `xsd`, `corpus` and `bench` only when a change touches `packages/runtime/`, the harness
+(`scripts/`, `validation/` and the configuration files at the root) or `.github/workflows/ci.yml`;
 the other jobs run on every change.
 
 A change to a package goes into the pending release's changeset in `.changeset/`, or a new one made with

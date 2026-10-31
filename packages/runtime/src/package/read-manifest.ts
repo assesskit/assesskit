@@ -26,10 +26,8 @@ import {
 
 const RULES: ReaderRules = {
   module: "package",
-  source: "CP XSD",
   namespaces: [CP_NAMESPACE, CPX_NAMESPACE, DRD_NAMESPACE, QTI_METADATA_NAMESPACE, CSM_NAMESPACE, LOM_NAMESPACE],
 };
-const BIND = "BIND §8";
 
 /**
  * The resource types that BIND §8.8 lists and the CP XSD does not enumerate, read as the type of the schema. 1EdTech's
@@ -140,7 +138,7 @@ class ManifestReader {
     const first = reader.next();
     if (first !== undefined) {
       const message = `The organizations of a QTI package must be empty, found the element ${first.qualifiedName}; the profile prohibits cp:organization, cp:item and nested manifests.`;
-      throw first.fail("organizations", message, BIND);
+      throw first.fail("organizations", message);
     }
     reader.done();
   }
@@ -159,7 +157,7 @@ class ManifestReader {
     for (const { reader, identifier } of this.references) {
       if (!this.resourceIds.has(identifier)) {
         const message = `The identifierref ${JSON.stringify(identifier)} names no resource of the manifest.`;
-        issues.push(...reader.fail("dangling-reference", message, BIND).issues);
+        issues.push(...reader.fail("dangling-reference", message).issues);
       }
     }
     const [first] = issues;

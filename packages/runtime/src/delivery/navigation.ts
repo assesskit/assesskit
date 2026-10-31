@@ -275,10 +275,7 @@ class Walk {
     if (value === null) return false;
     if (value.cardinality !== "single" || value.baseType !== "boolean") {
       const found = value.cardinality === "record" ? "a record" : `${value.cardinality} ${value.baseType}`;
-      throw new ProcessingError(
-        `A pre-condition or branch rule must give a single boolean, found ${found}.`,
-        "INFO §2.8.3",
-      );
+      throw new ProcessingError(`A pre-condition or branch rule must give a single boolean, found ${found}.`);
     }
     return value.value === true;
   }

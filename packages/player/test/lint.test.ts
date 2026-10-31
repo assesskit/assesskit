@@ -3,7 +3,6 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { BANNED_FEATURES, lintMessage } from "../../../compat/banned-features.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const SRC = "packages/player/src";
@@ -22,7 +21,6 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   server: ["messages", "protocol", "scoring", "caliper", "cat", "lti"],
 };
 const FOLDERS = Object.keys(LAYERS);
-const SERVER = ["scoring", "caliper", "cat", "lti", "server"];
 const SHARED = ["errors", "checks"];
 
 interface Diagnostic {
@@ -194,37 +192,6 @@ const IMPORTS = "Browser code imports from @assesskit/runtime/delivery only";
 const REEXPORTS = "Browser code re-exports from @assesskit/runtime/delivery only";
 const LOADS = "Only client/local.ts loads @assesskit/runtime/delivery";
 
-const baseline = BANNED_FEATURES.flatMap((banned, i) =>
-  banned.samples.map((sample, j) => ({
-    banned,
-    sample,
-    path: source(
-      `${SRC}/${sample.language === "js" ? "protocol" : "player"}/banned-${i}-${j}.${sample.language === "js" ? "ts" : "css"}`,
-      [sample.code],
-    ),
-  })),
-);
-const baselineFolders = ["protocol", "messages", "player", "client", ...SERVER].map((folder) => ({
-  folder,
-  path: source(`${SRC}/${folder}/mixed.ts`, [
-    "export const a = Object.groupBy(items, key);",
-    'export const b = "a:has(b) { color: red; }";',
-  ]),
-}));
-const allowedBaseline = source(`${SRC}/protocol/allowed-baseline.ts`, [
-  "export const a = [Object.values(o).map(f), Object.keys(o).filter(f), Array.from(map.values()).map(f)];",
-  "export const b = [/a/u, new RegExp(pattern, 'u'), 'text', `plain`, set.add(1), new Set([1]).has(1)];",
-  "const popover = element;",
-  "export const c = [popover.hidden, [1, 2].toSorted(), structuredClone(o), items.at(-1)];",
-]);
-const allowedCss = source(`${SRC}/player/allowed-baseline.css`, [
-  ".a { color: color-mix(in srgb, red, blue); }",
-  "dialog::backdrop { color: red; }",
-  ".b:focus-visible { outline: 1px solid; }",
-  "@container (min-width: 10px) { .c { display: grid; grid-template-columns: 1fr 1fr; } }",
-  "@media (min-width: 1px) { .d { color: red; } }",
-]);
-
 beforeAll(() => {
   project = mkdtempSync(join(tmpdir(), "player-lint-"));
   cpSync(join(ROOT, "biome.json"), join(project, "biome.json"));
@@ -355,31 +322,5 @@ describe("browser-delivery-imports.grit", () => {
   it("does not apply to the server folders", () => {
     expect(messagesFor(delivery.server, "Browser code")).toEqual([]);
     expect(messagesFor(delivery.server, "Only client")).toEqual([]);
-  });
-});
-
-describe("baseline.grit and baseline-css.grit", () => {
-  for (const { banned, sample, path } of baseline) {
-    it(`bans ${banned.feature}: ${sample.code}`, () => {
-      expect(whatFor(path).filter((what) => what.includes("outside the browser baseline"))).toEqual([
-        lintMessage(banned),
-      ]);
-    });
-  }
-
-  it("applies to the shared and browser folders and not to the server folders", () => {
-    for (const { folder, path } of baselineFolders) {
-      const reported = whatFor(path).filter((what) => what.includes("outside the browser baseline")).length;
-      expect(reported, folder).toBe(SERVER.includes(folder) ? 0 : 2);
-    }
-  });
-
-  it("allows the features that are inside the baseline", () => {
-    for (const path of [allowedBaseline, allowedCss]) {
-      expect(
-        whatFor(path).filter((what) => what.includes("outside the browser baseline")),
-        path,
-      ).toEqual([]);
-    }
   });
 });

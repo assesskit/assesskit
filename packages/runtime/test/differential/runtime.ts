@@ -1,5 +1,4 @@
-import { AssesskitError, createRandom } from "@assesskit/runtime";
-import { type AssessmentItem, type ResponseDeclaration, readAsi } from "@assesskit/runtime/asi";
+import { type AssessmentItem, type ResponseDeclaration, readAsi } from "../../src/asi/index.js";
 import {
   applyItemAction,
   type ItemAction,
@@ -9,13 +8,14 @@ import {
   presentItem,
   standaloneSessionControl,
   startItemSession,
-} from "@assesskit/runtime/delivery";
+} from "../../src/delivery/index.js";
+import { AssesskitError, createRandom } from "../../src/index.js";
 import {
   createItemVariables,
   type ItemVariables,
   runResponseProcessing,
   runTemplateProcessing,
-} from "@assesskit/runtime/processing";
+} from "../../src/processing/index.js";
 import {
   type BaseType,
   container,
@@ -23,9 +23,9 @@ import {
   parsePrimitive,
   single,
   type Value,
-} from "@assesskit/runtime/values";
-import { longsightRandom } from "./longsight.ts";
-import type { Implementation, ItemCase, Observed, Play, Scalar, SessionCase, Turn, TurnObservation } from "./model.ts";
+} from "../../src/values/index.js";
+import { longsightRandom } from "./longsight.js";
+import type { Implementation, ItemCase, Observed, Play, Scalar, SessionCase, Turn, TurnObservation } from "./model.js";
 
 /** Returns a primitive in the neutral form: points, pairs and files as the text that the oracle reports. */
 function scalarOf(primitive: Primitive): Scalar {

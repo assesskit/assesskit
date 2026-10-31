@@ -50,13 +50,13 @@ export class AttributeReferences {
         const here = elementPath(visit);
         if (found === undefined) {
           const message = `The attribute ${definition.name} of the ${visit.name} names ${JSON.stringify(identifier)}, which is no template or outcome variable of the ${this.owner} in reach.`;
-          this.findings.error("assesskit/validate/undeclared-variable", message, "INFO §2.7.2", here);
+          this.findings.error("assesskit/validate/undeclared-variable", message, here);
           continue;
         }
         const accepted: readonly string[] = REFERABLE_BASE_TYPES[type.value];
         if (found.cardinality !== "single" || (found.baseType !== undefined && !accepted.includes(found.baseType))) {
           const message = `The attribute ${definition.name} of the ${visit.name} names ${JSON.stringify(identifier)}, which must be a single ${accepted.join(" or ")} variable.`;
-          this.findings.error("assesskit/validate/reference-type", message, "INFO §2.7.2", here);
+          this.findings.error("assesskit/validate/reference-type", message, here);
         }
       }
     }

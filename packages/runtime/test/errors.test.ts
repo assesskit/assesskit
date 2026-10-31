@@ -5,7 +5,6 @@ const issue: Issue = {
   severity: "error",
   code: "assesskit/xml/not-well-formed",
   message: "The document is not well-formed: the element qti-item-body is not closed.",
-  source: "BIND §5.2",
   location: { path: "items/choice.xml", line: 12, column: 3, element: "qti-assessment-item/qti-item-body" },
 };
 
@@ -46,15 +45,14 @@ describe("SecurityError", () => {
 });
 
 describe("ProcessingError", () => {
-  it("carries the source and the identifier", () => {
-    const error = new ProcessingError('The variable "SCORE" is not declared.', "INFO §2.2.2", "SCORE");
+  it("carries the identifier", () => {
+    const error = new ProcessingError('The variable "SCORE" is not declared.', "SCORE");
     expect(error).toBeInstanceOf(AssesskitError);
     expect(error.name).toBe("ProcessingError");
-    expect(error.source).toBe("INFO §2.2.2");
     expect(error.identifier).toBe("SCORE");
   });
 
   it("has no identifier when none is given", () => {
-    expect(new ProcessingError("Unknown template.", "INFO §4.6.1").identifier).toBeUndefined();
+    expect(new ProcessingError("Unknown template.").identifier).toBeUndefined();
   });
 });

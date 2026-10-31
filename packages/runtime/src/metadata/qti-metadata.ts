@@ -91,7 +91,7 @@ export interface QtiMetadata {
 
 /** The rules of the QTI metadata schema for a reader. */
 function rulesOf(path: string | undefined): ReaderRules {
-  return { module: "metadata", source: "MD §2.3.1", namespaces: [QTI_METADATA_NAMESPACE], path };
+  return { module: "metadata", namespaces: [QTI_METADATA_NAMESPACE], path };
 }
 
 function readPciContext(reader: ElementReader): PciContext {

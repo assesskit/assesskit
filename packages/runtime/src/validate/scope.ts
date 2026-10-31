@@ -8,8 +8,6 @@ export interface Problem {
   readonly code: string;
   /** A full sentence that says what is wrong and what is expected. */
   readonly message: string;
-  /** The specification reference. */
-  readonly source: string;
 }
 
 /** What an expression's variable is: its type, which may come with warnings about naming it, or the problem with naming it. */

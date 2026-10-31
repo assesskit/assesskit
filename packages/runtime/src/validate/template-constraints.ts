@@ -32,7 +32,6 @@ export function checkConstraintDefaults(item: AssessmentItem, findings: Findings
     findings.warning(
       "assesskit/validate/constraint-without-default",
       message,
-      "INFO §5.150",
       "qti-assessment-item/qti-template-declaration",
     );
   }

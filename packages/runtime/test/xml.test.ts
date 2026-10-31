@@ -265,7 +265,6 @@ describe("parseXml", () => {
       expect(issue).toMatchObject({
         severity: "error",
         code: "assesskit/xml/encoding",
-        source: "XML 1.0 §4.3.3",
         location: { path: "items/a.xml" },
       });
       expect(issue.message).toMatch(message);
@@ -400,7 +399,6 @@ describe("parseXml", () => {
       expect(issue).toMatchObject({
         severity: "error",
         code: "assesskit/xml/not-well-formed",
-        source: "XML 1.0 §2.1",
         location: { path: "bad.xml", line },
       });
       expect(issue.location?.column).toBeGreaterThanOrEqual(1);
@@ -416,7 +414,6 @@ describe("parseXml", () => {
     ])("rejects %s, which is no character (XML 1.0 §2.2)", (_name, xml, line, column) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
         code: "assesskit/xml/not-well-formed",
-        source: "XML 1.0 §2.2",
         location: { path: "bad.xml", line, column },
       });
       expect(parseXml("<a>\ud83d\ude00</a>").children).toEqual([text("😀")]);
@@ -431,7 +428,6 @@ describe("parseXml", () => {
       (_name, xml) => {
         expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
           code: "assesskit/xml/namespace",
-          source: "Namespaces in XML 1.0 §2.2",
           location: { path: "bad.xml", line: 1, column: 1 },
         });
       },
@@ -444,7 +440,6 @@ describe("parseXml", () => {
     ])("rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
         code: "assesskit/xml/not-well-formed",
-        source: "Namespaces in XML 1.0 §3",
         location: { path: "bad.xml", line: 1, column: 1 },
       });
     });
@@ -462,7 +457,7 @@ describe("parseXml", () => {
 
     it("rejects XML 1.1, which has other rules for characters and names", () => {
       const issue = issueOf(thrown(() => parseXml('<?xml version="1.1"?><a/>')));
-      expect(issue).toMatchObject({ code: "assesskit/xml/version", source: "XML 1.0 §2.8" });
+      expect(issue).toMatchObject({ code: "assesskit/xml/version" });
       expect(issue.message).toBe('The document declares XML version "1.1", but the runtime reads XML 1.0.');
     });
 
@@ -771,7 +766,7 @@ describe("resolveIncludes", () => {
   it("rejects an include whose resource cannot be read and that has no fallback", () => {
     const root = element("a", [include("missing.xml")]);
     const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({}))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource", source: "XInclude 1.0 §4.4" });
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource" });
     expect(issue.message).toBe(
       'The document "missing.xml" of an xi:include cannot be read and the include has no xi:fallback: missing.xml is not in the package.',
     );
@@ -784,7 +779,6 @@ describe("resolveIncludes", () => {
     const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" }))));
     expect(issue).toMatchObject({
       code: "assesskit/xml/xinclude-attribute",
-      source: "INFO §2.12",
       location: { path: "a.xml" },
     });
     expect(issue.message).toBe("An xi:include must not have an xpointer attribute.");
@@ -816,13 +810,13 @@ describe("resolveIncludes", () => {
           resolveIncludes(element("a", [include("f.xml", children)]), "a.xml", resolver({ "f.xml": "<f/>" })),
         ),
       );
-      expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure", source: "XInclude 1.0 §3.1" });
+      expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
     }
   });
 
   it("rejects an xi:fallback outside an include", () => {
     const issue = issueOf(thrown(() => resolveIncludes(element("a", [xi("fallback")]), "a.xml", resolver({}))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure", source: "XInclude 1.0 §3.2" });
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
   });
 
   it("rejects includes that form a loop, however long", () => {
@@ -831,7 +825,7 @@ describe("resolveIncludes", () => {
       "b.xml": '<b xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="a.xml"/></b>',
     };
     const issue = issueOf(thrown(() => resolveIncludes(parseXml(documents["a.xml"]), "a.xml", resolver(documents))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-cycle", source: "XInclude 1.0 §4.2.7" });
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
     expect(issue.message).toBe('The xi:include of "a.xml" includes a document that is already being included.');
   });
 
@@ -960,7 +954,7 @@ describe("buildElement", () => {
 
 describe("ElementReader", () => {
   const Ns = "urn:demo";
-  const rules = { module: "demo", source: "DEMO XSD", namespaces: [Ns] };
+  const rules = { module: "demo", namespaces: [Ns] };
   const open = (xml: string): ElementReader => ElementReader.open(xml, rules, "The demo");
   const failure = (run: () => unknown): ReadError => thrownAs(ReadError, run);
 
@@ -985,13 +979,10 @@ describe("ElementReader", () => {
       expect(() => new ElementReader(element, JSON.parse("null"))).toThrow(
         "The rules of a reader must be an object, found null.",
       );
-      expect(() => new ElementReader(element, JSON.parse('{"module":5,"source":"s","namespaces":[]}'))).toThrow(
+      expect(() => new ElementReader(element, JSON.parse('{"module":5,"namespaces":[]}'))).toThrow(
         "The module of the rules of a reader must be a string, found 5.",
       );
-      expect(() => new ElementReader(element, JSON.parse('{"module":"m","source":null,"namespaces":[]}'))).toThrow(
-        DataError,
-      );
-      expect(() => new ElementReader(element, JSON.parse('{"module":"m","source":"s","namespaces":"urn:a"}'))).toThrow(
+      expect(() => new ElementReader(element, JSON.parse('{"module":"m","namespaces":"urn:a"}'))).toThrow(
         'The namespaces of the rules of a reader must be an array, found "urn:a".',
       );
     });
@@ -1018,7 +1009,6 @@ describe("ElementReader", () => {
         severity: "error",
         code: "assesskit/demo/missing-attribute",
         message: "The element b needs the attribute id.",
-        source: "DEMO XSD",
         location: { line: 2, column: 3, element: "a/b" },
       });
       const invalid = failure(() =>
@@ -1264,7 +1254,7 @@ describe("childElements, attributeOf and textOf", () => {
 
 describe("readError and locationOf", () => {
   it("builds a ReadError with one issue and the position in its message", () => {
-    const error = readError("assesskit/xml/example", "The example is wrong.", "XML 1.0 §2.1", {
+    const error = readError("assesskit/xml/example", "The example is wrong.", {
       path: "a.xml",
       line: 3,
       column: 7,
@@ -1276,11 +1266,10 @@ describe("readError and locationOf", () => {
         severity: "error",
         code: "assesskit/xml/example",
         message: "The example is wrong.",
-        source: "XML 1.0 §2.1",
         location: { path: "a.xml", line: 3, column: 7 },
       },
     ]);
-    expect(readError("assesskit/xml/example", "m", "s").issues[0]).not.toHaveProperty("location");
+    expect(readError("assesskit/xml/example", "m").issues[0]).not.toHaveProperty("location");
   });
 
   it("takes the location of an element from its start tag", () => {

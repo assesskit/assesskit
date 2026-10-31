@@ -20,7 +20,6 @@ export function lookUp(declaration: OutcomeDeclaration, source: Value | null): V
   if (table === undefined || declaration.cardinality !== "single" || baseType === undefined) {
     throw new ProcessingError(
       `The rule qti-lookup-outcome-value sets ${identifier}, which is not a single outcome with a lookup table.`,
-      "INFO §5.87",
       identifier,
     );
   }
@@ -28,7 +27,6 @@ export function lookUp(declaration: OutcomeDeclaration, source: Value | null): V
   if (source !== null && (source.cardinality !== "single" || !accepted.includes(source.baseType))) {
     throw new ProcessingError(
       `The rule qti-lookup-outcome-value for ${identifier} needs a single ${accepted.join(", ")}, found ${describeType(source)}.`,
-      "INFO §5.87.2",
       identifier,
     );
   }

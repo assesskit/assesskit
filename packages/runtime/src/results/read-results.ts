@@ -28,7 +28,7 @@ import {
   SUPPORT_ASSIGNMENTS,
 } from "./vocabularies.js";
 
-const RULES: ReaderRules = { module: "results", source: "RR XSD", namespaces: [RESULTS_NAMESPACE] };
+const RULES: ReaderRules = { module: "results", namespaces: [RESULTS_NAMESPACE] };
 
 /** The names of the elements that report variables, in the order of the schema's choice. */
 const VARIABLE_ELEMENTS = ["responseVariable", "templateVariable", "outcomeVariable", "contextVariable"];
@@ -65,7 +65,7 @@ function readType(reader: ElementReader): VariableType {
   const type = variableType(reader.requiredTerm("cardinality", CARDINALITIES), reader.term("baseType", BASE_TYPES));
   if (type === undefined) {
     const message = `The element ${reader.name} needs the attribute baseType, which only a variable of cardinality record may leave out.`;
-    throw reader.fail("missing-attribute", message, "RR §2.4.3");
+    throw reader.fail("missing-attribute", message);
   }
   return type;
 }
@@ -99,8 +99,7 @@ function readCorrectResponse(reader: ElementReader, type: VariableType): ResultC
   if (elements.length === 0) throw reader.fail("missing-element", "The element correctResponse needs a value.");
   reader.done();
   const value = readValue(reader, elements, type);
-  if (value === null)
-    throw reader.fail("invalid-value", "The correct response of a variable is never NULL.", "RR §2.4.4");
+  if (value === null) throw reader.fail("invalid-value", "The correct response of a variable is never NULL.");
   return { ...(interpretation !== undefined && { interpretation }), value };
 }
 
@@ -245,7 +244,7 @@ export function readResults(input: string | Uint8Array | XmlElement): Assessment
   const reader = ElementReader.open(input, RULES, "The results");
   if (reader.foreign || reader.name !== "assessmentResult") {
     const message = `The root element must be assessmentResult in the namespace ${RESULTS_NAMESPACE}, found ${reader.qualifiedName}.`;
-    throw reader.fail("not-results", message, "RR §2.3.1");
+    throw reader.fail("not-results", message);
   }
   const context = readContext(reader.require("context"));
   const test = reader.take("testResult");

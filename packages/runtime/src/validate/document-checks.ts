@@ -24,21 +24,15 @@ export class DocumentChecks {
     this.includes(visit);
     const mask = PATTERN_MASKS.has(visit.name) ? textOf(visit.model, "patternMask") : undefined;
     if (mask !== undefined) {
-      checkPatternText(
-        this.findings,
-        mask,
-        `The pattern-mask of the ${visit.name}`,
-        "INFO §5.162.5",
-        elementPath(visit),
-      );
+      checkPatternText(this.findings, mask, `The pattern-mask of the ${visit.name}`, elementPath(visit));
     }
     if (visit.name.endsWith("-interaction") && this.within(visit, "qti-rubric-block")) {
       const message = `The ${visit.name} is inside a qti-rubric-block, which must not contain interactions.`;
-      this.findings.error("assesskit/validate/rubric-interaction", message, "INFO §2.8.6", elementPath(visit));
+      this.findings.error("assesskit/validate/rubric-interaction", message, elementPath(visit));
     }
     if (visit.name === "qti-rubric-block" && this.coversBelowTest(visit)) {
       const message = `The qti-rubric-block has the class ${SCORE_COVERS_CLASS}, which only a rubric block of the test is recognized by; here it is an ordinary rubric block.`;
-      this.findings.warning("assesskit/covers/malformed", message, "runtime convention §4.16", elementPath(visit));
+      this.findings.warning("assesskit/covers/malformed", message, elementPath(visit));
     }
   }
 
@@ -46,7 +40,7 @@ export class DocumentChecks {
     for (const element of visit.foreign) {
       if (element.namespace !== XINCLUDE_NAMESPACE) continue;
       const message = `The ${visit.name} holds an xi:include, which must be resolved before the document is validated or run.`;
-      this.findings.error("assesskit/validate/unresolved-include", message, "INFO §2.12", elementPath(visit));
+      this.findings.error("assesskit/validate/unresolved-include", message, elementPath(visit));
     }
   }
 

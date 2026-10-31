@@ -17,7 +17,7 @@
     },
     "compat": {
       "entry": ["smoke.ts"],
-      "ignoreDependencies": ["stylelint-no-unsupported-browser-features", "playwright-core"]
+      "ignoreDependencies": ["stylelint-no-unsupported-browser-features"]
     },
     "compat/engines/*": {
       "entry": ["playwright.config.ts"],

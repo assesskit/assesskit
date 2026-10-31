@@ -274,7 +274,6 @@ describe("errors", () => {
       severity: "error",
       code: "assesskit/usage/not-usage-data",
       message: `The root element must be usageData in the namespace ${USAGE_NAMESPACE}, found {http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2}usageData.`,
-      source: "UD §2.3.1",
       location: { line: 1, column: 1, element: "usageData" },
     });
     expect(() => readUsageData(`<statistics xmlns="${USAGE_NAMESPACE}"/>`)).toThrow("found statistics.");
@@ -334,7 +333,6 @@ describe("errors", () => {
     );
     expect(issueOf(() => statisticOf(ordinary("", `${TARGET}<value baseType="integer">1.5</value>`)))).toMatchObject({
       code: "assesskit/usage/invalid-value",
-      source: "INFO §8.13",
     });
   });
 

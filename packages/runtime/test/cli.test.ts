@@ -283,17 +283,15 @@ describe("report", () => {
     severity: "error",
     code: "assesskit/node/xsd-invalid",
     message: "Element 'x': Not expected.",
-    source: "imsqti_asiv3p0p1_v1p0.xsd",
     location: { path: "items/a.xml", line: 12, column: 5 },
   };
   const warning: Issue = {
     severity: "warning",
     code: "assesskit/validate/unbound-response",
     message: "The response variable is bound to no interaction.",
-    source: "INFO §2.2.2.2",
     location: { path: "items/b.xml", element: "qti-assessment-item/qti-response-declaration" },
   };
-  const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place.", source: "S" };
+  const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place." };
 
   it("counts the issues of each severity, and is valid when none is an error", () => {
     expect(buildReport("t", "1.2.3", [warning, bare])).toEqual({
@@ -320,9 +318,9 @@ describe("report", () => {
   it("writes a line for each issue and the verdict as text", () => {
     expect(formatText(buildReport("pkg", "v", [error, warning, bare]))).toBe(
       [
-        "items/a.xml:12:5: error: Element 'x': Not expected. [assesskit/node/xsd-invalid, imsqti_asiv3p0p1_v1p0.xsd]",
-        "items/b.xml (qti-assessment-item/qti-response-declaration): warning: The response variable is bound to no interaction. [assesskit/validate/unbound-response, INFO §2.2.2.2]",
-        "pkg: warning: No place. [assesskit/x/y, S]",
+        "items/a.xml:12:5: error: Element 'x': Not expected. [assesskit/node/xsd-invalid]",
+        "items/b.xml (qti-assessment-item/qti-response-declaration): warning: The response variable is bound to no interaction. [assesskit/validate/unbound-response]",
+        "pkg: warning: No place. [assesskit/x/y]",
         "pkg: invalid (1 error, 2 warnings)",
         "",
       ].join("\n"),

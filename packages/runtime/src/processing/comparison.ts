@@ -105,7 +105,6 @@ export function toleranceOf(
   if (lower === undefined || rest.length > 0) {
     throw new ProcessingError(
       `The operator qti-equal in ${mode} mode needs one or two tolerances, found ${amounts.length}.`,
-      "INFO §5.46.2",
     );
   }
   if (lower === null || upper === null || upper === undefined || lower < 0 || upper < 0) return null;

@@ -92,8 +92,6 @@ export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Cata
     );
 }
 
-const CARDS = "BPIG §3.7.10";
-
 /**
  * Checks a catalog against the rules of cards (BPIG §3.7.10).
  *
@@ -112,8 +110,8 @@ export function checkCatalog(catalog: Catalog): readonly Issue[] {
   checkArray(catalog.cards, "The cards of the catalog must be an array");
   const issues: Issue[] = [];
   const supports = new Set<string>();
-  const report = (code: string, message: string, source: string, element: string): void => {
-    issues.push({ severity: "error", code, message, source, location: { element: `qti-catalog/${element}` } });
+  const report = (code: string, message: string, element: string): void => {
+    issues.push({ severity: "error", code, message, location: { element: `qti-catalog/${element}` } });
   };
   for (const card of catalog.cards) {
     const name = describe(card.support);
@@ -121,7 +119,6 @@ export function checkCatalog(catalog: Catalog): readonly Issue[] {
       report(
         "assesskit/content/duplicate-card",
         `The catalog has more than one qti-card for the support ${name}, but it may have one.`,
-        "INFO §5.26.1",
         "qti-card",
       );
     }
@@ -132,7 +129,6 @@ export function checkCatalog(catalog: Catalog): readonly Issue[] {
       report(
         "assesskit/content/empty-card",
         `The qti-card for the support ${name} has no qti-html-content and no qti-file-href, so it gives no content.`,
-        CARDS,
         "qti-card",
       );
     }
@@ -140,7 +136,6 @@ export function checkCatalog(catalog: Catalog): readonly Issue[] {
       report(
         "assesskit/content/empty-card",
         `A qti-card-entry of the qti-card for the support ${name} has no qti-html-content and no qti-file-href, so it gives no content.`,
-        CARDS,
         "qti-card/qti-card-entry",
       );
     }
@@ -148,7 +143,6 @@ export function checkCatalog(catalog: Catalog): readonly Issue[] {
       report(
         "assesskit/content/duplicate-default-entry",
         `More than one qti-card-entry of the qti-card for the support ${name} is the default, but one may be.`,
-        "INFO §5.27.2",
         "qti-card/qti-card-entry",
       );
     }

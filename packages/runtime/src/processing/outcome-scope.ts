@@ -16,7 +16,7 @@ import { initialOutcome } from "./variables.js";
 const INSTANCE = /^[1-9][0-9]*$/;
 
 function undeclared(identifier: string, kind = "variable"): ProcessingError {
-  return new ProcessingError(`The test has no ${kind} ${identifier}.`, "INFO §2.11.1.2", identifier);
+  return new ProcessingError(`The test has no ${kind} ${identifier}.`, identifier);
 }
 
 /** An item variable named with its item prefix: `ITEM.VAR` or `ITEM.n.VAR`. */
@@ -169,7 +169,6 @@ export class OutcomeScope implements Scope {
     if (declaration === undefined) {
       throw new ProcessingError(
         `The rule ${rule} sets ${identifier}, which is not an outcome of the test.`,
-        "INFO §5.130",
         identifier,
       );
     }

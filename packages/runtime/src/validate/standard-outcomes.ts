@@ -21,5 +21,5 @@ export function checkStandardOutcome(
   const expected = STANDARD_OUTCOMES.get(identifier);
   if (expected === undefined || baseType === expected) return;
   const message = `The outcome ${identifier} should have the base type ${expected}, found ${baseType ?? "none"}; content that deviates still runs.`;
-  findings.warning("assesskit/validate/standard-outcome", message, "INFO §2.2.2.3, BPIG §3.5", element);
+  findings.warning("assesskit/validate/standard-outcome", message, element);
 }

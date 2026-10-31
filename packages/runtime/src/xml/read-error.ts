@@ -11,11 +11,10 @@ export function documentName(path: string | undefined): string {
  *
  * @param code - The issue code, `assesskit/xml/<name>`.
  * @param message - A full sentence that says what is wrong and what is expected.
- * @param source - The specification reference that defines the rule.
  * @param location - Where the problem is, when known.
  */
-export function readError(code: string, message: string, source: string, location?: IssueLocation): ReadError {
-  const issue: Issue = { severity: "error", code, message, source, ...(location ? { location } : {}) };
+export function readError(code: string, message: string, location?: IssueLocation): ReadError {
+  const issue: Issue = { severity: "error", code, message, ...(location ? { location } : {}) };
   const position = location?.line === undefined ? "" : ` (line ${location.line}, column ${location.column ?? 1})`;
   return new ReadError(`${message}${position}`, [issue]);
 }

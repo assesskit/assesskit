@@ -7,7 +7,7 @@ import {
   transformWith,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { BINDING_SOURCES } from "../interactions/bindings.js";
+import { INTERACTION_KINDS } from "../interactions/bindings.js";
 import type { InteractionKind } from "../interactions/index.js";
 import type { ResultContext } from "../results/index.js";
 import { baseTypeSchema } from "../values/base-type.js";
@@ -22,7 +22,7 @@ const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
 
 /** Whether a value is the kind of an interaction. */
 const isInteractionKind = (value: unknown): value is InteractionKind =>
-  typeof value === "string" && Object.hasOwn(BINDING_SOURCES, value);
+  typeof value === "string" && INTERACTION_KINDS.has(value);
 
 const optionalString = v.optional(v.string());
 const optionalNumber = v.optional(finiteSchema);

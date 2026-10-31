@@ -86,23 +86,23 @@ export class BranchRuleChecks {
     const name = JSON.stringify(target);
     if (node === undefined) {
       const message = `The branch rule of the ${elementOf(source)} ${JSON.stringify(source.model.identifier)} names the target ${name}, which is no test part, section or item reference of the test.`;
-      this.findings.error("assesskit/validate/branch-target", message, "INFO §5.23.1", here);
+      this.findings.error("assesskit/validate/branch-target", message, here);
       return;
     }
     if (source.kind === "part" ? node.kind !== "part" : node.kind === "part" || partOf(node) !== partOf(source)) {
       const wanted = source.kind === "part" ? "another test part" : "an item or section in the same test part";
       const message = `The branch rule of the ${elementOf(source)} ${JSON.stringify(source.model.identifier)} names the target ${name}, but it must name ${wanted}.`;
-      this.findings.error("assesskit/validate/branch-target", message, "INFO §5.23", here);
+      this.findings.error("assesskit/validate/branch-target", message, here);
     } else if (node.order <= source.last) {
       const message = `The branch rule of the ${elementOf(source)} ${JSON.stringify(source.model.identifier)} names the target ${name}, which is not ahead of it; a branch rule only jumps forward, so that the paths through a test are trees.`;
-      this.findings.error("assesskit/validate/branch-target", message, "INFO §2.8.3.2", here);
+      this.findings.error("assesskit/validate/branch-target", message, here);
     }
     if (mayRepeat(node)) {
       const message = `The branch rule of the ${elementOf(source)} ${JSON.stringify(source.model.identifier)} names the target ${name}, which selection with replacement can repeat, so the target is ambiguous.`;
-      this.findings.error("assesskit/validate/branch-to-repeated", message, "INFO §5.98", here);
+      this.findings.error("assesskit/validate/branch-to-repeated", message, here);
     } else if (insideAdaptive(node)) {
       const message = `The branch rule of the ${elementOf(source)} ${JSON.stringify(source.model.identifier)} names the target ${name}, an item of an adaptive section, so the rule is ignored.`;
-      this.findings.warning("assesskit/validate/ignored-rule", message, "CAT §2.1", here);
+      this.findings.warning("assesskit/validate/ignored-rule", message, here);
     }
   }
 
@@ -113,12 +113,7 @@ export class BranchRuleChecks {
     if (!nonlinear && !insideAdaptive(node)) return;
     const why = nonlinear ? "the test part is navigated in nonlinear mode" : "the section selects its items adaptively";
     const message = `The ${elementOf(node)} ${JSON.stringify(node.model.identifier)} has branch rules or pre-conditions, which are ignored because ${why}.`;
-    this.findings.warning(
-      "assesskit/validate/ignored-rule",
-      message,
-      nonlinear ? "INFO §2.8.3" : "CAT §2.1",
-      `${ROOT}/${elementOf(node)}`,
-    );
+    this.findings.warning("assesskit/validate/ignored-rule", message, `${ROOT}/${elementOf(node)}`);
   }
 
   /** The index of the first node after a section, among a list of nodes in presentation order. */
@@ -173,7 +168,7 @@ export class BranchRuleChecks {
     parts.forEach((part, index) => {
       if (reached.has(index)) return;
       const message = `The test part ${JSON.stringify(part.model.identifier)} is never presented: a branch rule that is always true jumps over it.`;
-      this.findings.warning("assesskit/validate/unreachable", message, "INFO §2.8.3.2", `${ROOT}/qti-test-part`);
+      this.findings.warning("assesskit/validate/unreachable", message, `${ROOT}/qti-test-part`);
     });
   }
 
@@ -195,12 +190,7 @@ export class BranchRuleChecks {
     items.forEach((item, index) => {
       if (reached.has(index) || insideAdaptive(item)) return;
       const message = `The item reference ${JSON.stringify(item.model.identifier)} is never presented: a branch rule that is always true jumps over it.`;
-      this.findings.warning(
-        "assesskit/validate/unreachable",
-        message,
-        "INFO §2.8.3.2",
-        `${ROOT}/qti-assessment-item-ref`,
-      );
+      this.findings.warning("assesskit/validate/unreachable", message, `${ROOT}/qti-assessment-item-ref`);
     });
   }
 }

@@ -21,13 +21,8 @@ import { checkStandardOutcome } from "./standard-outcomes.js";
 
 type Declaration = ContextDeclaration | ResponseDeclaration | OutcomeDeclaration | TemplateDeclaration;
 
-/** Where a built-in variable is defined (INFO §2.2.2). */
-const RESERVED_SOURCES: ReadonlyMap<string, string> = new Map([
-  [NUM_ATTEMPTS, "INFO §2.2.2.2"],
-  [DURATION, "INFO §2.2.2.2"],
-  [COMPLETION_STATUS, "INFO §2.2.2.3"],
-  [QTI_CONTEXT, "INFO §2.2.2.1"],
-]);
+/** The built-in variables, whose identifiers a declaration must not use (INFO §2.2.2). */
+const RESERVED = new Set([NUM_ATTEMPTS, DURATION, COMPLETION_STATUS, QTI_CONTEXT]);
 
 /** The declarations of one kind, with the element that declares them. */
 interface DeclarationGroup {
@@ -65,13 +60,12 @@ export function checkDeclarations(findings: Findings, scope: DeclarationScope): 
     for (const declaration of declarations) {
       const here = `${scope.trail}/${element}`;
       const { identifier } = declaration;
-      const reserved = RESERVED_SOURCES.get(identifier);
-      if (reserved !== undefined && scope.builtIn.includes(identifier)) {
+      if (RESERVED.has(identifier) && scope.builtIn.includes(identifier)) {
         const message = `The identifier ${JSON.stringify(identifier)} names a built-in variable of the ${scope.owner}, which must not be declared.`;
-        findings.error("assesskit/validate/reserved-identifier", message, reserved, here);
+        findings.error("assesskit/validate/reserved-identifier", message, here);
       } else if (seen.has(identifier)) {
         const message = `The identifier ${JSON.stringify(identifier)} is declared twice in the ${scope.owner}; the identifiers of its variables must be unique.`;
-        findings.error("assesskit/validate/duplicate-identifier", message, "INFO §5.34.1", here);
+        findings.error("assesskit/validate/duplicate-identifier", message, here);
       }
       seen.add(identifier);
       checkDeclared(findings, element, declaration, here);
@@ -83,7 +77,7 @@ function checkDeclared(findings: Findings, element: string, declaration: Declara
   const { identifier, cardinality, baseType } = declaration;
   if (cardinality !== "record" && baseType === undefined) {
     const message = `The variable ${JSON.stringify(identifier)} has the cardinality ${cardinality} and no base-type; only a record has none.`;
-    findings.error("assesskit/validate/base-type", message, "INFO §5.34.3", here);
+    findings.error("assesskit/validate/base-type", message, here);
     return;
   }
   if (element === "qti-outcome-declaration") checkStandardOutcome(findings, identifier, baseType, here);
@@ -96,7 +90,7 @@ function checkValue(findings: Findings, read: () => unknown, here: string): void
     read();
   } catch (error) {
     if (!(error instanceof ProcessingError)) throw error;
-    findings.error("assesskit/validate/declared-value", error.message, error.source, here);
+    findings.error("assesskit/validate/declared-value", error.message, here);
   }
 }
 

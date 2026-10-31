@@ -118,7 +118,6 @@ export function regression(session: ItemSession, at: number): ItemStep | undefin
   return refuse(
     "clock-regression",
     `The step at ${at} is earlier than the latest change of the item session at ${session.updatedAt}.`,
-    "INFO §2.2.2.2",
   );
 }
 

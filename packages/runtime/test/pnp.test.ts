@@ -707,7 +707,6 @@ describe("errors", () => {
       severity: "error",
       code: "assesskit/pnp/not-pnp",
       message: `The root element must be access-for-all-pnp or access-for-all-pnp-records in the namespace ${PNP_NAMESPACE}, found profile.`,
-      source: "BPIG §5",
       location: { line: 1, column: 1, element: "profile" },
     });
   });

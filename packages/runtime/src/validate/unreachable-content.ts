@@ -68,7 +68,7 @@ export class UnreachableContent {
     const values = possible.size === 0 ? "NULL" : [...possible].map((value) => JSON.stringify(value)).join(", ");
     const shows = controller.showHide === "show";
     const message = `The ${visit.name} is ${shows ? "never shown" : "never hidden"}: it ${shows ? "shows" : "hides"} for the identifier ${JSON.stringify(controller.identifier)}, but the only values that ${controller.variable} can take are ${values}.`;
-    findings.warning("assesskit/validate/unreachable-content", message, "INFO §5.93.2", elementPath(visit));
+    findings.warning("assesskit/validate/unreachable-content", message, elementPath(visit));
   }
 
   /** The identifiers a variable can take: its defaults and what the rules give it, `undefined` when the rules give it a computed value. */

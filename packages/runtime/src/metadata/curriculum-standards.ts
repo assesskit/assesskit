@@ -85,7 +85,6 @@ export function readCurriculumStandardsSet(element: XmlElement, path?: string): 
   checkReadArguments(element, path);
   const reader = new ElementReader(element, {
     module: "metadata",
-    source: "CSM XSD",
     namespaces: [CSM_NAMESPACE],
     path,
   });

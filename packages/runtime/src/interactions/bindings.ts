@@ -23,28 +23,30 @@ export function anyBindings(): readonly Binding[] {
   return CARDINALITIES.map((cardinality) => bind(cardinality, ...(cardinality === "record" ? [] : BASE_TYPES)));
 }
 
-/** The section of the information model that states the binding of each interaction. */
-export const BINDING_SOURCES: Readonly<Record<InteractionKind, string>> = {
-  "associate-interaction": "INFO §2.4.1.3",
-  "choice-interaction": "INFO §2.4.1.1",
-  "custom-interaction": "INFO §2.4.4.5",
-  "drawing-interaction": "INFO §2.4.4.3",
-  "end-attempt-interaction": "INFO §2.4.5",
-  "extended-text-interaction": "INFO §2.4.2.3",
-  "gap-match-interaction": "INFO §2.4.1.5",
-  "graphic-associate-interaction": "INFO §2.4.3.3",
-  "graphic-gap-match-interaction": "INFO §2.4.3.4",
-  "graphic-order-interaction": "INFO §2.4.3.2",
-  "hotspot-interaction": "INFO §2.4.3.1",
-  "hottext-interaction": "INFO §2.4.2.4",
-  "inline-choice-interaction": "INFO §2.4.2.1",
-  "match-interaction": "INFO §2.4.1.4",
-  "media-interaction": "INFO §2.4.4.2",
-  "order-interaction": "INFO §2.4.1.2",
-  "portable-custom-interaction": "INFO §2.4.4.6",
-  "position-object-interaction": "INFO §2.4.3.6",
-  "select-point-interaction": "INFO §2.4.3.5",
-  "slider-interaction": "INFO §2.4.4.1",
-  "text-entry-interaction": "INFO §2.4.2.2",
-  "upload-interaction": "INFO §2.4.4.4",
-};
+/** The kind of every interaction, which JSON that names an interaction is checked against. */
+export const INTERACTION_KINDS: ReadonlySet<string> = new Set(
+  Object.keys({
+    "associate-interaction": true,
+    "choice-interaction": true,
+    "custom-interaction": true,
+    "drawing-interaction": true,
+    "end-attempt-interaction": true,
+    "extended-text-interaction": true,
+    "gap-match-interaction": true,
+    "graphic-associate-interaction": true,
+    "graphic-gap-match-interaction": true,
+    "graphic-order-interaction": true,
+    "hotspot-interaction": true,
+    "hottext-interaction": true,
+    "inline-choice-interaction": true,
+    "match-interaction": true,
+    "media-interaction": true,
+    "order-interaction": true,
+    "portable-custom-interaction": true,
+    "position-object-interaction": true,
+    "select-point-interaction": true,
+    "slider-interaction": true,
+    "text-entry-interaction": true,
+    "upload-interaction": true,
+  } satisfies Record<InteractionKind, true>),
+);

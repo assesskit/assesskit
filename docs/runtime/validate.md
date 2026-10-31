@@ -51,18 +51,18 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 
 const issues = validateAsi(document, { path: "capital.xml" });
-for (const { severity, code, source } of issues) console.log(severity, code, source);
-// warning assesskit/validate/standard-outcome INFO §2.2.2.3, BPIG §3.5
-// error assesskit/validate/undeclared-variable INFO §2.2.2
-// error assesskit/validate/assignment-type INFO §5.130.2
+for (const { severity, code } of issues) console.log(severity, code);
+// warning assesskit/validate/standard-outcome
+// error assesskit/validate/undeclared-variable
+// error assesskit/validate/assignment-type
 issues[2]?.message; // 'The variable "SCORE" is a single integer and cannot be set to a single float.'
 issues[2]?.location; // { path: "capital.xml", element: "qti-assessment-item/qti-response-processing/…/qti-set-outcome-value" }
 ```
 
 ## Issues
 
-An `Issue` has a `severity`, a `code`, a `message` that says what is wrong and what is expected, a `source` that names
-the specification and section of the rule, and a `location` with the `path` of the file and the `element` path.
+An `Issue` has a `severity`, a `code`, a `message` that says what is wrong and what is expected, and a `location` with
+the `path` of the file and the `element` path.
 
 - An `error` is content that breaks a rule or fails when it runs. A `warning` is content that runs but deviates from a
   recommendation or cannot do what it appears to.

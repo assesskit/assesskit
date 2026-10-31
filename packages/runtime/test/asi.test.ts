@@ -49,7 +49,6 @@ import { fuzzReader } from "./fuzz.js";
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
   "http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd";
-const SCHEMA = "imsqti_asiv3p0p1_v1p0.xsd";
 
 /** Reads a document and checks that writing it and reading that gives the same model. */
 function checked(xml: string): AsiDocument {
@@ -929,7 +928,7 @@ describe("readAsi: test structure", () => {
         `<qti-assessment-section ${NAMESPACE} identifier="S" title="s" visible="true"><qti-adaptive-selection><qti-adaptive-engine-ref identifier="E" href="e.json"/></qti-adaptive-selection><qti-selection select="1"/></qti-assessment-section>`,
       ),
     );
-    expect(issue).toMatchObject({ code: "assesskit/asi/exclusive", source: SCHEMA });
+    expect(issue).toMatchObject({ code: "assesskit/asi/exclusive" });
   });
 
   it("qti-adaptive-settings-ref: reads the identifier and the href", () => {
@@ -1784,7 +1783,7 @@ describe("readAsi: expressions", () => {
       operands: [ONE, RESPONSE],
     });
     const issue = readIssue(() => expressionOf(`<qti-sum><qti-and>${ONE_XML}</qti-and></qti-sum>`));
-    expect(issue).toMatchObject({ code: "assesskit/asi/element", source: SCHEMA });
+    expect(issue).toMatchObject({ code: "assesskit/asi/element" });
   });
 
   it("qti-truncate: reads its operand", () => {
@@ -3377,7 +3376,7 @@ describe("readAsi: common attributes and extension points", () => {
         '<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqti_v3p0" identifier="i" title="t" time-dependent="false"/>',
       ),
     );
-    expect(wrong).toMatchObject({ code: "assesskit/asi/document-element", source: SCHEMA });
+    expect(wrong).toMatchObject({ code: "assesskit/asi/document-element" });
     expect(wrong.message).toContain("http://www.imsglobal.org/xsd/imsqti_v3p0");
     expect(readIssue(() => readAsi(`<div ${NAMESPACE}/>`))).toMatchObject({ code: "assesskit/asi/document-element" });
   });
@@ -3471,7 +3470,6 @@ describe("readAsi: input and errors", () => {
       severity: "error",
       code: "assesskit/asi/missing-attribute",
       message: "The element qti-response-declaration must have the attribute cardinality.",
-      source: SCHEMA,
       location: { path: "items/a.xml", line: 2, column: 1, element: "qti-assessment-item/qti-response-declaration" },
     });
     const error = thrown(() => readAsi(item("<qti-response-declaration/>"), { path: "a.xml" }));

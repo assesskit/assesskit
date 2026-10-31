@@ -1406,10 +1406,10 @@ describe("createLtiScoreIntake", () => {
           calls.push({ session, action, by });
           if (action.type !== "supply-scores") throw new Error("Not a supply.");
           if (refusal.code !== undefined) {
-            return { ok: false, refusal: { code: refusal.code, message: "no", source: "test" } } as never;
+            return { ok: false, refusal: { code: refusal.code, message: "no" } } as never;
           }
           if (!known.includes(action.request)) {
-            return { ok: false, refusal: { code: "unknown-request", message: "none", source: "test" } } as never;
+            return { ok: false, refusal: { code: "unknown-request", message: "none" } } as never;
           }
           return { ok: true } as never;
         },

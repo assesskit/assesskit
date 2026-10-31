@@ -16,16 +16,6 @@ export interface ParseXmlOptions {
   readonly limits?: Partial<XmlLimits>;
 }
 
-/** The rule for well-formed documents (XML 1.0 §2.1). */
-const WELL_FORMED = "XML 1.0 §2.1";
-/** The rule for the XML declaration (XML 1.0 §2.8). */
-const XML_DECLARATION = "XML 1.0 §2.8";
-/** The rule for the characters of a document (XML 1.0 §2.2). */
-const CHARACTERS = "XML 1.0 §2.2";
-/** The rule for qualified names (Namespaces in XML 1.0 §3). */
-const QUALIFIED_NAMES = "Namespaces in XML 1.0 §3";
-/** The rule for the names of namespaces (Namespaces in XML 1.0 §2.2, which makes them URI references). */
-const NAMESPACE_NAMES = "Namespaces in XML 1.0 §2.2";
 /** A surrogate that is not half of a pair, which is no character, so that no text that has one is a document. */
 const LONE_SURROGATE = /\p{Cs}/u;
 
@@ -58,7 +48,7 @@ class TreeBuilder {
   /** The root element, once it is closed. */
   get root(): XmlElement {
     if (this.result === undefined) {
-      throw readError("assesskit/xml/not-well-formed", `${this.name} has no root element.`, WELL_FORMED);
+      throw readError("assesskit/xml/not-well-formed", `${this.name} has no root element.`);
     }
     return this.result;
   }
@@ -100,7 +90,7 @@ class TreeBuilder {
     if (unqualified === undefined) return;
     const written = unqualified.prefix === "" ? unqualified.local : `${unqualified.prefix}:${unqualified.local}`;
     const message = `${this.name} has the name ${JSON.stringify(written)}, which is not a qualified name: the parts around its colon must be names without a colon.`;
-    throw readError("assesskit/xml/not-well-formed", message, QUALIFIED_NAMES, { path: this.path, line, column });
+    throw readError("assesskit/xml/not-well-formed", message, { path: this.path, line, column });
   }
 
   /**
@@ -112,7 +102,7 @@ class TreeBuilder {
     if (padded === undefined) return;
     const declaration = padded.prefix === "" ? padded.local : `${padded.prefix}:${padded.local}`;
     const message = `${this.name} declares the namespace ${JSON.stringify(padded.value)} in ${declaration}, which has white space at its start or end; a namespace name is a URI reference and has none.`;
-    throw readError("assesskit/xml/namespace", message, NAMESPACE_NAMES, { path: this.path, line, column });
+    throw readError("assesskit/xml/namespace", message, { path: this.path, line, column });
   }
 
   /** Opens an element at the position of its start tag. */
@@ -179,7 +169,7 @@ function notWellFormed(error: Error, parser: Position, path: string | undefined)
   const prefix = `${parser.line}:${parser.column}: `;
   const reason = error.message.startsWith(prefix) ? error.message.slice(prefix.length) : error.message;
   const message = `${documentName(path)} is not well-formed: ${reason}${reason.endsWith(".") ? "" : "."}`;
-  return readError("assesskit/xml/not-well-formed", message, WELL_FORMED, {
+  return readError("assesskit/xml/not-well-formed", message, {
     path,
     line: parser.line,
     column: Math.max(1, parser.column),
@@ -197,13 +187,13 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
   if (lone >= 0) {
     const code = (text.codePointAt(lone) ?? 0).toString(16).toUpperCase();
     const message = `${name} is not well-formed: it has the lone surrogate U+${code}, which is not a character.`;
-    throw readError("assesskit/xml/not-well-formed", message, CHARACTERS, { path, ...locator.at(lone) });
+    throw readError("assesskit/xml/not-well-formed", message, { path, ...locator.at(lone) });
   }
   let start = { line: 1, column: 1 };
   parser.on("xmldecl", ({ version }) => {
     if (version !== "1.0") {
       const message = `${name} declares XML version ${describe(version)}, but the runtime reads XML 1.0.`;
-      throw readError("assesskit/xml/version", message, XML_DECLARATION, {
+      throw readError("assesskit/xml/version", message, {
         path,
         line: parser.line,
         column: parser.column,

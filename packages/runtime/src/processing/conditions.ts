@@ -17,14 +17,11 @@ export interface Branch<TRule> {
  *
  * @throws `ProcessingError` when it is not a single boolean.
  */
-export function holds(condition: Expression, scope: Scope, element: string, source: string): boolean {
+export function holds(condition: Expression, scope: Scope, element: string): boolean {
   const value = evaluateIn(condition, scope);
   if (value === null) return false;
   if (value.cardinality !== "single" || value.baseType !== "boolean") {
-    throw new ProcessingError(
-      `The expression of ${element} must be a single boolean, found ${describeType(value)}.`,
-      source,
-    );
+    throw new ProcessingError(`The expression of ${element} must be a single boolean, found ${describeType(value)}.`);
   }
   return asBoolean(primitiveOf(value));
 }
@@ -40,7 +37,6 @@ export function chosenRules<TRule>(
   otherwise: readonly TRule[] | undefined,
   scope: Scope,
   element: string,
-  source: string,
 ): readonly TRule[] | undefined {
-  return branches.find((branch) => holds(branch.condition, scope, element, source))?.rules ?? otherwise;
+  return branches.find((branch) => holds(branch.condition, scope, element))?.rules ?? otherwise;
 }

@@ -26,10 +26,7 @@ export function customOperator(
       names.length === 0
         ? "no definition or class"
         : `the definition or class ${names.map((each) => JSON.stringify(each)).join(" or ")}`;
-    throw new ProcessingError(
-      `No custom operator is registered for qti-custom-operator with ${named}.`,
-      "INFO §2.11.3.2",
-    );
+    throw new ProcessingError(`No custom operator is registered for qti-custom-operator with ${named}.`);
   }
   const result: unknown = operator(operands, expression);
   if (result === null) return null;

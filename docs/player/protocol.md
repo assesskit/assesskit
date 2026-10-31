@@ -56,7 +56,7 @@ checkActionEnvelope(JSON.parse('{"seq":1,"action":{},"session":"s2"}'));
 ## Refusal
 
 When the engine refuses a well-formed action, the host answers with the view of the state as it was, and the refusal in the
-envelope. A refusal has the properties `code`, `message` and `source` of the runtime's `Refusal`. `REFUSAL_CODES` lists the codes,
+envelope. A refusal has the properties `code` and `message` of the runtime's `Refusal`. `REFUSAL_CODES` lists the codes,
 and `checkRefusal(value)` throws `DataError` unless `value` is a refusal with one of them. The player has a message for each
 code ([delivery](delivery.md#refusals-and-status-messages)).
 

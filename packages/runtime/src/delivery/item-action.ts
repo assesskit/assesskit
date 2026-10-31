@@ -167,14 +167,12 @@ function acceptResponses(
       return refuse(
         "invalid-response",
         `The item has no response variable ${describe(identifier)} that the candidate sets.`,
-        "INFO §2.2.2.2",
       );
     }
     if (holdsUnsafeInteger(given)) {
       return refuse(
         "value-out-of-range",
         `The response ${describe(identifier)} holds an integer outside the safe integers.`,
-        "BIND §2.9",
       );
     }
     if (given === null) {
@@ -187,7 +185,6 @@ function acceptResponses(
       return refuse(
         "invalid-response",
         `The response variable ${identifier} is ${describeType(declaration)}, found ${describeType(value)}.`,
-        "INFO §2.2.2.2",
       );
     }
     accepted.set(identifier, fitted);
@@ -209,7 +206,6 @@ function acceptPciStates(states: ReadonlyMap<string, string>, item: AssessmentIt
       return refuse(
         "invalid-response",
         `The item has no portable custom interaction bound to ${describe(identifier)}.`,
-        "BPIG §3.7.12",
       );
     }
   }
@@ -260,7 +256,6 @@ function isSkip(
 const SKIPPING_NOT_ALLOWED = refuse(
   "skipping-not-allowed",
   "The item does not allow skipping: a response other than the default value must be given before it is submitted.",
-  "INFO §7.19.6",
 );
 
 /** Returns the response identifiers of the visible interactions whose drafts are not valid (INFO §7.19.7). */
@@ -285,7 +280,6 @@ function submit(session: ItemSession, at: number, context: ItemSessionContext): 
       return refuse(
         "invalid-response",
         `The responses ${invalid.map((identifier) => describe(identifier)).join(", ")} are not valid, and the item session control validates responses.`,
-        "INFO §7.19.7",
       );
     }
   }
@@ -303,11 +297,7 @@ function skip(session: ItemSession, at: number, context: ItemSessionContext): It
 
 function endWith(session: ItemSession, at: number, interaction: string, context: ItemSessionContext): ItemStep {
   if (!endAttemptInteractions(context.item).has(interaction)) {
-    return refuse(
-      "invalid-response",
-      `The item has no end attempt interaction bound to ${describe(interaction)}.`,
-      "INFO §2.4.5",
-    );
+    return refuse("invalid-response", `The item has no end attempt interaction bound to ${describe(interaction)}.`);
   }
   return ended(open(session, context.item), at, { by: "end-attempt", interaction }, context);
 }
@@ -315,11 +305,10 @@ function endWith(session: ItemSession, at: number, interaction: string, context:
 /** Enters the review or solution state of a closed session, when the control allows it (INFO §7.19.3–4). */
 function revisit(session: ItemSession, at: number, to: "review" | "solution", allowed: boolean): ItemStep {
   const code = to === "review" ? "review-not-allowed" : "solution-not-allowed";
-  const source = to === "review" ? "INFO §7.19.3" : "INFO §7.19.4";
   if (session.status === "interacting") {
-    return refuse(code, `The item shows its ${to} only after its session closed.`, source);
+    return refuse(code, `The item shows its ${to} only after its session closed.`);
   }
-  if (!allowed) return refuse(code, `The item session control does not allow the ${to} of the item.`, source);
+  if (!allowed) return refuse(code, `The item session control does not allow the ${to} of the item.`);
   return applied({ ...session, status: to, updatedAt: at });
 }
 
@@ -367,23 +356,22 @@ export function applyItemAction(
     return refuse(
       "unknown-item",
       `The action names the item instance ${describe(action.item.ref)} ${action.item.instance}, not the instance ${describe(session.key.ref)} ${session.key.instance} of the session.`,
-      "INFO §2.2.1",
     );
   }
   const refused = regression(session, at);
   if (refused !== undefined) return refused;
   if (session.status === "initial") {
-    return refuse("not-current", "The item has not been presented to the candidate.", "INFO §2.2.1");
+    return refuse("not-current", "The item has not been presented to the candidate.");
   }
   if (session.status === "suspended") {
-    return refuse("suspended", "The item session is suspended; it resumes when the item is presented.", "INFO §2.2.1");
+    return refuse("suspended", "The item session is suspended; it resumes when the item is presented.");
   }
   const over = session.status !== "interacting";
   if (over && action.type === "next-attempt") {
-    return refuse("attempts-exhausted", "The item session allows no further attempt.", "INFO §7.19.1");
+    return refuse("attempts-exhausted", "The item session allows no further attempt.");
   }
   if (over && RESPONDING.has(action.type)) {
-    return refuse("item-closed", "The item session is closed, so its responses are fixed.", "INFO §2.2.1");
+    return refuse("item-closed", "The item session is closed, so its responses are fixed.");
   }
   const { control, item } = context;
   switch (action.type) {
@@ -403,7 +391,7 @@ export function applyItemAction(
       return revisit(session, at, "solution", control.showSolution);
     case "comment":
       if (!control.allowComment) {
-        return refuse("comment-not-allowed", "The item session control does not allow comments.", "INFO §7.19.5");
+        return refuse("comment-not-allowed", "The item session control does not allow comments.");
       }
       return applied({ ...session, comment: action.text, updatedAt: at });
   }

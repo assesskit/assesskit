@@ -56,7 +56,6 @@ pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; 
 pnpm docs:api           # TypeDoc into docs/api; fails on undocumented exports
 pnpm corpus             # downloads the 1EdTech examples and the W3C regular expression suite
 pnpm test:corpus        # tests that read the corpus
-pnpm test:differential  # the runtime against Longsight qti3-core on items; run pnpm corpus first
 pnpm unicode            # regenerates the Unicode tables of the regular expressions
 pnpm schemas            # downloads the official XSDs (about 140 MB) into .cache/schemas
 pnpm test:xsd           # tests that validate against the XSDs
@@ -73,7 +72,6 @@ packages/runtime/    the QTI 3.0 runtime
 packages/player/     the player
 docs/runtime/        guides of the runtime
 docs/player/         guides of the player
-differential/     private package: the runtime against Longsight qti3-core
 compat/           private packages: the browser baseline of the player, its lint and the pinned old browsers
 scripts/          corpus and schema downloads, the pinned corpus, Unicode table generator
 validation/       Python scripts that write the printf and rounding fixtures

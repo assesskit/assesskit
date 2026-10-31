@@ -35,7 +35,7 @@ export function responseRulesOf(
   const template = processing.template === "" ? undefined : processing.template;
   if (template !== undefined && isQti2TemplateUri(template)) {
     const message = `The response processing template ${JSON.stringify(template)} is a QTI 2.x address; the runtime applies the standard QTI 3.0 template of the same algorithm. Use a QTI 3.0 address.`;
-    findings.warning("assesskit/validate/legacy-template", message, "BPIG §2.5.1", element);
+    findings.warning("assesskit/validate/legacy-template", message, element);
   }
   const standard = template === undefined ? undefined : STANDARD_TEMPLATES.get(standardTemplateUri(template) ?? "");
   if (standard !== undefined) return { rules: standard.rules, element, complete: true };
@@ -44,7 +44,7 @@ export function responseRulesOf(
   const resolved = resolveTemplate?.(location);
   if (resolved === undefined) {
     const message = `The response processing template ${JSON.stringify(location)} is not a standard template and the option resolveTemplate does not resolve it, so the item cannot be scored.`;
-    findings.error("assesskit/validate/unknown-template", message, "INFO §4.6.1", element);
+    findings.error("assesskit/validate/unknown-template", message, element);
     return { rules: [], element, complete: false };
   }
   return { rules: resolved.rules, element, complete: true };

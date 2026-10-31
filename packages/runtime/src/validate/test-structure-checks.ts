@@ -25,11 +25,11 @@ function checkSelections(placed: PlacedTest, findings: Findings): void {
     const required = section.children.filter(({ model }) => model.required === true).length;
     if (selection.select > section.children.length && selection.withReplacement !== true) {
       const message = `The section ${name} selects ${selection.select} of its ${section.children.length} children without replacement; only a selection with replacement may select more children than the section has.`;
-      findings.error("assesskit/validate/selection", message, "INFO §5.129.1", here);
+      findings.error("assesskit/validate/selection", message, here);
     }
     if (selection.select < required) {
       const message = `The section ${name} selects ${selection.select} children but requires ${required}; it is an error to select fewer children than the section requires.`;
-      findings.error("assesskit/validate/selection", message, "INFO §4.2.2", here);
+      findings.error("assesskit/validate/selection", message, here);
     }
   }
 }
@@ -42,11 +42,11 @@ function checkAdaptiveSections(placed: PlacedTest, findings: Findings): void {
     const here = `${ROOT}/qti-assessment-section/qti-adaptive-selection`;
     if (section.children.some((child) => child.kind === "section")) {
       const message = `The adaptive section ${name} has a sub-section, but an adaptive section must list all the items of its pool directly.`;
-      findings.error("assesskit/validate/adaptive-section", message, "CAT §2.3", here);
+      findings.error("assesskit/validate/adaptive-section", message, here);
     }
     if (section.parent.kind === "section") {
       const message = `The adaptive section ${name} is nested in another section, but it must be a section of a test part.`;
-      findings.error("assesskit/validate/adaptive-section", message, "CAT §2.3", here);
+      findings.error("assesskit/validate/adaptive-section", message, here);
     }
   }
 }
@@ -64,7 +64,7 @@ function checkSubmission(
       if (child.kind === "section") visit(child);
       else if (items.get(child.model.identifier)?.adaptive === true) {
         const message = `The item reference ${JSON.stringify(child.model.identifier)} names an adaptive item in the test part ${JSON.stringify(part.model.identifier)}, which submits simultaneously; adaptive items need several attempts and so are not compatible with simultaneous submission.`;
-        findings.error("assesskit/validate/adaptive-simultaneous", message, "INFO §5.159.5", `${ROOT}/qti-test-part`);
+        findings.error("assesskit/validate/adaptive-simultaneous", message, `${ROOT}/qti-test-part`);
       }
     }
   };

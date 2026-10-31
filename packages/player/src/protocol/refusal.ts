@@ -34,14 +34,13 @@ export const REFUSAL_CODES = [
 export const refusalSchema: Schema<Refusal> = v.strictObject({
   code: v.picklist(REFUSAL_CODES),
   message: v.string(),
-  source: v.string(),
 });
 
 /**
  * Checks a refusal that arrived as JSON, as the engine's `Refusal` writes it.
  *
- * @throws `DataError` when it is not an object with the properties `code`, `message` and `source` only, `code` one of
- * {@link REFUSAL_CODES} and the others strings.
+ * @throws `DataError` when it is not an object with the properties `code` and `message` only, `code` one of
+ * {@link REFUSAL_CODES} and `message` a string.
  */
 export function checkRefusal(value: unknown): asserts value is Refusal {
   parseWith(refusalSchema, value, "A refusal");

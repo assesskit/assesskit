@@ -144,7 +144,7 @@ describe("assesskit validate: documents", () => {
     const { code, stdout } = await run(["validate", path]);
     expect(code).toBe(0);
     expect(stdout).toBe(
-      `${path} (qti-assessment-item): warning: The identifier "Example03-feedbackBlock-solution-random" of the qti-assessment-item has more than 32 characters, which version 1 of QTI does not take. [assesskit/validate/identifier-style, INFO §4.1.1]\n` +
+      `${path} (qti-assessment-item): warning: The identifier "Example03-feedbackBlock-solution-random" of the qti-assessment-item has more than 32 characters, which version 1 of QTI does not take. [assesskit/validate/identifier-style]\n` +
         `${path}: valid (0 errors, 1 warning)\n`,
     );
   });
@@ -189,9 +189,7 @@ describe("assesskit validate: documents", () => {
   it("applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex (RR §2.4.5)", async () => {
     const { code, report: found } = await report(example("results/conformance-use-case-1.xml"));
     expect(code).toBe(1);
-    expect(found.issues.map(({ code: each, source }) => [each, source])).toEqual(
-      Array(4).fill(["assesskit/validate/sequence-index", "RR §2.4.5"]),
-    );
+    expect(found.issues.map(({ code: each }) => each)).toEqual(Array(4).fill("assesskit/validate/sequence-index"));
   });
 
   it("reports a document that is not well-formed once, with the position the reader found", async () => {
@@ -212,7 +210,7 @@ describe("assesskit validate: documents", () => {
     const path = write("doctype.xml", '<!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>');
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
-    expect(found.issues).toMatchObject([{ code: "assesskit/xml/security", severity: "error", source: "BPIG §6.7" }]);
+    expect(found.issues).toMatchObject([{ code: "assesskit/xml/security", severity: "error" }]);
   });
 
   it("reads a PNP document, checks its supports and reports the namespaces of the examples of 1EdTech", async () => {
@@ -229,7 +227,7 @@ describe("assesskit validate: documents", () => {
     const contradictory = await report(contradiction);
     expect(contradictory.code).toBe(1);
     expect(contradictory.report.issues).toMatchObject([
-      { code: "assesskit/validate/pnp-prohibited", severity: "error", source: "BPIG §5.3.3" },
+      { code: "assesskit/validate/pnp-prohibited", severity: "error" },
     ]);
     const alternate = write(
       "pnp-alternate.xml",
@@ -312,7 +310,6 @@ describe("assesskit validate: packages", () => {
       {
         code: "assesskit/validate/unlisted-file",
         severity: "error",
-        source: "BIND §8.1, CAT §2.6",
         location: { path: "imsmanifest.xml", element: "manifest/resources" },
       },
     ]);

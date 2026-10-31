@@ -791,7 +791,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, state, moveTo(key("c"), 30))).toEqual({
       code: "not-current",
       message: "In a linear test part the candidate moves to the next item only.",
-      source: "INFO §2.8.2",
     });
     const atC = played(engine, left.state, moveTo(key("c"), 30));
     expect(atC.state.current).toEqual(key("c"));
@@ -807,7 +806,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, ended.state, moveTo("next", 50))).toEqual({
       code: "ended",
       message: "The test has ended.",
-      source: "INFO §2.8",
     });
   });
 
@@ -857,7 +855,6 @@ describe("Engine.apply", () => {
       expect(refusalOf(engine, state, action)).toEqual({
         code: "wrong-submission-mode",
         message: "The test part submits its items together at its end, so an item is not submitted alone.",
-        source: "INFO §2.8.2",
       });
     }
     const ended = played(engine, state, answer("a", "B", 10), moveTo(key("b"), 20), answer("b", "A", 30), {
@@ -1052,13 +1049,11 @@ describe("Engine.apply", () => {
       refusal: {
         code: "not-current",
         message: "The action names an item that is not the one presented.",
-        source: "INFO §2.2.1",
       },
     });
     expect(refusalOf(engine, state, answer("x", "A", 1))).toEqual({
       code: "unknown-item",
       message: 'The test has no item instance "x" 1.',
-      source: "INFO §2.8",
     });
     expect(refusalOf(engine, state, { type: "comment", item: key("a"), text: "Hm.", at: 1 }).code).toBe(
       "comment-not-allowed",
@@ -1072,7 +1067,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, state, answer("a", "C", 4))).toEqual({
       code: "clock-regression",
       message: "The action at 4 is earlier than the latest step of the session at 5.",
-      source: "INFO §2.2.2.2",
     });
     expect(played(engine, state, answer("a", "C", 5)).state.at).toBe(5);
   });
@@ -1090,7 +1084,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, state, answer("a", "C", 12_000))).toEqual({
       code: "time-over",
       message: 'The item instance "a" 1 was closed when a maximum time passed.',
-      source: "INFO §7.40.3",
     });
     const out = played(engine, state, { type: "time", at: 12_000 });
     expect(described(out.events)).toEqual([
@@ -1140,7 +1133,6 @@ describe("Engine.apply", () => {
     expect(late).toEqual({
       code: "time-over",
       message: "The test ended when a maximum time passed.",
-      source: "INFO §7.40.3",
     });
     const ended = played(testOut, begun(testOut).state, { type: "time", at: 11_000 });
     expect(described(ended.events)[0]).toBe("time-out T@10000");
@@ -1181,7 +1173,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, state, moveTo("next", 3_000))).toEqual({
       code: "min-time-not-reached",
       message: 'The item "a" has a minimum time of 5 s, of which 3 s are spent.',
-      source: "INFO §7.40",
     });
     const atB = played(engine, state, moveTo("next", 5_000));
     expect(refusalOf(engine, atB.state, moveTo("next", 8_000)).message).toBe(
@@ -1212,7 +1203,6 @@ describe("Engine.apply", () => {
       expect(refusalOf(engine, paused.state, action)).toEqual({
         code: "suspended",
         message: "The candidate session is suspended; it goes on when it is resumed.",
-        source: "INFO §2.2.1",
       });
     }
     const resumed = played(engine, paused.state, { type: "resume", at: 9_000 });
@@ -1252,7 +1242,6 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, state, toggle("spell-checker-on-screen", true, 1))).toEqual({
       code: "support-not-available",
       message: "The support spell-checker-on-screen is prohibited, so the candidate cannot turn it on or off.",
-      source: "BPIG §5.3",
     });
     expect(refusalOf(engine, state, toggle("line-reader", false, 1)).message).toBe(
       "The support line-reader is active, so the candidate cannot turn it on or off.",
@@ -2069,7 +2058,6 @@ describe("applyItemAction", () => {
     ]);
     expect(refused(act(step.session, context, respond("RESPONSE", identifier("B"))))).toMatchObject({
       code: "item-closed",
-      source: "INFO §2.2.1",
     });
     expect(refused(act(step.session, context, SUBMIT)).code).toBe("item-closed");
     expect(refused(act(step.session, context, HINT)).code).toBe("item-closed");
@@ -2161,7 +2149,7 @@ describe("applyItemAction", () => {
     const context = contextOf(counterItem());
     expect(
       refused(act(presented(context), context, { type: "end-attempt", item: KEY, interaction: "RESPONSE" })),
-    ).toMatchObject({ code: "invalid-response", source: "INFO §2.4.5" });
+    ).toMatchObject({ code: "invalid-response" });
   });
 
   it("refuses a submission of only NULL or default responses, and a skip, when skipping is not allowed", () => {
@@ -2169,7 +2157,6 @@ describe("applyItemAction", () => {
     const session = presented(context);
     expect(refused(act(session, context, SUBMIT))).toMatchObject({
       code: "skipping-not-allowed",
-      source: "INFO §7.19.6",
     });
     const defaulted = acts(session, context, respond("RESPONSE", identifier("A")));
     expect(refused(act(defaulted, context, SUBMIT)).code).toBe("skipping-not-allowed");
@@ -2207,7 +2194,6 @@ describe("applyItemAction", () => {
     expect(refused(act(session, context, SUBMIT))).toMatchObject({
       code: "invalid-response",
       message: 'The responses "RESPONSE" are not valid, and the item session control validates responses.',
-      source: "INFO §7.19.7",
     });
     expect(acts(session, context, respond("RESPONSE", identifier("A")), SUBMIT).status).toBe("closed");
     expect(acts(session, context, SKIP).status).toBe("closed");
@@ -2222,11 +2208,9 @@ describe("applyItemAction", () => {
     const open = contextOf(item, { maxAttempts: 0 });
     expect(refused(act(presented(open), open, review))).toMatchObject({
       code: "review-not-allowed",
-      source: "INFO §7.19.3",
     });
     expect(refused(act(presented(open), open, solution))).toMatchObject({
       code: "solution-not-allowed",
-      source: "INFO §7.19.4",
     });
     expect(refused(act(presented(open), open, comment("Hard."))).code).toBe("comment-not-allowed");
     const strict = contextOf(item, { allowReview: false });
@@ -2245,19 +2229,17 @@ describe("applyItemAction", () => {
   it("refuses actions on an item not presented or suspended, of another instance, or earlier than the latest change", () => {
     const context = contextOf(counterItem());
     const started = accepted(startItemSession(KEY, 0, context)).session;
-    expect(refused(act(started, context, SUBMIT))).toMatchObject({ code: "not-current", source: "INFO §2.2.1" });
+    expect(refused(act(started, context, SUBMIT))).toMatchObject({ code: "not-current" });
     const session = presented(context, 10);
     const suspended = accepted(suspendItem(session, 20)).session;
     expect(refused(act(suspended, context, SUBMIT)).code).toBe("suspended");
     expect(refused(applyItemAction(session, { ...SUBMIT, item: { ref: "q", instance: 2 }, at: 30 }, context))).toEqual({
       code: "unknown-item",
       message: 'The action names the item instance "q" 2, not the instance "q" 1 of the session.',
-      source: "INFO §2.2.1",
     });
     expect(refused(act(session, context, SUBMIT, 9))).toEqual({
       code: "clock-regression",
       message: "The step at 9 is earlier than the latest change of the item session at 10.",
-      source: "INFO §2.2.2.2",
     });
   });
 
@@ -2285,12 +2267,10 @@ describe("applyItemAction", () => {
     expect(refused(act(session, context, respond("N", float(1.5))))).toEqual({
       code: "invalid-response",
       message: "The response variable N is a single integer, found a single float.",
-      source: "INFO §2.2.2.2",
     });
     const huge = json<Value>('{"cardinality": "single", "baseType": "integer", "value": 9007199254740993}');
     expect(refused(act(session, context, respond("N", huge)))).toMatchObject({
       code: "value-out-of-range",
-      source: "BIND §2.9",
     });
     expect(acts(session, context, respond("X", integer(2))).drafts.get("X")).toEqual(float(2));
   });
@@ -2314,7 +2294,6 @@ describe("applyItemAction", () => {
     expect(session.pciStates).toEqual(new Map([["R", '{"points":2}']]));
     expect(refused(act(session, context, states("3", "TEXT")))).toMatchObject({
       code: "invalid-response",
-      source: "BPIG §3.7.12",
     });
     expect(acts(session, context, respond("TEXT", single("string", "x"))).pciStates).toEqual(session.pciStates);
   });

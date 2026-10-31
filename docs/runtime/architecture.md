@@ -14,6 +14,34 @@ lint, and the rest are checked in review.
 
 ## Layers
 
+An arrow points from a layer to the layers it imports. `@assesskit/player` imports the runtime only through its published
+subpaths.
+
+```mermaid
+flowchart TD
+  subgraph player["@assesskit/player"]
+    direction TB
+    ps["server"] --> pk["scoring, caliper, cat, lti"]
+    pb["player, client"]
+    pk --> pp["protocol"]
+    pb --> pp
+    pp --> pm["errors, checks, messages"]
+  end
+  subgraph runtime["@assesskit/runtime"]
+    direction TB
+    cli["cli"] --> node["node"]
+    node --> validate["validate"]
+    delivery["delivery"] --> validate
+    validate --> l5["cat, package"]
+    l5 --> l4["metadata, processing, interactions, pci, content"]
+    l4 --> l3["asi, results, usage, pnp"]
+    l3 --> l2["xml, values"]
+    l2 --> l1["errors, checks, random"]
+  end
+  pb -->|"subpaths"| delivery
+  ps -->|"subpaths"| delivery
+```
+
 A module imports only from lower layers, and imports never form cycles (lint). Every module may import `errors.ts`,
 `checks.ts` and `random.ts`; `checks.ts` imports `errors.ts` and valibot only, and `random.ts` imports `errors.ts` and `checks.ts`.
 `delivery` is the top library layer, and no runtime module imports it. `packages/runtime` never imports `@assesskit/player`, and
@@ -44,19 +72,18 @@ except `node` and `cli`, so the root stays portable. `bin` maps `assesskit` to t
 
 All errors extend `AssesskitError`, and their messages are full sentences that say what is wrong and what is expected.
 
-| Class             | Thrown when                                                                                                               | Carries                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message               |
-| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`                  |
-| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `value`       |
-| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `source` and `identifier` |
+| Class             | Thrown when                                                                                                               | Carries             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `DataError`       | An argument has the wrong type or is out of range, an untrusted action is not an action, or a state has an unknown format | the message         |
+| `ReadError`       | A document is not well-formed, not in the expected namespace, or cannot be mapped to the model                            | `issues`            |
+| `SecurityError`   | Input breaks a security rule or a limit: a DOCTYPE, a path escape, a size, depth or ratio above its limit                 | `limit` and `value` |
+| `ProcessingError` | Processing meets a condition the specification does not define as NULL                                                    | `identifier`        |
 
 The subpath `errors` exports the errors and the types `Issue` and `IssueLocation` without any other module. The player imports
 `AssesskitError` and `DataError` from it.
 
 Validation does not throw. It returns `Issue`s: a severity, a code (`assesskit/<module>/<name>`, or the identifier of a rule
-set in BIND §5), a message, the specification reference that defines the rule and, when known, a location with the file
-path, line, column and element path.
+set in BIND §5), a message and, when known, a location with the file path, line, column and element path.
 
 ## Determinism
 
