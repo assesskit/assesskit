@@ -11,7 +11,7 @@ import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf } from "./exam-fixture.js";
-import { picture } from "./graphic-fixture.js";
+import { picture, settle } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
 
@@ -1006,7 +1006,7 @@ describe("the supports in the player", () => {
 });
 
 /** The item q1 as a drawing on a white picture: its response is a file that the host stores. */
-function drawingFiles(): Readonly<Record<string, string | Uint8Array>> {
+function drawingFiles(prompt = "Draw."): Readonly<Record<string, string | Uint8Array>> {
   return {
     ...examFiles(),
     "items/q1/item.xml": `<?xml version="1.0" encoding="UTF-8"?>
@@ -1015,20 +1015,31 @@ function drawingFiles(): Readonly<Record<string, string | Uint8Array>> {
   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"><qti-default-value><qti-value>0</qti-value></qti-default-value></qti-outcome-declaration>
   <qti-item-body>
     <p>Look at the picture.</p>
-    <qti-drawing-interaction response-identifier="RESPONSE"><qti-prompt>Draw.</qti-prompt><object type="image/png" width="200" height="100" data="${picture(200, 100, "#ffffff")}">A canvas</object></qti-drawing-interaction>
+    <qti-drawing-interaction response-identifier="RESPONSE"><qti-prompt>${prompt}</qti-prompt><object type="image/png" width="200" height="100" data="${picture(200, 100, "#ffffff")}">A canvas</object></qti-drawing-interaction>
   </qti-item-body>
 </qti-assessment-item>`,
   };
 }
 
-/** A storage of drawings that keeps the upload pending until the test lets it go; a stored drawing plays back as a white picture. */
+/**
+ * A storage of drawings that keeps each upload pending until the test lets it go; a stored drawing plays back as a white
+ * picture. After `finish` an upload that the drawing makes later is stored at once, so that no drawing waits for a test
+ * that has gone on.
+ */
 function slowUpload(): {
   readonly files: Pick<Parameters<typeof shell>[0] & object, "upload" | "url">;
+  /** Resolves when the drawing has asked to store its first picture. */
+  readonly started: Promise<void>;
   readonly uploads: () => number;
   readonly finish: () => void;
 } {
   const pending: (() => void)[] = [];
   const stored = picture(200, 100, "#ffffff");
+  let started = (): void => undefined;
+  const first = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let released = false;
   let count = 0;
   return {
     files: {
@@ -1036,24 +1047,31 @@ function slowUpload(): {
         new Promise((resolve) => {
           count += 1;
           const reference = `drawing-${count}`;
-          pending.push(() => resolve({ reference, mimeType }));
+          const store = (): void => resolve({ reference, mimeType });
+          if (released) store();
+          else pending.push(store);
+          started();
         }),
       url: () => stored,
     },
+    started: first,
     uploads: () => count,
     finish: () => {
+      released = true;
       for (const release of pending.splice(0)) release();
     },
   };
 }
 
-/** Draws a line, and waits until the drawing has started to store it. */
+/** Draws a line, and returns once the drawing has asked to store the picture. */
 async function draw(s: Shell, storage: ReturnType<typeof slowUpload>): Promise<void> {
-  const surface = (): HTMLElement | null => contentOf(s.ui).querySelector<HTMLElement>(".tempuh-surface");
-  await vi.waitFor(() => expect(surface()?.getBoundingClientRect().width).toBeGreaterThan(0));
-  const target = surface() as HTMLElement;
+  // The pen paints only once the picture has loaded and the stage has its size.
+  const image = contentOf(s.ui).querySelector<HTMLImageElement>("qti-drawing-interaction .tempuh-stage img");
+  await image?.decode();
+  await settle();
+  const target = contentOf(s.ui).querySelector<HTMLElement>(".tempuh-surface") as HTMLElement;
   await userEvent.dragAndDrop(target, target, { sourcePosition: { x: 20, y: 20 }, targetPosition: { x: 120, y: 20 } });
-  await vi.waitFor(() => expect(storage.uploads()).toBe(1));
+  await storage.started;
 }
 
 describe("a drawing that is still being stored", () => {
@@ -1122,24 +1140,36 @@ describe("a drawing that is still being stored", () => {
     expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } });
   });
 
-  it("lets a host that draws its own actions wait for the drawing", async () => {
+  it("lets a host that draws its own actions wait for the drawing, which has handed its response to the session by then", async () => {
+    const { sent, wrap } = recording();
     const storage = slowUpload();
-    const s = await shell({ files: drawingFiles(), ...storage.files, chrome: false });
+    const s = await shell({ files: drawingFiles(), ...storage.files, chrome: false, wrap });
     await shown(s);
     await draw(s, storage);
-    let settled = false;
-    void s.mounted.settled().then(() => {
-      settled = true;
-    });
-    await real(200);
-    expect(settled).toBe(false);
+    const settling = s.mounted.settled().then(() => [...sent]);
+    expect(await Promise.race([settling, real(200).then(() => "pending")])).toBe("pending");
     storage.finish();
-    await vi.waitFor(() => expect(settled).toBe(true));
-    await vi.waitFor(
-      () =>
-        expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } }),
-      { timeout: 5000 },
-    );
+    // The response is sent to the session before `settled()` resolves, so the host need not wait for the autosave to land.
+    const handedOver = await settling;
+    expect(types(handedOver).every((type) => type === "set-responses")).toBe(true);
+    const response = handedOver.findLast((action) => action.type === "set-responses");
+    expect(response?.type === "set-responses" && response.responses.get("RESPONSE")).toMatchObject({
+      cardinality: "single",
+      baseType: "file",
+      value: { reference: `drawing-${storage.uploads()}` },
+    });
+  });
+
+  it("draws on its own picture when the prompt has a picture too, which the stage of the content root must not take for its own", async () => {
+    const prompt = `Draw on the second picture. <img src="${picture(20, 20, "#c62828")}" alt="A red square"/>`;
+    const storage = slowUpload();
+    const s = await shell({ files: drawingFiles(prompt), ...storage.files });
+    await shown(s);
+    await draw(s, storage);
+    const canvas = contentOf(s.ui).querySelector("canvas.tempuh-canvas") as HTMLCanvasElement;
+    expect([canvas.width, canvas.height]).toEqual([200, 100]);
+    storage.finish();
+    await s.mounted.settled();
   });
 
   it("sends a request at once when no interaction has work to finish", async () => {
@@ -1176,7 +1206,7 @@ const toolbar = (ui: ShadowRoot): HTMLButtonElement[] => [
   ...ui.querySelectorAll<HTMLButtonElement>(".tempuh-tools > .tempuh-row > button"),
 ];
 const toolNames = (ui: ShadowRoot): (string | null)[] => toolbar(ui).map((button) => button.textContent);
-const stageOf = (ui: ShadowRoot): HTMLElement => contentOf(ui).querySelector(".tempuh-stage") as HTMLElement;
+const stageOf = (ui: ShadowRoot): HTMLElement => contentOf(ui).querySelector(".tempuh-root-stage") as HTMLElement;
 
 describe("the tools in the player", () => {
   it("[T63] draws a button for each tool that the item asks for, and a tool opens over the item", async () => {

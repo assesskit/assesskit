@@ -615,6 +615,14 @@ describe("the stage and the media scale", () => {
   const sizes = (root: ParentNode, selector: string): (string | null)[][] =>
     [...root.querySelectorAll(selector)].map((each) => [each.getAttribute("width"), each.getAttribute("height")]);
 
+  it("[T1] fills the width of the host, which the rules of the stage of a graphic interaction would shrink to its content", async () => {
+    const { host, root } = createRoot({}, "width: 480px;");
+    await root.show({ body: { nodes: itemBody("<p>Text.</p>") } });
+    expect(computed(root.stage, "display")).toBe("block");
+    const padding = parseFloat(computed(host, "padding-left")) + parseFloat(computed(host, "padding-right"));
+    expect(root.stage.getBoundingClientRect().width).toBe(host.getBoundingClientRect().width - padding);
+  });
+
   it("[T1] holds the content in a positioned element that stays when the content is replaced", async () => {
     const { root } = createRoot();
     expect(root.stage.parentNode).toBe(root.root);

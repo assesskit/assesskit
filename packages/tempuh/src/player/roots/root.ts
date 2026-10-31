@@ -139,7 +139,7 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
   let catalogs: readonly Catalog[] = [];
   let itemRenderer: BodyRenderer = createBodyRenderer(rendererOptions);
   let mediaScale = initialScale;
-  const stage = html("div", { class: "tempuh-stage" });
+  const stage = html("div", { class: "tempuh-root-stage" });
   shadow.append(stage);
 
   const sheetFor = (path: string): Promise<CSSStyleSheet> => {

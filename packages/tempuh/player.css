@@ -95,7 +95,7 @@
 }
 
 /* The box of the content. What lies over the item, such as a ruler, is positioned in it. */
-.tempuh-stage {
+.tempuh-root-stage {
   position: relative;
 }
 

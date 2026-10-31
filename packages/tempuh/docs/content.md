@@ -92,7 +92,7 @@ cannot find the target of the fragment inside it and would only change the addre
 
 ### The stage
 
-`root.stage` is the `div.tempuh-stage` that `player.css` positions. The content stands in it, and `show` replaces the
+`root.stage` is the `div.tempuh-root-stage` that `player.css` positions. The content stands in it, and `show` replaces the
 content in it, so that what lies over the item stays: the tools of an item ([tools](tools.md)) mount their layer in it, and
 read the text and the choices of the item there. The stylesheets that other parts adopt into the shadow root stay when the
 root adopts the stylesheets of the next item.
@@ -115,7 +115,7 @@ pixels, such as `50%`, stay.
 | The rubric               | `div.tempuh-rubric`.                                                                                                                                                     |
 | The stimuli and the body | `div.tempuh-main`, with `data-tempuh-stimuli` when there are stimuli; `div.tempuh-stimuli` holds one `section.tempuh-stimulus` for each, and `div.tempuh-body` the item. |
 | The test feedback        | `section.tempuh-test-feedback`, labelled Feedback, with `h2` for a title.                                                                                                |
-| The stage                | `div.tempuh-stage`, the parent of the content in the shadow root.                                                                                                        |
+| The stage                | `div.tempuh-root-stage`, the parent of the content in the shadow root.                                                                                                   |
 | The dialog               | `dialog.tempuh-dialog`, a sibling of the stage in the shadow root.                                                                                                       |
 
 ## The renderer
