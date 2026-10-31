@@ -1,4 +1,4 @@
-import { SaxesParser } from "saxes";
+import { type EventNameToHandler, SaxesParser } from "saxes";
 import { checkOptions, checkString, describe } from "../checks.js";
 import { AssesskitError, DataError, type ReadError, SecurityError } from "../errors.js";
 import { decodeXml } from "./encoding.js";
@@ -50,11 +50,49 @@ function notWellFormed(error: Error, parser: Position, path: string | undefined)
   });
 }
 
+/** The options of the parser: names resolve to namespaces, and the parser tracks the line and column of its errors. */
+const PARSER_OPTIONS = { xmlns: true, position: true } as const;
+
+type Parser = SaxesParser<typeof PARSER_OPTIONS>;
+
+/** The events that the tree is built from, each with its handler. */
+type Handlers = {
+  readonly [TEvent in
+    | "xmldecl"
+    | "doctype"
+    | "opentagstart"
+    | "opentag"
+    | "closetag"
+    | "text"
+    | "cdata"
+    | "comment"
+    | "processinginstruction"]: EventNameToHandler<typeof PARSER_OPTIONS, TEvent>;
+};
+
+/**
+ * Sets the handlers of a parser. `SaxesParser.on` stores a handler in a field whose name it computes, and from the seventh
+ * on V8 keeps the fields of the parser in a dictionary, which makes parsing five times slower. Storing by the name of the
+ * field keeps the parser as fast as it is with fewer handlers.
+ */
+function listen(parser: Parser, handlers: Handlers): void {
+  // biome-ignore-start lint/complexity/useLiteralKeys: the fields of the handlers are private to the parser
+  parser["xmldeclHandler"] = handlers.xmldecl;
+  parser["doctypeHandler"] = handlers.doctype;
+  parser["openTagStartHandler"] = handlers.opentagstart;
+  parser["openTagHandler"] = handlers.opentag;
+  parser["closeTagHandler"] = handlers.closetag;
+  parser["textHandler"] = handlers.text;
+  parser["cdataHandler"] = handlers.cdata;
+  parser["commentHandler"] = handlers.comment;
+  parser["piHandler"] = handlers.processinginstruction;
+  // biome-ignore-end lint/complexity/useLiteralKeys: the fields of the handlers are private to the parser
+}
+
 /** Feeds the text to a parser whose events build the tree, and returns the root. */
 function parseText(text: string, limits: XmlLimits, path: string | undefined): XmlElement {
   const name = documentName(path);
   const builder = new TreeBuilder(limits, path);
-  const parser = new SaxesParser({ xmlns: true, position: true });
+  const parser = new SaxesParser(PARSER_OPTIONS);
   const locator = new Locator(text);
   // The parser takes a high surrogate for half of a pair without looking at what follows it.
   const lone = text.search(LONE_SURROGATE);
@@ -64,32 +102,34 @@ function parseText(text: string, limits: XmlLimits, path: string | undefined): X
     throw readError("assesskit/xml/not-well-formed", message, { path, ...locator.at(lone) });
   }
   let start = { line: 1, column: 1 };
-  parser.on("xmldecl", ({ version }) => {
-    if (version !== "1.0") {
-      const message = `${name} declares XML version ${describe(version)}, but the runtime reads XML 1.0.`;
-      throw readError("assesskit/xml/version", message, {
-        path,
-        line: parser.line,
-        column: parser.column,
-      });
-    }
+  listen(parser, {
+    xmldecl: ({ version }) => {
+      if (version !== "1.0") {
+        const message = `${name} declares XML version ${describe(version)}, but the runtime reads XML 1.0.`;
+        throw readError("assesskit/xml/version", message, {
+          path,
+          line: parser.line,
+          column: parser.column,
+        });
+      }
+    },
+    // A DOCTYPE can declare entities that expand without bound or read files.
+    doctype: () => {
+      const message = `${name} has a DOCTYPE declaration, which the runtime rejects so that no entity is declared or read.`;
+      throw new SecurityError(message, "doctype", 0);
+    },
+    // The parser reports a start tag after the name and the character that follows it, which may be a line end; the
+    // tag starts at the nearest "<" before that character.
+    opentagstart: () => {
+      start = locator.at(text.lastIndexOf("<", parser.position - 1));
+    },
+    opentag: (tag) => builder.open(tag, start.line, start.column),
+    closetag: () => builder.close(),
+    text: (value) => builder.text(value),
+    cdata: (value) => builder.node({ kind: "cdata", value }),
+    comment: (value) => builder.node({ kind: "comment", value }),
+    processinginstruction: ({ target, body }) => builder.node({ kind: "instruction", target, data: body }),
   });
-  // A DOCTYPE can declare entities that expand without bound or read files.
-  parser.on("doctype", () => {
-    const message = `${name} has a DOCTYPE declaration, which the runtime rejects so that no entity is declared or read.`;
-    throw new SecurityError(message, "doctype", 0);
-  });
-  // The parser reports a start tag after the name and the character that follows it, which may be a line end; the
-  // tag starts at the nearest "<" before that character.
-  parser.on("opentagstart", () => {
-    start = locator.at(text.lastIndexOf("<", parser.position - 1));
-  });
-  parser.on("opentag", (tag) => builder.open(tag, start.line, start.column));
-  parser.on("closetag", () => builder.close());
-  parser.on("text", (value) => builder.text(value));
-  parser.on("cdata", (value) => builder.node({ kind: "cdata", value }));
-  parser.on("comment", (value) => builder.node({ kind: "comment", value }));
-  parser.on("processinginstruction", ({ target, body }) => builder.node({ kind: "instruction", target, data: body }));
   try {
     parser.write(text).close();
   } catch (error) {
