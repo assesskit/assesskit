@@ -7,5 +7,7 @@ interaction, hosts portable custom interactions in a sandboxed frame, applies pe
 session with navigation, timers, review and feedback, in English and Indonesian. For exams it has the session host, the asset
 gate that serves package files, scoring for raters, adaptive testing, LTI 1.3 as tool and platform, and Caliper events. The
 client of a remote CAT engine is the subpath `@assesskit/player/cat-rest`, which stays on servers because it holds an OAuth
-client secret. The player runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions, and is tested with axe-core
+client secret. A practice session offers the host side of its session (`HostSession`): the host supplies external scores and
+reads pending work, scorer views and results, and a listener gets the events of each step. Session calls take an
+`AbortSignal`. The player runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions, and is tested with axe-core
 at WCAG 2.2 levels A and AA. It is not certified by 1EdTech.

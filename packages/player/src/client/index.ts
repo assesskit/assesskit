@@ -8,7 +8,13 @@
 export type { Clock } from "../protocol/index.js";
 export { assetResolver, UNSIGNED_URL } from "./assets.js";
 export { BROWSER_CLOCK } from "./clock.js";
-export { createLocalSession, type LocalSessionOptions, type LocalStore } from "./local.js";
+export {
+  createLocalSession,
+  type LocalHostSession,
+  type LocalSession,
+  type LocalSessionOptions,
+  type LocalStore,
+} from "./local.js";
 export {
   AUTOSAVE_MS,
   createRemoteSession,

@@ -9,11 +9,13 @@ import {
   type Clock,
   checkViewEnvelope,
   type DispatchResult,
+  type SessionCallOptions,
   type SessionClient,
   type ViewDocuments,
   type ViewEnvelope,
 } from "../protocol/index.js";
-import { clockSchema } from "../protocol/internal.js";
+import { checkCallOptions, clockSchema } from "../protocol/internal.js";
+import { untilAborted } from "./abort.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
@@ -25,8 +27,13 @@ export const AUTOSAVE_MS = 1000;
 /** How long in milliseconds before the nearest timer reaches 0 the client sends the responses it holds, so that the host has them when the time-out ends the attempt. */
 export const FLUSH_BEFORE_DEADLINE_MS = 10_000;
 
-/** Sends an envelope to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example. */
-export type Transport = (envelope: ActionEnvelope) => Promise<ViewEnvelope>;
+/**
+ * Sends an envelope to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example.
+ *
+ * @remarks The client passes the signal of the call that sends the envelope, so that the transport can stop waiting for the
+ * answer. A transport that cannot may ignore it.
+ */
+export type Transport = (envelope: ActionEnvelope, options?: SessionCallOptions) => Promise<ViewEnvelope>;
 
 /** The options of {@link createRemoteSession}. */
 export interface RemoteSessionOptions {
@@ -70,7 +77,10 @@ const isRejection = (error: unknown): boolean => error instanceof DataError || e
  * - **Envelopes.** Each request is an `ActionEnvelope` with the next sequence number and the action in the runtime's JSON form,
  *   sent one at a time. The answer is read with `viewFromJson`.
  * - **Lost answers.** A request that got no answer may or may not have been applied, so it is sent again, unchanged, before
- *   any later one; the host answers a repeated sequence number with the answer it stored.
+ *   any later one; the host answers a repeated sequence number with the answer it stored. A request whose call aborted while
+ *   it waited for the answer is one of these.
+ * - **Signals.** A call with an aborted `signal` sends nothing. While a request is in flight the signal goes to the
+ *   transport. The abort of a call that holds `set-responses` ends its wait, and the responses are still sent.
  * - **Autosave.** `set-responses` actions are held and sent together {@link AUTOSAVE_MS} after the last one, and before any
  *   other action, when the page is hidden, and {@link FLUSH_BEFORE_DEADLINE_MS} before the nearest timer reaches 0. At 0 the
  *   client sends them once more, or an empty `set-responses` if it holds none, to learn from the host whether the time-out
@@ -141,9 +151,9 @@ export function createRemoteSession(
   };
 
   /** Sends an envelope and reads the answer; one that got no answer stays in doubt and is sent again first next time. */
-  const deliver = async (envelope: ActionEnvelope): Promise<ViewEnvelope> => {
+  const deliver = async (envelope: ActionEnvelope, signal: AbortSignal | undefined): Promise<ViewEnvelope> => {
     try {
-      const reply = await transport(envelope);
+      const reply = await transport(envelope, { signal });
       checkViewEnvelope(reply);
       if (reply.seq !== envelope.seq) {
         throw new DataError(`The host answered the sequence number ${reply.seq} to the request ${envelope.seq}.`);
@@ -155,24 +165,25 @@ export function createRemoteSession(
     }
   };
 
-  const exchange = async (action: CandidateAction): Promise<DispatchResult> => {
+  const exchange = async (action: CandidateAction, signal: AbortSignal | undefined): Promise<DispatchResult> => {
+    signal?.throwIfAborted();
     const again = inDoubt;
     if (again !== undefined) {
       inDoubt = undefined;
       try {
-        accept(await deliver(again));
+        accept(await deliver(again, signal));
       } catch (error) {
         // A request that the host rejected is gone; one that got no answer again blocks the next.
         if (!isRejection(error)) throw error;
       }
     }
     sequence += 1;
-    return accept(await deliver({ seq: sequence, action: actionToJson(action) }));
+    return accept(await deliver({ seq: sequence, action: actionToJson(action) }, signal));
   };
 
   /** Sends one action after the ones before it. */
-  const send = (action: CandidateAction): Promise<DispatchResult> => {
-    const result = queue.then(() => exchange(action));
+  const send = (action: CandidateAction, signal?: AbortSignal): Promise<DispatchResult> => {
+    const result = queue.then(() => exchange(action, signal));
     queue = result.catch(() => undefined);
     return result;
   };
@@ -208,7 +219,7 @@ export function createRemoteSession(
     return item === undefined ? undefined : send({ type: "set-responses", item: item.key, responses: new Map() });
   };
 
-  const hold = (action: SetResponses): Promise<DispatchResult> => {
+  const hold = (action: SetResponses, signal: AbortSignal | undefined): Promise<DispatchResult> => {
     if (held !== undefined && (held.item.ref !== action.item.ref || held.item.instance !== action.item.instance)) {
       report(flush());
     }
@@ -219,7 +230,7 @@ export function createRemoteSession(
     const waiting = new Promise<DispatchResult>((resolve, reject) => batch.waiters.push({ resolve, reject }));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => report(flush()), AUTOSAVE_MS);
-    return waiting;
+    return untilAborted(waiting, signal);
   };
 
   const onVisibility = (): void => {
@@ -237,12 +248,15 @@ export function createRemoteSession(
     },
     age: () => clock.now() - latest.receivedAt,
     assets: (path) => latest.assets(path),
-    dispatch: async (action) => {
+    dispatch: async (action, options) => {
+      checkCallOptions(options);
+      const signal = options?.signal;
       if (closed) throw new DataError("The session client is closed.");
       actionToJson(action);
-      if (action.type === "set-responses") return hold(action);
+      if (action.type === "set-responses") return hold(action, signal);
+      signal?.throwIfAborted();
       await flush();
-      return send(action);
+      return send(action, signal);
     },
     subscribe: (listener) => {
       checkFunction(listener, "The listener must be a function");

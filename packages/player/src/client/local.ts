@@ -1,9 +1,11 @@
 import type { AssessmentItem } from "@assesskit/runtime/asi";
 import {
+  checkAbortSignal,
   checkFunction,
   functionSchema,
   methodsSchema,
   nonEmptyStringSchema,
+  optional,
   parseWith,
   recordSchema,
 } from "@assesskit/runtime/checks";
@@ -11,10 +13,12 @@ import type {
   CandidateAction,
   CandidateView,
   DeliveryDefinition,
+  DeliveryEvent,
   DeliveryState,
   EngineOptions,
   HostAction,
   StartOptions,
+  Step,
   TestStructure,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
@@ -22,13 +26,20 @@ import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import {
   type Clock,
-  type DispatchResult,
   type DocumentSource,
+  type HostSession,
+  type SessionCallOptions,
   type SessionClient,
   type ViewDocuments,
   viewDocuments,
 } from "../protocol/index.js";
-import { clockSchema } from "../protocol/internal.js";
+import {
+  checkCallOptions,
+  checkHostAction,
+  checkHostApplyOptions,
+  clockSchema,
+  readClock,
+} from "../protocol/internal.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
 import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
@@ -39,20 +50,28 @@ export interface LocalStore {
    * Returns the saved state of a session.
    *
    * @param session - The identifier of the session.
+   * @param options - See {@link SessionCallOptions}. A store may ignore them.
    * @returns The state, or `undefined` when there is none.
    */
-  load(session: string): Promise<string | undefined>;
+  load(session: string, options?: SessionCallOptions): Promise<string | undefined>;
   /**
-   * Saves the state of a session in place of the one before.
+   * Saves the state of a session in place of the one before. It rejects only when the state was not saved, so that the
+   * session applies a step only when this resolved.
    *
    * @param session - The identifier of the session.
    * @param state - The state as `serializeState` writes it.
+   * @param options - See {@link SessionCallOptions}. A store may ignore them.
    */
-  save(session: string, state: string): Promise<void>;
+  save(session: string, state: string, options?: SessionCallOptions): Promise<void>;
 }
 
-/** The options of {@link createLocalSession}. */
-export interface LocalSessionOptions {
+/**
+ * The options of {@link createLocalSession}.
+ *
+ * @remarks The `signal` stops the creation before its load and its first save. It does not reach later calls: each of them
+ * takes its own.
+ */
+export interface LocalSessionOptions extends SessionCallOptions {
   /** What to deliver: a test, or an item alone for a preview. */
   readonly definition: DeliveryDefinition;
   /**
@@ -101,6 +120,7 @@ const optionsSchema = v.strictObject({
   assets: functionSchema<(path: string) => string>(),
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
+  signal: v.optional(v.unknown()),
 });
 
 /** Returns the paths of the stimuli an item names, resolved against its document. */
@@ -133,24 +153,62 @@ function sourceOf(
   };
 }
 
+/** The host side of a local session, with the events of each step. */
+export interface LocalHostSession extends HostSession {
+  /**
+   * Calls the listener with the events of every step that the session saves after this call, the candidate's and the
+   * host's, in order, after the view listeners have run. A step with no events calls no listener, as `forward.log` is not
+   * called for one, and a refused action makes no step.
+   *
+   * @param listener - The function to call.
+   * @returns The function that removes the listener.
+   * @throws `DataError` when the listener is not a function, or the client is closed.
+   */
+  subscribeSteps(listener: (events: readonly DeliveryEvent[]) => void): () => void;
+}
+
+/** A session client of practice that also offers the host side of its session. */
+export interface LocalSession extends SessionClient {
+  /** The host side of the session on the device. Its results are never official. */
+  readonly host: LocalHostSession;
+}
+
+/** An accepted or refused action, with the view after it. */
+interface Applied {
+  readonly step: Step;
+  readonly view: CandidateView;
+}
+
 /**
- * Creates the session client of practice: the engine runs on the device, with the same client interface as exam mode.
+ * Creates the session client of practice: the engine runs on the device, with the same client interface as exam mode, and
+ * `host` offers the host side of the session.
  *
  * @remarks
  * It loads the runtime's engine with `import()`, the one place the browser code does, so an exam's bundle holds no
  * engine. The answer keys are on the device, which practice accepts, and its results are never official.
  *
- * It stamps each action with the clock, saves the state after each step that is accepted, and fires a `time` action at
- * each maximum time with `setTimeout`. A session that the store has resumes from its state; a preview of one item is a
- * session of the definition of an item.
+ * It stamps each action with the clock and saves the state after each step that is accepted, before it applies the step:
+ * an action whose save fails is rejected and changes nothing. It fires a `time` action at each maximum time with
+ * `setTimeout`. A session that the store has resumes from its state; a preview of one item is a session of the definition
+ * of an item.
+ *
+ * Actions and reads of the client and of `host` run one after the other, in the order of the calls. A scoring request
+ * that the session makes has no event on a resumed session, and the events of the first step come before any listener can
+ * subscribe, so a host checks `host.pending()` once after this function resolves. The store key belongs to one live
+ * session: two sessions on one key overwrite each other.
  *
  * @param options - See {@link LocalSessionOptions}.
  * @returns The session client.
  * @throws `DataError` when an option has the wrong type, the engine cannot be created, or the session cannot start.
+ * @throws `signal.reason` when the signal aborts before the load or the first save. A session already saved stays, and a
+ * new call resumes it.
  */
-export async function createLocalSession(options: LocalSessionOptions): Promise<SessionClient> {
+export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");
+  const { signal: creating } = options;
+  optional(creating, (value) => checkAbortSignal(value, "The option signal"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
+  const now = (): number => readClock(clock);
 
   const delivery = await import("@assesskit/runtime/delivery");
   const engine = delivery.createEngine(definition, options.engine);
@@ -160,27 +218,30 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       : undefined;
   const source = sourceOf(definition, structure, lexicons);
 
-  const saved = await store.load(session);
+  creating?.throwIfAborted();
+  const saved = await store.load(session, { signal: creating });
   let state: DeliveryState;
   if (saved === undefined) {
-    const step = engine.start({ ...options.start, seed, at: clock.now() });
+    const step = engine.start({ ...options.start, seed, at: now() });
     if (!step.ok) throw new DataError(`The session cannot start: ${step.refusal.message}`);
+    creating?.throwIfAborted();
+    await store.save(session, delivery.serializeState(step.state), { signal: creating });
     state = step.state;
-    await store.save(session, delivery.serializeState(state));
   } else {
     state = delivery.deserializeState(saved);
   }
 
   const listeners = new Set<(view: CandidateView) => void>();
+  const stepListeners = new Set<(events: readonly DeliveryEvent[]) => void>();
   let queue: Promise<unknown> = Promise.resolve();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let latest: { view: CandidateView; documents: ViewDocuments; receivedAt: number };
 
   const look = (): void => {
-    const now = clock.now();
-    const view = engine.view(state, now);
-    latest = { view, documents: viewDocuments(view, source), receivedAt: now };
+    const at = now();
+    const view = engine.view(state, at);
+    latest = { view, documents: viewDocuments(view, source), receivedAt: at };
   };
   look();
 
@@ -189,33 +250,73 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     clearTimeout(timer);
     const times = engine.deadlines(state).flatMap((each) => (each.kind === "max-time" ? [each.at] : []));
     if (closed || times.length === 0) return;
-    const delay = Math.max(0, Math.min(...times) - clock.now());
+    const delay = Math.max(0, Math.min(...times) - now());
     timer = setTimeout(
       () => {
-        if (Math.min(...times) > clock.now()) arm();
-        else void run({ type: "time" }).catch((error: unknown) => reportError(error));
+        if (Math.min(...times) > now()) arm();
+        else void run({ type: "time" }, undefined).catch((error: unknown) => reportError(error));
       },
       Math.min(delay, MAX_TIMER_DELAY_MS),
     );
   };
 
-  /** Applies one action after the ones before it, saves an accepted step, and tells the listeners. */
-  const run = (action: CandidateAction | HostAction): Promise<DispatchResult> => {
-    const result = queue.then(async (): Promise<DispatchResult> => {
-      const step = engine.apply(state, delivery.stamp(state, action, clock.now()));
-      if (step.ok) {
-        state = step.state;
-        await store.save(session, delivery.serializeState(state));
-      }
-      look();
-      notifyListeners(listeners, latest.view);
-      arm();
-      return { view: latest.view, ...(step.ok ? {} : { refusal: step.refusal }) };
+  /** Runs one task after the ones before it. A call whose signal aborted by its turn is dropped. */
+  const enqueue = <T>(task: () => T | Promise<T>, signal: AbortSignal | undefined): Promise<T> => {
+    const result = queue.then(async () => {
+      signal?.throwIfAborted();
+      return task();
     });
     queue = result.catch(() => undefined);
     return result;
   };
+
+  /**
+   * Applies one action after the ones before it. An accepted step is saved before it takes effect, so that a store that
+   * rejects leaves the state, the view and the timer as they were; then the view listeners and the step listeners run.
+   */
+  const run = (action: CandidateAction | HostAction, signal: AbortSignal | undefined): Promise<Applied> =>
+    enqueue(async (): Promise<Applied> => {
+      const step = engine.apply(state, delivery.stamp(state, action, now()));
+      if (step.ok) {
+        await store.save(session, delivery.serializeState(step.state), { signal });
+        state = step.state;
+      }
+      look();
+      notifyListeners(listeners, latest.view);
+      if (step.ok && step.events.length > 0) notifyListeners(stepListeners, step.events);
+      arm();
+      return { step, view: latest.view };
+    }, signal);
+
+  /** Reads the state the actions before it left. */
+  const read = async <T>(
+    from: (state: DeliveryState) => T,
+    callOptions: SessionCallOptions | undefined,
+  ): Promise<T> => {
+    checkCallOptions(callOptions);
+    return enqueue(() => from(state), callOptions?.signal);
+  };
+
   arm();
+
+  const host: LocalHostSession = {
+    apply: async (action, options) => {
+      checkHostApplyOptions(options);
+      if (closed) throw new DataError("The session client is closed.");
+      checkHostAction(action);
+      const { step } = await run(action, options?.signal);
+      return step.ok ? { events: step.events } : { events: [], refusal: step.refusal };
+    },
+    pending: (options) => read((current) => engine.pending(current), options),
+    scorerView: (request, options) => read((current) => engine.scorerView(current, request), options),
+    results: (options) => read((current) => engine.results(current), options),
+    subscribeSteps: (listener) => {
+      checkFunction(listener, "The listener must be a function");
+      if (closed) throw new DataError("The session client is closed.");
+      stepListeners.add(listener);
+      return () => void stepListeners.delete(listener);
+    },
+  };
 
   return {
     get view() {
@@ -224,12 +325,14 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     get documents() {
       return latest.documents;
     },
-    age: () => clock.now() - latest.receivedAt,
+    age: () => now() - latest.receivedAt,
     assets: (path) => assets(path),
-    dispatch: async (action) => {
+    dispatch: async (action, options) => {
+      checkCallOptions(options);
       if (closed) throw new DataError("The session client is closed.");
       delivery.actionToJson(action);
-      return run(action);
+      const { step, view } = await run(action, options?.signal);
+      return { view, ...(step.ok ? {} : { refusal: step.refusal }) };
     },
     subscribe: (listener) => {
       checkFunction(listener, "The listener must be a function");
@@ -240,6 +343,8 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       closed = true;
       clearTimeout(timer);
       listeners.clear();
+      stepListeners.clear();
     },
+    host,
   };
 }

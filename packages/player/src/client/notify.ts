@@ -1,15 +1,13 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
-
 /**
- * Calls each listener with a view. A listener that throws does not stop the others; its error goes to `reportError`.
+ * Calls each listener with a value. A listener that throws does not stop the others; its error goes to `reportError`.
  *
  * @param listeners - The listeners, which may remove themselves while they run.
- * @param view - The view to give them.
+ * @param value - The value to give them.
  */
-export function notifyListeners(listeners: ReadonlySet<(view: CandidateView) => void>, view: CandidateView): void {
+export function notifyListeners<T>(listeners: ReadonlySet<(value: T) => void>, value: T): void {
   for (const listener of [...listeners]) {
     try {
-      listener(view);
+      listener(value);
     } catch (error) {
       reportError(error);
     }

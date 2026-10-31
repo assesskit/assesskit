@@ -6,10 +6,10 @@ key in an exam: it imports only `viewFromJson` and `actionToJson` from the runti
 the remote session and fails if any file of the engine has code in the output. Only `createLocalSession` loads the engine,
 with `import()`.
 
-| Client                | Mode     | Where the engine runs | Keys on the device |
-| --------------------- | -------- | --------------------- | ------------------ |
-| `createRemoteSession` | exam     | the server            | no                 |
-| `createLocalSession`  | practice | the device            | yes, by design     |
+| Client                | Mode     | Where the engine runs | Keys on the device | Host side of the session |
+| --------------------- | -------- | --------------------- | ------------------ | ------------------------ |
+| `createRemoteSession` | exam     | the server            | no                 | the session host         |
+| `createLocalSession`  | practice | the device            | yes, by design     | `host`                   |
 
 ```mermaid
 sequenceDiagram
@@ -61,11 +61,11 @@ client.close();
 
 `createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type.
 
-| Argument    | Type           | Meaning                                                                                        |
-| ----------- | -------------- | ---------------------------------------------------------------------------------------------- |
-| `transport` | `Transport`    | Sends an `ActionEnvelope` to the host and resolves with its `ViewEnvelope`.                    |
-| `initial`   | `ViewEnvelope` | What `SessionHost.start` or `SessionHost.view` gave. The first request has its `seq` plus one. |
-| `clock`     | `Clock`        | In the options. Times the age of a view. Default: the clock of the browser, `BROWSER_CLOCK`.   |
+| Argument    | Type           | Meaning                                                                                               |
+| ----------- | -------------- | ----------------------------------------------------------------------------------------------------- |
+| `transport` | `Transport`    | Sends an `ActionEnvelope` and the `signal` of the call to the host; resolves with its `ViewEnvelope`. |
+| `initial`   | `ViewEnvelope` | What `SessionHost.start` or `SessionHost.view` gave. The first request has its `seq` plus one.        |
+| `clock`     | `Clock`        | In the options. Times the age of a view. Default: the clock of the browser, `BROWSER_CLOCK`.          |
 
 ### What the client does
 
@@ -78,6 +78,7 @@ client.close();
 | Deadline     | At 0 the client sends the held responses, or an empty `set-responses` for the item presented, to learn from the host whether the time-out happened. The host's view shows a passed deadline as applied.                                                                                    |
 | Assets       | `assets(path)` joins the base URL of the longest prefix of the latest envelope that holds the path with the path. A path no prefix holds gets `about:blank`, which loads nothing.                                                                                                          |
 | Age          | `age()` is the milliseconds since the view was received, on the client's clock; the timers count down from it.                                                                                                                                                                             |
+| Signals      | A `signal` that aborted before the send stops the call, and nothing is sent. In flight, the transport gets the signal and an abort leaves the request in doubt. A held `set-responses` call stops waiting, and its responses are sent all the same.                                        |
 
 `close()` stops the timers and removes the listener of the page. Further `dispatch` calls reject with `DataError`.
 
@@ -107,25 +108,28 @@ const client = await createLocalSession({
 client.view.current?.title; // => "Question"
 ```
 
-`createLocalSession(options)` is asynchronous because it loads the engine. It throws `DataError` when an option is not of its
-type, the engine cannot be created from the definition, or the session cannot start.
+`createLocalSession(options)` is asynchronous because it loads the engine. It returns a `LocalSession`: a `SessionClient` with
+`host`, the host side of the session. It throws `DataError` when an option is not of its type, the engine cannot be created from
+the definition, or the session cannot start, and it rejects with `signal.reason` when the `signal` aborts before the load or the
+first save. A session that was saved stays, and a new call resumes it.
 
 | Option       | Type                                  | Meaning                                                                                                      |
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                     |
 | `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                |
 | `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                            |
-| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load(session)` and `save(session, state)`.                      |
+| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.           |
 | `session`    | `string`                              | The identifier of the session in the store.                                                                  |
 | `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                      |
 | `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                        |
 | `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none. |
-| `clock`      | `Clock`                               | Stamps actions and times the deadlines. Default: the clock of the browser.                                   |
+| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.    |
+| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                        |
 
-It stamps each action with `stamp(state, action, now)`, saves the state after each accepted step, and fires a `time` action
-at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that has the session
-resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a report, so
-`publishScore` refuses them.
+It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
+fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
+has the session resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a
+report, so `publishScore` refuses them.
 
 A preview of one item is a session of `{ kind: "item", item, base }`; `documents.item` is `base`.
 
@@ -137,3 +141,106 @@ A lexicon is a resource of type `pls` among the dependencies of the item's resou
 return the paths.
 
 The server's session host finds them the same way for an exam.
+
+### The host side
+
+`host` is a `LocalHostSession`: the `HostSession` of the [protocol](protocol.md#the-host-session) and `subscribeSteps`. A host
+that rates practice answers supplies the scores here, with the code it uses on a server.
+
+```mermaid
+sequenceDiagram
+  participant C as Candidate (player)
+  participant L as LocalSession
+  participant H as Host code on the page
+  participant S as Scoring endpoint
+  C->>L: dispatch(submit)
+  L->>L: stamp, apply, save, then the view and step listeners
+  L-->>C: the view after the step
+  L-->>H: step events: scoring-requested
+  H->>L: host.pending(), host.scorerView(request)
+  H->>S: toSubmission(view)
+  S-->>H: score
+  H->>L: host.apply(toSupplyScores(request, score, scorer))
+  L-->>C: the new view through subscribe
+```
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { single } from "@assesskit/runtime/values";
+import { createLocalSession } from "@assesskit/player/client";
+
+const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="essay" title="Essay" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`);
+if (document.kind !== "item") throw new Error("The document is not an item.");
+
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: document.item, base: "items/essay.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, state) => void saved.set(session, state),
+  },
+  session: "practice-1",
+  seed: 1,
+  assets: (path) => `/package/${path}`,
+});
+const types = [];
+client.host.subscribeSteps((events) => types.push(...events.map((event) => event.type)));
+
+const item = client.view.current.key;
+await client.dispatch({
+  type: "set-responses",
+  item,
+  responses: new Map([["RESPONSE", single("string", "My essay.")]]),
+});
+await client.dispatch({ type: "submit", item });
+types; // => ["responses-set", "attempt-ended", "response-processed", "outcome-processed", "scoring-requested"]
+
+const [request] = (await client.host.pending()).scoring;
+request.id; // => "item:essay:1:SCORE"
+const step = await client.host.apply({
+  type: "supply-scores",
+  request: request.id,
+  value: single("float", 7),
+  scorer: "human",
+});
+step.events.map((event) => event.type); // => ["scores-applied", "outcome-processed"]
+(await client.host.results()).itemResults[0].sessionStatus; // => "final"
+client.close();
+```
+
+| Member                          | Meaning                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apply(action, options?)`       | Applies a `time`, `supply-scores` or `cat-response` action and resolves with the `HostStep`. A candidate action is a `DataError`: send it with `dispatch`.          |
+| `pending(options?)`             | The scoring requests without a value, and the CAT requests.                                                                                                         |
+| `scorerView(request, options?)` | What a scorer needs to rate the request. It holds the correct responses, which the device holds already.                                                            |
+| `results(options?)`             | The results report. It is never official.                                                                                                                           |
+| `subscribeSteps(listener)`      | Calls the listener with the events of each step saved after this call, the candidate's, the timer's and the host's, in order. Returns the function that removes it. |
+
+`subscribeSteps` calls the listener after the view listeners. A step with no events calls no listener, and a refused action makes
+no step. `dispatch` and every method of `host` run one after the other, in the order of the calls; a read sees the state that the
+calls before it left. Each call takes the options `{ signal }` of the [protocol](protocol.md#the-host-session): an action or a
+read whose signal aborted before its turn rejects with `signal.reason` and is dropped.
+
+| Case                                                          | Behavior                                                                                                                                                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A session resumed from the store has pending scoring requests | No step announces them. The host checks `pending()` once after `createLocalSession` resolves, for a new and for a resumed session.                                                                 |
+| The start of a new session makes a scoring request            | Its events come before any listener can subscribe, so the same check covers it.                                                                                                                    |
+| The store rejects a save                                      | The call rejects with the error of the store. The state, the view, the timer and the listeners stay as they were, because a step takes effect only after its save.                                 |
+| The save of a `time` action of the timer fails                | The error goes to `reportError`. No timer is armed again, because a delay of 0 would loop against a failing store. The next action applies the passed deadlines first, so no expiry slips through. |
+| A score arrives after the page closed the client              | `apply` throws. The host opens a new `createLocalSession` from the store and applies the score there.                                                                                              |
+| Two sessions on one store key                                 | They overwrite each other, because `LocalStore.save` has no version. One live session per key is the host's duty.                                                                                  |
+| A listener throws                                             | The error goes to `reportError`, and the other listeners still run.                                                                                                                                |
+| After `close()`                                               | `dispatch`, `apply` and `subscribeSteps` throw `DataError`. The reads still answer, because the state is in memory and in the store.                                                               |
+
+| Error                  | When                                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `DataError`            | `apply` gets what is not an action of the host, or a malformed one; `scorerView` names a request that does not exist    |
+| `DataError`            | An option, a listener or a `signal` is of the wrong type, or the clock answers with anything but a non-negative integer |
+| `DataError`            | The client is closed, for `dispatch`, `apply` and `subscribeSteps`                                                      |
+| The error of the store | A `load` or a `save` rejected                                                                                           |
+| `signal.reason`        | The signal of the call aborted before the call ran                                                                      |

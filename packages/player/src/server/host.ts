@@ -36,16 +36,13 @@ import {
   checkViewEnvelope,
   type ViewEnvelope,
 } from "../protocol/index.js";
-import { checkClock, markOfficial, readClock } from "../protocol/internal.js";
+import { checkClock, checkHostAction, markOfficial, readClock } from "../protocol/internal.js";
 import { forwardEvents, type SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
 import { checkClientAction, EXAM_CLIENT_ACTIONS, readClientActions } from "./policy.js";
 import type { Scheduler } from "./scheduler.js";
 import { MAX_SAVE_RETRIES, PROCTOR_ACTIONS, type SessionHost, type SessionHostOptions } from "./session-host.js";
 import type { SessionStore, StoredSession } from "./session-store.js";
-
-/** The actions of the host, which a candidate never sends. */
-const HOST_ACTIONS = ["time", "supply-scores", "cat-response"] as const;
 
 /** What one attempt at a change gives: the answer, and the new record when the attempt changes the session. */
 interface Attempt<T> {
@@ -317,8 +314,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     },
     host: async (session, action, scoredBy) => {
       checkNonEmptyString(session, "The session");
-      checkRecord(action, "The action must be an object with a type");
-      checkChoice(action.type, "The type of a host action", HOST_ACTIONS);
+      checkHostAction(action);
       if (action.type !== "supply-scores" || forward?.caliper === undefined) return authority(session, action);
       checkIri(scoredBy, "The scoredBy of a supply-scores action");
       return authority(session, action, { value: action.value, scorer: action.scorer, scoredBy });

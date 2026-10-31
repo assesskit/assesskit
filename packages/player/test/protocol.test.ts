@@ -22,7 +22,7 @@ import {
   REFUSAL_CODES,
   viewDocuments,
 } from "../src/protocol/index.js";
-import { markOfficial } from "../src/protocol/internal.js";
+import { checkCallOptions, checkHostAction, checkHostApplyOptions, markOfficial } from "../src/protocol/internal.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
 
@@ -282,6 +282,65 @@ describe("viewDocuments", () => {
       stimuli: [],
       lexicons: [],
     });
+  });
+});
+
+describe("checkHostAction", () => {
+  it("accepts the types of the actions of the host", () => {
+    for (const type of ["time", "supply-scores", "cat-response"]) {
+      expect(() => checkHostAction(json(JSON.stringify({ type }))), type).not.toThrow();
+    }
+  });
+
+  it("rejects an action of the candidate and a type that does not exist", () => {
+    for (const type of ["move", "set-responses", "suspend", "nope"]) {
+      expect(() => checkHostAction(json(JSON.stringify({ type }))), type).toThrow(
+        new DataError(
+          `The type of a host action must be "time", "supply-scores" or "cat-response", found ${JSON.stringify(type)}.`,
+        ),
+      );
+    }
+  });
+
+  it("rejects what is not an object with a type", () => {
+    for (const text of ["null", "5", '"time"', "[]", "{}"]) {
+      expect(() => checkHostAction(json(text)), text).toThrow(DataError);
+    }
+    expect(() => checkHostAction(json("null"))).toThrow("The action must be an object with a type, found null.");
+  });
+});
+
+describe("the options of a session call", () => {
+  it("accept absent options, no property and a signal", () => {
+    const signal = new AbortController().signal;
+    for (const check of [checkCallOptions, checkHostApplyOptions]) {
+      expect(() => check(undefined)).not.toThrow();
+      expect(() => check({})).not.toThrow();
+      expect(() => check({ signal })).not.toThrow();
+      expect(() => check({ signal: undefined })).not.toThrow();
+    }
+    expect(() => checkHostApplyOptions({ signal, scoredBy: "https://rater.example/1" })).not.toThrow();
+  });
+
+  it("refuse null, an array, a signal of another type and a property they do not know", () => {
+    for (const check of [checkCallOptions, checkHostApplyOptions]) {
+      expect(() => check(json("null"))).toThrow(new DataError("The options must be an object, found null."));
+      expect(() => check(json("[]"))).toThrow(new DataError("The options must be an object, found an array."));
+      expect(() => check(json('{"signal":5}'))).toThrow(
+        new DataError("The option signal must be an AbortSignal, found 5."),
+      );
+      expect(() => check(json('{"signal":null}'))).toThrow(
+        new DataError("The option signal must be an AbortSignal, found null."),
+      );
+      expect(() => check(json('{"timeout":1}'))).toThrow(DataError);
+    }
+  });
+
+  it("refuse a scoredBy that is not a string only where the host applies an action", () => {
+    expect(() => checkHostApplyOptions(json('{"scoredBy":5}'))).toThrow(
+      new DataError("The option scoredBy must be a string, found 5."),
+    );
+    expect(() => checkCallOptions(json('{"scoredBy":"x"}'))).toThrow(DataError);
   });
 });
 

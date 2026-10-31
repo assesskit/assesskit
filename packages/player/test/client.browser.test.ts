@@ -1,36 +1,20 @@
-import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
-import {
-  AUTOSAVE_MS,
-  createLocalSession,
-  createRemoteSession,
-  FLUSH_BEFORE_DEADLINE_MS,
-  type LocalStore,
-} from "../src/client/index.js";
+import { AUTOSAVE_MS, createLocalSession, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
+import { untilAborted } from "../src/client/internal.js";
 import { ServiceError } from "../src/index.js";
-import type { ActionEnvelope } from "../src/protocol/index.js";
-import { examDefinition, examFiles, examHost, fakeClock, packageOf } from "./exam-fixture.js";
+import type { ActionEnvelope, SessionCallOptions } from "../src/protocol/index.js";
+import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
+import { answer, localOptions, Q1, SECOND, statusOfQ1 } from "./local-fixture.js";
+import { waitFor } from "./wait.js";
 
 const ALICE = { session: "exam-1", principal: "alice" };
-const SECOND = 1000;
-const Q1 = { ref: "q1", instance: 1 };
-const answer = (identifier: string): CandidateAction => ({
-  type: "set-responses",
-  item: Q1,
-  responses: new Map([["RESPONSE", single("identifier", identifier)]]),
-});
 
 const realSetTimeout = globalThis.setTimeout;
 /** Waits on the real clock, for the host's own asynchronous work, while the timers of the client are fake. */
 const real = (milliseconds: number): Promise<void> => new Promise((resolve) => realSetTimeout(resolve, milliseconds));
-
-/** The state of q1 in the navigation of a view. */
-const statusOfQ1 = (view: CandidateView): string | undefined => {
-  const entry = view.navigation.find((each) => each.kind === "item" && each.key.ref === "q1");
-  return entry?.kind === "item" ? entry.status : undefined;
-};
 
 afterEach(() => {
   vi.useRealTimers();
@@ -41,12 +25,18 @@ async function remote(
   options: {
     readonly files?: Readonly<Record<string, string | Uint8Array>>;
     readonly fail?: (envelope: ActionEnvelope, call: number) => "before" | "after" | undefined;
+    /** Holds the transport before it sends the envelope, until the promise settles or the signal of the call aborts. */
+    readonly wait?: (envelope: ActionEnvelope, call: number) => Promise<void> | undefined;
   } = {},
 ) {
   const setup = await examHost({}, options.files, inject("fixtures").asset);
   const calls: ActionEnvelope[] = [];
-  const transport = async (envelope: ActionEnvelope) => {
+  const signals: (AbortSignal | undefined)[] = [];
+  const transport = async (envelope: ActionEnvelope, callOptions?: SessionCallOptions) => {
     calls.push(envelope);
+    signals.push(callOptions?.signal);
+    const waiting = options.wait?.(envelope, calls.length);
+    if (waiting !== undefined) await untilAborted(waiting, callOptions?.signal);
     const sent = JSON.parse(JSON.stringify(envelope));
     const failure = options.fail?.(envelope, calls.length);
     if (failure === "before") throw new ServiceError("The host could not be reached.", 0, "");
@@ -56,7 +46,7 @@ async function remote(
   };
   const initial = JSON.parse(JSON.stringify(await setup.host.start(ALICE, { seed: 1 })));
   const client = createRemoteSession(transport, initial, { clock: setup.clock });
-  return { ...setup, client, calls, transport, initial };
+  return { ...setup, client, calls, signals, transport, initial };
 }
 
 const typesOf = (calls: readonly ActionEnvelope[]): string[] =>
@@ -206,6 +196,70 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
+  it("passes the signal of a call to the transport", async () => {
+    const { client, signals } = await remote();
+    const controller = new AbortController();
+    await client.dispatch({ type: "move", to: "next" }, { signal: controller.signal });
+    await client.dispatch({ type: "move", to: "next" });
+    expect(signals).toEqual([controller.signal, undefined]);
+    client.close();
+  });
+
+  it("sends nothing for a call whose signal aborted, before it is queued and while it waits for its turn", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { client, calls } = await remote({ wait: (_envelope, call) => (call === 1 ? gate : undefined) });
+    const reason = new Error("The caller left.");
+    await expect(client.dispatch({ type: "move", to: "next" }, { signal: AbortSignal.abort(reason) })).rejects.toBe(
+      reason,
+    );
+    expect(calls).toHaveLength(0);
+
+    const first = client.dispatch({ type: "move", to: "next" });
+    const controller = new AbortController();
+    const queued = client.dispatch({ type: "move", to: "next" }, { signal: controller.signal });
+    const dropped = expect(queued).rejects.toBe(reason);
+    await waitFor(() => expect(calls).toHaveLength(1));
+    controller.abort(reason);
+    release();
+    expect((await first).view.current?.key.ref).toBe("q2");
+    await dropped;
+    expect(calls.map(({ seq }) => seq)).toEqual([1]);
+    client.close();
+  });
+
+  it("leaves a request in doubt when the call aborts while it is in flight, and sends it again before the next one", async () => {
+    const gate = new Promise<void>(() => undefined);
+    const { client, calls } = await remote({ wait: (_envelope, call) => (call === 1 ? gate : undefined) });
+    const controller = new AbortController();
+    const reason = new Error("The caller left.");
+    const moving = client.dispatch({ type: "move", to: "next" }, { signal: controller.signal });
+    const aborted = expect(moving).rejects.toBe(reason);
+    await waitFor(() => expect(calls).toHaveLength(1));
+    controller.abort(reason);
+    await aborted;
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect(calls.map(({ seq }) => seq)).toEqual([1, 1, 2]);
+    expect(moved.view.current?.key.ref).toBe("q3");
+    client.close();
+  });
+
+  it("ends the wait of a call that holds responses when it aborts, and still sends the responses", async () => {
+    const { client, calls } = await remote();
+    const controller = new AbortController();
+    const reason = new Error("The caller left.");
+    const waiting = client.dispatch(answer("A"), { signal: controller.signal });
+    controller.abort(reason);
+    await expect(waiting).rejects.toBe(reason);
+    expect(calls).toHaveLength(0);
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect(typesOf(calls)).toEqual(["set-responses", "move"]);
+    expect(moved.view.current?.key.ref).toBe("q2");
+    client.close();
+  });
+
   it("fails when the host answers another sequence number", async () => {
     const { initial } = await remote();
     const client = createRemoteSession(async (envelope) => ({ ...initial, seq: envelope.seq + 1 }), initial);
@@ -266,40 +320,15 @@ describe("createRemoteSession", () => {
     const client = createRemoteSession(transport, initial);
     expect(() => client.subscribe(JSON.parse("5"))).toThrow("The listener must be a function");
     await expect(client.dispatch(JSON.parse('{"type":"nope"}'))).rejects.toThrow("The type of the action");
+    await expect(client.dispatch({ type: "move", to: "next" }, JSON.parse("null"))).rejects.toThrow(
+      "The options must be an object, found null.",
+    );
+    await expect(client.dispatch({ type: "move", to: "next" }, JSON.parse('{"signal":5}'))).rejects.toThrow(
+      "The option signal must be an AbortSignal, found 5.",
+    );
     client.close();
   });
 });
-
-/** A store for the state of a local session that keeps what was saved. */
-function localStore(): LocalStore & { readonly saved: Map<string, string[]> } {
-  const saved = new Map<string, string[]>();
-  return {
-    saved,
-    load: async (session) => saved.get(session)?.at(-1),
-    save: async (session, state) => {
-      saved.set(session, [...(saved.get(session) ?? []), state]);
-    },
-  };
-}
-
-/** The options of a local session over the fixture test. */
-function localOptions(overrides: Partial<Parameters<typeof createLocalSession>[0]> = {}) {
-  const clock = fakeClock();
-  const store = localStore();
-  return {
-    clock,
-    store,
-    options: {
-      definition: examDefinition(),
-      store,
-      session: "practice-1",
-      seed: 1,
-      assets: (path: string) => `/assets/${path}`,
-      clock,
-      ...overrides,
-    },
-  };
-}
 
 describe("createLocalSession", () => {
   it("runs the engine on the device behind the interface of the remote session", async () => {

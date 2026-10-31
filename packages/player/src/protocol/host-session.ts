@@ -1,0 +1,97 @@
+import { checkAbortSignal, checkProperties, checkRecord, checkString, optional } from "@assesskit/runtime/checks";
+import type { DeliveryEvent, HostAction, PendingWork, Refusal, ScorerView } from "@assesskit/runtime/delivery";
+import type { AssessmentResult } from "@assesskit/runtime/results";
+
+/** The options of a session call that waits on a store or a service. */
+export interface SessionCallOptions {
+  /**
+   * Stops the call before it applies anything. Work already saved stays saved.
+   *
+   * @defaultValue none
+   */
+  readonly signal?: AbortSignal;
+}
+
+/** The options of {@link HostSession.apply}. */
+export interface HostApplyOptions extends SessionCallOptions {
+  /**
+   * The absolute IRI of the rater or scoring service that supplies a score, for the GradeEvent of Caliper. Only a session
+   * host that forwards Caliper reads it, and there `supply-scores` needs it.
+   *
+   * @defaultValue none
+   */
+  readonly scoredBy?: string;
+}
+
+/** What the host side answers to an action: the events of the step, and the engine's refusal when it did not apply. */
+export interface HostStep {
+  /** The events of the step, in order; empty when the action was refused or changed nothing. */
+  readonly events: readonly DeliveryEvent[];
+  /**
+   * Why the engine refused the action.
+   *
+   * @defaultValue none, the action was applied
+   */
+  readonly refusal?: Refusal;
+}
+
+/** The host side of one candidate session, which a session host on a server and a local session on a device both offer. */
+export interface HostSession<TResult extends AssessmentResult = AssessmentResult> {
+  /**
+   * Applies an action of the host, `time`, `supply-scores` or `cat-response`, stamped by the session's clock and never
+   * before the latest step, and saves the state when the engine accepts it. A `time` that finds nothing to do is accepted
+   * with no events; it is refused only as `ended` or `suspended`.
+   *
+   * @returns The events of the step, or the engine's refusal, which changes nothing.
+   * @throws `DataError` when the action is not an action of the host or is malformed, the session does not exist, or
+   * `scoredBy` is missing where Caliper forwarding needs it.
+   * @throws `ServiceError` when a session host cannot save after its retries; a local session rejects with the store's
+   * error.
+   * @throws `signal.reason` when the signal aborts.
+   * @remarks On a session host, forwarding runs after the save. When it throws, the step stays saved and the call rejects,
+   * so a retried `supply-scores` reports `scores-replaced` and a second GradeEvent.
+   */
+  apply(action: HostAction, options?: HostApplyOptions): Promise<HostStep>;
+  /** Returns what the engine waits on the host for: scoring requests without a value, and CAT requests. */
+  pending(options?: SessionCallOptions): Promise<PendingWork>;
+  /**
+   * Returns what a scorer needs to rate a request: the correct responses, and the scoring rubric of the request when it
+   * has one.
+   *
+   * @throws `DataError` when the session or the request does not exist.
+   * @remarks In exam mode, call it only from a rater's endpoint, never from a candidate's. A local session holds the keys
+   * by design, for practice.
+   */
+  scorerView(request: string, options?: SessionCallOptions): Promise<ScorerView>;
+  /** Returns the results report of the session; it is provisional while scoring requests are pending. */
+  results(options?: SessionCallOptions): Promise<TResult>;
+}
+
+const CALL_OPTIONS = ["signal"] as const;
+const HOST_APPLY_OPTIONS = ["signal", "scoredBy"] as const;
+
+/**
+ * Checks the options of a session call, as a host passes them from JavaScript.
+ *
+ * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal` and no other property.
+ */
+export function checkCallOptions(options: unknown): asserts options is SessionCallOptions | undefined {
+  if (options === undefined) return;
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", CALL_OPTIONS);
+  optional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
+}
+
+/**
+ * Checks the options of {@link HostSession.apply}.
+ *
+ * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal`, a `scoredBy` that is
+ * a string, and no other property.
+ */
+export function checkHostApplyOptions(options: unknown): asserts options is HostApplyOptions | undefined {
+  if (options === undefined) return;
+  checkRecord(options, "The options must be an object");
+  checkProperties(options, "The options", HOST_APPLY_OPTIONS);
+  optional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
+  optional(options.scoredBy, (value) => checkString(value, "The option scoredBy"));
+}

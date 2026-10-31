@@ -1,5 +1,6 @@
 import type { CandidateAction, CandidateView, Refusal } from "@assesskit/runtime/delivery";
 import type { ViewDocuments } from "./documents.js";
+import type { SessionCallOptions } from "./host-session.js";
 
 /** What a session client answers to an action: the view after it, and the engine's refusal when it did not apply. */
 export interface DispatchResult {
@@ -39,11 +40,15 @@ export interface SessionClient {
    * together after a pause; the promise then resolves when they were answered.
    *
    * @param action - The action.
+   * @param options - See {@link SessionCallOptions}.
    * @returns The view after the action, and the refusal when the engine did not apply it.
    * @throws `DataError` when the host refuses the action as outside the policy or malformed.
    * @throws `ServiceError` when the host cannot be reached or cannot save.
+   * @throws `signal.reason` when the signal aborts. An action that had not started is dropped. A request of a remote client
+   * that is in flight stays in doubt, and the client sends it again before the next one. Held `set-responses` are sent
+   * all the same.
    */
-  dispatch(action: CandidateAction): Promise<DispatchResult>;
+  dispatch(action: CandidateAction, options?: SessionCallOptions): Promise<DispatchResult>;
   /**
    * Calls the listener with every new view.
    *
