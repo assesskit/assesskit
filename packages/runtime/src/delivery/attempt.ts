@@ -1,4 +1,5 @@
-import { type AssessmentItem, descendantNodes, type EndAttemptInteraction, type ModelNode } from "../asi/index.js";
+import type { AssessmentItem, EndAttemptInteraction, ModelNode } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { AssesskitError } from "../errors.js";
 import { describeInteractions, initialResponse } from "../interactions/index.js";
 import {
@@ -53,6 +54,9 @@ export function isAdaptive(item: AssessmentItem): boolean {
 
 const isEndAttempt = (node: ModelNode): node is EndAttemptInteraction => node.kind === "end-attempt-interaction";
 
+/** The end attempt interactions of the items that sessions have used: an item never changes, so its body is read once. */
+const END_ATTEMPTS = new WeakMap<AssessmentItem, ReadonlyMap<string, boolean>>();
+
 /**
  * Returns the response variables that end attempt interactions bind, each with whether the attempt it ends counts
  * toward `max-attempts`: `count-attempt` absent means true.
@@ -60,8 +64,15 @@ const isEndAttempt = (node: ModelNode): node is EndAttemptInteraction => node.ki
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function endAttemptInteractions(item: AssessmentItem): ReadonlyMap<string, boolean> {
-  const nodes = item.body?.children.flatMap((node) => [node, ...descendantNodes(node)]) ?? [];
-  return new Map(nodes.filter(isEndAttempt).map((node) => [node.responseIdentifier, node.countAttempt !== false]));
+  const known = END_ATTEMPTS.get(item);
+  if (known !== undefined) return known;
+  const found = new Map(
+    withDescendants(item.body?.children ?? [])
+      .filter(isEndAttempt)
+      .map((node) => [node.responseIdentifier, node.countAttempt !== false]),
+  );
+  END_ATTEMPTS.set(item, found);
+  return found;
 }
 
 /** Returns the number of attempts that `numAttempts` holds. */

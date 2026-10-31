@@ -298,6 +298,14 @@ describe("describing interactions", () => {
     ]);
   });
 
+  it("describes an item once, and a changed copy of it on its own", () => {
+    const item = itemOf('<div><qti-text-entry-interaction response-identifier="FIRST"/></div>');
+    expect(describeInteractions(item)).toBe(describeInteractions(item));
+    const emptied = { ...item, body: item.body && { ...item.body, children: [] } };
+    expect(describeInteractions(emptied)).toEqual([]);
+    expect(describeInteractions(item).map(({ responseIdentifier }) => responseIdentifier)).toEqual(["FIRST"]);
+  });
+
   it("describes an item without a body or with no interaction as no interactions", () => {
     expect(describeInteractions(itemOf("<p>Text</p>"))).toEqual([]);
     const document = readAsi(`<qti-assessment-item ${NS} identifier="i" title="T" time-dependent="false"/>`);

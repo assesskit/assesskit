@@ -44,11 +44,24 @@ const XML_ELEMENT = "element";
  * @returns The child nodes in document order, text and elements.
  */
 export function childNodes(node: ModelNode): readonly ModelNode[] {
-  if (node.kind === XML_ELEMENT) return [];
-  return Object.values(node).flatMap((property) => {
-    if (Array.isArray(property)) return property.filter(isModelNode);
-    return isModelNode(property) ? [property] : [];
-  });
+  const children: ModelNode[] = [];
+  if (node.kind === XML_ELEMENT) return children;
+  for (const property of Object.values(node)) {
+    if (!Array.isArray(property)) {
+      if (isModelNode(property)) children.push(property);
+      continue;
+    }
+    for (const entry of property) if (isModelNode(entry)) children.push(entry);
+  }
+  return children;
+}
+
+/** Appends the nodes below a node to `found`, depth first. */
+function collect(node: ModelNode, found: ModelNode[]): void {
+  for (const child of childNodes(node)) {
+    found.push(child);
+    collect(child, found);
+  }
 }
 
 /**
@@ -58,5 +71,22 @@ export function childNodes(node: ModelNode): readonly ModelNode[] {
  * @returns Every node below it, depth first, in document order.
  */
 export function descendantNodes(node: ModelNode): readonly ModelNode[] {
-  return childNodes(node).flatMap((child) => [child, ...descendantNodes(child)]);
+  const found: ModelNode[] = [];
+  collect(node, found);
+  return found;
+}
+
+/**
+ * Returns the nodes of some content and every node below them: each node is followed by its descendants, in document
+ * order.
+ *
+ * @param nodes - The root nodes of the content, such as the children of an item body.
+ */
+export function withDescendants(nodes: readonly ModelNode[]): readonly ModelNode[] {
+  const found: ModelNode[] = [];
+  for (const node of nodes) {
+    found.push(node);
+    collect(node, found);
+  }
+  return found;
 }

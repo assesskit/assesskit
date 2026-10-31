@@ -1,4 +1,5 @@
-import { type AssessmentItem, type BodyNode, descendantNodes, type ModelNode, scoreCoverBlocks } from "../asi/index.js";
+import { type AssessmentItem, type BodyNode, type ModelNode, scoreCoverBlocks } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { resolveContent, testRubricBlocks } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { Value } from "../values/index.js";
@@ -55,8 +56,7 @@ const isRubricBlock = (node: ModelNode): node is ItemRubricBlock => node.kind ==
 
 /** Returns the rubric blocks of the item body that only the scorer sees: the candidate's are already in the body. */
 function scorerRubric(item: AssessmentItem): ItemRubricBlock[] {
-  return (item.body?.children ?? [])
-    .flatMap((node) => [node, ...descendantNodes(node)])
+  return withDescendants(item.body?.children ?? [])
     .filter(isRubricBlock)
     .filter((node) => node.view.includes("scorer") && !node.view.includes("candidate"));
 }

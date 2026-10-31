@@ -1,17 +1,12 @@
 import {
   type BodyNode,
   type Catalog,
-  descendantNodes,
   isBodyNode,
   isModelNode,
   type ModelNode,
   type PortableCustomInteraction,
 } from "../asi/index.js";
-
-/** The nodes of some content and all the nodes below them, in document order. */
-function withDescendants(nodes: readonly ModelNode[]): ModelNode[] {
-  return nodes.flatMap((node) => [node, ...descendantNodes(node)]);
-}
+import { withDescendants } from "../asi/internal.js";
 
 const isCatalog = (node: ModelNode): node is Catalog => node.kind === "catalog";
 const isPortable = (node: ModelNode): node is PortableCustomInteraction => node.kind === "portable-custom-interaction";

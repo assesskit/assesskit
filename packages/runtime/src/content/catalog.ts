@@ -1,11 +1,5 @@
-import {
-  type AssessmentItem,
-  type BodyNode,
-  type Catalog,
-  descendantNodes,
-  type FileHref,
-  type HtmlContent,
-} from "../asi/index.js";
+import type { AssessmentItem, BodyNode, Catalog, FileHref, HtmlContent } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { SupportName } from "../pnp/index.js";
@@ -101,11 +95,9 @@ export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Cata
     ...item.modalFeedback,
     ...(item.catalogInfo === undefined ? [] : [item.catalogInfo]),
   ];
-  return roots
-    .flatMap((root) => [root, ...descendantNodes(root)])
-    .filter(
-      (candidate): candidate is Catalog => candidate.kind === "catalog" && "id" in candidate && candidate.id === idref,
-    );
+  return withDescendants(roots).filter(
+    (candidate): candidate is Catalog => candidate.kind === "catalog" && "id" in candidate && candidate.id === idref,
+  );
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   type Interaction,
   type ModelNode,
 } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { checkArray, checkRecord } from "../checks.js";
 import type { BaseType, ValueDeclaration } from "../values/index.js";
 import { anyBindings, bind, containerBindings, TEXT_BASE_TYPES } from "./bindings.js";
@@ -376,6 +377,9 @@ const isGap = (node: ModelNode): node is Gap => node.kind === "gap";
 
 const isHotText = (node: ModelNode): node is HotText => node.kind === "hottext";
 
+/** The descriptors of the items described so far, so that a session reads an item's body once. */
+const DESCRIPTORS = new WeakMap<AssessmentItem, readonly InteractionDescriptor[]>();
+
 /**
  * Describes the interactions of an item in document order: the response variable each binds, the bindings it accepts,
  * its choices, what a valid response needs and whether the choices shuffle.
@@ -386,6 +390,9 @@ const isHotText = (node: ModelNode): node is HotText => node.kind === "hottext";
  *
  * Attributes that a document omits have the defaults of the schema, and a maximum of 0, which means no restriction, is
  * left out of the constraints.
+ *
+ * The descriptors of an item are built on the first call and shared by the later ones, which an item that is not changed
+ * after it is read allows; the result is read-only.
  *
  * @param item - The item, as `readAsi` reads it.
  * @returns One descriptor for each interaction in the body of the item, including those inside feedback and template
@@ -399,9 +406,10 @@ export function describeInteractions(item: AssessmentItem): readonly Interaction
   checkArray(input.responseDeclarations, "The response declarations of the item must be an array");
   if (item.body === undefined) return [];
   checkArray(item.body.children, "The children of the item body must be an array");
+  const known = DESCRIPTORS.get(item);
+  if (known !== undefined) return known;
   const declarations = new Map(item.responseDeclarations.map((declaration) => [declaration.identifier, declaration]));
-  return item.body.children
-    .flatMap((node) => [node, ...descendantNodes(node)])
+  const described = withDescendants(item.body.children)
     .filter(isInteraction)
     .map((interaction): InteractionDescriptor => {
       const declared = declarations.get(interaction.responseIdentifier);
@@ -419,4 +427,6 @@ export function describeInteractions(item: AssessmentItem): readonly Interaction
         ...partsOf(interaction, declaration),
       };
     });
+  DESCRIPTORS.set(item, described);
+  return described;
 }

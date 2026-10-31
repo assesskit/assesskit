@@ -1,4 +1,5 @@
-import { type AssessmentItem, type BodyNode, type Catalog, descendantNodes } from "../asi/index.js";
+import type { AssessmentItem, BodyNode, Catalog } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { hazardExposure, resolveContent, visibleModalFeedback } from "../content/index.js";
 import type { InteractionDescriptor } from "../interactions/index.js";
 import { type LtiLink, resolveReference } from "../package/index.js";
@@ -109,11 +110,7 @@ export function candidateItem(state: DeliveryState, delivered: DeliveredItem, en
   const catalogs = distinctCatalogs([
     ...(item.catalogInfo?.catalogs ?? []),
     ...candidate.stimuli.flatMap(({ stimulus }) => stimulus.catalogInfo?.catalogs ?? []),
-    ...catalogsIn([
-      ...body,
-      ...stimuli.flatMap((each) => each.body),
-      ...shownModals.flatMap((modal) => [modal, ...descendantNodes(modal)]),
-    ]),
+    ...catalogsIn([...body, ...stimuli.flatMap((each) => each.body), ...withDescendants(shownModals)]),
   ]);
   const stylesheets = [
     ...item.stylesheets.map(({ href }) => packagePath(candidate.path ?? "", href)),

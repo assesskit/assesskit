@@ -1,4 +1,5 @@
-import { type AssessmentItem, descendantNodes, type Interaction, isModelNode, type ModelNode } from "../asi/index.js";
+import { type AssessmentItem, type Interaction, isModelNode, type ModelNode } from "../asi/index.js";
+import { withDescendants } from "../asi/internal.js";
 import { isShown, resolveContent } from "../content/index.js";
 import { describeInteractions, type InteractionDescriptor, presentChoices } from "../interactions/index.js";
 import { checkItem } from "../processing/internal.js";
@@ -101,9 +102,9 @@ export function presentedInteractions(
   const { templates } = session.variables;
   const { outcomes } = feedbackOf(session, item, control);
   const shown = new Set(
-    resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" })
-      .filter(isModelNode)
-      .flatMap((node) => [node, ...descendantNodes(node)])
+    withDescendants(
+      resolveContent(item.body.children, { outcomes, templates }, item, { view: "candidate" }).filter(isModelNode),
+    )
       .filter(isInteraction)
       .map((node) => node.responseIdentifier),
   );

@@ -10,6 +10,7 @@ import {
   readElement,
   type TypeDef,
   typeNamed,
+  withDescendants,
   writeElement,
 } from "../src/asi/internal.js";
 import {
@@ -3556,6 +3557,13 @@ describe("the nodes of the content", () => {
     expect(paragraph && kindsOf(descendantNodes(paragraph))).toEqual(["text", "em", "text", "strong", "text", "text"]);
     const [text] = body("<p>x</p>").flatMap((node) => childNodes(node));
     expect(text && descendantNodes(text)).toEqual([]);
+  });
+
+  it("lists each of some nodes before its descendants, in document order", () => {
+    const nodes = body("<p>One <em>two</em></p><p>three</p>");
+    expect(kindsOf(withDescendants(nodes))).toEqual(["p", "text", "em", "text", "p", "text"]);
+    expect(withDescendants(nodes)).toEqual(nodes.flatMap((node) => [node, ...descendantNodes(node)]));
+    expect(withDescendants([])).toEqual([]);
   });
 
   it("takes MathML as a leaf, because the model keeps it as XML", () => {

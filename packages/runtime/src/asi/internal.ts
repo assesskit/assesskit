@@ -5,6 +5,7 @@
  */
 export { formatAttributeValue, parseAttributeValue } from "./attribute-value.js";
 export { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION, NUMERIC_EXPRESSION } from "./element-table.js";
+export { withDescendants } from "./nodes.js";
 export { readElement } from "./read.js";
 export type {
   AcceptDef,
