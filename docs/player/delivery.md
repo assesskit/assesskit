@@ -206,8 +206,12 @@ Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 
 | File                        | Concept                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
+| `delivery/action-row.ts`    | The rows of buttons that the actions of a view make                           |
 | `delivery/actions.ts`       | The buttons of a view, and the confirmations                                  |
 | `delivery/announcer.ts`     | The live region for status messages                                           |
+| `delivery/attachments.ts`   | The supports, the lexicons and the tools, mounted together                    |
+| `delivery/body.ts`          | The content root, its interactions bound to the view, and the modal feedback  |
+| `delivery/chrome.ts`        | The navigation map, the actions, the attempts, the timers and the comment box |
 | `delivery/comment.ts`       | The comment box                                                               |
 | `delivery/confirm.ts`       | The confirmation dialog                                                       |
 | `delivery/content.ts`       | What the content root shows for a view                                        |
@@ -215,15 +219,21 @@ Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 | `delivery/index.ts`         | The public API                                                                |
 | `delivery/internal.ts`      | Helpers that other folders and tests share, which the package does not export |
 | `delivery/lexicons.ts`      | Loading the pronunciation lexicons of an item                                 |
-| `delivery/mount.ts`         | `mountDelivery`                                                               |
+| `delivery/mount.ts`         | `mountDelivery`, which puts the parts together                                |
 | `delivery/navigation.ts`    | The navigation map                                                            |
+| `delivery/notices.ts`       | The notices and the attempts of a view                                        |
 | `delivery/options.ts`       | The options of `mountDelivery`, checked                                       |
 | `delivery/pci.ts`           | The host of the portable custom interactions of a view                        |
 | `delivery/refusals.ts`      | The message of each refusal code                                              |
+| `delivery/sender.ts`        | The actions that the parts send to the session, and what the engine refused   |
+| `delivery/settings.ts`      | The options with their defaults applied                                       |
+| `delivery/shell.ts`         | The elements of the player, in the order they stand on the page               |
+| `delivery/state.ts`         | The view and what is drawn, which the parts share                             |
 | `delivery/styles.ts`        | The stylesheet of the chrome                                                  |
 | `delivery/supports.ts`      | The supports in the chrome and the content                                    |
 | `delivery/timers.ts`        | The timers and their warnings                                                 |
 | `delivery/tools.ts`         | The tools in the chrome                                                       |
+| `delivery/update.ts`        | Showing a view: the chrome at once, the content one view at a time            |
 | `lti-frame/capabilities.ts` | The answer to the capabilities request of a tool                              |
 | `lti-frame/frame.ts`        | The frames of a tool and its storage page                                     |
 | `lti-frame/index.ts`        | The public API                                                                |
