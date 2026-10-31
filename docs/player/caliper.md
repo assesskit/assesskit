@@ -225,7 +225,7 @@ logged; // => ["session-1 3 1"]
   Assessment Profile. A step with `supplied` also sends a GradeEvent Graded for each of them, after the mapped events, when the
   value is a single number: `scoreGiven` is the value, `scorer` and `scoredBy` are those of `supplied`, and the object is the
   attempt at the item of the event, or at the test for an outcome of the test. A value that is NULL or not a number gives none.
-  `createSessionHost` fills `supplied` from the action and from the `scoredBy` that `SessionHost.host` takes
+  `createSessionHost` fills `supplied` from the action and from the `scoredBy` that `session(id).apply` takes
   ([server](server.md#session-host)). A replaced score is reported at its own step, so it has its own identifiers.
 - A host that sees a failure reports the same step again. The log receives the step again, so it keeps a step by its
   session and `step`, and the endpoint receives the same identifiers.

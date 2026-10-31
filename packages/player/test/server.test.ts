@@ -19,7 +19,7 @@ import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
 import type { AgsScore } from "../src/lti/index.js";
-import { isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
+import { isOfficialResult, type SessionCallOptions, type ViewEnvelope } from "../src/protocol/index.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,
@@ -53,7 +53,10 @@ import {
   HIDDEN_KEY_FILE,
   lexiconFiles,
   memoryFileStore,
+  memoryStore,
   packageOf,
+  RATED_KEY,
+  ratedFiles,
   recordingScheduler,
 } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
@@ -1084,14 +1087,14 @@ describe("createSessionHost", () => {
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
     const suspended = await host.proctor(ALICE.session, { type: "suspend" });
-    expect(suspended.ok).toBe(true);
+    expect(suspended.refusal).toBeUndefined();
     const during = await host.handle(ALICE, request(2, answer("B")));
     expect(during.refusal?.code).toBe("suspended");
     expect(viewOf(during).status).toBe("suspended");
     expect(viewOf(during).actions).toEqual([]);
     expect(viewOf(await host.view(ALICE)).status).toBe("suspended");
     await expect(host.handle(ALICE, request(3, { type: "resume" }))).rejects.toThrow(DataError);
-    expect((await host.proctor(ALICE.session, { type: "resume" })).ok).toBe(true);
+    expect((await host.proctor(ALICE.session, { type: "resume" })).refusal).toBeUndefined();
     const after = await host.handle(ALICE, request(3, answer("B")));
     expect(after.refusal).toBeUndefined();
     expect(viewOf(after).current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
@@ -1106,7 +1109,8 @@ describe("createSessionHost", () => {
     await host.proctor(ALICE.session, { type: "end-test" });
     const version = store.records.get("exam-1")?.version;
     const suspended = await host.proctor(ALICE.session, { type: "suspend" });
-    expect(suspended.ok).toBe(false);
+    expect(suspended.events).toEqual([]);
+    expect(suspended.refusal?.code).toBe("ended");
     expect(store.records.get("exam-1")?.version).toBe(version);
     await expect(host.proctor("nobody", { type: "suspend" })).rejects.toThrow(DataError);
     await expect(host.proctor(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
@@ -1146,9 +1150,9 @@ describe("createSessionHost", () => {
     await host.handle(ALICE, request(1, answer("A")));
     expect(scheduler.jobs).toHaveLength(1);
     clock.advance(301 * SECOND);
-    const timedOut = await host.host(ALICE.session, { type: "time" });
-    expect(timedOut.ok).toBe(true);
-    if (timedOut.ok) expect(timedOut.events.map(({ type }) => type)).toContain("time-out");
+    const timedOut = await host.session(ALICE.session).apply({ type: "time" });
+    expect(timedOut.refusal).toBeUndefined();
+    expect(timedOut.events.map(({ type }) => type)).toContain("time-out");
     const late = await host.handle(ALICE, request(2, answer("B")));
     expect(late.refusal?.code).toBe("time-over");
     expect(store.records.get("exam-1")?.version).toBe(3);
@@ -1176,12 +1180,12 @@ describe("createSessionHost", () => {
     await host.handle(ALICE, request(1, answer("A")));
     await host.handle(ALICE, request(2, answer("B")));
     expect(scheduler.jobs).toHaveLength(1);
-    const early = await host.host(ALICE.session, { type: "time" });
-    expect(early.ok && early.events).toEqual([]);
+    const early = await host.session(ALICE.session).apply({ type: "time" });
+    expect(early).toEqual({ events: [] });
     clock.advance(601 * SECOND);
-    await host.host(ALICE.session, { type: "time" });
-    const again = await host.host(ALICE.session, { type: "time" });
-    expect(again.ok && again.events).toEqual([]);
+    await host.session(ALICE.session).apply({ type: "time" });
+    const again = await host.session(ALICE.session).apply({ type: "time" });
+    expect(again).toEqual({ events: [] });
   });
 
   it("absorbs a time-out whose job came late: the next action applies the deadline first", async () => {
@@ -1220,7 +1224,7 @@ describe("createSessionHost", () => {
     await host.handle(ALICE, request(1, answer("A")));
     await host.handle(ALICE, request(2, { type: "submit", item: Q1 }));
     await host.proctor(ALICE.session, { type: "end-test" });
-    const result = await host.results(ALICE.session);
+    const result = await host.session(ALICE.session).results();
     expect(isOfficialResult(result)).toBe(true);
     expect(isOfficialResult({ ...result })).toBe(false);
     expect(isOfficialResult(structuredClone(result))).toBe(false);
@@ -1230,9 +1234,9 @@ describe("createSessionHost", () => {
   it("hands the pending work and the view of a rater to the host only", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
-    expect(await host.pending(ALICE.session)).toEqual({ scoring: [], cat: [] });
-    await expect(host.scorerView(ALICE.session, "none")).rejects.toMatchObject({ name: "DataError" });
-    await expect(host.pending("nobody")).rejects.toThrow(DataError);
+    expect(await host.session(ALICE.session).pending()).toEqual({ scoring: [], cat: [] });
+    await expect(host.session(ALICE.session).scorerView("none")).rejects.toMatchObject({ name: "DataError" });
+    await expect(host.session("nobody").pending()).rejects.toThrow(DataError);
   });
 
   it("numbers the steps of the log by the version of the record they saved", async () => {
@@ -1282,28 +1286,20 @@ describe("createSessionHost", () => {
       }),
     );
     await host.handle(ALICE, request(3, { type: "submit", item: q2 }));
-    const [pending] = (await host.pending(ALICE.session)).scoring;
+    const [pending] = (await host.session(ALICE.session).pending()).scoring;
     expect(pending?.id).toBe("item:q2:1:SCORE");
     const before = endpoint.requests.length;
     const value = single("float", 3);
-    await expect(
-      host.host(ALICE.session, { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" }),
-    ).rejects.toThrow("The scoredBy of a supply-scores action must be a string");
-    await expect(
-      host.host(
-        ALICE.session,
-        { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" },
-        "rater-17",
-      ),
-    ).rejects.toThrow("The scoredBy of a supply-scores action must be an absolute IRI");
-    expect((await host.pending(ALICE.session)).scoring).toHaveLength(1);
-    expect(endpoint.requests).toHaveLength(before);
-    const step = await host.host(
-      ALICE.session,
-      { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" },
-      rater,
+    const session = host.session(ALICE.session);
+    const supply = { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" } as const;
+    await expect(session.apply(supply)).rejects.toThrow("The scoredBy of a supply-scores action must be a string");
+    await expect(session.apply(supply, { scoredBy: "rater-17" })).rejects.toThrow(
+      "The scoredBy of a supply-scores action must be an absolute IRI",
     );
-    expect(step.ok).toBe(true);
+    expect((await session.pending()).scoring).toHaveLength(1);
+    expect(endpoint.requests).toHaveLength(before);
+    const step = await session.apply(supply, { scoredBy: rater });
+    expect(step.refusal).toBeUndefined();
     const grades = endpoint.requests.slice(before).flatMap((each) => JSON.parse(each.init.body ?? "{}").data);
     expect(grades).toHaveLength(1);
     expect(grades[0].generated.attempt).toBe(grades[0].object.id);
@@ -1313,13 +1309,63 @@ describe("createSessionHost", () => {
       object: { type: "Attempt" },
       generated: { scoreGiven: 3, scoredBy: rater },
     });
-    const replaced = await host.host(
-      ALICE.session,
-      { type: "supply-scores", request: pending?.id ?? "", value: single("float", 4), scorer: "human" },
-      rater,
-    );
-    expect(replaced.ok && replaced.events.map(({ type }) => type)).toContain("scores-replaced");
+    const replaced = await session.apply({ ...supply, value: single("float", 4) }, { scoredBy: rater });
+    expect(replaced.events.map(({ type }) => type)).toContain("scores-replaced");
     expect(endpoint.requests.slice(before)).toHaveLength(2);
+  });
+
+  it("keeps the correct responses of a rated item out of every envelope, and gives them to the rater", async () => {
+    const { host } = await examHost({}, ratedFiles());
+    const q2 = { ref: "q2", instance: 1 };
+    const replies = [await host.start(ALICE, { seed: 7 })];
+    replies.push(await host.handle(ALICE, request(1, { type: "move", to: q2 })));
+    const guess = new Map([["RESPONSE", single("string", "A guess")]]);
+    replies.push(await host.handle(ALICE, request(2, { type: "set-responses", item: q2, responses: guess })));
+    replies.push(await host.handle(ALICE, request(3, { type: "submit", item: q2 })));
+    replies.push(await host.view(ALICE));
+    for (const reply of replies) expect(JSON.stringify(reply)).not.toContain(RATED_KEY);
+    const [pending] = (await host.session(ALICE.session).pending()).scoring;
+    const view = await host.session(ALICE.session).scorerView(pending?.id ?? "");
+    expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(single("string", RATED_KEY));
+  });
+
+  it("refuses a session identifier that is not a non-empty string, and a session that does not exist", async () => {
+    const { host } = await examHost();
+    for (const text of ["null", '""', "5"]) {
+      expect(() => host.session(json(text) as never), text).toThrow(DataError);
+    }
+    const nobody = host.session("nobody");
+    await expect(nobody.apply({ type: "time" })).rejects.toThrow(DataError);
+    await expect(nobody.results()).rejects.toThrow(DataError);
+    await expect(nobody.scorerView("r")).rejects.toThrow(DataError);
+  });
+
+  it("checks the options of a call", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const options = (text: string): { readonly signal?: never } => JSON.parse(text);
+    const calls = [
+      (given: ReturnType<typeof options>) => host.check(ALICE, given),
+      (given: ReturnType<typeof options>) => host.view(ALICE, given),
+      (given: ReturnType<typeof options>) => host.handle(ALICE, request(1, answer("A")), given),
+      (given: ReturnType<typeof options>) => host.proctor(ALICE.session, { type: "suspend" }, given),
+      (given: ReturnType<typeof options>) => host.session(ALICE.session).apply({ type: "time" }, given),
+      (given: ReturnType<typeof options>) => host.session(ALICE.session).pending(given),
+      (given: ReturnType<typeof options>) => host.session(ALICE.session).scorerView("r", given),
+      (given: ReturnType<typeof options>) => host.session(ALICE.session).results(given),
+    ];
+    for (const call of calls) {
+      await expect(call(options("null"))).rejects.toThrow(new DataError("The options must be an object, found null."));
+      await expect(call(options('{"signal":5}'))).rejects.toThrow(
+        new DataError("The option signal must be an AbortSignal, found 5."),
+      );
+    }
+    await expect(host.start(ALICE, JSON.parse('{"seed":1,"signal":5}'))).rejects.toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
+    );
+    await expect(host.session(ALICE.session).apply({ type: "time" }, JSON.parse('{"scoredBy":5}'))).rejects.toThrow(
+      new DataError("The option scoredBy must be a string, found 5."),
+    );
   });
 
   it("checks its options and arguments", async () => {
@@ -1368,14 +1414,150 @@ describe("createSessionHost", () => {
     await expect(good.host.handle(JSON.parse("null"), { seq: 1, action: {} })).rejects.toThrow(
       "The caller is invalid: expected an object, found null.",
     );
-    await expect(good.host.host(ALICE.session, JSON.parse('{"type":"move"}'))).rejects.toThrow(
+    await expect(good.host.session(ALICE.session).apply(JSON.parse('{"type":"move"}'))).rejects.toThrow(
       "The type of a host action",
     );
+    expect(() => good.host.session(JSON.parse("5"))).toThrow("The session must be a non-empty string, found 5.");
   });
 
   it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
     fuzzJson((options) => createSessionHost(options as never));
     fuzzJson((options) => createAssetGate(options as never));
+  });
+});
+
+describe("the signals of the session host", () => {
+  const reason = new Error("The caller left.");
+  type Received = Record<"load" | "create" | "save" | "schedule" | "packages", (SessionCallOptions | undefined)[]>;
+
+  /** A session host whose store, scheduler and package source record the options they get. */
+  async function observed(extra: Partial<Parameters<typeof createSessionHost>[0]> = {}, files = examFiles()) {
+    const base = memoryStore();
+    const queue = recordingScheduler();
+    const pkg = packageOf(files);
+    const received: Received = { load: [], create: [], save: [], schedule: [], packages: [] };
+    const setup = await examHost(
+      {
+        store: {
+          create: async (session, record, options) => {
+            received.create.push(options);
+            return base.create(session, record);
+          },
+          load: async (session, options) => {
+            received.load.push(options);
+            return base.load(session);
+          },
+          save: async (session, record, options) => {
+            received.save.push(options);
+            return base.save(session, record);
+          },
+        },
+        scheduler: {
+          schedule: async (session, at, options) => {
+            received.schedule.push(options);
+            return queue.schedule(session, at);
+          },
+        },
+        packages: async (_session, options) => {
+          received.packages.push(options);
+          return pkg;
+        },
+        ...extra,
+      },
+      files,
+    );
+    const counts = () => Object.values(received).map((each) => each.length);
+    return { ...setup, received, counts };
+  }
+
+  it("passes the signal of a call to the store, the scheduler and the package source", async () => {
+    const limits = '<qti-time-limits max-time="600"/>';
+    const { host, received } = await observed({}, examFiles({ limits }));
+    const signal = new AbortController().signal;
+    await host.start(ALICE, { seed: 7, signal });
+    for (const method of ["load", "create", "schedule", "packages"] as const) {
+      expect(
+        received[method].map((each) => each?.signal),
+        method,
+      ).toEqual([signal]);
+    }
+    await host.handle(ALICE, request(1, answer("A")), { signal });
+    await host.view(ALICE, { signal });
+    await host.proctor(ALICE.session, { type: "suspend" }, { signal });
+    await host.session(ALICE.session).apply({ type: "time" }, { signal });
+    await host.session(ALICE.session).pending({ signal });
+    for (const method of ["load", "save", "schedule", "packages"] as const) {
+      expect(received[method].length, method).toBeGreaterThan(0);
+      expect(
+        received[method].every((each) => each?.signal === signal),
+        method,
+      ).toBe(true);
+    }
+  });
+
+  it("stops a call whose signal aborted before its load, and applies nothing", async () => {
+    const { host, counts } = await observed();
+    await host.start(ALICE, { seed: 7 });
+    const before = counts();
+    const signal = { signal: AbortSignal.abort(reason) };
+    const session = host.session(ALICE.session);
+    const calls = [
+      host.start({ session: "other", principal: "bob" }, { seed: 7, ...signal }),
+      host.check(ALICE, signal),
+      host.view(ALICE, signal),
+      host.handle(ALICE, request(1, answer("A")), signal),
+      host.proctor(ALICE.session, { type: "suspend" }, signal),
+      session.apply({ type: "time" }, signal),
+      session.pending(signal),
+      session.scorerView("r", signal),
+      session.results(signal),
+    ];
+    for (const call of calls) await expect(call).rejects.toBe(reason);
+    expect(counts()).toEqual(before);
+  });
+
+  it("stops between the retries of a save, and applies nothing", async () => {
+    const controller = new AbortController();
+    const base = memoryStore();
+    let saves = 0;
+    const { host } = await examHost({
+      store: {
+        create: base.create,
+        load: base.load,
+        save: async () => {
+          saves += 1;
+          controller.abort(reason);
+          return false;
+        },
+      },
+    });
+    await host.start(ALICE, { seed: 7 });
+    await expect(host.handle(ALICE, request(1, answer("A")), { signal: controller.signal })).rejects.toBe(reason);
+    expect(saves).toBe(1);
+    expect(base.records.get("exam-1")?.version).toBe(0);
+  });
+
+  it("ignores an abort that comes after the save: the step stays saved and its events are forwarded", async () => {
+    const controller = new AbortController();
+    const logged: StepEvents[] = [];
+    const base = memoryStore();
+    const { host } = await examHost({
+      store: {
+        create: base.create,
+        load: base.load,
+        save: async (session, record, options) => {
+          const saved = await base.save(session, record, options);
+          controller.abort(reason);
+          return saved;
+        },
+      },
+      forward: { log: (step) => void logged.push(step) },
+    });
+    await host.start(ALICE, { seed: 7 });
+    const reply = await host.handle(ALICE, request(1, answer("A")), { signal: controller.signal });
+    expect(reply.refusal).toBeUndefined();
+    expect(logged.map(({ step }) => step)).toEqual(["start", 1]);
+    expect(base.records.get("exam-1")?.version).toBe(1);
   });
 });
 
@@ -1405,17 +1587,19 @@ describe("createLtiScoreIntake", () => {
     const refusal: { code?: string } = {};
     const made = createLtiScoreIntake({
       host: {
-        host: async (session, action, by) => {
-          calls.push({ session, action, by });
-          if (action.type !== "supply-scores") throw new Error("Not a supply.");
-          if (refusal.code !== undefined) {
-            return { ok: false, refusal: { code: refusal.code, message: "no" } } as never;
-          }
-          if (!known.includes(action.request)) {
-            return { ok: false, refusal: { code: "unknown-request", message: "none" } } as never;
-          }
-          return { ok: true } as never;
-        },
+        session: (session) => ({
+          apply: async (action, options) => {
+            calls.push({ session, action, by: options?.scoredBy });
+            if (action.type !== "supply-scores") throw new Error("Not a supply.");
+            if (refusal.code !== undefined) {
+              return { events: [], refusal: { code: refusal.code, message: "no" } } as never;
+            }
+            if (!known.includes(action.request)) {
+              return { events: [], refusal: { code: "unknown-request", message: "none" } } as never;
+            }
+            return { events: [] };
+          },
+        }),
       },
       scores: {
         keep: async (session, item, next) => {
@@ -1542,26 +1726,28 @@ describe("createLtiScoreIntake", () => {
     const calls: unknown[][] = [];
     const bare = createLtiScoreIntake({
       host: {
-        host: async (...args) => {
-          calls.push(args);
-          return { ok: true } as never;
-        },
+        session: () => ({
+          apply: async (...args) => {
+            calls.push(args);
+            return { events: [] };
+          },
+        }),
       },
       scores: { keep: async () => true, latest: async () => undefined },
     });
     await bare.onScore("s1", Item, score());
-    expect(calls.map(([, , by]) => by)).toEqual([undefined, undefined]);
+    expect(calls.map(([, options]) => options)).toEqual([{}, {}]);
   });
 
   it("throws DataError for options of other types", () => {
     const good = {
-      host: { host: async () => ({ ok: true }) },
+      host: { session: () => ({ apply: async () => ({ events: [] }) }) },
       scores: { keep: async () => true, latest: async () => undefined },
     };
     const make = (change: Record<string, unknown>): unknown => createLtiScoreIntake({ ...good, ...change } as never);
     expect(() => make({ host: json("null") })).toThrow(new DataError("The option host must be an object, found null."));
     expect(() => make({ host: {} })).toThrow(
-      new DataError("The function host of the option host must be a function, found undefined."),
+      new DataError("The function session of the option host must be a function, found undefined."),
     );
     expect(() => make({ scores: json("5") })).toThrow(new DataError("The option scores must be an object, found 5."));
     expect(() => make({ scores: { keep: async () => true } })).toThrow(

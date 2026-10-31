@@ -1,14 +1,14 @@
-import type {
-  ActionLimits,
-  Engine,
-  HostAction,
-  PendingWork,
-  ScorerView,
-  StartOptions,
-  Step,
-} from "@assesskit/runtime/delivery";
+import type { ActionLimits, Engine, StartOptions } from "@assesskit/runtime/delivery";
 import type { QtiPackage } from "@assesskit/runtime/package";
-import type { Caller, Clock, OfficialResult, ViewEnvelope } from "../protocol/index.js";
+import type {
+  Caller,
+  Clock,
+  HostSession,
+  HostStep,
+  OfficialResult,
+  SessionCallOptions,
+  ViewEnvelope,
+} from "../protocol/index.js";
 import type { ForwardOptions } from "./forward.js";
 import type { AssetGate } from "./gate/index.js";
 import type { CandidateActionType } from "./policy.js";
@@ -33,8 +33,8 @@ export interface SessionHostOptions {
   readonly clock: Clock;
   /** The asset gate that signs the prefixes of each envelope. */
   readonly gate: AssetGate;
-  /** Returns the package that a session delivers; the gate takes the same function. */
-  readonly packages: (session: string) => Promise<QtiPackage>;
+  /** Returns the package that a session delivers; the gate takes the same function. It may ignore the options. */
+  readonly packages: (session: string, options?: SessionCallOptions) => Promise<QtiPackage>;
   /**
    * The types of action a client may send, `suspend` and `resume` among them only if the host lets candidates pause.
    *
@@ -62,29 +62,35 @@ export interface SessionHost {
    * envelope are stored, the deadlines scheduled and the events of the start forwarded. The seed stays on the server.
    *
    * @param caller - The session to start and the principal to bind it to.
-   * @param options - What `Engine.start` takes but the time.
+   * @param options - What `Engine.start` takes but the time, and the `signal` of the call, which does not reach the engine.
    * @returns The first envelope, with the sequence number 0.
    * @throws `AccessError` (`session-exists`) when the session exists: a session is never started again or rebound.
    * @throws `DataError` when an argument has the wrong type, or the engine cannot start.
+   * @throws `signal.reason` when the signal aborts before the store or the scheduler is called. A call that waits on one
+   * rejects when the service does.
    */
-  start(caller: Caller, options: Omit<StartOptions, "at">): Promise<ViewEnvelope>;
+  start(caller: Caller, options: Omit<StartOptions, "at"> & SessionCallOptions): Promise<ViewEnvelope>;
   /**
    * Checks that the session is bound to the caller's principal.
    *
    * @param caller - The session and the authenticated principal.
+   * @param options - See {@link SessionCallOptions}.
    * @throws `AccessError` (`not-bound`) when it is not, or the session does not exist.
+   * @throws `signal.reason` when the signal aborts before the session is loaded.
    */
-  check(caller: Caller): Promise<void>;
+  check(caller: Caller, options?: SessionCallOptions): Promise<void>;
   /**
    * Returns the current view of the session as an envelope with fresh asset tokens and the sequence number of the latest
    * request answered: what a page needs after a reload, or after the proctor acted. The client's next request carries
    * that number plus one.
    *
    * @param caller - The session and the authenticated principal.
+   * @param options - See {@link SessionCallOptions}.
    * @returns The envelope.
    * @throws `AccessError` (`not-bound`) as {@link SessionHost.check} does.
+   * @throws `signal.reason` when the signal aborts before the session is loaded.
    */
-  view(caller: Caller): Promise<ViewEnvelope>;
+  view(caller: Caller, options?: SessionCallOptions): Promise<ViewEnvelope>;
   /**
    * Handles a request of the client: checks the caller, answers a repeated sequence number with the stored answer,
    * refuses a stale one, applies the client-action policy, stamps and applies the action, saves, and answers with the
@@ -93,64 +99,43 @@ export interface SessionHost {
    *
    * @param caller - The session and the authenticated principal.
    * @param envelope - The request as it arrived, parsed from JSON.
+   * @param options - See {@link SessionCallOptions}.
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.
    * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, or the sequence number is stale.
    * @throws `ServiceError` when the session cannot be saved after the retries.
+   * @throws `signal.reason` when the signal aborts before a load, including the load of a retry. Nothing was applied.
    */
-  handle(caller: Caller, envelope: unknown): Promise<ViewEnvelope>;
+  handle(caller: Caller, envelope: unknown, options?: SessionCallOptions): Promise<ViewEnvelope>;
   /**
-   * Applies an action on the host's authority, such as a break or the end of a part. A refusal of the engine
-   * is returned as the step and changes nothing.
+   * Applies an action on the proctor's authority, such as a break or the end of a part. A refusal of the engine is in the
+   * step and changes nothing.
    *
    * @param session - The identifier of the session.
    * @param action - The action.
-   * @returns The step; its `ok` is false for a refusal.
+   * @param options - See {@link SessionCallOptions}.
+   * @returns The events of the step, or the refusal.
    * @throws `DataError` when the session does not exist or the action is not valid.
    * @throws `ServiceError` when the session cannot be saved after the retries.
+   * @throws `signal.reason` when the signal aborts before a load. Nothing was applied.
    */
-  proctor(session: string, action: { readonly type: (typeof PROCTOR_ACTIONS)[number] }): Promise<Step>;
+  proctor(
+    session: string,
+    action: { readonly type: (typeof PROCTOR_ACTIONS)[number] },
+    options?: SessionCallOptions,
+  ): Promise<HostStep>;
   /**
-   * Applies an action of the host: `time`, which the scheduler's job sends and which is idempotent, `supply-scores` or
-   * `cat-response`. A refusal of the engine, such as a `time` that finds nothing to apply, is returned as the step.
-   * When Caliper is configured, a `supply-scores` action that applies or replaces a score also forwards a GradeEvent of
-   * the Grading Profile, scored by `scoredBy`.
+   * Returns the host side of a session: the actions of the host, its pending work, its scorer views and its official
+   * results. Each method loads the session when it is called.
    *
    * @param session - The identifier of the session.
-   * @param action - The action.
-   * @param scoredBy - The IRI of the rater or the scoring service that supplies the score, the authenticated caller of the
-   * host's rater endpoint. Needed for `supply-scores` when Caliper is configured.
-   * @returns The step; its `ok` is false for a refusal.
-   * @throws `DataError` when the session does not exist, the action is not valid, or `scoredBy` is missing or not an
-   * absolute IRI where it is needed.
-   * @throws `ServiceError` when the session cannot be saved after the retries.
+   * @returns The host side of the session, with results branded as official.
+   * @throws `DataError` when `session` is not a non-empty string. Each method of the result rejects with `DataError` when
+   * the session does not exist.
+   * @remarks It gives full host powers and the correct responses for a bare session id. Call it only from the host's
+   * rater and service endpoints, and never with an identifier that a candidate supplies. A `time` action, which the
+   * scheduler's job sends, is idempotent; when Caliper is configured, a `supply-scores` action that applies or replaces a
+   * score also forwards a GradeEvent, scored by the `scoredBy` option of `apply`, which it then needs.
    */
-  host(session: string, action: HostAction, scoredBy?: string): Promise<Step>;
-  /**
-   * Returns what the engine waits on the host for.
-   *
-   * @param session - The identifier of the session.
-   * @returns The pending work.
-   * @throws `DataError` when the session does not exist.
-   */
-  pending(session: string): Promise<PendingWork>;
-  /**
-   * Returns what a scorer needs to rate a request, the correct responses included. Only the host's endpoints for raters
-   * call it, never a candidate's.
-   *
-   * @param session - The identifier of the session.
-   * @param request - The identifier of the scoring request.
-   * @returns The scorer view.
-   * @throws `DataError` when the session or the request does not exist.
-   */
-  scorerView(session: string, request: string): Promise<ScorerView>;
-  /**
-   * Returns the results report of the session, marked official: the one object that `publishScore` accepts. It is
-   * provisional while scoring requests are pending.
-   *
-   * @param session - The identifier of the session.
-   * @returns The report.
-   * @throws `DataError` when the session does not exist.
-   */
-  results(session: string): Promise<OfficialResult>;
+  session(session: string): HostSession<OfficialResult>;
 }

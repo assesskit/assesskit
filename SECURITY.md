@@ -76,8 +76,11 @@ Points to be aware of when deploying the runtime:
 - **Resolvers and callbacks.** The functions a host passes in (`resolvers`, `resolveTemplate`, `customOperators`, the file
   callbacks of PCI values, `CatPort`) are the host's code and run with its authority. What they return is data and is checked
   where it is used. A resolver returns its value synchronously.
-- **Scoring.** `scorerView` holds the correct responses, so it belongs on the server. `supply-scores` is a host action: accept
-  a score only from the scorer or the tool it belongs to.
+- **Scoring.** `scorerView` holds the correct responses. In exam mode it belongs on the server: `SessionHost.session(id)` gives
+  full host powers and the correct responses for a bare session identifier, so call it only from the host's rater and service
+  endpoints and never with an identifier that a candidate supplies. In practice the device holds the keys already, and
+  `LocalSession.host` offers it by design. `supply-scores` is a host action: accept a score only from the scorer or the tool it
+  belongs to.
 
 ## The player: the frame of portable custom interactions
 

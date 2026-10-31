@@ -108,7 +108,7 @@ async function rig(files: Readonly<Record<string, string>> = ltiExamFiles({ maxi
     files,
   );
   const { host } = base;
-  intake = createLtiScoreIntake({ host: { host: (...args) => host.host(...args) }, scores });
+  intake = createLtiScoreIntake({ host, scores });
 
   // The drawing tool's registration and the platform's handlers.
   const tool: ToolRegistration = toolRegistration({
@@ -164,7 +164,12 @@ async function rig(files: Readonly<Record<string, string>> = ltiExamFiles({ maxi
     return host.handle(CANDIDATE, { seq, action: actionToJson(action) });
   };
   const publish = async (): Promise<void> =>
-    publishScore(await host.results(CANDIDATE.session), launch, await host.pending(CANDIDATE.session), toolOptions);
+    publishScore(
+      await host.session(CANDIDATE.session).results(),
+      launch,
+      await host.session(CANDIDATE.session).pending(),
+      toolOptions,
+    );
 
   return {
     ...base,
@@ -264,10 +269,10 @@ async function openDrawing(ctx: Rig): Promise<LaunchedTool> {
 }
 
 const requestsOf = async (ctx: Rig): Promise<string[]> =>
-  (await ctx.host.pending(CANDIDATE.session)).scoring.map(({ id }) => id);
+  (await ctx.host.session(CANDIDATE.session).pending()).scoring.map(({ id }) => id);
 
 const supplyEssay = (ctx: Rig, score: number) =>
-  ctx.host.host(CANDIDATE.session, {
+  ctx.host.session(CANDIDATE.session).apply({
     type: "supply-scores",
     request: "item:essay:1:SCORE",
     value: single("float", score),
@@ -276,7 +281,7 @@ const supplyEssay = (ctx: Rig, score: number) =>
 
 /** The `SCORE` of the test in the results report. */
 async function totalOf(ctx: Rig): Promise<unknown> {
-  const { testResult } = await ctx.host.results(CANDIDATE.session);
+  const { testResult } = await ctx.host.session(CANDIDATE.session).results();
   const score = testResult?.variables.find((variable) => variable.identifier === "SCORE");
   return score?.kind === "outcome" ? score.value : undefined;
 }
@@ -365,7 +370,7 @@ describe("the results of the exam go back to the learning platform", () => {
     await ctx.host.proctor(CANDIDATE.session, { type: "end-test" });
 
     // A person must score the essay, and the tool the drawing: the report is provisional.
-    const provisional = await ctx.host.results(CANDIDATE.session);
+    const provisional = await ctx.host.session(CANDIDATE.session).results();
     expect(provisional.itemResults.map(({ identifier, sessionStatus }) => [identifier, sessionStatus])).toEqual([
       ["essay", "pendingExternalScoring"],
       ["draw", "pendingExternalScoring"],
@@ -380,7 +385,7 @@ describe("the results of the exam go back to the learning platform", () => {
 
     // The person scores the essay; only the tool is left.
     ctx.clock.advance(60);
-    expect((await supplyEssay(ctx, 8)).ok).toBe(true);
+    expect((await supplyEssay(ctx, 8)).refusal).toBeUndefined();
     await ctx.publish();
     expect(ctx.lms.accepted.at(-1)).toMatchObject({
       gradingProgress: "Pending",
@@ -445,8 +450,8 @@ describe("the results of the exam go back to the learning platform", () => {
     const ctx = await rig();
     await openDrawing(ctx);
     await ctx.host.proctor(CANDIDATE.session, { type: "end-test" });
-    const results = await ctx.host.results(CANDIDATE.session);
-    const pending = await ctx.host.pending(CANDIDATE.session);
+    const results = await ctx.host.session(CANDIDATE.session).results();
+    const pending = await ctx.host.session(CANDIDATE.session).pending();
     const toolOptions = {
       registration: async () => registrationOf(examKeys),
       clock: ctx.clock,

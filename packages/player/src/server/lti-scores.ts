@@ -3,14 +3,17 @@ import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import type { AgsScore } from "../lti/index.js";
+import type { HostSession } from "../protocol/index.js";
 import type { AgsScoreStore } from "./ags-score-store.js";
 import type { StepEvents } from "./forward.js";
-import type { SessionHost } from "./session-host.js";
 
 /** The options of {@link createLtiScoreIntake}. */
 export interface LtiScoreIntakeOptions {
-  /** The session host that the scores go to. */
-  readonly host: Pick<SessionHost, "host">;
+  /** The session host that the scores go to. `Pick<SessionHost, "session">` satisfies it. */
+  readonly host: {
+    /** Returns the host side of a session, of which the intake uses `apply`. */
+    session(session: string): Pick<HostSession, "apply">;
+  };
   /** Keeps the latest score of each line item. */
   readonly scores: AgsScoreStore;
   /**
@@ -60,7 +63,7 @@ const requestId = (item: ItemKey, outcome: string): string => `item:${item.ref}:
 function checkIntakeOptions(options: unknown): asserts options is LtiScoreIntakeOptions {
   checkRecord(options, "The options must be an object");
   checkRecord(options.host, "The option host must be an object");
-  checkFunction(options.host.host, "The function host of the option host must be a function");
+  checkFunction(options.host.session, "The function session of the option host must be a function");
   checkRecord(options.scores, "The option scores must be an object");
   for (const name of ["keep", "latest"]) {
     checkFunction(options.scores[name], `The function ${name} of the option scores must be a function`);
@@ -89,21 +92,20 @@ export function createLtiScoreIntake(options: LtiScoreIntakeOptions): LtiScoreIn
   /** Supplies the requests of an item with a final score; a session that has not made them yet is left as it is. */
   const supply = async (session: string, item: ItemKey, score: AgsScore): Promise<void> => {
     if (score.gradingProgress !== "FullyGraded") return;
-    const by = scoredBy === undefined ? undefined : await scoredBy(session, item);
+    const applyOptions = scoredBy === undefined ? {} : { scoredBy: await scoredBy(session, item) };
     for (const [outcome, answer] of ANSWERS) {
       const value = answer(score);
       const request = requestId(item, outcome);
-      const step = await host.host(
-        session,
+      const step = await host.session(session).apply(
         {
           type: "supply-scores",
           request,
           value: value === undefined ? null : single("float", value),
           scorer: "externalMachine",
         },
-        by,
+        applyOptions,
       );
-      if (step.ok) continue;
+      if (step.refusal === undefined) continue;
       if (step.refusal.code === "unknown-request") return;
       throw new DataError(
         `The session ${JSON.stringify(session)} refused the score of the tool for ${request}: ${step.refusal.message}`,

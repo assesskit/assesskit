@@ -1,13 +1,22 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isRecord } from "@assesskit/runtime/checks";
-import type { CandidateView, RefusalCode } from "@assesskit/runtime/delivery";
+import {
+  actionToJson,
+  type CandidateAction,
+  type CandidateView,
+  type DeliveryEvent,
+  type HostAction,
+  type RefusalCode,
+} from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
+import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
 import readme from "../README.md?raw";
+import { createLocalSession } from "../src/client/index.js";
 import {
   checkActionEnvelope,
   checkAllowList,
@@ -23,8 +32,10 @@ import {
   viewDocuments,
 } from "../src/protocol/index.js";
 import { checkCallOptions, checkHostAction, checkHostApplyOptions, markOfficial } from "../src/protocol/internal.js";
+import { examDefinition, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
+import { localOptions } from "./local-fixture.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
@@ -594,6 +605,75 @@ describe("checkSubmission", () => {
     expect(() => checkSubmission(changed(["items"], [SUBMISSION.items[0], SUBMISSION.items[0]]))).toThrow(
       new DataError('A submission is invalid: has the item "e" instance 1 twice.'),
     );
+  });
+});
+
+describe("the host side of a session host and of a local session", () => {
+  const Alice = { session: "exam-1", principal: "alice" };
+  const Q2 = { ref: "q2", instance: 1 };
+  const supply = (request: string, value: number): HostAction => ({
+    type: "supply-scores",
+    request,
+    value: single("float", value),
+    scorer: "human",
+  });
+
+  it("give equal pending work, scorer views, results and steps for one script", async () => {
+    const files = ratedFiles();
+    const { host, logged } = await examHost({}, files);
+    await host.start(Alice, { seed: 1 });
+    const server = host.session(Alice.session);
+    const local = await createLocalSession({
+      ...localOptions({ definition: examDefinition(packageOf(files)) }).options,
+      seed: 1,
+    });
+    const feed: (readonly DeliveryEvent[])[] = [];
+    local.host.subscribeSteps((events) => feed.push(events));
+
+    let seq = 0;
+    const candidate = async (action: CandidateAction): Promise<void> => {
+      seq += 1;
+      const answered = await host.handle(Alice, { seq, action: actionToJson(action) });
+      const dispatched = await local.dispatch(action);
+      expect(answered.refusal, JSON.stringify(action)).toEqual(dispatched.refusal);
+    };
+    const hosted = async (action: HostAction): Promise<void> => {
+      expect(await server.apply(action), JSON.stringify(action)).toEqual(await local.host.apply(action));
+    };
+    const same = async (): Promise<readonly string[]> => {
+      const pending = await local.host.pending();
+      expect(await server.pending()).toEqual(pending);
+      expect(await server.results()).toEqual(await local.host.results());
+      for (const { id } of pending.scoring) {
+        expect(await server.scorerView(id)).toEqual(await local.host.scorerView(id));
+      }
+      return pending.scoring.map(({ id }) => id);
+    };
+
+    expect(await same()).toEqual([]);
+    await candidate({ type: "move", to: Q2 });
+    await candidate({ type: "submit", item: { ref: "q3", instance: 1 } });
+    await candidate({
+      type: "set-responses",
+      item: Q2,
+      responses: new Map([["RESPONSE", single("string", "A word")]]),
+    });
+    await candidate({ type: "submit", item: Q2 });
+    const [request] = await same();
+    expect(request).toBe("item:q2:1:SCORE");
+    await hosted({ type: "time" });
+    await hosted(supply("none", 1));
+    await hosted(supply(request ?? "", 7));
+    await hosted(supply(request ?? "", 8));
+    await candidate({ type: "end-test" });
+    expect(await same()).toEqual([]);
+
+    // The session host reports a step to its log after the save; the start is the step "start", which a local session has no feed for.
+    expect(logged.slice(1).map(({ events }) => events)).toEqual(feed);
+    expect(feed.length).toBeGreaterThan(3);
+    expect(isOfficialResult(await server.results())).toBe(true);
+    expect(isOfficialResult(await local.host.results())).toBe(false);
+    local.close();
   });
 });
 

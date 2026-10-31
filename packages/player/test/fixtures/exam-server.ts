@@ -157,8 +157,8 @@ export async function startExamServer(): Promise<ExamServer> {
           send(200, await host.start(caller, json() as never));
         } else if (path === "/exam/view") send(200, await host.view(caller));
         else if (path === "/exam/handle") send(200, await host.handle(caller, json()));
-        else if (path === "/exam/proctor") send(200, { ok: (await host.proctor(session, json() as never)).ok });
-        else if (path === "/exam/time") send(200, { ok: (await host.host(session, { type: "time" })).ok });
+        else if (path === "/exam/proctor") send(200, { ok: (await host.proctor(session, json() as never)).refusal === undefined });
+        else if (path === "/exam/time") send(200, { ok: (await host.session(session).apply({ type: "time" })).refusal === undefined });
         else if (path === "/exam/jobs") send(200, scheduled.jobs.filter(([each]) => each === session));
         else if (path === "/exam/conflicts") {
           conflicts.set(session, Number(url.searchParams.get("times")));

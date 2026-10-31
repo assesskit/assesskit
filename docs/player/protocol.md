@@ -196,9 +196,9 @@ Where a host wires each concern:
 
 ## Official results
 
-`SessionHost.results` returns a report of type `OfficialResult`. The host records the object it returns in a private `WeakSet`,
+`SessionHost.session(id).results()` returns a report of type `OfficialResult`. The host records the object it returns in a private `WeakSet`,
 and `isOfficialResult` tells whether a value is one: a copy of the report, a report parsed from JSON and the report of a practice
-session are not. The marking function is not exported; only `server` and `lti` may reach it, through the `internal.ts` of the
+session are not. The marking function is not exported; only `server` may reach it, through the `internal.ts` of the
 module (lint). A service that reports a score takes only an `OfficialResult` and refuses any other object.
 
 ## Submission

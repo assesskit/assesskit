@@ -412,7 +412,7 @@ describe("mountDelivery", () => {
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);
     s.clock.advance(601 * SECOND);
-    expect((await s.host.host(ALICE.session, { type: "time" })).ok).toBe(true);
+    expect((await s.host.session(ALICE.session).apply({ type: "time" })).refusal).toBeUndefined();
     buttonNamed(s.ui, "Next").click();
     await waitFor(() => expect(s.ui.querySelector(".ak-nav-item")?.textContent).toContain("(Submitted)"));
   });
@@ -476,14 +476,14 @@ describe("mountDelivery", () => {
   it("shows a break that the proctor made, and the candidate can do nothing until the proctor ends it", async () => {
     const s = await shell();
     await shown(s);
-    expect((await s.host.proctor(ALICE.session, { type: "suspend" })).ok).toBe(true);
+    expect((await s.host.proctor(ALICE.session, { type: "suspend" })).refusal).toBeUndefined();
     buttonNamed(s.ui, "Skip question").click();
     await waitFor(() => expect(statusOf(s.ui)).toBe("The test is paused, so this action is not possible."));
     expect(s.ui.querySelector(".ak-notice")?.textContent).toBe(
       "The test is paused and your time is stopped. Wait until it continues.",
     );
     expect(buttons(s.ui)).toEqual([]);
-    expect((await s.host.proctor(ALICE.session, { type: "resume" })).ok).toBe(true);
+    expect((await s.host.proctor(ALICE.session, { type: "resume" })).refusal).toBeUndefined();
     s.mounted.destroy();
     const reloaded = createRemoteSession(
       async (envelope) => JSON.parse(JSON.stringify(await s.host.handle(ALICE, JSON.parse(JSON.stringify(envelope))))),

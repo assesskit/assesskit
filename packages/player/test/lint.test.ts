@@ -143,6 +143,20 @@ const official = {
   inLti: source(`${SRC}/lti/official.ts`, ['export * from "../protocol/official.js";']),
   inProtocol: source(`${SRC}/protocol/official-copy.ts`, ['export * from "./official.js";']),
 };
+const brand = {
+  inPlayer: source(`${SRC}/player/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  inClient: source(`${SRC}/client/brand.ts`, [
+    'import { markOfficial } from "../protocol/internal.js";',
+    "markOfficial({});",
+  ]),
+  inScoring: source(`${SRC}/scoring/brand.ts`, ['export { markOfficial } from "../protocol/internal";']),
+  inCaliper: source(`${SRC}/caliper/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  inCat: source(`${SRC}/cat/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  inCatRest: source(`${SRC}/cat-rest/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  inLti: source(`${SRC}/lti/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  inServer: source(`${SRC}/server/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
+  otherName: source(`${SRC}/client/brand-other.ts`, ['export { readClock } from "../protocol/internal.js";']),
+};
 const runtimeByPath = {
   inShared: source(`${SRC}/protocol/runtime.ts`, ['export * from "../../../runtime/src/xml/index.js";']),
   inBrowser: source(`${SRC}/player/runtime.ts`, ['export * from "../../../runtime/dist/index.js";']),
@@ -244,11 +258,20 @@ describe("layering", () => {
     expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([2, 4]);
   });
 
-  it("lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
-    for (const path of [official.inPlayer, official.inClient, official.inScoring, official.inCatRest]) {
+  it("lets only server/ import protocol/official.ts, which brands a report as official", () => {
+    for (const path of [official.inPlayer, official.inClient, official.inScoring, official.inCatRest, official.inLti]) {
       expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
     }
-    for (const path of [official.inServer, official.inLti, official.inProtocol]) {
+    for (const path of [official.inServer, official.inProtocol]) {
+      expect(whatFor(path), path).not.toContain(RESTRICTED_IMPORT);
+    }
+  });
+
+  it("lets only server/ import markOfficial from the internal entry of protocol/", () => {
+    for (const path of Object.values(brand).filter((each) => each !== brand.inServer && each !== brand.otherName)) {
+      expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
+    }
+    for (const path of [brand.inServer, brand.otherName]) {
       expect(whatFor(path), path).not.toContain(RESTRICTED_IMPORT);
     }
   });

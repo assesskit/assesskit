@@ -111,29 +111,60 @@ records.get("s1").version; // => 1
 
 `createSessionHost(options)` throws `DataError` when an option is not of its type.
 
-| Option          | Type                               | Meaning                                                                                                          |
-| --------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `engine`        | `Engine`                           | The delivery engine of the test. One engine serves every session.                                                |
-| `store`         | `SessionStore`                     | The storage of sessions.                                                                                         |
-| `scheduler`     | `Scheduler`                        | The scheduler of time-outs, such as a job queue.                                                                 |
-| `clock`         | `Clock`                            | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                         |
-| `gate`          | `AssetGate`                        | Signs the prefixes of each envelope.                                                                             |
-| `packages`      | `(session) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function.                                           |
-| `clientActions` | `CandidateActionType[]`            | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).   |
-| `limits`        | `Partial<ActionLimits>`            | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's. |
-| `forward`       | `ForwardOptions`                   | Where the events of each step go: the host's log and Caliper. Default: nowhere.                                  |
+| Option          | Type                                         | Meaning                                                                                                          |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                |
+| `store`         | `SessionStore`                               | The storage of sessions.                                                                                         |
+| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                 |
+| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                         |
+| `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                             |
+| `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                |
+| `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).   |
+| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's. |
+| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's log and Caliper. Default: nowhere.                                  |
 
-| Method                             | What it does                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start(caller, options)`           | Starts the session at the time of the clock, binds it to `caller.principal`, stores the record, schedules the deadlines, forwards the events and answers with the first envelope, `seq` 0. `options` are those of `Engine.start` but the time.                                                                                                                                                                   |
-| `check(caller)`                    | Throws `AccessError` (`not-bound`) unless the session is bound to the caller's principal. A session that does not exist is the same error, so that the answer does not tell which sessions exist.                                                                                                                                                                                                                |
-| `view(caller)`                     | The current view as an envelope, with fresh tokens and the `seq` of the latest request answered. A page that reloads, or that the proctor acted on, mounts from it.                                                                                                                                                                                                                                              |
-| `handle(caller, envelope)`         | Answers a request of the client, as below.                                                                                                                                                                                                                                                                                                                                                                       |
-| `proctor(session, action)`         | Applies `suspend`, `resume`, `end-part` or `end-test` on the host's authority.                                                                                                                                                                                                                                                                                                                                   |
-| `host(session, action, scoredBy?)` | Applies `time`, `supply-scores` or `cat-response`. When Caliper is configured, a `supply-scores` action also forwards a GradeEvent for the score it applied or replaced, scored by `scoredBy`: the IRI of the rater or of the scoring service, which the host takes from its authentication of the rater endpoint. A `supply-scores` without an absolute IRI as `scoredBy` is a `DataError` and changes nothing. |
-| `pending(session)`                 | What the engine waits on the host for.                                                                                                                                                                                                                                                                                                                                                                           |
-| `scorerView(session, id)`          | What a rater needs, correct responses included. Only the host's endpoints for raters call it.                                                                                                                                                                                                                                                                                                                    |
-| `results(session)`                 | The results report, marked official: the one object that `publishScore` accepts. A copy of it is not official.                                                                                                                                                                                                                                                                                                   |
+| Method                               | What it does                                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start(caller, options)`             | Starts the session at the time of the clock, binds it to `caller.principal`, stores the record, schedules the deadlines, forwards the events and answers with the first envelope, `seq` 0. `options` are those of `Engine.start` but the time, and `signal`, which does not reach the engine. |
+| `check(caller, options?)`            | Throws `AccessError` (`not-bound`) unless the session is bound to the caller's principal. A session that does not exist is the same error, so that the answer does not tell which sessions exist.                                                                                             |
+| `view(caller, options?)`             | The current view as an envelope, with fresh tokens and the `seq` of the latest request answered. A page that reloads, or that the proctor acted on, mounts from it.                                                                                                                           |
+| `handle(caller, envelope, options?)` | Answers a request of the client, as below.                                                                                                                                                                                                                                                    |
+| `proctor(session, action, options?)` | Applies `suspend`, `resume`, `end-part` or `end-test` on the host's authority and answers with a `HostStep`.                                                                                                                                                                                  |
+| `session(session)`                   | The host side of the session, a `HostSession` ([protocol](protocol.md#the-host-session)): `apply`, `pending`, `scorerView` and `results`, as below.                                                                                                                                           |
+
+`options` of a call is `{ signal? }`: an `AbortSignal` that stops the call before its next load, as [signals](#signals) says.
+
+### The host side
+
+`session(session)` returns the `HostSession` of one session. Each of its methods loads the session when it is called, and
+rejects with `DataError` when the session does not exist. It gives the correct responses and the powers of the host for a bare
+session identifier, so call it only from the host's rater and service endpoints, such as the job of the scheduler and the
+rater's route, and never with an identifier that a candidate supplies.
+
+```mermaid
+sequenceDiagram
+  participant R as Rater endpoint<br/>(authenticated)
+  participant S as session(id)
+  participant C as Scoring code
+  R->>S: pending()
+  S-->>R: the scoring requests
+  R->>S: scorerView(request)
+  S-->>R: correct responses and rubric
+  R->>C: toSubmission(view), then the score
+  C-->>R: toSupplyScores(request, score, scorer)
+  R->>S: apply(action, { scoredBy })
+  S-->>R: HostStep { events, refusal? }
+```
+
+| Method                          | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apply(action, options?)`       | Applies `time`, `supply-scores` or `cat-response`. A refusal of the engine, such as `unknown-request`, is `HostStep.refusal` and changes nothing. A `time` that finds nothing to apply is accepted with no events; it is saved, and nothing is forwarded. When Caliper is configured, a `supply-scores` action also forwards a GradeEvent for the score it applied or replaced, scored by `options.scoredBy`: the IRI of the rater or of the scoring service, which the host takes from its authentication of the rater endpoint. A `supply-scores` without an absolute IRI as `scoredBy` is a `DataError` and changes nothing. If forwarding throws, the step stays saved and the call rejects, so a retried `supply-scores` reports `scores-replaced` and a second GradeEvent. |
+| `pending(options?)`             | What the engine waits on the host for.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `scorerView(request, options?)` | What a rater needs, correct responses included. Call it only from a rater's endpoint.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `results(options?)`             | The results report, marked official: the one object that `publishScore` accepts. A copy of it is not official.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+
+The step feed of a session host is `forward.log`, which every process calls after the save of each step with events; a
+local session has `subscribeSteps` instead ([protocol](protocol.md#the-host-session)).
 
 ### Caller binding
 
@@ -172,7 +203,7 @@ never offers such an action. Practice allows every action, and so does a host th
 ### The proctor
 
 A break, a pause and the end of a part are the proctor's, through `proctor(session, action)`. It applies the
-action as the host and saves it; a refusal of the engine, such as `suspend` on an ended test, is returned as the step and
+action as the host and saves it; a refusal of the engine, such as `suspend` on an ended test, is `HostStep.refusal` and
 saves nothing. The candidate learns of it with the next request: the engine refuses the action as `suspended`, the
 envelope carries the suspended view, and `view(caller)` gives it after a reload.
 
@@ -180,22 +211,36 @@ envelope carries the suspended view, and `view(caller)` gives it after a reload.
 
 The scheduler is the host's, such as a job queue, so a restart loses no time-out. After each step the host calls
 `schedule(session, at)` for every maximum time of the new state, rounded up to a millisecond; the call is idempotent for a
-pair. The job calls `host(session, { type: "time" })` when `at` arrives. The runtime applies a passed deadline on the next action
-and its view shows a time-out as applied, so a late job delays only a proactive time-out, never correctness. A `time` that
-finds nothing to apply is returned as a step and saves nothing. Proctor time extensions are out of scope: the runtime has no action
+pair. The job calls `session(id).apply({ type: "time" })` when `at` arrives. The runtime applies a passed deadline on the next
+action and its view shows a time-out as applied, so a late job delays only a proactive time-out, never correctness. A `time` that
+finds nothing to apply is accepted with no events: it is saved, and nothing is forwarded. Proctor time extensions are out of scope: the runtime has no action
 for them.
 
 ## Stores
 
-| Interface       | Methods                                                                                                                                                                                                                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SessionStore`  | `create(session, { state, principal, envelope })` returns `false` when the session exists. `load(session)` gives `{ state, principal, version, seq, envelope }`. `save(session, record)` stores `version + 1` if the stored version is `record.version`, else returns `false`. |
-| `Scheduler`     | `schedule(session, at)`: idempotent per pair.                                                                                                                                                                                                                                  |
-| `FileStore`     | `put(bytes, mimeType, fileName?)` returns the `FileValue` that refers to the bytes; `read(file)` returns them or `undefined`.                                                                                                                                                  |
-| `AgsScoreStore` | `keep(session, item, score)` keeps the score if it is later than the kept one and returns `false` otherwise. `latest(session, item)` returns the kept score or `undefined`.                                                                                                    |
+| Interface       | Methods                                                                                                                                                                                                                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SessionStore`  | `create(session, { state, principal, envelope }, options?)` returns `false` when the session exists. `load(session, options?)` gives `{ state, principal, version, seq, envelope }`. `save(session, record, options?)` stores `version + 1` if the stored version is `record.version`, else returns `false`. |
+| `Scheduler`     | `schedule(session, at, options?)`: idempotent per pair.                                                                                                                                                                                                                                                      |
+| `FileStore`     | `put(bytes, mimeType, fileName?)` returns the `FileValue` that refers to the bytes; `read(file)` returns them or `undefined`.                                                                                                                                                                                |
+| `AgsScoreStore` | `keep(session, item, score)` keeps the score if it is later than the kept one and returns `false` otherwise. `latest(session, item)` returns the kept score or `undefined`.                                                                                                                                  |
 
 `create` and `save` of `SessionStore`, and `keep` of `AgsScoreStore`, must be atomic across the host's processes. `state` is the runtime's `serializeState`, `envelope` the JSON of the
 latest `ViewEnvelope`, and `action` of a save the JSON `{ at, action }` of the step that made it: the log of the session.
+
+### Signals
+
+Every call of the session host takes `{ signal }`, and the signal reaches the stores, the scheduler and `packages`, which may
+ignore it. `FileStore`, `AgsScoreStore`, the gate and forwarding take none.
+
+| Point                                      | Effect of an aborted signal                                                                         |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Before each load, and between save retries | The call rejects with `signal.reason`; nothing was applied                                          |
+| In `load`, `schedule`, `packages`          | The service may reject, and then the call rejects; nothing was applied                              |
+| In `save`, `create`                        | Passed to the store, which rejects only when nothing was saved: a store that cannot tell ignores it |
+| After the save                             | Ignored by the call: forwarding completes                                                           |
+
+`start` takes the signal beside the options of `Engine.start`, and does not pass it on.
 
 ## The scores of LTI items
 
@@ -205,7 +250,7 @@ of the session. Its `onScore` is the `onScore` of `agsScores`, and its `settle` 
 
 | Option     | Meaning                                                                                                                                        |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `host`     | The session host, of which the intake uses `host`.                                                                                             |
+| `host`     | The session host, of which the intake uses `session(id).apply`.                                                                                |
 | `scores`   | The `AgsScoreStore` that keeps the latest score of each line item.                                                                             |
 | `scoredBy` | `(session, item) => iri`: the IRI of the tool, for the GradeEvent of Caliper. Needed when the session host forwards to Caliper. Default: none. |
 
@@ -224,10 +269,12 @@ const supplied = [];
 const kept = new Map();
 const intake = createLtiScoreIntake({
   host: {
-    host: async (session, action) => {
-      supplied.push(`${session} ${action.request} ${action.value?.value}`);
-      return { ok: true };
-    },
+    session: (session) => ({
+      apply: async (action) => {
+        supplied.push(`${session} ${action.request} ${action.value?.value}`);
+        return { events: [] };
+      },
+    }),
   },
   scores: {
     keep: async (session, item, score) => {
@@ -257,7 +304,7 @@ supplied.length; // => 2
 ```
 
 The intake and the host need each other: the host logs through the intake's `settle`, and the intake supplies through the host.
-Create the intake with `host: { host: (...call) => host.host(...call) }`, then the host with
+Create the intake with `host: { session: (id) => host.session(id) }`, then the host with
 `forward: { log: (step) => intake.settle(step) }`, and mount the handler of the score service with
 `agsScores({ ...platformOptions, onScore: intake.onScore })`.
 

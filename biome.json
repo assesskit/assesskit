@@ -1124,7 +1124,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1167,7 +1172,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1210,7 +1220,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1253,7 +1268,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1296,7 +1316,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1340,7 +1365,12 @@
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1380,6 +1410,15 @@
                       "**/server/**"
                     ],
                     "message": "lti/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
+                  },
+                  {
+                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
+                    "importNamePattern": "markOfficial",
+                    "message": "Only server/ imports markOfficial: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],

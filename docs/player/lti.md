@@ -264,7 +264,7 @@ function keeps none.
 
 `publishScore(result, launch, pending, options)` gives the learning platform the score of a test that ended: the tool posts
 it to the score service of the line item that the launch offered ([LTI AGS 2.0](https://www.imsglobal.org/spec/lti-ags/v2p0#score-publish-service)).
-`result` is the report of `SessionHost.results`, `pending` is `SessionHost.pending` of the same session, and `launch` is the
+`result` is the report of `session(id).results()`, `pending` is `session(id).pending()` of the same session, and `launch` is the
 resource link launch that started it. `options` are those of `ltiAccessToken`. The function asks for an access token for the
 scopes it needs on every call and keeps none.
 
@@ -290,7 +290,7 @@ sequenceDiagram
   participant H as Host
   participant T as publishScore
   participant P as Platform
-  H->>T: results(session), launch, pending(session), options
+  H->>T: results(), launch, pending(), options
   T->>T: refuse a report that the session host did not mark official
   T->>P: ltiAccessToken for the scopes the call needs
   opt The report has no MAXSCORE
@@ -299,7 +299,7 @@ sequenceDiagram
   T->>P: POST the score to the line item's score service
 ```
 
-Call it for a finished session with `await publishScore(await host.results(session), launch, await host.pending(session), options)`,
+Call it for a finished session with `const s = host.session(id); await publishScore(await s.results(), launch, await s.pending(), options)`,
 and again when a person or a service supplies a score.
 
 | Error                              | When                                                                                                              |

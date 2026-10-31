@@ -160,6 +160,23 @@ export function examFiles(
   };
 }
 
+/** The correct response of the rated item of {@link ratedFiles}, which only a scorer may see. */
+export const RATED_KEY = "hidden-key";
+
+const RATED_ITEM = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="q2" title="Item q2" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string">
+    <qti-correct-response><qti-value>${RATED_KEY}</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><p>Type the word <qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body>
+</qti-assessment-item>`;
+
+/** The files of the fixture where the second item has a correct response and a `SCORE` that a person gives. */
+export function ratedFiles(): Readonly<Record<string, string | Uint8Array>> {
+  return { ...examFiles(), "items/q2/item.xml": RATED_ITEM };
+}
+
 /** A pronunciation lexicon (PLS) that says W3C as the words. */
 const LEXICON =
   '<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0" alphabet="ipa" xml:lang="en"><lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme></lexicon>';
