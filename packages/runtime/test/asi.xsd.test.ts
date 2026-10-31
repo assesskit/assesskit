@@ -13,6 +13,7 @@ import {
   readAsi,
   SecurityError,
   scoreCoversBlock,
+  scoringRubricBlock,
   writeAsi,
   type XmlElement,
 } from "../src/index.js";
@@ -21,6 +22,7 @@ import { DOCUMENT_ARBITRARIES } from "./arbitraries/asi.js";
 import { tableNames } from "./asi-elements.js";
 import { PLACES, vocabularyOf } from "./asi-vocabularies.js";
 import { declaredNames, unusedNames, unusedSharedAttributes, usedNames } from "./schema-declarations.js";
+import { ESSAY_MARKUP, KIND_EXAMPLES } from "./scoring-rubrics.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const examples = join(requireCorpus(root), "qti-examples/qtiv3-examples");
@@ -124,6 +126,28 @@ describe("writeAsi: worked examples", () => {
     );
     const test: AssessmentTest = { ...document.test, rubricBlocks: [block] };
     expect(await validated({ kind: "test", test })).toEqual([]);
+  });
+
+  it("writes the scoring rubric block of every kind that the schema accepts, in an item body and before the test parts", async () => {
+    const item = readAsi(ITEM);
+    const test = readAsi(TEST);
+    if (item.kind !== "item" || test.kind !== "test") throw new Error("Expected an item and a test.");
+    const notes: XmlElement[] = [];
+    for (const rubric of Object.values(KIND_EXAMPLES)) {
+      const block = scoringRubricBlock({ ...rubric, outcomeIdentifier: "SCORE" }, notes);
+      const body = { kind: "item-body", children: [...(item.item.body?.children ?? []), block] } as const;
+      expect(await validated({ kind: "item", item: { ...item.item, body } }), rubric.kind).toEqual([]);
+      const rubricBlocks = [...test.test.rubricBlocks, block];
+      expect(await validated({ kind: "test", test: { ...test.test, rubricBlocks } }), rubric.kind).toEqual([]);
+    }
+  });
+
+  it("accepts the markup of the guide in an item body and in a test, and writes it back as it was read", async () => {
+    const item = readAsi(ITEM.replace("</qti-item-body>", `${ESSAY_MARKUP}</qti-item-body>`));
+    const test = readAsi(TEST.replace("<qti-test-part", `${ESSAY_MARKUP}<qti-test-part`));
+    expect(await validated(item)).toEqual([]);
+    expect(await validated(test)).toEqual([]);
+    expect(readAsi(writeAsi(item))).toEqual(item);
   });
 
   it("writes a stimulus with a stylesheet and a body that the schema accepts", async () => {

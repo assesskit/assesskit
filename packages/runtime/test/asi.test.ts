@@ -7,7 +7,11 @@ import {
   formatAttributeValue,
   kindOf,
   parseAttributeValue,
+  RUBRIC_KINDS,
   readElement,
+  scoreRange,
+  scoringRubricBlocks,
+  scoringRubricOf,
   type TypeDef,
   typeNamed,
   withDescendants,
@@ -21,6 +25,7 @@ import {
   type AssessmentSection,
   type AssessmentStimulus,
   type AssessmentTest,
+  checkScoringRubric,
   childNodes,
   coordinateCountFits,
   DataError,
@@ -37,24 +42,31 @@ import {
   ReadError,
   type ResponseProcessing,
   type ResponseRule,
+  type RubricContent,
+  type RubricRating,
   readAsi,
   readScoreCovers,
+  readScoringRubrics,
   SCORE_COVERS_CLASS,
+  SCORING_RUBRIC_CLASS,
   type ScoreCover,
+  type ScoringRubric,
   scoreCoverBlocks,
   scoreCoversBlock,
+  scoreFromRatings,
+  scoringRubricBlock,
   serializeXml,
   type TemplateRule,
-  type TestRubricBlock,
   walkDocument,
   writeAsi,
   XINCLUDE_NAMESPACE,
   type XmlElement,
 } from "../src/index.js";
-import { DOCUMENT_ARBITRARIES, modelArbitrary } from "./arbitraries/asi.js";
+import { DOCUMENT_ARBITRARIES, modelArbitrary, SCORING_RUBRICS } from "./arbitraries/asi.js";
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 import { fuzzReader } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
+import { ESSAY, ESSAY_MARKUP, KIND_EXAMPLES } from "./scoring-rubrics.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
@@ -330,9 +342,6 @@ describe("attribute values", () => {
   });
 });
 
-/** A node of the content of a rubric block of a test. */
-type RubricContent = TestRubricBlock["contentBody"]["children"][number];
-
 describe("building and reading the covers", () => {
   /** The example of the convention: one rubric block that covers two responses. */
   const coversBlock =
@@ -545,6 +554,470 @@ describe("the covers as written", () => {
     ]) {
       expect(() => scoreCoverBlocks(JSON.parse(bad))).toThrow(DataError);
     }
+  });
+});
+
+/** An item whose body holds the markup of rubric blocks. */
+const itemWithBlocks = (blocks: string, attributes = ""): AssessmentItem =>
+  itemOf(item(`<qti-item-body>${blocks}</qti-item-body>`, attributes));
+
+/** A test with the markup of rubric blocks as its own, before the test part. */
+const testWithBlocks = (blocks: string): AssessmentTest =>
+  testOf(`${blocks}${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part>`);
+
+/** The markup of a rubric block of the convention with the given attributes and criteria lists. */
+function rubricMarkup(body: string, attributes = ' data-outcome-identifier="SCORE"', view = "scorer"): string {
+  return `<qti-rubric-block view="${view}" use="scoring" class="external-scoring-rubric"${attributes}><qti-content-body>${body}</qti-content-body></qti-rubric-block>`;
+}
+
+/** The markup of a criterion with levels given by their scores. */
+const criterionMarkup = (identifier: string, scores: readonly string[], attributes = ""): string =>
+  `<li data-criterion-identifier="${identifier}"${attributes}><ol>${scores.map((score) => `<li data-score="${score}">level ${score}</li>`).join("")}</ol></li>`;
+
+/** The rubric of an outcome that a document gives, or `undefined`. */
+const rubricOf = (document: AssessmentItem | AssessmentTest, outcome = "SCORE"): ScoringRubric | undefined =>
+  readScoringRubrics(document).get(outcome);
+
+describe("reading and building the scoring rubric", () => {
+  it("reads the example block of an item and of a test as the same rubric, with its texts normalized", () => {
+    expect(rubricOf(itemWithBlocks(ESSAY_MARKUP))).toEqual(ESSAY);
+    expect(rubricOf(testWithBlocks(ESSAY_MARKUP))).toEqual(ESSAY);
+  });
+
+  it("builds the block that reading the example gives", () => {
+    const compact = ESSAY_MARKUP.replace(/>\s+</g, "><").replace(/\s*\n\s*/g, " ");
+    const notes = [
+      { kind: "p", children: [{ kind: "text", value: "Rate the essay on each criterion." }], extensions: [] },
+    ] satisfies RubricContent[];
+    const [block] = testWithBlocks(compact).rubricBlocks;
+    expect(scoringRubricBlock(ESSAY, notes)).toEqual(block);
+  });
+
+  it("builds a block that fits an item body and the rubric blocks of a test, and reads it back after writing", () => {
+    const block = scoringRubricBlock(ESSAY);
+    const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
+    const inTest: AssessmentTest = { ...testModel(), rubricBlocks: [block] };
+    const item2 = readAsi(writeAsi({ kind: "item", item: inItem }));
+    const test2 = readAsi(writeAsi({ kind: "test", test: inTest }));
+    if (item2.kind !== "item" || test2.kind !== "test") throw new Error("Expected an item and a test.");
+    expect(rubricOf(item2.item)).toEqual(ESSAY);
+    expect(rubricOf(test2.test)).toEqual(ESSAY);
+  });
+
+  it("writes the attributes of the convention, leaving the default weight out", () => {
+    const written = writeAsi({ kind: "test", test: { ...testModel(), rubricBlocks: [scoringRubricBlock(ESSAY)] } });
+    expect(written).toContain('class="external-scoring-rubric" xml:lang="en"');
+    expect(written).toContain('data-outcome-identifier="SCORE" data-rubric-kind="analytic"');
+    expect(written).toContain('<li data-criterion-identifier="content" data-weight="2">');
+    expect(written).toContain('<li data-criterion-identifier="language">');
+    expect(written).toContain('<li data-score="0" data-quality="Absent">No idea relates to the task.</li>');
+  });
+
+  it("reads and builds a rubric of every kind", () => {
+    for (const kind of RUBRIC_KINDS) {
+      const rubric = KIND_EXAMPLES[kind];
+      const read = itemWithBlocks("");
+      const inItem: AssessmentItem = { ...read, body: { kind: "item-body", children: [scoringRubricBlock(rubric)] } };
+      expect(rubricOf(inItem), kind).toEqual(rubric);
+    }
+  });
+
+  it("takes a missing kind for analytic and a missing weight for 1", () => {
+    const markup = rubricMarkup(`<ol>${criterionMarkup("a", ["0", "1"])}</ol>`);
+    expect(rubricOf(itemWithBlocks(markup))).toEqual({
+      outcomeIdentifier: "SCORE",
+      kind: "analytic",
+      criteria: [
+        {
+          identifier: "a",
+          weight: 1,
+          levels: [
+            { score: 0, description: "level 0" },
+            { score: 1, description: "level 1" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("reads numbers as an xs:double attribute, with -0 as 0", () => {
+    const criteria = criterionMarkup("a", ["1e1", "+2", " 3 ", "-0", "0.5"], ' data-weight=" 1.5e0 "');
+    const rubric = rubricOf(itemWithBlocks(rubricMarkup(`<ol>${criteria}</ol>`)));
+    expect(rubric?.criteria[0]?.weight).toBe(1.5);
+    expect(rubric?.criteria[0]?.levels.map(({ score }) => score)).toEqual([10, 2, 3, 0, 0.5]);
+    expect(Object.is(rubric?.criteria[0]?.levels[3]?.score, 0)).toBe(true);
+  });
+
+  it("adds up the criteria of several lists and keeps what lies between them as notes", () => {
+    const markup = rubricMarkup(
+      `<p>One</p><ol>${criterionMarkup("a", ["0", "1"])}</ol><p>Two</p><ol>${criterionMarkup("b", ["0", "1"])}</ol>`,
+    );
+    expect(rubricOf(itemWithBlocks(markup))?.criteria.map(({ identifier }) => identifier)).toEqual(["a", "b"]);
+  });
+
+  it("takes the language of the block, then that of the item, and a test has no other", () => {
+    const body = `<ol>${criterionMarkup("a", ["0", "1"])}</ol>`;
+    const bare = rubricMarkup(body);
+    const own = rubricMarkup(body, ' data-outcome-identifier="SCORE" xml:lang="id"');
+    expect(rubricOf(itemWithBlocks(bare, ' xml:lang="en"'))?.language).toBe("en");
+    expect(rubricOf(itemWithBlocks(own, ' xml:lang="en"'))?.language).toBe("id");
+    expect(rubricOf(itemWithBlocks(bare))?.language).toBeUndefined();
+    expect(rubricOf(testWithBlocks(own))?.language).toBe("id");
+    expect(rubricOf(testWithBlocks(bare))?.language).toBeUndefined();
+  });
+
+  it("reads a rubric for each outcome and lets the first marked block of an outcome decide", () => {
+    const body = (identifier: string) => `<ol>${criterionMarkup(identifier, ["0", "1"])}</ol>`;
+    const named = (outcome: string, identifier: string) =>
+      rubricMarkup(body(identifier), ` data-outcome-identifier="${outcome}"`);
+    const rubrics = readScoringRubrics(
+      itemWithBlocks(`${named("A", "first")}${named("B", "other")}${named("A", "second")}`),
+    );
+    expect([...rubrics.keys()]).toEqual(["A", "B"]);
+    expect(rubrics.get("A")?.criteria[0]?.identifier).toBe("first");
+    const broken = rubricMarkup("<ol/>", ' data-outcome-identifier="A"');
+    expect(readScoringRubrics(itemWithBlocks(`${broken}${named("A", "second")}`)).has("A")).toBe(false);
+  });
+
+  it("recognizes a block among the content of an item body and only among the rubric blocks of a test", () => {
+    const markup = rubricMarkup(`<ol>${criterionMarkup("a", ["0", "1"])}</ol>`);
+    expect(rubricOf(itemWithBlocks(`<p>Before</p>${markup}<p>After</p>`))?.criteria).toHaveLength(1);
+    const inPart = testOf(`${PART}${markup}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part>`);
+    expect(readScoringRubrics(inPart).size).toBe(0);
+    const inSection = testOf(
+      `${PART}<qti-assessment-section identifier="S" title="s" visible="true">${markup}</qti-assessment-section></qti-test-part>`,
+    );
+    expect(readScoringRubrics(inSection).size).toBe(0);
+  });
+
+  it("leaves out a block without the class token and one without an outcome", () => {
+    const plain =
+      '<qti-rubric-block view="scorer" use="scoring"><qti-content-body><ol><li>x</li></ol></qti-content-body></qti-rubric-block>';
+    const unnamed = rubricMarkup(`<ol>${criterionMarkup("a", ["0", "1"])}</ol>`, "");
+    expect(readScoringRubrics(itemWithBlocks(`${plain}${unnamed}`)).size).toBe(0);
+  });
+
+  it("refuses to take a block of the covers convention for a rubric", () => {
+    const both = rubricMarkup(`<ol>${criterionMarkup("a", ["0", "1"])}</ol>`).replace(
+      'class="external-scoring-rubric"',
+      'class="external-scoring-rubric external-score-covers"',
+    );
+    expect(readScoringRubrics(itemWithBlocks(both)).size).toBe(0);
+  });
+
+  it("reads the text of an entry across inline elements and drops the levels from the text of a criterion", () => {
+    const criterion = `<li data-criterion-identifier="a">Use <em>clear</em> words <ol><li data-score="0">Poor <b>use</b></li><li data-score="1">Good</li></ol></li>`;
+    const rubric = rubricOf(itemWithBlocks(rubricMarkup(`<ol>${criterion}</ol>`)));
+    expect(rubric?.criteria[0]?.description).toBe("Use clear words");
+    expect(rubric?.criteria[0]?.levels[0]?.description).toBe("Poor use");
+  });
+});
+
+describe("the rules of a scoring rubric as written", () => {
+  /** Reads the one block that a markup holds and returns the codes and paths of what it breaks. */
+  function issuesOf(markup: string): string[] {
+    const [marked, ...others] = scoringRubricBlocks(itemWithBlocks(markup));
+    if (marked === undefined || others.length > 0) throw new Error("Expected one marked block.");
+    const { rubric, issues } = scoringRubricOf(marked.block, marked.language);
+    expect(rubric === undefined, "the rubric is absent exactly when a rule is broken").toBe(issues.length > 0);
+    return issues.map(({ code, path }) => `${code} ${path}`.trim());
+  }
+  const levels = (count: number) => Array.from({ length: count }, (_, score) => String(score));
+  const analytic = (criteria: string, attributes = ' data-outcome-identifier="SCORE"') =>
+    rubricMarkup(`<ol>${criteria}</ol>`, attributes);
+
+  it("accepts the shapes of the four kinds", () => {
+    for (const kind of RUBRIC_KINDS) {
+      const block = scoringRubricBlock(KIND_EXAMPLES[kind]);
+      const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
+      const [marked] = scoringRubricBlocks(inItem);
+      expect(marked && scoringRubricOf(marked.block).issues, kind).toEqual([]);
+    }
+  });
+
+  it("reports a block that is not shown to scorers, or is shown to candidates", () => {
+    const body = `<ol>${criterionMarkup("a", levels(2))}</ol>`;
+    for (const view of ["proctor", "candidate scorer", "scorer candidate"]) {
+      expect(issuesOf(rubricMarkup(body, ' data-outcome-identifier="SCORE"', view)), view).toEqual(["malformed"]);
+    }
+    expect(issuesOf(rubricMarkup(body, ' data-outcome-identifier="SCORE"', "proctor scorer"))).toEqual([]);
+  });
+
+  it("reports a missing outcome, an unknown kind and a block with both class tokens", () => {
+    const body = `<ol>${criterionMarkup("a", levels(2))}</ol>`;
+    expect(issuesOf(rubricMarkup(body, ""))).toEqual(["malformed"]);
+    expect(issuesOf(rubricMarkup(body, ' data-outcome-identifier="SCORE" data-rubric-kind="rank"'))).toEqual([
+      "malformed",
+    ]);
+    const both = rubricMarkup(body).replace(
+      'class="external-scoring-rubric"',
+      'class="external-score-covers external-scoring-rubric"',
+    );
+    expect(issuesOf(both)).toEqual(["malformed"]);
+  });
+
+  it("reports a block without criteria, whether it has no list or an empty one", () => {
+    expect(issuesOf(rubricMarkup("<p>Notes</p>"))).toEqual(["malformed criteria"]);
+    expect(issuesOf(rubricMarkup("<ol/>"))).toEqual(["malformed criteria"]);
+  });
+
+  it("reports a criterion without an identifier, with an identifier that is not one, or without levels", () => {
+    expect(issuesOf(analytic(`<li><ol><li data-score="0"/><li data-score="1"/></ol></li>`))).toEqual([
+      "malformed criteria[0].identifier",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("1x", levels(2))))).toEqual(["malformed criteria[0].identifier"]);
+    expect(issuesOf(analytic(`<li data-criterion-identifier="a"><p>Text</p></li>`))).toEqual([
+      "malformed criteria[0].levels",
+    ]);
+    const nested = `<li data-criterion-identifier="a"><div><ol><li data-score="0"/><li data-score="1"/></ol></div></li>`;
+    expect(issuesOf(analytic(nested))).toEqual(["malformed criteria[0].levels"]);
+  });
+
+  it("reports a weight that is not a finite number greater than 0", () => {
+    for (const weight of ["0", "-1", "abc", "INF", "NaN", "", "1 2"]) {
+      expect(issuesOf(analytic(criterionMarkup("a", levels(2), ` data-weight="${weight}"`))), weight).toEqual([
+        "malformed criteria[0].weight",
+      ]);
+    }
+  });
+
+  it("reports a level without a score and a score that is not a finite number of 0 or more", () => {
+    expect(
+      issuesOf(analytic(`<li data-criterion-identifier="a"><ol><li>x</li><li data-score="1"/></ol></li>`)),
+    ).toEqual(["malformed criteria[0].levels[0].score"]);
+    for (const score of ["-1", "INF", "NaN", "x", ""]) {
+      expect(issuesOf(analytic(criterionMarkup("a", [score, "1"]))), score).toEqual([
+        "malformed criteria[0].levels[0].score",
+      ]);
+    }
+  });
+
+  it("reports the shape that the kind requires", () => {
+    const kind = (name: string) => ` data-outcome-identifier="SCORE" data-rubric-kind="${name}"`;
+    expect(issuesOf(analytic(criterionMarkup("a", levels(1))))).toEqual(["shape criteria[0].levels"]);
+    expect(
+      issuesOf(analytic(criterionMarkup("a", levels(2)) + criterionMarkup("b", levels(2)), kind("holistic"))),
+    ).toEqual(["shape criteria"]);
+    expect(issuesOf(analytic(criterionMarkup("a", levels(2), ' data-weight="2"'), kind("holistic")))).toEqual([
+      "shape criteria[0].weight",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", levels(3)), kind("checklist")))).toEqual([
+      "shape criteria[0].levels",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", ["1", "2"]), kind("checklist")))).toEqual([
+      "shape criteria[0].levels",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", ["1", "0"]), kind("checklist")))).toEqual([]);
+    expect(issuesOf(analytic(criterionMarkup("a", levels(2)), kind("single-point")))).toEqual([
+      "shape criteria[0].levels",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", ["2", "1", "0"]), kind("single-point")))).toEqual([
+      "shape criteria[0].levels",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", ["2", "1", "0"])))).toEqual([]);
+  });
+
+  it("reports an identifier or a score that occurs twice", () => {
+    expect(issuesOf(analytic(criterionMarkup("a", levels(2)) + criterionMarkup("a", levels(2))))).toEqual([
+      "duplicate criteria[1].identifier",
+    ]);
+    expect(issuesOf(analytic(criterionMarkup("a", ["1", "1", "2"])))).toEqual([
+      "duplicate criteria[0].levels[1].score",
+    ]);
+  });
+
+  it("reports a malformed value without the shape rules that need a complete rubric", () => {
+    expect(issuesOf(analytic(criterionMarkup("a", ["x"])))).toEqual(["malformed criteria[0].levels[0].score"]);
+  });
+});
+
+describe("checking a scoring rubric", () => {
+  const broken = (change: (rubric: ScoringRubric) => unknown): unknown =>
+    change(JSON.parse(JSON.stringify(KIND_EXAMPLES["single-point"])));
+
+  it("accepts a rubric of every kind and the rubric that the reader gives", () => {
+    for (const kind of RUBRIC_KINDS) expect(() => checkScoringRubric(KIND_EXAMPLES[kind]), kind).not.toThrow();
+    expect(() => checkScoringRubric(ESSAY)).not.toThrow();
+  });
+
+  it("names the path and the rule of the first one broken", () => {
+    const withLevels = (count: number) =>
+      broken((rubric) => ({
+        ...rubric,
+        criteria: [rubric.criteria[0], { ...rubric.criteria[1], levels: [{ score: 0 }, { score: 1 }].slice(0, count) }],
+      }));
+    expect(() => checkScoringRubric(withLevels(2))).toThrow(
+      new DataError(
+        "The scoring rubric is invalid at criteria[1].levels: a single-point criterion has three levels, found 2.",
+      ),
+    );
+    expect(() => checkScoringRubric({ ...ESSAY, outcomeIdentifier: "1x" })).toThrow(
+      new DataError(
+        'The scoring rubric is invalid at outcomeIdentifier: the outcome identifier must be an identifier, found "1x".',
+      ),
+    );
+    expect(() => checkScoringRubric({ ...ESSAY, criteria: [] })).toThrow(
+      new DataError(
+        "The scoring rubric is invalid at criteria: a scoring rubric has one or more criteria, found none.",
+      ),
+    );
+    const twice = { ...ESSAY, criteria: [ESSAY.criteria[0], ESSAY.criteria[0]] };
+    expect(() => checkScoringRubric(twice)).toThrow(
+      new DataError(
+        "The scoring rubric is invalid at criteria[1].identifier: the criterion identifier content occurs twice, so a rating cannot name one.",
+      ),
+    );
+    const heavy = { ...KIND_EXAMPLES.holistic, criteria: [{ ...KIND_EXAMPLES.holistic.criteria[0], weight: 2 }] };
+    expect(() => checkScoringRubric(heavy)).toThrow(DataError);
+  });
+
+  it("refuses values that are not the model, as JSON passes them", () => {
+    for (const bad of [
+      "null",
+      "[]",
+      '{"outcomeIdentifier":1}',
+      '{"outcomeIdentifier":"S","kind":"rank","criteria":[]}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":{}}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":[],"extra":1}',
+      '{"outcomeIdentifier":"S","kind":"analytic","language":"","criteria":[]}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":[{"identifier":"a","weight":"1","levels":[]}]}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":[{"identifier":"a","weight":0,"levels":[]}]}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":[{"identifier":"a","weight":1,"levels":[{"score":"1"}]}]}',
+      '{"outcomeIdentifier":"S","kind":"analytic","criteria":[{"identifier":"a","weight":1,"levels":[{"score":-1}]}]}',
+    ]) {
+      expect(() => checkScoringRubric(JSON.parse(bad)), bad).toThrow(DataError);
+    }
+    expect(() => checkScoringRubric(JSON.parse("null"))).toThrow(
+      new DataError("The scoring rubric is invalid: expected an object, found null."),
+    );
+  });
+});
+
+describe("the score that ratings give", () => {
+  const rate = (rubric: ScoringRubric, ...scores: readonly number[]): RubricRating[] =>
+    rubric.criteria.flatMap(({ identifier }, index) => {
+      const score = scores[index];
+      return score === undefined ? [] : [{ criterion: identifier, score }];
+    });
+
+  it("is the sum of weight times the chosen score, for each kind", () => {
+    expect(scoreFromRatings(ESSAY, rate(ESSAY, 2, 1))).toBe(5);
+    expect(scoreFromRatings(ESSAY, rate(ESSAY, 1, 0))).toBe(2);
+    expect(scoreFromRatings(KIND_EXAMPLES.holistic, rate(KIND_EXAMPLES.holistic, 3))).toBe(3);
+    expect(scoreFromRatings(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 1, 0, 1))).toBe(3);
+    expect(scoreFromRatings(KIND_EXAMPLES.checklist, rate(KIND_EXAMPLES.checklist, 0, 0, 0))).toBe(0);
+    expect(scoreFromRatings(KIND_EXAMPLES["single-point"], rate(KIND_EXAMPLES["single-point"], 2, 1))).toBe(5);
+  });
+
+  it("is null while a criterion has no rating, for an empty list too", () => {
+    expect(scoreFromRatings(ESSAY, [])).toBeNull();
+    expect(scoreFromRatings(ESSAY, rate(ESSAY, 2))).toBeNull();
+    expect(scoreFromRatings(ESSAY, [{ criterion: "language", score: 1 }])).toBeNull();
+  });
+
+  it("ranges from the sum of the lowest levels to the sum of the highest", () => {
+    expect(scoreRange(ESSAY)).toEqual({ minimum: 0, maximum: 5 });
+    expect(scoreRange(KIND_EXAMPLES.checklist)).toEqual({ minimum: 0, maximum: 4 });
+    expect(scoreRange(KIND_EXAMPLES["single-point"])).toEqual({ minimum: 3, maximum: 11 });
+    const lowest = rate(KIND_EXAMPLES["single-point"], 0, 1);
+    expect(scoreFromRatings(KIND_EXAMPLES["single-point"], lowest)).toBe(3);
+  });
+
+  it("does not depend on the order of the ratings", () => {
+    const ratings = rate(ESSAY, 2, 1);
+    expect(scoreFromRatings(ESSAY, [...ratings].reverse())).toBe(scoreFromRatings(ESSAY, ratings));
+  });
+
+  it("sums in the order of the criteria in binary floating point", () => {
+    const rubric: ScoringRubric = {
+      outcomeIdentifier: "S",
+      kind: "analytic",
+      criteria: [0.1, 0.1, 0.1].map((weight, index) => ({
+        identifier: `c${index}`,
+        weight,
+        levels: [{ score: 0 }, { score: 1 }],
+      })),
+    };
+    expect(scoreFromRatings(rubric, rate(rubric, 1, 1, 1))).toBe(0.1 + 0.1 + 0.1);
+  });
+
+  it("refuses a rating of an unknown criterion, a criterion rated twice and a score that no level has", () => {
+    expect(() => scoreFromRatings(ESSAY, [{ criterion: "style", score: 1 }])).toThrow(
+      new DataError('A rating names the criterion "style", which the scoring rubric does not have.'),
+    );
+    expect(() =>
+      scoreFromRatings(ESSAY, [
+        { criterion: "content", score: 1 },
+        { criterion: "content", score: 2 },
+      ]),
+    ).toThrow(new DataError('The criterion "content" has more than one rating.'));
+    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: 3 }])).toThrow(
+      new DataError('The rating of the criterion "content" gives the score 3, which no level of the criterion has.'),
+    );
+  });
+
+  it("refuses a rubric that fails the check and ratings that are not the model, as JSON passes them", () => {
+    expect(() => scoreFromRatings(JSON.parse("null"), [])).toThrow(DataError);
+    expect(() => scoreFromRatings({ ...ESSAY, criteria: [] }, [])).toThrow(DataError);
+    for (const bad of [
+      "null",
+      "{}",
+      "[null]",
+      '[{"criterion":1,"score":1}]',
+      '[{"criterion":"content","score":"2"}]',
+      '[{"criterion":"content"}]',
+      '[{"criterion":"content","score":2,"note":"x"}]',
+    ]) {
+      expect(() => scoreFromRatings(ESSAY, JSON.parse(bad)), bad).toThrow(DataError);
+    }
+    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: Number.NaN }])).toThrow(DataError);
+    expect(() => scoreFromRatings(ESSAY, [{ criterion: "content", score: Number.POSITIVE_INFINITY }])).toThrow(
+      DataError,
+    );
+  });
+});
+
+describe("the arguments of the rubric functions", () => {
+  it("refuses a document that is not an item or a test of the model", () => {
+    expect(() => readScoringRubrics(JSON.parse("null"))).toThrow(
+      new DataError("The document must be an object, found null."),
+    );
+    expect(() => readScoringRubrics(JSON.parse('{"kind":"section"}'))).toThrow(
+      new DataError('The document must be an item or a test of the model, found "section".'),
+    );
+    expect(() => readScoringRubrics(JSON.parse('{"kind":"assessment-test","rubricBlocks":"x"}'))).toThrow(DataError);
+    expect(() => readScoringRubrics(JSON.parse('{"kind":"assessment-item","body":{"children":1}}'))).toThrow(DataError);
+  });
+
+  it("refuses a marked block that is not the model", () => {
+    const block = (properties: string) =>
+      `{"kind":"assessment-test","rubricBlocks":[{"kind":"rubric-block","class":["external-scoring-rubric"],${properties}}]}`;
+    for (const bad of [
+      block('"view":["scorer"],"contentBody":null,"extensions":[]'),
+      block('"view":["scorer"],"contentBody":{"children":1},"extensions":[]'),
+      block('"view":["scorer"],"contentBody":{"children":[]},"extensions":"x"'),
+      block('"view":"scorer","contentBody":{"children":[]},"extensions":[]'),
+    ]) {
+      expect(() => readScoringRubrics(JSON.parse(bad)), bad).toThrow(DataError);
+    }
+  });
+
+  it("refuses notes that are not nodes, or hold a list, and a rubric that fails the check", () => {
+    expect(() => scoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
+      new DataError("The notes must be an array, found null."),
+    );
+    expect(() => scoringRubricBlock(ESSAY, JSON.parse('["x"]'))).toThrow(
+      new DataError("The notes must be nodes of body content, found an array."),
+    );
+    expect(() => scoringRubricBlock(ESSAY, [{ kind: "ol", items: [], extensions: [] }])).toThrow(
+      new DataError("The notes must not contain an ol, which a reader would take for the criteria."),
+    );
+    expect(() => scoringRubricBlock(JSON.parse("{}"))).toThrow(DataError);
+    expect(() => scoringRubricBlock({ ...ESSAY, kind: "holistic" })).toThrow(DataError);
+  });
+
+  it("names the class token that marks the block", () => {
+    expect(SCORING_RUBRIC_CLASS).toBe("external-scoring-rubric");
   });
 });
 
@@ -4031,6 +4504,12 @@ describe("the guide", () => {
     const asi = await import("../src/asi/index.js");
     expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBeGreaterThan(0);
   });
+
+  it("shows the results that the samples of the conventions give", async () => {
+    const guide = new URL("../../../docs/runtime/conventions.md", import.meta.url);
+    const asi = await import("../src/asi/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(5);
+  });
 });
 
 describe("properties", () => {
@@ -4114,5 +4593,82 @@ describe("properties", () => {
       fc.constantFrom(...DOCUMENT_ARBITRARIES.values()).chain((arbitrary) => arbitrary.map(writeAsi)),
       readAsi,
     );
+  });
+
+  it("reads back any scoring rubric that the builder writes, in an item and in a test, through the XML", () => {
+    fc.assert(
+      fc.property(SCORING_RUBRICS, (rubric) => {
+        const block = scoringRubricBlock(rubric);
+        const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
+        const inTest: AssessmentTest = { ...testModel(), rubricBlocks: [block] };
+        expect(() => checkScoringRubric(rubric)).not.toThrow();
+        for (const document of [
+          { kind: "item", item: inItem },
+          { kind: "test", test: inTest },
+        ] as const) {
+          const again = readAsi(writeAsi(document));
+          const found = again.kind === "item" ? again.item : again.kind === "test" ? again.test : undefined;
+          expect(found && readScoringRubrics(found).get(rubric.outcomeIdentifier)).toEqual(rubric);
+        }
+      }),
+    );
+  });
+
+  it("scores any complete ratings between the lowest and the highest sum, whatever their order, and gives null for less", () => {
+    const rated = SCORING_RUBRICS.chain((rubric) =>
+      fc
+        .tuple(...rubric.criteria.map(({ levels }) => fc.constantFrom(...levels.map(({ score }) => score))))
+        .chain((scores) => {
+          const ratings = rubric.criteria.map(({ identifier }, index) => ({
+            criterion: identifier,
+            score: scores[index] ?? 0,
+          }));
+          return fc.tuple(
+            fc.constant(rubric),
+            fc.shuffledSubarray(ratings, { minLength: ratings.length, maxLength: ratings.length }),
+            fc.integer({ min: 0, max: ratings.length - 1 }),
+          );
+        }),
+    );
+    fc.assert(
+      fc.property(rated, ([rubric, ratings, omitted]) => {
+        const score = scoreFromRatings(rubric, ratings);
+        const lowest = rubric.criteria.reduce(
+          (sum, { weight, levels }) => sum + weight * Math.min(...levels.map((level) => level.score)),
+          0,
+        );
+        const highest = rubric.criteria.reduce(
+          (sum, { weight, levels }) => sum + weight * Math.max(...levels.map((level) => level.score)),
+          0,
+        );
+        expect(score).not.toBeNull();
+        expect(score).toBeGreaterThanOrEqual(lowest);
+        expect(score).toBeLessThanOrEqual(highest);
+        expect(
+          scoreFromRatings(
+            rubric,
+            ratings.toSorted((first, second) => first.criterion.localeCompare(second.criterion)),
+          ),
+        ).toBe(score);
+        expect(
+          scoreFromRatings(
+            rubric,
+            ratings.filter((_, index) => index !== omitted),
+          ),
+        ).toBeNull();
+        expect(scoreRange(rubric)).toEqual({ minimum: lowest, maximum: highest });
+      }),
+    );
+  });
+
+  it("reads a mutated document with a scoring rubric into the rubrics or refuses it with a ReadError or a SecurityError", () => {
+    const documents = SCORING_RUBRICS.map((rubric) => {
+      const block = scoringRubricBlock(rubric);
+      return writeAsi({ kind: "item", item: { ...itemOf(item()), body: { kind: "item-body", children: [block] } } });
+    });
+    fuzzReader(documents, (input) => {
+      const document = readAsi(input);
+      return document.kind === "item" ? readScoringRubrics(document.item) : undefined;
+    });
   });
 });

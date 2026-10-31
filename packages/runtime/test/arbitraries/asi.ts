@@ -1,5 +1,12 @@
 import fc from "fast-check";
-import type { AsiDocument, AttributeType } from "../../src/asi/index.js";
+import type {
+  AsiDocument,
+  AttributeType,
+  RubricCriterion,
+  RubricKind,
+  RubricLevel,
+  ScoringRubric,
+} from "../../src/asi/index.js";
 import { foreignName, kindOf, type SlotDef, type SlotInfo, type TypeInfo, typeNamed } from "../../src/asi/internal.js";
 import { isRecord } from "../../src/checks.js";
 import {
@@ -292,3 +299,77 @@ export const DOCUMENT_ARBITRARIES: ReadonlyMap<AsiDocument["kind"], fc.Arbitrary
     modelArbitrary(type, elementName).map((model): AsiDocument => ({ kind, [property]: model }) as AsiDocument),
   ]),
 );
+
+/** Text in the normal form that a rubric block keeps: no white space at the ends and single spaces between words. */
+const rubricText = fc
+  .array(fc.string({ unit: fc.constantFrom(..."abcXYZ019<>&\"'-_.,:;é日😀"), minLength: 1, maxLength: 6 }), {
+    minLength: 1,
+    maxLength: 3,
+  })
+  .map((words) => words.join(" "));
+
+/** The scores of the levels of a criterion that has `count` of them: distinct whole numbers, in any order. */
+const rubricScores = (count: number): fc.Arbitrary<number[]> =>
+  fc.uniqueArray(fc.integer({ min: 0, max: 10 }), { minLength: count, maxLength: count });
+
+/** The levels of a criterion for a set of scores, each with a quality and a description or without. */
+const rubricLevels = (scores: readonly number[]): fc.Arbitrary<RubricLevel[]> =>
+  fc.tuple(
+    ...scores.map((score) =>
+      fc.tuple(fc.option(rubricText, { nil: undefined }), fc.option(rubricText, { nil: undefined })).map(
+        ([quality, description]): RubricLevel => ({
+          score,
+          ...(quality === undefined ? {} : { quality }),
+          ...(description === undefined ? {} : { description }),
+        }),
+      ),
+    ),
+  );
+
+/** The scores of the levels of a criterion of a kind: the shape that the kind requires. */
+const SCORES_OF_KIND: Readonly<Record<RubricKind, fc.Arbitrary<number[]>>> = {
+  analytic: fc.integer({ min: 2, max: 5 }).chain(rubricScores),
+  holistic: fc.integer({ min: 2, max: 5 }).chain(rubricScores),
+  checklist: fc.integer({ min: 1, max: 10 }).chain((met) => fc.constantFrom([0, met], [met, 0])),
+  "single-point": fc
+    .uniqueArray(fc.integer({ min: 0, max: 10 }), { minLength: 3, maxLength: 3 })
+    .map((scores) => scores.toSorted((first, second) => first - second)),
+};
+
+/** The weights of the criteria: whole numbers, so that a sum is exact, and a few fractions that are not. */
+const rubricWeights = fc.constantFrom(1, 2, 3, 5, 0.5, 0.1);
+
+function criterionOf(kind: RubricKind, identifier: string): fc.Arbitrary<RubricCriterion> {
+  return fc
+    .tuple(
+      SCORES_OF_KIND[kind].chain(rubricLevels),
+      kind === "holistic" ? fc.constant(1) : rubricWeights,
+      fc.option(rubricText, { nil: undefined }),
+    )
+    .map(([levels, weight, description]) => ({
+      identifier,
+      weight,
+      ...(description === undefined ? {} : { description }),
+      levels,
+    }));
+}
+
+/** Scoring rubrics of every kind, with the shape that the kind requires. */
+export const SCORING_RUBRICS: fc.Arbitrary<ScoringRubric> = fc
+  .constantFrom<RubricKind[]>("analytic", "holistic", "checklist", "single-point")
+  .chain((kind) =>
+    fc
+      .tuple(
+        identifier,
+        fc.option(fc.constantFrom("en", "id", "en-GB"), { nil: undefined }),
+        fc.uniqueArray(identifier, { minLength: 1, maxLength: kind === "holistic" ? 1 : 4 }),
+      )
+      .chain(([outcomeIdentifier, language, identifiers]) =>
+        fc.tuple(...identifiers.map((name) => criterionOf(kind, name))).map((criteria) => ({
+          outcomeIdentifier,
+          kind,
+          ...(language === undefined ? {} : { language }),
+          criteria,
+        })),
+      ),
+  );

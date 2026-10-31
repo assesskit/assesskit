@@ -1,16 +1,14 @@
-import { checkArray, checkRecord, checkString, describe, isRecord } from "../checks.js";
+import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 import { xmlTokens } from "../values/internal.js";
-import type { XmlAttribute, XmlNode } from "../xml/index.js";
+import { attributeOf, entryText, type ListEntry, OUTCOME_ATTRIBUTE, type RubricContent } from "./convention-markup.js";
 import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
-import { typeNamed } from "./type-index.js";
-import { writeElement } from "./write.js";
+import { isModelNode } from "./nodes.js";
 
 /** The class token that marks a test-level rubric block as the covers of an outcome (a convention of the runtime). */
 export const SCORE_COVERS_CLASS = "external-score-covers";
-/** The attributes of the convention: the outcome on the block, and the item reference and response on an `li`. */
-const OUTCOME_ATTRIBUTE = "data-outcome-identifier";
+/** The attributes of the convention besides the outcome: the item reference and response on an `li`. */
 const ITEM_ATTRIBUTE = "data-item-ref";
 const RESPONSE_ATTRIBUTE = "data-response-identifier";
 
@@ -44,29 +42,13 @@ export interface ScoreCoverBlock {
   readonly entries: readonly ScoreCoverEntry[];
 }
 
-/** A list entry of the convention, as the model has it. */
-type Entry = ElementModel<"LI", "li">;
-
 /** A list of the convention, as the model has it. */
 type List = ElementModel<"OUL", "ul">;
 
-/** A node of the content of a rubric block of a test. */
-type RubricContent = TestRubricBlock["contentBody"]["children"][number];
-
-function attributeOf(element: { readonly extensions: readonly XmlAttribute[] }, name: string): string | undefined {
-  return element.extensions.find((attribute) => attribute.namespace === "" && attribute.name === name)?.value;
-}
-
-/** Returns the text of a node and its descendants. */
-function textOf(node: XmlNode): string {
-  if (node.kind === "text" || node.kind === "cdata") return node.value;
-  return node.kind === "element" ? node.children.map(textOf).join("") : "";
-}
-
-function entryOf(entry: Entry): ScoreCoverEntry {
+function entryOf(entry: ListEntry): ScoreCoverEntry {
   const itemRef = attributeOf(entry, ITEM_ATTRIBUTE);
   const responseIdentifier = attributeOf(entry, RESPONSE_ATTRIBUTE);
-  const label = xmlTokens(textOf(writeElement(typeNamed("LI"), "li", entry))).join(" ");
+  const label = entryText(entry);
   return {
     ...(itemRef === undefined ? {} : { itemRef }),
     ...(responseIdentifier === undefined ? {} : { responseIdentifier }),
@@ -138,17 +120,12 @@ export function readScoreCovers(test: AssessmentTest): ReadonlyMap<string, reado
   return covers;
 }
 
-/** Returns whether a value has the field that tells the nodes of body content apart; `writeAsi` checks the rest. */
-function isNodeLike(value: unknown): boolean {
-  return isRecord(value) && typeof value.kind === "string";
-}
-
 function checkIdentifier(value: unknown, label: string): string {
   if (!isIdentifier(value)) throw new DataError(`${label} must be an identifier, found ${describe(value)}.`);
   return value;
 }
 
-function coverEntry(cover: unknown): Entry {
+function coverEntry(cover: unknown): ListEntry {
   checkRecord(cover, "A cover must be an object");
   const { itemRef, responseIdentifier, label } = cover;
   if (label !== undefined) checkString(label, "The label of a cover");
@@ -189,7 +166,7 @@ export function scoreCoversBlock(
   checkIdentifier(outcomeIdentifier, "The outcome identifier");
   checkArray(covers, "The covers must be an array");
   checkArray(notes, "The notes must be an array");
-  if (!notes.every(isNodeLike)) {
+  if (!notes.every(isModelNode)) {
     throw new DataError(`The notes must be nodes of body content, found ${describe(notes)}.`);
   }
   const list: List = { kind: "ul", items: covers.map(coverEntry), extensions: [] };
