@@ -1641,8 +1641,10 @@ describe("response processing", () => {
       `${Choice}<qti-response-processing><qti-set-outcome-value identifier="SCORE">${bv("float", 1)}</qti-set-outcome-value></qti-response-processing>`,
     );
     const variables = createItemVariables(item);
-    runResponseProcessing(item, variables, CONTEXT);
+    const first = runResponseProcessing(item, variables, CONTEXT);
     expect(variables.outcomes.get("SCORE")).toEqual(float(0));
+    expect(first.outcomes.get("SCORE")).toEqual(float(1));
+    expect(runResponseProcessing(item, variables, CONTEXT)).toEqual(first);
     expect(() => runResponseProcessing(json("null"), variables, CONTEXT)).toThrow(
       "The item must be an object of the model of qti-assessment-item, found null.",
     );
@@ -2020,6 +2022,13 @@ describe("item variables", () => {
     <qti-outcome-declaration identifier="SET" cardinality="multiple" base-type="integer"/>
     <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"><qti-default-value><qti-value>none</qti-value></qti-default-value></qti-outcome-declaration>
     <qti-template-declaration identifier="X" cardinality="single" base-type="float"/>`);
+
+  it("starts every session from the declared values, and a context value changes only the session that gets it", () => {
+    const given = createItemVariables(item, { context: new Map([["TERM", id("summer")]]) });
+    expect(given.contexts.get("TERM")).toEqual(id("summer"));
+    expect(createItemVariables(item).contexts.get("TERM")).toEqual(id("spring"));
+    expect(createItemVariables(item, { context: new Map() })).toEqual(createItemVariables(item));
+  });
 
   it("creates the variables of a new session: NULL responses, outcomes from their defaults or 0, the built-ins", () => {
     const variables = createItemVariables(item);

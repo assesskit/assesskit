@@ -54,6 +54,7 @@ function withTemplateDefaults(
       `The option templateDefaults must be a Map from identifier to value, found ${describe(given)}.`,
     );
   }
+  if (given.size === 0) return variables;
   const defaults = new Map(variables.defaults);
   const templates = new Map(variables.templates);
   for (const [identifier, value] of given) {

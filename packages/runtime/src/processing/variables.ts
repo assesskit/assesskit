@@ -127,9 +127,10 @@ function givenContexts(item: AssessmentItem, given: unknown): Map<string, Value 
   if (!(given instanceof Map)) {
     throw new DataError(`The option context must be a Map from identifier to value, found ${describe(given)}.`);
   }
+  const values = new Map<string, Value | null>();
+  if (given.size === 0) return values;
   const types = new Map<string, VariableType>(BUILT_IN_CONTEXTS);
   for (const declaration of item.contextDeclarations) types.set(declaration.identifier, declaration);
-  const values = new Map<string, Value | null>();
   for (const [identifier, value] of given) {
     const type = types.get(identifier);
     if (type === undefined) {
@@ -142,30 +143,19 @@ function givenContexts(item: AssessmentItem, given: unknown): Map<string, Value 
   return values;
 }
 
+/** The variables that items declare, before any context values: an item never changes, so its declared values are read once. */
+const DECLARED = new WeakMap<AssessmentItem, ItemVariables>();
+
 /**
- * Creates the variables of a new item session, before template processing: response variables are NULL (the delivery
- * engine applies their default values at the start of the first attempt), outcomes have their default values, else 0
- * for a single integer or float and NULL otherwise, template and context variables have their default values, else
- * NULL, and the correct responses and default values are the declared ones.
+ * Returns the variables an item declares: each variable at its default value, the correct responses, and the built-in
+ * variables at their first values.
  *
- * @remarks
- * `numAttempts` is 0, `duration` 0 seconds, `completionStatus` is `not_attempted`, and `QTI_CONTEXT` is NULL unless the
- * option `context` gives it.
- *
- * @param item - The item, as `readAsi` reads it.
- * @param options - See {@link CreateItemVariablesOptions}.
- * @returns The variables of the session.
- * @throws `DataError` when an argument has the wrong type, or the option `context` names a variable the item does not
- * declare or gives a value of another type than its declaration.
  * @throws `ProcessingError` when a declared value is not in the lexical form of its base type or does not fit its
  * variable.
- * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-export function createItemVariables(item: AssessmentItem, options: CreateItemVariablesOptions = {}): ItemVariables {
-  checkItem(item);
-  checkOptions(options);
-  const { context = new Map<string, Value | null>() } = options;
-  const given = givenContexts(item, context);
+function declaredVariables(item: AssessmentItem): ItemVariables {
+  const known = DECLARED.get(item);
+  if (known !== undefined) return known;
   const defaults = new Map<string, Value | null>();
   const declare = (
     identifier: string,
@@ -183,7 +173,6 @@ export function createItemVariables(item: AssessmentItem, options: CreateItemVar
       declare(declaration.identifier, declaration, declaration.defaultValue?.values),
     );
   }
-  for (const [identifier, value] of given) contexts.set(identifier, value);
   const responses = new Map<string, Value | null>([
     [NUM_ATTEMPTS, integerResult(0)],
     [DURATION, { cardinality: "single", baseType: "duration", value: 0 }],
@@ -212,5 +201,35 @@ export function createItemVariables(item: AssessmentItem, options: CreateItemVar
       declare(declaration.identifier, declaration, declaration.defaultValue?.values),
     );
   }
-  return { contexts, responses, outcomes, templates, correctResponses, defaults };
+  const variables = { contexts, responses, outcomes, templates, correctResponses, defaults };
+  DECLARED.set(item, variables);
+  return variables;
+}
+
+/**
+ * Creates the variables of a new item session, before template processing: response variables are NULL (the delivery
+ * engine applies their default values at the start of the first attempt), outcomes have their default values, else 0
+ * for a single integer or float and NULL otherwise, template and context variables have their default values, else
+ * NULL, and the correct responses and default values are the declared ones.
+ *
+ * @remarks
+ * `numAttempts` is 0, `duration` 0 seconds, `completionStatus` is `not_attempted`, and `QTI_CONTEXT` is NULL unless the
+ * option `context` gives it.
+ *
+ * @param item - The item, as `readAsi` reads it.
+ * @param options - See {@link CreateItemVariablesOptions}.
+ * @returns The variables of the session.
+ * @throws `DataError` when an argument has the wrong type, or the option `context` names a variable the item does not
+ * declare or gives a value of another type than its declaration.
+ * @throws `ProcessingError` when a declared value is not in the lexical form of its base type or does not fit its
+ * variable.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
+export function createItemVariables(item: AssessmentItem, options: CreateItemVariablesOptions = {}): ItemVariables {
+  checkItem(item);
+  checkOptions(options);
+  const { context = new Map<string, Value | null>() } = options;
+  const given = givenContexts(item, context);
+  const declared = declaredVariables(item);
+  return { ...declared, contexts: given.size === 0 ? declared.contexts : new Map([...declared.contexts, ...given]) };
 }
