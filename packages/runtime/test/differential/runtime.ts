@@ -112,7 +112,7 @@ function failureOf(step: ItemStep): string | undefined {
 }
 
 /** Reads the responses of a turn as values of their declarations; a response the item does not declare is left out. */
-function turnValues(item: AssessmentItem, responses: Turn["responses"]): Map<string, Value | null> {
+export function turnValues(item: AssessmentItem, responses: Turn["responses"]): Map<string, Value | null> {
   const values = new Map<string, Value | null>();
   for (const declaration of item.responseDeclarations) {
     const { identifier } = declaration;
@@ -136,6 +136,11 @@ function playTurn(session: ItemSession, { responses, endAttempt }: Turn, context
   return answered.ok ? applyItemAction(answered.session, { ...ending, at: at + 1 }, context) : answered;
 }
 
+/** The context of a session of an item delivered alone, without a limit on attempts, as the oracle has none. */
+export function sessionContext(item: AssessmentItem, seed: number): ItemSessionContext {
+  return { item, control: { ...standaloneSessionControl(), maxAttempts: 0 }, random: longsightRandom(seed) };
+}
+
 /**
  * Plays a session of an item delivered alone, without a limit on attempts, as the oracle has none. Template and
  * response processing draw from the oracle's generator with the case's seed, and the choices shuffle from another, as
@@ -146,11 +151,7 @@ function play({ xml, turns, seed }: SessionCase): Play {
   const document = readAsi(xml);
   if (document.kind !== "item") return { accepted: false, reason: `The document is a ${document.kind}.` };
   const { item } = document;
-  const context: ItemSessionContext = {
-    item,
-    control: { ...standaloneSessionControl(), maxAttempts: 0 },
-    random: longsightRandom(seed),
-  };
+  const context = sessionContext(item, seed);
   const started = startItemSession({ ref: item.identifier, instance: 1 }, 0, context);
   const failure = failureOf(started);
   if (!started.ok || failure !== undefined) return { accepted: false, reason: failure ?? "The session did not start." };

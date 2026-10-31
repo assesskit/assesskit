@@ -75,8 +75,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-  # The benchmarks of the runtime on generated inputs. The job fails when the fastest sample of a benchmark is above its budget
-  # (docs/runtime/architecture.md#performance).
+  # The benchmarks of the runtime on generated inputs and on the 1EdTech examples, which it times against Longsight qti3-core.
+  # The job fails when the fastest sample of a benchmark is above its budget (docs/runtime/architecture.md#performance).
   bench:
     needs: changes
     if: needs.changes.outputs.runtime == 'true'
@@ -89,6 +89,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm corpus
       - run: pnpm bench
 
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
