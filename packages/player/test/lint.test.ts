@@ -17,8 +17,9 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   scoring: ["messages", "protocol"],
   caliper: ["messages", "protocol"],
   cat: ["messages", "protocol"],
+  "cat-rest": ["messages", "protocol"],
   lti: ["messages", "protocol"],
-  server: ["messages", "protocol", "scoring", "caliper", "cat", "lti"],
+  server: ["messages", "protocol", "scoring", "caliper", "cat", "cat-rest", "lti"],
 };
 const FOLDERS = Object.keys(LAYERS);
 const SHARED = ["errors", "checks"];
@@ -100,14 +101,30 @@ const platform = {
     'import { readFileSync } from "node:fs";',
     "export const a = readFileSync;",
   ]),
+  nodeInSharedLayer3: ["scoring", "cat"].map((folder) =>
+    source(`${SRC}/${folder}/node.ts`, ['import { readFileSync } from "node:fs";', "export const a = readFileSync;"]),
+  ),
+  nodeInCatRest: source(`${SRC}/cat-rest/node.ts`, [
+    'import { readFileSync } from "node:fs";',
+    "export const a = readFileSync;",
+  ]),
   documentInShared: source(`${SRC}/protocol/document.ts`, ["export const a = document.title;"]),
   documentInBrowser: source(`${SRC}/player/document.ts`, ["export const a = document.title;"]),
   documentInServer: source(`${SRC}/server/document.ts`, ["export const a = document.title;"]),
+  documentInSharedLayer3: ["scoring", "cat"].map((folder) =>
+    source(`${SRC}/${folder}/document.ts`, ["export const a = document.title;"]),
+  ),
+  documentInCatRest: source(`${SRC}/cat-rest/document.ts`, ["export const a = document.title;"]),
   timerInShared: source(`${SRC}/protocol/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
   timerInBrowser: source(`${SRC}/client/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
+  timerInSharedLayer3: ["scoring", "cat"].map((folder) =>
+    source(`${SRC}/${folder}/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
+  ),
+  timerInCatRest: source(`${SRC}/cat-rest/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
   fetchInShared: source(`${SRC}/protocol/fetch.ts`, ['export const a = fetch("https://example.org");']),
   fetchInBrowser: source(`${SRC}/player/fetch.ts`, ['export const a = fetch("https://example.org");']),
   fetchInServer: source(`${SRC}/lti/fetch.ts`, ['export const a = fetch("https://example.org");']),
+  fetchInCatRest: source(`${SRC}/cat-rest/fetch.ts`, ['export const a = fetch("https://example.org");']),
   fetchOption: source(`${SRC}/lti/option.ts`, [
     "export async function load(fetch: (url: string) => Promise<string>) {",
     '  return fetch("https://example.org");',
@@ -121,6 +138,7 @@ const official = {
   inPlayer: source(`${SRC}/player/official.ts`, ['export * from "../protocol/official.js";']),
   inClient: source(`${SRC}/client/official.ts`, ['export { markOfficial } from "../protocol/official";']),
   inScoring: source(`${SRC}/scoring/official.ts`, ['export * from "../protocol/official.js";']),
+  inCatRest: source(`${SRC}/cat-rest/official.ts`, ['export * from "../protocol/official.js";']),
   inServer: source(`${SRC}/server/official.ts`, ['export * from "../protocol/official.js";']),
   inLti: source(`${SRC}/lti/official.ts`, ['export * from "../protocol/official.js";']),
   inProtocol: source(`${SRC}/protocol/official-copy.ts`, ['export * from "./official.js";']),
@@ -129,6 +147,7 @@ const runtimeByPath = {
   inShared: source(`${SRC}/protocol/runtime.ts`, ['export * from "../../../runtime/src/xml/index.js";']),
   inBrowser: source(`${SRC}/player/runtime.ts`, ['export * from "../../../runtime/dist/index.js";']),
   inServer: source(`${SRC}/server/runtime.ts`, ['export * from "@assesskit/runtime/xml";']),
+  catOfRuntime: source(`${SRC}/cat-rest/runtime-cat.ts`, ['export * from "@assesskit/runtime/cat";']),
 };
 
 const bans = [
@@ -226,7 +245,7 @@ describe("layering", () => {
   });
 
   it("lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
-    for (const path of [official.inPlayer, official.inClient, official.inScoring]) {
+    for (const path of [official.inPlayer, official.inClient, official.inScoring, official.inCatRest]) {
       expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
     }
     for (const path of [official.inServer, official.inLti, official.inProtocol]) {
@@ -239,29 +258,51 @@ describe("layering", () => {
     expect(whatFor(runtimeByPath.inBrowser)).toContain(RESTRICTED_IMPORT);
     expect(whatFor(runtimeByPath.inServer)).not.toContain(RESTRICTED_IMPORT);
   });
+
+  it("lets cat-rest/ import the cat subpath of the runtime, though it may not import the cat/ folder", () => {
+    expect(whatFor(runtimeByPath.catOfRuntime)).not.toContain(RESTRICTED_IMPORT);
+  });
 });
 
 describe("platform rules", () => {
   it("keeps Node.js out of the shared and browser folders and lets the server folders use it", () => {
-    expect(whatFor(platform.nodeInShared)).toContain("lint/correctness/noNodejsModules");
-    expect(whatFor(platform.nodeInBrowser)).toContain("lint/correctness/noNodejsModules");
-    expect(whatFor(platform.nodeInServer)).not.toContain("lint/correctness/noNodejsModules");
+    for (const path of [platform.nodeInShared, platform.nodeInBrowser, ...platform.nodeInSharedLayer3]) {
+      expect(whatFor(path), path).toContain("lint/correctness/noNodejsModules");
+    }
+    for (const path of [platform.nodeInServer, platform.nodeInCatRest]) {
+      expect(whatFor(path), path).not.toContain("lint/correctness/noNodejsModules");
+    }
     expect(whatFor(platform.env)).toContain("lint/style/noProcessEnv");
   });
 
   it("keeps the DOM out of the shared and server folders and lets the browser folders use it", () => {
-    expect(whatFor(platform.documentInShared)).toContain("lint/style/noRestrictedGlobals");
-    expect(whatFor(platform.documentInServer)).toContain("lint/style/noRestrictedGlobals");
+    for (const path of [
+      platform.documentInShared,
+      ...platform.documentInSharedLayer3,
+      platform.documentInServer,
+      platform.documentInCatRest,
+    ]) {
+      expect(whatFor(path), path).toContain("lint/style/noRestrictedGlobals");
+    }
     expect(whatFor(platform.documentInBrowser)).not.toContain("lint/style/noRestrictedGlobals");
   });
 
   it("keeps timers out of the shared folders only", () => {
-    expect(whatFor(platform.timerInShared)).toContain("lint/style/noRestrictedGlobals");
-    expect(whatFor(platform.timerInBrowser)).not.toContain("lint/style/noRestrictedGlobals");
+    for (const path of [platform.timerInShared, ...platform.timerInSharedLayer3]) {
+      expect(whatFor(path), path).toContain("lint/style/noRestrictedGlobals");
+    }
+    for (const path of [platform.timerInBrowser, platform.timerInCatRest]) {
+      expect(whatFor(path), path).not.toContain("lint/style/noRestrictedGlobals");
+    }
   });
 
   it("lets fetch appear only as an option parameter", () => {
-    for (const path of [platform.fetchInShared, platform.fetchInBrowser, platform.fetchInServer]) {
+    for (const path of [
+      platform.fetchInShared,
+      platform.fetchInBrowser,
+      platform.fetchInServer,
+      platform.fetchInCatRest,
+    ]) {
       expect(whatFor(path), path).toContain("lint/style/noRestrictedGlobals");
     }
     expect(whatFor(platform.fetchOption)).not.toContain("lint/style/noRestrictedGlobals");

@@ -853,7 +853,9 @@
         "packages/player/src/errors.ts",
         "packages/player/src/checks.ts",
         "packages/player/src/messages/**",
-        "packages/player/src/protocol/**"
+        "packages/player/src/protocol/**",
+        "packages/player/src/scoring/**",
+        "packages/player/src/cat/**"
       ],
       "linter": {
         "rules": {
@@ -914,9 +916,8 @@
     },
     {
       "includes": [
-        "packages/player/src/scoring/**",
         "packages/player/src/caliper/**",
-        "packages/player/src/cat/**",
+        "packages/player/src/cat-rest/**",
         "packages/player/src/lti/**",
         "packages/player/src/server/**"
       ],
@@ -1032,6 +1033,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1071,6 +1074,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1108,6 +1113,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1149,6 +1156,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1190,6 +1199,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1231,6 +1242,8 @@
                       "**/scoring/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1272,6 +1285,8 @@
                       "**/scoring/**",
                       "**/caliper",
                       "**/caliper/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
@@ -1295,7 +1310,7 @@
       }
     },
     {
-      "includes": ["packages/player/src/cat/**"],
+      "includes": ["packages/player/src/cat-rest/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1313,12 +1328,19 @@
                       "**/scoring/**",
                       "**/caliper",
                       "**/caliper/**",
+                      "**/cat",
+                      "**/cat/**",
+                      "!@assesskit/runtime/cat",
                       "**/lti",
                       "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
-                    "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                    "message": "cat-rest/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
+                  },
+                  {
+                    "group": ["**/protocol/official", "**/protocol/official.js"],
+                    "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
                     "group": ["../**/runtime/**"],
@@ -1352,6 +1374,8 @@
                       "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
+                      "**/cat-rest",
+                      "**/cat-rest/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1379,7 +1403,7 @@
                 "patterns": [
                   {
                     "group": ["**/player", "**/player/**", "**/client", "**/client/**"],
-                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, caliper/, cat/ and lti/ only."
+                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, caliper/, cat/, cat-rest/ and lti/ only."
                   },
                   {
                     "group": ["../**/runtime/**"],

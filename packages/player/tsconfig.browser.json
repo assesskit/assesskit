@@ -16,6 +16,8 @@
     "src/checks.ts",
     "src/messages",
     "src/protocol",
+    "src/scoring",
+    "src/cat",
     "src/player",
     "src/client"
   ]

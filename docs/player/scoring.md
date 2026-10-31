@@ -22,10 +22,10 @@ sequenceDiagram
 
 | Step                                  | Where                                | Function                                 |
 | ------------------------------------- | ------------------------------------ | ---------------------------------------- |
-| Turn a request into a JSON submission | server, `@assesskit/player/scoring`  | `toSubmission`                           |
+| Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `toSubmission`                           |
 | Check a submission that arrived       | shared, `@assesskit/player/protocol` | `checkSubmission`                        |
 | Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                        |
-| Turn the rater's score into an action | server, `@assesskit/player/scoring`  | `toSupplyScores`                         |
+| Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `toSupplyScores`                         |
 | Give the action to the engine         | server, the runtime                  | `engine.apply(state, { ...action, at })` |
 
 The rating form and the rating workflow, such as assignment and double scoring, are the host's. A submission holds the correct

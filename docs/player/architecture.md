@@ -8,11 +8,14 @@ flowchart TB
   subgraph L4["Layer 4: server"]
     server["server<br/>session host, asset gate"]
   end
-  subgraph L3b["Layer 3: server side"]
-    scoring["scoring"]
+  subgraph L3c["Layer 3: server side"]
     caliper["caliper"]
-    cat["cat"]
+    catRest["cat-rest"]
     lti["lti"]
+  end
+  subgraph L3b["Layer 3: shared"]
+    scoring["scoring"]
+    cat["cat"]
   end
   subgraph L3a["Layer 3: browser side"]
     player["player"]
@@ -24,24 +27,25 @@ flowchart TB
   subgraph L1["Layer 1: shared"]
     base["errors.ts, checks.ts, messages"]
   end
-  server --> scoring & caliper & cat & lti
+  server --> scoring & cat & caliper & catRest & lti
   server --> protocol
-  scoring & caliper & cat & lti --> protocol
+  scoring & cat & caliper & catRest & lti --> protocol
   player & client --> protocol
   protocol --> base
   runtime[("@assesskit/runtime")]
-  player & client & server & scoring & caliper & cat & lti & protocol -.->|package name and subpath| runtime
+  player & client & server & scoring & cat & caliper & catRest & lti & protocol -.->|package name and subpath| runtime
 ```
 
-| Principle              | Rule                                                                                                                                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Thin over the runtime  | The player renders what the runtime's candidate view says. It evaluates no expression, decides no visibility or validity, chooses no variant and reimplements no codec.                             |
-| No keys in the browser | Browser folders import from `@assesskit/runtime/delivery` only `viewFromJson`, `actionToJson` and types (lint). Only `client/local.ts` loads the engine, with `import()`, for practice on a device. |
-| Browser baseline       | Shared and browser code stays inside the [baseline](baseline.md) (lint, and `pnpm compat`).                                                                                                         |
-| Deterministic          | `Math.random` fails lint. `Date.now`, `new Date()` and `performance.now()` fail lint except in `client/clock.ts` and `server/clock.ts`; time comes from a clock that the caller passes.             |
-| No hidden network      | `fetch` appears only as an option parameter (lint), so that a caller can replace it.                                                                                                                |
-| Untrusted input        | Every input is untrusted: envelopes, tokens, payloads and messages. Entry points validate their input, with valibot schemas for JSON, and throw `DataError`; inner functions validate shallowly.    |
-| Cited rules            | What the specifications and the runtime declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                        |
+| Principle              | Rule                                                                                                                                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Thin over the runtime  | The player renders what the runtime's candidate view says. It evaluates no expression, decides no visibility or validity, chooses no variant and reimplements no codec.                                         |
+| No keys in the browser | Browser folders import from `@assesskit/runtime/delivery` only `viewFromJson`, `actionToJson` and types (lint). Only `client/local.ts` loads the engine, with `import()`, for practice on a device.             |
+| Browser baseline       | Shared and browser code stays inside the [baseline](baseline.md) (lint, and `pnpm compat`).                                                                                                                     |
+| Deterministic          | `Math.random` fails lint. `Date.now`, `new Date()` and `performance.now()` fail lint except in `client/clock.ts` and `server/clock.ts`; time comes from a clock that the caller passes.                         |
+| No secret in a page    | `cat-rest/` takes the OAuth client secret of a CAT engine. No shared or browser folder imports it (lint), and `bundle.test.ts` checks that the bundles of the candidate and of practice hold none of its files. |
+| No hidden network      | `fetch` appears only as an option parameter (lint), so that a caller can replace it.                                                                                                                            |
+| Untrusted input        | Every input is untrusted: envelopes, tokens, payloads and messages. Entry points validate their input, with valibot schemas for JSON, and throw `DataError`; inner functions validate shallowly.                |
+| Cited rules            | What the specifications and the runtime declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                                    |
 
 ## Layers
 
@@ -49,16 +53,18 @@ A folder imports only the folders in its row, and imports never form cycles (lin
 below every folder; `checks.ts` holds the checks of `https` URLs and imports `@assesskit/runtime/checks`, `@assesskit/runtime/errors` and valibot only; the other checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
 to its row from its first file.
 
-| Layer | Folders                                | Side    | Imports                          |
-| ----- | -------------------------------------- | ------- | -------------------------------- |
-| 1     | `errors.ts`, `checks.ts`, `messages/`  | shared  | none of the folders below        |
-| 2     | `protocol/`                            | shared  | layer 1                          |
-| 3     | `player/`, `client/`                   | browser | layers 1 and 2                   |
-| 3     | `scoring/`, `caliper/`, `cat/`, `lti/` | server  | layers 1 and 2                   |
-| 4     | `server/`                              | server  | layers 1 to 3 of the server side |
+| Layer | Folders                               | Side    | Imports                                     |
+| ----- | ------------------------------------- | ------- | ------------------------------------------- |
+| 1     | `errors.ts`, `checks.ts`, `messages/` | shared  | none of the folders below                   |
+| 2     | `protocol/`                           | shared  | layer 1                                     |
+| 3     | `player/`, `client/`                  | browser | layers 1 and 2                              |
+| 3     | `scoring/`, `cat/`                    | shared  | layers 1 and 2                              |
+| 3     | `caliper/`, `cat-rest/`, `lti/`       | server  | layers 1 and 2                              |
+| 4     | `server/`                             | server  | layers 1 to 3, the browser folders excepted |
 
 Shared folders use no DOM, Node.js, timer or network API. Browser folders use the DOM and no Node.js. Server folders use
-Node.js or any server runtime, and no DOM. The player imports the runtime by package name and subpath, never by a relative path.
+Node.js or any server runtime, and no DOM. A page that runs practice on a device imports `client`, `scoring` and `cat`, which
+the [baseline](baseline.md) covers, and never `cat-rest`. The player imports the runtime by package name and subpath, never by a relative path.
 
 ## Subpaths
 
@@ -71,8 +77,9 @@ messages and nothing of the other subpaths, so that a browser bundle and a serve
 | `client`     | browser | The session clients: the remote session of exam mode with autosave, and the local session of practice ([client](client.md))                                                                                                                                                                                                                                                                                                                         |
 | `player`     | browser | `mountDelivery`, the player with its chrome ([delivery](delivery.md)); the renderer of content and the content root ([content](content.md)), the host of portable custom interactions ([PCI](pci.md)), the tools of an item ([tools](tools.md)), mathematics ([math](math.md)), speech ([speech](speech.md)), the interactions ([interactions](interactions.md), [graphics](graphics.md)) and the supports of a candidate ([supports](supports.md)) |
 | `protocol`   | shared  | The caller, the envelopes between a browser and a server, the session client, the official result and the submission that a rater reads ([protocol](protocol.md), [scoring](scoring.md))                                                                                                                                                                                                                                                            |
-| `scoring`    | server  | The submission of a scoring request and the action that supplies its score; `player` shows the submission to a rater ([scoring](scoring.md))                                                                                                                                                                                                                                                                                                        |
-| `cat`        | server  | The CAT engine over the REST binding of CAT 1.0, and the deployment of a package ([CAT](cat.md))                                                                                                                                                                                                                                                                                                                                                    |
+| `scoring`    | shared  | The submission of a scoring request and the action that supplies its score; `player` shows the submission to a rater ([scoring](scoring.md))                                                                                                                                                                                                                                                                                                        |
+| `cat`        | shared  | The deployment of the adaptive sections of a package to their CAT engines, through any `CatPort` ([CAT](cat.md))                                                                                                                                                                                                                                                                                                                                    |
+| `cat-rest`   | server  | The client of a remote CAT engine over the REST binding of CAT 1.0, with the OAuth client secret ([CAT](cat.md))                                                                                                                                                                                                                                                                                                                                    |
 | `caliper`    | server  | Caliper 1.2 events from the events of a session, their identifiers, and the sensor that sends them ([Caliper](caliper.md))                                                                                                                                                                                                                                                                                                                          |
 | `lti`        | server  | LTI 1.3: the tool role, with the publication of a score ([lti](lti.md)), and the platform role ([lti-platform](lti-platform.md))                                                                                                                                                                                                                                                                                                                    |
 | `server`     | server  | The session host of exam mode and the asset gate ([server](server.md), [asset gate](asset-gate.md)); what the host does with the events of each step: the host's log and Caliper ([Caliper](caliper.md)); the scores of LTI items ([server](server.md#the-scores-of-lti-items))                                                                                                                                                                     |

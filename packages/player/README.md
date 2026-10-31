@@ -15,16 +15,18 @@ flowchart LR
   end
   subgraph shared["Shared"]
     protocol["protocol<br/>envelopes, caller, submission"]
+    practice["scoring, cat<br/>submission, score, deployment"]
     base["errors, messages"]
   end
   subgraph server["Server"]
     host["server<br/>session host, asset gate"]
-    integrations["lti, cat, caliper, scoring"]
+    integrations["lti, cat-rest, caliper"]
   end
   runtime[("@assesskit/runtime")]
   player --> client --> protocol
   client <-->|"JSON envelopes"| host
   host --> integrations --> protocol
+  host --> practice --> protocol
   protocol --> base
   host --> runtime
   client -.->|"viewFromJson, actionToJson"| runtime
@@ -70,7 +72,8 @@ lists what that allows and how it is tested.
 | `@assesskit/player/scoring`             | `toSubmission`, `toSupplyScores`; `SupplyScores`, `ScoreInput`                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `@assesskit/player/client`              | `createRemoteSession`, `createLocalSession`, `Transport`, `LocalStore`, `Clock`, `BROWSER_CLOCK`, `AUTOSAVE_MS`, `FLUSH_BEFORE_DEADLINE_MS`, `assetResolver`                                                                                                                                                                                                                                                                                                                      |
 | `@assesskit/player/lti`                 | Tool role: `ltiLogin`, `ltiLaunch`, `deepLinkResponse`, `ltiAccessToken`, `publishScore`, `createJwksCache`. Platform role: `ltiPlatformLogin`, `ltiPlatformFrame`, `ltiPlatformAuthorize`, `platformJwks`, `platformStorage`, `platformToken`, `agsLineItem`, `agsScores`, `readAgsScore`, `platformEndpoints`. The types of their arguments and results                                                                                                                         |
-| `@assesskit/player/cat`                 | `restCatPort`, `deployCatSections`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results                                                                                                                                                                                                                                                                                                                                                                  |
+| `@assesskit/player/cat`                 | `deployCatSections`, `DeployedCatSection`                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `@assesskit/player/cat-rest`            | `restCatPort`, `OAuthClientCredentials`, `CatFetch`; the types of their options and results; on a server only, as it takes an OAuth client secret                                                                                                                                                                                                                                                                                                                                 |
 | `@assesskit/player/caliper`             | `caliperEvents`, `caliperGrade`, `sendCaliper`, `CALIPER_CONTEXT`; `CaliperEvent`, `CaliperEntity`, `CaliperContext`, `CaliperParties`, `CaliperGrade`, `SendCaliperOptions`, `CaliperFetch`                                                                                                                                                                                                                                                                                      |
 | `@assesskit/player/server`              | `createSessionHost`, `SessionHost`, `createAssetGate`, `AssetGate`, `collectAssetPrefixes`, `SessionStore`, `Scheduler`, `FileStore`, `AgsScoreStore`, `createLtiScoreIntake`, `SYSTEM_CLOCK`, `EXAM_CLIENT_ACTIONS`, `MAX_SAVE_RETRIES`; `forwardEvents`, `StepEvents`, `ForwardOptions`, `CaliperForwarding`                                                                                                                                                                    |
 | `@assesskit/player/player.css`          | The stylesheet of a content root: themes, the QTI 3 shared vocabulary and the PNP presentation                                                                                                                                                                                                                                                                                                                                                                                    |

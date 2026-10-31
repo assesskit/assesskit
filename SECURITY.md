@@ -151,8 +151,8 @@ key, to the tool's client and deployment, and to one use.
 
 ## The player: CAT engines
 
-`restCatPort` sends a candidate's results and an OAuth bearer token to a remote engine, so it is built to send them to one
-place only.
+`restCatPort` of `@assesskit/player/cat-rest` sends a candidate's results and an OAuth bearer token to a remote engine, so
+it is built to send them to one place only.
 
 - It serves the one `endpoint` that the host configures. The `qti-adaptive-engine-ref` of a package is the package's word:
   a request for another prefix is a `DataError`, and nothing leaves. Give each trusted engine its own port.
@@ -160,6 +160,11 @@ place only.
   address or from HTTPS to HTTP. Every request is aborted after `timeoutMs`.
 - The personal needs and preferences of a candidate go to the engine only with `sharePnp: true`.
 - The client secret goes only to the token URL, as HTTP Basic credentials.
+- The client secret stays on the server. `cat-rest` is the one folder that takes it, no shared or browser folder of the
+  package imports it (lint), and a test checks that the bundles of the candidate and of practice hold none of its files. A
+  host's own page is out of the library's sight: keep `credentials` and the import of `@assesskit/player/cat-rest` out of
+  it. A page that runs an adaptive section in practice brings its own `CatPort` and deploys with `deployCatSections` of
+  `@assesskit/player/cat`.
 
 An engine that the host runs in process, behind the runtime's `CatPort`, sends nothing. The `sessionState` that it returns is kept
 in the delivery state, so keep it on the server like the seed of an exam session, and keep the engine's own store of the

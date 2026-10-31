@@ -48,7 +48,7 @@ flowchart LR
 | Firefox  | 115            | The same                                                                |
 | Safari   | 16.4           | The suites in the current WebKit, and a smoke test in the oldest WebKit |
 
-The server folders (`server`, `scoring`, `cat`, `lti`, `caliper`) run on Node.js 22 or later. [Baseline](baseline.md) lists
+The server folders (`server`, `cat-rest`, `lti`, `caliper`) run on Node.js 22 or later. [Baseline](baseline.md) lists
 the features that the browser code does not use.
 
 ## WCAG 2.2, levels A and AA

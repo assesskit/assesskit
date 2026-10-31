@@ -8,12 +8,14 @@ const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
 /** The subpaths of the runtime that the player imports, each a folder of its sources with an `index.ts`. */
 const RUNTIME_FOLDERS = [
   "asi",
+  "cat",
   "content",
   "delivery",
   "interactions",
   "package",
   "pci",
   "pnp",
+  "processing",
   "values",
   "xml",
 ] as const;

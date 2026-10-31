@@ -51,6 +51,10 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./cat-rest": {
+      "types": "./dist/cat-rest/index.d.ts",
+      "default": "./dist/cat-rest/index.js"
+    },
     "./caliper": {
       "types": "./dist/caliper/index.d.ts",
       "default": "./dist/caliper/index.js"

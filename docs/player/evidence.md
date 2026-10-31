@@ -14,15 +14,15 @@ flowchart LR
   complete --> browsers
 ```
 
-| Suite                      | Runs in                                   | Command               | Covers                                                                                           |
-| -------------------------- | ----------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
-| `*.test.ts`                | Node                                      | `pnpm test`           | `protocol`, `scoring`, `cat`, `caliper`, `client`, `server`, `lti` and the shared code           |
-| `*.browser.test.ts`        | Chromium, Firefox and WebKit              | `pnpm test:browser`   | Rendering, the shell, accessibility with axe, the clients, the exam server over HTTP, LTI frames |
-| `*.corpus.test.ts`         | Node                                      | `pnpm test:corpus`    | The asset gate over the 1EdTech examples                                                         |
-| `*.browser.corpus.test.ts` | Chromium, Firefox and WebKit              | `pnpm test:corpus`    | The 1EdTech examples drawn, answered and checked with axe                                        |
-| `*.xsd.test.ts`            | Node                                      | `pnpm test:xsd`       | The HTML elements of the ASI schema                                                              |
-| `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                            |
-| The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                  |
+| Suite                      | Runs in                                   | Command               | Covers                                                                                             |
+| -------------------------- | ----------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
+| `*.test.ts`                | Node                                      | `pnpm test`           | `protocol`, `scoring`, `cat`, `cat-rest`, `caliper`, `client`, `server`, `lti` and the shared code |
+| `*.browser.test.ts`        | Chromium, Firefox and WebKit              | `pnpm test:browser`   | Rendering, the shell, accessibility with axe, the clients, the exam server over HTTP, LTI frames   |
+| `*.corpus.test.ts`         | Node                                      | `pnpm test:corpus`    | The asset gate over the 1EdTech examples                                                           |
+| `*.browser.corpus.test.ts` | Chromium, Firefox and WebKit              | `pnpm test:corpus`    | The 1EdTech examples drawn, answered and checked with axe                                          |
+| `*.xsd.test.ts`            | Node                                      | `pnpm test:xsd`       | The HTML elements of the ASI schema                                                                |
+| `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                              |
+| The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                    |
 
 ## Completeness
 

@@ -1,9 +1,25 @@
 import { Buffer } from "node:buffer";
+import { DataError } from "@assesskit/runtime/errors";
 import { CP_NAMESPACE } from "@assesskit/runtime/metadata";
 import { openPackage, type QtiPackage } from "@assesskit/runtime/package";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { type ItemStatistic, writeUsageData } from "@assesskit/runtime/usage";
 import { single } from "@assesskit/runtime/values";
+import { expect } from "vitest";
+
+/** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
+export const json = <T = never>(text: string): T => JSON.parse(text);
+
+/** Returns the message of the error a promise rejects with, after checking that it is a DataError of the player. */
+export async function rejection(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (error) {
+    expect(error).toBeInstanceOf(DataError);
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("The promise did not reject.");
+}
 
 /** The prefix of the engine in the tests: `qti-adaptive-engine-ref` of the sections. */
 export const PREFIX = "https://cat.example/ims/cat/v1p0";

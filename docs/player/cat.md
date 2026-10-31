@@ -1,30 +1,43 @@
 # CAT
 
 The runtime defines `CatPort`, the six requests of a CAT 1.0 engine, and makes no network request and runs no CAT algorithm.
-The player implements the port as a client of the REST binding of CAT 1.0 and deploys the adaptive sections of a package. Any
-other engine, such as one in process over a psychometrics library, plugs in behind the same port. The code runs on any
-server runtime.
+The player has two subpaths for it. `@assesskit/player/cat` deploys the adaptive sections of a package through any port, on a
+server or in a page. `@assesskit/player/cat-rest` implements the port as a client of the REST binding of CAT 1.0, on a server
+only. Any other engine, such as one in process over a psychometrics library, plugs in behind the same port.
 
 ```mermaid
 flowchart LR
   subgraph runtime["@assesskit/runtime"]
     drain["drainCat: the requests of the delivery engine"] -->|calls| port{{"CatPort"}}
   end
-  subgraph player["@assesskit/player/cat"]
+  subgraph shared["@assesskit/player/cat: a server or a page"]
     deploy["deployCatSections"] -->|"Create Section, Get Section"| port
+  end
+  subgraph server["@assesskit/player/cat-rest: a server only"]
     rest["restCatPort"] -.->|implements| port
   end
   rest -->|"REST/JSON binding of CAT 1.0"| remote[("Remote CAT engine")]
-  own["Any engine in process"] -.->|implements| port
+  own["Any engine in process or in the page"] -.->|implements| port
   example["examples/player: one engine in process"] -.->|illustrates| own
 ```
 
-| Subpath                 | Export                                            | Purpose                                                                                          |
-| ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `@assesskit/player/cat` | `restCatPort(options)`                            | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                              |
-| `@assesskit/player/cat` | `deployCatSections(pkg, port)`                    | Creates the sections of a package's adaptive selections at the engine and checks their pool.     |
-| `@assesskit/player/cat` | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `restCatPort` uses.                                                     |
-| `@assesskit/player/cat` | `OAuthClientCredentials`, `DeployedCatSection`    | The client credentials with which `restCatPort` asks for a token, and what a deployment returns. |
+| Subpath                      | Side   | Export                                            | Purpose                                                                                      |
+| ---------------------------- | ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port)`                    | Creates the sections of a package's adaptive selections at the engine and checks their pool. |
+| `@assesskit/player/cat`      | shared | `DeployedCatSection`                              | What a deployment returns for an adaptive section.                                           |
+| `@assesskit/player/cat-rest` | server | `restCatPort(options)`                            | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                          |
+| `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `restCatPort` uses.                                                 |
+| `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                          | The client credentials with which `restCatPort` asks for a token.                            |
+
+## Why the REST port stays on servers
+
+`restCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, so it must never reach a
+browser bundle. It lives in its own subpath, `cat-rest`, for that reason, and no shared or browser folder of the package
+imports it (lint); the bundle tests check that the bundles of the candidate and of practice hold none of its files. A page that
+runs practice with an adaptive section brings its own `CatPort`, such as an engine over a psychometrics library in the page,
+and deploys with `deployCatSections(pkg, () => port)` from `@assesskit/player/cat`. Nothing in the library can see a host's
+page: a host that imports `@assesskit/player/cat-rest` there puts the secret in the page, and [SECURITY.md](../../SECURITY.md)
+says to keep it on the server.
 
 ## With the runtime's engine
 
@@ -70,7 +83,7 @@ requests, the stages and the section data that any engine reads.
 
 ## restCatPort
 
-`restCatPort(options)` returns a `CatPort` that speaks the REST/JSON binding of CAT 1.0
+`restCatPort(options)`, from `@assesskit/player/cat-rest`, returns a `CatPort` that speaks the REST/JSON binding of CAT 1.0
 (<https://www.imsglobal.org/spec/cat/v1p0/bind>) to one remote engine.
 
 | Option        | Default  | Meaning                                                                           |
@@ -82,7 +95,7 @@ requests, the stages and the section data that any engine reads.
 | `sharePnp`    | `false`  | Whether Create Session sends the personal needs and preferences to the engine.    |
 
 ```ts
-import { restCatPort } from "@assesskit/player/cat";
+import { restCatPort } from "@assesskit/player/cat-rest";
 
 const requests = [];
 const fetch = async (url, request) => {
@@ -166,7 +179,7 @@ listing in Appendix B1.2 of <https://www.imsglobal.org/spec/cat/v1p0/bind> is th
 
 ## deployCatSections
 
-`deployCatSections(pkg, port)` deploys the adaptive sections of every test of a package, in document order. For each:
+`deployCatSections(pkg, port)`, from `@assesskit/player/cat`, deploys the adaptive sections of every test of a package, in document order. For each:
 
 1. It reads the files that the `qti-adaptive-selection` references, against the document that holds the section: the
    settings, and the usage data and the metadata when referenced. A selection without a settings reference sends an empty

@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bundle } from "./bundle.js";
 
+const SRC = resolve(import.meta.dirname, "../src");
 const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
 
 /** The files of the runtime's delivery engine, which hold answer keys, processing and the state of a session. */
@@ -24,6 +25,10 @@ const bundled = async (program: string): Promise<readonly string[]> => (await bu
 const engineFilesIn = (inputs: readonly string[]): string[] =>
   ENGINE_FILES.filter((file) => inputs.includes(resolve(RUNTIME, file)));
 
+/** The files of a folder of the player that a bundle holds, as paths below `src/`. */
+const filesOf = (inputs: readonly string[], folder: string): string[] =>
+  inputs.filter((path) => path.startsWith(`${SRC}/${folder}/`)).map((path) => path.slice(SRC.length + 1));
+
 describe("the exam bundle", () => {
   it("holds none of the runtime's engine: the player and the remote session read views and write actions only", async () => {
     const inputs = await bundled(`
@@ -38,11 +43,49 @@ describe("the exam bundle", () => {
     expect(engineFilesIn(inputs)).toEqual([]);
   });
 
+  it("holds none of the CAT client, which keeps the secret of a CAT engine, or of the server folders", async () => {
+    const inputs = await bundled(`
+      import { mountDelivery } from "./player/index.ts";
+      import { createRemoteSession } from "./client/index.ts";
+      export { mountDelivery, createRemoteSession };
+    `);
+    for (const folder of ["cat-rest", "cat", "scoring", "caliper", "lti", "server"]) {
+      expect(filesOf(inputs, folder), folder).toEqual([]);
+    }
+  });
+
   it("holds the engine in a bundle that makes a local session, which is how the check sees it", async () => {
     const inputs = await bundled(`
       import { createLocalSession } from "./client/index.ts";
       export { createLocalSession };
     `);
     expect(engineFilesIn(inputs)).toContain("delivery/engine.ts");
+  });
+});
+
+describe("the practice bundle", () => {
+  const practice = bundled(`
+    import { createLocalSession } from "./client/index.ts";
+    import { toSubmission, toSupplyScores } from "./scoring/index.ts";
+    import { deployCatSections } from "./cat/index.ts";
+    export { createLocalSession, toSubmission, toSupplyScores, deployCatSections };
+  `);
+
+  it("holds the scoring and the deployment of a page that runs practice on a device", async () => {
+    const inputs = await practice;
+    expect(filesOf(inputs, "scoring")).toContain("scoring/supply-scores.ts");
+    expect(filesOf(inputs, "cat")).toContain("cat/deploy.ts");
+  });
+
+  it("holds none of the CAT client, which keeps the secret of a CAT engine, or of Caliper and LTI", async () => {
+    const inputs = await practice;
+    for (const folder of ["cat-rest", "caliper", "lti", "server"]) {
+      expect(filesOf(inputs, folder), folder).toEqual([]);
+    }
+  });
+
+  it("holds the CAT client in a bundle that makes one, which is how the check sees it", async () => {
+    const inputs = await bundled('import { restCatPort } from "./cat-rest/index.ts"; export { restCatPort };');
+    expect(filesOf(inputs, "cat-rest")).toContain("cat-rest/rest-port.ts");
   });
 });

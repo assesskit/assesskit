@@ -19,6 +19,7 @@
     "src/server",
     "src/scoring",
     "src/cat",
+    "src/cat-rest",
     "src/lti",
     "src/caliper"
   ]
