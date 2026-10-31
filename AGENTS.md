@@ -278,7 +278,7 @@ untested in the others.
   meet, and for media they wait for the events of the recording and move the timers by hand, never for a time.
 - Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
   builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them
-  ([architecture.md](docs/runtime/architecture.md#performance)).
+  ([performance.md](docs/runtime/performance.md)).
 - Tests that validate against or read the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 

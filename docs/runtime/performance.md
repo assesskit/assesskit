@@ -1,0 +1,86 @@
+# Performance
+
+The runtime is timed against Longsight `qti3-core` on the work both do, and against budgets on the work only it does. The
+target is parity with Longsight, a multiple of 1.25 at most; a budget fails the `bench` job of CI when the runtime slows
+down.
+
+## Against Longsight
+
+Time of the runtime divided by time of Longsight, on the same items and responses. Below the line at 1 the runtime is faster.
+
+```mermaid
+xychart-beta
+  title "Runtime time ÷ Longsight time (lower is faster)"
+  x-axis ["parse", "start", "start + template", "submit", "item end to end", "submit in a test"]
+  y-axis "ratio" 0 --> 4
+  bar [0.85, 1.14, 1.21, 1.13, 0.97, 3.04]
+  line [1, 1, 1, 1, 1, 1]
+```
+
+| Row              | The runtime                                                                                  | Longsight                                                                  | Runtime  | Longsight | Ratio | Budget (time, ratio) |
+| ---------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
+| parse            | `readAsi` on the 223 example items that both read                                            | `parseQtiXml` on the same items                                            | 13.86 ms | 16.44 ms  | 0.85  | 70 ms, 1.5           |
+| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt | `createItemSession` for each                                               | 0.345 ms | 0.303 ms  | 1.14  | 2 ms, 2              |
+| start + template | the same for the 8 items with template processing, 20 times each                             | the same                                                                   | 1.766 ms | 1.452 ms  | 1.21  | 9 ms, 2              |
+| submit           | `set-responses` and `submit` of the correct responses in presented sessions                  | `respond` for each response, then `score`                                  | 0.559 ms | 0.493 ms  | 1.13  | 3 ms, 2              |
+| item end to end  | `readAsi`, start, present, set the responses and submit                                      | `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.91 ms | 17.49 ms  | 0.97  | 90 ms, 1.5           |
+| submit in a test | `apply` of `submit` for the 51st of 100 items: response processing, the sum of the scores    | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 0.017 ms | 0.006 ms  | 3.04  | 0.09 ms, 4.5         |
+
+The inputs are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses
+the oracle reports, and a test of 10 sections of 10 choice items with the sum of the scores as its outcome. A sample is the
+whole row: every item of it, once. Both sides run warm, after a warm-up, on a runtime built as it ships; each side prepares its
+sessions outside the time. The ratio compares the fastest samples of a run, and a gate compares the runtime with both its time
+and its ratio. `pnpm bench` runs the rows.
+
+What each side does besides the work in the table:
+
+- **Reading.** The runtime reads every attribute value against the type of the ASI schema, refuses a DOCTYPE and enforces limits
+  on size, depth and nodes. Longsight collects diagnostics and validates in a separate call that the row does not make.
+- **Submitting a response.** The runtime checks each response against its declaration and the rules of its interaction.
+  Longsight stores a copy of the value it is given.
+- **A test.** Longsight takes the score of an item as a number, on a fixed order of items with the sum, comparison and
+  boolean expressions of a test. The runtime keeps the session of every instance of the plan, reads the sessions that the
+  expression names (`qti-test-variables` visits the 100 instances, those not yet presented included), and also settles the time
+  limits, the scoring requests and the state that the step returns. The row compares one `apply` with the score of an item
+  and `submitQtiTestAnswer`, which is the smallest operation of each that submits an item of a test.
+
+## Budgets
+
+`pnpm bench` runs the benchmarks of `packages/runtime/test/*.bench.ts` with Vitest, on inputs that the arbitraries and builders
+of the tests generate with a fixed seed. A benchmark fails when its fastest sample is above its budget. The budgets are in
+`packages/runtime/test/budgets.ts`.
+
+| Benchmark                               | Input                                                                                                                 | Measured (fastest) | Budget        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
+| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource     | 26.5 ms            | 200 ms        |
+| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                 | 0.87 ms            | 5 ms          |
+| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                               | 0.34 ms            | 2 ms          |
+| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                     | 5.6 ms             | 30 ms         |
+| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules | 80 ms              | 500 ms        |
+| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                     | 1.34 ms            | 5 ms          |
+| Size of that state                      | The same state as JSON text                                                                                           | 118,699 bytes      | 150,000 bytes |
+
+The replay also checks that the replayed state equals the state of the session.
+
+A benchmark takes at least 10 samples, and the gate is the fastest of them, which the other work of a shared machine affects
+least. The measurement is the median of that sample over three runs on a laptop with an Apple M5 and Node.js 26.8; the median
+of the samples of a run was up to 3 times higher on a busy laptop. The budget of a time is five times its measurement, rounded
+up to one significant digit, and that of the size 1.25 times the size. The factor allows for CI hardware two to three times
+slower than the laptop, and for the noise of shared machines. It is far below the cost of the changes that the budgets exist
+to catch: a reader that parsed every item would take about ten times as long. A budget changes only with the reason in the
+commit that changes it.
+
+Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
+so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks that import the sources run through
+Vite; the one against Longsight imports the build by name, which `pnpm bench` makes first, because Vite's rewrite of the
+imports makes the sources about 1.7 times slower than the code that ships.
+
+## Outcome processing
+
+Outcome processing runs after every submission in individual mode (INFO section 2.9). The expressions that read item sessions
+(`qti-number-*`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables`) visit every instance of the plan,
+keep the ones that their `section-identifier`, `include-category` and `exclude-category` select, and read each one kept. The
+cost of a submission is therefore the rules that read item sessions times the matching items, and no less than the size of the
+plan for each such rule. The benchmark has 101 such rules over 800 instances, one for each of 100 sections and one for the
+test. The session looks the items presented up in a map made once for the step, so the cost grows with the rules times the
+instances of the plan.

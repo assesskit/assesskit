@@ -4,20 +4,20 @@ import { expect, type TestContext } from "vitest";
 export const BENCH_OPTIONS = { time: 500, iterations: 10, warmupTime: 100, warmupIterations: 3 } as const;
 
 /**
- * The budgets of the benchmarks, from the first measurements with the headroom that docs/runtime/architecture.md#performance
+ * The budgets of the benchmarks, from the measurements with the headroom that docs/runtime/performance.md
  * gives. A time is the most that the fastest sample of a benchmark may take, in milliseconds.
  */
 export const BUDGETS = {
   /** Reading the manifest of a package of 1,000 items. */
-  packageRead: 300,
+  packageRead: 200,
   /** The first use of 3 items of a package that has parsed none. */
-  packageFirstUse: 9,
+  packageFirstUse: 5,
   /** Starting a session of a test of 100 sections. */
   planStart: 2,
   /** A submission with the outcome processing of a test of 100 sections, halfway through its session. */
-  outcomeSubmit: 80,
+  outcomeSubmit: 30,
   /** Reading a stored state and replaying 1,000 actions. */
-  replay: 2000,
+  replay: 500,
   /** Writing and reading the state of a session of 100 items. */
   stateRoundTrip: 5,
   /** The size of the state of a session of 100 items that has ended, in bytes. */
@@ -25,23 +25,24 @@ export const BUDGETS = {
 } as const;
 
 /**
- * The budgets of the rows against Longsight qti3-core, on the 1EdTech examples: the most that the fastest sample of the
- * runtime may take, in milliseconds, and the most it may take as a multiple of the fastest sample of Longsight in the
- * same run. The multiple is the target of docs/runtime/performance.md.
+ * The budgets of the rows against Longsight qti3-core: the most that the fastest sample of the runtime may take, in
+ * milliseconds, and the most it may take as a multiple of the fastest sample of Longsight in the same run. The times have
+ * the headroom of the other budgets, and the multiples stay within 1.5 of the measured ratios, which
+ * docs/runtime/performance.md lists, so that a change which slows one path against the reference fails.
  */
 export const LONGSIGHT_BUDGETS = {
   /** Reading the 223 example items that both implementations read. */
-  parse: { time: 1000, ratio: 100 },
+  parse: { time: 70, ratio: 1.5 },
   /** Starting an item session of each of them, with the first presentation. */
-  start: { time: 1000, ratio: 100 },
+  start: { time: 2, ratio: 2 },
   /** Starting the sessions of the items that have template processing, repeated. */
-  startTemplated: { time: 1000, ratio: 100 },
+  startTemplated: { time: 9, ratio: 2 },
   /** Entering the correct responses and submitting them, in sessions that were presented. */
-  submit: { time: 1000, ratio: 100 },
+  submit: { time: 3, ratio: 2 },
   /** Reading each item, starting its session and scoring its correct responses. */
-  score: { time: 1000, ratio: 100 },
+  score: { time: 90, ratio: 1.5 },
   /** Submitting the 51st item of a test of 100 items, with the sum of the scores of the items answered. */
-  testSubmit: { time: 1000, ratio: 100 },
+  testSubmit: { time: 0.09, ratio: 4.5 },
 } as const;
 
 /** The budget of one row against Longsight. */

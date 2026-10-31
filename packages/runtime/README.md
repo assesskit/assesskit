@@ -239,6 +239,7 @@ contradict themselves or are silent, and what the runtime does.
 ## Documentation
 
 - [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/runtime/architecture.md): principles, layers, errors and determinism.
+- [Performance](https://github.com/assesskit/assesskit/blob/main/docs/runtime/performance.md): the runtime's times against Longsight `qti3-core` and the budgets of the benchmarks.
 - [Conventions](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md): the runtime convention that names the responses an externally scored outcome of a test covers.
 - [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md): where the specifications contradict themselves or are silent, and what the runtime does.
 - [ASI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
