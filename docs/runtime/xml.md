@@ -26,7 +26,7 @@ flowchart LR
 | `parseXml(input, options?)`                                                           | Parses text or bytes into an `XmlElement`.                                 |
 | `serializeXml(root)`                                                                  | Writes an `XmlElement` as a UTF-8 document.                                |
 | `ElementReader`, `ReaderRules`, `termOf`                                              | Reads an element into a model and reports what the model leaves unread.    |
-| `buildElement(namespace, name, attributes?, children?)`                               | Builds an element for a writer.                                            |
+| `buildElement(namespace, name, attributes?, children?)`, `ElementAttributes`          | Builds an element for a writer, and the type of its attributes.            |
 | `isXmlLanguage(value)`                                                                | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                                      | Replaces each `xi:include` with the root element of the document it names. |
 | `childElements(element)`, `attributeOf(element, name, namespace?)`, `textOf(element)` | The child elements, an attribute and the text of an element.               |

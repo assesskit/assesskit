@@ -2,8 +2,8 @@ import { checkArray, checkChoice, checkRecord, checkString, describe, optional }
 import { DataError } from "../errors.js";
 import { BASE_TYPES, CARDINALITIES, formatIdentifierList, formatPrimitive, isXsdDateTime } from "../values/index.js";
 import { optionalText } from "../values/internal.js";
-import { serializeXml, type XmlElement } from "../xml/index.js";
-import { type Attributes, elementBuilder } from "../xml/internal.js";
+import { type ElementAttributes, serializeXml, type XmlElement } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 import type {
   AssessmentResult,
   ContextVariable,
@@ -77,7 +77,7 @@ function checkType(
   return type;
 }
 
-function typeAttributes(type: VariableType): Attributes {
+function typeAttributes(type: VariableType): ElementAttributes {
   return { cardinality: type.cardinality, baseType: type.baseType };
 }
 

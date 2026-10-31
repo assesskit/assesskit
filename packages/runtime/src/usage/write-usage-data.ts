@@ -2,8 +2,8 @@ import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, descri
 import { DataError } from "../errors.js";
 import { BASE_TYPES, formatPrimitive, isXsdDate } from "../values/index.js";
 import { optionalText } from "../values/internal.js";
-import { serializeXml, type XmlElement } from "../xml/index.js";
-import { type Attributes, elementBuilder } from "../xml/internal.js";
+import { type ElementAttributes, serializeXml, type XmlElement } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 import type {
   ItemStatistic,
   ItemStatisticBase,
@@ -67,7 +67,10 @@ function writeMapping(mapping: StatisticMapping): XmlElement {
 }
 
 /** Returns the attributes and the target objects that the two kinds of statistic share. */
-function writeBase(statistic: ItemStatisticBase): { readonly attributes: Attributes; readonly targets: XmlElement[] } {
+function writeBase(statistic: ItemStatisticBase): {
+  readonly attributes: ElementAttributes;
+  readonly targets: XmlElement[];
+} {
   const label = `the statistic ${describe(statistic.name)}`;
   const { lastUpdated } = statistic;
   optional(lastUpdated, (date) => {

@@ -13,13 +13,13 @@ import {
 } from "../metadata/index.js";
 import {
   buildElement,
+  type ElementAttributes,
   serializeXml,
   XMLNS_NAMESPACE,
   type XmlAttribute,
   type XmlElement,
   type XmlNode,
 } from "../xml/index.js";
-import type { Attributes } from "../xml/internal.js";
 import {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,
@@ -40,11 +40,11 @@ const PREFIXES: ReadonlyMap<string, string> = new Map([
 
 type Children = readonly (XmlElement | string)[];
 
-function cp(name: string, children: Children = [], attributes: Attributes = {}): XmlElement {
+function cp(name: string, children: Children = [], attributes: ElementAttributes = {}): XmlElement {
   return buildElement(CP_NAMESPACE, name, attributes, children);
 }
 
-function cpx(name: string, children: Children, attributes: Attributes = {}): XmlElement {
+function cpx(name: string, children: Children, attributes: ElementAttributes = {}): XmlElement {
   return { ...buildElement(CPX_NAMESPACE, name, attributes, children), prefix: "cpx" };
 }
 

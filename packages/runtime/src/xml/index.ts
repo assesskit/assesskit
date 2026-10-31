@@ -3,7 +3,7 @@
  *
  * @module @assesskit/runtime/xml
  */
-export { buildElement } from "./build-element.js";
+export { buildElement, type ElementAttributes } from "./build-element.js";
 export { ElementReader, type ReaderRules, termOf } from "./element-reader.js";
 export { type IncludeResolver, type ResolveIncludesOptions, resolveIncludes } from "./include.js";
 export { isXmlLanguage } from "./language.js";

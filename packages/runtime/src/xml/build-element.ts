@@ -15,7 +15,7 @@ function toAttribute(qualified: string, value: string): XmlAttribute {
 }
 
 /** The attributes of an element to build by name; one whose value is `undefined` is left out. */
-export type Attributes = Readonly<Record<string, string | undefined>>;
+export type ElementAttributes = Readonly<Record<string, string | undefined>>;
 
 /**
  * Builds an element for a writer. Attributes whose value is `undefined` are left out, so that an optional field of a model
@@ -32,7 +32,7 @@ export type Attributes = Readonly<Record<string, string | undefined>>;
 export function buildElement(
   namespace: string,
   name: string,
-  attributes: Attributes = {},
+  attributes: ElementAttributes = {},
   children: readonly (XmlNode | string)[] = [],
 ): XmlElement {
   checkString(namespace, "The namespace of an element");
@@ -61,6 +61,6 @@ export function buildElement(
  */
 export function elementBuilder(
   namespace: string,
-): (name: string, attributes?: Attributes, children?: readonly (XmlNode | string)[]) => XmlElement {
+): (name: string, attributes?: ElementAttributes, children?: readonly (XmlNode | string)[]) => XmlElement {
   return (name, attributes = {}, children = []) => buildElement(namespace, name, attributes, children);
 }
