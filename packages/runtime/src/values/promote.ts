@@ -6,14 +6,19 @@ import type { Value } from "./value.js";
 export type PromotionTarget = "float" | "duration";
 
 /**
- * Converts a value of base type `integer` to `float` or `duration`, keeping its numbers and its cardinality: the type
- * promotion of weighted outcomes (INFO §2.11.1.2, §7.39.6, §7.47.2) and of assigning an integer to a `float` or
- * `duration` variable. A value that already has the target base type is returned as it is.
+ * Converts a value of base type `integer` to `float` or `duration`, keeping its numbers and its cardinality.
+ *
+ * @remarks
+ * This is the type promotion of weighted outcomes and of assigning an integer to a `float` or `duration` variable. A
+ * value that already has the target base type is returned as it is.
  *
  * @param value - A `single`, `multiple` or `ordered` value.
  * @param baseType - `float` or `duration`.
+ * @returns The promoted value, or `value` itself when it has the target base type.
  * @throws `DataError` when `value` is not an object, `baseType` is not a target, or `value` is a record or has another
  * base type than `integer` and the target.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, outcome declarations and weights}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function promote(value: Value, baseType: PromotionTarget): Value {
   checkRecord(value, "The value must be an object");

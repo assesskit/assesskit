@@ -1,6 +1,6 @@
 import { isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
-import { xmlTokens } from "../values/whitespace.js";
+import { xmlTokens } from "../values/xml-tokens.js";
 import {
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,

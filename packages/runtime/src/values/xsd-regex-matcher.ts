@@ -1,5 +1,6 @@
 import { checkString } from "../checks.js";
 import { type CodePointSet, contains, MAX_CODE_POINT } from "./code-point-set.js";
+import { ACCEPT, buildNfa, NONE, type State } from "./xsd-regex-nfa.js";
 import type { RegexNode } from "./xsd-regex-parser.js";
 
 /** A compiled XML Schema regular expression. */
@@ -7,6 +8,7 @@ export interface XsdPattern {
   /**
    * Returns whether the whole text matches the pattern. The time is linear in the length of the text.
    *
+   * @param text - The text.
    * @throws `DataError` when `text` is not a string.
    */
   matches(text: string): boolean;
@@ -17,93 +19,6 @@ export interface XsdPattern {
  * matcher starts again. It bounds the memory a text can make a matcher use.
  */
 const MAX_CACHED_ENTRIES = 1_000_000;
-
-/** A state of the automaton: it reads a character of `set` and goes to `out`, or it goes to `out` and `alternative`. */
-interface State {
-  readonly set: CodePointSet | undefined;
-  out: number;
-  alternative: number;
-}
-
-/** No state: the end of a path. */
-const NONE = -1;
-
-/** The state that accepts. */
-const ACCEPT = 0;
-
-/**
- * Returns how many states a node needs once its repeats are expanded, or a number above `limit` when it needs more, so
- * that a pattern such as `((a{9999}){9999}){9999}` is refused before any state is built.
- */
-export function countStates(node: RegexNode, limit: number): number {
-  const capped = (count: number): number => Math.min(count, limit + 1);
-  switch (node.kind) {
-    case "set":
-      return 1;
-    case "sequence":
-      return node.items.reduce((total, item) => capped(total + countStates(item, limit)), 0);
-    case "choice":
-      return node.options.reduce(
-        (total, option) => capped(total + countStates(option, limit)),
-        node.options.length - 1,
-      );
-    case "repeat": {
-      const each = countStates(node.node, limit);
-      const optional = node.max === undefined ? each + 1 : (node.max - node.min) * (each + 1);
-      return capped(node.min * each + optional);
-    }
-  }
-}
-
-/** Builds a Thompson automaton: each node becomes states that lead to `next`. */
-class NfaBuilder {
-  readonly states: State[] = [{ set: undefined, out: NONE, alternative: NONE }];
-
-  private add(state: State): number {
-    this.states.push(state);
-    return this.states.length - 1;
-  }
-
-  build(node: RegexNode, next: number): number {
-    switch (node.kind) {
-      case "set":
-        return this.add({ set: node.set, out: next, alternative: NONE });
-      case "sequence":
-        return node.items.reduceRight((after, item) => this.build(item, after), next);
-      case "choice":
-        return node.options.reduceRight(
-          (after, option, index) =>
-            index === node.options.length - 1
-              ? this.build(option, next)
-              : this.add({ set: undefined, out: this.build(option, next), alternative: after }),
-          next,
-        );
-      case "repeat":
-        return this.repeat(node, next);
-    }
-  }
-
-  private repeat(node: Extract<RegexNode, { kind: "repeat" }>, next: number): number {
-    let tail = next;
-    if (node.max === undefined) {
-      const loop = this.add({ set: undefined, out: NONE, alternative: next });
-      const state = this.states[loop];
-      if (state !== undefined) state.out = this.build(node.node, loop);
-      tail = loop;
-    } else {
-      for (let optional = node.min; optional < node.max; optional++) {
-        tail = this.add({ set: undefined, out: this.build(node.node, tail), alternative: next });
-      }
-    }
-    for (let required = 0; required < node.min; required++) {
-      const built = this.build(node.node, tail);
-      // A node that adds no state, such as an empty group, repeats to itself however many times the pattern says.
-      if (built === tail) break;
-      tail = built;
-    }
-    return tail;
-  }
-}
 
 /** A state of the deterministic automaton: the set of states of the Thompson automaton that the text so far can reach. */
 interface DfaState {
@@ -230,10 +145,9 @@ function classBoundaries(states: readonly State[]): number[] {
 /**
  * Builds the matcher of a parsed pattern.
  *
- * @param tree - The pattern.
+ * @param tree - The pattern, within the limit on its states.
  */
 export function buildMatcher(tree: RegexNode): XsdPattern {
-  const builder = new NfaBuilder();
-  const entry = builder.build(tree, ACCEPT);
-  return new Matcher(builder.states, entry);
+  const { states, entry } = buildNfa(tree);
+  return new Matcher(states, entry);
 }

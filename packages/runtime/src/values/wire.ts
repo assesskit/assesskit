@@ -2,29 +2,37 @@ import * as v from "valibot";
 import { parseWith, type Schema, transformWith } from "../checks.js";
 import { type BaseType, baseTypeSchema } from "./base-type.js";
 import type { Cardinality } from "./cardinality.js";
-import { fromJsonValue, type JsonValue, toJsonValue, type ValueDeclaration } from "./json.js";
+import type { ValueDeclaration } from "./declaration.js";
+import { fromJsonValue } from "./json-read.js";
+import type { JsonValue } from "./json-value.js";
+import { toJsonValue } from "./json-write.js";
 import type { Value } from "./value.js";
 
 /**
- * A value in the runtime's own JSON form, for state, views and actions: the App. C JSON of the value in an envelope that names
- * its cardinality and base type, so that it decodes without a declaration and loses nothing. It tells `multiple` from
- * `ordered`, and the NULL of one type from the NULL of another.
+ * A value in the runtime's own JSON form, for state, views and actions.
+ *
+ * @remarks
+ * It is the JSON of the value in an envelope that names its cardinality and base type, so that it decodes without a
+ * declaration and loses nothing. It tells `multiple` from `ordered`, and the NULL of one type from the NULL of another.
  */
 export interface WireValue {
   /** The cardinality. */
   readonly cardinality: Cardinality;
-  /** The base type; a record has none. */
+  /** The base type. A record has none. */
   readonly baseType?: BaseType;
-  /** The App. C JSON of the value, or `null` for NULL. */
+  /** The JSON of the value as {@link toJsonValue} writes it, or `null` for NULL. */
   readonly value: JsonValue | null;
 }
 
 /**
- * Writes a value, or NULL, as a {@link WireValue}. Durations are `PT<seconds>S` and files are references, as in
- * {@link toJsonValue}.
+ * Writes a value, or NULL, as a {@link WireValue}.
+ *
+ * @remarks
+ * Durations are `PT<seconds>S` and files are references, as in {@link toJsonValue}.
  *
  * @param value - The value, or `null` for NULL.
- * @param declaration - The cardinality and base type of the variable; they type a NULL, and a value must have them.
+ * @param declaration - The cardinality and base type of the variable. They type a NULL, and a value must have them.
+ * @returns The wire value.
  * @throws `DataError` when `value` is not a value or `null`, `declaration` is not a declaration, or they differ.
  */
 export function toWireValue(value: Value | null, declaration: ValueDeclaration): WireValue {
@@ -54,12 +62,12 @@ export const wireValueSchema: Schema<Value | null> = v.pipe(
 );
 
 /**
- * Reads a value, or NULL, from a {@link WireValue} that `toWireValue` writes.
+ * Reads a value, or NULL, from a {@link WireValue} that {@link toWireValue} writes.
  *
  * @param json - The parsed JSON.
  * @returns The value, or `null` for NULL.
- * @throws `DataError` when `json` is not a wire value, or its value is not one of its cardinality and base type, or has a
- * duration with years or months (G14).
+ * @throws `DataError` when `json` is not a wire value, its value is not one of its cardinality and base type, or it has a
+ * duration with years or months.
  */
 export function fromWireValue(json: unknown): Value | null {
   return parseWith(wireValueSchema, json, "A wire value");

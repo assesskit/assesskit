@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkArray,
   checkBoolean,
+  checkBytes,
   checkChoice,
   checkFinite,
   checkFunction,
@@ -104,6 +105,16 @@ describe("checkString", () => {
   it("accepts a string and rejects other values", () => {
     expect(() => checkString("", "The href")).not.toThrow();
     expect(() => checkString(JSON.parse("1"), "The href")).toThrow("The href must be a string, found 1.");
+  });
+});
+
+describe("checkBytes", () => {
+  it("accepts a Uint8Array and rejects other values", () => {
+    expect(() => checkBytes(new Uint8Array(), "The file settings")).not.toThrow();
+    expect(() => checkBytes(JSON.parse("[1]"), "The file settings")).toThrow(
+      "The file settings must be a Uint8Array, found an array.",
+    );
+    expect(() => checkBytes("text", "The file settings")).toThrow(DataError);
   });
 });
 

@@ -1,17 +1,16 @@
-import { checkString, describe } from "../checks.js";
-import { DataError } from "../errors.js";
+import { checkBytes, checkString } from "../checks.js";
 
-/** The digits of base 64, in order (RFC 4648 §4, Table 1). */
+/** The digits of base 64, in order. */
 const BASE64_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-/** The digits of base 64 with a URL and filename safe alphabet (RFC 4648 §5, Table 2). */
+/** The digits of base 64 with the URL and filename safe alphabet. */
 const BASE64URL_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-/** The code of the padding character `=` (RFC 4648 §4). */
+/** The code of the padding character `=`. */
 const PADDING_CODE = 0x3d;
-/** The most padding characters that end a text: a group of 4 digits holds at least one byte (RFC 4648 §4). */
+/** The most padding characters that end a text: a group of 4 digits holds at least one byte. */
 const MAX_PADDING = 2;
 const BYTE_BITS = 8;
 const BYTE_MASK = 0xff;
-/** Each digit stands for 6 bits, and a group of 3 bytes gives 4 digits (RFC 4648 §4). */
+/** Each digit stands for 6 bits, and a group of 3 bytes gives 4 digits. */
 const DIGIT_BITS = 6;
 const DIGIT_MASK = 0b11_1111;
 const GROUP_BYTES = 3;
@@ -38,16 +37,6 @@ function alphabet(digits: string, padded: boolean): Alphabet {
 
 const BASE64 = alphabet(BASE64_DIGITS, true);
 const BASE64URL = alphabet(BASE64URL_DIGITS, false);
-
-/**
- * Checks that a value is bytes, such as the content of a file.
- *
- * @param label - Names the value in the error message, such as `The file settings`.
- * @throws `DataError` when it is not a `Uint8Array`.
- */
-export function checkBytes(value: unknown, label: string): asserts value is Uint8Array {
-  if (!(value instanceof Uint8Array)) throw new DataError(`${label} must be a Uint8Array, found ${describe(value)}.`);
-}
 
 function encode(bytes: Uint8Array, { digits, padded }: Alphabet): string {
   const length = padded
@@ -102,14 +91,18 @@ function decode(text: string, { values, padded }: Alphabet): Uint8Array<ArrayBuf
       buffer &= (1 << bits) - 1;
     }
   }
-  // RFC 4648 §3.5: the bits after the last byte are zero, and a lone digit stands for no byte.
+  // The canonical encoding: the bits after the last byte are zero, and a lone digit stands for no byte.
   return bits >= DIGIT_BITS || buffer !== 0 ? undefined : bytes;
 }
 
 /**
- * Returns the bytes in base 64 with padding (RFC 4648 §4), the encoding that CAT 1.0 uses for files (CAT §1.5).
+ * Writes bytes in base 64 with padding, the encoding that CAT 1.0 uses for files.
  *
- * @throws `DataError` when the bytes are not a `Uint8Array`.
+ * @param bytes - The bytes.
+ * @returns The text.
+ * @throws `DataError` when `bytes` is not a `Uint8Array`.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-4 | RFC 4648, base 64}
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function encodeBase64(bytes: Uint8Array): string {
   checkBytes(bytes, "The bytes to encode");
@@ -117,15 +110,19 @@ export function encodeBase64(bytes: Uint8Array): string {
 }
 
 /**
- * Returns the bytes that a text in base 64 with padding encodes (RFC 4648 §4), or `undefined` when the text is not that
- * encoding of any bytes: it has a character outside the alphabet, wrong padding, or bits after the last byte that are not
- * zero.
+ * Reads a text in base 64 with padding.
  *
- * Only the canonical encoding decodes (RFC 4648 §3.5), so that `encodeBase64` of the result is the text. A decoder that
- * ignores the bits that stand for no byte accepts several spellings of the same bytes, which a bookkeeping by the text of
- * a token, such as a log or a cache, could not tell apart.
+ * @remarks
+ * Only the canonical encoding decodes, so that {@link encodeBase64} of the result is the text. A decoder that ignores the
+ * bits that stand for no byte accepts several spellings of the same bytes, which a bookkeeping by the text of a token,
+ * such as a log or a cache, could not tell apart.
  *
- * @throws `DataError` when the text is not a string.
+ * @param text - The text.
+ * @returns The bytes, or `undefined` when the text is not the encoding of any bytes: it has a character outside the
+ * alphabet, wrong padding, or bits after the last byte that are not zero.
+ * @throws `DataError` when `text` is not a string.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-4 | RFC 4648, base 64}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-3.5 | RFC 4648, canonical encoding}
  */
 export function decodeBase64(text: string): Uint8Array<ArrayBuffer> | undefined {
   checkString(text, "The text to decode");
@@ -133,10 +130,13 @@ export function decodeBase64(text: string): Uint8Array<ArrayBuffer> | undefined 
 }
 
 /**
- * Returns the bytes in base 64 with the URL and filename safe alphabet, without padding (RFC 4648 §5), as the parts of a
- * JWT are (RFC 7515 §2).
+ * Writes bytes in base 64 with the URL and filename safe alphabet, without padding, as the parts of a JWT are.
  *
- * @throws `DataError` when the bytes are not a `Uint8Array`.
+ * @param bytes - The bytes.
+ * @returns The text.
+ * @throws `DataError` when `bytes` is not a `Uint8Array`.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-5 | RFC 4648, base 64 with a URL and filename safe alphabet}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc7515#section-2 | RFC 7515, JSON Web Signature terminology}
  */
 export function encodeBase64Url(bytes: Uint8Array): string {
   checkBytes(bytes, "The bytes to encode");
@@ -144,10 +144,12 @@ export function encodeBase64Url(bytes: Uint8Array): string {
 }
 
 /**
- * Returns the bytes that a text in base64url without padding encodes (RFC 4648 §5), or `undefined` when the text is not
- * that encoding of any bytes, by the rule of {@link decodeBase64}.
+ * Reads a text in base64url without padding, by the rule of {@link decodeBase64}.
  *
- * @throws `DataError` when the text is not a string.
+ * @param text - The text.
+ * @returns The bytes, or `undefined` when the text is not the encoding of any bytes.
+ * @throws `DataError` when `text` is not a string.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648#section-5 | RFC 4648, base 64 with a URL and filename safe alphabet}
  */
 export function decodeBase64Url(text: string): Uint8Array<ArrayBuffer> | undefined {
   checkString(text, "The text to decode");

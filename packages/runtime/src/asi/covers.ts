@@ -1,7 +1,7 @@
 import { checkArray, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
-import { xmlTokens } from "../values/whitespace.js";
+import { xmlTokens } from "../values/xml-tokens.js";
 import type { XmlAttribute, XmlNode } from "../xml/index.js";
 import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
 import { typeNamed } from "./type-index.js";

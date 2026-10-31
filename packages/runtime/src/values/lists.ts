@@ -2,16 +2,18 @@ import { checkArray, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "./identifier.js";
 import { parseInteger } from "./lexical.js";
-import { xmlTokens } from "./whitespace.js";
+import { xmlTokens } from "./xml-tokens.js";
 
-/** The range of `xs:int`, the item type of `IntegerList` in the ASI schema (INFO §9.1.2). */
+/** The range of `xs:int`, the item type of `IntegerList` in the ASI schema. */
 const INT_RANGE = [-(2 ** 31), 2 ** 31 - 1] as const;
 
 /**
- * Reads an `IdentifierList` (INFO §9.1.1): identifiers separated by whitespace. An empty text is an empty list.
+ * Reads an `IdentifierList`: identifiers separated by whitespace.
  *
- * @param text - The text of the attribute.
+ * @param text - The text of the attribute. An empty text is an empty list.
+ * @returns The identifiers.
  * @throws `DataError` when `text` is not a string or an item is not an identifier.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, IdentifierList}
  */
 export function parseIdentifierList(text: string): string[] {
   checkString(text, "The text");
@@ -23,8 +25,10 @@ export function parseIdentifierList(text: string): string[] {
 }
 
 /**
- * Writes an `IdentifierList`: the identifiers separated by one space.
+ * Writes an `IdentifierList`.
  *
+ * @param identifiers - The identifiers.
+ * @returns The identifiers separated by one space.
  * @throws `DataError` when `identifiers` is not an array of identifiers.
  */
 export function formatIdentifierList(identifiers: readonly string[]): string {
@@ -44,11 +48,12 @@ function checkInt(value: number, source: string): number {
 }
 
 /**
- * Reads an `IntegerList` (INFO §9.1.2): integers separated by whitespace, each an `xs:int`. An empty text is an empty
- * list.
+ * Reads an `IntegerList`: integers separated by whitespace, each an `xs:int`.
  *
- * @param text - The text of the attribute.
+ * @param text - The text of the attribute. An empty text is an empty list.
+ * @returns The integers.
  * @throws `DataError` when `text` is not a string or an item is not an integer from -2147483648 to 2147483647.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, IntegerList}
  */
 export function parseIntegerList(text: string): number[] {
   checkString(text, "The text");
@@ -56,8 +61,10 @@ export function parseIntegerList(text: string): number[] {
 }
 
 /**
- * Writes an `IntegerList`: the integers separated by one space.
+ * Writes an `IntegerList`.
  *
+ * @param integers - The integers.
+ * @returns The integers separated by one space.
  * @throws `DataError` when `integers` is not an array of integers from -2147483648 to 2147483647.
  */
 export function formatIntegerList(integers: readonly number[]): string {

@@ -45,7 +45,7 @@ packages/runtime/         the QTI 3.0 runtime
   src/errors.ts           AssesskitError, DataError, ReadError, SecurityError, ProcessingError; Issue; the subpath `errors` exports
                           them without the rest of the package, for the player
   src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
-                          checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
+                          checkFunction, checkString, checkBytes, checkBoolean, checkChoice, checkFinite, checkNonNegative,
                           checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous; and the
                           valibot side: parseWith, transformWith, mapSchema, recordSchema and the schemas of a
                           number or a string
@@ -193,12 +193,12 @@ The runtime owns everything QTI defines that is not presentation or platform; th
 - Options and optional fields are destructured with their defaults, so that a value set to `null` is checked and rejected,
   never taken as absent.
 - Validation returns `Issue`s and does not throw. An issue has a stable `code` and a message; a refusal of the engine is its
-  `code` and a message, and the codes are in the table of the delivery guide. The specification section of a rule is in the
-  comment of the code that applies it, and not in the issue.
+  `code` and a message, and the codes are in the table of the delivery guide. The specification of a rule is cited in the
+  TSDoc of the code that applies it, and not in the issue.
 - Never use `Math.random`, read a clock, or construct a `RegExp`. Take a `Random` or a time from the caller, and compile
   author patterns with the linear-time automaton of `values`. `pnpm lint` fails on all three in `packages/runtime/src`.
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
-- Every semantic rule cites its specification section in the TSDoc or in a `//` comment.
+- Every semantic rule names its specification in the TSDoc of the code that applies it, with `@see`.
 - A number with a meaning is a named constant with its source.
 - No speculative options, abstractions or modules. Add a method only when a real use needs it, with its validation.
 
@@ -220,12 +220,17 @@ untested in the others.
 
 ## Comments and docs
 
-- Every export has a TSDoc comment: types and constants a noun phrase, functions a third-person verb phrase
-  ("Returns ...", "Builds ..."), properties a short phrase. Defaults are written `Default: \`x\`.`Errors are listed with
- `@throws`.
-- `//` comments only explain why something non-obvious is done, or cite a source. No commented-out code.
+- Every export has a TSDoc comment that starts with one sentence: a noun phrase for a type or a constant, a third-person
+  verb phrase for a function ("Returns ...", "Builds ..."), a short phrase for a property. A function adds `@param`,
+  `@returns` and `@throws`, an option adds `@defaultValue`, a longer explanation goes under `@remarks`, and a specification
+  is cited with `@see {@link url | name}`. A comment carries no history, no section sign and no code of a review or a
+  ticket.
+- `//` comments only explain why something non-obvious is done: an ambiguity of a specification, a numerical trap, an
+  invariant. No commented-out code.
 - US English. Docs state facts in short sentences; prefer a table or list to prose. Code samples are complete: they
-  show their imports. Values shown in samples come from running them. No marketing language, emojis or filler. The Example
+  show their imports. A guide gives the result of a sample as `// => result`, and `runGuideSamples` of
+  `test/guide-samples.ts` runs the samples in the test file of the module and fails on a result that differs. No
+  marketing language, emojis or filler. The Example
   of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails when the README
   shows other code or other output.
 - Diagrams are Mermaid in Markdown. GitHub renders them, and the Mermaid plugin of TypeDoc renders them on the docs site

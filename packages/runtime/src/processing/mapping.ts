@@ -1,7 +1,7 @@
 import type { AreaMapping, Mapping } from "../asi/index.js";
 import { ProcessingError } from "../errors.js";
 import type { Primitive, Value } from "../values/index.js";
-import { primitiveKey } from "../values/match.js";
+import { primitiveKey } from "../values/primitive-key.js";
 import { readPrimitive } from "./declared-value.js";
 import { asPoint, asString, floatResult, primitivesOf } from "./operands.js";
 import type { DeclaredResponse } from "./scope.js";

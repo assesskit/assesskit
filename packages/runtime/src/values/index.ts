@@ -1,6 +1,7 @@
 /**
- * Values of QTI variables: base types, cardinalities, NULL, lexical forms, equality and promotion, the JSON value codec of
- * BPIG Appendix C and the runtime's wire form, and the linear-time regular expressions of XML Schema.
+ * Values of QTI variables: base types, cardinalities and NULL, their lexical forms in XML, equality and promotion, the
+ * JSON forms of a value for portable custom interactions and for state, base64, and the linear-time regular
+ * expressions of XML Schema.
  *
  * @module @assesskit/runtime/values
  */
@@ -8,14 +9,12 @@
 export { BASE_TYPES, type BaseType, isBaseType } from "./base-type.js";
 export { decodeBase64, decodeBase64Url, encodeBase64, encodeBase64Url } from "./base64.js";
 export { CARDINALITIES, type Cardinality, isCardinality } from "./cardinality.js";
+export type { ValueDeclaration } from "./declaration.js";
 export { parseIsoDuration } from "./duration.js";
 export { isIdentifier } from "./identifier.js";
-export {
-  fromJsonValue,
-  type JsonValue,
-  toJsonValue,
-  type ValueDeclaration,
-} from "./json.js";
+export { fromJsonValue } from "./json-read.js";
+export type { JsonValue } from "./json-value.js";
+export { toJsonValue } from "./json-write.js";
 export { formatPrimitive, parsePrimitive } from "./lexical.js";
 export { formatIdentifierList, formatIntegerList, parseIdentifierList, parseIntegerList } from "./lists.js";
 export { matchValues } from "./match.js";
@@ -40,4 +39,4 @@ export {
   DEFAULT_XSD_REGEX_LIMITS,
   type XsdRegexLimits,
 } from "./xsd-regex.js";
-export type { XsdPattern } from "./xsd-regex-automaton.js";
+export type { XsdPattern } from "./xsd-regex-matcher.js";

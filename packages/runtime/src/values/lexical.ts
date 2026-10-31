@@ -2,26 +2,19 @@ import { checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type BaseType, checkBaseType } from "./base-type.js";
 import { isIdentifier } from "./identifier.js";
-import {
-  type FileValue,
-  isFileValue,
-  isTuple,
-  normalizePrimitive,
-  type Pair,
-  type Point,
-  type Primitive,
-} from "./primitive.js";
-import { xmlTokens } from "./whitespace.js";
+import { normalizePrimitive } from "./normalize-primitive.js";
+import { type FileValue, isFileValue, isTuple, type Pair, type Point, type Primitive } from "./primitive.js";
+import { xmlTokens } from "./xml-tokens.js";
 
-/** `xs:integer`: an optional sign and digits (XML Schema Part 2, 3.3.13). */
+/** `xs:integer`: an optional sign and digits. */
 const INTEGER_LEXICAL = /^[+-]?[0-9]+$/;
 
-/** `xs:double` apart from `INF`, `-INF` and `NaN`: a decimal number with an optional exponent (3.2.5). */
+/** `xs:double` apart from `INF`, `-INF` and `NaN`: a decimal number with an optional exponent. */
 const DOUBLE_LEXICAL = /^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/;
 
 /**
- * The content type of a `file` value read from XML. The XML form of a file is its reference alone (G10), so the content
- * type is the one that RFC 2046, 4.5.1, gives to bytes of an unknown type.
+ * The content type of a `file` read from XML. A document writes the reference alone, so the content type is the one that
+ * RFC 2046 gives to bytes of an unknown type.
  */
 const UNKNOWN_MIME_TYPE = "application/octet-stream";
 
@@ -62,26 +55,31 @@ function twoTokens(tokens: readonly string[], text: string, baseType: BaseType):
 }
 
 /**
- * Reads the lexical form of a value of a base type, as a document writes it (INFO §8.13, BIND §2.9). Whitespace around
- * a value is dropped and runs of whitespace inside it count as one space, as XML Schema's `collapse` rule says, except
- * for a `string`, which stays as it is.
+ * Reads the lexical form of a value of a base type, as a document writes it.
+ *
+ * @remarks
+ * Whitespace around a value is dropped and runs of whitespace inside it count as one space, as the `collapse` rule of XML
+ * Schema says, except for a `string`, which stays as it is.
  *
  * | Base type | Lexical form |
  * | --- | --- |
  * | `boolean` | `true`, `false`, `1` or `0` |
- * | `integer` | `xs:integer` within the safe integers (G2) |
+ * | `integer` | `xs:integer` within the safe integers: a larger integer is refused |
  * | `float`, `duration` | `xs:double` with `INF`, `-INF` and `NaN`; a duration is in seconds |
  * | `string`, `uri` | the text |
  * | `identifier` | an identifier |
  * | `point` | two integers, `x y` |
  * | `pair`, `directedPair` | two identifiers, `a b` |
- * | `file` | the reference alone; its content type is `application/octet-stream` (G10) |
+ * | `file` | the reference alone; its content type is `application/octet-stream` |
  *
- * The empty string is NULL (INFO §2.2.2); this function returns it as a string, and `single` turns it into `null`.
+ * The empty string is NULL; this function returns it as a string, and {@link single} turns it into `null`.
  *
  * @param text - The text of the value.
  * @param baseType - The base type.
+ * @returns The value, with the JavaScript type that the base type has.
  * @throws `DataError` when `text` is not a string, `baseType` is not a base type or the text is not in the lexical form.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, base types}
+ * @see {@link https://www.w3.org/TR/xmlschema-2/ | XML Schema Part 2: Datatypes}
  */
 export function parsePrimitive(text: string, baseType: "boolean"): boolean;
 export function parsePrimitive(text: string, baseType: "integer" | "float" | "duration"): number;
@@ -123,8 +121,10 @@ export function parsePrimitive(text: string, baseType: BaseType): Primitive {
 }
 
 /**
- * Reads an integer in the lexical form of `xs:integer`, with whitespace around it dropped; see {@link parsePrimitive}.
+ * Reads an integer in the lexical form of `xs:integer`, with whitespace around it dropped.
  *
+ * @param text - The text of the integer.
+ * @returns The integer.
  * @throws `DataError` when `text` is not a string, is not an integer or is outside the safe integers.
  */
 export function parseInteger(text: string): number {
@@ -133,8 +133,11 @@ export function parseInteger(text: string): number {
 }
 
 /**
- * Writes a number in the lexical form of `xs:double`: `INF`, `-INF`, `NaN`, `-0` and otherwise the shortest decimal
- * that reads back as the same number, which has an exponent for very large and very small numbers.
+ * Writes a number in the lexical form of `xs:double`.
+ *
+ * @param value - The number.
+ * @returns `INF`, `-INF`, `NaN`, `-0`, and otherwise the shortest decimal that reads back as the same number, with an
+ * exponent for very large and very small numbers.
  */
 export function formatDouble(value: number): string {
   if (Number.isNaN(value)) return "NaN";
@@ -144,11 +147,14 @@ export function formatDouble(value: number): string {
 }
 
 /**
- * Writes a value of a base type in its lexical form, so that `parsePrimitive` reads it back. A `file` is written as its
- * reference alone (G10), so its content type and name are not part of the text.
+ * Writes a value of a base type in its lexical form, so that {@link parsePrimitive} reads it back.
  *
- * @param value - A value of the base type, as `single` takes it.
+ * @remarks
+ * A `file` is written as its reference alone, so its content type and name are not part of the text.
+ *
+ * @param value - A value of the base type, as {@link single} takes it.
  * @param baseType - The base type.
+ * @returns The text.
  * @throws `DataError` when `baseType` is not a base type or `value` is not a value of it.
  */
 export function formatPrimitive(value: Primitive, baseType: BaseType): string {

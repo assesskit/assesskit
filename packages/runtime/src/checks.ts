@@ -81,6 +81,16 @@ export function checkString(value: unknown, label: string): asserts value is str
 }
 
 /**
+ * Checks that a value is bytes, such as the content of a file.
+ *
+ * @param label - Names the value in the error message, such as `The file settings`.
+ * @throws `DataError` when it is not a `Uint8Array`.
+ */
+export function checkBytes(value: unknown, label: string): asserts value is Uint8Array {
+  if (!(value instanceof Uint8Array)) throw new DataError(`${label} must be a Uint8Array, found ${describe(value)}.`);
+}
+
+/**
  * Checks that a value is a boolean.
  *
  * @param label - Names the value in the error message, such as `The option allowLateSubmission`.

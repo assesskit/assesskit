@@ -2,7 +2,7 @@ import { type CodePointSet, codePointSet, subtract, union } from "./code-point-s
 
 const code = (character: string): number => character.codePointAt(0) ?? 0;
 
-/** The code points that start an XML name: `NameStartChar` of XML 1.0, fifth edition, §2.3. */
+/** The code points that start an XML name: `NameStartChar` of XML 1.0, fifth edition. */
 export const NAME_START_CHARS: CodePointSet = codePointSet([
   [code(":"), code(":")],
   [code("A"), code("Z")],
@@ -22,7 +22,7 @@ export const NAME_START_CHARS: CodePointSet = codePointSet([
   [0x10000, 0xeffff],
 ]);
 
-/** The code points of an XML name: `NameChar` of XML 1.0, fifth edition, §2.3. */
+/** The code points of an XML name: `NameChar` of XML 1.0, fifth edition. */
 export const NAME_CHARS: CodePointSet = union(
   NAME_START_CHARS,
   codePointSet([

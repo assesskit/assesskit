@@ -8,12 +8,12 @@ const SECONDS_PER_WEEK = 7 * SECONDS_PER_DAY;
 
 /**
  * An ISO 8601 duration as XML Schema writes it, with weeks: years, months, weeks, days, and after `T` hours, minutes and
- * seconds with an optional fraction. Every part is optional here; `parseIsoDuration` requires one.
+ * seconds with an optional fraction. Every part is optional in the pattern; `splitDuration` requires one.
  */
 const ISO_DURATION =
   /^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
 
-/** Returns a number the way `Number.prototype.toString` does, but without an exponent. */
+/** Writes a number as `Number.prototype.toString` does, but without an exponent, which ISO 8601 does not have. */
 function plainDecimal(value: number): string {
   const text = String(value);
   const [mantissa = "", exponent] = text.split("e");
@@ -27,9 +27,14 @@ function plainDecimal(value: number): string {
 }
 
 /**
- * Writes a finite duration in seconds as the ISO 8601 duration `PT<seconds>S`, with the shortest decimal that reads back
- * as the same number and a leading `-` for a negative one. It uses no parts above seconds, so it has no years or months,
- * whose length in seconds is not fixed (G14).
+ * Writes a finite duration in seconds as an ISO 8601 duration.
+ *
+ * @remarks
+ * The form is `PT<seconds>S`, with the shortest decimal that reads back as the same number and a leading `-` for a
+ * negative one. It has no part above seconds, so it has no years or months, whose length in seconds is not fixed.
+ *
+ * @param seconds - A finite number of seconds.
+ * @returns The duration.
  */
 export function formatIsoDuration(seconds: number): string {
   return `${seconds < 0 ? "-" : ""}PT${plainDecimal(Math.abs(seconds))}S`;
@@ -59,11 +64,19 @@ function splitDuration(text: string): DurationParts | undefined {
 }
 
 /**
- * Reads an ISO 8601 duration into seconds. Weeks, days, hours and minutes have fixed lengths of 7 days, 24 hours, 60 minutes
- * and 60 seconds; only the seconds may have a fraction. Years and months have no fixed length, so they are refused, as
- * in the example of BPIG Appendix C.1, `P10Y3M20DT4H30M25S` (G14, G39).
+ * Reads an ISO 8601 duration into seconds.
  *
- * @throws `DataError` when the text is not a duration, or has years or months.
+ * @remarks
+ * Weeks, days, hours and minutes have the fixed lengths of 7 days, 24 hours, 60 minutes and 60 seconds, and only the
+ * seconds may have a fraction. Years and months have no fixed length, so they are refused, although the example of the
+ * JSON binding, `P10Y3M20DT4H30M25S`, has both.
+ *
+ * @param text - The duration, such as `PT1H30M` or `-P1DT1H`.
+ * @returns The seconds.
+ * @throws `DataError` when `text` is not a string, is not a duration, has years or months, or is too long to be a number
+ * of seconds.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, JSON binding}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function parseIsoDuration(text: string): number {
   checkString(text, "The duration");

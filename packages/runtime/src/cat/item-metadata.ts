@@ -1,4 +1,4 @@
-import { checkArray, checkOptions, checkRecord, checkString } from "../checks.js";
+import { checkArray, checkBytes, checkOptions, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
   checkQtiMetadata,
@@ -7,7 +7,7 @@ import {
   type QtiMetadata,
   type ScoringMode,
 } from "../metadata/index.js";
-import { checkBytes, encodeBase64 } from "../values/base64.js";
+import { encodeBase64 } from "../values/base64.js";
 
 /**
  * A metadata file that is not QTI metadata, such as IEEE LOM (`lom`) or curriculum standards metadata (`csmd`); other

@@ -1,6 +1,6 @@
 import { drawIndex } from "../random.js";
 import type { BaseType, ContainerValue, Primitive, Value } from "../values/index.js";
-import { primitiveKey } from "../values/match.js";
+import { primitiveKey } from "../values/primitive-key.js";
 import { checkContainerSize, type Environment } from "./context.js";
 import { baseTypeOf, booleanResult, integerResult, primitiveOf, primitivesOf } from "./operands.js";
 

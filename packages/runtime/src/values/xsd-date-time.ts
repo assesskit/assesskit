@@ -1,36 +1,36 @@
-/** `YYYY-MM-DD` (XML Schema Part 2, 3.2.9), the form that the pattern of UD's `DateDType` allows. */
+/** `YYYY-MM-DD`, the form that the pattern of `DateDType` of the usage data schema allows. */
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * `YYYY-MM-DDThh:mm:ss`, a fraction of seconds and a time zone (XML Schema Part 2, 3.2.7), starting with the four digits
- * that the pattern of RR's `DateTimeDType` requires.
+ * `YYYY-MM-DDThh:mm:ss`, a fraction of seconds and a time zone, starting with the four digits that the pattern of
+ * `DateTimeDType` of the results reporting schema requires.
  */
 const DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
 
 /** A fraction of seconds that is zero, or none. */
 const ZERO_FRACTION = /^(?:\.0+)?$/;
 
-/** `Z`, or a signed offset `hh:mm` (3.2.7.3). */
+/** A signed offset `hh:mm`; `Z` is handled apart. */
 const TIME_ZONE_OFFSET = /^[+-](\d{2}):(\d{2})$/;
 
 /** The days of each month in a year that is not a leap year. */
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-/** The greatest hour offset of a time zone (3.2.7.3). */
+/** The greatest hour offset of a time zone. */
 const MAX_OFFSET_HOURS = 14;
 
 function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
-/** Returns whether the year, month and day name a day of the proleptic Gregorian calendar; there is no year 0 (3.2.7). */
+/** Returns whether the year, month and day name a day of the proleptic Gregorian calendar, which has no year 0. */
 function isCalendarDay(year: number, month: number, day: number): boolean {
   if (year < 1 || month < 1 || month > DAYS_IN_MONTH.length || day < 1) return false;
   const leapDay = month === 2 && isLeapYear(year) ? 1 : 0;
   return day <= (DAYS_IN_MONTH[month - 1] ?? 0) + leapDay;
 }
 
-/** Returns whether an offset `+hh:mm` or `-hh:mm` is from -14:00 to +14:00. */
+/** Returns whether a time zone is `Z` or an offset from -14:00 to +14:00. */
 function isTimeZone(zone: string): boolean {
   if (zone === "Z") return true;
   const match = TIME_ZONE_OFFSET.exec(zone);
@@ -47,9 +47,16 @@ function isTimeOfDay(hours: number, minutes: number, seconds: number, fraction: 
 }
 
 /**
- * Returns whether a text is a date as UD writes `lastUpdated`: `YYYY-MM-DD` with a four-digit year from 0001, a month,
- * and a day of that month, without a time zone. That is the `xs:date` of XML Schema Part 2, 3.2.9, restricted by the
- * pattern of `DateDType` in the UD schema.
+ * Returns whether a text is a date as the usage data writes `lastUpdated`.
+ *
+ * @remarks
+ * The form is `YYYY-MM-DD` with a four-digit year from 0001, a month and a day of that month, without a time zone. That
+ * is the `xs:date` of XML Schema, restricted by the pattern of `DateDType` in the usage data schema.
+ *
+ * @param text - Any value; one that is not text is not a date.
+ * @returns `true` for a date.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data and Item Statistics}
+ * @see {@link https://www.w3.org/TR/xmlschema-2/#date | XML Schema Part 2, date}
  */
 export function isXsdDate(text: string): boolean {
   const match = typeof text === "string" ? DATE.exec(text) : null;
@@ -57,10 +64,17 @@ export function isXsdDate(text: string): boolean {
 }
 
 /**
- * Returns whether a text is a date and time as RR writes `datestamp`: `YYYY-MM-DDThh:mm:ss` with a four-digit year from
- * 0001, an optional fraction of seconds and an optional time zone, `Z` or an offset of at most 14 hours. That is the
- * `xs:dateTime` of XML Schema Part 2, 3.2.7, restricted by the pattern of `DateTimeDType` in the RR schema; `24:00:00` is
- * the end of a day.
+ * Returns whether a text is a date and time as the results reporting `datestamp` writes it.
+ *
+ * @remarks
+ * The form is `YYYY-MM-DDThh:mm:ss` with a four-digit year from 0001, an optional fraction of seconds and an optional time
+ * zone, `Z` or an offset of at most 14 hours. That is the `xs:dateTime` of XML Schema, restricted by the pattern of
+ * `DateTimeDType` in the results reporting schema. `24:00:00` is the end of a day.
+ *
+ * @param text - Any value; one that is not text is not a date and time.
+ * @returns `true` for a date and time.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ * @see {@link https://www.w3.org/TR/xmlschema-2/#dateTime | XML Schema Part 2, dateTime}
  */
 export function isXsdDateTime(text: string): boolean {
   const match = typeof text === "string" ? DATE_TIME.exec(text) : null;
