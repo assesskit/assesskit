@@ -193,7 +193,7 @@ parameters of the items and the settings of the test there too.
 ## The player: external scoring
 
 A `Submission` of `toSubmission` carries what a rater needs to score a response, which includes the correct responses of the
-items and the rubric for the scorer ([scoring.md](docs/player/scoring.md)).
+items, the rubric for the scorer and the scoring rubric of the outcome ([scoring.md](docs/player/scoring.md)).
 
 - Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
   candidate's session or to the candidate's browser. It is not a view of the candidate.
@@ -203,6 +203,10 @@ items and the rubric for the scorer ([scoring.md](docs/player/scoring.md)).
   `http` or `https` URL. Serve the files of candidates from an origin that is not the host's page, with `nosniff` and a
   `Content-Disposition` that downloads what the display does not play.
 - The text of a response is data: the display sets it as text and never as markup.
+- `Submission.scoringRubric` goes only to authorized raters, with the rest of the submission: the candidate's view and
+  envelopes hold none of its text. `mountRatingForm` sets the texts of the rubric as text, never as markup. The ratings that
+  a rater's page sends back are untrusted input: the server computes the score again with `scoreFromRatings` of the runtime
+  from the rubric of its own state, and passes it to `toSupplyScores`.
 - `toSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
   trusts a score it is given, so authenticate the rater and log who supplied it.
 

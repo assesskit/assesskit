@@ -63,6 +63,7 @@ import {
 } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
+import { RUBRIC_WORD, rubricMarkup } from "./scoring-fixture.js";
 
 const SECOND = 1000;
 
@@ -1329,6 +1330,24 @@ describe("createSessionHost", () => {
     const [pending] = (await host.session(ALICE.session).pending()).scoring;
     const view = await host.session(ALICE.session).scorerView(pending?.id ?? "");
     expect(view.items[0]?.correctResponses.get("RESPONSE")).toEqual(single("string", RATED_KEY));
+  });
+
+  it("keeps the scoring rubric of a rated item out of every envelope, and gives it to the rater", async () => {
+    const { host } = await examHost({}, ratedFiles(rubricMarkup("SCORE")));
+    const q2 = { ref: "q2", instance: 1 };
+    const replies = [await host.start(ALICE, { seed: 7 })];
+    replies.push(await host.handle(ALICE, request(1, { type: "move", to: q2 })));
+    const guess = new Map([["RESPONSE", single("string", "A guess")]]);
+    replies.push(await host.handle(ALICE, request(2, { type: "set-responses", item: q2, responses: guess })));
+    replies.push(await host.handle(ALICE, request(3, { type: "submit", item: q2 })));
+    replies.push(await host.view(ALICE));
+    for (const reply of replies) {
+      expect(JSON.stringify(reply)).not.toContain(RUBRIC_WORD);
+      expect(JSON.stringify(reply)).not.toContain("Clear order.");
+    }
+    const [pending] = (await host.session(ALICE.session).pending()).scoring;
+    const view = await host.session(ALICE.session).scorerView(pending?.id ?? "");
+    expect(view.scoringRubric?.criteria[0]?.description).toContain(RUBRIC_WORD);
   });
 
   it("refuses a session identifier that is not a non-empty string, and a session that does not exist", async () => {

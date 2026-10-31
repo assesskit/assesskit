@@ -172,9 +172,12 @@ const RATED_ITEM = `<?xml version="1.0" encoding="UTF-8"?>
   <qti-item-body><p>Type the word <qti-text-entry-interaction response-identifier="RESPONSE"/></p></qti-item-body>
 </qti-assessment-item>`;
 
-/** The files of the fixture where the second item has a correct response and a `SCORE` that a person gives. */
-export function ratedFiles(): Readonly<Record<string, string | Uint8Array>> {
-  return { ...examFiles(), "items/q2/item.xml": RATED_ITEM };
+/**
+ * The files of the fixture where the second item has a correct response and a `SCORE` that a person gives. `body` is more
+ * content for the end of the body of that item, such as a rubric block for the scorer.
+ */
+export function ratedFiles(body = ""): Readonly<Record<string, string | Uint8Array>> {
+  return { ...examFiles(), "items/q2/item.xml": RATED_ITEM.replace("</qti-item-body>", `${body}</qti-item-body>`) };
 }
 
 /** A pronunciation lexicon (PLS) that says W3C as the words. */

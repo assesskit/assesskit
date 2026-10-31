@@ -94,7 +94,7 @@ function checkView(view: unknown): asserts view is ScorerView {
  *
  * @remarks
  * The submission has the outcome with its declaration, the covers as parts with their `presented` flag and submitted
- * value, the rubric of the scorer view, and for each covered item the body as the candidate saw it, its template values
+ * value, the rubric of the scorer view, the scoring rubric of the outcome when it has one, and for each covered item the body as the candidate saw it, its template values
  * and its correct responses. Values are the runtime's wire values, so the submission decodes without declarations; NULL
  * is `null`, and a file stays a reference that the host's `files.url` resolves. The submission holds the correct
  * responses: give it only to authorized raters.
@@ -106,7 +106,7 @@ function checkView(view: unknown): asserts view is ScorerView {
  */
 export function toSubmission(view: ScorerView): Submission {
   checkView(view);
-  const { request, rubric, items } = view;
+  const { request, rubric, scoringRubric, items } = view;
   const { id, outcome, mode, variableIdentifierRef, lti, declaration, covers, requestedAt } = request;
   const supplied = suppliedOf(request);
   const submission = {
@@ -119,6 +119,7 @@ export function toSubmission(view: ScorerView): Submission {
     requestedAt,
     ...(supplied === undefined ? {} : { supplied }),
     rubric,
+    ...(scoringRubric === undefined ? {} : { scoringRubric }),
     parts: covers.map(partOf),
     items: items.map(itemOf),
   };

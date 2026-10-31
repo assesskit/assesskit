@@ -1,4 +1,4 @@
-import type { BodyNode } from "@assesskit/runtime/asi";
+import { type BodyNode, checkScoringRubric, type ScoringRubric } from "@assesskit/runtime/asi";
 import {
   describe,
   finiteSchema,
@@ -6,6 +6,7 @@ import {
   parseWith,
   positiveIntegerSchema,
   recordSchema,
+  transformWith,
 } from "@assesskit/runtime/checks";
 import type { ItemKey, Scorer, ScoringDeclaration } from "@assesskit/runtime/delivery";
 import type { WireValue } from "@assesskit/runtime/values";
@@ -68,7 +69,7 @@ export interface SubmissionSupplied {
 
 /**
  * What a scorer needs to rate one externally scored outcome, in a form that is JSON text as it is: the request, its
- * declaration, the rubric, the responses that the outcome rates and the items they belong to.
+ * declaration, the rubric and the scoring rubric, the responses that the outcome rates and the items they belong to.
  *
  * @remarks
  * It holds the correct responses of the items, so it goes only to authorized raters.
@@ -92,6 +93,8 @@ export interface Submission {
   readonly supplied?: SubmissionSupplied;
   /** The rubric of the scorer view. */
   readonly rubric: readonly BodyNode[];
+  /** The scoring rubric of the outcome, which a rating form shows; absent when the outcome has none. */
+  readonly scoringRubric?: ScoringRubric;
   /** The responses the outcome rates, in the order of the covers. */
   readonly parts: readonly SubmissionPart[];
   /** The item instances the outcome covers, each once, in the order of the covers. */
@@ -112,6 +115,15 @@ const optionalString = v.optional(v.string());
 
 /** A value: NULL or an object, which `fromWireValue` of the runtime reads when the value is shown. */
 const valueSchema = v.nullable(recordSchema);
+
+/** A scoring rubric: an object that `checkScoringRubric` of the runtime accepts. */
+const scoringRubricSchema = v.pipe(
+  recordSchema,
+  transformWith((value) => {
+    checkScoringRubric(value);
+    return value;
+  }),
+);
 
 /** The nodes of content: an array of objects that each have a `kind`. */
 const nodesSchema = v.array(v.looseObject({ kind: v.string() }));
@@ -152,6 +164,7 @@ const submissionShape = v.strictObject({
   requestedAt: instantSchema,
   supplied: v.optional(v.strictObject({ value: valueSchema, at: instantSchema, scorer: v.picklist(SCORERS) })),
   rubric: nodesSchema,
+  scoringRubric: v.optional(scoringRubricSchema),
   parts: v.array(partSchema),
   items: v.array(itemSchema),
 });
@@ -178,7 +191,8 @@ const submissionSchema = v.pipe(
 
 /**
  * Checks a submission that arrived as JSON: every property of its form and no other, the type of every field, the content
- * as nodes, and that each part names an item the submission has, which it has once.
+ * as nodes, the scoring rubric as the runtime's `checkScoringRubric` does, and that each part names an item the submission
+ * has, which it has once.
  *
  * @remarks
  * A value is read when it is shown, not here.

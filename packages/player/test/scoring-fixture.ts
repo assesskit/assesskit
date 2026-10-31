@@ -25,9 +25,10 @@ function itemOf(identifier: string, content: string): AssessmentItem {
 
 /**
  * An item with an essay and a `SCORE` that a person gives, 0 to 10. Its body has a rubric block for the candidate and one
- * for the scorer, and a text with an image, so that the display has content to draw.
+ * for the scorer, and a text with an image, so that the display has content to draw. `body` is more content for the end
+ * of the body.
  */
-export function essay(identifier: string, scorer: "human" | "none" = "human"): AssessmentItem {
+export function essay(identifier: string, scorer: "human" | "none" = "human", body = ""): AssessmentItem {
   const external = scorer === "none" ? "" : ' external-scored="human"';
   return itemOf(
     identifier,
@@ -37,7 +38,7 @@ export function essay(identifier: string, scorer: "human" | "none" = "human"): A
       <qti-rubric-block view="candidate" use="instructions"><qti-content-body><p>Write about ${identifier}.</p></qti-content-body></qti-rubric-block>
       <p>Look at <img src="images/${identifier}.png" alt="Picture of ${identifier}"/>.</p>
       <qti-extended-text-interaction response-identifier="RESPONSE"/>
-      <qti-rubric-block view="scorer" use="scoring"><qti-content-body><p>Give 0 to 10 points for ${identifier}.</p></qti-content-body></qti-rubric-block>
+      <qti-rubric-block view="scorer" use="scoring"><qti-content-body><p>Give 0 to 10 points for ${identifier}.</p></qti-content-body></qti-rubric-block>${body}
     </qti-item-body>`,
   );
 }
@@ -69,6 +70,13 @@ export const covers = (outcomeId: string, entries: readonly (readonly [string, s
   `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="${outcomeId}"><qti-content-body>${notes}<ul>${entries
     .map(([ref, label]) => `<li data-item-ref="${ref}" data-response-identifier="RESPONSE">${label}</li>`)
     .join("")}</ul></qti-content-body></qti-rubric-block>`;
+
+/** A word that only the scoring rubric of {@link rubricMarkup} holds, so that a test finds where its text went. */
+export const RUBRIC_WORD = "paragraphs";
+
+/** The block of the scoring rubric convention for an outcome: one holistic criterion with three levels, 0 to 6. */
+export const rubricMarkup = (outcomeId: string): string =>
+  `<qti-rubric-block view="scorer" use="scoring" class="external-scoring-rubric" xml:lang="en" data-outcome-identifier="${outcomeId}" data-rubric-kind="holistic"><qti-content-body><p>Rate the whole text.</p><ol><li data-criterion-identifier="overall"><p>How well the ${RUBRIC_WORD} are organized.</p><ol><li data-score="0" data-quality="Poor">No order.</li><li data-score="3" data-quality="Fair">Some order.</li><li data-score="6" data-quality="Good">Clear order.</li></ol></li></ol></qti-content-body></qti-rubric-block>`;
 
 /** The item references of the identifiers, `href` the identifier. */
 const refs = (identifiers: readonly string[]): string =>

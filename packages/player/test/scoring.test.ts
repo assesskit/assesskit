@@ -1,4 +1,5 @@
-import type { DeliveryState, ScorerView, ScoringRequest } from "@assesskit/runtime/delivery";
+import { readScoringRubrics } from "@assesskit/runtime/asi";
+import { type DeliveryState, type ScorerView, type ScoringRequest, viewToJson } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { container, fromWireValue, record, single, type Value } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -19,6 +20,8 @@ import {
   itemEngine,
   pick,
   play,
+  RUBRIC_WORD,
+  rubricMarkup,
   write,
   writingEngine,
 } from "./scoring-fixture.js";
@@ -114,6 +117,46 @@ describe("toSubmission", () => {
     expect(submission.items[1]).toMatchObject({ templateValues: [], correctResponses: [] });
     // The notes of the covers block are the rubric of the rater.
     expect(JSON.stringify(submission.rubric)).toContain("Rate the content once, across both tasks.");
+  });
+
+  it("carries the scoring rubric of an item outcome, as the runtime reads it from the item, and leaves it out when there is none", () => {
+    const rated = essay("e", "human", rubricMarkup("SCORE"));
+    const engine = itemEngine(rated);
+    const state = play(engine, begin(engine), write("e", "Dear Sir", 1_000), act("submit", "e", 2_000));
+    const submission = toSubmission(firstScorerView(engine, state));
+    expect(submission.scoringRubric).toEqual(readScoringRubrics(rated).get("SCORE"));
+    expect(submission.scoringRubric).toMatchObject({ kind: "holistic", language: "en" });
+    expect(submission.scoringRubric?.criteria[0]?.description).toBe(`How well the ${RUBRIC_WORD} are organized.`);
+    const parsed = json(JSON.stringify(submission)) as Submission;
+    expect(() => checkSubmission(parsed)).not.toThrow();
+    expect(parsed).toEqual(submission);
+    expect("scoringRubric" in essayView().view).toBe(false);
+    expect("scoringRubric" in toSubmission(essayView().view)).toBe(false);
+  });
+
+  it("carries the scoring rubric of a test outcome, and none of the rubrics of its items", () => {
+    const engine = writingEngine(
+      { w1: essay("w1", "none"), w2: essay("w2", "none") },
+      WRITING + rubricMarkup("WRITING"),
+    );
+    const ended = play(engine, begin(engine), { type: "end-test", at: 1_000 });
+    const submission = toSubmission(firstScorerView(engine, ended));
+    expect(submission.scoringRubric).toMatchObject({ outcomeIdentifier: "WRITING", kind: "holistic" });
+    expect(submission.scoringRubric?.criteria[0]?.levels.map(({ score }) => score)).toEqual([0, 3, 6]);
+    expect(() => checkSubmission(json(JSON.stringify(submission)))).not.toThrow();
+  });
+
+  it("keeps the text of a scoring rubric out of the view of the candidate", () => {
+    const engine = itemEngine(essay("e", "human", rubricMarkup("SCORE")));
+    const started = begin(engine);
+    const state = play(engine, started, write("e", "Dear Sir", 1_000), act("submit", "e", 2_000));
+    for (const text of [
+      JSON.stringify(viewToJson(engine.view(started, 0))),
+      JSON.stringify(viewToJson(engine.view(state, 3_000))),
+    ]) {
+      expect(text).not.toContain(RUBRIC_WORD);
+      expect(text).not.toContain("Clear order.");
+    }
   });
 
   it("gives the correct responses and the template values of an item as wire values", () => {

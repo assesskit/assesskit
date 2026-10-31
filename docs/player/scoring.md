@@ -13,8 +13,8 @@ sequenceDiagram
   E-->>H: pending(state).scoring: a scoring request
   H->>H: toSubmission(scorerView)
   H->>R: Submission as JSON, with the correct responses
-  Note over R: mountSubmission shows it to a person
-  R-->>H: the score
+  Note over R: mountSubmission shows it to a person,<br/>mountRatingForm collects the ratings
+  R-->>H: the score, or the ratings
   H->>H: toSupplyScores(request, score, scorer)
   H->>E: apply(state, action with at)
   E-->>H: scores-applied, or scores-replaced for a second score
@@ -25,6 +25,8 @@ sequenceDiagram
 | Turn a request into a JSON submission | shared, `@assesskit/player/scoring`  | `toSubmission`                                    |
 | Check a submission that arrived       | shared, `@assesskit/player/protocol` | `checkSubmission`                                 |
 | Show a submission to a rater          | browser, `@assesskit/player/player`  | `mountSubmission`                                 |
+| Show a rating form                    | browser, `@assesskit/player/player`  | `mountRatingForm` ([rating](rating.md))           |
+| Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `scoreFromRatings`, which the form calls          |
 | Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `toSupplyScores`                                  |
 | Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
 
@@ -32,7 +34,8 @@ On a device the page learns of a request from `host.subscribeSteps` on `scoring-
 `createLocalSession` ([client](client.md#the-host-side)); a server's rater endpoint calls `session(id).pending()` and
 `session(id).scorerView(request)` ([server](server.md#the-host-side)).
 
-The rating form and the rating workflow, such as assignment and double scoring, are the host's. A submission holds the correct
+The rating form is the player's ([rating](rating.md)): it shows the `scoringRubric` of the submission and gives the ratings and
+their score. The rating workflow, such as assignment and double scoring, is the host's. A submission holds the correct
 responses of the items, so the host gives it only to authorized raters.
 
 ```ts
@@ -95,19 +98,20 @@ again.events.map(({ type }) => type); // => ["scores-replaced", "outcome-process
 `toSubmission(view)` takes what `Engine.scorerView(state, request.id)` returns. One submission is one scoring request, so it
 rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submission))` equals it.
 
-| Property                | Type                               | Meaning                                                                                                              |
-| ----------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `request`               | `string`                           | The identifier of the request, `item:<ref>:<instance>:<outcome>` or `test:<outcome>`, which `toSupplyScores` answers |
-| `outcome`               | `string`                           | The identifier of the outcome                                                                                        |
-| `mode`                  | `"human"` or `"externalMachine"`   | Who is to score it                                                                                                   |
-| `variableIdentifierRef` | `string`                           | The `variable-identifier-ref` of the declaration; absent when it has none                                            |
-| `lti`                   | `true`                             | The item is a link to a tool; absent otherwise                                                                       |
-| `declaration`           | The runtime's `ScoringDeclaration` | Cardinality, base type, normal minimum and maximum, mastery value, interpretation and long interpretation            |
-| `requestedAt`           | `number`                           | When the request was made, in epoch milliseconds                                                                     |
-| `supplied`              | `{ value, at, scorer }`            | The score supplied before; absent while the request is pending                                                       |
-| `rubric`                | `BodyNode[]`                       | The rubric of the scorer view: that of the test, and for an item outcome that of its part and sections               |
-| `parts`                 | `SubmissionPart[]`                 | The responses the outcome rates, in the order of the covers                                                          |
-| `items`                 | `SubmissionItem[]`                 | The item instances the outcome covers, each once, in the order of the covers                                         |
+| Property                | Type                               | Meaning                                                                                                                                                                 |
+| ----------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `request`               | `string`                           | The identifier of the request, `item:<ref>:<instance>:<outcome>` or `test:<outcome>`, which `toSupplyScores` answers                                                    |
+| `outcome`               | `string`                           | The identifier of the outcome                                                                                                                                           |
+| `mode`                  | `"human"` or `"externalMachine"`   | Who is to score it                                                                                                                                                      |
+| `variableIdentifierRef` | `string`                           | The `variable-identifier-ref` of the declaration; absent when it has none                                                                                               |
+| `lti`                   | `true`                             | The item is a link to a tool; absent otherwise                                                                                                                          |
+| `declaration`           | The runtime's `ScoringDeclaration` | Cardinality, base type, normal minimum and maximum, mastery value, interpretation and long interpretation                                                               |
+| `requestedAt`           | `number`                           | When the request was made, in epoch milliseconds                                                                                                                        |
+| `supplied`              | `{ value, at, scorer }`            | The score supplied before; absent while the request is pending                                                                                                          |
+| `rubric`                | `BodyNode[]`                       | The rubric of the scorer view: that of the test, and for an item outcome that of its part and sections                                                                  |
+| `scoringRubric`         | The runtime's `ScoringRubric`      | The criteria, levels and weights of the outcome, which a rating form shows ([conventions](../runtime/conventions.md#scoring-rubrics)); absent when the outcome has none |
+| `parts`                 | `SubmissionPart[]`                 | The responses the outcome rates, in the order of the covers                                                                                                             |
+| `items`                 | `SubmissionItem[]`                 | The item instances the outcome covers, each once, in the order of the covers                                                                                            |
 
 | `SubmissionPart`     | Type                | Meaning                                                                                  |
 | -------------------- | ------------------- | ---------------------------------------------------------------------------------------- |
@@ -134,8 +138,9 @@ rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submissi
 - The content is the runtime's typed nodes, as JSON.
 
 `checkSubmission(value)` of `@assesskit/player/protocol` checks a submission that arrived as JSON: every property of its
-form and no other, the type of every field, the content as nodes, and that each part names an item the submission has once.
-It reads no value; `fromWireValue` does when the value is shown.
+form and no other, the type of every field, the content as nodes, the scoring rubric as the runtime's `checkScoringRubric`
+does, and that each part names an item the submission has once. It reads no value; `fromWireValue` does when the value is
+shown.
 
 ## The score
 
@@ -211,7 +216,7 @@ display.
 The themes and the PNP presentation of [styling](styling.md) apply when the host sets their attributes and properties on
 `host`; the content roots in the display take the colors from it.
 
-Raters have their own tools. The display adds no controls: the rating form belongs beside it, in the host's page.
+Raters have their own tools. The display adds no controls: the [rating form](rating.md) belongs beside it, in the host's page.
 
 ## Errors
 

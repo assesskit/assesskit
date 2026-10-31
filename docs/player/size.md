@@ -9,15 +9,15 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [11.5, 5.6, 20.9, 116.5, 124.3]
+  bar [11.5, 7.0, 20.9, 116.5, 124.3]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`           | 35,505  | 11,519  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
-| `@assesskit/player/protocol`  | 18,076  | 5,581   | 7,500   | The envelopes and their schemas; valibot is 10.9 kB of it                                                                     |
+| `@assesskit/player`           | 35,514  | 11,521  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
+| `@assesskit/player/protocol`  | 21,958  | 7,016   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
 | `@assesskit/player/client`    | 64,928  | 20,883  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`    | 366,187 | 116,511 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
+| `@assesskit/player/player`    | 366,242 | 116,526 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
 | `@assesskit/runtime/delivery` | 526,637 | 124,304 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
 | `pci-frame/bridge.js`         | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
 | `pci-frame/require.js`        | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |

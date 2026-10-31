@@ -543,6 +543,22 @@ const SUBMISSION = {
     scorer: "human",
   },
   rubric: [{ kind: "p", children: [{ kind: "text", value: "Rate the content." }] }],
+  scoringRubric: {
+    outcomeIdentifier: "SCORE",
+    kind: "analytic",
+    language: "en",
+    criteria: [
+      {
+        identifier: "content",
+        weight: 2,
+        description: "Content.",
+        levels: [
+          { score: 0, quality: "Absent" },
+          { score: 1, description: "Some ideas." },
+        ],
+      },
+    ],
+  },
   parts: [
     {
       item: { ref: "e", instance: 1 },
@@ -588,6 +604,7 @@ describe("checkSubmission", () => {
   it("accepts the optional parts left out, a record declaration and NULL values", () => {
     const edits: readonly (readonly [readonly Step[], unknown])[] = [
       [["supplied"], undefined],
+      [["scoringRubric"], undefined],
       [["declaration"], { cardinality: "record" }],
       [["parts", 0, "label"], undefined],
       [["parts", 0, "interaction"], undefined],
@@ -626,6 +643,8 @@ describe("checkSubmission", () => {
       ],
       [["rubric"], {}, "A submission is invalid at rubric: expected an array, found an object."],
       [["rubric"], [{ text: "x" }], 'A submission is invalid at rubric[0]: missing the property "kind".'],
+      [["scoringRubric"], 5, "A submission is invalid at scoringRubric: expected an object, found 5."],
+      [["scoringRubric"], [], "A submission is invalid at scoringRubric: expected an object, found an array."],
       [["parts"], null, "A submission is invalid at parts: expected an array, found null."],
       [["items"], "x", 'A submission is invalid at items: expected an array, found "x".'],
       [["supplied"], 7, "A submission is invalid at supplied: expected an object, found 7."],
@@ -683,6 +702,42 @@ describe("checkSubmission", () => {
       expect(() => checkSubmission(input), path.join(".")).toThrow(
         typeof message === "string" ? new DataError(message) : message,
       );
+    }
+  });
+
+  it("rejects a scoring rubric that the runtime refuses, with the rule it breaks", () => {
+    const cases: readonly (readonly [readonly Step[], unknown, RegExp])[] = [
+      [
+        ["scoringRubric", "kind"],
+        "rank",
+        /^A submission is invalid at scoringRubric: The scoring rubric is invalid at kind: /,
+      ],
+      [
+        ["scoringRubric", "extra"],
+        1,
+        /^A submission is invalid at scoringRubric: The scoring rubric is invalid: unexpected property "extra"\.$/,
+      ],
+      [
+        ["scoringRubric", "outcomeIdentifier"],
+        "1x",
+        /at outcomeIdentifier: the outcome identifier must be an identifier/,
+      ],
+      [["scoringRubric", "criteria"], [], /at criteria: a scoring rubric has one or more criteria, found none/],
+      [["scoringRubric", "criteria", 0, "weight"], 0, /at criteria\[0\]\.weight: expected a positive number, found 0/],
+      [
+        ["scoringRubric", "criteria", 0, "levels"],
+        [{ score: 1 }],
+        /at criteria\[0\]\.levels: a criterion has two or more levels, found 1/,
+      ],
+      [
+        ["scoringRubric", "criteria", 0, "levels", 1, "score"],
+        0,
+        /at criteria\[0\]\.levels\[1\]\.score: the score 0 occurs twice/,
+      ],
+    ];
+    for (const [path, value, message] of cases) {
+      expect(() => checkSubmission(changed(path, value)), path.join(".")).toThrow(message);
+      expect(() => checkSubmission(changed(path, value)), path.join(".")).toThrow(DataError);
     }
   });
 
