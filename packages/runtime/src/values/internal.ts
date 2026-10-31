@@ -3,4 +3,8 @@
  *
  * @module
  */
+export { baseTypeSchema } from "./base-type.js";
+export { cardinalitySchema } from "./cardinality.js";
+export { primitiveKey } from "./primitive-key.js";
+export { wireValueSchema } from "./wire.js";
 export { xmlTokens } from "./xml-tokens.js";
