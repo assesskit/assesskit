@@ -21,13 +21,15 @@ import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import {
+  type Clock,
   type DispatchResult,
   type DocumentSource,
   type SessionClient,
   type ViewDocuments,
   viewDocuments,
 } from "../protocol/index.js";
-import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
+import { clockSchema } from "../protocol/internal.js";
+import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
 import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 

@@ -28,7 +28,6 @@ import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import { checkIri } from "../caliper/internal.js";
 import { AccessError, ServiceError } from "../errors.js";
-import { checkClock, readClock } from "../lti/internal.js";
 import {
   type ActionEnvelope,
   type Caller,
@@ -37,7 +36,7 @@ import {
   checkViewEnvelope,
   type ViewEnvelope,
 } from "../protocol/index.js";
-import { markOfficial } from "../protocol/internal.js";
+import { checkClock, markOfficial, readClock } from "../protocol/internal.js";
 import { forwardEvents, type SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
 import { checkClientAction, EXAM_CLIENT_ACTIONS, readClientActions } from "./policy.js";

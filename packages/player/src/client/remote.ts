@@ -6,14 +6,16 @@ import * as v from "valibot";
 import { AccessError } from "../errors.js";
 import {
   type ActionEnvelope,
+  type Clock,
   checkViewEnvelope,
   type DispatchResult,
   type SessionClient,
   type ViewDocuments,
   type ViewEnvelope,
 } from "../protocol/index.js";
+import { clockSchema } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
-import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
+import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
 import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 

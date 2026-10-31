@@ -3,6 +3,7 @@
  *
  * @module
  */
+export { checkClock, clockSchema, readClock } from "./clock.js";
 export { markOfficial } from "./official.js";
 export { SCORERS } from "./scorers.js";
 export { checkDeclaration } from "./scoring-declaration.js";

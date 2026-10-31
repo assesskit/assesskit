@@ -31,6 +31,7 @@ submission, because the server writes it and the browser shows it.
 | `LtiFrame`, `checkLtiFrame`, `checkAllowList`      | What the player needs to show a tool, and the checks of it.                                            |
 | `LTI_TOOL_FRAME`, `LTI_STORAGE_FRAME`              | The names of the two frames of an LTI item.                                                            |
 | `SessionClient`, `DispatchResult`                  | The one interface the player mounts against.                                                           |
+| `Clock`                                            | The source of the time that a client, a session host and a test pass in.                               |
 | `OfficialResult`, `isOfficialResult`               | A results report that the session host marked official.                                                |
 | `Submission` and its parts, `checkSubmission`      | What a rater needs to rate an externally scored outcome.                                               |
 

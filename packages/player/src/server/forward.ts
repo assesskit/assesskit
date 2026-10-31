@@ -11,7 +11,8 @@ import {
   caliperGrade,
   sendCaliper,
 } from "../caliper/index.js";
-import { type Clock, checkClock, readClock } from "../lti/internal.js";
+import type { Clock } from "../protocol/index.js";
+import { checkClock, readClock } from "../protocol/internal.js";
 
 /** The score that a `supply-scores` action supplied: the runtime's events name the request and not the value, so the step carries it. */
 export interface SuppliedGrade {

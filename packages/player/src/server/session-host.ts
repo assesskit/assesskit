@@ -8,8 +8,7 @@ import type {
   Step,
 } from "@assesskit/runtime/delivery";
 import type { QtiPackage } from "@assesskit/runtime/package";
-import type { Clock } from "../lti/index.js";
-import type { Caller, OfficialResult, ViewEnvelope } from "../protocol/index.js";
+import type { Caller, Clock, OfficialResult, ViewEnvelope } from "../protocol/index.js";
 import type { ForwardOptions } from "./forward.js";
 import type { AssetGate } from "./gate/index.js";
 import type { CandidateActionType } from "./policy.js";

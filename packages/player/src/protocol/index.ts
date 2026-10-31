@@ -7,6 +7,7 @@
  */
 export { type ActionEnvelope, checkActionEnvelope } from "./action-envelope.js";
 export { type Caller, checkCaller } from "./caller.js";
+export type { Clock } from "./clock.js";
 export { type DocumentSource, type ItemDocuments, type ViewDocuments, viewDocuments } from "./documents.js";
 export {
   checkAllowList,

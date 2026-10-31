@@ -4,8 +4,10 @@
  *
  * @module @assesskit/player/client
  */
+
+export type { Clock } from "../protocol/index.js";
 export { assetResolver, UNSIGNED_URL } from "./assets.js";
-export { BROWSER_CLOCK, type Clock } from "./clock.js";
+export { BROWSER_CLOCK } from "./clock.js";
 export { createLocalSession, type LocalSessionOptions, type LocalStore } from "./local.js";
 export {
   AUTOSAVE_MS,
