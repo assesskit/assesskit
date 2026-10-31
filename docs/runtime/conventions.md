@@ -123,6 +123,7 @@ flowchart LR
   ratings --> score["scoreFromRatings"]
   rubric --> score
   score --> result["The score, or null<br/>while a criterion is unrated"]
+  block -->|"the engine, for a scoring request"| view["ScorerView.scoringRubric"]
 ```
 
 ```xml
@@ -326,6 +327,21 @@ the form of the convention, the shape of its kind, or uses an identifier or a sc
 undeclared, not `external-scored`, or not a single integer or float (an integer outcome needs whole points); two blocks for one
 outcome. A rubric whose sums leave the normal range of the outcome, and a block with the class token where it is not
 recognized, are warnings. [Validate](validate.md#scoring-rubrics) lists the codes.
+
+### In the engine
+
+`scorerView` gives a rater the rubric of the request in `scoringRubric`, so that no host searches the content for it. Which block
+applies depends on the scope of the outcome:
+
+| Request      | `scoringRubric` comes from                                                                                                        | The rubric blocks of the scorer view leave out                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Item outcome | The first marked block of the item for the outcome, after template processing, with the item's `xml:lang` when the block has none | Every covers and scoring rubric block of the test, even for an outcome of the same name; the scoring rubrics of the item's other outcomes |
+| Test outcome | The first marked block of the test for the outcome                                                                                | The covers and scoring rubric blocks of other outcomes; every scoring rubric block of the covered items                                   |
+
+An outcome with no marked block has no `scoringRubric`, and the host rates it by its own means. Template content in a rubric
+resolves in the scorer view, and only its texts can vary: the criteria, the levels and the numbers are those of the document.
+`createEngine` runs the static checks of `validate`, so a block that breaks a rule is refused before a session starts.
+[Delivery](delivery.md#scorer-view) describes the view.
 
 ### Not included
 

@@ -13,6 +13,8 @@ import {
   type Engine,
   isXsdDateTime,
   readResults,
+  readScoringRubrics,
+  type ScoringRubric,
   sendCatRequest,
   serializeState,
   shuffleChoices,
@@ -56,6 +58,7 @@ import {
   waiting,
   write,
 } from "./pending-fixtures.js";
+import { criterionMarkup, ESSAY, ESSAY_MARKUP, rubricMarkup } from "./scoring-rubrics.js";
 
 const wire = (state: DeliveryState): DeliveryState => deserializeState(serializeState(state));
 
@@ -427,6 +430,153 @@ describe("scoring requests of the test", () => {
     expect(two.scorerView(ended.state, "test:STYLE").rubric.map((node) => node.kind)).toEqual(["ul"]);
     expect(two.scorerView(ended.state, "test:CONTENT").rubric.map((node) => node.kind)).toEqual(["p", "ul"]);
     expect(() => two.scorerView(ended.state, "test:NOPE")).toThrow('The state has no scoring request "test:NOPE".');
+  });
+});
+
+describe("the scoring rubric of a scoring request", () => {
+  /** The levels of a criterion that `criterionMarkup` writes, with the scores given. */
+  const levels = (...scores: number[]) => scores.map((score) => ({ score, description: `level ${score}` }));
+  const holisticMarkup = (outcomeId: string, identifier = "overall"): string =>
+    rubricMarkup(
+      `<ol>${criterionMarkup(identifier, ["0", "1", "2"])}</ol>`,
+      ` data-outcome-identifier="${outcomeId}" data-rubric-kind="holistic"`,
+    );
+  const holistic = (outcomeId: string, identifier = "overall"): ScoringRubric => ({
+    outcomeIdentifier: outcomeId,
+    kind: "holistic",
+    criteria: [{ identifier, weight: 1, levels: levels(0, 1, 2) }],
+  });
+  const external = 'external-scored="human"';
+  const kinds = (nodes: readonly { readonly kind: string }[]): string[] =>
+    nodes.map((node) => node.kind).filter((kind) => kind !== "text");
+  const traitDeclaration = `<qti-outcome-declaration identifier="TRAIT" cardinality="single" base-type="float" ${external}/>`;
+
+  /** A test that rates its own outcome `SCORE` and two items that rate theirs, with the rubrics of both. */
+  const collision = engineOf(
+    `${outcome("SCORE", "float", external)}${outcome("TOTAL", "float")}${covers("SCORE", [["w1", "Task 1"]], "<p>Rate the test.</p>")}${holisticMarkup("SCORE", "whole")}${part("P", section("S", refs("w1", "w2")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
+    {
+      items: {
+        w1: essay("w1", {
+          declarations: traitDeclaration,
+          body: `${holisticMarkup("SCORE", "item-score")}${holisticMarkup("TRAIT", "item-trait")}`,
+          attributes: 'xml:lang="id"',
+        }),
+        w2: essay("w2", { body: holisticMarkup("SCORE", "other") }),
+      },
+    },
+  );
+  const submitted = played(collision, begun(collision).state, write("w1", "Text", 1), act("submit", "w1", 2));
+  const ended = played(collision, submitted.state, { type: "end-test", at: 3 });
+
+  it("gives the rubric of an item outcome from the item, in the language of the item", () => {
+    const view = collision.scorerView(ended.state, "item:w1:1:SCORE");
+    expect(view.scoringRubric).toEqual({ ...holistic("SCORE", "item-score"), language: "id" });
+    expect(collision.scorerView(ended.state, "item:w1:1:TRAIT").scoringRubric).toEqual({
+      ...holistic("TRAIT", "item-trait"),
+      language: "id",
+    });
+  });
+
+  it("gives the rubric of a test outcome from the test, whatever the items name", () => {
+    const view = collision.scorerView(ended.state, "test:SCORE");
+    expect(view.scoringRubric).toEqual(holistic("SCORE", "whole"));
+    expect(kinds(view.rubric)).toEqual(["p", "ul", "ol"]);
+  });
+
+  it("leaves out of an item outcome the blocks of the test, even for an outcome of the same name", () => {
+    const view = collision.scorerView(ended.state, "item:w1:1:SCORE");
+    expect(view.rubric).toEqual([]);
+    expect(collision.scorerView(ended.state, "item:w1:1:TRAIT").rubric).toEqual([]);
+  });
+
+  it("shows a scorer only the scoring rubric of the outcome in the body of an item", () => {
+    const bodyOf = (request: string, ref = "w1") =>
+      collision.scorerView(ended.state, request).items.find(({ key: itemKey }) => itemKey.ref === ref)?.body;
+    // The interaction, the rubric of the item for scorers, and the rubric of the outcome.
+    expect(kinds(bodyOf("item:w1:1:SCORE") ?? [])).toEqual([
+      "extended-text-interaction",
+      "rubric-block",
+      "rubric-block",
+    ]);
+    expect(kinds(bodyOf("item:w1:1:TRAIT") ?? [])).toEqual([
+      "extended-text-interaction",
+      "rubric-block",
+      "rubric-block",
+    ]);
+    expect(kinds(bodyOf("test:SCORE") ?? [])).toEqual(["extended-text-interaction", "rubric-block"]);
+    expect(JSON.stringify(bodyOf("item:w1:1:SCORE"))).toContain("item-score");
+    expect(JSON.stringify(bodyOf("item:w1:1:TRAIT"))).toContain("item-trait");
+    expect(JSON.stringify(bodyOf("item:w1:1:SCORE"))).not.toContain("item-trait");
+    expect(JSON.stringify(bodyOf("item:w1:1:TRAIT"))).not.toContain("item-score");
+    expect(JSON.stringify(bodyOf("test:SCORE"))).not.toContain("item-");
+  });
+
+  it("gives the rubric of the test next to its covers, and leaves out those of other outcomes", () => {
+    const outcomes = `${outcome("CONTENT", "float", external)}${outcome("STYLE", "float", external)}${outcome("TOTAL", "float")}`;
+    const styled = ESSAY_MARKUP.replace('data-outcome-identifier="SCORE"', 'data-outcome-identifier="STYLE"');
+    const content = ESSAY_MARKUP.replace('data-outcome-identifier="SCORE"', 'data-outcome-identifier="CONTENT"');
+    const engine = engineOf(
+      `${outcomes}${covers("CONTENT", [["w1", "Task 1"]])}${content}${covers("STYLE", [["w1", "Style"]])}${styled}${part("P", section("S", refs("w1")))}`,
+      { items: { w1: essay("w1", { scorer: "none" }) } },
+    );
+    const state = played(engine, begun(engine).state, { type: "end-test", at: 1 }).state;
+    const view = engine.scorerView(state, "test:CONTENT");
+    expect(view.scoringRubric).toEqual({ ...ESSAY, outcomeIdentifier: "CONTENT" });
+    expect(kinds(view.rubric)).toEqual(["ul", "p", "ol"]);
+    expect(engine.scorerView(state, "test:STYLE").scoringRubric).toEqual({ ...ESSAY, outcomeIdentifier: "STYLE" });
+  });
+
+  it("reads the texts of an item after template processing, where the document gives the static text", () => {
+    const topic = `<qti-template-declaration identifier="TOPIC" cardinality="single" base-type="string"><qti-default-value><qti-value>rivers</qti-value></qti-default-value></qti-template-declaration>`;
+    const block = rubricMarkup(
+      `<ol><li data-criterion-identifier="idea"><p>About <qti-printed-variable identifier="TOPIC"/></p><ol><li data-score="0">Off topic</li><li data-score="1">Writes about <qti-printed-variable identifier="TOPIC"/></li></ol></li></ol>`,
+    );
+    const authored = essay("w1", { declarations: topic, body: block });
+    const engine = engineOf(`${outcome("TOTAL", "float")}${part("P", section("S", refs("w1")))}`, {
+      items: { w1: authored },
+    });
+    const state = played(engine, begun(engine).state, write("w1", "Text", 1), act("submit", "w1", 2)).state;
+    const [criterion] = engine.scorerView(state, "item:w1:1:SCORE").scoringRubric?.criteria ?? [];
+    expect(criterion?.description).toBe("About rivers");
+    expect(criterion?.levels.map(({ description }) => description)).toEqual(["Off topic", "Writes about rivers"]);
+    const [written] = readScoringRubrics(authored).get("SCORE")?.criteria ?? [];
+    expect(written?.description).toBe("About");
+  });
+
+  it("gives no rubric for an outcome without a block", () => {
+    const engine = engineOf(`${outcome("TOTAL", "float")}${part("P", section("S", refs("w1")))}`, {
+      items: { w1: essay("w1") },
+    });
+    const state = played(engine, begun(engine).state, act("submit", "w1", 1)).state;
+    const view = engine.scorerView(state, "item:w1:1:SCORE");
+    expect(view.scoringRubric).toBeUndefined();
+    expect("scoringRubric" in view).toBe(false);
+  });
+
+  it("refuses to deliver an item whose first rubric block breaks the convention", () => {
+    const broken = rubricMarkup("<ol/>", ' data-outcome-identifier="SCORE"');
+    const engine = () =>
+      engineOf(`${outcome("TOTAL", "float")}${part("P", section("S", refs("w1")))}`, {
+        items: { w1: essay("w1", { body: `${broken}${holisticMarkup("SCORE")}` }) },
+      });
+    expect(engine).toThrow(/assesskit\/scoring-rubric\/malformed/);
+  });
+
+  it("does not take the class token of a test part or a section for a rubric", () => {
+    const stray = holisticMarkup("CONTENT");
+    const engine = engineOf(
+      `${outcome("CONTENT", "float", external)}${outcome("TOTAL", "float")}${part("P", section("S", `<qti-rubric-block view="scorer" use="scoring" class="external-scoring-rubric" data-outcome-identifier="CONTENT"><qti-content-body><p>Stray</p></qti-content-body></qti-rubric-block>${refs("w1")}`), "linear", "individual", stray)}`,
+      { items: { w1: essay("w1", { scorer: "none" }) } },
+    );
+    const state = played(engine, begun(engine).state, { type: "end-test", at: 1 }).state;
+    expect(engine.scorerView(state, "test:CONTENT").scoringRubric).toBeUndefined();
+  });
+
+  it("keeps the candidate view free of the text of the rubric", () => {
+    const view = collision.view(begun(collision).state, 0);
+    const text = JSON.stringify(viewToJson(view));
+    expect(text).not.toContain("item-score");
+    expect(text).not.toContain("level 1");
   });
 });
 

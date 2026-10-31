@@ -593,11 +593,26 @@ engine.results(scored.state).itemResults[0].sessionStatus; // => "final"
 
 ### Scorer view
 
-`scorerView(state, requestId)` gives what a rater needs: the request; the `rubric` of the test for the `scorer`
-view, and for an item outcome that of its part and sections too, without the covers blocks of other outcomes; and for each
-covered instance its title, its body as the candidate saw it after template processing, followed by the rubric blocks of the
-item that only the scorer sees, its template values, submitted responses and correct responses. An instance not presented
-has an empty body and empty maps. The view holds the correct responses, so it belongs on the server.
+```mermaid
+flowchart LR
+  request["Scoring request<br/>item or test outcome"] --> view["scorerView(state, requestId)"]
+  view --> rubric["rubric<br/>children of the scorer blocks of the test<br/>and, for an item outcome, of its part and sections"]
+  view --> scoring["scoringRubric<br/>the rubric of the outcome<br/>from its item or from the test"]
+  view --> items["items<br/>body, template values, responses,<br/>correct responses"]
+```
+
+`scorerView(state, requestId)` gives what a rater needs. The blocks of the conventions are chosen by scope and outcome, so a scorer
+sees only the rubric being rated, even when an item and the test name an outcome alike:
+
+| Part of the view    | Item outcome                                                                                                                                                                              | Test outcome                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `rubric`            | The rubric blocks of the test, its part and its sections for `scorer`, without any covers or scoring rubric block of the test                                                             | The rubric blocks of the test for `scorer`, without the covers and scoring rubric blocks of other outcomes |
+| `scoringRubric`     | The [scoring rubric](conventions.md#scoring-rubrics) of the outcome, from the first marked block of the item, read after template processing, in the language of the block or of the item | The scoring rubric of the outcome, from the first marked block of the test                                 |
+| `items[].body`      | The body as the candidate saw it after template processing, then the rubric blocks of the item for `scorer`, without the scoring rubrics of the item's other outcomes                     | The same for each covered instance, without any scoring rubric of the item                                 |
+| `items[]` otherwise | Title, template values, submitted responses and correct responses of the instance                                                                                                         | Each covered instance, presented or not; an instance not presented has an empty body and empty maps        |
+
+`scoringRubric` is absent when the outcome has no marked block. The engine's static checks refuse a block that breaks the
+convention, so a delivered rubric is always whole. The view holds the correct responses, so it belongs on the server.
 
 ### Adaptive sections
 

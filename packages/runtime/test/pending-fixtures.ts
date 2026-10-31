@@ -49,22 +49,26 @@ export interface EssayOptions {
   readonly declarations?: string;
   /** Response processing, after the body. Default: none. */
   readonly responseProcessing?: string;
+  /** More content of the item body, after the rubric for the scorer. Default: none. */
+  readonly body?: string;
+  /** More attributes of the item, such as `xml:lang`. Default: none. */
+  readonly attributes?: string;
 }
 
 /** An item with an essay and a `SCORE` that no response processing sets, and a rubric for the scorer. */
 export function essay(identifier: string, options: EssayOptions = {}): AssessmentItem {
-  const { scorer = "human", ref, declarations = "", responseProcessing = "" } = options;
+  const { scorer = "human", ref, declarations = "", responseProcessing = "", body = "", attributes = "" } = options;
   const external = scorer === "none" ? "" : ` external-scored="${scorer}"`;
   const reference = ref === undefined ? "" : ` variable-identifier-ref="${ref}"`;
   return itemOf(
     identifier,
-    'time-dependent="false"',
+    `time-dependent="false"${attributes === "" ? "" : ` ${attributes}`}`,
     `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
     <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"${external}${reference} normal-minimum="0" normal-maximum="10" interpretation="Essay score"/>
     ${declarations}
     <qti-item-body>
       <qti-extended-text-interaction response-identifier="RESPONSE"/>
-      <qti-rubric-block view="scorer" use="scoring"><qti-content-body><p>Give 0 to 10 points for ${identifier}.</p></qti-content-body></qti-rubric-block>
+      <qti-rubric-block view="scorer" use="scoring"><qti-content-body><p>Give 0 to 10 points for ${identifier}.</p></qti-content-body></qti-rubric-block>${body}
     </qti-item-body>
     ${responseProcessing}`,
   );
