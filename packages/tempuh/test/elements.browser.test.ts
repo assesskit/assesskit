@@ -17,6 +17,7 @@ import { audioContextRuns } from "./audio.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { waitFor } from "./wait.js";
 
 /** The declaration of a response variable. */
 const declare = (cardinality: string, baseType: string, identifier = "R"): string =>
@@ -976,7 +977,7 @@ describe("upload", () => {
     const files = fakeFiles();
     const scene = mountScene(Declaration, Body('type="text/plain"'), { options: { files } });
     await userEvent.upload(scene.find("input[type=file]"), new File(["abc"], "notes.txt", { type: "text/plain" }));
-    await vi.waitFor(() => expect(scene.responses).toHaveLength(1));
+    await waitFor(() => expect(scene.responses).toHaveLength(1));
     expect(files.uploads.map(({ mimeType, fileName }) => [mimeType, fileName])).toEqual([["text/plain", "notes.txt"]]);
     expect(await files.uploads[0]?.bytes.text()).toBe("abc");
     expect(scene.responses[0]).toEqual({
@@ -999,7 +1000,7 @@ describe("upload", () => {
     const files = fakeFiles();
     const scene = mountScene(Declaration, Body('type="application/pdf"'), { options: { files } });
     await userEvent.upload(scene.find("input[type=file]"), new File(["x"], "a.png", { type: "image/png" }));
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(scene.find(".tempuh-hint").textContent).toBe(
         "This file type is not accepted. Accepted types: application/pdf",
       ),
@@ -1014,7 +1015,7 @@ describe("upload", () => {
       options: { files: { upload: () => Promise.reject(new Error("offline")), url: () => "" } },
     });
     await userEvent.upload(scene.find("input[type=file]"), new File(["x"], "a.txt", { type: "text/plain" }));
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(scene.find(".tempuh-upload-status").textContent).toBe("The file could not be uploaded. Try again."),
     );
     expect(scene.responses).toEqual([]);
@@ -1051,12 +1052,12 @@ describe("upload", () => {
     const [record, stop] = scene.findAll<HTMLButtonElement>(".tempuh-upload button");
     expect([record?.textContent, stop?.textContent, stop?.disabled]).toEqual(["Record", "Stop recording", true]);
     await userEvent.click(record ?? scene.host);
-    await vi.waitFor(() => expect(scene.find(".tempuh-recording").textContent).toBe("Recording"));
+    await waitFor(() => expect(scene.find(".tempuh-recording").textContent).toBe("Recording"));
     expect(microphone).toHaveBeenCalledOnce();
     expect(record?.disabled).toBe(true);
     await new Promise((done) => setTimeout(done, 300));
     await userEvent.click(stop ?? scene.host);
-    await vi.waitFor(() => expect(scene.responses).toHaveLength(1));
+    await waitFor(() => expect(scene.responses).toHaveLength(1));
     const [upload] = files.uploads;
     expect(["audio/webm", "audio/ogg", "audio/mp4"]).toContain(upload?.mimeType);
     expect(upload?.fileName).toMatch(/^recording\.(webm|ogg|m4a)$/u);
@@ -1073,7 +1074,7 @@ describe("upload", () => {
       options: { staticUrl: `${inject("fixtures").asset}/nothing-here/` },
     });
     await userEvent.click(first(scene.findAll(".tempuh-upload button")));
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(scene.find(".tempuh-upload-status").textContent).toBe("The microphone could not be used."),
     );
     expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
@@ -1087,7 +1088,7 @@ describe("upload", () => {
       .mockRejectedValue(new DOMException("denied", "NotAllowedError"));
     const scene = mountScene(Declaration, Body('type="audio/wav"'));
     await userEvent.click(first(scene.findAll(".tempuh-upload button")));
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(scene.find(".tempuh-upload-status").textContent).toBe("The microphone could not be used."),
     );
     expect(scene.responses).toEqual([]);

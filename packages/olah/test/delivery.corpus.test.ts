@@ -476,30 +476,41 @@ describe("the engine on the examples", () => {
     expect(delivered).toBeGreaterThan(40);
   });
 
-  it("[E19][E20][E30][C] shows every example item as a view that holds no key and reads back from its JSON text", () => {
-    const keys = [
-      "correctResponse",
-      "mapping",
-      "areaMapping",
-      "lookupTable",
-      "responseProcessing",
-      "templateProcessing",
-      "outcomeDeclarations",
-      "responseDeclarations",
-      "templateDeclarations",
-      "defaultValue",
-    ];
-    const namesIn = (value: unknown, names: Set<string>): Set<string> => {
-      if (Array.isArray(value)) for (const member of value) namesIn(member, names);
-      else if (typeof value === "object" && value !== null) {
-        for (const [name, member] of Object.entries(value)) namesIn(member, names.add(name));
-      }
-      return names;
-    };
-    let shown = 0;
-    for (const { path, item } of exampleItems()) {
-      const issues = validateAsi({ kind: "item", item }, { customOperators: new Map() });
-      if (issues.some((issue) => issue.severity === "error")) continue;
+  /** The example items that the static checks accept. */
+  const accepted = exampleItems().filter(
+    ({ item }) =>
+      !validateAsi({ kind: "item", item }, { customOperators: new Map() }).some(({ severity }) => severity === "error"),
+  );
+
+  /** The names of a view that an answer key would be under. */
+  const KeyNames = [
+    "correctResponse",
+    "mapping",
+    "areaMapping",
+    "lookupTable",
+    "responseProcessing",
+    "templateProcessing",
+    "outcomeDeclarations",
+    "responseDeclarations",
+    "templateDeclarations",
+    "defaultValue",
+  ];
+
+  const namesIn = (value: unknown, names: Set<string>): Set<string> => {
+    if (Array.isArray(value)) for (const member of value) namesIn(member, names);
+    else if (typeof value === "object" && value !== null) {
+      for (const [name, member] of Object.entries(value)) namesIn(member, names.add(name));
+    }
+    return names;
+  };
+
+  it("[E19][E20][E30][C] has more than 40 example items that the static checks accept, to show as views", () => {
+    expect(accepted.length).toBeGreaterThan(40);
+  });
+
+  it.for(accepted)(
+    "[E19][E20][E30][C] shows the example item $path as a view that holds no key and reads back from its JSON text",
+    ({ path, item }) => {
       const engine = createEngine({ kind: "item", item, base: path });
       const started = engine.start({ seed: 1, at: 0 });
       if (!started.ok) throw new Error(`${path}: ${started.refusal.message}`);
@@ -513,10 +524,8 @@ describe("the engine on the examples", () => {
         const written = viewToJson(view);
         expect(viewFromJson(JSON.parse(JSON.stringify(written))), path).toEqual(view);
         const names = namesIn(written, new Set());
-        for (const forbidden of keys) expect(names.has(forbidden), `${path}: ${forbidden}`).toBe(false);
+        for (const forbidden of KeyNames) expect(names.has(forbidden), `${path}: ${forbidden}`).toBe(false);
       }
-      shown += 1;
-    }
-    expect(shown).toBeGreaterThan(40);
-  });
+    },
+  );
 });

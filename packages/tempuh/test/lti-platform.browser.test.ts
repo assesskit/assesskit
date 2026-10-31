@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
-import { afterEach, describe, expect, inject, it, vi } from "vitest";
+import { afterEach, describe, expect, inject, it } from "vitest";
 import {
   type HttpResponse,
   ltiPlatformAuthorize,
@@ -9,6 +9,7 @@ import {
   type PlatformLoginOptions,
   platformEndpoints,
 } from "../src/lti/index.js";
+import { waitFor } from "./wait.js";
 
 /**
  * The page that posts the id_token runs in the engines of the player. The tool's origin is a fixture server, which the
@@ -123,7 +124,7 @@ describe("the page that posts the id_token", () => {
   it("[T120] posts the form to the redirect URI of the tool by itself, under its policy", async () => {
     const path = `/launch/${crypto.randomUUID()}`;
     load(await answer(path, "state-1"));
-    await vi.waitFor(async () => expect(await requests(other)).toContain(path), { timeout: 5000 });
+    await waitFor(async () => expect(await requests(other)).toContain(path));
   });
 
   it("[T120] writes a hostile state as text in the markup, whatever the engine's parser", async () => {
@@ -137,7 +138,7 @@ describe("the page that posts the id_token", () => {
     expect(document2.querySelector<HTMLInputElement>("input[name=state]")?.value).toBe(hostile);
     expect(document2.querySelector("form")?.getAttribute("action")).toBe(`${TOOL}${path}`);
     load(page);
-    await vi.waitFor(async () => expect(await requests(other)).toContain(path), { timeout: 5000 });
+    await waitFor(async () => expect(await requests(other)).toContain(path));
     expect(await requests(stranger)).toEqual([]);
   });
 

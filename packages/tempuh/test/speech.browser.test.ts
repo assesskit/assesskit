@@ -17,6 +17,7 @@ import {
 } from "../src/player/index.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import type { ContentRoot } from "./css-fixture.js";
+import { waitFor } from "./wait.js";
 
 const { asset } = inject("fixtures");
 
@@ -812,7 +813,7 @@ describe("webSpeech", () => {
 
   /** Waits until the voice has an utterance, as `speak` is asynchronous. */
   const utteranceOf = async (spoken: readonly SpeechSynthesisUtterance[]): Promise<SpeechSynthesisUtterance> => {
-    await vi.waitFor(() => expect(spoken).toHaveLength(1));
+    await waitFor(() => expect(spoken).toHaveLength(1));
     const [utterance] = spoken;
     if (utterance === undefined) throw new Error("No utterance.");
     return utterance;

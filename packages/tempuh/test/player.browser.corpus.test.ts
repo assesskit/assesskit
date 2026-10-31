@@ -1,9 +1,10 @@
 import { descendantNodes, type PortableCustomInteraction, readAsi } from "@luthfanwakan/olah/asi";
 import { moduleConfigurationPaths, type PciModuleConfiguration, parseModuleResolution } from "@luthfanwakan/olah/pci";
 import { single, type ValueDeclaration } from "@luthfanwakan/olah/values";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { commands } from "vitest/browser";
 import { asset, eventOf, hits, type Mounted, mount, ready, tokenOf } from "./pci-fixture.js";
+import { waitFor } from "./wait.js";
 
 /** The 1EdTech example packages that the global setup serves, by name. */
 type Example = "pci-simple" | "pci";
@@ -89,7 +90,7 @@ describe("the PCI examples of 1EdTech", () => {
     expect(paths.indexOf("/c/pci/modules/shading.js")).toBeGreaterThan(paths.indexOf("/c/pci/modules/shadingYY.js"));
 
     await commands.clickInFrame("Interactive question", "button.colMore");
-    await vi.waitFor(() => expect(result.frame.element.getBoundingClientRect().height).toBeGreaterThan(48));
+    await waitFor(() => expect(result.frame.element.getBoundingClientRect().height).toBeGreaterThan(48));
     expect(await errorsExcept("shadingYY.js")).toEqual([]);
   });
 });

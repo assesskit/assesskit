@@ -1,11 +1,12 @@
 import { single } from "@luthfanwakan/olah/values";
-import { afterEach, describe, expect, inject, it, vi } from "vitest";
+import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { AccessError, DataError, ServiceError } from "../src/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient, ViewEnvelope } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
+import { waitFor } from "./wait.js";
 
 const origin = inject("exam");
 const player = new CSSStyleSheet();
@@ -217,7 +218,7 @@ describe("the player over the exam server", () => {
     try {
       const { client, ui } = await mountExam(fresh());
       await client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
-      await vi.waitFor(() => expect(messages).toHaveLength(1), { timeout: 20_000 });
+      await waitFor(() => expect(messages).toHaveLength(1), { timeout: 20_000 });
       expect(messages[0]?.color).toBe("rgb(18, 52, 86)");
       expect(messages[0]?.image).toContain("/items/q3/images/dot.svg");
       expect(messages[0]?.image).toContain(`${origin}/g/`);
@@ -231,8 +232,8 @@ describe("the player over the exam server", () => {
     const session = fresh();
     const { client, who } = await mountExam(session);
     await client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
-    await vi.waitFor(async () => commands.clickInFrame("Press the button", "#press"), { timeout: 20_000 });
-    await vi.waitFor(() => expect(client.view.current?.responses.get("PCI")).toEqual(single("integer", 1)), {
+    await waitFor(async () => commands.clickInFrame("Press the button", "#press"), { timeout: 20_000 });
+    await waitFor(() => expect(client.view.current?.responses.get("PCI")).toEqual(single("integer", 1)), {
       timeout: 15_000,
     });
     expect(client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
@@ -246,11 +247,11 @@ describe("the player over the exam server", () => {
   it("[T61] shows the break that the proctor made, in a candidate's page that was open before it", async () => {
     const session = fresh();
     const { who, ui } = await mountExam(session);
-    await vi.waitFor(() => expect(ui.querySelector(".tempuh-heading")?.textContent).toBe("Item q1"));
+    await waitFor(() => expect(ui.querySelector(".tempuh-heading")?.textContent).toBe("Item q1"));
     await who.post("proctor", { type: "suspend" });
     const skip = [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question");
     skip?.click();
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(ui.querySelector(".tempuh-status")?.textContent).toBe(
         "The test is paused, so this action is not possible.",
       ),

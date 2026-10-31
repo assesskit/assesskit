@@ -34,6 +34,7 @@ import {
   tokenOf,
 } from "./pci-fixture.js";
 import { onSupport } from "./supports-fixture.js";
+import { waitFor } from "./wait.js";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const TITLE = "Press the button.";
@@ -118,14 +119,14 @@ describe("mountPciFrame", () => {
         configuration: { primary: resolution({ relative: "modules/relative" }) },
       });
       await ready(result);
-      await vi.waitFor(() => expect(probeOf(result.probes, "relative")).toMatchObject({ helper: "helper-loaded" }));
+      await waitFor(() => expect(probeOf(result.probes, "relative")).toMatchObject({ helper: "helper-loaded" }));
       expect(await hits(asset)).toContain("/g/modules/helper.js");
     });
 
     it("[T49] resolves the relative url() of a stylesheet against the stylesheet under the prefix", async () => {
       const result = mount();
       await ready(result);
-      await vi.waitFor(async () => expect(await hits(asset)).toContain("/g/images/dot.svg"));
+      await waitFor(async () => expect(await hits(asset)).toContain("/g/images/dot.svg"));
       expect(probeOf(result.probes, "instance")).toMatchObject({ color: "rgb(10, 20, 30)" });
     });
 
@@ -142,16 +143,14 @@ describe("mountPciFrame", () => {
       expect(await hits(other)).toEqual(["/cdn/cdn-module.js"]);
 
       const refused = mount(external);
-      await vi.waitFor(() => expect(eventOf(refused.events, "failed")).toEqual({ type: "failed", reason: "modules" }), {
-        timeout: 8000,
-      });
+      await waitFor(() => expect(eventOf(refused.events, "failed")).toEqual({ type: "failed", reason: "modules" }));
       // The refused frame asked for nothing: the one request is the allowed frame's.
       expect(await hits(other)).toEqual(["/cdn/cdn-module.js"]);
     });
 
     it("[T49] reports that no location of a module loads", async () => {
       const result = mount({ configuration: FAILING });
-      await vi.waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "modules" }]), { timeout: 8000 });
+      await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "modules" }]));
     });
 
     it("[T49] reports a module that registers no interaction, and a factory that throws", async () => {
@@ -163,12 +162,8 @@ describe("mountPciFrame", () => {
         interaction: interactionOf('module="throws" custom-interaction-type-identifier="urn:test:throws"'),
         configuration: { primary: resolution({ throws: "modules/throws" }) },
       });
-      await vi.waitFor(() => expect(silent.events).toEqual([{ type: "failed", reason: "register" }]), {
-        timeout: 8000,
-      });
-      await vi.waitFor(() => expect(failing.events).toEqual([{ type: "failed", reason: "instance" }]), {
-        timeout: 8000,
-      });
+      await waitFor(() => expect(silent.events).toEqual([{ type: "failed", reason: "register" }]));
+      await waitFor(() => expect(failing.events).toEqual([{ type: "failed", reason: "instance" }]));
     });
 
     it("[T49] starts the one interaction that the modules register under another identifier, and no interaction of several", async () => {
@@ -183,9 +178,7 @@ describe("mountPciFrame", () => {
         interaction: interactionOf('module="two" custom-interaction-type-identifier="urn:test:c"'),
         configuration: { primary: resolution({ two: "modules/two" }) },
       });
-      await vi.waitFor(() => expect(several.events).toEqual([{ type: "failed", reason: "register" }]), {
-        timeout: 8000,
-      });
+      await waitFor(() => expect(several.events).toEqual([{ type: "failed", reason: "register" }]));
       const chosen = mount({
         interaction: interactionOf('module="two" custom-interaction-type-identifier="urn:test:b"'),
         configuration: { primary: resolution({ two: "modules/two" }) },
@@ -269,7 +262,7 @@ describe("mountPciFrame", () => {
       const result = mount();
       await ready(result);
       await commands.clickInFrame(TITLE, "#press");
-      await vi.waitFor(() =>
+      await waitFor(() =>
         expect(eventOf(result.events, "changed")).toEqual({
           type: "changed",
           response: single("integer", 1),
@@ -286,9 +279,7 @@ describe("mountPciFrame", () => {
       });
       await ready(result);
       await commands.clickInFrame(TITLE, "#press");
-      await vi.waitFor(() =>
-        expect(eventOf(result.events, "changed")).toMatchObject({ response: single("integer", 3) }),
-      );
+      await waitFor(() => expect(eventOf(result.events, "changed")).toMatchObject({ response: single("integer", 3) }));
     });
 
     it("[T51] reads the bytes of a file value before the interaction starts, and writes them inline", async () => {
@@ -308,7 +299,7 @@ describe("mountPciFrame", () => {
       const result = mount(filesPci(files));
       await ready(result);
       await commands.clickInFrame(TITLE, "#give");
-      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1));
+      await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1));
       expect(eventOf(result.events, "changed")).toMatchObject({
         response: single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "f1.txt" }),
       });
@@ -323,7 +314,7 @@ describe("mountPciFrame", () => {
       await ready(result);
       await commands.clickInFrame(TITLE, "#same");
       await commands.clickInFrame(TITLE, "#same");
-      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2));
+      await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2));
       expect(uploads).toHaveLength(1);
       expect(eventsOf(result, "changed").map((event) => event.response)).toEqual([
         single("file", { reference: "uploaded-1", mimeType: "text/plain", fileName: "same.txt" }),
@@ -344,7 +335,7 @@ describe("mountPciFrame", () => {
       await ready(result);
       await commands.clickInFrame(TITLE, "#give");
       await commands.clickInFrame(TITLE, "#give");
-      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2), { timeout: 5000 });
+      await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(2));
       const states = eventsOf(result, "changed").map((event) => event.state);
       expect(states).toEqual(['{"given":1}', '{"given":2}']);
     });
@@ -354,7 +345,7 @@ describe("mountPciFrame", () => {
       await ready(result);
       await commands.clickInFrame(TITLE, "#bad");
       await commands.clickInFrame(TITLE, "#give");
-      await vi.waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1), { timeout: 5000 });
+      await waitFor(() => expect(eventsOf(result, "changed")).toHaveLength(1));
       expect(eventOf(result.events, "changed")).toMatchObject({ state: '{"given":1}' });
     });
 
@@ -366,7 +357,7 @@ describe("mountPciFrame", () => {
           single("file", { reference: "lost", mimeType: "text/plain" }),
         ),
       );
-      await vi.waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "files" }]), { timeout: 8000 });
+      await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "files" }]));
       expect(report).toHaveBeenCalledWith(new Error("The storage is down."));
       report.mockRestore();
     });
@@ -383,7 +374,7 @@ describe("mountPciFrame", () => {
       const result = mount();
       await ready(result);
       await commands.clickInFrame(TITLE, "#done");
-      await vi.waitFor(() =>
+      await waitFor(() =>
         expect(eventOf(result.events, "done")).toEqual({
           type: "done",
           response: null,
@@ -398,7 +389,7 @@ describe("mountPciFrame", () => {
       await ready(result);
       expect(await result.frame.checkValidity()).toBe(false);
       await commands.clickInFrame(TITLE, "#press");
-      await vi.waitFor(async () => expect(await result.frame.checkValidity()).toBe(true));
+      await waitFor(async () => expect(await result.frame.checkValidity()).toBe(true));
       expect(await result.frame.reportValidity()).toBe(true);
       expect(probeOf(result.probes, "reportValidity")).toBeDefined();
       expect(await result.frame.getCustomValidity()).toBe("");
@@ -416,7 +407,7 @@ describe("mountPciFrame", () => {
     it("[T52] gives no verdict when the interaction is not running", async () => {
       const result = mount({ configuration: FAILING });
       expect(await result.frame.checkValidity()).toBeUndefined();
-      await vi.waitFor(() => expect(eventOf(result.events, "failed")).toBeDefined(), { timeout: 8000 });
+      await waitFor(() => expect(eventOf(result.events, "failed")).toBeDefined());
       expect(await result.frame.getCustomValidity()).toBeUndefined();
     });
 
@@ -467,7 +458,7 @@ describe("mountPciFrame", () => {
   describe("the height", () => {
     it("[T49] sets the height of the frame to the height of its content", async () => {
       const result = mount({ markup: '<div style="height: 300px"></div>' });
-      await vi.waitFor(() => {
+      await waitFor(() => {
         const height = result.frame.element.getBoundingClientRect().height;
         expect(height).toBeGreaterThanOrEqual(300);
         expect(height).toBeLessThan(360);
@@ -479,7 +470,7 @@ describe("mountPciFrame", () => {
       await ready(small);
       expect(small.frame.element.getBoundingClientRect().height).toBe(MIN_PCI_HEIGHT);
       const tall = mount({ markup: '<div style="height: 6000px"></div>' });
-      await vi.waitFor(() => expect(tall.frame.element.getBoundingClientRect().height).toBe(MAX_PCI_HEIGHT));
+      await waitFor(() => expect(tall.frame.element.getBoundingClientRect().height).toBe(MAX_PCI_HEIGHT));
     });
   });
 
@@ -504,7 +495,7 @@ describe("mountPciFrame", () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
       mounted.frame.setPresentation(presentationOf([onSupport("invert-display-polarity"), onSupport("magnification")]));
-      await vi.waitFor(async () =>
+      await waitFor(async () =>
         expect((await commands.frameTheme(TITLE)).attributes).toEqual({
           lang: "en",
           "data-tempuh-polarity": "inverted",
@@ -517,7 +508,7 @@ describe("mountPciFrame", () => {
       expect(theme.color).toBe("rgb(242, 242, 242)");
       expect(theme.fontSize).toBe("32px");
       mounted.frame.setPresentation(presentationOf([]));
-      await vi.waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
+      await waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
       // The defaults of the stylesheet are back.
       expect((await commands.frameTheme(TITLE)).properties).toEqual({
         "--tempuh-fg": "#1a1a1a",
@@ -536,7 +527,7 @@ describe("mountPciFrame", () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
       mounted.frame.setPresentation(presentationOf([]));
-      await vi.waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
+      await waitFor(async () => expect(look(await commands.frameTheme(TITLE))).toEqual({}));
       expect(mounted.events.map(({ type }) => type)).toEqual(["ready"]);
     });
 
@@ -594,7 +585,7 @@ describe("the frame", () => {
         configuration: { primary: resolution({ hostile: "modules/hostile" }) },
       });
       const location = window.location.href;
-      await vi.waitFor(() => expect(probeOf(result.probes, "hostile")).toBeDefined(), { timeout: 10000 });
+      await waitFor(() => expect(probeOf(result.probes, "hostile")).toBeDefined());
       expect(probeOf(result.probes, "hostile")?.results).toEqual({
         fetch: "blocked",
         xhr: "blocked",
@@ -625,7 +616,7 @@ describe("the frame", () => {
         interaction: interactionOf('module="forger" custom-interaction-type-identifier="urn:test:forger"'),
         configuration: { primary: resolution({ forger: "modules/forger" }) },
       });
-      await vi.waitFor(() => expect(result.frame.element.style.height).toBe(`${MAX_PCI_HEIGHT}px`), { timeout: 5000 });
+      await waitFor(() => expect(result.frame.element.style.height).toBe(`${MAX_PCI_HEIGHT}px`));
       expect(result.events).toEqual([{ type: "ready", state: "{}" }]);
     });
 
@@ -641,7 +632,7 @@ describe("the frame", () => {
 
     it("[T53] does not start the interaction where the browser sets no policy", async () => {
       const result = mount({ staticUrl: `${asset}/unrestricted/` });
-      await vi.waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "csp" }]), { timeout: 8000 });
+      await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "csp" }]));
       expect(await hits(asset)).not.toContain("/g/modules/simple.js");
     });
   });
@@ -670,7 +661,7 @@ describe("the frame", () => {
     it("[SC 4.1.2] exposes the controls of the frame in the accessibility tree, below the frame", async () => {
       const result = mount();
       await ready(result);
-      await vi.waitFor(async () => {
+      await waitFor(async () => {
         const tree = await commands.ariaSnapshot();
         expect(tree).toMatch(/- iframe[^\n]*:\n(?:.*\n)*?\s+- button "Press"/u);
         expect(tree).toMatch(/- button "Done"/u);
@@ -695,10 +686,10 @@ describe("the frame", () => {
       await userEvent.click(before);
 
       await tabTo(after);
-      await vi.waitFor(() => expect(visited(result)).toEqual(["first", "second"]));
+      await waitFor(() => expect(visited(result)).toEqual(["first", "second"]));
       // Going back, the frame ends at its first field; Firefox does not report a second visit to the second.
       await tabTo(before, true);
-      await vi.waitFor(() => expect(visited(result).at(-1)).toBe("first"));
+      await waitFor(() => expect(visited(result).at(-1)).toBe("first"));
       before.remove();
       after.remove();
     });

@@ -9,12 +9,26 @@ const OLAH_SOURCES = [
   { find: /^@luthfanwakan\/olah\/(.+)$/, replacement: resolve(import.meta.dirname, "packages/olah/src/$1/index.ts") },
 ];
 
-/** The engines of the browser tests, and the commands that they use. Vitest names the instances, so each project has its own. */
+/**
+ * The limit of a test in the projects whose tests do seconds of work on the CPU. It is there to catch a hang, and not to
+ * judge speed: a host that runs many test runs at once takes tens of times as long as a quiet one.
+ */
+const HANG_LIMIT = 60_000;
+
+/**
+ * The engines of the browser tests, and the commands that they use. Vitest names the instances, so each project has its own.
+ * Firefox runs one file at a time: the mouse of a page can reach another page of the same Firefox that runs at once, so
+ * that the pages take each other's presses, moves and drags.
+ */
 const browser = () => ({
   enabled: true,
   headless: true,
   provider: playwright(),
-  instances: [{ browser: "chromium" as const }, { browser: "firefox" as const }, { browser: "webkit" as const }],
+  instances: [
+    { browser: "chromium" as const },
+    { browser: "firefox" as const, fileParallelism: false },
+    { browser: "webkit" as const },
+  ],
   commands: COMMANDS,
 });
 
@@ -36,6 +50,7 @@ export default defineConfig({
           name: "olah",
           include: ["packages/olah/test/**/*.test.ts"],
           exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
+          testTimeout: HANG_LIMIT,
         },
       },
       {
@@ -44,6 +59,7 @@ export default defineConfig({
           name: "tempuh",
           include: ["packages/tempuh/test/**/*.test.ts"],
           exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts"],
+          testTimeout: HANG_LIMIT,
         },
       },
       {
@@ -73,6 +89,7 @@ export default defineConfig({
           name: "tempuh-corpus-node",
           include: ["packages/tempuh/test/**/*.corpus.test.ts"],
           exclude: ["**/*.browser.corpus.test.ts"],
+          testTimeout: HANG_LIMIT,
         },
       },
       {
@@ -112,6 +129,7 @@ export default defineConfig({
         test: {
           name: "olah-corpus",
           include: ["packages/olah/test/**/*.corpus.test.ts"],
+          testTimeout: HANG_LIMIT,
         },
       },
       {

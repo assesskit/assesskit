@@ -269,7 +269,9 @@ describes how the baseline is tested.
 - Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of tempuh that
   also need a browser are named `*.browser.corpus.test.ts`. The tests of `differential/` run with `pnpm test:differential`,
   and `pnpm test` leaves them out.
-- Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`.
+- Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`. They wait for a
+  condition with `waitFor` of `test/wait.ts`, never with `vi.waitFor`, whose limit of one second a busy host does not
+  meet, and for media they wait for the events of the recording and move the timers by hand, never for a time.
 - Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
   builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them
   ([architecture.md](packages/olah/docs/architecture.md#performance)).

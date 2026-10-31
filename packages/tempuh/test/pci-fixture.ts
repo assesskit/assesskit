@@ -1,7 +1,7 @@
 import { type PortableCustomInteraction, readAsi } from "@luthfanwakan/olah/asi";
 import type { ModuleResolution, PciModuleConfiguration } from "@luthfanwakan/olah/pci";
 import type { ValueDeclaration } from "@luthfanwakan/olah/values";
-import { afterEach, beforeEach, expect, inject, vi } from "vitest";
+import { afterEach, beforeEach, expect, inject } from "vitest";
 import { EN_MESSAGES } from "../src/messages/index.js";
 import {
   mountPciFrame,
@@ -10,6 +10,7 @@ import {
   type PciFrame,
   type PciFrameOptions,
 } from "../src/player/index.js";
+import { waitFor } from "./wait.js";
 
 /** The origins of the servers of the global setup. */
 export const { asset, other, stranger } = inject("fixtures");
@@ -139,8 +140,7 @@ export const eventOf = <T extends PciEvent["type"]>(events: readonly PciEvent[],
 export const probeOf = (probes: readonly Probe[], name: string) => probes.find(({ probe }) => probe === name);
 
 /** Waits until the interaction of the frame is ready. */
-export const ready = ({ events }: Mounted) =>
-  vi.waitFor(() => expect(eventOf(events, "ready")).toBeDefined(), { timeout: 8000 });
+export const ready = ({ events }: Mounted) => waitFor(() => expect(eventOf(events, "ready")).toBeDefined());
 
 /** Returns every path that a fixture server was asked for. */
 export async function requests(origin: string): Promise<string[]> {

@@ -50,7 +50,10 @@ XML, with SSML and MathML in their namespaces, in a content root.
 The browser tests of the interactions ([interactions](interactions.md)) render items written as XML with the renderers
 of the interactions in a content root and give the interactions the descriptors of olah's `describeInteractions`
 (`interactions-fixture.ts`). The asset origin also serves the worklet of the WAV recording under
-`/static/recorder-worklet.js`, and two short tones and a caption file among the package files, for the rules of media.
+`/static/recorder-worklet.js`, and among the package files three recordings and a caption file, for the rules of media: a
+blip of a quarter of a second that a test plays to its end, a tone of two seconds, and twenty seconds of silence that
+outlast a test which acts while it plays. The tests of the pause attributes hold the timers of the page with fake timers
+and move them by hand, and the tests that play wait for the events of the recording, never for a time.
 The tests answer with the mouse, with real key presses and with a stream of an oscillator in place of the microphone;
 Safari on macOS leaves form controls out of the tab order unless the person turns that on, so the keyboard tests focus a
 control and press its keys. `elements.browser.corpus.test.ts` renders every item of the examples that has one of these
@@ -100,6 +103,10 @@ of the score service (`lti-fake-lms.ts`).
 
 The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
 operates the tools by keyboard.
+
+In the Firefox of Playwright the mouse of a page can reach another page of the same browser that runs at once, so that pages
+take each other's presses, moves and drags. The Firefox instances of `vitest.config.ts` therefore run one test file at a
+time; Chromium and WebKit run files at once.
 
 Where the Firefox of Playwright does not start, such as on macOS 27, run the suite in a Linux container from the root of the
 repository. The container needs network access to install the dependencies and the browsers. takar is a dev dependency of

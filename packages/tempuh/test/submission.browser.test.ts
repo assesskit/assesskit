@@ -133,6 +133,25 @@ function contents(shadow: ShadowRoot): ShadowRoot[] {
   return [...shadow.querySelectorAll(".tempuh-submission-content")].flatMap((host) => host.shadowRoot ?? []);
 }
 
+/**
+ * Resolves once the first element below a root that matches a selector is there. A display typesets its content after it
+ * is shown, and MathJax takes seconds to load in a cold browser, so the test waits for the output and not for a time.
+ */
+function appears(root: ParentNode & Node, selector: string): Promise<Element> {
+  return new Promise((done) => {
+    const present = (): boolean => {
+      const found = root.querySelector(selector);
+      if (found !== null) done(found);
+      return found !== null;
+    };
+    if (present()) return;
+    const observer = new MutationObserver(() => {
+      if (present()) observer.disconnect();
+    });
+    observer.observe(root, { childList: true, subtree: true });
+  });
+}
+
 /** Returns the text of a name and value group of a definition list, by the name. */
 function fact(root: ParentNode, name: string): string {
   const group = [...root.querySelectorAll("dl > div")].find((each) => each.querySelector("dt")?.textContent === name);
@@ -430,7 +449,9 @@ describe("mountSubmission", () => {
   it("[T9][T112] typesets the expressions of the content when the host gives MathJax", async () => {
     const math = itemBody("<p>Half of x is <m:math><m:mfrac><m:mi>x</m:mi><m:mn>2</m:mn></m:mfrac></m:math>.</p>");
     const { shadow } = show(submission({ items: [item({ body: math })] }), { mathjax: MATHJAX });
-    await expect.poll(() => contents(shadow)[0]?.querySelector("mjx-container mjx-frac") != null).toBe(true);
+    const [content] = contents(shadow);
+    if (content === undefined) throw new Error("The display has no content root.");
+    expect(await appears(content, "mjx-container mjx-frac")).toBeInstanceOf(Element);
   });
 
   it("[T112] shows another submission when updated, and keeps the display when the new one is wrong", () => {

@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   createJwksCache,
   type HttpResponse,
@@ -10,6 +10,7 @@ import {
   ltiLogin,
   type PlatformRegistration,
 } from "../src/lti/index.js";
+import { waitFor } from "./wait.js";
 
 /**
  * The pages of the client-side storage path run in the engines of the player. The test page plays the platform: it
@@ -193,9 +194,7 @@ describe("the page that stores state and nonce", () => {
     const { page, state, nonce } = await login("_parent");
     const frame = await load(page);
     storage.release();
-    await vi.waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT), {
-      timeout: 5000,
-    });
+    await waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT));
     expect(storage.get(`state_${state}`)).toBe(state);
     expect(storage.get(`nonce_${nonce}`)).toBe(nonce);
     const request = new URLSearchParams(new URL(frame.contentWindow?.location.href ?? "").hash.slice(1));
@@ -209,9 +208,7 @@ describe("the page that stores state and nonce", () => {
     const { page, state, nonce } = await login("lti-storage");
     const frame = await load(page);
     storage.release();
-    await vi.waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT), {
-      timeout: 5000,
-    });
+    await waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT));
     expect(storage.get(`state_${state}`)).toBe(state);
     expect(storage.get(`nonce_${nonce}`)).toBe(nonce);
   });
@@ -221,9 +218,7 @@ describe("the page that stores state and nonce", () => {
     const { page } = await login("_parent");
     const frame = await load(page);
     storage.release();
-    await vi.waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT), {
-      timeout: 5000,
-    });
+    await waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT));
   });
 
   it("[T121] tells the user and stays when the platform answers with an error", async () => {
@@ -231,9 +226,7 @@ describe("the page that stores state and nonce", () => {
     const { page } = await login("_parent");
     const frame = await load(page);
     storage.release();
-    await vi.waitFor(() => expect(frame.contentDocument?.getElementById("failure")?.hidden).toBe(false), {
-      timeout: 5000,
-    });
+    await waitFor(() => expect(frame.contentDocument?.getElementById("failure")?.hidden).toBe(false));
     expect(frame.contentWindow?.location.href).toBe("about:srcdoc");
   });
 
@@ -284,7 +277,7 @@ describe("the verification page", () => {
     const frame = await load(page);
     const { submitted } = submission(frame);
     storage.release();
-    await vi.waitFor(() => expect(submitted()).toBeDefined(), { timeout: 5000 });
+    await waitFor(() => expect(submitted()).toBeDefined());
     expect(Object.fromEntries(submitted() ?? [])).toEqual({
       id_token: "header.payload.signature",
       state,
@@ -300,9 +293,7 @@ describe("the verification page", () => {
     const frame = await load(page);
     const { submitted } = submission(frame);
     storage.release();
-    await vi.waitFor(() => expect(frame.contentDocument?.getElementById("failure")?.hidden).toBe(false), {
-      timeout: 5000,
-    });
+    await waitFor(() => expect(frame.contentDocument?.getElementById("failure")?.hidden).toBe(false));
     expect(submitted()).toBeUndefined();
   });
 

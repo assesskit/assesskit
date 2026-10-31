@@ -14,6 +14,7 @@ import { examDefinition, examFiles, examHost, lexiconFiles, packageOf } from "./
 import { picture, settle } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
+import { waitFor } from "./wait.js";
 
 const ALICE = { session: "exam-1", principal: "alice" };
 const SECOND = 1000;
@@ -139,7 +140,7 @@ const dialogOf = (ui: ShadowRoot): HTMLDialogElement | null => ui.querySelector(
 
 /** Waits until the content of the first item is on screen. */
 const shown = (s: Shell): Promise<void> =>
-  vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("Look at"));
+  waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("Look at"));
 
 const answer = (identifier: string): CandidateAction => ({
   type: "set-responses",
@@ -158,8 +159,8 @@ describe("mountDelivery", () => {
       s.client.assets("items/q1/images/map.png"),
     );
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    await vi.waitFor(() =>
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() =>
       expect(contentOf(s.ui).querySelector(".tempuh-rubric")?.textContent).toContain("Read every question."),
     );
   });
@@ -177,7 +178,7 @@ describe("mountDelivery", () => {
     ]);
     expect(items.map((button) => button.getAttribute("aria-current"))).toEqual(["true", null, null]);
     items[1]?.click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     expect(s.ui.querySelector("nav [aria-current]")?.textContent).toContain("Item q2");
   });
 
@@ -187,7 +188,7 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector("nav")).toBeNull();
     expect(buttons(s.ui)).not.toContain("Previous");
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     const nav = [...s.ui.querySelectorAll<HTMLButtonElement>("nav button")];
     expect(nav.map((button) => [button.textContent, button.disabled])).toEqual([
       ["Item q1 (Submitted)", true],
@@ -201,7 +202,7 @@ describe("mountDelivery", () => {
     await shown(s);
     expect(s.ui.activeElement).toBeNull();
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
 
@@ -212,9 +213,9 @@ describe("mountDelivery", () => {
     submit.focus();
     expect(s.ui.activeElement).toBe(submit);
     await s.client.dispatch(answer("A"));
-    await vi.waitFor(() => expect(s.ui.activeElement?.textContent).toBe("Submit answer"));
+    await waitFor(() => expect(s.ui.activeElement?.textContent).toBe("Submit answer"));
     submit.click();
-    await vi.waitFor(() => expect(buttons(s.ui)).not.toContain("Submit answer"));
+    await waitFor(() => expect(buttons(s.ui)).not.toContain("Submit answer"));
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
 
@@ -238,12 +239,12 @@ describe("mountDelivery", () => {
     await shown(s);
     expect(buttons(s.ui)).toContain("Pause the test");
     buttonNamed(s.ui, "Pause the test").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toEqual(["Resume the test"]));
+    await waitFor(() => expect(buttons(s.ui)).toEqual(["Resume the test"]));
     expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe(
       "The test is paused and your time is stopped. Wait until it continues.",
     );
     buttonNamed(s.ui, "Resume the test").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toContain("Submit answer"));
+    await waitFor(() => expect(buttons(s.ui)).toContain("Submit answer"));
     expect(s.ui.querySelector(".tempuh-notice")).toBeNull();
   });
 
@@ -254,7 +255,7 @@ describe("mountDelivery", () => {
     submit.focus();
     s.clock.advance(700 * SECOND);
     submit.click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("The time for this question is over."));
+    await waitFor(() => expect(statusOf(s.ui)).toBe("The time for this question is over."));
     const region = s.ui.querySelector(".tempuh-status");
     expect(region?.getAttribute("role")).toBe("status");
     expect(region?.getAttribute("aria-live")).toBe("polite");
@@ -275,7 +276,7 @@ describe("mountDelivery", () => {
     ]);
     s.clock.advance(700 * SECOND);
     buttonNamed(s.ui, "Kirim jawaban").click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Waktu untuk soal ini sudah habis."));
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Waktu untuk soal ini sudah habis."));
   });
 
   it("[SC 3.3.4][T55] asks before the end of the test, starts on the answer that goes back, and sends nothing when the candidate goes back", async () => {
@@ -285,7 +286,7 @@ describe("mountDelivery", () => {
     const end = buttonNamed(s.ui, "End the test");
     end.focus();
     end.click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     const dialog = dialogOf(s.ui) as HTMLDialogElement;
     expect(dialog.getAttribute("aria-label")).toBe("Please confirm");
     expect(dialog.querySelector("p")?.textContent).toBe(
@@ -294,7 +295,7 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement?.textContent).toBe("No, go back");
     dialog.dispatchEvent(new Event("cancel"));
     dialog.close();
-    await vi.waitFor(() => expect(dialogOf(s.ui)).toBeNull());
+    await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     expect(s.ui.activeElement).toBe(end);
     expect(s.store.records.get("exam-1")?.version).toBe(version);
   });
@@ -303,9 +304,9 @@ describe("mountDelivery", () => {
     const s = await shell();
     await shown(s);
     buttonNamed(s.ui, "End the test").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     buttonNamed(s.ui, "Yes, continue").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
     expect(buttons(s.ui)).toEqual([]);
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
@@ -314,16 +315,16 @@ describe("mountDelivery", () => {
     const linear = await shell({ files: examFiles({ part: 'navigation-mode="linear" submission-mode="individual"' }) });
     await shown(linear);
     buttonNamed(linear.ui, "Submit answer").click();
-    await vi.waitFor(() => expect(dialogOf(linear.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(linear.ui)?.open).toBe(true));
     expect(dialogOf(linear.ui)?.querySelector("p")?.textContent).toBe(
       "Submit your answer? You cannot change it afterward.",
     );
     buttonNamed(linear.ui, "Yes, continue").click();
-    await vi.waitFor(() => expect(buttons(linear.ui)).not.toContain("Submit answer"));
+    await waitFor(() => expect(buttons(linear.ui)).not.toContain("Submit answer"));
     const nonlinear = await shell();
     await shown(nonlinear);
     buttonNamed(nonlinear.ui, "Submit answer").click();
-    await vi.waitFor(() => expect(buttons(nonlinear.ui)).not.toContain("Submit answer"));
+    await waitFor(() => expect(buttons(nonlinear.ui)).not.toContain("Submit answer"));
     expect(dialogOf(nonlinear.ui)).toBeNull();
   });
 
@@ -331,7 +332,7 @@ describe("mountDelivery", () => {
     const s = await shell({ files: examFiles({ part: 'navigation-mode="nonlinear" submission-mode="simultaneous"' }) });
     await shown(s);
     buttonNamed(s.ui, "End this part").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     const sentences = [...(dialogOf(s.ui)?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
     expect(sentences).toEqual([
       "End this part of the test? You cannot return to it.",
@@ -363,8 +364,8 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector(".tempuh-timer-status")?.getAttribute("role")).toBe("status");
     await tick(60);
     expect(timerStatusOf(s.ui)).toBe("Time is up.");
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Submitted)"));
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Submitted)"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
   });
 
   it("[SC 2.2.1] tells the candidate who reloads inside the last minutes how much time is left", async () => {
@@ -416,7 +417,7 @@ describe("mountDelivery", () => {
     s.clock.advance(601 * SECOND);
     expect((await s.host.host(ALICE.session, { type: "time" })).ok).toBe(true);
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Submitted)"));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Submitted)"));
   });
 
   it("[T58] offers the review and the solution of a closed item", async () => {
@@ -424,12 +425,12 @@ describe("mountDelivery", () => {
     const s = await shell({ files: examFiles({ control }) });
     await shown(s);
     buttonNamed(s.ui, "Submit answer").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
+    await waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
     expect(buttons(s.ui)).toContain("Show solution");
     buttonNamed(s.ui, "Review answer").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(In review)"));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(In review)"));
     buttonNamed(s.ui, "Show solution").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Solution shown)"));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Solution shown)"));
   });
 
   it("[T59] draws a comment box where the item allows a comment, and sends the comment", async () => {
@@ -445,9 +446,9 @@ describe("mountDelivery", () => {
     expect(form?.querySelector("label")?.textContent).toBe("Comment on this question");
     field.value = "Unclear wording.";
     buttonNamed(s.ui, "Save comment").click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Comment saved."));
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Comment saved."));
     await s.client.dispatch({ type: "move", to: "next" });
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     expect(form?.hidden).toBe(true);
   });
 
@@ -461,7 +462,7 @@ describe("mountDelivery", () => {
     await shown(s);
     expect(s.ui.querySelector(".tempuh-notice")).toBeNull();
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe(
         "This question is timed. Your time counts while you work on it.",
       ),
@@ -480,7 +481,7 @@ describe("mountDelivery", () => {
     await shown(s);
     expect((await s.host.proctor(ALICE.session, { type: "suspend" })).ok).toBe(true);
     buttonNamed(s.ui, "Skip question").click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("The test is paused, so this action is not possible."));
+    await waitFor(() => expect(statusOf(s.ui)).toBe("The test is paused, so this action is not possible."));
     expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe(
       "The test is paused and your time is stopped. Wait until it continues.",
     );
@@ -500,7 +501,7 @@ describe("mountDelivery", () => {
     const s = await shell();
     await shown(s);
     await s.client.dispatch({ type: "move", to: "next" });
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     s.mounted.destroy();
     const view = JSON.parse(JSON.stringify(await s.host.view(ALICE)));
     const client = createRemoteSession(
@@ -535,7 +536,7 @@ describe("mountDelivery", () => {
     field.focus();
     field.value = "Fine.";
     buttonNamed(s.ui, "Save comment").click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Comment saved."));
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Comment saved."));
     expect(s.ui.activeElement).toBe(field);
     for (const selector of [".tempuh-status", ".tempuh-timer-status"]) {
       const region = s.ui.querySelector(selector);
@@ -554,7 +555,7 @@ describe("mountDelivery", () => {
     window.addEventListener("error", ignore);
     try {
       buttonNamed(failing.ui, "Skip question").click();
-      await vi.waitFor(() =>
+      await waitFor(() =>
         expect(statusOf(failing.ui)).toBe("Your answers could not be sent. They will be sent again."),
       );
     } finally {
@@ -565,7 +566,7 @@ describe("mountDelivery", () => {
     });
     await shown(rejecting);
     buttonNamed(rejecting.ui, "Skip question").click();
-    await vi.waitFor(() => expect(statusOf(rejecting.ui)).toBe("The test could not accept this action."));
+    await waitFor(() => expect(statusOf(rejecting.ui)).toBe("The test could not accept this action."));
   });
 
   it("draws the content alone when the host draws the chrome", async () => {
@@ -659,15 +660,15 @@ describe("a portable custom interaction in the player", () => {
     // The interaction's files come from the fixtures server: the player fetches its module resolution through `fetch`.
     await shown(s);
     await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q3"));
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
-    await vi.waitFor(
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q3"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
+    await waitFor(
       async () => {
         await commands.clickInFrame("Press the button", "#press");
       },
       { timeout: 15_000 },
     );
-    await vi.waitFor(
+    await waitFor(
       () => {
         const stored = s.store.records.get("exam-1");
         expect(stored?.version).toBeGreaterThan(1);
@@ -675,8 +676,8 @@ describe("a portable custom interaction in the player", () => {
       { timeout: 15_000 },
     );
     const view = s.client.view.current;
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 10_000 });
-    await vi.waitFor(() => expect(s.client.view.current?.responses.get("PCI")).toBeDefined(), { timeout: 10_000 });
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
+    await waitFor(() => expect(s.client.view.current?.responses.get("PCI")).toBeDefined());
     expect(s.client.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
     expect(s.client.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     expect(view?.key.ref).toBe("q3");
@@ -691,16 +692,16 @@ const choices = (ui: ShadowRoot): HTMLInputElement[] => [
 describe("the interactions in the player", () => {
   it("[T67][T55] sends the response that the candidate gives, and tells that the answers are saved", async () => {
     const s = await shell();
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 5000 });
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
     expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
   });
 
   it("[T67] keeps what the candidate chose when a view that answers an earlier request arrives", async () => {
     const s = await shell();
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
     const current = s.client.view.current;
     if (current === undefined) throw new Error("The fixture shows an item.");
@@ -715,30 +716,30 @@ describe("the interactions in the player", () => {
   it("[T67] sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
     buttonNamed(s.ui, "Submit answer").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
+    await waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
     expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
   });
 
   it("[T58] disables the interactions of a closed item, and shows the answer in the review and the correct one in the solution", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     expect(choices(s.ui).map((input) => input.disabled)).toEqual([false, false]);
     choices(s.ui)[1]?.click();
     buttonNamed(s.ui, "Submit answer").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
-    await vi.waitFor(() => expect(choices(s.ui).map((input) => input.disabled)).toEqual([true, true]));
+    await waitFor(() => expect(buttons(s.ui)).toContain("Review answer"));
+    await waitFor(() => expect(choices(s.ui).map((input) => input.disabled)).toEqual([true, true]));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
     buttonNamed(s.ui, "Review answer").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(In review)"));
-    await vi.waitFor(() => expect(choices(s.ui).map((input) => input.disabled)).toEqual([true, true]));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(In review)"));
+    await waitFor(() => expect(choices(s.ui).map((input) => input.disabled)).toEqual([true, true]));
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
     buttonNamed(s.ui, "Show solution").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Solution shown)"));
-    await vi.waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([true, false]));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-nav-item")?.textContent).toContain("(Solution shown)"));
+    await waitFor(() => expect(choices(s.ui).map((input) => input.checked)).toEqual([true, false]));
     expect(choices(s.ui).map((input) => input.disabled)).toEqual([true, true]);
   });
 });
@@ -749,19 +750,19 @@ describe("accessibility of the chrome", () => {
     await shown(s);
     expect(await axeViolations(s.page)).toEqual([]);
     buttonNamed(s.ui, "End the test").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     expect(await axeViolations(s.page)).toEqual([]);
     buttonNamed(s.ui, "No, go back").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)).toBeNull());
+    await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     buttonNamed(s.ui, "Pause the test").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toEqual(["Resume the test"]));
+    await waitFor(() => expect(buttons(s.ui)).toEqual(["Resume the test"]));
     expect(await axeViolations(s.page)).toEqual([]);
     buttonNamed(s.ui, "Resume the test").click();
-    await vi.waitFor(() => expect(buttons(s.ui)).toContain("End the test"));
+    await waitFor(() => expect(buttons(s.ui)).toContain("End the test"));
     buttonNamed(s.ui, "End the test").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     buttonNamed(s.ui, "Yes, continue").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
     expect(await axeViolations(s.page)).toEqual([]);
   });
 
@@ -779,10 +780,10 @@ describe("accessibility of the chrome", () => {
     expect([...s.ui.querySelectorAll("button")].every((button) => button.tabIndex >= 0)).toBe(true);
     buttonNamed(s.ui, "Next").focus();
     await userEvent.keyboard("{Enter}");
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     buttonNamed(s.ui, "Previous").focus();
     await userEvent.keyboard(" ");
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
   });
 
   it("[SC 2.4.3] gives the focus to the answer that goes back, and back to the control that asked", async () => {
@@ -791,19 +792,19 @@ describe("accessibility of the chrome", () => {
     const end = buttonNamed(s.ui, "End this part");
     end.focus();
     await userEvent.keyboard("{Enter}");
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     expect(s.ui.activeElement?.textContent).toBe("No, go back");
     await userEvent.keyboard("{Escape}");
-    await vi.waitFor(() => expect(dialogOf(s.ui)).toBeNull());
+    await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     expect(s.ui.activeElement).toBe(end);
     end.click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     const yes = buttonNamed(s.ui, "Yes, continue");
     expect(yes.tabIndex).toBeGreaterThanOrEqual(0);
     yes.focus();
     await userEvent.keyboard("{Enter}");
-    await vi.waitFor(() => expect(dialogOf(s.ui)).toBeNull());
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+    await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
   });
 });
 
@@ -862,11 +863,11 @@ describe("the supports in the player", () => {
     const host = contentHostOf(s.ui);
     expect(host.hasAttribute("data-tempuh-contrast")).toBe(false);
     buttonNamed(s.ui, "High contrast").click();
-    await vi.waitFor(() => expect(host.getAttribute("data-tempuh-contrast")).toBe("high"));
+    await waitFor(() => expect(host.getAttribute("data-tempuh-contrast")).toBe("high"));
     expect(sent).toContainEqual({ type: "support", name: "high-contrast", active: true });
     expect(buttonNamed(s.ui, "High contrast").getAttribute("aria-pressed")).toBe("true");
     buttonNamed(s.ui, "High contrast").click();
-    await vi.waitFor(() => expect(host.hasAttribute("data-tempuh-contrast")).toBe(false));
+    await waitFor(() => expect(host.hasAttribute("data-tempuh-contrast")).toBe(false));
     expect(sent).toContainEqual({ type: "support", name: "high-contrast", active: false });
     expect(buttonNamed(s.ui, "High contrast").getAttribute("aria-pressed")).toBe("false");
   });
@@ -877,7 +878,7 @@ describe("the supports in the player", () => {
     const button = buttonNamed(s.ui, "High contrast");
     button.focus();
     await userEvent.keyboard("{Enter}");
-    await vi.waitFor(() => expect(button.getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(button.getAttribute("aria-pressed")).toBe("true"));
     expect(s.ui.activeElement).toBe(button);
     expect(statusOf(s.ui)).toBe("");
   });
@@ -888,25 +889,25 @@ describe("the supports in the player", () => {
     const body = contentOf(s.ui).querySelector(".tempuh-body");
     expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).not.toContain("A map");
     buttonNamed(s.ui, "Alternative text").click();
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
     expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
     buttonNamed(s.ui, "Alternative text").click();
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).not.toContain("A map"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).not.toContain("A map"));
   });
 
   it("[T84] leaves what the supports added alone while the answers are saved, and applies them again to the next item", async () => {
     const s = await shell({ profile: PROFILE });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     buttonNamed(s.ui, "Alternative text").click();
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector(".tempuh-body")?.textContent).toContain("A map"));
     const after = [...contentOf(s.ui).querySelectorAll("img + *")].find((node) => node.textContent === "A map");
     expect(after).toBeDefined();
     choices(s.ui)[1]?.click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 5000 });
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
     expect(after?.isConnected).toBe(true);
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     expect(buttonNamed(s.ui, "Alternative text").getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -922,7 +923,7 @@ describe("the supports in the player", () => {
     await shown(s);
     const lines = (): (string | null)[] =>
       [...s.ui.querySelectorAll(".tempuh-supports li")].map((line) => line.textContent);
-    await vi.waitFor(() => expect(lines()).toEqual(expect.arrayContaining(["Single column: on", "Spoken: on"])));
+    await waitFor(() => expect(lines()).toEqual(expect.arrayContaining(["Single column: on", "Spoken: on"])));
     expect(lines()).toEqual(expect.arrayContaining(["High contrast", "Alternative text"]));
     // The prohibited magnification is not listed, and the states have no control.
     expect(lines().join(" ")).not.toContain("Magnification");
@@ -939,7 +940,7 @@ describe("the supports in the player", () => {
 
   it("[T75][T97] names the supports in the language of the interface", async () => {
     const s = await shell({ profile: PROFILE, language: "id" });
-    await vi.waitFor(() => expect(panelButtons(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(panelButtons(s.ui)).toHaveLength(2));
     expect(s.ui.querySelector(".tempuh-supports")?.getAttribute("aria-label")).toBe(ID_MESSAGES.supportsLabel);
   });
 
@@ -951,9 +952,9 @@ describe("the supports in the player", () => {
     };
     const s = await shell({ profile: PROFILE, voice });
     await shown(s);
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
     buttonNamed(s.ui, "Read aloud").click();
-    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]?.text).toContain("Look at");
     expect(requests[0]?.lang).toBe("en");
   });
@@ -967,13 +968,13 @@ describe("the supports in the player", () => {
     });
     await shown(s);
     await s.client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
+    await waitFor(() => expect(contentOf(s.ui).querySelector("iframe")).not.toBeNull());
     const look = async () => (await commands.frameTheme("Press the button")).attributes["data-tempuh-contrast"];
-    await vi.waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+    await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
     buttonNamed(s.ui, "High contrast").click();
-    await vi.waitFor(async () => expect(await look()).toBe("high"), { timeout: 15_000 });
+    await waitFor(async () => expect(await look()).toBe("high"), { timeout: 15_000 });
     buttonNamed(s.ui, "High contrast").click();
-    await vi.waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
+    await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
   });
 
   it("[T74] says which version of the question was delivered", async () => {
@@ -984,16 +985,16 @@ describe("the supports in the player", () => {
     const notice = (): HTMLElement => s.ui.querySelector(".tempuh-variant") as HTMLElement;
     expect(notice().hidden).toBe(true);
     s.mounted.update({ ...s.client.view, current: { ...current, variant: { resource: "q1-id", language: "id" } } });
-    await vi.waitFor(() => expect(notice().textContent).toBe("Language of this version: Indonesian"));
+    await waitFor(() => expect(notice().textContent).toBe("Language of this version: Indonesian"));
     expect(notice().querySelector("span")?.getAttribute("lang")).toBe("id");
     s.mounted.update({ ...s.client.view, current });
-    await vi.waitFor(() => expect(notice().hidden).toBe(true));
+    await waitFor(() => expect(notice().hidden).toBe(true));
   });
 
   it("[T75][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the panel and the controls of reading aloud", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-read-aloud")?.hasAttribute("hidden")).toBe(false));
     expect(await axeViolations(s.page)).toEqual([]);
   });
 
@@ -1098,7 +1099,7 @@ describe("a drawing that is still being stored", () => {
       expect(types(sent)).not.toContain(type);
       expect(types(sent)).not.toContain("set-responses");
       storage.finish();
-      await vi.waitFor(() => expect(types(sent)).toContain(type));
+      await waitFor(() => expect(types(sent)).toContain(type));
       expect(types(sent).filter((each) => each === "set-responses" || each === type)).toEqual(["set-responses", type]);
       const response = sent.find((action) => action.type === "set-responses");
       expect(response?.type === "set-responses" && response.responses.get("RESPONSE")).toMatchObject({
@@ -1116,17 +1117,17 @@ describe("a drawing that is still being stored", () => {
     await shown(s);
     await draw(s, storage);
     buttonNamed(s.ui, "End the test").click();
-    await vi.waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
     buttonNamed(s.ui, "Yes, continue").click();
     await real(200);
     expect(types(sent)).not.toContain("end-test");
     storage.finish();
-    await vi.waitFor(() => expect(types(sent)).toContain("end-test"));
+    await waitFor(() => expect(types(sent)).toContain("end-test"));
     expect(types(sent).filter((each) => each === "set-responses" || each === "end-test")).toEqual([
       "set-responses",
       "end-test",
     ]);
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-notice")?.textContent).toBe("The test has ended."));
   });
 
   it("keeps the stored drawing in the answer the engine submitted", async () => {
@@ -1136,7 +1137,7 @@ describe("a drawing that is still being stored", () => {
     await draw(s, storage);
     buttonNamed(s.ui, "Submit answer").click();
     storage.finish();
-    await vi.waitFor(() => expect(s.client.view.current?.status).toBe("closed"));
+    await waitFor(() => expect(s.client.view.current?.status).toBe("closed"));
     expect(s.client.view.current?.responses.get("RESPONSE")).toMatchObject({ value: { reference: "drawing-1" } });
   });
 
@@ -1177,7 +1178,7 @@ describe("a drawing that is still being stored", () => {
     const s = await shell({ wrap });
     await shown(s);
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(types(sent)).toEqual(["move"]));
+    await waitFor(() => expect(types(sent)).toEqual(["move"]));
   });
 });
 
@@ -1211,72 +1212,72 @@ const stageOf = (ui: ShadowRoot): HTMLElement => contentOf(ui).querySelector(".t
 describe("the tools in the player", () => {
   it("[T63] draws a button for each tool that the item asks for, and a tool opens over the item", async () => {
     const s = await shell({ files: toolFiles() });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toEqual(["Ruler", "Protractor", "Basic calculator"]));
+    await waitFor(() => expect(toolNames(s.ui)).toEqual(["Ruler", "Protractor", "Basic calculator"]));
     expect(s.ui.querySelector(".tempuh-tools")?.getAttribute("aria-label")).toBe("Tools");
     buttonNamed(s.ui, "Ruler").click();
     const layer = stageOf(s.ui).querySelector(".tempuh-tool-layer");
-    await vi.waitFor(() => expect(layer?.querySelector(".tempuh-placed")).not.toBeNull());
+    await waitFor(() => expect(layer?.querySelector(".tempuh-placed")).not.toBeNull());
     expect(buttonNamed(s.ui, "Ruler").getAttribute("aria-pressed")).toBe("true");
     // The panel is in the chrome, and the ruler lies over the item in the stage of the content root.
     expect(s.ui.querySelector(".tempuh-tray .tempuh-panel")?.textContent).toContain("A ruler for the lengths.");
     expect(layer?.parentElement).toBe(stageOf(s.ui));
     expect(stageOf(s.ui).querySelector(".tempuh-content")).not.toBeNull();
     buttonNamed(s.ui, "Ruler").click();
-    await vi.waitFor(() => expect(layer?.querySelector(".tempuh-placed")).toBeNull());
+    await waitFor(() => expect(layer?.querySelector(".tempuh-placed")).toBeNull());
   });
 
   it("[T63] works a calculator from the panel in the chrome", async () => {
     const s = await shell({ files: toolFiles() });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Basic calculator"));
+    await waitFor(() => expect(toolNames(s.ui)).toContain("Basic calculator"));
     buttonNamed(s.ui, "Basic calculator").click();
     const key = (name: string): HTMLButtonElement =>
       [...s.ui.querySelectorAll<HTMLButtonElement>(".tempuh-calculator button")].find(
         (button) => button.textContent === name,
       ) as HTMLButtonElement;
-    await vi.waitFor(() => expect(key("2")).toBeDefined());
+    await waitFor(() => expect(key("2")).toBeDefined());
     for (const name of ["2", "+", "3", "="]) key(name).click();
     expect(s.ui.querySelector(".tempuh-display")?.textContent).toBe("5");
   });
 
   it("[T63] keeps a tool that the next item shares, and takes the others away with an item that asks for none", async () => {
     const s = await shell({ files: toolFiles() });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     buttonNamed(s.ui, "Ruler").click();
-    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-placed")).not.toBeNull());
+    await waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-placed")).not.toBeNull());
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    await vi.waitFor(() => expect(toolNames(s.ui)).toEqual([]));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(toolNames(s.ui)).toEqual([]));
     expect(s.ui.querySelector(".tempuh-tools")?.hasAttribute("hidden")).toBe(true);
     expect(stageOf(s.ui).querySelector(".tempuh-placed")).toBeNull();
     buttonNamed(s.ui, "Previous").click();
-    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     expect(buttonNamed(s.ui, "Ruler").getAttribute("aria-pressed")).toBe("false");
   });
 
   it("[T86] turns the line reader on from its button through the session, and the band lies over the text of the item", async () => {
     const { sent, wrap } = recording();
     const s = await shell({ profile: TOOLS_PROFILE, wrap });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Line reader"));
+    await waitFor(() => expect(toolNames(s.ui)).toContain("Line reader"));
     buttonNamed(s.ui, "Line reader").click();
-    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).not.toBeNull());
+    await waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).not.toBeNull());
     expect(sent).toContainEqual({ type: "support", name: "line-reader", active: true });
     expect(buttonNamed(s.ui, "Line reader").getAttribute("aria-pressed")).toBe("true");
     buttonNamed(s.ui, "Line reader").click();
-    await vi.waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).toBeNull());
+    await waitFor(() => expect(stageOf(s.ui).querySelector(".tempuh-line-reader")).toBeNull());
     expect(sent).toContainEqual({ type: "support", name: "line-reader", active: false });
   });
 
   it("[T92] masks the choices of the item shown and of the next item while masking is on", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     buttonNamed(s.ui, "Answer masking").click();
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(contentOf(s.ui).querySelector("qti-choice-interaction")?.hasAttribute("data-tempuh-masked")).toBe(true),
     );
     expect(contentOf(s.ui).querySelector(".tempuh-mask")).not.toBeNull();
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    await vi.waitFor(() =>
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() =>
       expect(contentOf(s.ui).querySelector("qti-choice-interaction")?.hasAttribute("data-tempuh-masked")).toBe(true),
     );
     expect(contentOf(s.ui).querySelectorAll(".tempuh-mask")).toHaveLength(1);
@@ -1292,18 +1293,18 @@ describe("the tools in the player", () => {
       },
     };
     const s = await shell({ profile: TOOLS_PROFILE, tools });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
+    await waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
     buttonNamed(s.ui, "Dictionary").click();
-    await vi.waitFor(() => expect(s.ui.querySelector(".tempuh-tray")?.textContent).toContain("A dictionary for en"));
+    await waitFor(() => expect(s.ui.querySelector(".tempuh-tray")?.textContent).toContain("A dictionary for en"));
     buttonNamed(s.ui, "Dictionary").click();
-    await vi.waitFor(() => expect(built).toEqual(["built", "down"]));
+    await waitFor(() => expect(built).toEqual(["built", "down"]));
   });
 
   it("[T63] says that a tool of the host is not available when the host gives no function for it", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
+    await waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
     buttonNamed(s.ui, "Dictionary").click();
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(s.ui.querySelector(".tempuh-tray")?.textContent).toContain("This tool is not available."),
     );
   });
@@ -1317,16 +1318,16 @@ describe("the tools in the player", () => {
 
   it("[T63][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the toolbar, a panel and a ruler open", async () => {
     const s = await shell({ files: toolFiles() });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     buttonNamed(s.ui, "Ruler").click();
     buttonNamed(s.ui, "Basic calculator").click();
-    await vi.waitFor(() => expect(s.ui.querySelectorAll(".tempuh-panel")).toHaveLength(2));
+    await waitFor(() => expect(s.ui.querySelectorAll(".tempuh-panel")).toHaveLength(2));
     expect(await axeViolations(s.page)).toEqual([]);
   });
 
   it("[T63] gives the content root only the styles of what lies over the item, so that the toolbar styles do not restyle the interactions", async () => {
     const s = await shell({ files: toolFiles() });
-    await vi.waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
+    await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     // The shell mounts the tools before the first item is drawn, and drawing it keeps the sheet.
     const sheets = [...(contentHostOf(s.ui).shadowRoot?.adoptedStyleSheets ?? [])];
     const stage = sheets.find((sheet) =>
@@ -1348,20 +1349,20 @@ describe("the tools in the player", () => {
 describe("magnification in the player", () => {
   it("[T88] enlarges media sized in pixels when magnification is turned on, without drawing the item again or losing the answer", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
-    await vi.waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."), { timeout: 5000 });
+    await waitFor(() => expect(statusOf(s.ui)).toBe("Answers saved."));
     const body = contentOf(s.ui).querySelector(".tempuh-body");
     const image = (): HTMLImageElement => contentOf(s.ui).querySelector("img") as HTMLImageElement;
     expect([image().getAttribute("width"), image().getAttribute("height")]).toEqual(["10", "10"]);
     buttonNamed(s.ui, "Magnification").click();
-    await vi.waitFor(() => expect(image().getAttribute("width")).toBe("20"));
+    await waitFor(() => expect(image().getAttribute("width")).toBe("20"));
     expect(image().getAttribute("height")).toBe("20");
     expect(contentHostOf(s.ui).style.getPropertyValue("--tempuh-text-zoom")).toBe("2");
     expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
     buttonNamed(s.ui, "Magnification").click();
-    await vi.waitFor(() => expect(image().getAttribute("width")).toBe("10"));
+    await waitFor(() => expect(image().getAttribute("width")).toBe("10"));
     expect(contentOf(s.ui).querySelector(".tempuh-body")).toBe(body);
   });
 
@@ -1372,12 +1373,12 @@ describe("magnification in the player", () => {
       '<p>Question <img src="images/map.png" alt="Map" width="30" height="30"/></p>',
     );
     const s = await shell({ profile: TOOLS_PROFILE, files });
-    await vi.waitFor(() => expect(choices(s.ui)).toHaveLength(2));
+    await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     buttonNamed(s.ui, "Magnification").click();
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("20"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("20"));
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
-    await vi.waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("60"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(contentOf(s.ui).querySelector("img")?.getAttribute("width")).toBe("60"));
   });
 });
 
@@ -1388,7 +1389,7 @@ describe("pronunciation lexicons in the player", () => {
   });
   /** Presses Read aloud until the voice has been given a request that holds the text. */
   const reads = async (s: Shell, requests: SpeechRequest[], text: string): Promise<void> => {
-    await vi.waitFor(() => {
+    await waitFor(() => {
       buttonNamed(s.ui, "Read aloud").click();
       expect(requests.at(-1)?.text).toContain(text);
     });
@@ -1401,12 +1402,12 @@ describe("pronunciation lexicons in the player", () => {
     expect(s.client.documents.lexicons).toEqual(["items/q1/words.pls"]);
     await reads(s, requests, "the World Wide Web Consortium and");
     buttonNamed(s.ui, "Next").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     expect(s.client.documents.lexicons).toEqual([]);
     await reads(s, requests, "The W3C again");
     expect(requests.at(-1)?.text).not.toContain("World Wide Web Consortium");
     buttonNamed(s.ui, "Previous").click();
-    await vi.waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
     await reads(s, requests, "World Wide Web Consortium");
   });
 
@@ -1422,7 +1423,7 @@ describe("pronunciation lexicons in the player", () => {
     const requests: SpeechRequest[] = [];
     const s = await shell({ profile: PROFILE, files: lexiconFiles("<p>Not a lexicon.</p>"), voice: voiceOf(requests) });
     await shown(s);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       buttonNamed(s.ui, "Read aloud").click();
       expect(requests.at(-1)?.text).toContain("Look at the W3C and");
     });
@@ -1435,7 +1436,7 @@ describe("pronunciation lexicons in the player", () => {
     delete files["items/q1/words.pls"];
     const s = await shell({ profile: PROFILE, files, voice: voiceOf(requests) });
     await shown(s);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       buttonNamed(s.ui, "Read aloud").click();
       expect(requests.at(-1)?.text).toContain("Look at the W3C and");
     });

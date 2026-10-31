@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
 import type { ItemKey } from "@luthfanwakan/olah/delivery";
-import { afterEach, describe, expect, inject, it, vi } from "vitest";
+import { afterEach, describe, expect, inject, it } from "vitest";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { DataError } from "../src/index.js";
 import { mountDelivery } from "../src/player/index.js";
@@ -11,6 +11,7 @@ import { examHost } from "./exam-fixture.js";
 import type { Hit } from "./fixtures/lti-server.js";
 import { ltiExamFiles } from "./lti-exam-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { waitFor } from "./wait.js";
 
 const { platform, tool, other } = inject("lti");
 const { asset } = inject("fixtures");
@@ -37,9 +38,7 @@ async function reported(origin: string, token: string): Promise<string[]> {
 
 /** Waits until the tool has reported every step. */
 function expectReports(origin: string, token: string, steps: readonly string[]): Promise<void> {
-  return vi.waitFor(async () => expect(await reported(origin, token)).toEqual(expect.arrayContaining([...steps])), {
-    timeout: 8000,
-  });
+  return waitFor(async () => expect(await reported(origin, token)).toEqual(expect.arrayContaining([...steps])));
 }
 
 const storagePageUrl = (delay = 0): string =>
@@ -252,7 +251,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     });
     expect(frames(host)).toEqual([]);
     await client.dispatch({ type: "move", to: DRAW });
-    await vi.waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
+    await waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
     const frame = host.querySelector("iframe[name='lti-tool']");
     expect(frame?.getAttribute("title")).toBe("Drawing tool");
     expect(frame?.getAttribute("allow")).toBe("microphone");
@@ -263,7 +262,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     await client.dispatch({ type: "move", to: ESSAY });
     expect(frames(host)).toEqual([]);
     await client.dispatch({ type: "move", to: DRAW });
-    await vi.waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
+    await waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
     expect(calls).toEqual([DRAW, DRAW]);
   });
 
@@ -286,7 +285,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     try {
       const none = await player();
       await none.client.dispatch({ type: "move", to: DRAW });
-      await vi.waitFor(() => expect(none.slot.textContent).toBe("The tool for this question could not be started."));
+      await waitFor(() => expect(none.slot.textContent).toBe("The tool for this question could not be started."));
       expect(none.slot.querySelector("[role='alert']")).not.toBeNull();
       expect(frames(none.host)).toEqual([]);
 
@@ -294,11 +293,11 @@ describe("mountDelivery with an item that is a link to a tool", () => {
         throw new Error("The route failed.");
       });
       await failing.client.dispatch({ type: "move", to: DRAW });
-      await vi.waitFor(() => expect(failing.slot.textContent).toBe("The tool for this question could not be started."));
+      await waitFor(() => expect(failing.slot.textContent).toBe("The tool for this question could not be started."));
 
       const wrong = await player(async () => ({ url: `${location.origin}/login`, storageUrl: storagePageUrl() }));
       await wrong.client.dispatch({ type: "move", to: DRAW });
-      await vi.waitFor(() => expect(wrong.slot.textContent).toBe("The tool for this question could not be started."));
+      await waitFor(() => expect(wrong.slot.textContent).toBe("The tool for this question could not be started."));
       expect(frames(wrong.host)).toEqual([]);
       expect(errors.map((error) => (error instanceof Error ? error.name : String(error)))).toEqual([
         "Error",
@@ -312,9 +311,9 @@ describe("mountDelivery with an item that is a link to a tool", () => {
   it("[T106] shows a note in place of the tool once the item is closed", async () => {
     const { client, slot, host } = await player(async () => frameFor(toolUrl(tool, "sandbox", token())));
     await client.dispatch({ type: "move", to: DRAW });
-    await vi.waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
+    await waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
     await client.dispatch({ type: "submit", item: DRAW });
-    await vi.waitFor(() => expect(slot.textContent).toBe("The tool for this question is no longer open."));
+    await waitFor(() => expect(slot.textContent).toBe("The tool for this question is no longer open."));
     expect(frames(host)).toEqual([]);
   });
 

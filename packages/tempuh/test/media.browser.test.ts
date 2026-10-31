@@ -2,16 +2,21 @@ import { single } from "@luthfanwakan/olah/values";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { followPlayback } from "../src/player/media/companion.js";
+import { Playback, type PlaybackNotice } from "../src/player/media/playback.js";
 import { audioPlaysToEnd } from "./audio.js";
 import { ASSETS, mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { waitFor } from "./wait.js";
 
 const DECLARATION = `<qti-response-declaration identifier="R" cardinality="single" base-type="integer"/>`;
 
-/** A media interaction over the tone of the fixtures, which lasts two seconds, with captions. */
+/**
+ * A media interaction with captions over a recording of the fixtures: by default twenty seconds of silence, which
+ * outlast the 15 seconds that a test has, or the blip of a quarter of a second, which a test plays to its end.
+ */
 const BODY = (
   attributes: string,
-  source = "tone",
+  source = "long",
 ): string => `<qti-media-interaction response-identifier="R" autostart="false" ${attributes}>
   <qti-prompt>Listen to the tone.</qti-prompt>
   <audio><source src="media/${source}.wav" type="audio/wav"/><track kind="captions" src="media/captions.vtt" srclang="en" label="English"/></audio>
@@ -30,8 +35,30 @@ const plays = (scene: Scene): unknown => scene.responses.at(-1)?.value;
 /** Whether a recording is not playing: it is paused, or, in browsers that do not pause it, it has ended. */
 const idle = (audio: HTMLAudioElement): boolean => audio.paused || audio.ended;
 const playing = (audio: HTMLAudioElement): boolean => !idle(audio);
+/** Resolves with the next event of a type that the recording sends. */
+const next = (audio: HTMLAudioElement, type: string): Promise<void> =>
+  new Promise((done) => audio.addEventListener(type, () => done(), { once: true }));
+/**
+ * Presses play and resolves once the browser has sent `playing`, which it sends when the data has come and which counts
+ * a play, or, with `play`, once it has sent the event of the request. A recording that resumes after a pause sends `play`
+ * in every engine, and `playing` not in a sandbox without a sound device.
+ */
+async function playFrom(scene: Scene, event: "play" | "playing" = "playing"): Promise<void> {
+  const started = next(audioOf(scene), event);
+  await userEvent.click(button(scene, "Play"));
+  await started;
+}
+/** Makes the timers of the page wait for the test, which moves them with `vi.advanceTimersByTime`. */
+const holdTimers = (): void => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+};
 
 describe("media", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it("[T42] draws the controls of the player in place of the controls of the browser, named by the prompt", async () => {
     const scene = mountScene(DECLARATION, BODY(""));
     expect(audioOf(scene).hasAttribute("controls")).toBe(false);
@@ -49,11 +76,13 @@ describe("media", () => {
   it("[T42] gives the number of plays as the response, one for each time playback starts from the start", async (context) => {
     await needsPlaybackToEnd(context);
     const scene = mountScene(DECLARATION, BODY("", "blip"));
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(plays(scene)).toEqual(single("integer", 1)));
-    await vi.waitFor(() => expect(button(scene, "Play")).toBeDefined(), { timeout: 3000 });
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(plays(scene)).toEqual(single("integer", 2)));
+    const audio = audioOf(scene);
+    const finished = next(audio, "ended");
+    await playFrom(scene);
+    expect(plays(scene)).toEqual(single("integer", 1));
+    await finished;
+    await playFrom(scene);
+    expect(plays(scene)).toEqual(single("integer", 2));
     expect(scene.find(".tempuh-media-status").textContent).toBe("Plays 2.");
   });
 
@@ -62,11 +91,11 @@ describe("media", () => {
     const scene = mountScene(DECLARATION, BODY('max-plays="2"', "blip"));
     scene.setValue("R", single("integer", 1));
     expect(scene.find(".tempuh-media-status").textContent).toBe("Plays 1 / 2.");
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(plays(scene)).toEqual(single("integer", 2)));
-    await vi.waitFor(() => expect(scene.find(".tempuh-media-status").textContent).toBe("Plays 2 / 2. No plays left."), {
-      timeout: 3000,
-    });
+    const finished = next(audioOf(scene), "ended");
+    await playFrom(scene);
+    expect(plays(scene)).toEqual(single("integer", 2));
+    await finished;
+    expect(scene.find(".tempuh-media-status").textContent).toBe("Plays 2 / 2. No plays left.");
     await userEvent.click(button(scene, "Play"));
     expect(scene.find(".tempuh-media-notice").textContent).toBe("No plays left.");
     expect(scene.find(".tempuh-media-notice").getAttribute("role")).toBe("status");
@@ -85,17 +114,25 @@ describe("media", () => {
   it("[T42] plays again by itself when it loops, up to max-plays", async (context) => {
     await needsPlaybackToEnd(context);
     const scene = mountScene(DECLARATION, BODY('loop="true" max-plays="2"', "blip"));
+    const audio = audioOf(scene);
+    // The element listens before the test does, so that it has decided about a third play when the second ends.
+    const secondEnd = new Promise<void>((done) => {
+      let ends = 0;
+      audio.addEventListener("ended", () => {
+        ends += 1;
+        if (ends === 2) done();
+      });
+    });
     await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(plays(scene)).toEqual(single("integer", 2)));
-    await vi.waitFor(() => expect(idle(audioOf(scene))).toBe(true), { timeout: 3000 });
-    await new Promise((done) => setTimeout(done, 300));
+    await secondEnd;
     expect(plays(scene)).toEqual(single("integer", 2));
+    expect(idle(audio)).toBe(true);
   });
 
   it("[T42][T47][SC 3.3.3] tells the candidate to play more when min-plays is not reached", async () => {
     const scene = mountScene(DECLARATION, BODY('min-plays="2"', "blip"));
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(scene.find(".tempuh-hint").textContent).toBe("Play at least 2."));
+    await playFrom(scene);
+    expect(scene.find(".tempuh-hint").textContent).toBe("Play at least 2.");
   });
 
   it("[T42] shows the controls that the item asks for, and play always", () => {
@@ -125,37 +162,46 @@ describe("media", () => {
   });
 
   it("[T119] waits for the pause delay before playback starts, in either spelling of the attribute", async () => {
+    holdTimers();
     for (const attribute of ["data-qti-media-player-pause-delay", "qti-media-player-pause-delay"]) {
       const scene = mountScene(DECLARATION, BODY(`${attribute}="1.5"`));
+      const audio = audioOf(scene);
+      const notice = scene.find(".tempuh-media-notice");
       await userEvent.click(button(scene, "Play"));
-      expect(scene.find(".tempuh-media-notice").textContent, attribute).toBe("Playback starts in a moment.");
-      expect(idle(audioOf(scene)), attribute).toBe(true);
+      expect(notice.textContent, attribute).toBe("Playback starts in a moment.");
+      expect(idle(audio), attribute).toBe(true);
       expect(button(scene, "Pause").textContent).toBe("Pause");
+      vi.advanceTimersByTime(1499);
+      expect(idle(audio), attribute).toBe(true);
+      const started = next(audio, "playing");
+      vi.advanceTimersByTime(1);
+      await started;
       // The notice stays until playback has started.
-      await vi.waitFor(() => expect(scene.find(".tempuh-media-notice").textContent).toBe(""), { timeout: 5000 });
-      expect(playing(audioOf(scene))).toBe(true);
-      audioOf(scene).pause();
+      expect(notice.textContent, attribute).toBe("");
+      expect(playing(audio), attribute).toBe(true);
+      audio.pause();
       scene.host.remove();
     }
   });
 
   it("[T119] cancels a start that waits for its delay when the candidate presses pause", async () => {
+    holdTimers();
+    const play = vi.spyOn(HTMLMediaElement.prototype, "play");
     const scene = mountScene(DECLARATION, BODY('data-qti-media-player-pause-delay="1.5"'));
     await userEvent.click(button(scene, "Play"));
     await userEvent.click(button(scene, "Pause"));
-    await new Promise((done) => setTimeout(done, 2000));
+    vi.advanceTimersByTime(2000);
+    expect(play).not.toHaveBeenCalled();
     expect(idle(audioOf(scene))).toBe(true);
     expect(scene.responses).toEqual([]);
   });
 
   it("[T119] lets the candidate pause as often as the pause count says in one play, and then keeps playing", async () => {
     const scene = mountScene(DECLARATION, BODY('qti-media-player-pause-count="1"'));
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true));
+    await playFrom(scene);
     await userEvent.click(button(scene, "Pause"));
     expect(idle(audioOf(scene))).toBe(true);
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true));
+    await playFrom(scene, "play");
     await userEvent.click(button(scene, "Pause"));
     expect(playing(audioOf(scene))).toBe(true);
     expect(scene.find(".tempuh-media-notice").textContent).toBe("You cannot pause again.");
@@ -164,14 +210,20 @@ describe("media", () => {
   });
 
   it("[T119] ends a pause by itself after the pause duration", async () => {
+    holdTimers();
     const scene = mountScene(DECLARATION, BODY('data-qti-media-player-pause-duration="1.5"'));
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true));
+    const audio = audioOf(scene);
+    await playFrom(scene);
     await userEvent.click(button(scene, "Pause"));
-    expect(idle(audioOf(scene))).toBe(true);
+    expect(idle(audio)).toBe(true);
     expect(scene.find(".tempuh-media-notice").textContent).toBe("Playback continues by itself.");
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true), { timeout: 5000 });
-    audioOf(scene).pause();
+    vi.advanceTimersByTime(1499);
+    expect(idle(audio)).toBe(true);
+    const resumed = next(audio, "play");
+    vi.advanceTimersByTime(1);
+    await resumed;
+    expect(playing(audio)).toBe(true);
+    audio.pause();
   });
 
   it("[T119] ignores a pause attribute that is not a number of seconds above zero", async () => {
@@ -181,8 +233,7 @@ describe("media", () => {
         'data-qti-media-player-pause-delay="soon" data-qti-media-player-pause-count="0" qti-media-player-pause-duration="-1"',
       ),
     );
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true));
+    await playFrom(scene);
     await userEvent.click(button(scene, "Pause"));
     await userEvent.click(button(scene, "Play"));
     await userEvent.click(button(scene, "Pause"));
@@ -220,8 +271,7 @@ describe("media", () => {
 
   it("[T42] stops the recording and locks the controls while the candidate cannot respond", async () => {
     const scene = mountScene(DECLARATION, BODY(""));
-    await userEvent.click(button(scene, "Play"));
-    await vi.waitFor(() => expect(playing(audioOf(scene))).toBe(true));
+    await playFrom(scene);
     scene.interaction().disabled = true;
     expect(idle(audioOf(scene))).toBe(true);
     expect(scene.findAll<HTMLButtonElement>(".tempuh-media-bar button").every(({ disabled }) => disabled)).toBe(true);
@@ -262,18 +312,18 @@ describe("followPlayback", () => {
     followPlayback(primary, companion);
     await userEvent.click(document.body);
     await primary.play();
-    await vi.waitFor(() => expect(companion.paused).toBe(false));
+    await waitFor(() => expect(companion.paused).toBe(false));
     primary.pause();
-    await vi.waitFor(() => expect(companion.paused).toBe(true));
+    await waitFor(() => expect(companion.paused).toBe(true));
     primary.currentTime = 1.5;
-    await vi.waitFor(() => expect(Math.abs(companion.currentTime - 1.5)).toBeLessThan(0.35));
+    await waitFor(() => expect(Math.abs(companion.currentTime - 1.5)).toBeLessThan(0.35));
   });
 
   it("[T82] changes the speed of the companion with the recording", async () => {
     const [primary, companion] = [await recording(), await recording()];
     followPlayback(primary, companion);
     primary.playbackRate = 1.5;
-    await vi.waitFor(() => expect(companion.playbackRate).toBe(1.5));
+    await waitFor(() => expect(companion.playbackRate).toBe(1.5));
   });
 
   it("[T82] takes the controls and the sound from the companion while it follows, and gives them back", async () => {
@@ -303,5 +353,72 @@ describe("followPlayback", () => {
     await new Promise((done) => setTimeout(done, 300));
     expect(companion.paused).toBe(true);
     primary.pause();
+  });
+});
+
+describe("Playback", () => {
+  /**
+   * An audio element at the end of a recording as WebKit reports it: `ended` is true while `paused` is still false, and
+   * the `pause` and `ended` events are yet to come. `play` and `pause` do what the specification says: `play` on a
+   * recording that is not paused sends no `play` and `playing` events.
+   */
+  function endingRecording(maxPlays: number | undefined) {
+    const audio = document.createElement("audio");
+    const state = { paused: true, ended: false };
+    Object.defineProperties(audio, { paused: { get: () => state.paused }, ended: { get: () => state.ended } });
+    const play = vi.spyOn(audio, "play").mockImplementation(() => {
+      if (state.paused) {
+        state.paused = false;
+        state.ended = false;
+        audio.dispatchEvent(new Event("play"));
+        audio.dispatchEvent(new Event("playing"));
+      }
+      return Promise.resolve();
+    });
+    vi.spyOn(audio, "pause").mockImplementation(() => {
+      if (state.paused) return;
+      state.paused = true;
+      audio.dispatchEvent(new Event("pause"));
+    });
+    const counted = { plays: 0, notices: [] as (PlaybackNotice | undefined)[] };
+    const playback = new Playback(
+      audio,
+      { maxPlays: () => maxPlays, loop: false, pauseDelay: undefined, pauseDuration: undefined, pauseCount: undefined },
+      {
+        plays: () => counted.plays,
+        started: () => {
+          counted.plays += 1;
+        },
+        notify: (notice) => counted.notices.push(notice),
+        changed: () => undefined,
+      },
+    );
+    const reachEnd = (): void => {
+      state.ended = true;
+      audio.dispatchEvent(new Event("timeupdate"));
+    };
+    return { playback, play, counted, reachEnd };
+  }
+
+  it("[T42] counts a play that starts after the recording has ended and before the page has its ended event", () => {
+    const { playback, counted, reachEnd } = endingRecording(undefined);
+    playback.play();
+    expect(counted.plays).toBe(1);
+    reachEnd();
+    expect(playback.playing).toBe(false);
+    playback.play();
+    expect(counted.plays).toBe(2);
+    expect(playback.playing).toBe(true);
+  });
+
+  it("[T42] stops at max-plays a play that starts after the recording has ended and before its ended event", () => {
+    const { playback, play, counted, reachEnd } = endingRecording(1);
+    playback.play();
+    reachEnd();
+    expect(playback.exhausted).toBe(true);
+    playback.play();
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(counted.plays).toBe(1);
+    expect(counted.notices.at(-1)).toBe("no-plays");
   });
 });

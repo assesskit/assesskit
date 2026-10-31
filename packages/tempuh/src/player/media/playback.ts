@@ -74,7 +74,7 @@ export class Playback {
   /** Whether another play can start: the recording is not at its limit of plays. */
   get exhausted(): boolean {
     const max = this.#rules.maxPlays();
-    return this.#fresh && max !== undefined && this.#host.plays() >= max;
+    return this.#atStart && max !== undefined && this.#host.plays() >= max;
   }
 
   /** Whether the candidate can pause: the recording plays and the pauses of this play are not used up. */
@@ -143,7 +143,21 @@ export class Playback {
     this.#media.pause();
   }
 
+  /**
+   * Whether the next play begins a new one: the last play ended. WebKit reports `ended` while `paused` is still false,
+   * and sends the `pause` and `ended` events after, when a busy page may take seconds to get to them; a candidate who
+   * presses play in between has begun a new play.
+   */
+  get #atStart(): boolean {
+    return this.#fresh || this.#media.ended;
+  }
+
   #start(): void {
+    if (this.#media.ended) {
+      // `play()` on a recording that is not paused sends no `play` and `playing` events, and the count needs the second.
+      this.#fresh = true;
+      this.#media.pause();
+    }
     // The browser refuses a play that no gesture asked for; the candidate presses play instead.
     this.#media.play().catch(() => undefined);
   }

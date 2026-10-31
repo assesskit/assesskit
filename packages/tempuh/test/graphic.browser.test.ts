@@ -1,10 +1,11 @@
 import { container, single } from "@luthfanwakan/olah/values";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
 import { pointsOf } from "../src/player/elements/values.js";
 import { colorAt, type Graphic, outlined, picture, settle, show } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
+import { waitFor } from "./wait.js";
 
 /** An image of the given size that every fixture uses, drawn at its own size. */
 const image = (width = 200, height = 100): string =>
@@ -927,11 +928,11 @@ describe("drawing", () => {
     // Bytes that are no image: the browser loads the file and cannot decode it.
     const broken = `data:image/png;base64,${btoa("not an image")}`;
     shown.setValue("RESPONSE", single("file", { reference: broken, mimeType: "image/png" }));
-    await vi.waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(EN_MESSAGES.drawLoadFailed));
+    await waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(EN_MESSAGES.drawLoadFailed));
     expect(shown.find(".tempuh-surface").getAttribute("aria-invalid")).toBe("true");
     expect(shown.find(".tempuh-surface").getAttribute("aria-describedby")).toContain(shown.find(".tempuh-hint").id);
     await userEvent.click(shown.find('button[data-action="clear"]'));
-    await vi.waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(""));
+    await waitFor(() => expect(shown.find(".tempuh-hint").textContent).toBe(""));
     expect(shown.find(".tempuh-surface").hasAttribute("aria-invalid")).toBe(false);
     await drag(shown, [20, 20], [120, 20]);
     await stored(shown);

@@ -2,7 +2,7 @@ import { readAsi } from "@luthfanwakan/olah/asi";
 import { createEngine, type DeliveryState, type SupportView, stamp } from "@luthfanwakan/olah/delivery";
 import { describeInteractions } from "@luthfanwakan/olah/interactions";
 import { readPnp, type SupportSetting } from "@luthfanwakan/olah/pnp";
-import { afterEach, beforeEach, describe, expect, inject, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { DataError, EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
 import {
@@ -23,6 +23,7 @@ import { computed, mount, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 import { axeViolations, ITEM_PATH } from "./renderer-fixture.js";
 import { onSupport, supportView } from "./supports-fixture.js";
+import { waitFor } from "./wait.js";
 
 const { asset } = inject("fixtures");
 
@@ -1077,7 +1078,7 @@ describe("mountSpoken", () => {
     };
     window.addEventListener("error", catcher);
     await userEvent.click(buttonOf(second.chrome, "Read aloud"));
-    await vi.waitFor(() => expect(el(second.chrome, "output").textContent).toBe("The voice could not read this."));
+    await waitFor(() => expect(el(second.chrome, "output").textContent).toBe("The voice could not read this."));
     window.removeEventListener("error", catcher);
     expect(errors).toHaveLength(1);
   });
@@ -1327,9 +1328,9 @@ describe("supports and a media interaction", () => {
     expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("false");
     supports.update([onSupport("captions")]);
     expect(track?.mode).toBe("showing");
-    await vi.waitFor(() => expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("true"));
     supports.update([]);
-    await vi.waitFor(() => expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("false"));
+    await waitFor(() => expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("false"));
     expect(track?.mode).not.toBe("showing");
   });
 
@@ -1358,9 +1359,9 @@ describe("supports and a media interaction", () => {
     expect(companion.muted).toBe(true);
     expect(companion.paused).toBe(true);
     await userEvent.click(barButton(root.root, "Play"));
-    await vi.waitFor(() => expect(companion.paused).toBe(false));
+    await waitFor(() => expect(companion.paused).toBe(false));
     await userEvent.click(barButton(root.root, "Pause"));
-    await vi.waitFor(() => expect(companion.paused).toBe(true));
+    await waitFor(() => expect(companion.paused).toBe(true));
     expect(recording.paused).toBe(true);
   });
 
@@ -1446,15 +1447,15 @@ describe("the supports with olah's engine", () => {
     expect(root.root.querySelector(".tempuh-card-trigger")).toBeNull();
 
     await userEvent.click(buttonOf(chrome, "Glossary"));
-    await vi.waitFor(() => expect(buttonOf(chrome, "Glossary").getAttribute("aria-pressed")).toBe("true"));
-    await vi.waitFor(() => expect(root.root.querySelectorAll(".tempuh-card-trigger")).toHaveLength(1));
+    await waitFor(() => expect(buttonOf(chrome, "Glossary").getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(root.root.querySelectorAll(".tempuh-card-trigger")).toHaveLength(1));
 
     await userEvent.click(buttonOf(chrome, "High contrast"));
-    await vi.waitFor(() => expect(host.getAttribute("data-tempuh-contrast")).toBe("high"));
+    await waitFor(() => expect(host.getAttribute("data-tempuh-contrast")).toBe("high"));
     expect(computed(el(root.root, "#term"), "color")).toBe("rgb(0, 0, 0)");
 
     await userEvent.click(buttonOf(chrome, "High contrast"));
-    await vi.waitFor(() => expect(host.hasAttribute("data-tempuh-contrast")).toBe(false));
+    await waitFor(() => expect(host.hasAttribute("data-tempuh-contrast")).toBe(false));
 
     // A request for a prohibited support is refused by the engine, and the next view is as it was.
     clock += 10;

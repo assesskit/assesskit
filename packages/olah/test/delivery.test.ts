@@ -5523,24 +5523,30 @@ describe("properties", () => {
     }
   }
 
-  it("[E19][E30] shows at every step a view that reads back equal from its JSON text and from a state read back", () => {
-    fc.assert(
-      fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
-        const engine = flowEngine(flow);
-        session(engine, seed, moves, (before, action, step) => {
-          const written = serializeState(before);
-          const states = step.ok ? [before, step.state] : [before];
-          for (const state of states) {
-            const view = engine.view(state, action.at);
-            expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
-            expect(engine.view(deserializeState(serializeState(state)), action.at)).toEqual(view);
-            expect(view.status).toBe(engine.view(state, state.at).status === "ended" ? "ended" : view.status);
-          }
-          expect(serializeState(before)).toBe(written);
-        });
-      }),
-    );
-  });
+  // The 100 runs of this property take half a second, and five times that on a busy host. Four tests of 25 runs each,
+  // with a seed of their own, check as many flows and keep each test far from the limit of a test.
+  it.for([1, 2, 3, 4])(
+    "[E19][E30] shows at every step a view that reads back equal from its JSON text and from a state read back (runs %i of 4)",
+    () => {
+      fc.assert(
+        fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
+          const engine = flowEngine(flow);
+          session(engine, seed, moves, (before, action, step) => {
+            const written = serializeState(before);
+            const states = step.ok ? [before, step.state] : [before];
+            for (const state of states) {
+              const view = engine.view(state, action.at);
+              expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+              expect(engine.view(deserializeState(serializeState(state)), action.at)).toEqual(view);
+              expect(view.status).toBe(engine.view(state, state.at).status === "ended" ? "ended" : view.status);
+            }
+            expect(serializeState(before)).toBe(written);
+          });
+        }),
+        { numRuns: 25 },
+      );
+    },
+  );
 
   it("[E22][E30] gives the same step to an action that reaches the engine through the JSON text of a server as to one applied on the device", () => {
     fc.assert(

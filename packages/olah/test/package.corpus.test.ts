@@ -28,6 +28,13 @@ const zips = all.filter((path) => path.endsWith(".zip"));
 const IMS_CP_ARCHIVES = ["CAT/CAT_Test01_Adaptive_EchoAdapt.zip", "PCI/sample_pci.zip"];
 const profileZips = zips.filter((path) => !IMS_CP_ARCHIVES.includes(path));
 
+/**
+ * The most bytes of a file that a round trip writes. The writer deflates an entry and stores it when that is not smaller,
+ * whatever its size, and a megabyte of each file takes both paths; the two videos of `items.zip`, 10 MB that no deflate
+ * shrinks, would take most of the time of the test.
+ */
+const ROUND_TRIP_BYTES = 2 ** 20;
+
 const sha256 = (data: Uint8Array | undefined): string =>
   createHash("sha256")
     .update(data ?? new Uint8Array())
@@ -104,8 +111,9 @@ describe("the 1EdTech example packages", () => {
     }
   });
 
-  it("[K30] read from the directories with the files that the file system lists and their bytes", async () => {
-    for (const manifest of manifests) {
+  it.for(manifests)(
+    "[K30] read from the directory of %s with the files that the file system lists and their bytes",
+    async (manifest) => {
       const directory = join(examples, dirname(manifest));
       const listed = readdirSync(directory, { recursive: true, withFileTypes: true })
         .filter((entry) => entry.isFile())
@@ -115,14 +123,12 @@ describe("the 1EdTech example packages", () => {
       expect([...pkg.paths].sort(), manifest).toEqual(listed);
       for (const path of listed)
         expect(sha256(pkg.file(path)), `${manifest} ${path}`).toBe(sha256(readFileSync(join(directory, path))));
-    }
-  });
+    },
+  );
 
-  it("[K30] read from an archive file by readPackageFile", async () => {
-    for (const path of profileZips) {
-      const pkg = await readPackageFile(join(examples, path));
-      expect(pkg.paths, path).toEqual(readPackage(read(path)).paths);
-    }
+  it.for(profileZips)("[K30] read from the archive file %s by readPackageFile", async (path) => {
+    const pkg = await readPackageFile(join(examples, path));
+    expect(pkg.paths, path).toEqual(readPackage(read(path)).paths);
   });
 
   it("[K7][B89] list files that exist in the package, except the one file that the pci example misses", () => {
@@ -144,19 +150,20 @@ describe("the 1EdTech example packages", () => {
     ]);
   });
 
-  it("[K30][R] write a package from the files of an archive that reads back with the same manifest and bytes", () => {
-    for (const path of profileZips) {
+  it.for(profileZips)(
+    "[K30][R] write a package from the files of %s that reads back with the same manifest and bytes",
+    (path) => {
       const pkg = readPackage(read(path));
       const files = new Map(
         pkg.paths
           .filter((file) => file !== "imsmanifest.xml")
-          .map((file) => [file, pkg.file(file) ?? new Uint8Array()]),
+          .map((file) => [file, (pkg.file(file) ?? new Uint8Array()).subarray(0, ROUND_TRIP_BYTES)]),
       );
       const again = readPackage(writePackage(pkg.manifest, files));
       expect(bare(again.manifest), path).toEqual(bare(pkg.manifest));
       for (const [file, bytes] of files) expect(sha256(again.file(file)), `${path} ${file}`).toBe(sha256(bytes));
-    }
-  });
+    },
+  );
 
   it("[K5][K10][K12] resolve every item of every package to a document, as a QTI item or an LTI link, except the two that the schema rejects", () => {
     for (const path of profileZips) {
