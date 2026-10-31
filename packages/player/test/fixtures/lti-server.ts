@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
-import { storagePage } from "../../src/lti/platform/storage.ts";
-
 const FILES = resolve(import.meta.dirname, "lti");
 
 /** The origins of the servers of the LTI browser tests. */
@@ -71,16 +69,25 @@ async function listen(
 const wait = (milliseconds: number): Promise<void> => new Promise((done) => setTimeout(done, milliseconds));
 
 /**
- * Starts the servers of the LTI browser tests: the platform serves its storage page at `/storage?player=<origin>`, built by
- * `storagePage` for that player, with its own headers, and, with `delay=<ms>`, after a wait; the two tool origins serve `/tool.html` and `/tool.js`
+ * Starts the servers of the LTI browser tests: the platform serves its storage page at `/storage?player=<origin>`, which
+ * only that player may frame and, with `delay=<ms>`, after a wait; the two tool origins serve `/tool.html` and `/tool.js`
  * and answer `/report/...` with nothing, so that their hits show what the tool did.
  */
 export async function startLtiServers(): Promise<{ origins: LtiOrigins; close: () => Promise<void> }> {
-  const platform = await listen(async (path, query) => {
+  const platform = await listen(async (path, query): Promise<Answer> => {
     if (path !== "/storage") return { status: 404, headers: {}, body: "" };
     await wait(Number(query.get("delay") ?? 0));
-    const { headers, body } = await storagePage(query.get("player") ?? "");
-    return { status: 200, headers, body };
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+        "content-security-policy": `frame-ancestors ${query.get("player") ?? "'none'"}`,
+      },
+      body: await readFile(resolve(FILES, "storage.html"), "utf8"),
+    };
   });
   const tool = async (path: string): Promise<Answer> => {
     if (path.startsWith("/report/")) return { status: 204, headers: {}, body: "" };

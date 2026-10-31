@@ -1,12 +1,20 @@
 import { readScoringRubrics } from "@assesskit/runtime/asi";
-import { type DeliveryState, type ScorerView, type ScoringRequest, viewToJson } from "@assesskit/runtime/delivery";
+import {
+  type DeliveryState,
+  type PendingWork,
+  type ScorerView,
+  type ScoringRequest,
+  viewToJson,
+} from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
+import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
 import { container, fromWireValue, record, single, type Value } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import scoringGuide from "../../../docs/player/scoring.md?raw";
-import { checkSubmission, type Submission } from "../src/protocol/index.js";
-import { toSubmission, toSupplyScores } from "../src/scoring/index.js";
+import { checkSubmission, type OfficialResult, type Submission } from "../src/protocol/index.js";
+import { markOfficial } from "../src/protocol/internal.js";
+import { sessionScore, toSubmission, toSupplyScores } from "../src/scoring/index.js";
 import { runGuideSamples } from "./guide-samples.js";
 import {
   accepted,
@@ -52,6 +60,157 @@ const WRITING = covers(
   ],
   "<p>Rate the content once, across both tasks.</p>",
 );
+
+/** The time of the reports that the tests of `sessionScore` build. */
+const DATESTAMP = "2023-11-14T22:13:20.000Z";
+const outcome = (identifier: string, value: number | null): ResultVariable => ({
+  kind: "outcome",
+  identifier,
+  cardinality: "single",
+  baseType: "float",
+  value: value === null ? null : single("float", value),
+});
+/** A report of a test with the given outcomes, branded as the session host does. */
+function report(outcomes: Readonly<Record<string, number | null>>, datestamp = DATESTAMP): OfficialResult {
+  const result: AssessmentResult = {
+    context: { sessionIdentifiers: [] },
+    testResult: {
+      identifier: "exam",
+      datestamp,
+      variables: Object.entries(outcomes).map(([identifier, value]) => outcome(identifier, value)),
+      supports: [],
+    },
+    itemResults: [],
+  };
+  return markOfficial(result);
+}
+const open = (mode: "human" | "externalMachine", id = "test:SCORE"): ScoringRequest => ({
+  id,
+  scope: "test",
+  outcome: "SCORE",
+  mode,
+  declaration: { cardinality: "single", baseType: "float" },
+  covers: [],
+  requestedAt: 0,
+});
+const nothing: PendingWork = { scoring: [], cat: [] };
+const waiting = (...modes: readonly ("human" | "externalMachine")[]): PendingWork => ({
+  scoring: modes.map((mode, index) => open(mode, `test:R${index}`)),
+  cat: [],
+});
+
+describe("sessionScore", () => {
+  it("gives the score, the maximum and the time of a report with nothing pending", () => {
+    expect(sessionScore(report({ SCORE: 12, MAXSCORE: 100 }), nothing)).toEqual({
+      progress: "complete",
+      timestamp: DATESTAMP,
+      score: 12,
+      maximum: 100,
+    });
+  });
+
+  it("leaves out the score while a person must score, though the report has one", () => {
+    expect(sessionScore(report({ SCORE: 12, MAXSCORE: 100 }), waiting("human", "externalMachine"))).toEqual({
+      progress: "awaiting-person",
+      timestamp: DATESTAMP,
+      maximum: 100,
+    });
+  });
+
+  it("gives the score so far while only scoring services are left", () => {
+    expect(sessionScore(report({ SCORE: 12, MAXSCORE: 100 }), waiting("externalMachine"))).toEqual({
+      progress: "awaiting-service",
+      timestamp: DATESTAMP,
+      score: 12,
+      maximum: 100,
+    });
+  });
+
+  it("raises a negative SCORE to 0 and keeps the report's value in rawScore, and gives a zero as it is", () => {
+    expect(sessionScore(report({ SCORE: -2.5, MAXSCORE: 10 }), nothing)).toMatchObject({ score: 0, rawScore: -2.5 });
+    expect(sessionScore(report({ SCORE: 0, MAXSCORE: 10 }), nothing)).not.toHaveProperty("rawScore");
+  });
+
+  it("takes the time of the report as the timestamp, which grows as the session changes", () => {
+    expect(sessionScore(report({ SCORE: 1 }, "2023-11-14T22:13:20.001Z"), nothing).timestamp).toBe(
+      "2023-11-14T22:13:20.001Z",
+    );
+    expect(sessionScore(report({ SCORE: 2 }, "2023-11-14T22:14:00.000Z"), nothing).timestamp).toBe(
+      "2023-11-14T22:14:00.000Z",
+    );
+  });
+
+  it("leaves out what the report does not have, and a NULL outcome", () => {
+    expect(sessionScore(report({}), nothing)).toEqual({ progress: "complete", timestamp: DATESTAMP });
+    expect(sessionScore(report({ SCORE: null, MAXSCORE: null }), nothing)).toEqual({
+      progress: "complete",
+      timestamp: DATESTAMP,
+    });
+  });
+
+  it("scores the one item that a session delivered alone, and refuses a report with several items and no test", () => {
+    const itemResult = (identifier: string) => ({
+      identifier,
+      datestamp: DATESTAMP,
+      sessionStatus: "final" as const,
+      variables: [outcome("SCORE", 3), outcome("MAXSCORE", 4)],
+      supports: [],
+    });
+    const alone = markOfficial({ context: { sessionIdentifiers: [] }, itemResults: [itemResult("q1")] });
+    expect(sessionScore(alone, nothing)).toMatchObject({ score: 3, maximum: 4 });
+    const several = markOfficial({
+      context: { sessionIdentifiers: [] },
+      itemResults: [itemResult("q1"), itemResult("q2")],
+    });
+    expect(() => sessionScore(several, nothing)).toThrow(
+      "The results report must have a test result or the result of one item",
+    );
+    expect(() => sessionScore(markOfficial({ context: { sessionIdentifiers: [] }, itemResults: [] }), nothing)).toThrow(
+      DataError,
+    );
+  });
+
+  it("refuses a report that the session host did not return, and one that is a copy of it", () => {
+    const official = report({ SCORE: 1, MAXSCORE: 2 });
+    const refusal = "A score is read from the results report that SessionHost.results returned";
+    expect(() => sessionScore({ ...official } as OfficialResult, nothing)).toThrow(refusal);
+    expect(() => sessionScore(structuredClone(official), nothing)).toThrow(refusal);
+    expect(() => sessionScore(json("null") as OfficialResult, nothing)).toThrow(refusal);
+  });
+
+  it("refuses a SCORE or MAXSCORE that cannot be a score", () => {
+    const text: AssessmentResult = {
+      context: { sessionIdentifiers: [] },
+      testResult: {
+        identifier: "exam",
+        datestamp: DATESTAMP,
+        variables: [
+          {
+            kind: "outcome",
+            identifier: "SCORE",
+            cardinality: "single",
+            baseType: "string",
+            value: single("string", "high"),
+          },
+        ],
+        supports: [],
+      },
+      itemResults: [],
+    };
+    expect(() => sessionScore(markOfficial(text), nothing)).toThrow(DataError);
+    expect(() => sessionScore(report({ SCORE: 1, MAXSCORE: 0 }), nothing)).toThrow(
+      "The outcome MAXSCORE must be above 0, found 0.",
+    );
+    expect(() => sessionScore(report({ SCORE: Number.POSITIVE_INFINITY }), nothing)).toThrow(
+      "must be one finite integer or float",
+    );
+  });
+
+  it("gives the same score for the same report and pending work", () => {
+    const result = report({ SCORE: 5, MAXSCORE: 8 });
+    expect(sessionScore(result, waiting("externalMachine"))).toEqual(sessionScore(result, waiting("externalMachine")));
+  });
+});
 
 describe("toSubmission", () => {
   it("turns the request of an item outcome into one outcome, with its covers, body and keys", () => {
@@ -483,6 +642,28 @@ describe("properties", () => {
           scorer: "human",
         });
       }),
+      { seed: 20_261_030, numRuns: 200 },
+    );
+  });
+  it("reads a score from 0 together with a maximum above 0 for any SCORE, and none while a person scores", () => {
+    const number = fc.double({ noNaN: true, noDefaultInfinity: true, min: -1e9, max: 1e9 });
+    const modes = fc.array(fc.constantFrom("human" as const, "externalMachine" as const), { maxLength: 4 });
+    fc.assert(
+      fc.property(
+        number,
+        fc.double({ noNaN: true, noDefaultInfinity: true, min: 1e-9, max: 1e9 }),
+        modes,
+        (raw, maximum, kinds) => {
+          const read = sessionScore(report({ SCORE: raw, MAXSCORE: maximum }), waiting(...kinds));
+          if (read.progress === "awaiting-person") {
+            expect(read.score).toBeUndefined();
+            return;
+          }
+          expect(read.score).toBe(Math.max(0, raw));
+          expect(read.maximum).toBe(maximum);
+          expect(read.rawScore !== undefined).toBe(raw < 0);
+        },
+      ),
       { seed: 20_261_030, numRuns: 200 },
     );
   });

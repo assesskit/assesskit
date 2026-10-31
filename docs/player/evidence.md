@@ -14,15 +14,15 @@ flowchart LR
   complete --> browsers
 ```
 
-| Suite                      | Runs in                                   | Command               | Covers                                                                                             |
-| -------------------------- | ----------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
-| `*.test.ts`                | Node                                      | `pnpm test`           | `protocol`, `scoring`, `cat`, `cat-rest`, `caliper`, `client`, `server`, `lti` and the shared code |
-| `*.browser.test.ts`        | Chromium, Firefox and WebKit              | `pnpm test:browser`   | Rendering, the shell, accessibility with axe, the clients, the exam server over HTTP, LTI frames   |
-| `*.corpus.test.ts`         | Node                                      | `pnpm test:corpus`    | The asset gate over the 1EdTech examples                                                           |
-| `*.browser.corpus.test.ts` | Chromium, Firefox and WebKit              | `pnpm test:corpus`    | The 1EdTech examples drawn, answered and checked with axe                                          |
-| `*.xsd.test.ts`            | Node                                      | `pnpm test:xsd`       | The HTML elements of the ASI schema                                                                |
-| `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                              |
-| The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                    |
+| Suite                      | Runs in                                   | Command               | Covers                                                                                           |
+| -------------------------- | ----------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
+| `*.test.ts`                | Node                                      | `pnpm test`           | `protocol`, `scoring`, `cat`, `cat-rest`, `client`, `server` and the shared code                 |
+| `*.browser.test.ts`        | Chromium, Firefox and WebKit              | `pnpm test:browser`   | Rendering, the shell, accessibility with axe, the clients, the exam server over HTTP, LTI frames |
+| `*.corpus.test.ts`         | Node                                      | `pnpm test:corpus`    | The asset gate over the 1EdTech examples                                                         |
+| `*.browser.corpus.test.ts` | Chromium, Firefox and WebKit              | `pnpm test:corpus`    | The 1EdTech examples drawn, answered and checked with axe                                        |
+| `*.xsd.test.ts`            | Node                                      | `pnpm test:xsd`       | The HTML elements of the ASI schema                                                              |
+| `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                            |
+| The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                  |
 
 ## Completeness
 
@@ -96,15 +96,14 @@ so that the `support` action, its refusals and the next view are the runtime's. 
 takes a new look in `pci.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
 origin.
 
-The LTI tests run the frames of an LTI item against a second set of servers, which `fixtures/lti-setup.ts` starts: a platform
-that serves its storage page with the headers `storagePage` builds, and two tool origins that serve `fixtures/lti/tool.html`.
-The tool page runs a scenario, which the test names in the query: it talks to the storage frame and to the player the way
-LTI Client Side postMessages and LTI postMessage Storage describe, and each step it takes is a request to its own server
-(`/report/<token>/<step>`), which the test reads at `/__hits`. `lti-frame.browser.test.ts` mounts the frames alone and with
-`mountDelivery`, over the exam server's package of an essay and a link to a tool (`lti-exam-fixture.ts`).
-`lti-items.test.ts` runs the whole exchange in Node, without a browser, between a session host over that package, the
-platform's handlers, a tool that follows the specifications (`lti-fake-tool.ts`) and a learning platform that checks the rules
-of the score service (`lti-fake-lms.ts`).
+The tests of the LTI frame run against a second set of servers, which `fixtures/lti-setup.ts` starts: a platform that serves a
+storage page written from LTI postMessage Storage (`fixtures/lti/storage.html`), and two tool origins that serve
+`fixtures/lti/tool.html`. The tool page runs a scenario, which the test names in the query: it talks to the storage frame and to
+the player the way LTI Client Side postMessages and LTI postMessage Storage describe, and each step it takes is a request to its
+own server (`/report/<token>/<step>`), which the test reads at `/__hits`. `lti-frame.browser.test.ts` mounts the frames alone and
+with `mountDelivery`, over the exam server's package of an essay and a link to a tool (`lti-exam-fixture.ts`). The launch, the
+grade services and the events of Caliper are tested in [interopkit](https://github.com/interopkit/interopkit), and the whole
+exchange between a session host and a learning platform in [the example](lti-items.md), which runs in Node.
 
 The smoke test of the pinned old browsers (`pnpm compat:engines`) also runs a portable custom interaction in its frame, and
 operates the tools by keyboard.
@@ -160,22 +159,14 @@ proctor's suspension, conflict retries (a competing write comes first three time
 fourth gives 409), a time-out that the scheduler's job applies, the gate's refusals and headers, the token of an upload, and a
 portable custom interaction with a relative `define` and a stylesheet with a relative `url()` that load under their prefixes.
 
-## Tests of Caliper
+## Tests of the ports
 
-The tests of `caliper/` and of `server/` run in Node with no network. Their oracles are not the code under test.
-
-| Oracle                                                  | Used for                                                                                                               |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `validation/caliper_ids.py`                             | The name-based UUIDs of Python's `uuid5`, in `test/fixtures/caliper-ids.json`, and the worked example of RFC 9562 A.4. |
-| `test/fixtures/caliper-context-v1p2.json`               | The JSON-LD context of Caliper 1.2, as 1EdTech serves it at `http://purl.imsglobal.org/ctx/caliper/v1p2/`.             |
-| Caliper 1.2 sections 3.2 and 3.6 and Appendices A and B | The actions, objects and generated entities each event may have, and the properties each entity may have.              |
-
-`caliper-fixture.ts` checks an event against the context: every term is defined by it, every value has the type that the context
-coerces its term to, an `@id` value is an absolute IRI, an `@vocab` value is a term, and the properties that section 2.1 requires
-are there. It checks an envelope for its four properties. `sendCaliper` is tested against a fake endpoint that records the
-request, and `forwardEvents` against a log that records its calls. The fixture of the context is a copy of the file that was
-served on 2026-10-30 (SHA-256 `8a78d3d0d380e80c03c7507d1e6d0113d8ab2aa2f772f3e1c8442d958d40837d`); a new version of the context is
-a new file and a new decision.
+The tests of `server/` run in Node with no network. The log of a session host is a function that records its calls; the intake
+runs against a host and a store that fail on demand, one failure at a time, which is how the failure table of
+[server](server.md#forwarding-the-steps) is tested: a retry at an equal time, a `settle` that repeats after it succeeded, a
+store, a `scoredBy` and a host that reject, a signal that aborts, and a log that rejects on the step of a `cat-response`. The
+oracles are the contracts of those ports and the specification of the score service for the order of timestamps. `sessionScore`
+is tested in `scoring.test.ts` against reports built from the runtime's result model.
 
 ## Tests of scoring
 

@@ -1,4 +1,3 @@
-import type { webcrypto } from "node:crypto";
 import {
   checkNonNegativeInteger,
   checkRecord,
@@ -12,12 +11,12 @@ import {
 import { DataError } from "@assesskit/runtime/errors";
 import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
 import type { FileValue } from "@assesskit/runtime/values";
+import type { CryptoKey } from "jose";
 import * as v from "valibot";
-import { isHmacKey } from "../../lti/internal.js";
-import { openToken, sealToken } from "../../lti/platform/internal.js";
 import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
 import { deniedPaths, isQtiData } from "./deny.js";
+import { isHmacKey, openToken, sealToken } from "./seal.js";
 
 /** The seconds a token for a prefix of package paths is valid by default: an hour, renewed by every envelope. */
 export const DEFAULT_TTL_SECONDS = 3600;
@@ -32,7 +31,7 @@ const FILE_USE = "file";
 /** The options of {@link createAssetGate}. */
 export interface AssetGateOptions {
   /** The key that signs tokens: HMAC with SHA-256 and the usages `sign` and `verify`. */
-  readonly key: webcrypto.CryptoKey;
+  readonly key: CryptoKey;
   /** The origin that serves the gate, `https` and without a path, such as `https://assets.example`. */
   readonly origin: string;
   /** Returns the package that a session delivers. */
@@ -131,10 +130,7 @@ function checkOrigin(value: unknown): asserts value is string {
 }
 
 const gateOptionsSchema = v.strictObject({
-  key: v.custom<webcrypto.CryptoKey>(
-    isHmacKey,
-    "The option key must be an HMAC key with SHA-256 for signing and verifying.",
-  ),
+  key: v.custom<CryptoKey>(isHmacKey, "The option key must be an HMAC key with SHA-256 for signing and verifying."),
   origin: v.unknown(),
   packages: functionSchema<AssetGateOptions["packages"]>(),
   files: methodsSchema<FileStore>("put", "read"),
@@ -170,7 +166,7 @@ function checkFileValue(file: unknown): asserts file is FileValue {
 
 /** Reads the claims of a token and checks its expiry; `undefined` when the token is no good. */
 async function claimsOf(
-  key: webcrypto.CryptoKey,
+  key: CryptoKey,
   token: string,
   use: string,
   now: number,

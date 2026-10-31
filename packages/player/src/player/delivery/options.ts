@@ -114,8 +114,8 @@ export interface MountOptions {
      */
     readonly voice?: SpeechHook;
     /**
-     * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item (see
-     * `ltiPlatformFrame`).
+     * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item, which
+     * its LTI library builds. The `signal` aborts when the candidate leaves the item.
      *
      * @defaultValue None, so that an LTI item says that its tool is not available
      */

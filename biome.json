@@ -909,18 +909,17 @@
       "includes": ["packages/player/**/*.css"],
       "linter": {
         "rules": {
-          "complexity": { "noImportantStyles": "off" },
-          "style": { "noDescendingSpecificity": "off" }
+          "complexity": {
+            "noImportantStyles": "off"
+          },
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
         }
       }
     },
     {
-      "includes": [
-        "packages/player/src/caliper/**",
-        "packages/player/src/cat-rest/**",
-        "packages/player/src/lti/**",
-        "packages/player/src/server/**"
-      ],
+      "includes": ["packages/player/src/cat-rest/**", "packages/player/src/server/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1029,14 +1028,10 @@
                       "**/client/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1070,15 +1065,11 @@
                       "**/client/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "!@assesskit/runtime/cat",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1110,14 +1101,10 @@
                       "**/client/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1158,15 +1145,11 @@
                       "**/player/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "!@assesskit/runtime/cat",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1207,66 +1190,14 @@
                       "**/player/**",
                       "**/client",
                       "**/client/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
                     "message": "scoring/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
-                  },
-                  {
-                    "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
-                  },
-                  {
-                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
-                    "importNamePattern": "markOfficial",
-                    "message": "Only server/ imports markOfficial: it brands a report as official."
-                  },
-                  {
-                    "group": ["../**/runtime/**"],
-                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["packages/player/src/caliper/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "**/player",
-                      "**/player/**",
-                      "**/client",
-                      "**/client/**",
-                      "**/scoring",
-                      "**/scoring/**",
-                      "**/cat",
-                      "**/cat/**",
-                      "**/cat-rest",
-                      "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
-                      "**/server",
-                      "**/server/**"
-                    ],
-                    "message": "caliper/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1305,12 +1236,8 @@
                       "**/client/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat-rest",
                       "**/cat-rest/**",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
@@ -1353,65 +1280,13 @@
                       "**/client/**",
                       "**/scoring",
                       "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
                       "**/cat",
                       "**/cat/**",
                       "!@assesskit/runtime/cat",
-                      "**/lti",
-                      "**/lti/**",
                       "**/server",
                       "**/server/**"
                     ],
                     "message": "cat-rest/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
-                  },
-                  {
-                    "group": ["**/protocol/official", "**/protocol/official.js"],
-                    "message": "Only server/ imports protocol/official.ts: it brands a report as official."
-                  },
-                  {
-                    "group": ["**/protocol/internal", "**/protocol/internal.js"],
-                    "importNamePattern": "markOfficial",
-                    "message": "Only server/ imports markOfficial: it brands a report as official."
-                  },
-                  {
-                    "group": ["../**/runtime/**"],
-                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["packages/player/src/lti/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "**/player",
-                      "**/player/**",
-                      "**/client",
-                      "**/client/**",
-                      "**/scoring",
-                      "**/scoring/**",
-                      "**/caliper",
-                      "**/caliper/**",
-                      "**/cat",
-                      "**/cat/**",
-                      "**/cat-rest",
-                      "**/cat-rest/**",
-                      "**/server",
-                      "**/server/**"
-                    ],
-                    "message": "lti/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
                     "group": ["**/protocol/official", "**/protocol/official.js"],
@@ -1444,7 +1319,7 @@
                 "patterns": [
                   {
                     "group": ["**/player", "**/player/**", "**/client", "**/client/**"],
-                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, caliper/, cat/, cat-rest/ and lti/ only."
+                    "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, cat/ and cat-rest/ only."
                   },
                   {
                     "group": ["../**/runtime/**"],

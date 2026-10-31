@@ -1,3 +1,5 @@
+import { checkRecord, describe } from "../checks.js";
+import { DataError } from "../errors.js";
 import { ElementReader, type ParseXmlOptions, type ReaderRules, type XmlElement } from "../xml/index.js";
 
 /** The namespaces of `cartridge_basiclti_link`: the one of the schema, and the relative one that the 1EdTech examples declare. */
@@ -136,4 +138,27 @@ export function readLtiLink(input: string | Uint8Array | XmlElement, options: Pa
   const { title, ...rest } = draft;
   if (title === undefined) throw reader.fail("lti-link", "An LTI link must have a title element.");
   return { title, ...rest };
+}
+
+/**
+ * Returns the URL that launches the tool of a link: the secure launch URL when the link has one, else the launch URL.
+ *
+ * @remarks
+ * The URL is not checked further: whether it must be `https` is the platform's rule, and the platform that launches the
+ * tool checks it.
+ *
+ * @param link - The link, as `readLtiLink` returns it.
+ * @returns The URL.
+ * @throws `DataError` when `link` is not a link, or names no launch URL, which is the case of a link that gives only a vendor.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, packaging}
+ */
+export function ltiLaunchUrl(link: LtiLink): string {
+  checkRecord(link, "The LTI link must be an object");
+  const url = [link.secureLaunchUrl, link.launchUrl].find((each) => typeof each === "string" && each !== "");
+  if (url === undefined) {
+    throw new DataError(
+      `The LTI link ${describe(link.title)} must have a launch URL; a link that names only a vendor cannot be launched.`,
+    );
+  }
+  return url;
 }

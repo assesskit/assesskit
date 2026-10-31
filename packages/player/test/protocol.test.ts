@@ -435,9 +435,12 @@ describe("the options of a session call", () => {
     }
   });
 
-  it("refuse a scoredBy that is not a string only where the host applies an action", () => {
+  it("refuse a scoredBy that is not a non-empty string only where the host applies an action", () => {
     expect(() => checkHostApplyOptions(json('{"scoredBy":5}'))).toThrow(
-      new DataError("The option scoredBy must be a string, found 5."),
+      new DataError("The option scoredBy must be a non-empty string, found 5."),
+    );
+    expect(() => checkHostApplyOptions(json('{"scoredBy":""}'))).toThrow(
+      new DataError('The option scoredBy must be a non-empty string, found "".'),
     );
     expect(() => checkCallOptions(json('{"scoredBy":"x"}'))).toThrow(DataError);
   });

@@ -43,7 +43,7 @@ flowchart LR
 | Rendering, the user interface, timers on screen, wall clocks                                 | These belong to the player. The runtime never renders and never reads a clock; the caller passes the time.      |
 | CAT algorithms and the HTTP transport to a CAT engine                                        | The host implements `CatPort`, over any engine. The player has a client for the REST binding of CAT 1.0.        |
 | Item response theory and other psychometrics                                                 | A psychometrics library does them. The runtime carries statistics as data.                                      |
-| LTI, Caliper and other platform integrations                                                 | The player has them.                                                                                            |
+| LTI, Caliper and other platform integrations                                                 | A library of another family implements them; the player has the ports they plug into.                           |
 | Storing packages, sessions, results and uploaded files                                       | The host application stores them. The engine is a reducer of state that the host keeps.                         |
 | Machine and human scoring services                                                           | The engine asks for a score through pending work and takes the answer; the services are the host's.             |
 | Authoring                                                                                    | The runtime reads and writes documents; it has no editor.                                                       |

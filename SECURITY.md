@@ -133,25 +133,6 @@ session holds any file of the engine. Practice runs the engine on the device, so
   references is served, so keep one folder for each item and its media.
 - The files of the candidate have tokens of their own, valid for five minutes, and are served in a sandbox.
 
-## The player: the LTI tool role
-
-A learning platform launches the player through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
-checked it ([lti.md](docs/player/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
-key, to the tool's client and deployment, and to one use.
-
-- Serve the login URL and the launch URL over HTTPS, and limit the size of a request body: the handlers read what the host
-  gives them.
-- `LtiStore.delete` must be atomic, and expired logins deleted. A login completes once because only one caller's `delete`
-  returns `true`.
-- Without third-party cookies, the launch is tied to the browser by the platform's storage, and the tool accepts the second
-  post of that path only from the origin of its own launch URL. Pass the `origin` header of the request to `ltiLaunch`.
-- The two pages of that path carry a content security policy that allows their one script by hash, and encode every value.
-  A host that adds headers must not weaken them.
-- The platform's key set is fetched from the URL of a registration, over HTTPS, without redirects, with a time limit and at
-  most 64 KiB. A token cannot choose the URL, and only RS256 with an RSA key of 2,048 bits or more verifies.
-- The tool's private key is the host's to keep. It signs client assertions and Deep Linking responses, which expire after
-  five minutes.
-
 ## The player: CAT engines
 
 `restCatPort` of `@assesskit/player/cat-rest` sends a candidate's results and an OAuth bearer token to a remote engine, so
@@ -172,23 +153,6 @@ it is built to send them to one place only.
 An engine that the host runs in process, behind the runtime's `CatPort`, sends nothing. The `sessionState` that it returns is kept
 in the delivery state, so keep it on the server like the seed of an exam session, and keep the engine's own store of the
 parameters of the items and the settings of the test there too.
-
-## The player: Caliper
-
-`sendCaliper` sends events about a candidate and a bearer token to a Caliper endpoint that the host configures
-([caliper.md](docs/player/caliper.md)).
-
-- The endpoint must be `https`. A redirect is an error, so it cannot carry the token to another address. Every call is
-  aborted after `timeoutMs`.
-- The candidate is the IRI that the host gives as `actor`. Give an opaque identifier, such as `urn:uuid:` and a UUID that the
-  host keeps in its own records, never an email address, a name or an identifier that another service knows. The
-  identifiers that the player makes (events, attempts, scores, items and sections) are UUIDs of names that hold the session
-  identifier and the item reference, and the session identifier does not leave the server in them.
-- The events hold times, the identifiers of item references and sections, and, for `caliperGrade`, the score that the host
-  gives. They hold no response, no answer key and no personal needs and preferences. Call `caliperGrade` only for a score that
-  the endpoint may know.
-- The token goes only in the `Authorization` header of that endpoint. A `ServiceError` carries the endpoint's answer as
-  `body`: log it as untrusted text.
 
 ## The player: external scoring
 
@@ -244,23 +208,22 @@ elements and attributes of SSML 1.1 that the ASI schema allows, with every value
 only for an `http` or `https` URL. Lexicons are parsed by the runtime's XML reader, with its limits, and become `sub` and `phoneme`
 in the request, so that a voice fetches no lexicon.
 
-## The player: the LTI platform role
+## The player: the LTI frame and the ports
 
-The player launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](docs/player/lti-platform.md)).
-A tool is code of another party, and its frame has `allow-same-origin`: it is the same origin as any page of the platform
-on the player's origin, so the platform's handlers must never share that origin.
+The player shows the tool of an LTI item in a frame, but it launches nothing: the host's route answers the player's `ltiLogin`
+hook with a frame, and the library that the host chose builds it ([LTI items](docs/player/lti-items.md)). A tool is code of
+another party, and its frame has `allow-same-origin`, so that the tool keeps its own storage.
 
-- Serve the platform's handlers from an origin of their own, which is neither the player's nor the assets', and serve
-  nothing else from it. Every handler refuses a configuration in which two of the three coincide, and a request whose URL is for
-  another origin; pass the public URL of the request.
-- The authorization binds to a signed, single-use `lti_message_hint`, not to a cookie, so it works where the browser
-  withholds third-party cookies. `once` must be atomic across the host's processes; a hint lasts five minutes.
-- The hints, the line item identifiers and the access tokens are signed with the hint key and not encrypted: the tool can read
-  the session, the item and the principal in them. Use identifiers that the tool may know. Changing the hint key ends them.
-- The page that posts the `id_token` allows its one script by hash, forms only to the origin of the redirect URI and framing
-  only by the player, and every value in it is encoded. Do not add headers that weaken the policy.
-- A score reaches the host only from the tool of its line item, for the user of its launch, through a token with the
-  `score` scope. Keep the latest score by `timestampMs`, and use only a score that is `FullyGraded`.
+- The frame of a tool has `sandbox="allow-scripts allow-forms allow-same-origin"`, `referrerpolicy="no-referrer"`, the `allow`
+  list of the registration and no other permission. The player refuses a tool or a storage page that is served from the origin
+  of the page or of the assets, because a tool with `allow-same-origin` there would have the player's own origin.
+- `checkLtiFrame` checks what the hook answers: absolute `http` or `https` URLs and an allow list of letters, digits, spaces and
+  `; * : / . ' -`. A `javascript:` or `data:` URL is never a frame URL.
+- The hook takes a `signal` that aborts when the candidate leaves the item, and the player drops an answer that comes late.
+- The ports `forward.log` and `createToolScoreIntake` receive data that the host's adapter already checked. The intake supplies
+  only a `final` score, keeps the latest by `timestampMs`, and trusts the adapter to bind a score to the session and the item of
+  its launch. `sessionScore` reads a report only if the session host branded it as official.
+- The hints, the line item identifiers and the tokens of a library are the library's: see its security notes.
 
 ## Default limits
 
@@ -342,5 +305,4 @@ The packages that the runtime and the player load at run time are pinned to exac
 | `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. The runtime reads the central directory itself.                                         |
 | `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                                           |
 | `valibot`      | 1.5.0   | MIT     | The runtime and the player: the schemas that read untrusted JSON (actions, views, state, envelopes, answers of services, options). One function in `checks.ts` turns the first issue into a `DataError` that names its path. It has no dependency. |
-| `jose`         | 6.2.12  | MIT     | The player `lti`: signs and verifies the JWS and JWT of LTI messages, assertions and hints (algorithm allowlist, `crit`, `iss`, `aud`, `sub`, `exp`), computes JWK thumbprints and fetches key sets. Web Crypto only.                              |
-| `uuid`         | 14.0.3  | MIT     | The player `caliper`: the name-based UUID of version 5 (RFC 9562) of the identifiers of events, attempts, scores, items and sections.                                                                                                              |
+| `jose`         | 6.2.12  | MIT     | The player `server`: signs and opens the tokens of the asset gate (HMAC with SHA-256, a compact JWS whose `typ` names the use).                                                                                                                    |

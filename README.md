@@ -8,7 +8,7 @@ flowchart LR
   host["Your application<br/>login, storage, routes"]
   subgraph player["@assesskit/player"]
     browser["Browser<br/>player, client"]
-    server["Server<br/>session host, asset gate,<br/>LTI, CAT, Caliper, scoring"]
+    server["Server<br/>session host, asset gate,<br/>CAT, scoring, ports"]
   end
   subgraph runtime["@assesskit/runtime"]
     content["Content<br/>xml, asi, package, metadata,<br/>results, usage, pnp, validate"]
@@ -22,10 +22,10 @@ flowchart LR
   engine --> content
 ```
 
-| Package                                            | What it is                                                                                                                                                                                                                                                                          |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@assesskit/runtime`](packages/runtime/README.md) | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                                           |
-| [`@assesskit/player`](packages/player/README.md)   | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side integrations. It uses the runtime only through its published subpaths. Under development and not yet published; its README says what the current version contains. |
+| Package                                            | What it is                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@assesskit/runtime`](packages/runtime/README.md) | Reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                                                            |
+| [`@assesskit/player`](packages/player/README.md)   | Rendering, the host of portable custom interactions, accessibility applied in the interface, and the server-side session host and integrations. It uses the runtime only through its published subpaths. Under development and not yet published; its README says what the current version contains. |
 
 To read, validate, process or run QTI content in your own code or pipeline, use the runtime. To deliver tests to candidates in a
 browser, use the player, which depends on the runtime.
@@ -40,17 +40,17 @@ The runtime owns what QTI defines that is not presentation or platform. The play
 never evaluates an expression, decides what is visible or valid, chooses a variant, or holds an answer key outside the runtime's
 solution view.
 
-| Concern                                                                | runtime                             | player                                       |
-| ---------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------- |
-| Reading, writing and validating content, packages, results, usage data | yes                                 | uses                                         |
-| Response, template and outcome processing                              | yes                                 |                                              |
-| Navigation, submission, time limits, attempts, variants                | the engine                          | applies it on a device, hosts it on a server |
-| Rendering, MathML, stylesheets, accessibility in the interface         |                                     | yes                                          |
-| Portable custom interactions                                           | the data, the codec and the state   | loading and API                              |
-| The candidate view, without answer keys                                | builds it                           | transports and shows it                      |
-| External scoring, computer adaptive testing                            | requests, covers, scorer view, port | scorer interface, adapters to engines        |
-| LTI 1.3 with grade services, Caliper                                   | results and events                  | yes                                          |
-| The validator command line                                             | yes                                 |                                              |
+| Concern                                                                | runtime                             | player                                                                        |
+| ---------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Reading, writing and validating content, packages, results, usage data | yes                                 | uses                                                                          |
+| Response, template and outcome processing                              | yes                                 |                                                                               |
+| Navigation, submission, time limits, attempts, variants                | the engine                          | applies it on a device, hosts it on a server                                  |
+| Rendering, MathML, stylesheets, accessibility in the interface         |                                     | yes                                                                           |
+| Portable custom interactions                                           | the data, the codec and the state   | loading and API                                                               |
+| The candidate view, without answer keys                                | builds it                           | transports and shows it                                                       |
+| External scoring, computer adaptive testing                            | requests, covers, scorer view, port | scorer interface, adapters to engines                                         |
+| LTI 1.3 with grade services, Caliper                                   | results and events                  | ports; [interopkit](https://github.com/interopkit/interopkit) implements them |
+| The validator command line                                             | yes                                 |                                                                               |
 
 The two meet in JSON: views, actions and state, with values in a self-describing form, so nothing needs a declaration to be
 decoded. On a server, the player hosts the runtime's engine: clients hold only views and send actions, and the answer keys and the

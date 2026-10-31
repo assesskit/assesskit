@@ -26,9 +26,9 @@ xychart-beta
 
 The sizes are bytes of the minified file. The first load of a client holds none of the engine: the engine is a chunk that
 the client loads on demand, and the test fails when the first load holds a file of the runtime's processing. The entry points of
-the shared folders `scoring` and `cat` and of the server side (`cat-rest`, `caliper`, `lti`, `server`) have no budget, as none
-of the entry points above loads them; the root, the protocol and the client hold no `jose`, `uuid` or XML parser, and the
-player holds no `jose` or `uuid`.
+the shared folders `scoring` and `cat` and of the server side (`cat-rest`, `server`) have no budget, as none
+of the entry points above loads them; the root, the protocol and the client hold no `jose` or XML parser, and the
+player holds no `jose`.
 
 ## What is in the player
 

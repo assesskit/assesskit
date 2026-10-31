@@ -49,7 +49,7 @@ export interface SessionHostOptions {
    */
   readonly limits?: Partial<ActionLimits>;
   /**
-   * Where the events of each step go: the host's log and Caliper.
+   * Where the events of each step go: the host's log.
    *
    * @defaultValue nowhere
    */
@@ -142,8 +142,8 @@ export interface SessionHost {
    * the session does not exist.
    * @remarks It gives full host powers and the correct responses for a bare session id. Call it only from the host's
    * rater and service endpoints, and never with an identifier that a candidate supplies. A `time` action, which the
-   * scheduler's job sends, is idempotent; when Caliper is configured, a `supply-scores` action that applies or replaces a
-   * score also forwards a GradeEvent, scored by the `scoredBy` option of `apply`, which it then needs.
+   * scheduler's job sends, is idempotent. A `supply-scores` action reaches the host's log with the score it supplied and the
+   * `scoredBy` option of `apply`, when the host gave one.
    */
   session(session: string): HostSession<OfficialResult>;
 }

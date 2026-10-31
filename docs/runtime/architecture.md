@@ -21,7 +21,7 @@ subpaths.
 flowchart TD
   subgraph player["@assesskit/player"]
     direction TB
-    ps["server"] --> pk["scoring, caliper, cat, lti"]
+    ps["server"] --> pk["scoring, cat, cat-rest"]
     pb["player, client"]
     pk --> pp["protocol"]
     pb --> pp
@@ -143,24 +143,24 @@ The runtime owns everything QTI defines that is not presentation or platform. Th
 the runtime only through its published subpaths. The two meet in JSON: `viewToJson` and `viewFromJson` for views, `actionToJson` and
 `parseCandidateAction` for actions, `serializeState` for state, with values as `WireValue`.
 
-| Concern                                                                               | runtime                                      | player                                       | Host application       |
-| ------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- | ---------------------- |
-| Reading, writing and validating content, packages, results, usage data, metadata, PNP | yes                                          | uses                                         |                        |
-| Response, template and outcome processing                                             | yes                                          |                                              |                        |
-| Session rules: navigation, submission, time limits, attempts, variants                | yes (the engine)                             | applies them on the device                   |                        |
-| Clocks and the firing of timers                                                       |                                              | yes                                          |                        |
-| Time extensions that a proctor grants during a session (not QTI)                      |                                              |                                              | yes                    |
-| Rendering, MathML, stylesheets, mapping package paths to URLs                         |                                              | yes                                          |                        |
-| Portable custom interactions: loading and API; storage of their state                 | the data, the codec and the state            | yes                                          |                        |
-| Accessibility applied in the interface                                                | resolution, settings, hazards, supports used | yes                                          | assigns PNPs           |
-| The candidate-safe view                                                               | yes                                          | transports and consumes it                   |                        |
-| External scoring                                                                      | requests, covers, scorer view, application   | the scorer interface and service calls       | the scorers            |
-| LTI-launched items                                                                    | the item model and the intake of the score   | the launch frame and the intake of the grade | registers the tool     |
-| Computer adaptive testing                                                             | section semantics, `CatPort`, the flow       | the adapter to an engine                     | deploys the engine     |
-| LTI 1.3 and its grade services, Caliper                                               | the results and the events                   | yes                                          | registers the platform |
-| Storage of states, results and files                                                  | serialization and file references            | uses the host's store                        | yes                    |
-| The validator command line                                                            | yes                                          |                                              |                        |
-| Authoring, test administration, proctoring                                            |                                              |                                              | yes                    |
+| Concern                                                                               | runtime                                      | player                                                             | Host application                                             |
+| ------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Reading, writing and validating content, packages, results, usage data, metadata, PNP | yes                                          | uses                                                               |                                                              |
+| Response, template and outcome processing                                             | yes                                          |                                                                    |                                                              |
+| Session rules: navigation, submission, time limits, attempts, variants                | yes (the engine)                             | applies them on the device                                         |                                                              |
+| Clocks and the firing of timers                                                       |                                              | yes                                                                |                                                              |
+| Time extensions that a proctor grants during a session (not QTI)                      |                                              |                                                                    | yes                                                          |
+| Rendering, MathML, stylesheets, mapping package paths to URLs                         |                                              | yes                                                                |                                                              |
+| Portable custom interactions: loading and API; storage of their state                 | the data, the codec and the state            | yes                                                                |                                                              |
+| Accessibility applied in the interface                                                | resolution, settings, hazards, supports used | yes                                                                | assigns PNPs                                                 |
+| The candidate-safe view                                                               | yes                                          | transports and consumes it                                         |                                                              |
+| External scoring                                                                      | requests, covers, scorer view, application   | the scorer interface and service calls                             | the scorers                                                  |
+| LTI-launched items                                                                    | the item model, the launch URL and the link  | shows the frame and takes the score through ports                  | registers the tool                                           |
+| Computer adaptive testing                                                             | section semantics, `CatPort`, the flow       | the adapter to an engine                                           | deploys the engine                                           |
+| LTI 1.3 and its grade services, Caliper                                               | the results and the events                   | the ports `LtiLogin`, `forward.log`, `sessionScore` and the intake | an LTI library, such as interopkit, implements the protocols |
+| Storage of states, results and files                                                  | serialization and file references            | uses the host's store                                              | yes                                                          |
+| The validator command line                                                            | yes                                          |                                                                    |                                                              |
+| Authoring, test administration, proctoring                                            |                                              |                                                                    | yes                                                          |
 
 The engine runs on a server, where clients hold only views and send actions, or on the device for practice. [Delivery](delivery.md#modes)
 describes both. A client-action policy is the player's, not the runtime's.

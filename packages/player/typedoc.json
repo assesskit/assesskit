@@ -6,10 +6,8 @@
     "src/client/index.ts",
     "src/protocol/index.ts",
     "src/scoring/index.ts",
-    "src/lti/index.ts",
     "src/cat/index.ts",
     "src/cat-rest/index.ts",
-    "src/caliper/index.ts",
     "src/server/index.ts"
   ],
   "tsconfig": "tsconfig.build.json",

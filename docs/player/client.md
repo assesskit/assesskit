@@ -130,7 +130,7 @@ first save. A session that was saved stays, and a new call resumes it.
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
 has the session resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a
-report, so `publishScore` refuses them.
+report, so `sessionScore` refuses them.
 
 A preview of one item is a session of `{ kind: "item", item, base }`; `documents.item` is `base`.
 

@@ -13,7 +13,7 @@ flowchart LR
   end
   subgraph player["@assesskit/player"]
     browser["Browser: player, client"]
-    server["Server: session host, asset gate, scoring, LTI, CAT, Caliper"]
+    server["Server: session host, asset gate, scoring, CAT"]
     shared["Shared: protocol, messages"]
   end
   runtime[("@assesskit/runtime: the engine and the QTI model")]
@@ -38,8 +38,7 @@ flowchart LR
 | Companion materials: rule, protractor, calculators, line reader, digital and physical materials   | Yes       |                                                                                               |
 | Interface languages                                                                               | Yes       | English and Indonesian; the language of the profile chooses the catalog                       |
 | Adaptive testing                                                                                  | Yes       | Through the runtime's `CatPort`: a client for the REST binding of CAT 1.0, or any engine      |
-| LTI 1.3 and LTI Advantage: tool launch, deep linking, grade passback, platform role, LTI items    | Yes       | [LTI](lti.md) and [LTI platform](lti-platform.md)                                             |
-| Caliper 1.2 events                                                                                | Yes       | [Caliper](caliper.md)                                                                         |
+| LTI items: read, shown and scored; the launch goes through the port `LtiLogin`                    | Yes       | [LTI items](lti-items.md); the launch and the grade services are in interopkit                |
 | Scoring: submissions for raters, supplying a score, provisional results                           | Yes       | [Scoring](scoring.md)                                                                         |
 
 | Engine   | Oldest version | How it is tested                                                        |
@@ -48,7 +47,7 @@ flowchart LR
 | Firefox  | 115            | The same                                                                |
 | Safari   | 16.4           | The suites in the current WebKit, and a smoke test in the oldest WebKit |
 
-The server folders (`server`, `cat-rest`, `lti`, `caliper`) run on Node.js 22 or later. [Baseline](baseline.md) lists
+The server folders (`server`, `cat-rest`) run on Node.js 22 or later. [Baseline](baseline.md) lists
 the features that the browser code does not use.
 
 ## WCAG 2.2, levels A and AA
@@ -74,16 +73,16 @@ The suites cannot show that a whole product is accessible: the host's page, its 
 
 ## Not included
 
-| What                                                                                                                               | Why                                                                                                        |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| LTI 1.0 to 1.2                                                                                                                     | 1EdTech ended support in 2022. LTI 1.3 is supported.                                                       |
-| Deciding who gets which support, encouragement and environment supports, proctoring                                                | The host decides and runs them. The player applies the profile it is given.                                |
-| Authoring                                                                                                                          | The player shows content; it has no editor.                                                                |
-| Storage of sessions, files and results                                                                                             | The host gives the player stores and a file store.                                                         |
-| The dictionary, thesaurus, homophone checker, note taking, visual organizer, outliner, peer interaction and spell checker supports | The tools are the host's. The player has a slot for each.                                                  |
-| Fetching from a network on its own                                                                                                 | The LTI, CAT and Caliper adapters take a `fetch` that the host passes; the player never fetches by itself. |
-| Live captions and media that the content does not provide                                                                          | The player shows the media and tracks of the content.                                                      |
-| Certification by 1EdTech                                                                                                           | Certification is for products, with member-only test sets.                                                 |
+| What                                                                                                                               | Why                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| LTI launches, the grade services, Caliper events and any other protocol of a learning platform                                     | [interopkit](https://github.com/interopkit/interopkit) implements them; the player has the ports they plug into. |
+| Deciding who gets which support, encouragement and environment supports, proctoring                                                | The host decides and runs them. The player applies the profile it is given.                                      |
+| Authoring                                                                                                                          | The player shows content; it has no editor.                                                                      |
+| Storage of sessions, files and results                                                                                             | The host gives the player stores and a file store.                                                               |
+| The dictionary, thesaurus, homophone checker, note taking, visual organizer, outliner, peer interaction and spell checker supports | The tools are the host's. The player has a slot for each.                                                        |
+| Fetching from a network on its own                                                                                                 | The CAT adapter takes a `fetch` that the host passes; the player never fetches by itself.                        |
+| Live captions and media that the content does not provide                                                                          | The player shows the media and tracks of the content.                                                            |
+| Certification by 1EdTech                                                                                                           | Certification is for products, with member-only test sets.                                                       |
 
 ## The claim
 

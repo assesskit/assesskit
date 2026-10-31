@@ -9,9 +9,7 @@ flowchart TB
     server["server<br/>session host, asset gate"]
   end
   subgraph L3c["Layer 3: server side"]
-    caliper["caliper"]
     catRest["cat-rest"]
-    lti["lti"]
   end
   subgraph L3b["Layer 3: shared"]
     scoring["scoring"]
@@ -27,13 +25,13 @@ flowchart TB
   subgraph L1["Layer 1: shared"]
     base["errors.ts, checks.ts, messages"]
   end
-  server --> scoring & cat & caliper & catRest & lti
+  server --> scoring & cat & catRest
   server --> protocol
-  scoring & cat & caliper & catRest & lti --> protocol
+  scoring & cat & catRest --> protocol
   player & client --> protocol
   protocol --> base
   runtime[("@assesskit/runtime")]
-  player & client & server & scoring & cat & caliper & catRest & lti & protocol -.->|package name and subpath| runtime
+  player & client & server & scoring & cat & catRest & protocol -.->|package name and subpath| runtime
 ```
 
 | Principle              | Rule                                                                                                                                                                                                            |
@@ -50,7 +48,7 @@ flowchart TB
 ## Layers
 
 A folder imports only the folders in its row, and imports never form cycles (lint). `errors.ts` and `checks.ts` are
-below every folder; `checks.ts` holds the checks of `https` URLs and imports `@assesskit/runtime/checks`, `@assesskit/runtime/errors` and valibot only; the other checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
+below every folder; `checks.ts` holds the schema of `https` URLs and imports valibot only; the other checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
 to its row from its first file.
 
 | Layer | Folders                               | Side    | Imports                                     |
@@ -59,12 +57,44 @@ to its row from its first file.
 | 2     | `protocol/`                           | shared  | layer 1                                     |
 | 3     | `player/`, `client/`                  | browser | layers 1 and 2                              |
 | 3     | `scoring/`, `cat/`                    | shared  | layers 1 and 2                              |
-| 3     | `caliper/`, `cat-rest/`, `lti/`       | server  | layers 1 and 2                              |
+| 3     | `cat-rest/`                           | server  | layers 1 and 2                              |
 | 4     | `server/`                             | server  | layers 1 to 3, the browser folders excepted |
 
 Shared folders use no DOM, Node.js, timer or network API. Browser folders use the DOM and no Node.js. Server folders use
 Node.js or any server runtime, and no DOM. A page that runs practice on a device imports `client`, `scoring` and `cat`, which
 the [baseline](baseline.md) covers, and never `cat-rest`. The player imports the runtime by package name and subpath, never by a relative path.
+
+## Ports to other families
+
+The player speaks to LTI, Caliper and any other learning-platform standard through four ports and imports none of their libraries.
+A library such as [interopkit](https://github.com/interopkit/interopkit), or an application's own code, plugs in beside the
+player, and an adapter between the two is an [example](https://github.com/assesskit/assesskit/tree/main/examples/player/lms-integration) or the host's code.
+
+```mermaid
+flowchart LR
+  subgraph player["@assesskit/player"]
+    login["LtiLogin<br/>player/lti-frame"]
+    log["forward.log, a StepSink<br/>server"]
+    score["sessionScore<br/>scoring"]
+    intake["createToolScoreIntake, ToolScoreStore<br/>server"]
+  end
+  host["The host or an adapter"]
+  lib["A library of another family"]
+  login -->|asks the host to start a tool| host
+  log -->|each saved step| host
+  host -->|results and pending work| score
+  host -->|the score of a tool| intake
+  host --- lib
+```
+
+| Port                                      | Direction                                       | Where                                                                        |
+| ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- |
+| `LtiLogin`, `LtiFrame`                    | The player asks the host to start a tool        | `player/lti-frame`, `protocol/lti-frame` ([delivery](delivery.md#lti-items)) |
+| `forward.log`, `StepSink`                 | The session host gives each step to the host    | `server` ([server](server.md#forwarding-the-steps))                          |
+| `sessionScore`                            | The host reads the score of a session           | `scoring` ([scoring](scoring.md#the-score-of-a-session))                     |
+| `createToolScoreIntake`, `ToolScoreStore` | The score of a tool comes in as `supply-scores` | `server` ([server](server.md#the-scores-of-tool-items))                      |
+
+[LTI items](lti-items.md) shows the three steps that wire them.
 
 ## Subpaths
 
@@ -77,12 +107,10 @@ messages and nothing of the other subpaths, so that a browser bundle and a serve
 | `client`     | browser | The session clients: the remote session of exam mode with autosave, and the local session of practice ([client](client.md))                                                                                                                                                                                                                                                                                                                                                                                    |
 | `player`     | browser | `mountDelivery`, the player with its chrome ([delivery](delivery.md)); the renderer of content and the content root ([content](content.md)), the host of portable custom interactions ([PCI](pci.md)), the rating form of a scoring rubric ([rating](rating.md)), the tools of an item ([tools](tools.md)), mathematics ([math](math.md)), speech ([speech](speech.md)), the interactions ([interactions](interactions.md), [graphics](graphics.md)) and the supports of a candidate ([supports](supports.md)) |
 | `protocol`   | shared  | The caller, the envelopes between a browser and a server, the session client, the official result and the submission that a rater reads ([protocol](protocol.md), [scoring](scoring.md))                                                                                                                                                                                                                                                                                                                       |
-| `scoring`    | shared  | The submission of a scoring request and the action that supplies its score; `player` shows the submission to a rater ([scoring](scoring.md))                                                                                                                                                                                                                                                                                                                                                                   |
+| `scoring`    | shared  | The submission of a scoring request, the action that supplies its score, and the score of a session as plain data; `player` shows the submission to a rater ([scoring](scoring.md))                                                                                                                                                                                                                                                                                                                            |
 | `cat`        | shared  | The deployment of the adaptive sections of a package to their CAT engines, through any `CatPort` ([CAT](cat.md))                                                                                                                                                                                                                                                                                                                                                                                               |
 | `cat-rest`   | server  | The client of a remote CAT engine over the REST binding of CAT 1.0, with the OAuth client secret ([CAT](cat.md))                                                                                                                                                                                                                                                                                                                                                                                               |
-| `caliper`    | server  | Caliper 1.2 events from the events of a session, their identifiers, and the sensor that sends them ([Caliper](caliper.md))                                                                                                                                                                                                                                                                                                                                                                                     |
-| `lti`        | server  | LTI 1.3: the tool role, with the publication of a score ([lti](lti.md)), and the platform role ([lti-platform](lti-platform.md))                                                                                                                                                                                                                                                                                                                                                                               |
-| `server`     | server  | The session host of exam mode and the asset gate ([server](server.md), [asset gate](asset-gate.md)); what the host does with the events of each step: the host's log and Caliper ([Caliper](caliper.md)); the scores of LTI items ([server](server.md#the-scores-of-lti-items))                                                                                                                                                                                                                                |
+| `server`     | server  | The session host of exam mode and the asset gate ([server](server.md), [asset gate](asset-gate.md)); the host's log of each step's events, and the scores of tool items ([server](server.md#the-scores-of-tool-items))                                                                                                                                                                                                                                                                                         |
 | `player.css` | browser | The stylesheet of a content root ([styling](styling.md)); a file at the package root, not a folder of `src/`                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The package also exports static files that a host serves: `pci-frame/*`, the frame of a portable custom interaction, and
@@ -112,11 +140,10 @@ The errors of the player extend `AssesskitError` of the runtime, and the player 
 `@assesskit/runtime/errors`, which loads no other module, so that browser folders can import it. The messages are full sentences
 that say what is wrong and what is expected. The runtime's errors pass through the player unchanged.
 
-| Class          | Thrown when                                                                                                           | Carries             |
-| -------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| `AccessError`  | A caller acts on a session it is not bound to, starts a session that exists, or presents a login hint that is invalid | `reason`            |
-| `LtiError`     | An LTI launch, login or service message fails validation, in either role                                              | `reason`            |
-| `ServiceError` | A call to the CAT, AGS, JWKS or Caliper service fails, or a store conflict outlasts its retries                       | `status` and `body` |
+| Class          | Thrown when                                                                    | Carries             |
+| -------------- | ------------------------------------------------------------------------------ | ------------------- |
+| `AccessError`  | A caller acts on a session it is not bound to, or starts a session that exists | `reason`            |
+| `ServiceError` | A call to a CAT engine fails, or a store conflict outlasts its retries         | `status` and `body` |
 
 `DataError` of the runtime is thrown when an argument has the wrong type or is out of range, or untrusted input is not what it should be, such as an
 envelope. `reason` is a kebab-case code such as `session-exists`. A host maps `AccessError` to 403. `status` is `0` when a service did

@@ -14,8 +14,8 @@ export interface CatFetchRequest {
   readonly headers: Readonly<Record<string, string>>;
   /** The request body; absent for a request without one. */
   readonly body?: string;
-  /** Always `error`: a redirect would send the bearer token to another address, or from HTTPS to HTTP. */
-  readonly redirect: "error";
+  /** Always `manual`: a redirect would send the bearer token to another address, or from HTTPS to HTTP, so the client refuses the 3xx answer. */
+  readonly redirect: "manual";
   /** Aborts the request when it takes longer than the timeout. */
   readonly signal: AbortSignal;
 }
@@ -24,6 +24,8 @@ export interface CatFetchRequest {
 export interface CatFetchResponse {
   /** Whether the status is from 200 to 299. */
   readonly ok: boolean;
+  /** `opaqueredirect` when a browser withholds the answer to a redirect; a runtime that returns the 3xx answer leaves it as it is. */
+  readonly type?: string;
   /** The HTTP status. */
   readonly status: number;
   /** Returns the body as text. */
@@ -102,6 +104,22 @@ function parseBody(text: string, what: string, status: number): unknown {
 }
 
 /**
+ * Refuses an answer that redirects. With `redirect: "manual"` a runtime returns the 3xx answer, or, in a browser, an opaque
+ * redirect with status 0 that has no body to read; neither is followed, so that the bearer token stays with the address
+ * that was configured. The check is a function and not the option `error` of `fetch`, which throws in some runtimes
+ * before the request is sent.
+ */
+function refuseRedirect(response: CatFetchResponse, what: string): void {
+  if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+    throw new ServiceError(
+      `${what} answered with a redirect, which the client does not follow, because the bearer token would go to another address.`,
+      response.status,
+      "",
+    );
+  }
+}
+
+/**
  * Creates the client of a REST service.
  *
  * @remarks
@@ -126,11 +144,12 @@ export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOp
         Accept: "application/json",
       },
       body: new URLSearchParams({ grant_type: "client_credentials", scope }).toString(),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(timeoutMs),
     });
-    const text = await response.text();
     const what = `The token endpoint ${tokenUrl}`;
+    refuseRedirect(response, what);
+    const text = await response.text();
     if (!response.ok)
       throw new ServiceError(`${what} answered with the status ${response.status}.`, response.status, text);
     const grant = parseBody(text, what, response.status);
@@ -156,8 +175,8 @@ export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOp
     return token;
   };
 
-  const attempt = async (method: string, url: string, body: string | undefined): Promise<CatFetchResponse> =>
-    fetch(url, {
+  const attempt = async (method: string, url: string, body: string | undefined): Promise<CatFetchResponse> => {
+    const response = await fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${await bearer()}`,
@@ -165,9 +184,12 @@ export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOp
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       ...(body === undefined ? {} : { body }),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(timeoutMs),
     });
+    refuseRedirect(response, `The CAT engine at ${url}`);
+    return response;
+  };
 
   return {
     async send(method, url, body) {

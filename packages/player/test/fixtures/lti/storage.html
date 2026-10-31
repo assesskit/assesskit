@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LTI storage</title>
+</head>
+<body>
+<script>
+// A platform's storage page as LTI postMessage Storage 0.1 describes it (https://www.imsglobal.org/spec/lti-pm-s/v0p1): it
+// answers lti.put_data and lti.get_data, keeps the values by the origin of the message, and replies to the window and the
+// origin that sent the request. This fixture answers only the frame of the tool, which the player names "lti-tool", and
+// keeps at most 500 keys and 4096 characters for an origin, the least that the specification asks a platform to offer.
+"use strict";
+const TOOL_FRAME = "lti-tool";
+const MAX_KEYS = 500;
+const MAX_CHARACTERS = 4096;
+const stores = new Map();
+
+function toolWindow() {
+  try {
+    return window.parent.frames[TOOL_FRAME] || null;
+  } catch {
+    return null;
+  }
+}
+
+function reply(event, data, body) {
+  event.source.postMessage({ subject: `${data.subject}.response`, message_id: data.message_id, ...body }, event.origin);
+}
+
+const refuse = (event, data, code, message) => reply(event, data, { error: { code, message } });
+
+const size = (store) => [...store].reduce((total, [key, value]) => total + key.length + value.length, 0);
+
+function put(event, data) {
+  const store = stores.get(event.origin) ?? new Map();
+  const value = data.value ?? "";
+  if (typeof value !== "string") return refuse(event, data, "bad_request", "The value must be a string.");
+  if (value === "") {
+    store.delete(data.key);
+    return reply(event, data, { key: data.key });
+  }
+  const kept = store.get(data.key);
+  const total = size(store) - (kept === undefined ? 0 : data.key.length + kept.length) + data.key.length + value.length;
+  if ((kept === undefined && store.size >= MAX_KEYS) || total > MAX_CHARACTERS) {
+    return refuse(event, data, "storage_exhaustion", "The storage for this origin is full.");
+  }
+  store.set(data.key, value);
+  stores.set(event.origin, store);
+  return reply(event, data, { key: data.key, value });
+}
+
+function get(event, data) {
+  const value = stores.get(event.origin)?.get(data.key);
+  if (value === undefined) return refuse(event, data, "key_not_found", "There is no value stored for this key.");
+  return reply(event, data, { key: data.key, value });
+}
+
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (typeof data !== "object" || data === null || typeof data.subject !== "string") return;
+  if (event.origin === "null" || event.source === null || event.source !== toolWindow()) return;
+  if (data.subject !== "lti.put_data" && data.subject !== "lti.get_data") {
+    return refuse(event, data, "unsupported_subject", "The storage answers lti.put_data and lti.get_data.");
+  }
+  if (typeof data.message_id !== "string" || typeof data.key !== "string" || data.key === "") {
+    return refuse(event, data, "bad_request", "The request needs a message_id and a key.");
+  }
+  return data.subject === "lti.put_data" ? put(event, data) : get(event, data);
+});
+</script>
+</body>
+</html>

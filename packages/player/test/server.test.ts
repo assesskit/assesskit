@@ -3,7 +3,6 @@ import {
   type CandidateAction,
   type CandidateView,
   createEngine,
-  type DeliveryEvent,
   type DeliveryEventType,
   deserializeState,
   type HostAction,
@@ -18,34 +17,28 @@ import { describe, expect, it } from "vitest";
 import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
 import serverGuide from "../../../docs/player/server.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
-import type { AgsScore } from "../src/lti/index.js";
-import { isOfficialResult, type SessionCallOptions, type ViewEnvelope } from "../src/protocol/index.js";
+import {
+  type HostApplyOptions,
+  isOfficialResult,
+  type SessionCallOptions,
+  type ViewEnvelope,
+} from "../src/protocol/index.js";
 import {
   type AssetGate,
   CANDIDATE_ACTION_TYPES,
   collectAssetPrefixes,
   createAssetGate,
-  createLtiScoreIntake,
   createSessionHost,
+  createToolScoreIntake,
   DEFAULT_TTL_SECONDS,
   DEFAULT_UPLOAD_TTL_SECONDS,
   EXAM_CLIENT_ACTIONS,
-  forwardEvents,
   MAX_SAVE_RETRIES,
   type SessionHost,
   type StepEvents,
+  type ToolScore,
 } from "../src/server/index.js";
 import { abandonedFiles, adaptiveEngine, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
-import {
-  ACTOR,
-  APPLICATION,
-  ASSESSMENT,
-  eventProblems,
-  type FakeReply,
-  fakeEndpoint,
-  SESSION,
-  urnOf,
-} from "./caliper-fixture.js";
 import {
   EXAM_ORIGIN,
   examDefinition,
@@ -67,244 +60,7 @@ import { RUBRIC_WORD, rubricMarkup } from "./scoring-fixture.js";
 
 const SECOND = 1000;
 
-/** Every type of the runtime's `DeliveryEventType`: a record, so that a type added to the runtime fails the type check here. */
-const EVERY_TYPE: Readonly<Record<DeliveryEventType, true>> = {
-  presented: true,
-  "responses-set": true,
-  "attempt-ended": true,
-  "response-processed": true,
-  "processing-failed": true,
-  "outcome-processed": true,
-  moved: true,
-  "section-entered": true,
-  "part-ended": true,
-  "test-ended": true,
-  "time-limit-passed": true,
-  "time-out": true,
-  "late-submission": true,
-  suspended: true,
-  resumed: true,
-  "support-changed": true,
-  "variant-selected": true,
-  "hazard-unavoidable": true,
-  "scoring-requested": true,
-  "scores-applied": true,
-  "scores-replaced": true,
-  "cat-requested": true,
-  "cat-stage-added": true,
-};
-const TYPES = Object.keys(EVERY_TYPE) as DeliveryEventType[];
-
-/** An event of a type with the fields that its type carries, as the runtime's TSDoc describes them. */
-function eventOf(type: DeliveryEventType, at: number): DeliveryEvent {
-  return {
-    type,
-    at,
-    item: { ref: "q1", instance: 1 },
-    scope: "main",
-    ...(type === "attempt-ended" ? { detail: "submit" } : {}),
-    ...(type === "support-changed" ? { detail: "magnification on" } : {}),
-  };
-}
-
-const fromJson = <T>(text: string): T => JSON.parse(text);
 const json = (text: string): unknown => JSON.parse(text);
-
-/** The options of a host that logs to a list and sends to a fake endpoint. */
-function host(...replies: readonly FakeReply[]) {
-  const endpoint = fakeEndpoint(...replies);
-  const logged: StepEvents[] = [];
-  const calls: string[] = [];
-  return {
-    endpoint,
-    logged,
-    calls,
-    options: {
-      log: (step: StepEvents) => {
-        calls.push("log");
-        logged.push(step);
-      },
-      caliper: {
-        parties: (session: string) => {
-          calls.push(`parties ${session}`);
-          return { actor: ACTOR, assessment: ASSESSMENT, edApp: APPLICATION };
-        },
-        sender: {
-          endpoint: "https://lrs.example/caliper",
-          token: "token-123",
-          sensor: "https://exam.example/sensors/1",
-          fetch: endpoint.fetch,
-        },
-        clock: { now: () => 1_700_000_000_000 },
-      },
-    },
-  };
-}
-
-describe("forwardEvents", () => {
-  it("forwards every event of every type to the host's log, in the order the runtime gave them", async () => {
-    const events = TYPES.map((type, at) => eventOf(type, at * SECOND));
-    const logged: StepEvents[] = [];
-    await forwardEvents({ session: SESSION, step: 3, events }, { log: (step) => void logged.push(step) });
-    expect(logged).toHaveLength(1);
-    expect(logged[0]).toEqual({ session: SESSION, step: 3, events });
-    expect(logged[0]?.events.map(({ type }) => type)).toEqual(TYPES);
-  });
-
-  it("forwards the types that the runtime added with the unit that completed it", async () => {
-    const added: DeliveryEventType[] = ["processing-failed", "time-limit-passed", "late-submission", "support-changed"];
-    const logged: StepEvents[] = [];
-    const events = added.map((type) => eventOf(type, SECOND));
-    await forwardEvents({ session: SESSION, step: 9, events }, { log: (step) => void logged.push(step) });
-    expect(logged[0]?.events).toEqual(events);
-  });
-
-  it("forwards an event of a type that it has not heard of, since it filters nothing", async () => {
-    const later: DeliveryEvent[] = fromJson(
-      '[{"type":"scores-replaced","at":1000,"scope":"essay","detail":"r1"},{"type":"scores-applied","at":2000}]',
-    );
-    const logged: StepEvents[] = [];
-    await forwardEvents({ session: SESSION, step: 4, events: later }, { log: (step) => void logged.push(step) });
-    expect(logged[0]?.events).toEqual(later);
-  });
-
-  it("forwards the events of the start step as they are, with the step that tells it", async () => {
-    const logged: StepEvents[] = [];
-    const events = [eventOf("section-entered", SECOND), eventOf("presented", SECOND)];
-    await forwardEvents({ session: SESSION, step: "start", events }, { log: (step) => void logged.push(step) });
-    expect(logged).toEqual([{ session: SESSION, step: "start", events }]);
-  });
-
-  it("calls nothing for a step without events", async () => {
-    const { options, calls, endpoint } = host();
-    await forwardEvents({ session: SESSION, step: 2, events: [] }, options);
-    expect(calls).toEqual([]);
-    expect(endpoint.requests).toEqual([]);
-  });
-
-  it("waits for the log of the host before it goes on", async () => {
-    const order: string[] = [];
-    const slow = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      order.push("log done");
-    };
-    const { options } = host({ status: 200 });
-    options.caliper.parties = (session: string) => {
-      order.push(`parties ${session}`);
-      return { actor: ACTOR, assessment: ASSESSMENT, edApp: APPLICATION };
-    };
-    await forwardEvents(
-      { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] },
-      { ...options, log: slow },
-    );
-    expect(order).toEqual(["log done", `parties ${SESSION}`]);
-  });
-
-  it("sends the events that Caliper has a counterpart for after the log, and none of the others", async () => {
-    const { options, endpoint, calls, logged } = host({ status: 200 });
-    const events = TYPES.map((type) => eventOf(type, SECOND));
-    await forwardEvents({ session: SESSION, step: 5, events }, options);
-    expect(calls).toEqual(["log", `parties ${SESSION}`]);
-    expect(logged[0]?.events).toHaveLength(TYPES.length);
-    expect(endpoint.requests).toHaveLength(1);
-    const body = JSON.parse(endpoint.requests[0]?.init.body ?? "");
-    expect(body.sendTime).toBe("2023-11-14T22:13:20.000Z");
-    expect(body.data.map((event: { type: string; action: string }) => `${event.type} ${event.action}`)).toEqual([
-      "AssessmentItemEvent Started",
-      "AssessmentItemEvent Completed",
-      "NavigationEvent NavigatedTo",
-      "NavigationEvent NavigatedTo",
-      "AssessmentEvent Submitted",
-      "AssessmentEvent Paused",
-      "AssessmentEvent Resumed",
-    ]);
-  });
-
-  it("maps the step of the start with the Started event, using the session's parties", async () => {
-    const { options, endpoint } = host({ status: 200 });
-    await forwardEvents(
-      { session: SESSION, step: "start", events: [eventOf("section-entered", SECOND), eventOf("presented", SECOND)] },
-      options,
-    );
-    const body = JSON.parse(endpoint.requests[0]?.init.body ?? "");
-    expect(body.data.map((event: { action: string }) => event.action)).toEqual(["Started", "NavigatedTo", "Started"]);
-    expect(body.data[0].actor).toEqual({ id: ACTOR, type: "Person" });
-    expect(body.data[0].object.id).toBe(ASSESSMENT);
-  });
-
-  it("sends nothing to Caliper when no event of the step has a counterpart", async () => {
-    const { options, endpoint, logged } = host();
-    const events = [eventOf("responses-set", SECOND), eventOf("outcome-processed", SECOND)];
-    await forwardEvents({ session: SESSION, step: 2, events }, options);
-    expect(logged).toHaveLength(1);
-    expect(endpoint.requests).toEqual([]);
-  });
-
-  it("reports the same step again with the same Caliper identifiers, so that a resend duplicates nothing", async () => {
-    const { options, endpoint, logged } = host({ status: 200 });
-    const step: StepEvents = {
-      session: SESSION,
-      step: 6,
-      events: [eventOf("moved", SECOND), eventOf("presented", SECOND)],
-    };
-    await forwardEvents(step, options);
-    await forwardEvents(step, options);
-    expect(logged).toEqual([step, step]);
-    expect(endpoint.requests[1]?.init.body).toBe(endpoint.requests[0]?.init.body);
-  });
-
-  it("sends to Caliper only after the log accepted the events", async () => {
-    const { options, endpoint } = host({ status: 200 });
-    const failing = { ...options, log: () => Promise.reject(new Error("disk full")) };
-    await expect(
-      forwardEvents({ session: SESSION, step: 1, events: [eventOf("presented", SECOND)] }, failing),
-    ).rejects.toThrow("disk full");
-    expect(endpoint.requests).toEqual([]);
-  });
-
-  it("keeps the log entry when the Caliper endpoint refuses, and tells the host", async () => {
-    const { options, logged } = host({ status: 401, body: "no" });
-    const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
-    const error = await forwardEvents(step, options).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ServiceError);
-    expect(error).toMatchObject({ status: 401, body: "no" });
-    expect(logged).toEqual([step]);
-  });
-
-  it("rejects steps and options that are not what the forwarder needs", async () => {
-    const { options } = host();
-    const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
-    const log = () => undefined;
-    const bad: [string, unknown, unknown][] = [
-      ["a step that is null", fromJson("null"), options],
-      ["an empty session", { ...step, session: "" }, options],
-      ["events as an object", { ...step, events: fromJson('{"0":{}}') }, options],
-      ["null options", step, fromJson("null")],
-      ["no log", step, { ...options, log: undefined }],
-      ["a log that is a string", step, { ...options, log: fromJson('"console"') }],
-      ["a caliper that is a string", step, { log, caliper: fromJson('"yes"') }],
-      ["parties that are not a function", step, { log, caliper: { ...options.caliper, parties: fromJson("{}") } }],
-      ["a sender that is null", step, { log, caliper: { ...options.caliper, sender: fromJson("null") } }],
-      ["a clock that is a number", step, { log, caliper: { ...options.caliper, clock: fromJson("5") } }],
-    ];
-    for (const [name, given, forwarding] of bad) {
-      await expect(forwardEvents(given as never, forwarding as never), name).rejects.toThrow(DataError);
-    }
-    await expect(forwardEvents(step, { ...options, log: undefined } as never)).rejects.toThrow(
-      "The option log must be a function, found undefined.",
-    );
-  });
-
-  it("rejects Caliper events from parties that are not IRIs, after the log has the events", async () => {
-    const { options, logged } = host({ status: 200 });
-    const parties = () => ({ actor: "candidate-1", assessment: ASSESSMENT, edApp: APPLICATION });
-    const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
-    await expect(forwardEvents(step, { ...options, caliper: { ...options.caliper, parties } })).rejects.toThrow(
-      DataError,
-    );
-    expect(logged).toEqual([step]);
-  });
-});
 
 const DAY = 24 * 3600 * SECOND;
 const ALICE = { session: "exam-1", principal: "alice" };
@@ -320,108 +76,6 @@ const answer = (identifier: string): CandidateAction => ({
   responses: new Map([["RESPONSE", single("identifier", identifier)]]),
 });
 const viewOf = (envelope: ViewEnvelope): CandidateView => viewFromJson(envelope.view);
-
-describe("forwardEvents: a score that a step supplied", () => {
-  const Rater = "https://rater.example/raters/17";
-  const applied = (type: "scores-applied" | "scores-replaced", extra: Partial<DeliveryEvent> = {}): DeliveryEvent => ({
-    type,
-    at: 5 * SECOND,
-    item: { ref: "q1", instance: 1 },
-    detail: "item:q1:1:SCORE",
-    ...extra,
-  });
-  const sent = (endpoint: ReturnType<typeof host>["endpoint"]) =>
-    JSON.parse(endpoint.requests[0]?.init.body ?? "{}").data as {
-      type: string;
-      action: string;
-      actor: { id: string; type: string };
-      object: { id: string; type: string };
-      generated: { id: string; type: string; scoreGiven: number; scoredBy: string; attempt: string };
-    }[];
-
-  it("gives a GradeEvent Graded for the score that a rater supplied, scored by the rater, for the item of the event", async () => {
-    const { options, endpoint } = host({ status: 200 });
-    const supplied = { value: single("float", 3.5), scorer: "human" as const, scoredBy: Rater };
-    await forwardEvents({ session: SESSION, step: 7, events: [applied("scores-applied")], supplied }, options);
-    const [grade, ...others] = sent(endpoint);
-    expect(others).toEqual([]);
-    expect(`${grade?.type} ${grade?.action}`).toBe("GradeEvent Graded");
-    expect(grade?.actor).toEqual({ id: Rater, type: "Person" });
-    expect(grade?.generated).toMatchObject({ type: "Score", scoreGiven: 3.5, scoredBy: Rater });
-    expect(grade?.generated.attempt).toBe(grade?.object.id);
-    expect(grade?.object.id).toBe(urnOf("attempt", SESSION, "q1", 1));
-    expect(eventProblems(JSON.parse(endpoint.requests[0]?.init.body ?? "{}").data[0])).toEqual([]);
-  });
-
-  it("names a scoring service a SoftwareApplication, and gives the test's attempt for an outcome of the test", async () => {
-    const { options, endpoint } = host({ status: 200 });
-    const supplied = { value: single("integer", 2), scorer: "externalMachine" as const, scoredBy: Rater };
-    const event: DeliveryEvent = { type: "scores-applied", at: SECOND, scope: "main", detail: "test:SCORE" };
-    await forwardEvents({ session: SESSION, step: 8, events: [event], supplied }, options);
-    const [grade] = sent(endpoint);
-    expect(grade?.actor.type).toBe("SoftwareApplication");
-    expect(grade?.object.id).toBe(urnOf("attempt", SESSION));
-    expect(grade?.generated.scoreGiven).toBe(2);
-  });
-
-  it("gives a GradeEvent for a replaced score, with the same identifiers when the step is reported again", async () => {
-    const supplied = { value: single("float", 4), scorer: "human" as const, scoredBy: Rater };
-    const ids: string[] = [];
-    for (const step of [9, 9, 10]) {
-      const { options, endpoint } = host({ status: 200 });
-      await forwardEvents({ session: SESSION, step, events: [applied("scores-replaced")], supplied }, options);
-      ids.push(sent(endpoint)[0]?.generated.id ?? "");
-    }
-    expect(ids[0]).toBe(ids[1]);
-    expect(ids[2]).not.toBe(ids[0]);
-  });
-
-  it("sends the grade after the events that the step maps, in one envelope", async () => {
-    const { options, endpoint } = host({ status: 200 });
-    const events = [applied("scores-applied"), eventOf("test-ended", 6 * SECOND)];
-    const supplied = { value: single("float", 1), scorer: "human" as const, scoredBy: Rater };
-    await forwardEvents({ session: SESSION, step: 11, events, supplied }, options);
-    expect(endpoint.requests).toHaveLength(1);
-    expect(sent(endpoint).map(({ type, action }) => `${type} ${action}`)).toEqual([
-      "AssessmentEvent Submitted",
-      "GradeEvent Graded",
-    ]);
-  });
-
-  it("gives no GradeEvent for a value that is not a number, for NULL, or for a step without the events of a score", async () => {
-    const values = [null, single("string", "good"), single("boolean", true)];
-    for (const value of values) {
-      const { options, endpoint } = host({ status: 200 });
-      const supplied = { value, scorer: "human" as const, scoredBy: Rater };
-      await forwardEvents({ session: SESSION, step: 12, events: [applied("scores-applied")], supplied }, options);
-      expect(endpoint.requests, String(value?.cardinality)).toEqual([]);
-    }
-    const { options, endpoint } = host({ status: 200 });
-    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: Rater };
-    await forwardEvents({ session: SESSION, step: 13, events: [eventOf("presented", SECOND)], supplied }, options);
-    expect(sent(endpoint).map(({ type }) => type)).toEqual(["AssessmentItemEvent"]);
-  });
-
-  it("logs the step with its score and sends nothing when Caliper is not configured", async () => {
-    const logged: StepEvents[] = [];
-    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: Rater };
-    const step: StepEvents = { session: SESSION, step: 14, events: [applied("scores-applied")], supplied };
-    await forwardEvents(step, { log: (each) => void logged.push(each) });
-    expect(logged).toEqual([step]);
-  });
-
-  it("refuses a score whose rater is not an IRI, after the log", async () => {
-    const { options, logged } = host({ status: 200 });
-    const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: "rater-17" };
-    await expect(
-      forwardEvents({ session: SESSION, step: 15, events: [applied("scores-applied")], supplied }, options),
-    ).rejects.toThrow(DataError);
-    expect(logged).toHaveLength(1);
-    await expect(
-      forwardEvents({ session: SESSION, step: 15, events: [], supplied: JSON.parse("5") }, options),
-    ).rejects.toThrow("The supplied score of the step must be an object");
-  });
-});
 
 describe("collectAssetPrefixes", () => {
   it("gives the content root the deepest directory that holds its document, image and stylesheet", async () => {
@@ -1254,29 +908,14 @@ describe("createSessionHost", () => {
     ]);
   });
 
-  it("forwards a GradeEvent for a score that the host supplies, scored by the rater it names, for the item", async () => {
+  it("gives the score of a supply-scores action to the log with its step, and the rater only when the host names one", async () => {
     const essay = `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="q2" title="Item q2" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
   <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
 </qti-assessment-item>`;
-    const endpoint = fakeEndpoint({ status: 200 });
-    const forward = {
-      log: () => undefined,
-      caliper: {
-        parties: () => ({ actor: ACTOR, assessment: ASSESSMENT, edApp: APPLICATION }),
-        sender: {
-          endpoint: "https://lrs.example/caliper",
-          token: "token-123",
-          sensor: "https://exam.example/sensors/1",
-          fetch: endpoint.fetch,
-        },
-        clock: { now: () => 1_700_000_000_000 },
-      },
-    };
-    const { host } = await examHost({ forward }, { ...examFiles(), "items/q2/item.xml": essay });
-    const rater = "https://rater.example/raters/17";
+    const { host, logged } = await examHost({}, { ...examFiles(), "items/q2/item.xml": essay });
     await host.start(ALICE, { seed: 7 });
     const q2 = { ref: "q2", instance: 1 };
     await host.handle(ALICE, request(1, { type: "move", to: q2 }));
@@ -1291,30 +930,79 @@ describe("createSessionHost", () => {
     await host.handle(ALICE, request(3, { type: "submit", item: q2 }));
     const [pending] = (await host.session(ALICE.session).pending()).scoring;
     expect(pending?.id).toBe("item:q2:1:SCORE");
-    const before = endpoint.requests.length;
-    const value = single("float", 3);
+    expect(logged.filter(({ supplied }) => supplied !== undefined)).toEqual([]);
     const session = host.session(ALICE.session);
+    const value = single("float", 3);
     const supply = { type: "supply-scores", request: pending?.id ?? "", value, scorer: "human" } as const;
-    await expect(session.apply(supply)).rejects.toThrow("The scoredBy of a supply-scores action must be a string");
-    await expect(session.apply(supply, { scoredBy: "rater-17" })).rejects.toThrow(
-      "The scoredBy of a supply-scores action must be an absolute IRI",
+
+    const bare = await session.apply(supply);
+    expect(bare.refusal).toBeUndefined();
+    const supplied = logged.at(-1);
+    expect(supplied?.supplied).toStrictEqual({ value, scorer: "human" });
+    expect(supplied?.events.map(({ type }) => type)).toContain("scores-applied");
+
+    const named = await session.apply({ ...supply, value: single("float", 4) }, { scoredBy: "rater-17" });
+    expect(named.events.map(({ type }) => type)).toContain("scores-replaced");
+    expect(logged.at(-1)?.supplied).toStrictEqual({ value: single("float", 4), scorer: "human", scoredBy: "rater-17" });
+    await expect(session.apply(supply, { scoredBy: "" })).rejects.toThrow(
+      new DataError('The option scoredBy must be a non-empty string, found "".'),
     );
-    expect((await session.pending()).scoring).toHaveLength(1);
-    expect(endpoint.requests).toHaveLength(before);
-    const step = await session.apply(supply, { scoredBy: rater });
-    expect(step.refusal).toBeUndefined();
-    const grades = endpoint.requests.slice(before).flatMap((each) => JSON.parse(each.init.body ?? "{}").data);
-    expect(grades).toHaveLength(1);
-    expect(grades[0].generated.attempt).toBe(grades[0].object.id);
-    expect(grades[0]).toMatchObject({
-      type: "GradeEvent",
-      actor: { id: rater, type: "Person" },
-      object: { type: "Attempt" },
-      generated: { scoreGiven: 3, scoredBy: rater },
+  });
+
+  it("calls the log for no step without events, and for no repeated request", async () => {
+    const { host, logged } = await examHost();
+    await host.start(ALICE, { seed: 7 });
+    const answered = await host.handle(ALICE, request(1, answer("A")));
+    const forwarded = logged.length;
+    expect(await host.session(ALICE.session).apply({ type: "time" })).toEqual({ events: [] });
+    expect(await host.handle(ALICE, request(1, answer("A")))).toEqual({
+      ...answered,
+      assets: expect.anything(),
     });
-    const replaced = await session.apply({ ...supply, value: single("float", 4) }, { scoredBy: rater });
-    expect(replaced.events.map(({ type }) => type)).toContain("scores-replaced");
-    expect(endpoint.requests.slice(before)).toHaveLength(2);
+    expect(logged).toHaveLength(forwarded);
+  });
+
+  it("waits for the log before the call returns, and keeps the step saved when the log rejects", async () => {
+    const order: string[] = [];
+    let failing = false;
+    const forward = {
+      log: async ({ step }: StepEvents) => {
+        order.push(`log ${step}`);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (failing) throw new Error("disk full");
+        order.push(`logged ${step}`);
+      },
+    };
+    const { host } = await examHost({ forward });
+    await host.start(ALICE, { seed: 7 });
+    expect(order).toEqual(["log start", "logged start"]);
+    failing = true;
+    await expect(host.handle(ALICE, request(1, answer("A")))).rejects.toThrow("disk full");
+    failing = false;
+    // The step is saved: the same request replays the stored answer, and nothing repeats the step.
+    const before = order.length;
+    const replayed = await host.handle(ALICE, request(1, answer("A")));
+    expect(order).toHaveLength(before);
+    expect(viewOf(replayed).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(viewOf(await host.view(ALICE)).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+  });
+
+  it("rejects a forward option without a log", async () => {
+    const good = await examHost();
+    const options = {
+      engine: good.engine,
+      store: good.store,
+      scheduler: good.scheduler,
+      clock: good.clock,
+      gate: good.gate,
+      packages: async () => good.pkg,
+    };
+    for (const forward of [json("{}"), json('{"log":"console"}'), json("null"), json('{"log":null}')]) {
+      expect(() => createSessionHost({ ...options, forward } as never), JSON.stringify(forward)).toThrow(DataError);
+    }
+    expect(() => createSessionHost({ ...options, forward: { log: () => undefined, other: 1 } } as never)).toThrow(
+      DataError,
+    );
   });
 
   it("keeps the correct responses of a rated item out of every envelope, and gives them to the rater", async () => {
@@ -1385,7 +1073,7 @@ describe("createSessionHost", () => {
       new DataError("The option signal must be an AbortSignal, found 5."),
     );
     await expect(host.session(ALICE.session).apply({ type: "time" }, JSON.parse('{"scoredBy":5}'))).rejects.toThrow(
-      new DataError("The option scoredBy must be a string, found 5."),
+      new DataError("The option scoredBy must be a non-empty string, found 5."),
     );
   });
 
@@ -1712,6 +1400,33 @@ describe("the option cat of the session host", () => {
     expect(viewOf(await host.view(ALICE)).status).toBe("ended");
   });
 
+  it("keeps the step of a cat-response saved and reports a log that rejects as catFailure, which the next call finishes", async () => {
+    const port = scriptedPort();
+    let failing = true;
+    const steps: (number | "start")[] = [];
+    const forward = {
+      log: ({ step }: StepEvents) => {
+        steps.push(step);
+        // The step that the host's own action made is step 2; the loop's first cat-response is step 3.
+        if (failing && step === 3) throw new Error("disk full");
+      },
+    };
+    const { host } = await adaptiveHost(port, "", { forward });
+    await host.start(ALICE, { seed: 7 });
+    const step = await host.proctor(ALICE.session, { type: "end-test" });
+    expect(step.refusal).toBeUndefined();
+    expect(step.catFailure).toMatchObject({ message: "disk full" });
+    expect(port.calls).toEqual(["createSession", "submitResults"]);
+    // The answer of Submit Results is saved and the request that followed it waits, so nothing was lost or repeated.
+    expect((await host.session(ALICE.session).pending()).cat).toHaveLength(1);
+    failing = false;
+    const finished = await host.session(ALICE.session).apply({ type: "time" });
+    expect(finished.catFailure).toBeUndefined();
+    expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]);
+    expect(steps.filter((each) => each === 3)).toHaveLength(1);
+    expect((await host.session(ALICE.session).pending()).cat).toEqual([]);
+  });
+
   it("applies the time action and reports the failure when End Session fails after a time-out", async () => {
     const port = scriptedPort();
     const { host, clock } = await adaptiveHost(port, '<qti-time-limits max-time="600"/>');
@@ -1835,61 +1550,78 @@ describe("the option cat of the session host", () => {
   });
 });
 
-describe("createLtiScoreIntake", () => {
+describe("createToolScoreIntake", () => {
   const Item = { ref: "draw", instance: 1 };
-  const score = (change: Partial<AgsScore> = {}): AgsScore => ({
-    userId: "u1",
+  const Open = ["item:draw:1:SCORE", "item:draw:1:MAXSCORE"];
+  const At = Date.parse("2026-10-30T12:00:00.000Z");
+  const score = (change: Partial<ToolScore> = {}): ToolScore => ({
     scoreGiven: 6,
     scoreMaximum: 10,
-    activityProgress: "Completed",
-    gradingProgress: "FullyGraded",
-    timestamp: "2026-10-30T12:00:00.000Z",
-    timestampMs: Date.parse("2026-10-30T12:00:00.000Z"),
+    final: true,
+    timestampMs: At,
     ...change,
   });
-  const later = (seconds: number, change: Partial<AgsScore> = {}): AgsScore =>
-    score({
-      timestamp: new Date(Date.parse("2026-10-30T12:00:00.000Z") + seconds * SECOND).toISOString(),
-      timestampMs: Date.parse("2026-10-30T12:00:00.000Z") + seconds * SECOND,
-      ...change,
-    });
+  const later = (seconds: number, change: Partial<ToolScore> = {}): ToolScore =>
+    score({ timestampMs: At + seconds * SECOND, ...change });
 
-  /** A store that keeps by the time of the score, and a host that answers the requests in `known` and refuses the others. */
-  function intake(known: readonly string[] = ["item:draw:1:SCORE", "item:draw:1:MAXSCORE"]) {
-    const kept = new Map<string, AgsScore>();
-    const calls: { session: string; action: HostAction; by: string | undefined }[] = [];
+  /** A call of `apply` that the intake made, with the options it passed. */
+  interface Call {
+    readonly session: string;
+    readonly action: HostAction;
+    readonly options: HostApplyOptions | undefined;
+  }
+
+  /** A store that keeps by the time of the score as the contract says, and a host that answers the requests it still has open. */
+  function intake(open: readonly string[] = Open) {
+    const kept = new Map<string, ToolScore>();
+    const calls: Call[] = [];
+    const reads: string[] = [];
+    const answered = new Set<string>();
     const refusal: { code?: string } = {};
-    const made = createLtiScoreIntake({
+    const rejects: { apply: ((call: Call) => Error | undefined) | undefined; keep: Error | undefined } = {
+      apply: undefined,
+      keep: undefined,
+    };
+    const made = createToolScoreIntake({
       host: {
         session: (session) => ({
           apply: async (action, options) => {
-            calls.push({ session, action, by: options?.scoredBy });
+            const call = { session, action, options };
+            calls.push(call);
             if (action.type !== "supply-scores") throw new Error("Not a supply.");
+            const failure = rejects.apply?.(call);
+            if (failure !== undefined) throw failure;
             if (refusal.code !== undefined) {
               return { events: [], refusal: { code: refusal.code, message: "no" } } as never;
             }
-            if (!known.includes(action.request)) {
+            if (!open.includes(action.request)) {
               return { events: [], refusal: { code: "unknown-request", message: "none" } } as never;
             }
+            answered.add(action.request);
             return { events: [] };
+          },
+          pending: async () => {
+            reads.push(session);
+            return { scoring: open.filter((id) => !answered.has(id)).map((id) => ({ id })) as never, cat: [] };
           },
         }),
       },
       scores: {
         keep: async (session, item, next) => {
+          if (rejects.keep !== undefined) throw rejects.keep;
           const key = `${session} ${item.ref} ${item.instance}`;
           const before = kept.get(key);
-          if (before !== undefined && before.timestampMs >= next.timestampMs) return false;
+          if (before !== undefined && before.timestampMs > next.timestampMs) return false;
           kept.set(key, next);
           return true;
         },
         latest: async (session, item) => kept.get(`${session} ${item.ref} ${item.instance}`),
       },
-      scoredBy: async (session) => `https://tool.example/${session}`,
+      scoredBy: async (session) => `tool-${session}`,
     });
-    return { ...made, kept, calls, refusal };
+    return { ...made, kept, calls, reads, refusal, rejects, answered };
   }
-  const supplied = (calls: { action: HostAction }[]): [string, unknown][] =>
+  const supplied = (calls: readonly Call[]): [string, unknown][] =>
     calls.map(({ action }) =>
       action.type === "supply-scores"
         ? [action.request, action.value === null ? null : (action.value as { value: unknown }).value]
@@ -1908,9 +1640,9 @@ describe("createLtiScoreIntake", () => {
       ["item:draw:1:SCORE", 6],
       ["item:draw:1:MAXSCORE", 10],
     ]);
-    expect(calls.map(({ action, by }) => [action.type === "supply-scores" && action.scorer, by])).toEqual([
-      ["externalMachine", "https://tool.example/s1"],
-      ["externalMachine", "https://tool.example/s1"],
+    expect(calls.map(({ action, options }) => [action.type === "supply-scores" && action.scorer, options])).toEqual([
+      ["externalMachine", { scoredBy: "tool-s1" }],
+      ["externalMachine", { scoredBy: "tool-s1" }],
     ]);
     expect(calls[0]?.action).toMatchObject({ value: single("float", 6) });
   });
@@ -1926,21 +1658,16 @@ describe("createLtiScoreIntake", () => {
 
   it("keeps a score that is not final and supplies nothing", async () => {
     const { onScore, calls, kept } = intake();
-    for (const [index, gradingProgress] of (["NotReady", "Pending", "PendingManual", "Failed"] as const).entries()) {
-      await onScore("s1", Item, later(index, { gradingProgress }));
-    }
+    await onScore("s1", Item, later(1, { final: false }));
     expect(calls).toEqual([]);
-    expect(kept.get("s1 draw 1")?.gradingProgress).toBe("Failed");
+    expect(kept.get("s1 draw 1")?.final).toBe(false);
   });
 
-  it("ignores a score whose time is not later than the kept one", async () => {
+  it("ignores a score that is earlier than the kept one", async () => {
     const { onScore, calls, kept } = intake();
     await onScore("s1", Item, later(10, { scoreGiven: 6 }));
     await onScore("s1", Item, later(5, { scoreGiven: 9 }));
-    await onScore("s1", Item, later(10, { scoreGiven: 8 }));
-    expect(supplied(calls).filter(([request]) => request.endsWith("SCORE") && !request.endsWith("MAXSCORE"))).toEqual([
-      ["item:draw:1:SCORE", 6],
-    ]);
+    expect(supplied(calls).filter(([request]) => request === "item:draw:1:SCORE")).toEqual([["item:draw:1:SCORE", 6]]);
     expect(kept.get("s1 draw 1")?.scoreGiven).toBe(6);
   });
 
@@ -1954,12 +1681,148 @@ describe("createLtiScoreIntake", () => {
     ]);
   });
 
-  it("keeps a final score for a session that has made no request yet, and supplies it when a step makes them", async () => {
-    const { onScore, settle, calls, refusal, kept } = intake([]);
+  it("finishes a supply that failed halfway when the tool retries at the same time", async () => {
+    const { onScore, calls, rejects, kept } = intake();
+    let failures = 1;
+    rejects.apply = ({ action }) =>
+      action.type === "supply-scores" && action.request.endsWith("MAXSCORE") && failures-- > 0
+        ? new Error("The save failed.")
+        : undefined;
+    await expect(onScore("s1", Item, score())).rejects.toThrow("The save failed.");
+    expect(kept.get("s1 draw 1")).toEqual(score());
     await onScore("s1", Item, score());
-    expect(kept.size).toBe(1);
-    expect(calls).toHaveLength(1);
-    refusal.code = undefined;
+    // The retry supplies both outcomes: SCORE again replaces its own value, and MAXSCORE is supplied for the first time.
+    expect(supplied(calls).map(([request]) => request)).toEqual([
+      "item:draw:1:SCORE",
+      "item:draw:1:MAXSCORE",
+      "item:draw:1:SCORE",
+      "item:draw:1:MAXSCORE",
+    ]);
+  });
+
+  it("keeps a score when the session host rejects, and supplies it at a later time too", async () => {
+    const { onScore, calls, rejects, kept } = intake();
+    rejects.apply = () => new Error("The host is down.");
+    await expect(onScore("s1", Item, later(1))).rejects.toThrow("The host is down.");
+    expect(kept.get("s1 draw 1")).toEqual(later(1));
+    rejects.apply = undefined;
+    await onScore("s1", Item, later(2, { scoreGiven: 7 }));
+    expect(supplied(calls).slice(1)).toEqual([
+      ["item:draw:1:SCORE", 7],
+      ["item:draw:1:MAXSCORE", 10],
+    ]);
+  });
+
+  it("stores nothing and applies nothing when the store rejects, and leaves the retry to the tool", async () => {
+    const { onScore, calls, rejects, kept } = intake();
+    rejects.keep = new Error("The store is down.");
+    await expect(onScore("s1", Item, score())).rejects.toThrow("The store is down.");
+    expect(kept.size).toBe(0);
+    expect(calls).toEqual([]);
+    rejects.keep = undefined;
+    await onScore("s1", Item, score());
+    expect(calls).toHaveLength(2);
+  });
+
+  it("keeps the score when scoredBy rejects, before any action is applied, and a retry supplies it", async () => {
+    const calls: unknown[] = [];
+    const kept = new Map<string, ToolScore>();
+    let failing = true;
+    const made = createToolScoreIntake({
+      host: {
+        session: () => ({
+          apply: async (action) => {
+            calls.push(action);
+            return { events: [] };
+          },
+          pending: async () => ({ scoring: [], cat: [] }),
+        }),
+      },
+      scores: {
+        keep: async (session, _item, next) => {
+          kept.set(session, next);
+          return true;
+        },
+        latest: async (session) => kept.get(session),
+      },
+      scoredBy: async () => {
+        if (failing) throw new Error("Nobody to name.");
+        return "tool";
+      },
+    });
+    await expect(made.onScore("s1", Item, score())).rejects.toThrow("Nobody to name.");
+    expect(calls).toEqual([]);
+    expect(kept.get("s1")).toEqual(score());
+    failing = false;
+    await made.onScore("s1", Item, score());
+    expect(calls).toHaveLength(2);
+  });
+
+  it("gives the signal of the call to the store, to scoredBy and to every action", async () => {
+    const seen: (AbortSignal | undefined)[] = [];
+    const made = createToolScoreIntake({
+      host: {
+        session: () => ({
+          apply: async (_action, options) => {
+            seen.push(options?.signal);
+            return { events: [] };
+          },
+          pending: async () => ({ scoring: [], cat: [] }),
+        }),
+      },
+      scores: {
+        keep: async (_session, _item, _next, options) => {
+          seen.push(options?.signal);
+          return true;
+        },
+        latest: async () => undefined,
+      },
+      scoredBy: async (_session, _item, options) => {
+        seen.push(options?.signal);
+        return "tool";
+      },
+    });
+    const { signal } = new AbortController();
+    await made.onScore("s1", Item, score(), { signal });
+    expect(seen).toEqual([signal, signal, signal, signal]);
+    await expect(made.onScore("s1", Item, score(), json('{"signal":5}') as never)).rejects.toThrow(
+      new DataError("The option signal must be an AbortSignal, found 5."),
+    );
+  });
+
+  it("stops before the save when the call is aborted, and applies nothing", async () => {
+    const aborted = new AbortController();
+    const calls: unknown[] = [];
+    const made = createToolScoreIntake({
+      host: {
+        session: () => ({
+          apply: async (action, options) => {
+            options?.signal?.throwIfAborted();
+            calls.push(action);
+            return { events: [] };
+          },
+          pending: async () => ({ scoring: [], cat: [] }),
+        }),
+      },
+      scores: {
+        keep: async (_session, _item, _next, options) => {
+          options?.signal?.throwIfAborted();
+          return true;
+        },
+        latest: async () => undefined,
+      },
+    });
+    aborted.abort(new Error("Gone."));
+    await expect(made.onScore("s1", Item, score(), { signal: aborted.signal })).rejects.toThrow("Gone.");
+    expect(calls).toEqual([]);
+  });
+
+  it("keeps a final score for a session that has made no request yet, and supplies it when a step makes them", async () => {
+    const early = intake([]);
+    await early.onScore("s1", Item, score());
+    expect(early.kept.size).toBe(1);
+    // The session knew neither request: the first answer ends the supply.
+    expect(early.calls).toHaveLength(1);
     const ready = intake();
     ready.kept.set("s1 draw 1", score());
     await ready.settle(step("scoring-requested", "scoring-requested"));
@@ -1968,16 +1831,55 @@ describe("createLtiScoreIntake", () => {
       ["item:draw:1:MAXSCORE", 10],
     ]);
     // The same step with nothing kept calls nothing.
-    await settle(step("moved"));
-    expect(calls).toHaveLength(1);
+    await early.settle(step("moved"));
+    expect(early.calls).toHaveLength(1);
   });
 
-  it("settles only for steps that made scoring requests, and only for items with a kept score", async () => {
+  it("supplies the requests that are open and no others, so that a repeated settle makes no step", async () => {
+    const { settle, calls, kept, reads, answered } = intake();
+    kept.set("s1 draw 1", score());
+    await settle(step("scoring-requested"));
+    expect(calls).toHaveLength(2);
+    await settle(step("scoring-requested"));
+    await settle(step("scoring-requested"));
+    expect(calls).toHaveLength(2);
+    expect(reads).toEqual(["s1", "s1", "s1"]);
+    expect([...answered]).toEqual(Open);
+  });
+
+  it("supplies only the request of an item that is still open when the other was answered", async () => {
+    const { settle, calls, kept, answered } = intake();
+    answered.add("item:draw:1:SCORE");
+    kept.set("s1 draw 1", score());
+    await settle(step("scoring-requested"));
+    expect(supplied(calls)).toEqual([["item:draw:1:MAXSCORE", 10]]);
+  });
+
+  it("reads the pending work once for a step, and not at all when no kept score is final", async () => {
+    const { settle, kept, reads } = intake();
+    await settle(step("scoring-requested"));
+    kept.set("s1 draw 1", score({ final: false }));
+    await settle(step("scoring-requested"));
+    expect(reads).toEqual([]);
+    kept.set("s1 draw 1", score());
+    kept.set("s1 other 2", score());
+    await settle({
+      session: "s1",
+      step: 5,
+      events: [
+        { type: "scoring-requested", at: 1, item: Item },
+        { type: "scoring-requested", at: 1, item: { ref: "other", instance: 2 } },
+      ],
+    });
+    expect(reads).toEqual(["s1"]);
+  });
+
+  it("settles only for steps that made scoring requests, and only for items with a kept final score", async () => {
     const { settle, calls, kept } = intake();
     await settle(step("moved", "scores-applied", "attempt-ended"));
     await settle(step("scoring-requested"));
     expect(calls).toEqual([]);
-    kept.set("s1 draw 1", score({ gradingProgress: "Pending" }));
+    kept.set("s1 draw 1", score({ final: false }));
     await settle(step("scoring-requested"));
     expect(calls).toEqual([]);
     await settle({
@@ -1986,6 +1888,38 @@ describe("createLtiScoreIntake", () => {
       events: [{ type: "scoring-requested", at: 1, scope: "exam", detail: "test:TOTAL" }],
     });
     expect(calls).toEqual([]);
+  });
+
+  it("fails as the step sink it runs in when the session host rejects, and the kept score stays", async () => {
+    const { settle, kept, rejects, calls } = intake();
+    kept.set("s1 draw 1", score());
+    rejects.apply = () => new Error("The host is down.");
+    await expect(settle(step("scoring-requested"))).rejects.toThrow("The host is down.");
+    expect(kept.get("s1 draw 1")).toEqual(score());
+    rejects.apply = undefined;
+    await settle(step("scoring-requested"));
+    expect(supplied(calls).slice(1)).toEqual([
+      ["item:draw:1:SCORE", 6],
+      ["item:draw:1:MAXSCORE", 10],
+    ]);
+  });
+
+  it("leaves a catFailure of the step alone, since the store holds the score", async () => {
+    const calls: unknown[] = [];
+    const made = createToolScoreIntake({
+      host: {
+        session: () => ({
+          apply: async (action) => {
+            calls.push(action);
+            return { events: [], catFailure: { request: "cat:1", message: "The CAT engine is down." } };
+          },
+          pending: async () => ({ scoring: [], cat: [] }),
+        }),
+      },
+      scores: { keep: async () => true, latest: async () => undefined },
+    });
+    await made.onScore("s1", Item, score());
+    expect(calls).toHaveLength(2);
   });
 
   it("throws DataError when the session refuses the score for a reason other than a request it does not have", async () => {
@@ -1998,13 +1932,14 @@ describe("createLtiScoreIntake", () => {
 
   it("leaves the scorer out of the action when the host names none", async () => {
     const calls: unknown[][] = [];
-    const bare = createLtiScoreIntake({
+    const bare = createToolScoreIntake({
       host: {
         session: () => ({
           apply: async (...args) => {
             calls.push(args);
             return { events: [] };
           },
+          pending: async () => ({ scoring: [], cat: [] }),
         }),
       },
       scores: { keep: async () => true, latest: async () => undefined },
@@ -2015,10 +1950,12 @@ describe("createLtiScoreIntake", () => {
 
   it("throws DataError for options of other types", () => {
     const good = {
-      host: { session: () => ({ apply: async () => ({ events: [] }) }) },
+      host: {
+        session: () => ({ apply: async () => ({ events: [] }), pending: async () => ({ scoring: [], cat: [] }) }),
+      },
       scores: { keep: async () => true, latest: async () => undefined },
     };
-    const make = (change: Record<string, unknown>): unknown => createLtiScoreIntake({ ...good, ...change } as never);
+    const make = (change: Record<string, unknown>): unknown => createToolScoreIntake({ ...good, ...change } as never);
     expect(() => make({ host: json("null") })).toThrow(new DataError("The option host must be an object, found null."));
     expect(() => make({ host: {} })).toThrow(
       new DataError("The function session of the option host must be a function, found undefined."),
@@ -2030,7 +1967,7 @@ describe("createLtiScoreIntake", () => {
     expect(() => make({ scoredBy: json("1") })).toThrow(
       new DataError("The option scoredBy must be a function, found 1."),
     );
-    expect(() => createLtiScoreIntake(json("null") as never)).toThrow(
+    expect(() => createToolScoreIntake(json("null") as never)).toThrow(
       new DataError("The options must be an object, found null."),
     );
   });
@@ -2138,20 +2075,15 @@ describe("properties", () => {
     );
   });
 
-  it("forwards any events, of any type, to the log without a change", async () => {
+  it("gives the log each saved step once, in the order of the versions that the steps saved", async () => {
     await fc.assert(
-      fc.asyncProperty(
-        fc.array(fc.record({ type: fc.string(), at: fc.integer(), detail: fc.string() }, { requiredKeys: ["type"] }), {
-          maxLength: 10,
-        }),
-        async (events) => {
-          const logged: StepEvents[] = [];
-          const step: StepEvents = { session: SESSION, step: 1, events: JSON.parse(JSON.stringify(events)) };
-          await forwardEvents(step, { log: (each) => void logged.push(each) });
-          expect(logged).toEqual(events.length === 0 ? [] : [step]);
-        },
-      ),
-      { numRuns: 40 },
+      fc.asyncProperty(fc.integer({ min: 1, max: 5 }), async (answers) => {
+        const { host, logged } = await examHost();
+        await host.start(ALICE, { seed: 7 });
+        for (let seq = 1; seq <= answers; seq += 1) await host.handle(ALICE, request(seq, answer("A")));
+        expect(logged.map(({ step }) => step)).toEqual(["start", ...Array.from({ length: answers }, (_, i) => i + 1)]);
+      }),
+      { numRuns: 15 },
     );
   });
 });

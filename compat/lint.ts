@@ -10,7 +10,7 @@ import stylelint from "stylelint";
 const PARTIAL_BUT_USABLE = ["css-text-indent"];
 
 /** The folders of the package whose code runs on a server, which the baseline does not cover. */
-const SERVER_FOLDERS = ["server", "cat-rest", "lti", "caliper"];
+const SERVER_FOLDERS = ["server", "cat-rest"];
 
 /** A use of a feature that the baseline browsers lack. */
 export interface BaselineProblem {

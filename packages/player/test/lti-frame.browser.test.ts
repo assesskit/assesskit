@@ -4,6 +4,7 @@ import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
+import type { LtiLogin } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { mountLtiFrame } from "../src/player/lti-frame/index.js";
 import type { LtiFrame } from "../src/protocol/index.js";
@@ -213,7 +214,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
   });
 
   /** Mounts the player on an exam session whose second item is the link, with the hook of the host. */
-  async function player(ltiLogin?: (item: ItemKey) => Promise<LtiFrame>) {
+  async function player(ltiLogin?: LtiLogin) {
     const setup = await examHost({}, ltiExamFiles({ maximum: 20 }), asset);
     const transport: Transport = async (envelope) =>
       JSON.parse(JSON.stringify(await setup.host.handle(CANDIDATE, JSON.parse(JSON.stringify(envelope)))));
@@ -329,5 +330,40 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     release(frameFor(toolUrl(tool, "sandbox", token())));
     await new Promise((done) => setTimeout(done, 200));
     expect(frames(host)).toEqual([]);
+  });
+
+  it("aborts the signal of a login that waits when the candidate leaves the item, and when the player is destroyed", async () => {
+    const signals: AbortSignal[] = [];
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      event.preventDefault();
+      errors.push(event.error);
+    };
+    window.addEventListener("error", onError);
+    try {
+      const { client, mounted, slot, host } = await player(
+        (_item, options) =>
+          new Promise<LtiFrame>((_resolve, reject) => {
+            const signal = options?.signal ?? new AbortController().signal;
+            signals.push(signal);
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          }),
+      );
+      await client.dispatch({ type: "move", to: DRAW });
+      await waitFor(() => expect(signals).toHaveLength(1));
+      expect(signals[0]?.aborted).toBe(false);
+      await client.dispatch({ type: "move", to: ESSAY });
+      await waitFor(() => expect(signals[0]?.aborted).toBe(true));
+      // The abort is the player's own doing: it shows no notice and reports no error.
+      expect(slot.textContent).toBe("");
+      expect(frames(host)).toEqual([]);
+      await client.dispatch({ type: "move", to: DRAW });
+      await waitFor(() => expect(signals).toHaveLength(2));
+      mounted.destroy();
+      expect(signals[1]?.aborted).toBe(true);
+      expect(errors).toEqual([]);
+    } finally {
+      window.removeEventListener("error", onError);
+    }
   });
 });

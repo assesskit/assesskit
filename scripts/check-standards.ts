@@ -21,7 +21,7 @@ const EXCLUDED = /(^|\/)(node_modules|dist|docs\/api|\.cache|\.changeset|fixture
 /** The script and its test, which hold violations as their input. */
 const EXEMPT = /^scripts\/(check-standards\.ts|test\/check-standards\.test\.ts)$/;
 /** Scopes of other families of packages, which no package of this repository may import. */
-const FOREIGN_SCOPES = ["@measurekit/"];
+const FOREIGN_SCOPES = ["@measurekit/", "@interopkit/"];
 /** Where the foreign scopes are allowed: an example adapts one family to the other. */
 const FOREIGN_ALLOWED = /^examples\//;
 /** The files whose job is output, so that they may call the console. */

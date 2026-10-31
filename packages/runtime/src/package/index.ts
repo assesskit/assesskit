@@ -5,7 +5,7 @@
  * @module @assesskit/runtime/package
  */
 export { dependencyClosure } from "./closure.js";
-export { type LtiExtensions, type LtiLink, type LtiVendor, readLtiLink } from "./lti-link.js";
+export { type LtiExtensions, type LtiLink, type LtiVendor, ltiLaunchUrl, readLtiLink } from "./lti-link.js";
 export {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,

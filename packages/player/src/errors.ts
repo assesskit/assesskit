@@ -1,9 +1,6 @@
 import { AssesskitError } from "@assesskit/runtime/errors";
 
-/**
- * The error for a caller that acts on a session it is not bound to, starts a session that exists, or presents a login
- * hint that is forged, expired, used or names another principal. A host maps it to 403.
- */
+/** The error for a caller that acts on a session it is not bound to, or starts a session that exists. A host maps it to 403. */
 export class AccessError extends AssesskitError {
   /** Error class name. */
   override name = "AccessError";
@@ -20,26 +17,9 @@ export class AccessError extends AssesskitError {
   }
 }
 
-/** The error for a message of an LTI launch, login or service that fails validation, in either role. */
-export class LtiError extends AssesskitError {
-  /** Error class name. */
-  override name = "LtiError";
-  /** A kebab-case code that names the failed check, such as `nonce-reused`. */
-  readonly reason: string;
-
-  /**
-   * @param message - Says what failed and what is expected.
-   * @param reason - A kebab-case code that names the failed check.
-   */
-  constructor(message: string, reason: string) {
-    super(message);
-    this.reason = reason;
-  }
-}
-
 /**
- * The error for a call to a service that fails, such as the CAT, AGS, JWKS and Caliper endpoints, and for a store
- * conflict that outlasts its retries.
+ * The error for a call to a service that fails, such as the endpoints of a CAT engine, and for a store conflict that
+ * outlasts its retries.
  */
 export class ServiceError extends AssesskitError {
   /** Error class name. */

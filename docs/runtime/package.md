@@ -30,6 +30,7 @@ flowchart LR
 | `dependencyClosure(manifest, identifier)`        | A resource with the resources it depends on.                                     |
 | `packageResolvers(pkg)`                          | The `Resolvers` of the engine: items with their variants, sections and stimuli.  |
 | `readLtiLink(input, options?)`, `LtiLink`        | The `cartridge_basiclti_link` document of an LTI resource.                       |
+| `ltiLaunchUrl(link)`                             | The URL that launches the tool of a link.                                        |
 | `DEFAULT_ZIP_LIMITS`, `ZipLimits`                | The limits on archives and directories.                                          |
 | `RESOURCE_TYPES`, `MANIFEST_SCHEMAS`             | The vocabularies of the manifest.                                                |
 
@@ -234,7 +235,12 @@ a separate outcome declaration or response processing template resource. Variant
 and `vendor`. Text is read without the white space around it. The root is accepted in `http://www.imsglobal.org/xsd/imslticc_v1p0`
 and in the relative namespace `/xsd/imslticc_v1p0` that the 1EdTech examples declare. A document without a title, a property
 without a name or with a repeated name, or a vendor without a code is a `ReadError` (`assesskit/package/lti-link`,
-`assesskit/package/lti-property`). Launching the tool belongs to the player.
+`assesskit/package/lti-property`). Launching the tool belongs to the host, through the player's port `LtiLogin`.
+
+`ltiLaunchUrl(link)` returns the URL that launches the tool: the `secureLaunchUrl` when the link has one, else the `launchUrl`
+(BPIG section 6.2.9). A link that names only a vendor has neither, and the function throws `DataError`: the platform could
+only look the tool up, which no QTI rule describes. The URL is not checked further; whether it must be `https` is the rule of the
+platform that launches it.
 
 ## Errors
 
@@ -246,14 +252,14 @@ without a name or with a repeated name, or a vendor without a code is a `ReadErr
 
 ## Not included
 
-| Not included                                             | Why                                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                    |
-| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                   |
-| Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                   |
-| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds every package within the limits |
-| Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                        |
-| Launching an LTI tool                                    | Launching belongs to the player; `readLtiLink` reads the document                     |
+| Not included                                             | Why                                                                                                                               |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                                                                |
+| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                                                               |
+| Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                                                               |
+| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds every package within the limits                                             |
+| Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                    |
+| Launching an LTI tool                                    | Launching belongs to the host, through the player's `LtiLogin`; `readLtiLink` reads the document and `ltiLaunchUrl` names the URL |
 
 ## Files
 

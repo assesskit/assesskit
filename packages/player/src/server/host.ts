@@ -29,7 +29,6 @@ import {
 import { DataError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";
-import { checkIri } from "../caliper/internal.js";
 import { AccessError, ServiceError } from "../errors.js";
 import {
   type ActionEnvelope,
@@ -53,7 +52,7 @@ import {
   readClock,
   untilAborted,
 } from "../protocol/internal.js";
-import { forwardEvents, type SuppliedGrade } from "./forward.js";
+import type { StepSink, SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";
 import { checkClientAction, EXAM_CLIENT_ACTIONS, readClientActions } from "./policy.js";
 import type { Scheduler } from "./scheduler.js";
@@ -76,7 +75,7 @@ interface Attempt<T> {
 const notBound = (): AccessError =>
   new AccessError("The session does not belong to the caller, or does not exist.", "not-bound");
 
-// The clock, the client actions and the forward options are checked by the functions that read them.
+// The clock and the client actions are checked by the functions that read them.
 const hostOptionsSchema = v.strictObject({
   engine: methodsSchema<Engine>("start", "apply", "view", "deadlines", "pending", "scorerView", "results"),
   store: methodsSchema<SessionStore>("create", "load", "save"),
@@ -86,7 +85,7 @@ const hostOptionsSchema = v.strictObject({
   packages: functionSchema<(session: string, options?: SessionCallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
-  forward: v.optional(v.unknown()),
+  forward: v.optional(v.strictObject({ log: functionSchema<StepSink>() })),
   cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
 });
 
@@ -122,9 +121,9 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
  *   store, the scheduler and `packages`. After the save it is ignored, so that forwarding completes.
- * - **Events.** After the save, the events of the step go to {@link SessionHostOptions.forward}. If forwarding throws,
- *   the step stays saved and the error reaches the caller; `forwardEvents` is idempotent for the same step, so a host
- *   that needs every event reports the step again.
+ * - **Events.** After the save, the events of the step go to the `log` of {@link SessionHostOptions.forward}. If it
+ *   throws, the step stays saved and the error reaches the caller. Nothing repeats the step by itself, so a host that needs
+ *   every event makes its `log` durable.
  *
  * @param options - See {@link SessionHostOptions}.
  * @returns The session host.
@@ -174,14 +173,14 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     }
   };
 
-  /** Gives the events of a saved step, and the score it supplied, to the host's forwarding. */
+  /** Gives the events of a saved step, and the score it supplied, to the host's log. A step without events calls nothing. */
   const forwardStep = async (
     session: string,
-    step: number,
+    step: "start" | number,
     { events, supplied }: Pick<NonNullable<Attempt<unknown>["change"]>, "events" | "supplied">,
   ): Promise<void> => {
-    if (forward === undefined) return;
-    await forwardEvents({ session, step, events, ...(supplied === undefined ? {} : { supplied }) }, forward);
+    if (forward === undefined || events.length === 0) return;
+    await forward.log({ session, step, events, ...(supplied === undefined ? {} : { supplied }) });
   };
 
   /**
@@ -407,7 +406,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
         { signal },
       );
       if (!created) throw exists();
-      if (forward !== undefined) await forwardEvents({ session, step: "start", events: step.events }, forward);
+      await forwardStep(session, "start", { events: step.events });
       return cat === undefined ? reply : settled(session, reply, await serve(session, signal), signal);
     },
     check: async (caller, callOptions) => {
@@ -451,12 +450,13 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
           checkHostApplyOptions(applyOptions);
           checkHostAction(action);
           const signal = applyOptions?.signal;
-          if (action.type !== "supply-scores" || forward?.caliper === undefined) {
-            return finish(session, await authority(session, action, signal));
-          }
+          if (action.type !== "supply-scores") return finish(session, await authority(session, action, signal));
           const scoredBy = applyOptions?.scoredBy;
-          checkIri(scoredBy, "The scoredBy of a supply-scores action");
-          const supplied = { value: action.value, scorer: action.scorer, scoredBy };
+          const supplied = {
+            value: action.value,
+            scorer: action.scorer,
+            ...(scoredBy === undefined ? {} : { scoredBy }),
+          };
           return finish(session, await authority(session, action, signal, supplied));
         },
         pending: async (callOptions) => {

@@ -103,9 +103,35 @@ describe("restCatPort", () => {
       Accept: "application/json",
     });
     expect(token?.request.body).toBe(`grant_type=client_credentials&scope=${encodeURIComponent(SCOPE)}`);
-    expect(token?.request.redirect).toBe("error");
+    expect(token?.request.redirect).toBe("manual");
+    expect(get?.request.redirect).toBe("manual");
     expect(token?.request.signal).toBeInstanceOf(AbortSignal);
     expect(get?.request.headers).toEqual({ Authorization: "Bearer tok1", Accept: "application/json" });
+  });
+
+  it("refuses a redirect of the token endpoint and of the engine, whether the runtime returns the 3xx answer or an opaque redirect", async () => {
+    const redirect = (url: string, answer: { status: number; type?: string }): CatFetch => {
+      const service = fakeService(() => ({ status: 200, body: {} }));
+      return async (target, request) => {
+        if (target !== url) return service.fetch(target, request);
+        return { ok: false, text: async () => "must not be read", ...answer };
+      };
+    };
+    const answers = [{ status: 302 }, { status: 307 }, { status: 0, type: "opaqueredirect" }];
+    for (const answer of answers) {
+      const atToken = restCatPort({ fetch: redirect(TOKEN_URL, answer), endpoint: PREFIX, credentials: CREDENTIALS });
+      await expect(atToken.getSection(PREFIX, "sec1")).rejects.toMatchObject({
+        name: "ServiceError",
+        status: answer.status,
+        message: expect.stringContaining(`The token endpoint ${TOKEN_URL} answered with a redirect`),
+      });
+      const atEngine = restCatPort({
+        fetch: redirect(`${PREFIX}/sections/sec1`, answer),
+        endpoint: PREFIX,
+        credentials: CREDENTIALS,
+      });
+      await expect(atEngine.getSection(PREFIX, "sec1")).rejects.toThrow(ServiceError);
+    }
   });
 
   it("creates a section: POST /sections with the configuration and usage data of SectionDType, and returns the identifier", async () => {

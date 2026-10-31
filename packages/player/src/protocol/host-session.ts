@@ -1,4 +1,10 @@
-import { checkAbortSignal, checkProperties, checkRecord, checkString, optional } from "@assesskit/runtime/checks";
+import {
+  checkAbortSignal,
+  checkNonEmptyString,
+  checkProperties,
+  checkRecord,
+  optional,
+} from "@assesskit/runtime/checks";
 import type { DeliveryEvent, HostAction, PendingWork, Refusal, ScorerView } from "@assesskit/runtime/delivery";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 
@@ -15,8 +21,8 @@ export interface SessionCallOptions {
 /** The options of {@link HostSession.apply}. */
 export interface HostApplyOptions extends SessionCallOptions {
   /**
-   * The absolute IRI of the rater or scoring service that supplies a score, for the GradeEvent of Caliper. Only a session
-   * host that forwards Caliper reads it, and there `supply-scores` needs it.
+   * Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its
+   * log with the step of a `supply-scores` action. A local session ignores it.
    *
    * @defaultValue none
    */
@@ -58,13 +64,12 @@ export interface HostSession<TResult extends AssessmentResult = AssessmentResult
    *
    * @returns The events of the step, or the engine's refusal, which changes nothing, and `catFailure` when the option
    * `cat` failed after the step.
-   * @throws `DataError` when the action is not an action of the host or is malformed, the session does not exist, or
-   * `scoredBy` is missing where Caliper forwarding needs it.
+   * @throws `DataError` when the action is not an action of the host or is malformed, or the session does not exist.
    * @throws `ServiceError` when a session host cannot save after its retries; a local session rejects with the store's
    * error.
    * @throws `signal.reason` when the signal aborts.
    * @remarks On a session host, forwarding runs after the save. When it throws, the step stays saved and the call rejects,
-   * so a retried `supply-scores` reports `scores-replaced` and a second GradeEvent.
+   * so a retried `supply-scores` reports `scores-replaced` and reaches the log a second time.
    */
   apply(action: HostAction, options?: HostApplyOptions): Promise<HostStep>;
   /** Returns what the engine waits on the host for: scoring requests without a value, and CAT requests. */
@@ -101,12 +106,12 @@ export function checkCallOptions(options: unknown): asserts options is SessionCa
  * Checks the options of {@link HostSession.apply}.
  *
  * @throws `DataError` when they are not absent or an object with a `signal` that is an `AbortSignal`, a `scoredBy` that is
- * a string, and no other property.
+ * a non-empty string, and no other property.
  */
 export function checkHostApplyOptions(options: unknown): asserts options is HostApplyOptions | undefined {
   if (options === undefined) return;
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", HOST_APPLY_OPTIONS);
   optional(options.signal, (value) => checkAbortSignal(value, "The option signal"));
-  optional(options.scoredBy, (value) => checkString(value, "The option scoredBy"));
+  optional(options.scoredBy, (value) => checkNonEmptyString(value, "The option scoredBy"));
 }

@@ -132,8 +132,8 @@ The map is hidden where the test part has fewer than two items.
 
 An item that is a link to a tool (`CandidateItem.lti`) has no content to draw. The player shows the tool in a frame, from the
 moment the candidate opens the item to the moment the candidate leaves it or the item closes. It asks the host for the frame
-once, through `hooks.ltiLogin(item)`, where `item` is the `ItemKey`. The host's authenticated route answers with an `LtiFrame`
-(`ltiPlatformFrame` of the [platform role](lti-platform.md)): the URL of the tool's login, the URL of the storage page and the
+once, through `hooks.ltiLogin(item, { signal })`, where `item` is the `ItemKey` and the `signal` aborts when the candidate leaves the item or the player is destroyed; an answer that arrives late is dropped. The host's authenticated route answers with an `LtiFrame`
+(see [LTI items](lti-items.md)): the URL of the tool's login, the URL of the storage page and the
 `allow` list of the registration.
 
 | Case                                                                                                                          | What the player does                                                                                                                    |
@@ -149,7 +149,7 @@ list of the answer and no other permission, and the title of the link. `allow-sa
 player refuses a tool that is served from the origin of the page or of `staticUrl`, where it would have the player's own origin.
 The player answers the capabilities request of the tool. Both frames are children of the host element, shown through a slot
 of the shadow root, because a window finds a frame by name only among the frames of its own document; the storage page needs
-that ([the storage page](lti-platform.md#the-storage-page)). A page has one player with an LTI item at a time.
+that. A page has one player with an LTI item at a time.
 
 ## Refusals and status messages
 

@@ -19,7 +19,7 @@ const OFFICIAL_RESULTS = new WeakSet<object>();
  * Brands a results report as official.
  *
  * @remarks
- * Only the session host calls it, on the report of a session it ran. `server` and `lti` reach it through `internal.ts`.
+ * Only the session host calls it, on the report of a session it ran. `server` reaches it through `internal.ts`.
  *
  * @param result - A report that `Engine.results` assembled.
  * @returns The same object, branded.

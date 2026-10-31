@@ -280,7 +280,7 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 - A protractor measures 180 degrees.
 - `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
 - Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only.
-- A digital material that is an LTI resource is a file here; the LTI launch belongs to the platform role.
+- A digital material that is an LTI resource is a file here; the launch belongs to the host ([LTI items](lti-items.md)).
 - The display of a calculator uses a decimal point in every language.
 
 ## Files

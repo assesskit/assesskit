@@ -1,11 +1,14 @@
 import type { CandidateItem, ItemKey } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import type { LtiFrame } from "../../protocol/index.js";
+import type { LtiFrame, SessionCallOptions } from "../../protocol/index.js";
 import { html } from "../internal.js";
 import { LTI_SLOT, type LtiFrameHandle, mountLtiFrame } from "./frame.js";
 
-/** The hook of the host that starts the login of the tool of an item: its route answers with the frame of the item. */
-export type LtiLogin = (item: ItemKey) => Promise<LtiFrame>;
+/**
+ * The hook of the host that starts the login of the tool of an item: its route answers with the frame of the item. The
+ * `signal` aborts when the candidate leaves the item or the player is destroyed, and the player drops a late answer.
+ */
+export type LtiLogin = (item: ItemKey, options?: SessionCallOptions) => Promise<LtiFrame>;
 
 /** What the slot of the LTI frame needs from the player. */
 interface LtiSlotOptions {
@@ -51,23 +54,30 @@ export function createLtiSlot(options: LtiSlotOptions): LtiSlot {
   const element = html("div", { class: "ak-lti" }, html("slot", { name: LTI_SLOT }), notes);
   let key: string | undefined;
   let mounted: LtiFrameHandle | undefined;
+  let launching: AbortController | undefined;
 
   const note = (text: string, role: "note" | "alert"): void => {
     notes.replaceChildren(html("p", { class: "ak-notice", role }, text));
   };
 
   const clear = (): void => {
+    launching?.abort();
+    launching = undefined;
     mounted?.destroy();
     mounted = undefined;
     notes.replaceChildren();
   };
 
   const launch = async (start: LtiLogin, item: ItemKey, title: string, current: string): Promise<void> => {
+    const login = new AbortController();
+    launching = login;
     try {
-      const frame = await start(item);
+      const frame = await start(item, { signal: login.signal });
       if (key !== current) return;
       mounted = mountLtiFrame(host, frame, { title, storageTitle: messages.ltiStorageFrame, refused });
     } catch (error) {
+      // An abort is the slot's own doing, so it is no failure of the host.
+      if (login.signal.aborted) return;
       if (key === current) note(messages.ltiUnavailable, "alert");
       reportError(error);
     }

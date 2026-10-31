@@ -12,6 +12,7 @@ import {
   DRD_NAMESPACE,
   dependencyClosure,
   LOM_NAMESPACE,
+  ltiLaunchUrl,
   MANIFEST_SCHEMAS,
   type Manifest,
   openPackage,
@@ -264,6 +265,34 @@ describe("reading LTI links", () => {
     expect(() => readLtiLink("<a/>", JSON.parse("null"))).toThrow(DataError);
     expect(() => readLtiLink("<a/>", { path: JSON.parse("3") })).toThrow(DataError);
     expect(securityLimit(() => readLtiLink('<!DOCTYPE a [<!ENTITY x "y">]><a/>'))).toBe("doctype");
+  });
+});
+
+describe("launching LTI links", () => {
+  const launch = (inner: string): string => ltiLaunchUrl(readLtiLink(lti(`<blti:title>t</blti:title>${inner}`)));
+
+  it("gives the secure launch URL before the launch URL, as the implementation guide says", () => {
+    expect(
+      launch(
+        "<blti:launch_url>http://tool.example/launch</blti:launch_url><blti:secure_launch_url>https://tool.example/launch</blti:secure_launch_url>",
+      ),
+    ).toBe("https://tool.example/launch");
+  });
+
+  it("gives the launch URL of a link that has no secure one", () => {
+    expect(launch("<blti:launch_url>https://tool.example/launch</blti:launch_url>")).toBe(
+      "https://tool.example/launch",
+    );
+  });
+
+  it("refuses a link that names only a vendor, which the platform could only look up", () => {
+    expect(() => launch("<blti:vendor><lticp:code>IMSGlobal.org</lticp:code></blti:vendor>")).toThrow(DataError);
+    expect(() => launch("<blti:launch_url></blti:launch_url>")).toThrow(DataError);
+  });
+
+  it("throws a DataError for a link of another type", () => {
+    for (const input of ["null", "3", "{}", '{"title":"t"}'])
+      expect(() => ltiLaunchUrl(JSON.parse(input)), input).toThrow(DataError);
   });
 });
 

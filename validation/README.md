@@ -1,12 +1,12 @@
 # validation
 
-Python scripts that write the reference fixtures in `packages/runtime/test/fixtures/` and `packages/player/test/fixtures/`. They
+Python scripts that write the reference fixtures in `packages/runtime/test/fixtures/`. They
 use the standard library of Python 3.12 or later and need no packages. Run them from the repository root:
 
 ```mermaid
 flowchart LR
-  scripts["Python scripts<br/>standard library only"] -->|"fixed seed, same output every run"| fixtures["Fixtures in<br/>packages/*/test/fixtures"]
-  fixtures --> tests["TypeScript tests compare<br/>the runtime and the player with them"]
+  scripts["Python scripts<br/>standard library only"] -->|"fixed seed, same output every run"| fixtures["Fixtures in<br/>packages/runtime/test/fixtures"]
+  fixtures --> tests["TypeScript tests compare<br/>the runtime with them"]
   tests --> ci["CI runs the tests,<br/>never the scripts"]
 ```
 
@@ -14,9 +14,8 @@ flowchart LR
 python3 validation/printf.py       # printed variables: C-style conversions as Python's % operator formats them
 python3 validation/rounding.py     # qti-round-to and qti-equal-rounded as Python's decimal module computes them
 python3 validation/zip.py          # ZIP archives that Python's zipfile writes and reads: valid, ZIP64 and hostile
-python3 validation/caliper_ids.py  # Caliper identifiers: the name-based UUIDs that Python's uuid5 computes (player)
 ```
 
 They write the same files every time they run: random samples use a fixed seed. Commit regenerated fixtures; CI runs only
 the TypeScript tests. The oracles, the cases the scripts leave out and why are in
-[evidence.md](../docs/runtime/evidence.md), and for the player in [evidence.md](../docs/player/evidence.md#tests-of-caliper).
+[evidence.md](../docs/runtime/evidence.md).

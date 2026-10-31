@@ -49,7 +49,7 @@ describe("the exam bundle", () => {
       import { createRemoteSession } from "./client/index.ts";
       export { mountDelivery, createRemoteSession };
     `);
-    for (const folder of ["cat-rest", "cat", "scoring", "caliper", "lti", "server"]) {
+    for (const folder of ["cat-rest", "cat", "scoring", "server"]) {
       expect(filesOf(inputs, folder), folder).toEqual([]);
     }
   });
@@ -86,9 +86,9 @@ describe("the practice bundle", () => {
     expect(filesOf(inputs, "cat")).toContain("cat/deploy.ts");
   });
 
-  it("holds none of the CAT client, which keeps the secret of a CAT engine, or of Caliper and LTI", async () => {
+  it("holds none of the CAT client, which keeps the secret of a CAT engine, or of the server folders", async () => {
     const inputs = await practice;
-    for (const folder of ["cat-rest", "caliper", "lti", "server"]) {
+    for (const folder of ["cat-rest", "server"]) {
       expect(filesOf(inputs, folder), folder).toEqual([]);
     }
   });
@@ -118,9 +118,9 @@ describe("the rater bundle", () => {
     expect(inputs.filter((path) => path.endsWith("asi/element-table.ts"))).toEqual([]);
   });
 
-  it("holds none of the CAT client, of Caliper, of LTI or of the server folders", async () => {
+  it("holds none of the CAT client or of the server folders", async () => {
     const inputs = await rater;
-    for (const folder of ["cat-rest", "caliper", "lti", "server"]) {
+    for (const folder of ["cat-rest", "server"]) {
       expect(filesOf(inputs, folder), folder).toEqual([]);
     }
   });

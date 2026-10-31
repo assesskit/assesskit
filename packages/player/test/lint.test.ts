@@ -15,11 +15,9 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   player: ["messages", "protocol"],
   client: ["messages", "protocol"],
   scoring: ["messages", "protocol"],
-  caliper: ["messages", "protocol"],
   cat: ["messages", "protocol"],
   "cat-rest": ["messages", "protocol"],
-  lti: ["messages", "protocol"],
-  server: ["messages", "protocol", "scoring", "caliper", "cat", "cat-rest", "lti"],
+  server: ["messages", "protocol", "scoring", "cat", "cat-rest"],
 };
 const FOLDERS = Object.keys(LAYERS);
 const SHARED = ["errors", "checks"];
@@ -123,9 +121,9 @@ const platform = {
   timerInCatRest: source(`${SRC}/cat-rest/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
   fetchInShared: source(`${SRC}/protocol/fetch.ts`, ['export const a = fetch("https://example.org");']),
   fetchInBrowser: source(`${SRC}/player/fetch.ts`, ['export const a = fetch("https://example.org");']),
-  fetchInServer: source(`${SRC}/lti/fetch.ts`, ['export const a = fetch("https://example.org");']),
+  fetchInServer: source(`${SRC}/server/fetch.ts`, ['export const a = fetch("https://example.org");']),
   fetchInCatRest: source(`${SRC}/cat-rest/fetch.ts`, ['export const a = fetch("https://example.org");']),
-  fetchOption: source(`${SRC}/lti/option.ts`, [
+  fetchOption: source(`${SRC}/cat-rest/option.ts`, [
     "export async function load(fetch: (url: string) => Promise<string>) {",
     '  return fetch("https://example.org");',
     "}",
@@ -140,7 +138,6 @@ const official = {
   inScoring: source(`${SRC}/scoring/official.ts`, ['export * from "../protocol/official.js";']),
   inCatRest: source(`${SRC}/cat-rest/official.ts`, ['export * from "../protocol/official.js";']),
   inServer: source(`${SRC}/server/official.ts`, ['export * from "../protocol/official.js";']),
-  inLti: source(`${SRC}/lti/official.ts`, ['export * from "../protocol/official.js";']),
   inProtocol: source(`${SRC}/protocol/official-copy.ts`, ['export * from "./official.js";']),
 };
 const brand = {
@@ -150,10 +147,8 @@ const brand = {
     "markOfficial({});",
   ]),
   inScoring: source(`${SRC}/scoring/brand.ts`, ['export { markOfficial } from "../protocol/internal";']),
-  inCaliper: source(`${SRC}/caliper/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
   inCat: source(`${SRC}/cat/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
   inCatRest: source(`${SRC}/cat-rest/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
-  inLti: source(`${SRC}/lti/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
   inServer: source(`${SRC}/server/brand.ts`, ['export { markOfficial } from "../protocol/internal.js";']),
   otherName: source(`${SRC}/client/brand-other.ts`, ['export { readClock } from "../protocol/internal.js";']),
 };
@@ -262,7 +257,7 @@ describe("layering", () => {
   });
 
   it("lets only server/ import protocol/official.ts, which brands a report as official", () => {
-    for (const path of [official.inPlayer, official.inClient, official.inScoring, official.inCatRest, official.inLti]) {
+    for (const path of [official.inPlayer, official.inClient, official.inScoring, official.inCatRest]) {
       expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
     }
     for (const path of [official.inServer, official.inProtocol]) {

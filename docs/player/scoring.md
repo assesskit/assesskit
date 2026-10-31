@@ -29,6 +29,7 @@ sequenceDiagram
 | Turn ratings into a score             | shared, `@assesskit/runtime/asi`     | `scoreFromRatings`, which the form calls          |
 | Turn the rater's score into an action | shared, `@assesskit/player/scoring`  | `toSupplyScores`                                  |
 | Give the action to the engine         | server or device, the host session   | `session(id).apply(action)`, `host.apply(action)` |
+| Read the score of a session           | shared, `@assesskit/player/scoring`  | `sessionScore`                                    |
 
 On a device the page learns of a request from `host.subscribeSteps` on `scoring-requested`, and checks `host.pending()` once after
 `createLocalSession` ([client](client.md#the-host-side)); a server's rater endpoint calls `session(id).pending()` and
@@ -163,6 +164,33 @@ keeps the request after its value is supplied, so a second action for it replace
 that is how a score is corrected or scored again. An action for a request the state lacks is refused with `unknown-request`.
 Until a request is supplied the results report is provisional: the item result has the status `pendingExternalScoring`.
 
+## The score of a session
+
+`sessionScore(result, pending)` reads the score of a session as plain data, for a gradebook or any other place that wants it. A host
+calls it from a job and not from a step: it reads `results()` and `pending()` from `session(id)` at the time it needs the score,
+and gives both to the function. The function is pure: the same report and pending work give the same score.
+
+```mermaid
+flowchart LR
+  J[A job of the host] --> R["session(id).results()"]
+  J --> P["session(id).pending()"]
+  R --> S[sessionScore]
+  P --> S
+  S --> O["SessionScore: progress, timestamp,<br/>score, maximum, rawScore"]
+  O --> G[Any sink: a gradebook, a report]
+```
+
+| Field       | Meaning                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `progress`  | `complete` when no request is open, `awaiting-service` while only scoring services must score, `awaiting-person` while a person must            |
+| `timestamp` | The time of the report's last change, in ISO 8601 UTC with milliseconds. Two steps may share it, because the clock of a session never goes back |
+| `score`     | The outcome `SCORE`, raised to 0 when it is negative. Absent while `progress` is `awaiting-person` and when the report has no `SCORE`           |
+| `maximum`   | The outcome `MAXSCORE`, above 0. Absent when the report has none                                                                                |
+| `rawScore`  | The value of a negative `SCORE`. Absent otherwise                                                                                               |
+
+The score comes from the test result, or from the one item result when a session delivered an item alone. `result` must be the
+report that `SessionHost.results` returned: a copy of it, and the report of a practice session, is not official.
+
 ## The display
 
 `mountSubmission(host, submission, options)` shows a submission read-only to a rater and returns `{ update, destroy }`. It
@@ -220,12 +248,13 @@ Raters have their own tools. The display adds no controls: the [rating form](rat
 
 ## Errors
 
-| Call                           | Throws `DataError` when                                                                                                                                                                                                                        |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `toSubmission(view)`           | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
-| `toSupplyScores(request, ...)` | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
-| `checkSubmission(value)`       | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
-| `mountSubmission`, `update`    | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
+| Call                            | Throws `DataError` when                                                                                                                                                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `toSubmission(view)`            | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
+| `toSupplyScores(request, ...)`  | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
+| `sessionScore(result, pending)` | `result` is not the report of a session host, has no test result and not exactly one item result, `SCORE` or `MAXSCORE` is not a finite number, or `MAXSCORE` is not above 0                                                                   |
+| `checkSubmission(value)`        | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
+| `mountSubmission`, `update`     | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
 
 ## Not included
 

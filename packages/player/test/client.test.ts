@@ -686,7 +686,7 @@ describe("input of other types", () => {
       await expect(call(options('{"extra":1}'))).rejects.toThrow('found "extra".');
     }
     await expect(client.host.apply({ type: "time" }, JSON.parse('{"scoredBy":5}'))).rejects.toThrow(
-      "The option scoredBy must be a string, found 5.",
+      "The option scoredBy must be a non-empty string, found 5.",
     );
     client.close();
   });

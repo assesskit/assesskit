@@ -6,16 +6,9 @@
  * @module @assesskit/player/server
  */
 
-export type { AgsScoreStore } from "./ags-score-store.js";
 export { SYSTEM_CLOCK } from "./clock.js";
 export type { FileStore } from "./file-store.js";
-export {
-  type CaliperForwarding,
-  type ForwardOptions,
-  forwardEvents,
-  type StepEvents,
-  type SuppliedGrade,
-} from "./forward.js";
+export type { ForwardOptions, StepEvents, StepSink, SuppliedGrade } from "./forward.js";
 export {
   type AssetGate,
   type AssetGateOptions,
@@ -26,8 +19,9 @@ export {
   type GateResponse,
 } from "./gate/index.js";
 export { createSessionHost } from "./host.js";
-export { createLtiScoreIntake, type LtiScoreIntake, type LtiScoreIntakeOptions } from "./lti-scores.js";
 export { CANDIDATE_ACTION_TYPES, type CandidateActionType, EXAM_CLIENT_ACTIONS } from "./policy.js";
 export type { Scheduler } from "./scheduler.js";
 export { MAX_SAVE_RETRIES, type SessionHost, type SessionHostOptions } from "./session-host.js";
 export type { SessionSave, SessionStore, StoredSession } from "./session-store.js";
+export type { ToolScore, ToolScoreStore } from "./tool-score-store.js";
+export { createToolScoreIntake, type ToolScoreIntake, type ToolScoreIntakeOptions } from "./tool-scores.js";

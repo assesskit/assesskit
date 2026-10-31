@@ -98,7 +98,7 @@ builds them from the `DocumentSource` that a host or a local session has of its 
 
 ## The frame of an LTI item
 
-`LtiFrame` is what the host's route answers the player's `ltiLogin` hook with; `ltiPlatformFrame` builds it.
+`LtiFrame` is what the host's route answers the player's `ltiLogin` hook with. The host builds it with its LTI platform library ([LTI items](lti-items.md)); the player only checks it.
 
 | Property     | Meaning                                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------------------------- |
@@ -152,13 +152,13 @@ flowchart LR
 | `scorerView(request, options?)` | Returns what a scorer needs to rate a request, the correct responses included.                                                                                                                           |
 | `results(options?)`             | Returns the results report of the session; it is provisional while scoring requests are pending.                                                                                                         |
 
-| Type                 | Property     | Meaning                                                                                                                                                                   |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HostStep`           | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                                   |
-| `HostStep`           | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                                     |
-| `HostStep`           | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                                       |
-| `SessionCallOptions` | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                                           |
-| `HostApplyOptions`   | `scoredBy`   | The absolute IRI of the rater or scoring service that supplies a score, for the GradeEvent of Caliper. Only a session host that forwards Caliper reads it. Default: none. |
+| Type                 | Property     | Meaning                                                                                                                                                |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HostStep`           | `events`     | The events of the step, in order; empty when the action was refused or changed nothing.                                                                |
+| `HostStep`           | `refusal`    | Why the engine refused the action, as a value. Default: none, the action was applied.                                                                  |
+| `HostStep`           | `catFailure` | The `request` and `message` of a CAT request that the option `cat` failed to answer after the step; the step stands. Default: none.                    |
+| `SessionCallOptions` | `signal`     | An `AbortSignal` that stops the call before it applies anything. Work already saved stays saved. Default: none.                                        |
+| `HostApplyOptions`   | `scoredBy`   | Who supplies a score, such as the rater or the scoring service: a non-empty string that a session host passes to its log with the step. Default: none. |
 
 A `time` action that finds nothing to do is accepted with no events; it is refused only as `ended` or `suspended`. A second
 `supply-scores` for one request replaces the first and reports `scores-replaced`. `supply-scores` and `cat-response` are accepted
@@ -168,9 +168,9 @@ after the test ended while their request exists.
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `apply`                 | Checks the type, loads, stamps, applies, schedules the deadlines, saves by version and forwards the events | Checks the type, queues behind earlier calls, stamps, saves, then applies, re-arms the timer and calls the listeners       |
 | Refusal                 | Returned as `HostStep.refusal`; nothing is saved or forwarded                                              | Returned as `HostStep.refusal`; nothing is saved and no step listener runs, while the view listeners run as for any answer |
-| `scoredBy`              | Needed for `supply-scores` when Caliper is configured; ignored without it                                  | Ignored: a local session forwards nothing                                                                                  |
+| `scoredBy`              | Passed to the log with the step of a `supply-scores` action                                                | Ignored: a local session forwards nothing                                                                                  |
 | `pending`, `scorerView` | Load the session, then ask the engine                                                                      | Queued behind earlier calls, so they see the state those calls left                                                        |
-| `results`               | Branded as official                                                                                        | Never official: `isOfficialResult` is `false`, so `publishScore` refuses it                                                |
+| `results`               | Branded as official                                                                                        | Never official: `isOfficialResult` is `false`, so `sessionScore` refuses it                                                |
 | After `close()`         | A session host has no `close`                                                                              | `apply` and `subscribeSteps` throw `DataError`; the reads still work                                                       |
 | Step feed               | `forward.log(step)` for every step with events, in every process, the start included                       | `subscribeSteps(listener)` for the steps with events that are saved after the call                                         |
 | Scorer view             | Holds the correct responses: call it only from a rater's endpoint, never from a candidate's                | Holds the correct responses by design, because the device holds them already                                               |
