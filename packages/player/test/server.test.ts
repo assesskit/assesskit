@@ -35,7 +35,7 @@ import {
   type SessionHost,
   type StepEvents,
 } from "../src/server/index.js";
-import { adaptiveEngine, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
+import { abandonedFiles, adaptiveEngine, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
 import {
   ACTOR,
   APPLICATION,
@@ -1712,6 +1712,80 @@ describe("the option cat of the session host", () => {
     expect(store.records.has("exam-1")).toBe(true);
     expect(viewOf(await host.view(ALICE)).current?.key).toEqual(item("i1"));
     expect(port.calls).toEqual(["createSession", "createSession"]);
+  });
+
+  describe("while End Session fails for a section that the candidate left", () => {
+    const b1 = item("b1");
+
+    /** A session whose candidate ended the first part and went on to the rated item, and whose End Session fails. */
+    async function abandoned() {
+      const port = scriptedPort();
+      const files = abandonedFiles();
+      const setup = await examHost({ engine: adaptiveEngine(files), cat: port }, files);
+      await setup.host.start(ALICE, { seed: 7 });
+      port.fail("endSession", 100);
+      const moved = await setup.host.handle(ALICE, request(1, { type: "end-part" }));
+      return { ...setup, port, moved, session: setup.host.session(ALICE.session) };
+    }
+
+    it("answers the candidate who goes on, and saves what the candidate enters", async () => {
+      const { host, port, moved, session, store } = await abandoned();
+      expect(moved.refusal).toBeUndefined();
+      expect(viewOf(moved).current?.key).toEqual(b1);
+      expect((await session.pending()).cat.map(({ kind }) => kind)).toEqual(["end-session"]);
+      const draft = new Map([["RESPONSE", single("string", "A draft.")]]);
+      const saved = await host.handle(ALICE, request(2, { type: "set-responses", item: b1, responses: draft }));
+      expect(saved.refusal).toBeUndefined();
+      expect(viewOf(saved).current?.responses.get("RESPONSE")).toEqual(single("string", "A draft."));
+      expect(store.records.get("exam-1")?.seq).toBe(2);
+      expect(port.calls.filter((call) => call === "endSession").length).toBeGreaterThan(1);
+    });
+
+    it("applies the action of the proctor and the time job, and reports the failure of each", async () => {
+      const { host, session } = await abandoned();
+      const suspended = await host.proctor(ALICE.session, { type: "suspend" });
+      expect(suspended.refusal).toBeUndefined();
+      expect(suspended.events.length).toBeGreaterThan(0);
+      expect(suspended.catFailure).toMatchObject({ message: "The CAT engine is down." });
+      expect((await host.proctor(ALICE.session, { type: "resume" })).catFailure).toBeDefined();
+      expect(await session.apply({ type: "time" })).toMatchObject({
+        events: [],
+        catFailure: { message: "The CAT engine is down." },
+      });
+      const ended = await host.proctor(ALICE.session, { type: "end-test" });
+      expect(ended.refusal).toBeUndefined();
+      expect(viewOf(await host.view(ALICE)).status).toBe("ended");
+    });
+
+    it("applies the score that a rater supplies, and reports the failure", async () => {
+      const { host, session } = await abandoned();
+      const text = new Map([["RESPONSE", single("string", "An essay.")]]);
+      await host.handle(ALICE, request(2, { type: "set-responses", item: b1, responses: text }));
+      await host.handle(ALICE, request(3, { type: "submit", item: b1 }));
+      const [pending] = (await session.pending()).scoring;
+      expect(pending?.id).toBe("item:b1:1:SCORE");
+      const step = await session.apply({
+        type: "supply-scores",
+        request: pending?.id ?? "",
+        value: single("float", 5),
+        scorer: "human",
+      });
+      expect(step.refusal).toBeUndefined();
+      expect(step.events.map(({ type }) => type)).toContain("scores-applied");
+      expect(step.catFailure).toMatchObject({ message: "The CAT engine is down." });
+      expect((await session.pending()).scoring).toEqual([]);
+      expect((await session.results()).itemResults.find(({ identifier }) => identifier === "b1")?.sessionStatus).toBe(
+        "final",
+      );
+    });
+
+    it("answers a reload with the view as it is, and finishes the request when the CAT engine answers again", async () => {
+      const { host, port, session } = await abandoned();
+      expect(viewOf(await host.view(ALICE)).current?.key).toEqual(b1);
+      port.fail("endSession", 0);
+      await host.view(ALICE);
+      expect((await session.pending()).cat).toEqual([]);
+    });
   });
 
   it("finishes when forward.log calls apply from inside a step of the answer loop", async () => {

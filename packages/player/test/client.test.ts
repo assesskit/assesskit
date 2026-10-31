@@ -13,7 +13,13 @@ import {
 import { ServiceError } from "../src/index.js";
 import { isOfficialResult } from "../src/protocol/index.js";
 import { untilAborted } from "../src/protocol/internal.js";
-import { adaptiveDefinition, adaptiveFiles, type ScriptedPort, scriptedPort } from "./adaptive-fixture.js";
+import {
+  abandonedFiles,
+  adaptiveDefinition,
+  adaptiveFiles,
+  type ScriptedPort,
+  scriptedPort,
+} from "./adaptive-fixture.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, localStore, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { essay, fail, pick } from "./scoring-fixture.js";
@@ -388,6 +394,40 @@ describe("the option cat of a local session", () => {
     expect((await client.host.pending()).cat).toHaveLength(1);
     expect((await client.host.apply({ type: "time" })).catFailure).toBeUndefined();
     expect(port.calls).toEqual(["createSession", "submitResults", "endSession", "endSession", "endSession"]);
+    client.close();
+  });
+
+  it("goes on in the next part and applies a rater's score while End Session fails for the section that was left", async () => {
+    const port = scriptedPort();
+    const setup = localOptions({ definition: adaptiveDefinition(abandonedFiles()), cat: port });
+    const client = await createLocalSession(setup.options);
+    port.fail("endSession", 100);
+    const b1 = item("b1");
+    const left = await client.dispatch({ type: "end-part" });
+    expect(left.refusal).toBeUndefined();
+    expect(left.view.current?.key).toEqual(b1);
+    expect((await client.host.pending()).cat.map(({ kind }) => kind)).toEqual(["end-session"]);
+
+    const saves = setup.store.saved.get("practice-1")?.length ?? 0;
+    const text = new Map([["RESPONSE", single("string", "An essay.")]]);
+    const entered = await client.dispatch({ type: "set-responses", item: b1, responses: text });
+    expect(entered.refusal).toBeUndefined();
+    expect(setup.store.saved.get("practice-1")).toHaveLength(saves + 1);
+    await client.dispatch({ type: "submit", item: b1 });
+    expect((await client.host.apply({ type: "time" })).catFailure).toMatchObject({
+      message: "The CAT engine is down.",
+    });
+
+    const [request] = (await client.host.pending()).scoring;
+    const step = await client.host.apply({
+      type: "supply-scores",
+      request: request?.id ?? "",
+      value: single("float", 5),
+      scorer: "human",
+    });
+    expect(step.events.map(({ type }) => type)).toContain("scores-applied");
+    expect(step.catFailure).toMatchObject({ message: "The CAT engine is down." });
+    expect((await client.host.pending()).scoring).toEqual([]);
     client.close();
   });
 

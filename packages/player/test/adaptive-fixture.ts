@@ -54,6 +54,31 @@ export function adaptiveFiles(limits = ""): Readonly<Record<string, string>> {
   };
 }
 
+/** An item that a person scores, in the part that follows the adaptive section. */
+const RATED = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="b1" title="Item b1" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float" external-scored="human"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`;
+
+/**
+ * The files of a test whose adaptive section `A` is followed by a second part with a section `B` of one item that a person
+ * scores, so that a candidate can leave `A` for `B` by ending the first part before the CAT engine ended the session.
+ */
+export function abandonedFiles(): Readonly<Record<string, string>> {
+  const files = adaptiveFiles();
+  const test = (files["tests/exam.xml"] ?? "").replace(
+    "</qti-test-part>",
+    '</qti-test-part><qti-test-part identifier="second" navigation-mode="linear" submission-mode="individual"><qti-assessment-section identifier="B" title="B" visible="true"><qti-assessment-item-ref identifier="b1" href="../items/b1.xml"/></qti-assessment-section></qti-test-part>',
+  );
+  const manifest = (files["imsmanifest.xml"] ?? "").replace(
+    "</resources>",
+    '<resource identifier="b1" type="imsqti_item_xmlv3p0" href="items/b1.xml"><file href="items/b1.xml"/></resource></resources>',
+  );
+  return { ...files, "tests/exam.xml": test, "imsmanifest.xml": manifest, "items/b1.xml": RATED };
+}
+
 /** The definition of the adaptive test, whose section `A` has a CAT engine behind the port. */
 export function adaptiveDefinition(files: Readonly<Record<string, string>>): DeliveryDefinition {
   const definition = examDefinition(packageOf(files));
