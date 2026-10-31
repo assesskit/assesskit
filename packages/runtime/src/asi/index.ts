@@ -19,7 +19,7 @@ export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi 
 export * from "./model.js";
 export { ASI_NAMESPACE } from "./namespace.js";
 export { childNodes, descendantNodes, isBodyNode, isModelNode, type ModelNode } from "./nodes.js";
-export { type RubricRating, scoreFromRatings } from "./rubric-ratings.js";
+export { type RubricRating, type RubricScoreRange, rubricScoreRange, scoreFromRatings } from "./rubric-ratings.js";
 export {
   checkScoringRubric,
   type RubricCriterion,

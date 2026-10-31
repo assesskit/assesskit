@@ -219,21 +219,22 @@ A single-point rubric here has three scored levels, while the literature often l
 | Rule                            | Behavior                                                                                                                                                                                      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A criterion without a rating    | `scoreFromRatings` returns `null`, so the scoring request stays pending                                                                                                                       |
-| The range of the score          | From the sum of weight times the lowest score to the sum of weight times the highest score; it starts at 0 only when every criterion has a level of 0                                         |
+| The range of the score          | `rubricScoreRange` gives it: from the sum of weight times the lowest score to the sum of weight times the highest score; it starts at 0 only when every criterion has a level of 0            |
 | The arithmetic                  | Binary floating point, in the order of the criteria, so the result is deterministic and does not depend on the order of the ratings. A sum such as 0.1 + 0.1 + 0.1 carries its usual rounding |
 | An outcome of base type integer | Takes the score only when every weight times score is an integer                                                                                                                              |
 
 ### Reading and writing
 
-| Function                             | Does                                                                                                                                                                        |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readScoringRubrics(document)`       | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.              |
-| `scoringRubricBlock(rubric, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized. |
-| `checkScoringRubric(value)`          | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.    |
-| `scoreFromRatings(rubric, ratings)`  | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                          |
+| Function                             | Does                                                                                                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readScoringRubrics(document)`       | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.                                |
+| `scoringRubricBlock(rubric, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized.                   |
+| `checkScoringRubric(value)`          | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.                      |
+| `scoreFromRatings(rubric, ratings)`  | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                                            |
+| `rubricScoreRange(rubric)`           | The lowest and the highest score that ratings can give, for a host that shows "7 out of 12" or checks the declaration of the outcome. Throws a `DataError` for a rubric that fails the check. |
 
 ```ts
-import { readAsi, readScoringRubrics, scoreFromRatings } from "@assesskit/runtime/asi";
+import { readAsi, readScoringRubrics, rubricScoreRange, scoreFromRatings } from "@assesskit/runtime/asi";
 
 const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="essay" title="Essay" time-dependent="false">
@@ -266,6 +267,7 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 const rubric = document.kind === "item" ? readScoringRubrics(document.item).get("SCORE") : undefined;
 rubric?.criteria.map(({ identifier, weight }) => [identifier, weight]); // => [["content", 2], ["language", 1]]
 rubric?.criteria[0]?.levels.map(({ score, quality }) => [score, quality]); // => [[0, "Absent"], [1, "Partial"], [2, "Full"]]
+rubric && rubricScoreRange(rubric); // => { minimum: 0, maximum: 5 }
 rubric &&
   scoreFromRatings(rubric, [
     { criterion: "content", score: 2 },

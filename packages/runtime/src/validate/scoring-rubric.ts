@@ -1,5 +1,11 @@
-import { type AssessmentItem, type AssessmentTest, SCORING_RUBRIC_CLASS, type ScoringRubric } from "../asi/index.js";
-import { scoreRange, scoringRubricBlocks, scoringRubricOf } from "../asi/internal.js";
+import {
+  type AssessmentItem,
+  type AssessmentTest,
+  rubricScoreRange,
+  SCORING_RUBRIC_CLASS,
+  type ScoringRubric,
+} from "../asi/index.js";
+import { scoringRubricBlocks, scoringRubricOf } from "../asi/internal.js";
 import type { Findings } from "./findings.js";
 
 const ITEM_ELEMENT = "qti-assessment-item/qti-item-body/qti-rubric-block";
@@ -77,7 +83,7 @@ function checkOutcome(
     const message = `The outcome ${identifier} is an integer, but the weight times the score of some level of its rubric is not a whole number.`;
     findings.error("assesskit/scoring-rubric/outcome-type", message, element);
   }
-  const { minimum, maximum } = scoreRange(rubric);
+  const { minimum, maximum } = rubricScoreRange(rubric);
   const { normalMaximum, normalMinimum } = declaration;
   if (normalMaximum !== undefined && maximum > normalMaximum) {
     const message = `The highest score of the rubric of ${identifier} is ${maximum}, above the normal maximum of ${normalMaximum}.`;

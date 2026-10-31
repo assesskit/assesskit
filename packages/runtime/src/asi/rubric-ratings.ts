@@ -63,11 +63,24 @@ export function scoreFromRatings(rubric: ScoringRubric, ratings: readonly Rubric
   return score;
 }
 
+/** The lowest and the highest score that ratings of a scoring rubric can give. */
+export interface RubricScoreRange {
+  /** The sum, in the order of the criteria, of weight times the lowest score of the levels. */
+  readonly minimum: number;
+  /** The sum, in the order of the criteria, of weight times the highest score of the levels. */
+  readonly maximum: number;
+}
+
 /**
- * Returns the lowest and the highest score that ratings of a scoring rubric can give: the sums, in the order of the
- * criteria, of weight times the lowest and of weight times the highest score of the levels. The rubric is trusted.
+ * Returns the range of the score that ratings give under a scoring rubric, for a host that shows a score as "7 out of 12" or
+ * checks it against the declaration of its outcome. The range starts at 0 only when every criterion has a level of 0.
+ *
+ * @param rubric - The scoring rubric.
+ * @returns The lowest and the highest score; every score that {@link scoreFromRatings} returns lies between them.
+ * @throws `DataError` when the rubric fails {@link checkScoringRubric}.
  */
-export function scoreRange(rubric: ScoringRubric): { readonly minimum: number; readonly maximum: number } {
+export function rubricScoreRange(rubric: ScoringRubric): RubricScoreRange {
+  checkScoringRubric(rubric);
   let minimum = 0;
   let maximum = 0;
   for (const { weight, levels } of rubric.criteria) {

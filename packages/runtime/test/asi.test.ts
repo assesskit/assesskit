@@ -9,7 +9,6 @@ import {
   parseAttributeValue,
   RUBRIC_KINDS,
   readElement,
-  scoreRange,
   scoringRubricBlocks,
   scoringRubricOf,
   type TypeDef,
@@ -47,6 +46,7 @@ import {
   readAsi,
   readScoreCovers,
   readScoringRubrics,
+  rubricScoreRange,
   SCORE_COVERS_CLASS,
   SCORING_RUBRIC_CLASS,
   type ScoreCover,
@@ -907,11 +907,16 @@ describe("the score that ratings give", () => {
   });
 
   it("ranges from the sum of the lowest levels to the sum of the highest", () => {
-    expect(scoreRange(ESSAY)).toEqual({ minimum: 0, maximum: 5 });
-    expect(scoreRange(KIND_EXAMPLES.checklist)).toEqual({ minimum: 0, maximum: 4 });
-    expect(scoreRange(KIND_EXAMPLES["single-point"])).toEqual({ minimum: 3, maximum: 11 });
+    expect(rubricScoreRange(ESSAY)).toEqual({ minimum: 0, maximum: 5 });
+    expect(rubricScoreRange(KIND_EXAMPLES.checklist)).toEqual({ minimum: 0, maximum: 4 });
+    expect(rubricScoreRange(KIND_EXAMPLES["single-point"])).toEqual({ minimum: 3, maximum: 11 });
     const lowest = rate(KIND_EXAMPLES["single-point"], 0, 1);
     expect(scoreFromRatings(KIND_EXAMPLES["single-point"], lowest)).toBe(3);
+  });
+
+  it("refuses a rubric that fails the check when it gives the range", () => {
+    expect(() => rubricScoreRange(JSON.parse("null"))).toThrow(DataError);
+    expect(() => rubricScoreRange({ ...ESSAY, criteria: [] })).toThrow(DataError);
   });
 
   it("does not depend on the order of the ratings", () => {
@@ -4499,7 +4504,7 @@ describe("the guide", () => {
   it("shows the results that the samples of the conventions give", async () => {
     const guide = new URL("../../../docs/runtime/conventions.md", import.meta.url);
     const asi = await import("../src/asi/index.js");
-    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(5);
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBe(6);
   });
 });
 
@@ -4647,7 +4652,7 @@ describe("properties", () => {
             ratings.filter((_, index) => index !== omitted),
           ),
         ).toBeNull();
-        expect(scoreRange(rubric)).toEqual({ minimum: lowest, maximum: highest });
+        expect(rubricScoreRange(rubric)).toEqual({ minimum: lowest, maximum: highest });
       }),
     );
   });

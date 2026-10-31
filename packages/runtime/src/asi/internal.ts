@@ -7,7 +7,6 @@ export { formatAttributeValue, parseAttributeValue } from "./attribute-value.js"
 export { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION, NUMERIC_EXPRESSION } from "./element-table.js";
 export { withDescendants } from "./nodes.js";
 export { readElement } from "./read.js";
-export { scoreRange } from "./rubric-ratings.js";
 export { RUBRIC_KINDS } from "./scoring-rubric.js";
 export { scoringRubricBlocks, scoringRubricOf } from "./scoring-rubric-block.js";
 export type {
