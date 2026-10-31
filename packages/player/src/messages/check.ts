@@ -1,5 +1,5 @@
+import { looseRecord, parseWith } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { looseRecord, parseWith } from "../checks.js";
 import { EN_MESSAGES } from "./en.js";
 import type { Messages } from "./messages.js";
 

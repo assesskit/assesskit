@@ -1,7 +1,4 @@
 import type { BodyNode } from "@assesskit/runtime/asi";
-import type { ItemKey, Scorer, ScoringDeclaration } from "@assesskit/runtime/delivery";
-import type { WireValue } from "@assesskit/runtime/values";
-import * as v from "valibot";
 import {
   describe,
   finiteSchema,
@@ -9,7 +6,10 @@ import {
   parseWith,
   positiveIntegerSchema,
   recordSchema,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import type { ItemKey, Scorer, ScoringDeclaration } from "@assesskit/runtime/delivery";
+import type { WireValue } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import { SCORERS } from "./scorers.js";
 import { declarationSchema } from "./scoring-declaration.js";
 

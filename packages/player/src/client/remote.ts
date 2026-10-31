@@ -1,8 +1,8 @@
+import { checkFunction, parseWith, recordSchema } from "@assesskit/runtime/checks";
 import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import { checkFunction, parseWith, recordSchema } from "../checks.js";
 import { AccessError } from "../errors.js";
 import {
   type ActionEnvelope,

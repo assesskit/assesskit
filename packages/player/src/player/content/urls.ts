@@ -1,6 +1,6 @@
+import { checkArray, checkString, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
-import { checkArray, checkString, describe } from "../../checks.js";
 
 /** How the references of content become URLs that the page may load. */
 export interface UrlPolicy {

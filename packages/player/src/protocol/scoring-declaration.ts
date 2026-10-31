@@ -1,7 +1,7 @@
+import { finiteSchema, parseWith, type Schema } from "@assesskit/runtime/checks";
 import type { ScoringDeclaration } from "@assesskit/runtime/delivery";
 import { BASE_TYPES } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import { finiteSchema, parseWith, type Schema } from "../checks.js";
 
 const optionalString = v.optional(v.string());
 const optionalFinite = v.optional(finiteSchema);

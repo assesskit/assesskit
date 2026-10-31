@@ -1,8 +1,8 @@
 import type { Interaction } from "@assesskit/runtime/asi";
+import { checkBoolean, describe, isRecord } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { checkResponse, type InteractionDescriptor, type InteractionKind } from "@assesskit/runtime/interactions";
 import { matchValues, normalizeValue, type Value } from "@assesskit/runtime/values";
-import { checkBoolean, describe, isRecord } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import type { BodyRenderer } from "../content/index.js";

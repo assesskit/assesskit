@@ -1,3 +1,9 @@
+/**
+ * Checks of one value that throw `DataError` with a full sentence, and the schemas that read JSON with valibot, which the
+ * runtime and the packages built on it share.
+ *
+ * @module @assesskit/runtime/checks
+ */
 import * as v from "valibot";
 import { DataError } from "./errors.js";
 
@@ -51,6 +57,28 @@ export function optional<T>(value: T | undefined, check: (value: T) => void): T 
 }
 
 /**
+ * Checks that a record has no property but the given ones.
+ *
+ * @param label - Names the record in the error message, such as `An action envelope`.
+ * @param known - The names of the properties it may have.
+ * @throws `DataError` when it has another property.
+ */
+export function checkProperties(
+  value: Readonly<Record<string, unknown>>,
+  label: string,
+  known: readonly string[],
+): void {
+  const unexpected = Object.keys(value).find((key) => !known.includes(key));
+  if (unexpected === undefined) return;
+  const quoted = known.map((key) => JSON.stringify(key));
+  const names =
+    quoted.length === 1
+      ? `the property ${quoted[0]}`
+      : `the properties ${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+  throw new DataError(`${label} has ${names}, found ${describe(unexpected)}.`);
+}
+
+/**
  * Checks a function's options: an object, as a caller from JavaScript may pass `null` or another value.
  *
  * @throws `DataError` when they are not.
@@ -65,7 +93,7 @@ export function checkOptions(options: unknown): void {
  * @param message - Says what the value should be, such as `The option resolve must be a function of an href and a base`.
  * @throws `DataError` when it is not.
  */
-export function checkFunction(value: unknown, message: string): void {
+export function checkFunction(value: unknown, message: string): asserts value is (...args: never[]) => unknown {
   if (typeof value !== "function") throw new DataError(`${message}, found ${describe(value)}.`);
 }
 
@@ -90,6 +118,18 @@ export function checkSynchronous(value: unknown, label: string): void {
  */
 export function checkString(value: unknown, label: string): asserts value is string {
   if (typeof value !== "string") throw new DataError(`${label} must be a string, found ${describe(value)}.`);
+}
+
+/**
+ * Checks that a value is a string of at least one character, such as an identifier.
+ *
+ * @param label - Names the value in the error message, such as `The session of a caller`.
+ * @throws `DataError` when it is not.
+ */
+export function checkNonEmptyString(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || value === "") {
+    throw new DataError(`${label} must be a non-empty string, found ${describe(value)}.`);
+  }
 }
 
 /**
@@ -167,6 +207,18 @@ export function checkNonNegativeInteger(value: unknown, label: string): asserts 
 }
 
 /**
+ * Checks that a value is a finite number greater than 0, such as a length.
+ *
+ * @param label - Names the value in the error message, such as `The property minimumLength`.
+ * @throws `DataError` when it is not.
+ */
+export function checkPositive(value: unknown, label: string): asserts value is number {
+  if (!(typeof value === "number" && Number.isFinite(value) && value > 0)) {
+    throw new DataError(`${label} must be a positive number, found ${describe(value)}.`);
+  }
+}
+
+/**
  * Checks that a value is a safe integer of at least 1, such as a size limit.
  *
  * @param label - Names the value in the error message, such as `The option maxBytes`.
@@ -210,10 +262,11 @@ const EXPECTED_WORDS: ReadonlyMap<string, string> = new Map([
   ["non_empty", "a length of at least 1"],
 ]);
 
-/** What valibot calls an object and an array in `expected` and `received`, in the words of a message. */
+/** What valibot calls an object, an array and a function in `expected` and `received`, in the words of a message. */
 const CLASS_WORDS: ReadonlyMap<string, string> = new Map([
   ["Object", "an object"],
   ["Array", "an array"],
+  ["Function", "a function"],
 ]);
 
 /** The comparisons of the validations, with the words that stand for them. */
@@ -291,6 +344,12 @@ function toError(issue: v.BaseIssue<unknown>, label: string): DataError {
   return new DataError(`${label} is invalid${path === "" ? "" : ` at ${path}`}: ${text}.`);
 }
 
+/** Returns what is wrong with a nested value for the message of an issue of the schema that parsed it, with its path. */
+export function issueText(issue: v.BaseIssue<unknown>): string {
+  const { path, text } = locate(issue);
+  return path === "" ? text : `${path}: ${text}`;
+}
+
 /**
  * Parses untrusted data with a schema, and stops at the first issue.
  *
@@ -336,7 +395,7 @@ export function transformWith<TInput, TOutput>(
  * @param guard - Tells whether the value is one.
  * @param expected - Says what the value should be, such as `an object`.
  */
-function guardSchema<TOutput>(guard: (value: unknown) => value is TOutput, expected: string): Schema<TOutput> {
+export function guardSchema<TOutput>(guard: (value: unknown) => value is TOutput, expected: string): Schema<TOutput> {
   return v.custom<TOutput>(guard, (issue) => `expected ${expected}, found ${foundOf(issue)}`);
 }
 
@@ -345,6 +404,22 @@ function guardSchema<TOutput>(guard: (value: unknown) => value is TOutput, expec
  * reads as an object.
  */
 export const recordSchema = guardSchema(isRecord, "an object");
+
+/**
+ * The schema of an object with the given entries, that keeps the properties it does not know. Unlike the object of
+ * valibot it refuses an array, whatever the entries.
+ */
+export function looseRecord<const TEntries extends v.ObjectEntries>(entries: TEntries) {
+  return v.pipe(recordSchema, v.looseObject(entries));
+}
+
+/**
+ * The schema of an object with the given entries and no other property. Unlike the object of valibot it refuses an array,
+ * whatever the entries.
+ */
+export function strictRecord<const TEntries extends v.ObjectEntries>(entries: TEntries) {
+  return v.pipe(recordSchema, v.strictObject(entries));
+}
 
 /**
  * The schema of an object whose property names are data, such as module ids or asset prefixes: every own property is read
@@ -387,3 +462,41 @@ export const positiveIntegerSchema = v.pipe(v.number(), v.safeInteger(), v.minVa
 
 /** A string of at least one character, such as an identifier. */
 export const nonEmptyStringSchema = v.pipe(v.string(), v.nonEmpty());
+
+/** A value that is not `undefined`: a property that must be present, whatever it holds. */
+export const definedSchema = v.nonOptional(v.unknown(), "expected a value, found undefined");
+
+/**
+ * The schema of a function, such as a listener or a host's callback. Only that it is a function is checked: its
+ * parameters and result are the host's to keep.
+ *
+ * @typeParam TFunction - The type of the function.
+ */
+export function functionSchema<TFunction extends (...args: never[]) => unknown>(): Schema<TFunction> {
+  return guardSchema((value): value is TFunction => typeof value === "function", "a function");
+}
+
+/**
+ * The schema of a host's object with functions, such as a store or an engine. Only that each is a function is checked:
+ * the object passes on whole, so a class instance keeps its methods.
+ *
+ * @typeParam TObject - The type of the object.
+ * @param names - The names of the functions it must have.
+ */
+export function methodsSchema<TObject extends object>(...names: readonly (keyof TObject & string)[]): Schema<TObject> {
+  const list = `${names.slice(0, -1).join(", ")}${names.length > 1 ? " and " : ""}${names.at(-1)}`;
+  return guardSchema(
+    (value): value is TObject => isRecord(value) && names.every((name) => typeof value[name] === "function"),
+    `an object with the function${names.length > 1 ? "s" : ""} ${list}`,
+  );
+}
+
+/** A finite number greater than 0, such as a length. */
+export const positiveSchema = v.pipe(
+  v.number(),
+  v.finite(),
+  v.check(
+    (number) => number > 0,
+    (issue) => `expected a positive number, found ${issue.received}`,
+  ),
+);

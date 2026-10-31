@@ -106,7 +106,7 @@ describe("createBodyRenderer", () => {
       'The option view must be "author", "candidate", "proctor", "scorer", "testConstructor" or "tutor", found "admin".',
     );
     expect(() => create({ ...valid, withholdMedia: json('"yes"') })).toThrow(
-      'The option withholdMedia must be true or false, found "yes".',
+      'The option withholdMedia must be a boolean, found "yes".',
     );
     expect(() => create({ ...valid, mediaScale: json('"2"') })).toThrow(
       'The option mediaScale must be a positive number, found "2".',

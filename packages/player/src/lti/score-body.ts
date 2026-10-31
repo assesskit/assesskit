@@ -1,7 +1,7 @@
+import { describe } from "@assesskit/runtime/checks";
 import type { PendingWork } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult, ResultVariable } from "@assesskit/runtime/results";
-import { describe } from "../checks.js";
 
 /** The values of `gradingProgress` that a tool publishes after a test. */
 export type PublishedGradingProgress = "FullyGraded" | "Pending" | "PendingManual";

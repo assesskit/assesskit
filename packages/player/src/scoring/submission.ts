@@ -1,7 +1,7 @@
+import { checkArray, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { ScorerItem, ScorerView, ScoringCover, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { toWireValue, type Value } from "@assesskit/runtime/values";
-import { checkArray, checkRecord, describe } from "../checks.js";
 import {
   checkSubmission,
   type Submission,

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { isRecord } from "@assesskit/runtime/checks";
 import type { CandidateView, RefusalCode } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
@@ -7,7 +8,6 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import protocolGuide from "../../../docs/player/protocol.md?raw";
 import readme from "../README.md?raw";
-import { isRecord } from "../src/checks.js";
 import {
   checkActionEnvelope,
   checkAllowList,

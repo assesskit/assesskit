@@ -1,5 +1,4 @@
 import type { PortableCustomInteraction } from "@assesskit/runtime/asi";
-import { DataError } from "@assesskit/runtime/errors";
 import {
   checkArray,
   checkFunction,
@@ -8,7 +7,8 @@ import {
   checkRecord,
   checkString,
   describe,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
 import { checkPresentation } from "../presentation/internal.js";
 import { checkVariable, type PciVariable } from "./files.js";
 import type { PciFrameOptions } from "./options.js";

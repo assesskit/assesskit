@@ -1,7 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the OAuth parameters are those of RFC 6749.
-import { DataError } from "@assesskit/runtime/errors";
-import { SignJWT } from "jose";
-import * as v from "valibot";
+
 import {
   checkArray,
   checkFunction,
@@ -13,7 +11,10 @@ import {
   nonEmptyStringSchema,
   parseWith,
   positiveIntegerSchema,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import { SignJWT } from "jose";
+import * as v from "valibot";
 import { CLAIM } from "./claims.js";
 import { readClock } from "./clock.js";
 import { rs256Header } from "./jwt.js";

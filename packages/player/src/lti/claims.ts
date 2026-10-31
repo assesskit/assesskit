@@ -1,12 +1,6 @@
+import { finiteSchema, issueText, mapSchema, positiveIntegerSchema, positiveSchema } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import {
-  finiteSchema,
-  httpsUrlSchema,
-  issueText,
-  mapSchema,
-  positiveIntegerSchema,
-  positiveSchema,
-} from "../checks.js";
+import { httpsUrlSchema } from "../checks.js";
 import { LtiError } from "../errors.js";
 
 /** The claims of a token: a JSON object. */

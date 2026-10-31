@@ -1,5 +1,5 @@
+import { definedSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { definedSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "../checks.js";
 
 /** What a client sends to a session host: one candidate action in the runtime's JSON form, with its sequence number. */
 export interface ActionEnvelope {

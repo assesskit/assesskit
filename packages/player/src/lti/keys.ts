@@ -1,4 +1,4 @@
-import { isRecord } from "../checks.js";
+import { isRecord } from "@assesskit/runtime/checks";
 
 /** Returns whether a value is a key for RS256 that is usable for the given purpose: `sign` for a private key, `verify` for a public key. */
 export function isRsaKey(key: unknown, usage: "sign" | "verify"): boolean {

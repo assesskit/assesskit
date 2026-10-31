@@ -1,5 +1,5 @@
+import { checkString, describe } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
-import { checkString, describe } from "../../checks.js";
 import { MATHML_NAMESPACE } from "../internal.js";
 
 /**

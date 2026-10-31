@@ -1,4 +1,12 @@
 import type { AssessmentItem } from "@assesskit/runtime/asi";
+import {
+  checkFunction,
+  functionSchema,
+  methodsSchema,
+  nonEmptyStringSchema,
+  parseWith,
+  recordSchema,
+} from "@assesskit/runtime/checks";
 import type {
   CandidateAction,
   CandidateView,
@@ -12,14 +20,6 @@ import type {
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import * as v from "valibot";
-import {
-  checkFunction,
-  functionSchema,
-  methodsSchema,
-  nonEmptyStringSchema,
-  parseWith,
-  recordSchema,
-} from "../checks.js";
 import {
   type DispatchResult,
   type DocumentSource,

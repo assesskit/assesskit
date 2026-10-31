@@ -1,7 +1,9 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers, OAuth parameters and the OAuth protocol are those of their specifications.
+
+import { checkRecord, describe, nonEmptyStringSchema, type Schema } from "@assesskit/runtime/checks";
 import { encodeBase64 } from "@assesskit/runtime/values";
 import * as v from "valibot";
-import { checkRecord, describe, httpsUrlSchema, nonEmptyStringSchema, type Schema } from "../checks.js";
+import { httpsUrlSchema } from "../checks.js";
 import { ServiceError } from "../errors.js";
 
 /** A request of the REST client: the part of `RequestInit` that it uses. */

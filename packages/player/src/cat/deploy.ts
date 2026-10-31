@@ -1,9 +1,9 @@
 import type { AdaptiveSelection } from "@assesskit/runtime/asi";
 import { type CatPort, checkPool, type SectionFiles, sectionData } from "@assesskit/runtime/cat";
+import { checkFunction, checkRecord, describe } from "@assesskit/runtime/checks";
 import { resolveStructure, type SectionNode } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { packageResolvers, type QtiPackage, resourcePath } from "@assesskit/runtime/package";
-import { checkFunction, checkRecord, describe } from "../checks.js";
 
 /** The section that the engine made for an adaptive section: the entry of `DeliveryDefinition.catSections`. */
 export interface DeployedCatSection {

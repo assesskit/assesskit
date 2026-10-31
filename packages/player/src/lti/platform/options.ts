@@ -1,6 +1,6 @@
+import { checkFunction, checkRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import type { LtiLink } from "@assesskit/runtime/package";
-import { checkFunction, checkRecord } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import type { Caller } from "../../protocol/index.js";
 import { type Clock, checkClock, checkJwksCache, type HttpRequest, type JwksCache } from "../internal.js";

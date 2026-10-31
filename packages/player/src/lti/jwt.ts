@@ -1,7 +1,7 @@
+import { describe } from "@assesskit/runtime/checks";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { decodeBase64Url } from "@assesskit/runtime/values";
 import { decodeJwt, errors, type JWTVerifyGetKey, jwtVerify } from "jose";
-import { describe } from "../checks.js";
 import { LtiError } from "../errors.js";
 import type { Claims } from "./claims.js";
 import { CLOCK_SKEW_SECONDS } from "./clock.js";

@@ -1,5 +1,5 @@
+import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { describe } from "../../checks.js";
 
 /**
  * Checks that a value is one of the terms of a vocabulary.

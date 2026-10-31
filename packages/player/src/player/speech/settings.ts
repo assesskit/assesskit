@@ -1,3 +1,4 @@
+import { checkArray, checkRecord } from "@assesskit/runtime/checks";
 import type { Spoken } from "@assesskit/runtime/pnp";
 import {
   PNP_LINK_INDICATIONS,
@@ -5,7 +6,6 @@ import {
   PNP_RESTRICTION_TYPES,
   PNP_TYPING_ECHOES,
 } from "@assesskit/runtime/pnp";
-import { checkArray, checkRecord } from "../../checks.js";
 import { checkSpeechRate, checkTerm, checkUnitInterval } from "./checks.js";
 
 /**

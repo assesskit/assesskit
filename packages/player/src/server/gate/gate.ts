@@ -1,8 +1,4 @@
 import type { webcrypto } from "node:crypto";
-import { DataError } from "@assesskit/runtime/errors";
-import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
-import type { FileValue } from "@assesskit/runtime/values";
-import * as v from "valibot";
 import {
   checkNonNegativeInteger,
   checkRecord,
@@ -12,7 +8,11 @@ import {
   methodsSchema,
   parseWith,
   positiveIntegerSchema,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
+import type { FileValue } from "@assesskit/runtime/values";
+import * as v from "valibot";
 import { isHmacKey } from "../../lti/internal.js";
 import { openToken, sealToken } from "../../lti/platform/internal.js";
 import type { FileStore } from "../internal.js";

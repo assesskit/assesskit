@@ -1,4 +1,4 @@
-import { describe } from "../checks.js";
+import { describe } from "@assesskit/runtime/checks";
 import { LtiError } from "../errors.js";
 import { type Claims, optional, required, STRING } from "./claims.js";
 import type { JwksCache } from "./jwks.js";

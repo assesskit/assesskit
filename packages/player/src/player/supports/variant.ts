@@ -1,6 +1,6 @@
+import { checkNonEmptyString, checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { VariantView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkNonEmptyString, checkProperties, checkRecord, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { html } from "../internal.js";

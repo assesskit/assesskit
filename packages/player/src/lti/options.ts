@@ -1,4 +1,4 @@
-import { checkFunction, checkRecord, describe } from "../checks.js";
+import { checkFunction, checkRecord, describe } from "@assesskit/runtime/checks";
 import { LtiError } from "../errors.js";
 import { type Clock, checkClock } from "./clock.js";
 import { checkJwksCache, type JwksCache } from "./jwks.js";

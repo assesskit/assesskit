@@ -7,11 +7,11 @@ import {
   type RubricBlock,
   type TestRubricBlock,
 } from "@assesskit/runtime/asi";
+import { checkArray, describe } from "@assesskit/runtime/checks";
 import { rubricBlocksFor } from "@assesskit/runtime/content";
 import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import type { XmlElement } from "@assesskit/runtime/xml";
-import { checkArray, describe } from "../../checks.js";
 import { XHTML_NAMESPACE } from "../internal.js";
 import { setAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";

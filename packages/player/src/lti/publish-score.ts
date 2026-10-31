@@ -1,6 +1,7 @@
+import { checkArray, checkNonEmptyString, checkRecord, describe, isRecord } from "@assesskit/runtime/checks";
 import type { PendingWork } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe, isRecord } from "../checks.js";
+import { checkHttpsUrl } from "../checks.js";
 import { LtiError } from "../errors.js";
 import { isOfficialResult, type OfficialResult } from "../protocol/index.js";
 import { type AccessToken, ltiAccessToken } from "./access-token.js";

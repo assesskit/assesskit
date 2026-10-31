@@ -1,4 +1,4 @@
-import { methodsSchema, type Schema } from "../checks.js";
+import { methodsSchema, type Schema } from "@assesskit/runtime/checks";
 
 /** The source of the current time. The caller passes it, so that a page and a test control the time. */
 export interface Clock {

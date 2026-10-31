@@ -1,3 +1,4 @@
+import { checkArray, checkFunction, checkNonEmptyString, checkRecord } from "@assesskit/runtime/checks";
 import type { DeliveryEvent } from "@assesskit/runtime/delivery";
 import type { Value } from "@assesskit/runtime/values";
 import {
@@ -10,7 +11,6 @@ import {
   caliperGrade,
   sendCaliper,
 } from "../caliper/index.js";
-import { checkArray, checkFunction, checkNonEmptyString, checkRecord } from "../checks.js";
 import { type Clock, checkClock, readClock } from "../lti/internal.js";
 
 /** The score that a `supply-scores` action supplied: the runtime's events name the request and not the value, so the step carries it. */

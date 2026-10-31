@@ -1,6 +1,6 @@
+import { checkProperties, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkProperties, checkRecord, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { showTracks } from "../media/index.js";

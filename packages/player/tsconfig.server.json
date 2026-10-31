@@ -4,6 +4,7 @@
     "noEmit": true,
     "paths": {
       "@assesskit/runtime": ["../runtime/src/index.ts"],
+      "@assesskit/runtime/checks": ["../runtime/src/checks.ts"],
       "@assesskit/runtime/errors": ["../runtime/src/errors.ts"],
       "@assesskit/runtime/*": ["../runtime/src/*/index.ts"]
     },

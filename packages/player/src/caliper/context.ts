@@ -1,5 +1,3 @@
-import { DataError } from "@assesskit/runtime/errors";
-import * as v from "valibot";
 import {
   checkString,
   describe,
@@ -7,7 +5,9 @@ import {
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
   parseWith,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import * as v from "valibot";
 
 /** The step of a session that made the events: its start, or the version of the session record that the step saved. */
 export type CaliperStep = "start" | number;

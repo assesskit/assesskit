@@ -1,5 +1,5 @@
+import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { describe } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import { checkCaller } from "../../protocol/index.js";
 import { checkHttpRequest, type HttpRequest, type HttpResponse, readClock, readForm, readQuery } from "../internal.js";

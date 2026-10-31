@@ -1,5 +1,5 @@
+import { checkString, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkString, describe } from "../../checks.js";
 import type { Presentation } from "../presentation/index.js";
 import { checkPresentation } from "../presentation/internal.js";
 import { checkPciFrameOptions } from "./check-options.js";

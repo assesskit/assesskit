@@ -1,5 +1,5 @@
+import { checkNonNegativeInteger, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkNonNegativeInteger, checkRecord, checkString, describe } from "../../checks.js";
 import {
   isRequestedStatus,
   type PciFailure,

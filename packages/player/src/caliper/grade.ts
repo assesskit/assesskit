@@ -1,5 +1,3 @@
-import type { ItemKey } from "@assesskit/runtime/delivery";
-import * as v from "valibot";
 import {
   finiteSchema,
   looseRecord,
@@ -7,7 +5,9 @@ import {
   nonNegativeIntegerSchema,
   parseWith,
   positiveIntegerSchema,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import type { ItemKey } from "@assesskit/runtime/delivery";
+import * as v from "valibot";
 import { buildEvent } from "./build.js";
 import { type CaliperContext, checkContext, iriSchema } from "./context.js";
 import { itemAttempt, testAttempt } from "./entities.js";

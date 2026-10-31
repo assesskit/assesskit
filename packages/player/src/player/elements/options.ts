@@ -1,6 +1,4 @@
 import type { CustomInteraction } from "@assesskit/runtime/asi";
-import { DataError } from "@assesskit/runtime/errors";
-import type { FileValue, Value } from "@assesskit/runtime/values";
 import {
   checkBoolean,
   checkFunction,
@@ -9,7 +7,9 @@ import {
   checkString,
   describe,
   isRecord,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import type { FileValue, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 

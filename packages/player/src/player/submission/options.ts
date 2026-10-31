@@ -1,7 +1,7 @@
+import { checkFunction, checkProperties, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
-import { checkFunction, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
 import { type Messages, selectMessages } from "../../messages/index.js";
 import type { InteractionRenderers } from "../content/index.js";
 import { readRenderOptions } from "../content/internal.js";

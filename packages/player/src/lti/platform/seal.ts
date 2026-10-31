@@ -1,6 +1,6 @@
 import type { webcrypto } from "node:crypto";
+import { isRecord } from "@assesskit/runtime/checks";
 import { CompactSign, compactVerify } from "jose";
-import { isRecord } from "../../checks.js";
 import { type Claims, hasCanonicalParts } from "../internal.js";
 
 const ALGORITHM = "HS256";

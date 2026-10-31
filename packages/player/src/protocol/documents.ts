@@ -1,6 +1,6 @@
+import type { Schema } from "@assesskit/runtime/checks";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import * as v from "valibot";
-import type { Schema } from "../checks.js";
 
 /**
  * The documents that the content of a view comes from, as paths in the package.

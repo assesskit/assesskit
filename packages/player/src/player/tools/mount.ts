@@ -1,7 +1,7 @@
+import { checkFunction, checkProperties, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
-import { checkFunction, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { deepActiveElement, html } from "../internal.js";

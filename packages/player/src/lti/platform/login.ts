@@ -1,8 +1,9 @@
+import { checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { LtiLink } from "@assesskit/runtime/package";
 import * as v from "valibot";
-import { checkHttpsUrl, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
+import { checkHttpsUrl } from "../../checks.js";
 import { LtiError } from "../../errors.js";
 import { type Caller, checkCaller, LTI_STORAGE_FRAME, type LtiFrame } from "../../protocol/index.js";
 import { MAX_IDENTIFIER_LENGTH, POSITIVE_NUMBER, randomToken, readClock } from "../internal.js";

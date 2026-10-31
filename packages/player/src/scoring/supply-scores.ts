@@ -1,8 +1,8 @@
+import { checkChoice, checkNonEmptyString, checkRecord } from "@assesskit/runtime/checks";
 import type { Scorer, ScoringRequest } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeType, fitsBaseType } from "@assesskit/runtime/processing";
 import { normalizeValue, promote, single, type Value } from "@assesskit/runtime/values";
-import { checkChoice, checkNonEmptyString, checkRecord } from "../checks.js";
 import { checkDeclaration, SCORERS } from "../protocol/internal.js";
 
 /**

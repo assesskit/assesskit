@@ -1,6 +1,6 @@
+import { checkArray, checkChoice, describe } from "@assesskit/runtime/checks";
 import type { CandidateAction } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkArray, checkChoice, describe } from "../checks.js";
 
 /** The type of an action of the candidate. */
 export type CandidateActionType = CandidateAction["type"];

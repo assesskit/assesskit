@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
-import { isRecord } from "../../checks.js";
+import { isRecord } from "@assesskit/runtime/checks";
 import { LTI_STORAGE_FRAME } from "../../protocol/index.js";
 
 /** The subject of the request with which a tool asks which messages the platform supports. */

@@ -1,4 +1,4 @@
-import { checkNonEmptyString, checkRecord, checkString } from "../../checks.js";
+import { checkNonEmptyString, checkRecord, checkString } from "@assesskit/runtime/checks";
 import { checkSpeechRate, checkUnitInterval } from "./checks.js";
 
 /**

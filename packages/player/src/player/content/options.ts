@@ -1,7 +1,5 @@
-import { type ContentVariables, VIEWS, type View } from "@assesskit/runtime/content";
-import { DataError } from "@assesskit/runtime/errors";
-import type { FileValue } from "@assesskit/runtime/values";
 import {
+  checkBoolean,
   checkChoice,
   checkFunction,
   checkPositive,
@@ -9,7 +7,10 @@ import {
   checkRecord,
   checkString,
   describe,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import { type ContentVariables, VIEWS, type View } from "@assesskit/runtime/content";
+import { DataError } from "@assesskit/runtime/errors";
+import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import type { InteractionRenderers } from "./context.js";
@@ -163,9 +164,7 @@ export function readRenderOptions(options: unknown): RenderSettings {
   checkString(base, "The option base");
   checkInteractions(interactions);
   checkChoice(view, "The option view", VIEWS);
-  if (typeof withholdMedia !== "boolean") {
-    throw new DataError(`The option withholdMedia must be true or false, found ${describe(withholdMedia)}.`);
-  }
+  checkBoolean(withholdMedia, "The option withholdMedia");
   checkPositive(mediaScale, "The option mediaScale");
   if (variables !== undefined) checkVariables(variables);
   if (fileUrl !== undefined) checkFunction(fileUrl, "The option fileUrl must be a function");

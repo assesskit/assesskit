@@ -1,14 +1,14 @@
-import { DataError } from "@assesskit/runtime/errors";
-import { SignJWT } from "jose";
 import {
   checkArray,
-  checkHttpsUrl,
   checkNonEmptyString,
   checkProperties,
   checkRecord,
   checkString,
   describe,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import { SignJWT } from "jose";
+import { checkHttpsUrl } from "../checks.js";
 import { CLAIM, LTI_VERSION, MESSAGE_TYPE } from "./claims.js";
 import { readClock } from "./clock.js";
 import { rs256Header } from "./jwt.js";

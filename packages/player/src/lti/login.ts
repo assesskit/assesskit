@@ -1,5 +1,5 @@
+import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { describe } from "../checks.js";
 import { readClock } from "./clock.js";
 import { checkHttpRequest, type HttpRequest, type HttpResponse, readForm, readQuery } from "./http.js";
 import { checkLoginOptions, findRegistration, type LtiLoginOptions } from "./options.js";

@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the claims are those of the LTI specifications.
+
+import { describe, looseRecord } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { describe, looseRecord } from "../checks.js";
 import { LtiError } from "../errors.js";
 import {
   BOOLEAN,

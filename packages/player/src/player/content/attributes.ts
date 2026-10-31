@@ -1,5 +1,5 @@
 import type { ModelNode } from "@assesskit/runtime/asi";
-import { isRecord } from "../../checks.js";
+import { isRecord } from "@assesskit/runtime/checks";
 import { isHtmlName } from "./html-elements.js";
 import { resolveSrcset } from "./srcset.js";
 import { resolveUrl, type UrlPolicy, type UrlUse } from "./urls.js";

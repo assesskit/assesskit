@@ -1,5 +1,5 @@
 import { childNodes, type ModelNode } from "@assesskit/runtime/asi";
-import { isRecord } from "../../checks.js";
+import { isRecord } from "@assesskit/runtime/checks";
 import { declareSize, scaleSize, setCommonAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";
 import { embed } from "./embed.js";

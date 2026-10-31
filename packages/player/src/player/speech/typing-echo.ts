@@ -1,7 +1,7 @@
+import { checkFunction, checkNonEmptyString, checkRecord } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { TypingEcho } from "@assesskit/runtime/pnp";
 import { PNP_TYPING_ECHOES } from "@assesskit/runtime/pnp";
-import { checkFunction, checkNonEmptyString, checkRecord } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import { checkTerm } from "./checks.js";
 import { languageOf } from "./language.js";

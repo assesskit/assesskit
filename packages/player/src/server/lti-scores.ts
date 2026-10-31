@@ -1,7 +1,7 @@
+import { checkFunction, checkRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
-import { checkFunction, checkRecord } from "../checks.js";
 import type { AgsScore } from "../lti/index.js";
 import type { AgsScoreStore } from "./ags-score-store.js";
 import type { StepEvents } from "./forward.js";

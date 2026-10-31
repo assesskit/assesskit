@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts", "src/node/index.ts", "src/cli/index.ts"],
+  "entryPoints": ["src/index.ts", "src/checks.ts", "src/node/index.ts", "src/cli/index.ts"],
   "tsconfig": "tsconfig.build.json",
   "sourceLinkTemplate": "https://github.com/assesskit/assesskit/blob/{gitRevision}/packages/runtime/{path}#L{line}",
   "validation": {

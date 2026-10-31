@@ -1,6 +1,6 @@
 import type { webcrypto } from "node:crypto";
+import { looseRecord } from "@assesskit/runtime/checks";
 import type { ItemKey } from "@assesskit/runtime/delivery";
-import { looseRecord } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import {
   type Claims,

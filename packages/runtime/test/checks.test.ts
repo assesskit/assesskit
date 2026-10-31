@@ -7,24 +7,33 @@ import {
   checkChoice,
   checkFinite,
   checkFunction,
+  checkNonEmptyString,
   checkNonNegative,
   checkNonNegativeInteger,
   checkOptions,
   checkPositiveInteger,
+  checkProperties,
   checkRecord,
   checkSeed,
   checkString,
   checkSynchronous,
+  definedSchema,
   describe as describeValue,
   finiteSchema,
+  functionSchema,
   isRecord,
+  issueText,
+  looseRecord,
   mapSchema,
+  methodsSchema,
   nonEmptyStringSchema,
   nonNegativeIntegerSchema,
   nonNegativeSchema,
   parseWith,
   positiveIntegerSchema,
+  positiveSchema,
   recordSchema,
+  strictRecord,
   transformWith,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
@@ -98,6 +107,47 @@ describe("checkSynchronous", () => {
     // biome-ignore lint/suspicious/noThenProperty: the test needs a thenable that is not a Promise.
     const thenable = { then: () => undefined };
     expect(() => checkSynchronous(thenable, "The resolver items")).toThrow(DataError);
+  });
+});
+
+describe("checkProperties", () => {
+  it("accepts a record with some or all of the properties, and one with none", () => {
+    expect(() => checkProperties({}, "An envelope", ["a", "b"])).not.toThrow();
+    expect(() => checkProperties({ a: 1 }, "An envelope", ["a", "b"])).not.toThrow();
+    expect(() => checkProperties({ a: 1, b: 2 }, "An envelope", ["a", "b"])).not.toThrow();
+  });
+
+  it("names the properties a record may have and the one it has too many", () => {
+    expect(() => checkProperties({ a: 1, session: "s" }, "An envelope", ["a", "b"])).toThrow(
+      new DataError('An envelope has the properties "a" and "b", found "session".'),
+    );
+    expect(() => checkProperties({ c: 1 }, "An envelope", ["a", "b", "d"])).toThrow(
+      'An envelope has the properties "a", "b" and "d", found "c".',
+    );
+  });
+
+  it("names the one property that a record may have in the singular", () => {
+    expect(() => checkProperties({ b: 1 }, "The options", ["a"])).toThrow(
+      new DataError('The options has the property "a", found "b".'),
+    );
+  });
+
+  it("treats a property named __proto__ as data", () => {
+    const record: Readonly<Record<string, unknown>> = JSON.parse('{"__proto__": 1}');
+    expect(() => checkProperties(record, "An envelope", ["a", "b"])).toThrow('found "__proto__".');
+  });
+});
+
+describe("checkNonEmptyString", () => {
+  it("accepts a string of at least one character", () => {
+    expect(() => checkNonEmptyString("s", "The session of a caller")).not.toThrow();
+  });
+
+  it("rejects the empty string and other values", () => {
+    expect(() => checkNonEmptyString("", "The session of a caller")).toThrow(
+      new DataError('The session of a caller must be a non-empty string, found "".'),
+    );
+    expect(() => checkNonEmptyString(JSON.parse("[]"), "The session of a caller")).toThrow("found an array.");
   });
 });
 
@@ -288,6 +338,67 @@ describe("transformWith", () => {
       }),
     );
     expect(() => parseWith(failing, "x", "The input")).toThrow(RangeError);
+  });
+});
+
+describe("strictRecord and looseRecord", () => {
+  it("refuse an array where the object has only optional entries", () => {
+    for (const options of [
+      strictRecord({ speed: v.optional(v.number()) }),
+      looseRecord({ speed: v.optional(v.number()) }),
+    ]) {
+      expect(parseWith(options, {}, "The options")).toEqual({});
+      expect(() => parseWith(options, [], "The options")).toThrow(
+        new DataError("The options is invalid: expected an object, found an array."),
+      );
+    }
+  });
+});
+
+describe("issueText", () => {
+  it("gives the text of an issue with its path", () => {
+    const schema = v.strictObject({ items: v.array(v.strictObject({ id: v.string() })) });
+    const [issue] = v.safeParse(schema, { items: [{ id: 1 }] }).issues ?? [];
+    expect(issue === undefined ? "" : issueText(issue)).toBe("items[0].id: expected a string, found 1");
+  });
+});
+
+describe("the schemas of functions and objects with functions", () => {
+  it("accept a function and an object that has the functions, a class instance included", () => {
+    class Store {
+      load(): void {}
+      save(): void {}
+    }
+    expect(parseWith(functionSchema(), () => 1, "The option")).toBeTypeOf("function");
+    const store = new Store();
+    expect(parseWith(methodsSchema<Store>("load", "save"), store, "The store")).toBe(store);
+  });
+
+  it("refuse the rest, and say which functions an object needs", () => {
+    expect(() => parseWith(functionSchema(), 5, "The option fetch")).toThrow(
+      new DataError("The option fetch is invalid: expected a function, found 5."),
+    );
+    expect(() =>
+      parseWith(methodsSchema<{ load(): void; save(): void }>("load", "save"), { load: 1 }, "The store"),
+    ).toThrow(
+      new DataError("The store is invalid: expected an object with the functions load and save, found an object."),
+    );
+  });
+});
+
+describe("positiveSchema and definedSchema", () => {
+  it("accept a positive number and any value but undefined", () => {
+    expect(parseWith(positiveSchema, 0.5, "The length")).toBe(0.5);
+    expect(parseWith(definedSchema, null, "The action")).toBeNull();
+  });
+
+  it("refuse the rest", () => {
+    expect(() => parseWith(positiveSchema, 0, "The length")).toThrow(
+      new DataError("The length is invalid: expected a positive number, found 0."),
+    );
+    expect(() => parseWith(v.object({ action: definedSchema }), { action: undefined }, "The envelope")).toThrow(
+      new DataError("The envelope is invalid at action: expected a value, found undefined."),
+    );
   });
 });
 

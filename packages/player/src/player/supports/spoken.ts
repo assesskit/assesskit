@@ -1,6 +1,3 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
-import type { ReadingType, TypingEcho } from "@assesskit/runtime/pnp";
 import {
   checkArray,
   checkFunction,
@@ -8,7 +5,10 @@ import {
   checkProperties,
   checkRecord,
   describe,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import type { SupportView } from "@assesskit/runtime/delivery";
+import { DataError } from "@assesskit/runtime/errors";
+import type { ReadingType, TypingEcho } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { html } from "../internal.js";

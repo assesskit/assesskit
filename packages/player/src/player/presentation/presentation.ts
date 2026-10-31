@@ -1,5 +1,5 @@
+import { checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkRecord, describe } from "../../checks.js";
 
 /**
  * The look that a candidate's supports ask for, as the attributes and the custom properties that `player.css` reads.

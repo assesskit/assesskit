@@ -1,6 +1,6 @@
 import type { Interaction } from "@assesskit/runtime/asi";
+import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { describe } from "../../checks.js";
 import type { BodyRenderer, InteractionRenderer, InteractionRenderers } from "../content/index.js";
 import { renderAssociate } from "./associate.js";
 import { renderChoice } from "./choice.js";

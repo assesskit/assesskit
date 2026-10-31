@@ -1,6 +1,3 @@
-import type { CandidateView } from "@assesskit/runtime/delivery";
-import { DataError } from "@assesskit/runtime/errors";
-import type { FileValue } from "@assesskit/runtime/values";
 import {
   checkBoolean,
   checkFunction,
@@ -9,7 +6,10 @@ import {
   checkRecord,
   checkString,
   describe,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import type { CandidateView } from "@assesskit/runtime/delivery";
+import { DataError } from "@assesskit/runtime/errors";
+import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
 import { readOrigins } from "../content/internal.js";

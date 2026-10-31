@@ -1,5 +1,5 @@
+import { checkRecord, checkString, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkRecord, checkString, describe } from "../checks.js";
 
 /**
  * A request in a form that does not depend on a web framework. The host builds it from its own request type, and the

@@ -1,7 +1,14 @@
 import type { BodyNode, Catalog, TestFeedback } from "@assesskit/runtime/asi";
+import {
+  checkArray,
+  checkBoolean,
+  checkChoice,
+  checkProperties,
+  checkRecord,
+  checkString,
+} from "@assesskit/runtime/checks";
 import type { ContentVariables, HazardExposure } from "@assesskit/runtime/content";
 import { PNP_HAZARDS } from "@assesskit/runtime/pnp";
-import { checkArray, checkBoolean, checkChoice, checkProperties, checkRecord, checkString } from "../../checks.js";
 
 /** Content from one document of the package, and where its references start. */
 export interface ContentPart {

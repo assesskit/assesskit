@@ -1,6 +1,7 @@
 import type { webcrypto } from "node:crypto";
+import { guardSchema, looseRecord, nonEmptyStringSchema, parseWith } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { guardSchema, httpsUrlSchema, looseRecord, nonEmptyStringSchema, parseWith } from "../checks.js";
+import { httpsUrlSchema } from "../checks.js";
 import { isRsaKey } from "./keys.js";
 
 /** The host's record of one platform that the tool trusts, as the platform's administrator and the tool agreed on it. */

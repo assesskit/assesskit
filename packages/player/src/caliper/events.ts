@@ -1,6 +1,12 @@
+import {
+  checkArray,
+  checkNonEmptyString,
+  checkPositiveInteger,
+  checkRecord,
+  describe,
+} from "@assesskit/runtime/checks";
 import type { DeliveryEvent, DeliveryEventType, ItemKey } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkArray, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../checks.js";
 import { buildEvent, type EventParts } from "./build.js";
 import { type CaliperContext, checkContext, START_STEP } from "./context.js";
 import { assessmentOf, itemAttempt, itemOf, person, sectionOf, testAttempt } from "./entities.js";

@@ -1,15 +1,16 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers are those of their specifications.
-import { DataError } from "@assesskit/runtime/errors";
+
 import {
   checkArray,
   checkFunction,
-  checkHttpsUrl,
   checkNonEmptyString,
   checkPositiveInteger,
   checkRecord,
   checkString,
   describe,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import { checkHttpsUrl } from "../checks.js";
 import { ServiceError } from "../errors.js";
 import { CALIPER_CONTEXT, type CaliperEvent } from "./model.js";
 import { caliperTime } from "./time.js";

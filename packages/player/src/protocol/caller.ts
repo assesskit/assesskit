@@ -1,5 +1,5 @@
+import { nonEmptyStringSchema, parseWith, type Schema } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { nonEmptyStringSchema, parseWith, type Schema } from "../checks.js";
 
 /**
  * The identity that the host's authentication gives to a request. It never comes from the client: envelopes carry no

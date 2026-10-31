@@ -1,4 +1,4 @@
-import { checkFunction, checkNonNegativeInteger, checkRecord } from "../checks.js";
+import { checkFunction, checkNonNegativeInteger, checkRecord } from "@assesskit/runtime/checks";
 
 /**
  * The leeway for clock skew between the platform and the tool, in seconds. Security Framework section 5.1.2 allows "some small

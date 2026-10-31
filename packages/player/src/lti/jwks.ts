@@ -1,5 +1,6 @@
+import { checkFunction, checkPositiveInteger, checkRecord } from "@assesskit/runtime/checks";
 import { createRemoteJWKSet, customFetch, type JWTVerifyGetKey } from "jose";
-import { checkFunction, checkHttpsUrl, checkPositiveInteger, checkRecord } from "../checks.js";
+import { checkHttpsUrl } from "../checks.js";
 import { callService, DEFAULT_TIMEOUT_MS, type Fetch } from "./service.js";
 
 const DEFAULT_TTL_SECONDS = 3600;

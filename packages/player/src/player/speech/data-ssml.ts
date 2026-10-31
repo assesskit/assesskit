@@ -1,5 +1,5 @@
+import { isRecord } from "@assesskit/runtime/checks";
 import type { XmlNode } from "@assesskit/runtime/xml";
-import { isRecord } from "../../checks.js";
 import { ssmlElement } from "./ssml.js";
 
 /** The values a property may have: the terms listed, or any string when `true`. */

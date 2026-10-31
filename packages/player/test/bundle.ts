@@ -67,6 +67,7 @@ export async function bundle(program: string, options: BundleOptions = {}): Prom
     outdir: "out",
     alias: {
       "@assesskit/runtime": `${RUNTIME}/index.ts`,
+      "@assesskit/runtime/checks": `${RUNTIME}/checks.ts`,
       "@assesskit/runtime/errors": `${RUNTIME}/errors.ts`,
       ...Object.fromEntries(
         RUNTIME_FOLDERS.map((folder) => [`@assesskit/runtime/${folder}`, `${RUNTIME}/${folder}/index.ts`]),

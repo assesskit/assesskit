@@ -1,7 +1,8 @@
 import type { webcrypto } from "node:crypto";
+import { checkArray, checkNonEmptyString, checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { errors, type JWTVerifyGetKey } from "jose";
-import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
+import { checkHttpsUrl } from "../../checks.js";
 import { checkAllowList } from "../../protocol/index.js";
 import { isRsaKey, type JwksCache, MAX_IDENTIFIER_LENGTH } from "../internal.js";
 

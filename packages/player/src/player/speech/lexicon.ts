@@ -1,6 +1,6 @@
+import { checkArray, checkNonEmptyString, checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { attributeOf, childElements, parseXml, textOf, XML_NAMESPACE, type XmlElement } from "@assesskit/runtime/xml";
-import { checkArray, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
 
 /**
  * The namespace of PLS.

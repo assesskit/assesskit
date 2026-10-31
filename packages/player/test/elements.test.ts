@@ -319,7 +319,7 @@ describe("readInteractionOptions", () => {
       new DataError("The method upload of the option files must be a function, found 1."),
     );
     expect(() => readInteractionOptions(valid({ record: parse('"yes"') }))).toThrow(
-      new DataError('The option record must be true or false, found "yes".'),
+      new DataError('The option record must be a boolean, found "yes".'),
     );
     expect(() => readInteractionOptions(valid({ customInteraction: parse("5") }))).toThrow(
       new DataError("The option customInteraction must be a function, found 5."),

@@ -1,5 +1,5 @@
+import { looseRecord, nonEmptyStringSchema, parseWith, positiveSchema, strictRecord } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { looseRecord, nonEmptyStringSchema, parseWith, positiveSchema, strictRecord } from "../../checks.js";
 import { checkSupportViews } from "../supports/internal.js";
 import { ANGLE_UNITS, CALCULATOR_TYPES, LENGTH_UNITS, type ToolsInput } from "./model.js";
 

@@ -1,3 +1,4 @@
+import { checkRecord, checkString } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { decodePciValue, encodePciValue, type PciJson } from "@assesskit/runtime/pci";
 import {
@@ -7,7 +8,6 @@ import {
   type Value,
   type ValueDeclaration,
 } from "@assesskit/runtime/values";
-import { checkRecord, checkString } from "../../checks.js";
 import { isFileValue } from "../internal.js";
 
 /**

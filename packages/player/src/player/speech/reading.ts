@@ -1,5 +1,5 @@
+import { checkNonEmptyString, checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkNonEmptyString, checkRecord, describe } from "../../checks.js";
 import { languageOf } from "./language.js";
 import { checkLexicons } from "./lexicon.js";
 import type { SpeechOptions } from "./options.js";

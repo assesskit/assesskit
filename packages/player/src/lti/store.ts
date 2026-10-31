@@ -1,5 +1,11 @@
+import {
+  looseRecord,
+  methodsSchema,
+  nonEmptyStringSchema,
+  nonNegativeIntegerSchema,
+  parseWith,
+} from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { looseRecord, methodsSchema, nonEmptyStringSchema, nonNegativeIntegerSchema, parseWith } from "../checks.js";
 
 /** What the tool remembers of a login between the authentication request and the launch. */
 export interface LoginRecord {

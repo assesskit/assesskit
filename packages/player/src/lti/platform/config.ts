@@ -1,7 +1,8 @@
 import type { webcrypto } from "node:crypto";
+import { checkRecord, describe, isRecord } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { calculateJwkThumbprint } from "jose";
-import { checkHttpsUrl, checkRecord, describe, isRecord } from "../../checks.js";
+import { checkHttpsUrl } from "../../checks.js";
 import { isHmacKey, isRsaKey } from "../internal.js";
 
 const AUTHORIZATION_PATH = "/authorize";

@@ -1,5 +1,5 @@
+import { checkProperties, checkRecord, checkString, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkProperties, checkRecord, checkString, describe } from "../checks.js";
 
 /** The name of the frame that holds the tool of an LTI item, by which the storage page recognizes the sender of a message. */
 export const LTI_TOOL_FRAME = "lti-tool";

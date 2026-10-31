@@ -6,20 +6,20 @@ import {
   itemStageFromJson,
   type SectionData,
 } from "@assesskit/runtime/cat";
-import { DataError } from "@assesskit/runtime/errors";
-import * as v from "valibot";
 import {
   checkNonEmptyString,
   checkString,
   describe,
   functionSchema,
-  httpsUrlSchema,
   nonEmptyStringSchema,
   parseWith,
   positiveSchema,
   recordSchema,
   type Schema,
-} from "../checks.js";
+} from "@assesskit/runtime/checks";
+import { DataError } from "@assesskit/runtime/errors";
+import * as v from "valibot";
+import { httpsUrlSchema } from "../checks.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
 import { readSectionData } from "./section-data.js";
 

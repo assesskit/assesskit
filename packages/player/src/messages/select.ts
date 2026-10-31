@@ -1,5 +1,5 @@
+import { checkString, mapSchema, parseWith, recordSchema } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { checkString, mapSchema, parseWith, recordSchema } from "../checks.js";
 import { EN_MESSAGES } from "./en.js";
 import { ID_MESSAGES } from "./id.js";
 import type { Messages } from "./messages.js";

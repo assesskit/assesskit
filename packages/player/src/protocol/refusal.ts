@@ -1,6 +1,6 @@
+import { parseWith, type Schema } from "@assesskit/runtime/checks";
 import type { Refusal, RefusalCode } from "@assesskit/runtime/delivery";
 import * as v from "valibot";
-import { parseWith, type Schema } from "../checks.js";
 
 /**
  * The refusal codes of the runtime's engine.

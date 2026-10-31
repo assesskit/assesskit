@@ -1,6 +1,6 @@
+import { definedSchema, mapSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "@assesskit/runtime/checks";
 import type { Refusal } from "@assesskit/runtime/delivery";
 import * as v from "valibot";
-import { definedSchema, mapSchema, nonNegativeIntegerSchema, parseWith, type Schema } from "../checks.js";
 import { type ViewDocuments, viewDocumentsSchema } from "./documents.js";
 import { refusalSchema } from "./refusal.js";
 

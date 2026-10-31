@@ -1,7 +1,7 @@
 import type { BodyNode } from "@assesskit/runtime/asi";
+import { describe } from "@assesskit/runtime/checks";
 import type { View } from "@assesskit/runtime/content";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
-import { describe } from "../../checks.js";
 import { checkSubmission, type Submission } from "../../protocol/index.js";
 import { html } from "../internal.js";
 import { type ContentRoot, createContentRoot } from "../roots/index.js";

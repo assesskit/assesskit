@@ -1,5 +1,5 @@
+import { checkRecord, describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { checkRecord, describe } from "../../checks.js";
 
 /** The values of `activityProgress` (LTI AGS 2.0 section 3.4.7). */
 const ACTIVITY_PROGRESS = ["Initialized", "Started", "InProgress", "Submitted", "Completed"] as const;

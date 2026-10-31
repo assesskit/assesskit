@@ -42,6 +42,10 @@
       "types": "./dist/cat/index.d.ts",
       "default": "./dist/cat/index.js"
     },
+    "./checks": {
+      "types": "./dist/checks.d.ts",
+      "default": "./dist/checks.js"
+    },
     "./content": {
       "types": "./dist/content/index.d.ts",
       "default": "./dist/content/index.js"

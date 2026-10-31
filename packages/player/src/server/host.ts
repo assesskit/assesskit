@@ -1,4 +1,14 @@
 import {
+  checkChoice,
+  checkNonEmptyString,
+  checkRecord,
+  describe,
+  functionSchema,
+  methodsSchema,
+  parseWith,
+  recordSchema,
+} from "@assesskit/runtime/checks";
+import {
   actionToJson,
   type CandidateAction,
   type CandidateView,
@@ -17,16 +27,6 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import * as v from "valibot";
 import { checkIri } from "../caliper/internal.js";
-import {
-  checkChoice,
-  checkNonEmptyString,
-  checkRecord,
-  describe,
-  functionSchema,
-  methodsSchema,
-  parseWith,
-  recordSchema,
-} from "../checks.js";
 import { AccessError, ServiceError } from "../errors.js";
 import { checkClock, readClock } from "../lti/internal.js";
 import {

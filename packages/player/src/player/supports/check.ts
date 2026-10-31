@@ -1,12 +1,3 @@
-import type { SupportView } from "@assesskit/runtime/delivery";
-import {
-  isSupportName,
-  PNP_BRAILLE_DELIVERY_MODES,
-  PNP_GENERIC_FONT_FACES,
-  type SupportName,
-  type SupportState,
-} from "@assesskit/runtime/pnp";
-import * as v from "valibot";
 import {
   describe,
   finiteSchema,
@@ -18,7 +9,16 @@ import {
   recordSchema,
   type Schema,
   strictRecord,
-} from "../../checks.js";
+} from "@assesskit/runtime/checks";
+import type { SupportView } from "@assesskit/runtime/delivery";
+import {
+  isSupportName,
+  PNP_BRAILLE_DELIVERY_MODES,
+  PNP_GENERIC_FONT_FACES,
+  type SupportName,
+  type SupportState,
+} from "@assesskit/runtime/pnp";
+import * as v from "valibot";
 
 /**
  * The states of a support for a candidate, as the runtime's `resolveSupports` gives them.

@@ -1,5 +1,5 @@
 import type { CalculatorInfo } from "@assesskit/runtime/asi";
-import { checkFunction } from "../../checks.js";
+import { checkFunction } from "@assesskit/runtime/checks";
 import { html } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { toolFile, viewFile } from "./file-viewer.js";

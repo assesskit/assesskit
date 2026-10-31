@@ -1,6 +1,6 @@
 import type { SectionData } from "@assesskit/runtime/cat";
+import { parseWith, type Schema } from "@assesskit/runtime/checks";
 import * as v from "valibot";
-import { parseWith, type Schema } from "../checks.js";
 
 /** The schema of section data; each field is base64 text. */
 const sectionDataSchema: Schema<SectionData> = v.strictObject({

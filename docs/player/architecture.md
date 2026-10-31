@@ -46,7 +46,7 @@ flowchart TB
 ## Layers
 
 A folder imports only the folders in its row, and imports never form cycles (lint). `errors.ts` and `checks.ts` are
-below every folder; `checks.ts` imports `errors.ts` and valibot only. The lint knows every folder of the table, so a folder is held
+below every folder; `checks.ts` holds the checks of `https` URLs and imports `@assesskit/runtime/checks`, `@assesskit/runtime/errors` and valibot only; the other checks come from `@assesskit/runtime/checks`. The lint knows every folder of the table, so a folder is held
 to its row from its first file.
 
 | Layer | Folders                                | Side    | Imports                          |

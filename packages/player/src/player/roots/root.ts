@@ -1,7 +1,14 @@
 import type { Catalog, ModalFeedback } from "@assesskit/runtime/asi";
+import {
+  checkArray,
+  checkFunction,
+  checkPositive,
+  checkProperties,
+  checkRecord,
+  describe,
+} from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
-import { checkArray, checkFunction, checkPositive, checkProperties, checkRecord, describe } from "../../checks.js";
 import { renderCard } from "../catalogs/index.js";
 import {
   type BodyRenderer,
