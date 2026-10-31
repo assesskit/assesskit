@@ -8,8 +8,8 @@
  * responses, review and solution, comments, PCI states, and processing failures as data — the candidate side: the
  * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions,
  * with the limits that a server puts on the actions of its clients — and the pending work that the engine waits on the
- * host for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine and
- * `drainCat`, links to tools scored by their tool, and the results report of a session.
+ * host for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine,
+ * `drainCat` and `sendCatRequest`, links to tools scored by their tool, and the results report of a session.
  *
  * @module @assesskit/runtime/delivery
  */
@@ -51,7 +51,7 @@ export type {
   SessionSupport,
   Step,
 } from "./delivery-state.js";
-export { drainCat } from "./drain-cat.js";
+export { type DrainCatOptions, drainCat, sendCatRequest } from "./drain-cat.js";
 export { createEngine, type Engine, type StartOptions } from "./engine.js";
 export type { DeliveryEvent, DeliveryEventType } from "./events.js";
 export { applyItemAction, type ItemAction } from "./item-action.js";

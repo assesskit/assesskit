@@ -143,6 +143,17 @@ export function checkBytes(value: unknown, label: string): asserts value is Uint
 }
 
 /**
+ * Checks that a value is an `AbortSignal`, such as the option that ends a wait.
+ *
+ * @param label - Names the value in the error message, such as `The option signal`.
+ * @throws `DataError` when it is not.
+ */
+export function checkAbortSignal(value: unknown, label: string): asserts value is AbortSignal {
+  if (!(value instanceof AbortSignal))
+    throw new DataError(`${label} must be an AbortSignal, found ${describe(value)}.`);
+}
+
+/**
  * Checks that a value is a boolean.
  *
  * @param label - Names the value in the error message, such as `The option allowLateSubmission`.

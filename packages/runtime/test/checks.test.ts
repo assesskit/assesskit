@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import {
+  checkAbortSignal,
   checkArray,
   checkBoolean,
   checkBytes,
@@ -165,6 +166,17 @@ describe("checkBytes", () => {
       "The file settings must be a Uint8Array, found an array.",
     );
     expect(() => checkBytes("text", "The file settings")).toThrow(DataError);
+  });
+});
+
+describe("checkAbortSignal", () => {
+  it("accepts an AbortSignal and rejects other values", () => {
+    expect(() => checkAbortSignal(new AbortController().signal, "The option signal")).not.toThrow();
+    expect(() => checkAbortSignal(AbortSignal.abort(), "The option signal")).not.toThrow();
+    expect(() => checkAbortSignal(JSON.parse('{"aborted":false}'), "The option signal")).toThrow(
+      new DataError("The option signal must be an AbortSignal, found an object."),
+    );
+    expect(() => checkAbortSignal(JSON.parse("null"), "The option signal")).toThrow("found null.");
   });
 });
 

@@ -13,6 +13,7 @@ import {
   type Engine,
   isXsdDateTime,
   readResults,
+  sendCatRequest,
   serializeState,
   shuffleChoices,
   single,
@@ -1269,6 +1270,71 @@ describe("the state with pending work", () => {
   });
 });
 
+describe("sendCatRequest", () => {
+  const pool = refs("i1", "i2", "i3");
+  const engine = engineOf(
+    `${outcome("TOTAL", "float")}${part("P", section("A", ADAPTIVE + pool))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
+    { cat: CAT_A },
+  );
+  /** The session after Create Session, with two items presented and the first answered. */
+  const presented = (): DeliveryState => {
+    const start = begun(engine).state;
+    const first = played(engine, start, stage(engine, start, 1, { itemIdentifiers: ["i1", "i2"], stageLength: 2 }));
+    return played(engine, first.state, pick("i1", "B", 2), act("submit", "i1", 3)).state;
+  };
+
+  it("makes the request of each kind through the method of the port that it needs", async () => {
+    const port = fakePort([["i3"]], ["i1", "i2"]);
+    const start = begun(engine).state;
+    const created = await sendCatRequest(port, waiting(engine, start));
+    expect(created).toEqual({
+      sessionIdentifier: "session-1",
+      nextItems: { itemIdentifiers: ["i1", "i2"], stageLength: 2 },
+    });
+    expect(port.calls).toEqual([{ method: "createSession", section: "section-1", request: {} }]);
+    const left = played(engine, presented(), { type: "end-test", at: 4 }).state;
+    const submitted = await sendCatRequest(port, waiting(engine, left));
+    expect(submitted).toEqual({ nextItems: { itemIdentifiers: ["i3"], stageLength: 1 } });
+    const submit = port.calls[1];
+    if (submit?.method !== "submitResults") fail("Submit Results was expected.");
+    expect([submit.section, submit.session]).toEqual(["section-1", "session-1"]);
+    const answered = played(engine, left, stage(engine, left, 5, { itemIdentifiers: ["i3"], stageLength: 1 })).state;
+    expect(await sendCatRequest(port, waiting(engine, answered))).toEqual({ ended: true });
+    expect(port.calls[2]).toEqual({ method: "endSession", section: "section-1", session: "session-1" });
+  });
+
+  it("rejects with the error of the port and does not repeat the request", async () => {
+    let calls = 0;
+    const broken = {
+      ...fakePort([]),
+      createSession: () => {
+        calls += 1;
+        return Promise.reject(new Error("The CAT engine is down."));
+      },
+    };
+    await expect(sendCatRequest(broken, waiting(engine, begun(engine).state))).rejects.toThrow(
+      "The CAT engine is down.",
+    );
+    expect(calls).toBe(1);
+  });
+
+  it("checks its arguments", async () => {
+    const request = waiting(engine, begun(engine).state);
+    await expect(sendCatRequest(JSON.parse("null"), request)).rejects.toThrow(
+      "The port must be an object with the methods of CatPort, found null.",
+    );
+    await expect(sendCatRequest(fakePort([]), JSON.parse("null"))).rejects.toThrow(
+      "The request must be a CAT request from Engine.pending, found null.",
+    );
+    await expect(sendCatRequest(fakePort([]), JSON.parse('{"kind":"other"}'))).rejects.toThrow(
+      'The kind of the request must be "create-session", "submit-results" or "end-session", found "other".',
+    );
+    await expect(sendCatRequest(JSON.parse("{}"), request)).rejects.toThrow(
+      "The port must have a function createSession, found undefined.",
+    );
+  });
+});
+
 describe("drainCat", () => {
   const pool = refs("i1", "i2", "i3", "i4");
   const engine = engineOf(
@@ -1347,9 +1413,43 @@ describe("drainCat", () => {
     );
   });
 
+  it("stops before its next request when the signal aborts, with the reason of the signal", async () => {
+    const reason = new Error("The page was closed.");
+    const aborted = AbortSignal.abort(reason);
+    const idle = fakePort([]);
+    await expect(drainCat(engine, begun(engine).state, idle, clock(), { signal: aborted })).rejects.toBe(reason);
+    expect(idle.calls).toEqual([]);
+
+    const first = await drainCat(engine, begun(engine).state, fakePort([["i3"]]), clock());
+    const left = played(engine, first, pick("i1", "B", 1001), act("submit", "i1", 1002), {
+      type: "end-test",
+      at: 1003,
+    });
+    const controller = new AbortController();
+    const port = fakePort([["i3"]]);
+    const stopping = {
+      ...port,
+      submitResults: (...args: Parameters<typeof port.submitResults>) => {
+        controller.abort(reason);
+        return port.submitResults(...args);
+      },
+    };
+    await expect(drainCat(engine, left.state, stopping, clock(), { signal: controller.signal })).rejects.toBe(reason);
+    expect(port.calls.map(({ method }) => method)).toEqual(["submitResults"]);
+  });
+
   it("checks its arguments", async () => {
     const state = begun(engine).state;
     const port = fakePort([]);
+    await expect(drainCat(engine, state, port, clock(), JSON.parse("null"))).rejects.toThrow(
+      "The options must be an object, found null.",
+    );
+    await expect(drainCat(engine, state, port, clock(), JSON.parse('{"signal":null}'))).rejects.toThrow(
+      "The option signal must be an AbortSignal, found null.",
+    );
+    await expect(drainCat(engine, state, port, clock(), JSON.parse('{"signal":{}}'))).rejects.toThrow(
+      "The option signal must be an AbortSignal, found an object.",
+    );
     await expect(drainCat(JSON.parse("null"), state, port, clock())).rejects.toThrow(DataError);
     await expect(drainCat(engine, JSON.parse("{}"), port, clock())).rejects.toThrow(DataError);
     await expect(drainCat(engine, state, JSON.parse("null"), clock())).rejects.toThrow(

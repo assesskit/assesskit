@@ -24,7 +24,7 @@ export interface CatRequestBase {
  * state the engine handed over; End Session when the candidate leaves before the engine ends the session.
  *
  * @remarks
- * The host makes the request through its `CatPort`, or `drainCat` does, and answers with a `cat-response` action.
+ * The host makes the request through its `CatPort` with `sendCatRequest`, or `drainCat` does, and answers with a `cat-response` action.
  */
 export type CatRequest =
   | (CatRequestBase & {
