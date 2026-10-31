@@ -87,11 +87,35 @@ export function operandsOf(expression: Expression): readonly Expression[] {
   return "operand" in expression ? [expression.operand] : [];
 }
 
+/** The values of the `qti-base-value` elements read so far: an expression never changes, so its text is read once. */
+const BASE_VALUES = new WeakMap<Expression, Value | null>();
+
+/**
+ * Returns the value of a `qti-base-value`.
+ *
+ * @throws `ProcessingError` when its text is not in the lexical form of its base type.
+ */
+function baseValue(expression: Extract<Expression, { readonly kind: "base-value" }>): Value | null {
+  const known = BASE_VALUES.get(expression);
+  if (known !== undefined) return known;
+  const value = readSingle(expression.value, expression.baseType, "The base value");
+  BASE_VALUES.set(expression, value);
+  return value;
+}
+
 /** Applies an operator to the values of its operands, which fit its signature. */
 function apply(expression: Expression, operands: readonly (Value | null)[], scope: Scope): Value | null {
-  const [a = null, b = null] = operands;
+  const a = operands[0] ?? null;
+  const b = operands[1] ?? null;
   const { environment } = scope;
+  // The switch compares the kind with each case in turn, so the leaves, which are most of the nodes of a tree, come first.
   switch (expression.kind) {
+    case "base-value":
+      return baseValue(expression);
+    case "null":
+      return null;
+    case "variable":
+      return scope.variable(expression.identifier, expression.weightIdentifier);
     case "and":
       return and(operands);
     case "or":
@@ -193,12 +217,6 @@ function apply(expression: Expression, operands: readonly (Value | null)[], scop
       return patternMatch(a, stringAttribute(expression.pattern, scope, "pattern"));
     case "custom-operator":
       return customOperator(expression, operands, environment);
-    case "base-value":
-      return readSingle(expression.value, expression.baseType, "The base value");
-    case "null":
-      return null;
-    case "variable":
-      return scope.variable(expression.identifier, expression.weightIdentifier);
     case "default":
       return scope.defaultValue(expression.identifier);
     case "correct":
@@ -248,7 +266,9 @@ function apply(expression: Expression, operands: readonly (Value | null)[], scop
  */
 export function evaluateIn(expression: Expression, scope: Scope): Value | null {
   checkRecord(expression, "An expression must be an object of the model");
-  const operands = operandsOf(expression).map((operand) => evaluateIn(operand, scope));
+  const expressions = operandsOf(expression);
+  const operands: (Value | null)[] = [];
+  for (const operand of expressions) operands.push(evaluateIn(operand, scope));
   checkOperands(expression.kind, operands);
   return apply(expression, operands, scope);
 }

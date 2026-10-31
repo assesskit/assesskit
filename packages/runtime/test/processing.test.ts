@@ -712,6 +712,23 @@ describe("declared values", () => {
       'The base value has the text "x", which is not a value of base type integer.',
     );
   });
+
+  it("reads the same base value to the same result each time, and refuses an unreadable one each time", () => {
+    const readable = expressionOf(bv("integer", "7"));
+    const variables = createItemVariables(ITEM);
+    expect(evaluate(readable, variables, ITEM, CONTEXT)).toEqual(int(7));
+    expect(evaluate(readable, variables, ITEM, CONTEXT)).toEqual(int(7));
+    const empty = expressionOf(bv("string", ""));
+    expect(evaluate(empty, variables, ITEM, CONTEXT)).toBeNull();
+    expect(evaluate(empty, variables, ITEM, CONTEXT)).toBeNull();
+    const unreadable = expressionOf(bv("integer", "x"));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expectProcessingError(
+        () => evaluate(unreadable, variables, ITEM, CONTEXT),
+        'The base value has the text "x", which is not a value of base type integer.',
+      );
+    }
+  });
 });
 
 describe("evaluate", () => {

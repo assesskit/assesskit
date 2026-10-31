@@ -71,10 +71,12 @@ export function checkOperands(kind: string, operands: readonly (Value | null)[])
   if (operands.length < signature.minOperands || operands.length > signature.maxOperands) {
     throw mismatch(kind, `takes ${describeCount(signature)} operands, found ${operands.length}`);
   }
+  for (let index = 0; index < operands.length; index++) {
+    const value = operands[index];
+    if (value !== null && value !== undefined) checkOperand(kind, signature, value, index);
+  }
+  if (!(signature.sameBaseType || signature.sameCardinality) || operands.length < 2) return;
   const present = operands.filter((value) => value !== null);
-  operands.forEach((value, index) => {
-    if (value !== null) checkOperand(kind, signature, value, index);
-  });
   if (signature.sameBaseType && new Set(present.map(baseTypeOf).filter((type) => type !== undefined)).size > 1) {
     throw mismatch(kind, `takes operands of one base type, found ${present.map(describeType).join(" and ")}`);
   }
