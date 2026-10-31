@@ -4,7 +4,7 @@ import { describeType } from "./assign.js";
 import { asNumber, asString, primitiveOf } from "./operands.js";
 import type { Scope } from "./scope.js";
 
-/** A `stringOrVariableRef` that names a variable: its identifier in braces (INFO §2.7.2, `EncVariableStringDType`). */
+/** A `stringOrVariableRef` that names a variable: its identifier in braces (`EncVariableStringDType`). */
 const BRACED = /^\{(.+)\}$/;
 
 /**
@@ -38,10 +38,14 @@ function referenced(
 }
 
 /**
- * Resolves an `IntegerOrVariableRef` or `IntOrIdentifier` attribute (INFO §2.7.2, §9.3): an integer, or the identifier
- * of a single integer variable. NULL when that variable is NULL.
+ * Resolves an `IntegerOrVariableRef` or `IntOrIdentifier` attribute: an integer, or the identifier of a single integer
+ * variable.
+ *
+ * @remarks
+ * NULL when that variable is NULL.
  *
  * @throws `ProcessingError` when the identifier names no such variable.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function integerAttribute(value: number | string, scope: Scope, attribute: string): number | null {
   if (typeof value === "number") return value;
@@ -50,10 +54,15 @@ export function integerAttribute(value: number | string, scope: Scope, attribute
 }
 
 /**
- * Resolves a `FloatOrVariableRef` attribute or an item of a `ToleranceList` (INFO §2.7.2, §9.3, G34): a number, or the
- * identifier of a single float variable; an integer variable is promoted (D5). NULL when that variable is NULL.
+ * Resolves a `FloatOrVariableRef` attribute or an item of a `ToleranceList`: a number, or the identifier of a single
+ * float variable; an integer variable is promoted.
+ *
+ * @remarks
+ * NULL when that variable is NULL.
  *
  * @throws `ProcessingError` when the identifier names no such variable.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function floatAttribute(value: number | string, scope: Scope, attribute: string): number | null {
   if (typeof value === "number") return value;
@@ -62,11 +71,14 @@ export function floatAttribute(value: number | string, scope: Scope, attribute: 
 }
 
 /**
- * Resolves a `StringOrVariableRef` attribute (INFO §2.7.2, §9.3): `{identifier}` names a single string variable, unless
- * no template or outcome variable in reach has the identifier, when the text is the string itself, as is any other text.
+ * Resolves a `StringOrVariableRef` attribute: `{identifier}` names a single string variable, unless no template or
+ * outcome variable in reach has the identifier, when the text is the string itself, as is any other text.
+ *
+ * @remarks
  * NULL when the variable is NULL.
  *
  * @throws `ProcessingError` when the identifier names a variable that is not a single string.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function stringAttribute(value: string, scope: Scope, attribute: string): string | null {
   const identifier = BRACED.exec(value)?.[1];

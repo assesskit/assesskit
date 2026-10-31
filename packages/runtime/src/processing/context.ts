@@ -9,9 +9,14 @@ import { DEFAULT_PROCESSING_LIMITS, type ProcessingLimits } from "./limits.js";
 export type CustomOperatorExpression = ElementModel<"CustomOperator", "qti-custom-operator">;
 
 /**
- * A custom operator: a function that computes the value of a `qti-custom-operator` from the values of its operands, NULL
- * as `null` (INFO §2.11.3.2, §10.1.5). It receives the expression, so that it can read the attributes and elements of
- * other namespaces that the operator carries.
+ * A custom operator: a function that computes the value of a `qti-custom-operator` from the values of its operands,
+ * NULL as `null`.
+ *
+ * @remarks
+ * It receives the expression, so that it can read the attributes and elements of other namespaces that the operator
+ * carries.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
  */
 export type CustomOperator = (
   operands: readonly (Value | null)[],
@@ -23,12 +28,16 @@ export interface ProcessingContext {
   /** The source of the draws of `qti-random`, `qti-random-integer` and `qti-random-float`. */
   readonly random: Random;
   /**
-   * The custom operators, by the `definition` of a `qti-custom-operator`, else by its `class`. Default: none.
+   * The custom operators, by the `definition` of a `qti-custom-operator`, else by its `class`.
+   *
+   * @defaultValue none
    */
   readonly customOperators?: ReadonlyMap<string, CustomOperator>;
   /**
    * Returns the response processing that a template URI names, for templates other than the six standard ones; it
-   * receives the `template-location` of the item when it has one, else its `template`. Default: none.
+   * receives the `template-location` of the item when it has one, else its `template`.
+   *
+   * @defaultValue none
    */
   readonly resolveTemplate?: (uri: string) => ResponseProcessing | undefined;
   /** Limits that replace those of {@link DEFAULT_PROCESSING_LIMITS}; a limit left out keeps its default. */

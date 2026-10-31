@@ -11,8 +11,8 @@ import {
   transformWith,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { checkDescriptor } from "../interactions/check-descriptor.js";
 import type { InteractionDescriptor } from "../interactions/index.js";
+import { checkDescriptor } from "../interactions/internal.js";
 import { PNP_HAZARDS } from "../pnp/index.js";
 import type { Value } from "../values/index.js";
 import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
@@ -141,17 +141,18 @@ const viewSchema: Schema<CandidateView> = v.strictObject({
 
 /**
  * Reads the JSON form of a candidate view, checking it deeply: every property of its form and no other, the type of
- * every field, the values as wire values, and the content as plain JSON nodes. A view that `viewToJson` wrote reads back
- * equal (E30).
+ * every field, the values as wire values, and the content as plain JSON nodes.
+ *
+ * @remarks
+ * A view that `viewToJson` wrote reads back equal.
  *
  * @param json - The parsed JSON.
+ * @returns The view.
  * @throws `DataError` when it is not the JSON form of a view.
  */
 export function viewFromJson(json: unknown): CandidateView {
   return parseWith(viewSchema, json, "The view");
 }
-
-// ---- writing ----
 
 /**
  * Returns a copy of an item instance's key with its two properties only.
@@ -201,13 +202,17 @@ function itemToJson(item: CandidateItem): unknown {
 }
 
 /**
- * Writes a candidate view as plain data that `JSON.stringify` keeps whole (R1, E30): values are wire values, NULL is
- * `null`, and maps are arrays of entries, so that an identifier such as `__proto__` stays data. The result is read back
- * by {@link viewFromJson} before it is returned, so that what leaves is what a client reads, and a view with a property
- * the form does not have is refused. The content nodes are shared with the view.
+ * Writes a candidate view as plain data that `JSON.stringify` keeps whole: values are wire values, NULL is `null`, and
+ * maps are arrays of entries, so that an identifier such as `__proto__` stays data.
  *
- * @throws `DataError` when the view is not one: it lacks a property of a view or has another, or holds a number that JSON
- * cannot carry.
+ * @remarks
+ * The result is read back by {@link viewFromJson} before it is returned, so that what leaves is what a client reads,
+ * and a view with a property the form does not have is refused. The content nodes are shared with the view.
+ *
+ * @param view - The view.
+ * @returns The plain data of the view.
+ * @throws `DataError` when the view is not one: it lacks a property of a view or has another, or holds a number that
+ * JSON cannot carry.
  */
 export function viewToJson(view: CandidateView): unknown {
   checkRecord(view, "The view must be an object");

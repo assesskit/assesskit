@@ -50,8 +50,11 @@ export interface PlannedPart {
 
 /**
  * What one session presents: the test parts in document order, each with the sections, and in them the items that
- * selection chose in the order that ordering gave. It holds identifiers and numbers only, so that it serializes as it
- * is and rebuilds the same session from the same structure.
+ * selection chose in the order that ordering gave.
+ *
+ * @remarks
+ * It holds identifiers and numbers only, so that it serializes as it is and rebuilds the same session from the same
+ * structure.
  */
 export interface TestPlan {
   /** The test parts in document order. */
@@ -102,7 +105,7 @@ interface Drafting {
   remaining: number;
 }
 
-/** Whether ordering keeps a draft where it is: its item reference or section is `fixed` (INFO §4.2.3). */
+/** Whether ordering keeps a draft where it is: its item reference or section is `fixed`. */
 function isFixed(entry: Draft): boolean {
   return entry.node.model.fixed === true;
 }
@@ -120,7 +123,7 @@ function spend(drafting: Drafting): void {
   drafting.remaining -= 1;
 }
 
-/** Returns the drafts with the children of the sections that ordering mixes in put in their places (INFO §4.2.6–7). */
+/** Returns the drafts with the children of the sections that ordering mixes in put in their places. */
 function mixIn(drafts: readonly Draft[]): Draft[] {
   return drafts.flatMap((entry) =>
     entry.kind === "section" && entry.node.dissolved ? mixIn(entry.children) : [entry],
@@ -130,7 +133,7 @@ function mixIn(drafts: readonly Draft[]): Draft[] {
 /**
  * Selects and orders the children of a section. The selection draws first, then each selected child section drafts its
  * own children, and the ordering draws last. An adaptive section keeps no children: its stages are appended as the CAT
- * engine chooses them (B66).
+ * engine chooses them.
  */
 function draftChildren(section: SectionNode, drafting: Drafting): Draft[] {
   if (section.model.adaptiveSelection !== undefined) return [];
@@ -177,19 +180,21 @@ function planChild(entry: Draft, occurrences: Map<string, number>): PlannedChild
 }
 
 /**
- * Plans a session: selects the children of every section, orders them, and numbers the instances (B21–B24, E11).
+ * Plans a session: selects the children of every section, orders them, and numbers the instances.
  *
+ * @remarks
  * - The test parts and the sections of a part keep document order; only the children of a section are selected and
  *   ordered, by `qti-selection` and `qti-ordering`.
  * - The draws come from `options.random` in a fixed order: depth first in document order, each section drawing its
- *   selection (G8), then its selected sections, then its ordering. Ordering shuffles by Fisher–Yates from the last
- *   index, so `fixed` children keep their places; an invisible section that is not kept together first gives its
- *   children to the list that is shuffled (B24). Equal draws give equal plans, and no draw is taken when a section
- *   selects all its children without shuffling.
+ *   selection, then its selected sections, then its ordering. Ordering shuffles by Fisher–Yates from the last index,
+ *   so `fixed` children keep their places; an invisible section that is not kept together first gives its children to the
+ *   list that is shuffled. Equal draws give equal plans, and no draw is taken when a section selects all its
+ *   children without shuffling.
  * - The instances of a reference, and of a section, are counted in presentation order across the whole test.
  *
  * @param structure - The test, from {@link resolveStructure}.
  * @param options - See {@link PlanOptions}.
+ * @returns The plan.
  * @throws `DataError` when an argument has the wrong type, or a selection asks for fewer children than are required,
  * more than exist without replacement, or any from a section with none.
  * @throws `SecurityError` when the plan would hold more than `limits.maxPlanNodes` sections and items.
@@ -222,10 +227,14 @@ export function planTest(structure: TestStructure, options: PlanOptions): TestPl
 }
 
 /**
- * Returns the item instances of a plan in presentation order, or those of one test part. A part with simultaneous
- * submission submits these together at its end (B27).
+ * Returns the item instances of a plan in presentation order, or those of one test part.
  *
+ * @remarks
+ * A part with simultaneous submission submits these together at its end.
+ *
+ * @param plan - The plan, from {@link planTest}.
  * @param part - The identifier of a test part. Default: every part.
+ * @returns The item instances.
  * @throws `DataError` when the plan is not a plan, or the part is not in it.
  */
 export function planItems(plan: TestPlan, part?: string): readonly ItemKey[] {

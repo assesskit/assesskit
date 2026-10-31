@@ -1,15 +1,12 @@
-import type { AssessmentSection, OutcomeDeclaration } from "../asi/index.js";
+import type { AssessmentSection } from "../asi/index.js";
 import type { ItemStage } from "../cat/index.js";
-import { fitValue } from "../processing/assign.js";
-import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS, QTI_CONTEXT } from "../processing/index.js";
-import type { OutcomeVariable } from "../results/index.js";
 import type { Value } from "../values/index.js";
 import { attemptsOf } from "./attempt.js";
 import { type DeliveredItem, type DeliveryState, findDelivered } from "./delivery-state.js";
 import { type ItemKey, type PlannedChild, type PlannedSection, sameKey, type TestPlan } from "./plan.js";
 import { planIndex } from "./plan-index.js";
 
-/** Where the CAT engine of an adaptive section is: the prefix of its URL and the identifier it gave the section (C1, C3). */
+/** Where the CAT engine of an adaptive section is: the prefix of its URL and the identifier it gave the section. */
 export interface CatSectionRef {
   /** The URL prefix of the engine, as `qti-adaptive-engine-ref` gives it. */
   readonly prefix: string;
@@ -18,27 +15,31 @@ export interface CatSectionRef {
 }
 
 /**
- * The request of a CAT session that waits for the host's answer (E18): Create Session when the candidate enters the
- * section, Submit Results with the item instances to report, End Session when the candidate leaves before the engine
- * ended the session.
+ * The request of a CAT session that waits for the host's answer: Create Session when the candidate enters the section,
+ * Submit Results with the item instances to report, End Session when the candidate leaves before the engine ended the
+ * session.
  */
 export type CatWait =
   | {
-      /** Create Session (CAT §3.3). */
+      /** Create Session. */
       readonly kind: "create-session";
     }
   | {
-      /** Submit Results (CAT §3.4). */
+      /** Submit Results. */
       readonly kind: "submit-results";
-      /** The item instances whose results the request carries (C4, B98). */
+      /** The item instances whose results the request carries. */
       readonly items: readonly ItemKey[];
     }
   | {
-      /** End Session (CAT §3.5). */
+      /** End Session. */
       readonly kind: "end-session";
     };
 
-/** An outcome that a CAT engine reported and the engine accepted (CAT §4.3.2). */
+/**
+ * An outcome that a CAT engine reported and the engine accepted.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export interface CatOutcome {
   /** The item instance of an item outcome; absent for a test outcome. */
   readonly item?: ItemKey;
@@ -52,7 +53,7 @@ export interface CatOutcome {
   readonly variableIdentifierRef?: string;
 }
 
-/** An item instance of an adaptive section with the number of attempts of it that a request reported (B98). */
+/** An item instance of an adaptive section with the number of attempts of it that a request reported. */
 export interface ReportedItem {
   /** The item instance. */
   readonly key: ItemKey;
@@ -66,7 +67,7 @@ export type CatStatus = "running" | "leaving" | "ended";
 /** The statuses, for the checks. */
 export const CAT_STATUSES: readonly CatStatus[] = ["running", "leaving", "ended"];
 
-/** The candidate session of one adaptive section (C3 to C5). */
+/** The candidate session of one adaptive section. */
 export interface CatSession {
   /** The identifier of the adaptive section. */
   readonly section: string;
@@ -84,17 +85,17 @@ export interface CatSession {
   readonly sessionState?: string;
   /** The item instances of the current stage that the plan holds, in order. */
   readonly stage: readonly ItemKey[];
-  /** The items of the stage that the candidate submits before the engine sends the results (C4). */
+  /** The items of the stage that the candidate submits before the engine sends the results. */
   readonly stageLength: number;
   /** The item instances reported so far, each with the attempts reported. */
   readonly reported: readonly ReportedItem[];
   /** The outcomes the engine reported. */
   readonly outcomes: readonly CatOutcome[];
-  /** Whether the candidate asked to move on while the session waited; the move goes on when it has answered (E18). */
+  /** Whether the candidate asked to move on while the session waited; the move goes on when it has answered. */
   readonly moving?: true;
 }
 
-/** The identifier of the request that a session waits for (E18). */
+/** The identifier of the request that a session waits for. */
 export function catRequestId(session: CatSession): string {
   return `cat:${session.section}:${session.instance}:${session.requests}`;
 }
@@ -110,7 +111,7 @@ export function withCat(state: DeliveryState, session: CatSession): DeliveryStat
   return { ...state, cat: at < 0 ? [...state.cat, session] : state.cat.map((each, i) => (i === at ? session : each)) };
 }
 
-/** Returns a session that waits for Create Session: the candidate has entered its section (C3). */
+/** Returns a session that waits for Create Session: the candidate has entered its section. */
 export function startedCat(section: string, instance: number): CatSession {
   return {
     section,
@@ -191,9 +192,11 @@ function withChildren(
 }
 
 /**
- * Returns the plan with the items of a stage added at the end of the section (CAT §2.4, §4.2): each identifier an
- * instance of the item reference, numbered after the instances the plan holds, so that an item the engine calls again is
- * instanced as with replacement (C8).
+ * Returns the plan with the items of a stage added at the end of the section: each identifier an instance of the item
+ * reference, numbered after the instances the plan holds, so that an item the engine calls again is instanced as with
+ * replacement.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function appendedStage(
   plan: TestPlan,
@@ -211,7 +214,11 @@ export function appendedStage(
   return { plan: withChildren(plan, section, instance, (children) => [...children, ...added]), keys };
 }
 
-/** Returns the plan without the item instances of a section that the candidate has not been presented (CAT §4.2). */
+/**
+ * Returns the plan without the item instances of a section that the candidate has not been presented.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export function withoutUnpresented(
   plan: TestPlan,
   section: string,
@@ -230,12 +237,20 @@ export function planSize(plan: TestPlan): number {
   return plan.parts.reduce((total, part) => total + size(part.children), 0);
 }
 
-/** The item references that an adaptive section lists: the pool of its engine (CAT §2.1). */
+/**
+ * The item references that an adaptive section lists: the pool of its engine.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export function poolOf(section: AssessmentSection): ReadonlySet<string> {
   return new Set(section.children.flatMap((child) => (child.kind === "assessment-item-ref" ? [child.identifier] : [])));
 }
 
-/** The number of items of a stage that the candidate submits before the engine sends the results (C4, CAT §4.2). */
+/**
+ * The number of items of a stage that the candidate submits before the engine sends the results.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export function stageLengthOf(stage: ItemStage, items: number): number {
   const hint = stage.stageLength ?? 0;
   return hint > 0 ? Math.min(hint, items) : items;
@@ -243,8 +258,12 @@ export function stageLengthOf(stage: ItemStage, items: number): number {
 
 /**
  * Returns the item instances of the section whose results the engine has not reported: presented, with an attempt that
- * ended after the last report of them (CAT §2.4, B98). A session in a nonlinear part reports an item again when a
- * further attempt ended.
+ * ended after the last report of them.
+ *
+ * @remarks
+ * A session in a nonlinear part reports an item again when a further attempt ended.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function unreported(state: DeliveryState, session: CatSession): ItemKey[] {
   const keys: ItemKey[] = [];
@@ -268,8 +287,8 @@ export function withReported(state: DeliveryState, session: CatSession, keys: re
 }
 
 /**
- * Whether the candidate has submitted the first `stageLength` items of the stage, so that the engine sends the results
- * (C4): each of them has an attempt that ended.
+ * Whether the candidate has submitted the first `stageLength` items of the stage, so that the engine sends the results:
+ * each of them has an attempt that ended.
  */
 export function stageSubmitted(state: DeliveryState, session: CatSession): boolean {
   if (session.stage.length === 0) return false;
@@ -277,77 +296,4 @@ export function stageSubmitted(state: DeliveryState, session: CatSession): boole
     const delivered = findDelivered(state, key);
     return delivered !== undefined && endedAttempts(delivered) > 0;
   });
-}
-
-/** How the engine takes an outcome that a CAT engine reported (CAT §4.3.2): into a declaration, as an extra, or not at all. */
-export type OutcomeFate =
-  | { readonly fate: "declared"; readonly identifier: string; readonly value: Value }
-  | { readonly fate: "extra" }
-  | { readonly fate: "ignored" };
-
-/** The variables of a test or an item that a CAT outcome may not take the name of (CAT §4.3.2). */
-export interface Declared {
-  /** The declared outcomes. */
-  readonly outcomes: readonly OutcomeDeclaration[];
-  /** The identifiers of the other variables: context, template and response variables, and the built-ins. */
-  readonly others: ReadonlySet<string>;
-}
-
-/** The built-in variables of an item, which an engine may not report (INFO §2.2.2). */
-const BUILT_INS: readonly string[] = [NUM_ATTEMPTS, DURATION, COMPLETION_STATUS, QTI_CONTEXT];
-
-/** Returns the identifiers that an item declares besides its outcomes, and the built-ins. */
-export function otherIdentifiers(
-  declarations: readonly (readonly { readonly identifier: string }[])[],
-): ReadonlySet<string> {
-  return new Set([...BUILT_INS, ...declarations.flat().map(({ identifier }) => identifier)]);
-}
-
-/**
- * Decides what the engine does with an outcome a CAT engine reported (CAT §4.3.2). A declared outcome with
- * `external-scored="externalMachine"` takes it, by its own identifier or by its `variable-identifier-ref`, if the value
- * fits. The same name as a context, template or response variable, or as an outcome without that attribute, is
- * ignored. Any other outcome is accepted as if it were declared, and kept for the report.
- */
-export function outcomeFate(reported: OutcomeVariable, declared: Declared): OutcomeFate {
-  const { identifier, value } = reported;
-  if (value === null) return { fate: "ignored" };
-  const mapped = declared.outcomes.find(
-    (declaration) =>
-      declaration.externalScored === "externalMachine" && declaration.variableIdentifierRef === identifier,
-  );
-  const own = declared.outcomes.find((declaration) => declaration.identifier === identifier);
-  const target = mapped ?? own;
-  if (target !== undefined) {
-    if (target.externalScored !== "externalMachine") return { fate: "ignored" };
-    const fitted = fitValue(value, target);
-    return fitted === undefined
-      ? { fate: "ignored" }
-      : { fate: "declared", identifier: target.identifier, value: fitted };
-  }
-  return declared.others.has(identifier) ? { fate: "ignored" } : { fate: "extra" };
-}
-
-/** Whether another session of the test already holds an outcome with this identifier for this scope (CAT §4.3.2). */
-export function heldByOther(state: DeliveryState, session: CatSession, identifier: string, item?: ItemKey): boolean {
-  return state.cat.some(
-    (other) =>
-      other !== session &&
-      other.outcomes.some(
-        (outcome) =>
-          outcome.identifier === identifier &&
-          (item === undefined ? outcome.item === undefined : outcome.item !== undefined && sameKey(outcome.item, item)),
-      ),
-  );
-}
-
-/** Returns the values that CAT engines gave the external-scored outcomes of the test: their reset values (G24, C4). */
-export function catTestOutcomes(state: DeliveryState): Map<string, Value> {
-  const values = new Map<string, Value>();
-  for (const session of state.cat) {
-    for (const outcome of session.outcomes) {
-      if (outcome.item === undefined && outcome.declared) values.set(outcome.identifier, outcome.value);
-    }
-  }
-  return values;
 }

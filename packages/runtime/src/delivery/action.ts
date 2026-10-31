@@ -10,17 +10,20 @@ import { checkKey, type ItemKey } from "./plan.js";
 import type { Scorer } from "./scoring.js";
 
 /**
- * An action of the candidate (INFO §2.2.1, §2.8):
+ * An action of the candidate:
  *
- * | Type                      | The candidate …                                                                   |
- * | ------------------------- | --------------------------------------------------------------------------------- |
+ * | Type                      | The candidate …                                                                                           |
+ * | ------------------------- | --------------------------------------------------------------------------------------------------------- |
  * | the types of `ItemAction` | acts on the item presented: responses, submit, skip, end attempt, next attempt, review, solution, comment |
- * | `move`                    | goes to the next item, to the previous one, or to an item of a nonlinear test part |
- * | `support`                 | turns on or off a support that is an option (BPIG §5.3)                           |
- * | `end-part`                | ends the test part                                                                |
- * | `end-test`                | ends the test                                                                     |
- * | `suspend`                 | suspends the candidate session                                                    |
- * | `resume`                  | resumes the candidate session                                                     |
+ * | `move`                    | goes to the next item, to the previous one, or to an item of a nonlinear test part                        |
+ * | `support`                 | turns on or off a support that is an option                                                               |
+ * | `end-part`                | ends the test part                                                                                        |
+ * | `end-test`                | ends the test                                                                                             |
+ * | `suspend`                 | suspends the candidate session                                                                            |
+ * | `resume`                  | resumes the candidate session                                                                             |
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export type CandidateAction =
   | ItemAction
@@ -44,13 +47,13 @@ export type CandidateAction =
     };
 
 /**
- * An action of the host (E22), which the client never sends:
+ * An action of the host, which the client never sends:
  *
- * | Type            | The host …                                                                                         |
- * | --------------- | -------------------------------------------------------------------------------------------------- |
- * | `time`          | applies the deadlines that passed (E7)                                                             |
- * | `supply-scores` | gives the value of the outcome that a scoring request asks for, in any state (E15)                 |
- * | `cat-response`  | gives the answer of the CAT engine to a CAT request, in any state (E18)                            |
+ * | Type            | The host …                                                                   |
+ * | --------------- | ---------------------------------------------------------------------------- |
+ * | `time`          | applies the deadlines that passed                                            |
+ * | `supply-scores` | gives the value of the outcome that a scoring request asks for, in any state |
+ * | `cat-response`  | gives the answer of the CAT engine to a CAT request, in any state            |
  */
 export type HostAction =
   | {
@@ -76,7 +79,7 @@ export type HostAction =
       readonly response: CatResponse;
     };
 
-/** An action of the candidate or the host, with the time it happened: epoch milliseconds on the host's clock (E5). */
+/** An action of the candidate or the host, with the time it happened: epoch milliseconds on the host's clock. */
 export type Action = (CandidateAction | HostAction) & {
   /** When the action happened, in epoch milliseconds. */
   readonly at: number;
@@ -97,7 +100,7 @@ const SESSION_ACTION_TYPES = [
 
 const ACTION_TYPES: readonly Action["type"][] = [...ITEM_ACTION_TYPES, ...SESSION_ACTION_TYPES];
 
-/** The scorers, for the checks (W18). */
+/** The scorers, for the checks. */
 const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
 
 /** The places that `move` names by a word. */

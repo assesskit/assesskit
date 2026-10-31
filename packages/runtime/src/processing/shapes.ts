@@ -2,10 +2,18 @@ import { ProcessingError } from "../errors.js";
 import type { Point, Value } from "../values/index.js";
 import { asPoint, booleanResult, primitivesOf } from "./operands.js";
 
-/** The shapes of areas (INFO §8.29). */
+/**
+ * The shapes of areas.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export type Shape = "circle" | "default" | "ellipse" | "poly" | "rect";
 
-/** The number of coordinates each shape takes; a polygon takes three points or more (INFO §5.75.2). */
+/**
+ * The number of coordinates each shape takes; a polygon takes three points or more.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const COORDINATE_COUNTS: ReadonlyMap<Shape, (count: number) => boolean> = new Map<Shape, (count: number) => boolean>([
   ["circle", (count) => count === 3],
   ["default", () => true],
@@ -14,14 +22,17 @@ const COORDINATE_COUNTS: ReadonlyMap<Shape, (count: number) => boolean> = new Ma
   ["rect", (count) => count === 4],
 ]);
 
-/** A coordinate: a non-negative number of pixels (INFO §5.75.2, `CoordsDType`). */
+/** A coordinate: a non-negative number of pixels (`CoordsDType`). */
 const COORDINATE = /^[0-9]+(?:\.[0-9]+)?$/;
 
 /**
- * Reads the coordinates of an area (INFO §5.75.2): numbers separated by commas, as many as the shape takes. A
- * percentage is relative to the size of the image, which processing does not know.
+ * Reads the coordinates of an area: numbers separated by commas, as many as the shape takes.
+ *
+ * @remarks
+ * A percentage is relative to the size of the image, which processing does not know.
  *
  * @throws `ProcessingError` when a coordinate is a percentage or not a number, or the count does not fit the shape.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function parseCoords(shape: Shape, coords: string): number[] {
   const tokens = shape === "default" && coords.trim() === "" ? [] : coords.split(",").map((token) => token.trim());
@@ -61,9 +72,11 @@ function insidePolygon(point: Point, coords: readonly number[]): boolean {
 }
 
 /**
- * Returns whether a point lies in an area, its edge included (INFO §5.75.2, §8.29): a rectangle from its left-x, top-y,
- * right-x and bottom-y, a circle from its center and radius, an ellipse from its center and horizontal and vertical
- * radii, a polygon from its corners, and `default`, the whole image.
+ * Returns whether a point lies in an area, its edge included: a rectangle from its left-x, top-y, right-x and bottom-y,
+ * a circle from its center and radius, an ellipse from its center and horizontal and vertical radii, a polygon from its
+ * corners, and `default`, the whole image.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function insideShape(shape: Shape, coords: readonly number[], point: Point): boolean {
   const [x, y] = point;
@@ -83,9 +96,13 @@ export function insideShape(shape: Shape, coords: readonly number[], point: Poin
 }
 
 /**
- * `qti-inside`: whether the point, or any point of a container, lies in the area (INFO §2.11.3.7). NULL for NULL.
+ * `qti-inside`: whether the point, or any point of a container, lies in the area.
+ *
+ * @remarks
+ * NULL for NULL.
  *
  * @throws `ProcessingError` when the coordinates do not fit the shape.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-inside}
  */
 export function inside(operand: Value | null, shape: Shape, coords: string): Value | null {
   const parsed = parseCoords(shape, coords);

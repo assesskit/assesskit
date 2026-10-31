@@ -23,7 +23,11 @@ export interface OutcomeTarget extends Scope {
   setOutcome(identifier: string, value: Value | null, rule: string): void;
 }
 
-/** Whether processing goes on after a rule, or a `qti-exit-response` or `qti-exit-test` ended it (INFO §6.39.5, §6.32.5). */
+/**
+ * Whether processing goes on after a rule, or a `qti-exit-response` or `qti-exit-test` ended it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-exit-response}
+ */
 type Flow = "continue" | "exit";
 
 type Rule = ResponseRule | OutcomeRule;
@@ -78,12 +82,14 @@ function runRule(rule: Rule, target: OutcomeTarget): Flow {
 }
 
 /**
- * Runs the rules of response or outcome processing in order, each seeing the outcomes the earlier ones set (INFO
- * §6.32, §6.39). A condition runs the rules of its first true branch; a fragment runs its rules; an exit rule ends the
- * processing.
+ * Runs the rules of response or outcome processing in order, each seeing the outcomes the earlier ones set.
+ *
+ * @remarks
+ * A condition runs the rules of its first true branch; a fragment runs its rules; an exit rule ends the processing.
  *
  * @returns `exit` when an exit rule ended the processing.
  * @throws `ProcessingError` when a rule fails.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function runOutcomeRules(rules: readonly Rule[], target: OutcomeTarget): Flow {
   for (const rule of rules) if (runRule(rule, target) === "exit") return "exit";

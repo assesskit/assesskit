@@ -2,7 +2,11 @@ import { ProcessingError } from "../errors.js";
 import type { Value } from "../values/index.js";
 import { asNumber, floatResult, integerResult, primitiveOf } from "./operands.js";
 
-/** The names of `qti-math-operator` (INFO §8.21). */
+/**
+ * The names of `qti-math-operator`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-math-operator}
+ */
 export type MathOperatorName =
   | "abs"
   | "acos"
@@ -36,8 +40,10 @@ export type MathOperatorName =
 const DEGREES_PER_RADIAN = 180 / Math.PI;
 
 /**
- * The functions of `qti-math-operator` (INFO §8.21). The reciprocal functions are 1/f, so that f = ±INF gives 0 and f = 0
- * gives an infinity, which is NULL (INFO §2.11.3.39); the inverse reciprocal ones are the inverse of 1/x.
+ * The functions of `qti-math-operator`. The reciprocal functions are 1/f, so that f = ±INF gives 0 and f = 0 gives an
+ * infinity, which is NULL; the inverse reciprocal ones are the inverse of 1/x.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-math-operator}
  */
 const FUNCTIONS: ReadonlyMap<MathOperatorName, (x: number, y: number) => number> = new Map<
   MathOperatorName,
@@ -73,20 +79,32 @@ const FUNCTIONS: ReadonlyMap<MathOperatorName, (x: number, y: number) => number>
   ["toRadians", (x) => x / DEGREES_PER_RADIAN],
 ]);
 
-/** The functions whose result is an integer (INFO §2.11.3.39). */
+/**
+ * The functions whose result is an integer.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const INTEGER_FUNCTIONS: ReadonlySet<MathOperatorName> = new Set(["signum", "floor", "ceil"]);
 
-/** The functions of two arguments; the others take one (INFO §2.11.3.39). */
+/**
+ * The functions of two arguments; the others take one.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const BINARY_FUNCTIONS: ReadonlySet<MathOperatorName> = new Set(["atan2"]);
 
 /**
- * `qti-math-operator` (INFO §2.11.3.39, §8.21): a float, or an integer for `signum`, `floor` and `ceil`. NULL when an
- * operand is NULL or NaN, or the argument is outside the natural domain, which includes `ln` and `log` of 0 (G28) and
- * the reciprocal functions where the function is 0. A finite argument whose result overflows to an infinity is NULL, as
- * a result outside the float range is for `qti-divide` (INFO §2.11.3.19); an infinite argument keeps the infinite
- * results of Table 8.21, such as `exp(INF) = INF`. `floor` and `ceil` of ±INF are NULL (D4).
+ * `qti-math-operator`: a float, or an integer for `signum`, `floor` and `ceil`.
+ *
+ * @remarks
+ * NULL when an operand is NULL or NaN, or the argument is outside the natural domain, which includes `ln` and `log` of
+ * 0 and the reciprocal functions where the function is 0. A finite argument whose result overflows to an infinity is
+ * NULL, as a result outside the float range is for `qti-divide`; an infinite argument keeps the infinite results of
+ * Table 8.21, such as `exp(INF) = INF`. `floor` and `ceil` of ±INF are NULL.
  *
  * @throws `ProcessingError` when the number of operands is not the function's.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-math-operator}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function mathOperator(name: MathOperatorName, operands: readonly (Value | null)[]): Value | null {
   const compute = FUNCTIONS.get(name);

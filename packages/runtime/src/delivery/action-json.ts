@@ -19,18 +19,24 @@ import { supportNameSchema } from "./support-json.js";
 /** The limits of {@link parseCandidateAction}, which keep a client from sending an action that is too large to handle. */
 export interface ActionLimits {
   /**
-   * The size of an action: each string, number, boolean, `null`, array and object counts 1, and each string and property
-   * name adds its length in code units. Default: `4194304`.
+   * The size of an action: each string, number, boolean, `null`, array and object counts 1, and each string and
+   * property name adds its length in code units.
+   *
+   * @defaultValue `4194304`
    */
   readonly maxActionSize: number;
-  /** The length of one portable custom interaction state, in code units (E29). Default: `1048576`. */
+  /**
+   * The length of one portable custom interaction state, in code units.
+   *
+   * @defaultValue `1048576`
+   */
   readonly maxPciStateLength: number;
 }
 
 /** The default limits of {@link parseCandidateAction}. */
 export const DEFAULT_ACTION_LIMITS: ActionLimits = { maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 };
 
-/** The types of the actions of the host, which a candidate never sends (E22). */
+/** The types of the actions of the host, which a candidate never sends. */
 const HOST_ACTION_TYPES: readonly string[] = ["time", "supply-scores", "cat-response"];
 
 /** The places that `move` names by a word. */
@@ -48,8 +54,8 @@ function readLimits(limits: Partial<ActionLimits>): ActionLimits {
 }
 
 /**
- * Checks that JSON is not larger than the limit. It counts without recursion and stops once the limit is passed, so that
- * the check costs no more than the limit, whatever the input.
+ * Checks that JSON is not larger than the limit. It counts without recursion and stops once the limit is passed, so
+ * that the check costs no more than the limit, whatever the input.
  */
 function checkSize(json: unknown, limit: number): void {
   const pending: unknown[] = [json];
@@ -94,7 +100,7 @@ const actionSchema: Schema<CandidateAction> = v.variant("type", [
   v.strictObject({ type: v.picklist(["end-part", "end-test", "suspend", "resume"]) }),
 ]);
 
-/** Refuses an action of the host (E22), which a candidate never sends. */
+/** Refuses an action of the host, which a candidate never sends. */
 function refuseHostAction(json: unknown): void {
   if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {
     throw new DataError(
@@ -103,7 +109,7 @@ function refuseHostAction(json: unknown): void {
   }
 }
 
-/** Checks the length of every PCI state against the limit (E29), which is the caller's and not the form's. */
+/** Checks the length of every PCI state against the limit, which is the caller's and not the form's. */
 function checkPciStates(action: CandidateAction, limit: number): void {
   if (action.type !== "set-responses" || action.pciStates === undefined) return;
   for (const [identifier, state] of action.pciStates) {
@@ -117,13 +123,15 @@ function checkPciStates(action: CandidateAction, limit: number): void {
 
 /**
  * Reads the JSON form of an action of the candidate, as {@link actionToJson} writes it, and checks it: the type, every
- * property of the type and no other, the values as wire values, and the limits. The action has no time: the server stamps
- * it with {@link stamp} (E22), and an action of the host (`time`, `supply-scores`, `cat-response`) or a property `at` is
- * refused.
+ * property of the type and no other, the values as wire values, and the limits.
+ *
+ * @remarks
+ * The action has no time: the server stamps it with {@link stamp}, and an action of the host (`time`, `supply-scores`,
+ * `cat-response`) or a property `at` is refused.
  *
  * @param json - The parsed JSON.
  * @param limits - Limits that replace those of {@link DEFAULT_ACTION_LIMITS}; a limit left out keeps its default.
- * Default: none.
+ * @returns The action of the candidate, without a time.
  * @throws `DataError` when the input is not an action of the candidate, or is larger than a limit.
  */
 export function parseCandidateAction(json: unknown, limits: Partial<ActionLimits> = {}): CandidateAction {
@@ -142,10 +150,15 @@ const UNLIMITED: ActionLimits = {
 };
 
 /**
- * Writes an action of the candidate as plain data that `JSON.stringify` keeps whole (E30): values are wire values, NULL is
- * `null`, and maps are arrays of entries. Only the properties of the action's type are written, so a time `at` is not.
- * The result is read back by {@link parseCandidateAction} before it is returned.
+ * Writes an action of the candidate as plain data that `JSON.stringify` keeps whole: values are wire values, NULL is
+ * `null`, and maps are arrays of entries.
  *
+ * @remarks
+ * Only the properties of the action's type are written, so a time `at` is not. The result is read back by
+ * {@link parseCandidateAction} before it is returned.
+ *
+ * @param action - The action.
+ * @returns The plain data of the action.
  * @throws `DataError` when the action is not an action of the candidate.
  */
 export function actionToJson(action: CandidateAction): unknown {

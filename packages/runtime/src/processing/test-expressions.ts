@@ -8,16 +8,25 @@ import { asNumber, integerResult, primitiveOf } from "./operands.js";
 import type { Scope } from "./scope.js";
 import type { ItemSessionFilter, ItemSessionView, TestScope } from "./test-scope.js";
 
-/** The base types that `qti-test-variables` reads without a `base-type` (INFO §7.39.6). */
+/**
+ * The base types that `qti-test-variables` reads without a `base-type`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-test-variables}
+ */
 const NUMERIC: readonly BaseType[] = ["integer", "float"];
 
-/** The expressions that count item sessions (INFO §2.11.2.1–5). */
+/**
+ * The expressions that count item sessions.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export type Count = "number-correct" | "number-incorrect" | "number-presented" | "number-responded" | "number-selected";
 
 /**
- * Returns the test of a scope, which only outcome processing has (INFO §2.11.2).
+ * Returns the test of a scope, which only outcome processing has.
  *
  * @throws `ProcessingError` in an item.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function testOf(scope: Scope, kind: string): TestScope {
   if (scope.test === undefined) {
@@ -28,7 +37,11 @@ export function testOf(scope: Scope, kind: string): TestScope {
   return scope.test;
 }
 
-/** The attributes that choose item sessions (INFO §7.27). */
+/**
+ * The attributes that choose item sessions.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 interface Subset {
   readonly sectionIdentifier?: string;
   readonly includeCategory?: readonly string[];
@@ -44,7 +57,11 @@ export function filterOf({ sectionIdentifier, includeCategory, excludeCategory }
   };
 }
 
-/** The number of attempts of a session (INFO §2.2.2.2). */
+/**
+ * The number of attempts of a session.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function attempts(view: ItemSessionView): number {
   const value = view.variables.responses.get(NUM_ATTEMPTS) ?? null;
   return value === null ? 0 : asNumber(primitiveOf(value));
@@ -57,8 +74,9 @@ function same(a: Value | null, b: Value | null): boolean {
 
 /**
  * Returns whether each response variable of a session matches its correct response, `undefined` when the item has no
- * response variable or one without a correct response, which the counts of correct and incorrect items leave out
- * (INFO §2.11.2.1–2).
+ * response variable or one without a correct response, which the counts of correct and incorrect items leave out.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function correctness(view: ItemSessionView): boolean | undefined {
   const { item, variables } = view;
@@ -72,7 +90,11 @@ function correctness(view: ItemSessionView): boolean | undefined {
   return correct;
 }
 
-/** Returns whether a session gave a response other than a declared default (INFO §2.11.2.4). */
+/**
+ * Returns whether a session gave a response other than a declared default.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function responded(view: ItemSessionView): boolean {
   const { item, variables } = view;
   return item.responseDeclarations.some(
@@ -92,10 +114,14 @@ const COUNTED: ReadonlyMap<Count, (view: ItemSessionView) => boolean> = new Map<
 ]);
 
 /**
- * The `qti-number-*` expressions (INFO §2.11.2.1–5): the item sessions of the subset that were selected; presented,
- * that is attempted at least once; responded, attempted with a response other than a declared default; correct, every
- * response variable matching its correct response; or incorrect, attempted with one that does not. Correct and
- * incorrect consider only items with response variables that all have correct responses.
+ * The `qti-number-*` expressions: the item sessions of the subset that were selected; presented, that is attempted at
+ * least once; responded, attempted with a response other than a declared default; correct, every response variable
+ * matching its correct response; or incorrect, attempted with one that does not.
+ *
+ * @remarks
+ * Correct and incorrect consider only items with response variables that all have correct responses.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function count(kind: Count, sessions: Iterable<ItemSessionView>): Value | null {
   const counted = COUNTED.get(kind) ?? (() => false);
@@ -105,12 +131,15 @@ export function count(kind: Count, sessions: Iterable<ItemSessionView>): Value |
 }
 
 /**
- * `qti-outcome-minimum` and `qti-outcome-maximum` (INFO §2.11.2.6–7): the `normal-minimum` or `normal-maximum` of the
- * outcome in each session of the subset, weighted, as a multiple float. Items without the outcome, or with one that is
- * not single, are left out. `outcome-minimum` leaves out items that declare no minimum; `outcome-maximum` is NULL when
- * an item declares no maximum. NULL when no value is left.
+ * `qti-outcome-minimum` and `qti-outcome-maximum`: the `normal-minimum` or `normal-maximum` of the outcome in each
+ * session of the subset, weighted, as a multiple float.
+ *
+ * @remarks
+ * Items without the outcome, or with one that is not single, are left out. `outcome-minimum` leaves out items that
+ * declare no minimum; `outcome-maximum` is NULL when an item declares no maximum. NULL when no value is left.
  *
  * @throws `SecurityError` when the container would hold more than `maxContainerSize` values.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-outcome-minimum}
  */
 export function outcomeBound(
   bound: "minimum" | "maximum",
@@ -136,13 +165,17 @@ export function outcomeBound(
 }
 
 /**
- * `qti-test-variables` (INFO §2.11.2.8, §7.39): the values of the variable in each session of the subset, as a multiple
- * container. Only single values are considered and NULL ones are left out. With `base-type`, only values of that base
- * type count, and the result has it; without, integers and floats count, and the result is an integer container when
- * every value is an integer, else a float one. A weight makes integers and floats floats; it applies only without
- * `base-type` or with `float`, and is ignored with `integer` (G35). NULL when no value is left.
+ * `qti-test-variables`: the values of the variable in each session of the subset, as a multiple container.
+ *
+ * @remarks
+ * Only single values are considered and NULL ones are left out. With `base-type`, only values of that base type count,
+ * and the result has it; without, integers and floats count, and the result is an integer container when every value is
+ * an integer, else a float one. A weight makes integers and floats floats; it applies only without `base-type` or with
+ * `float`, and is ignored with `integer`. NULL when no value is left.
  *
  * @throws `SecurityError` when the container would hold more than `maxContainerSize` values.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-test-variables}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function testVariables(
   sessions: Iterable<ItemSessionView>,

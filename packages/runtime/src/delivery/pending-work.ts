@@ -6,7 +6,7 @@ import type { DeliveryState } from "./delivery-state.js";
 import { catReport } from "./results-assembly.js";
 import type { ScoringRequest } from "./scoring.js";
 
-/** What every CAT request names: the adaptive section of the test and where its CAT engine is (C1). */
+/** What every CAT request names: the adaptive section of the test and where its CAT engine is. */
 export interface CatRequestBase {
   /** The identifier of the request; the `cat-response` action that answers it names it. */
   readonly id: string;
@@ -19,36 +19,38 @@ export interface CatRequestBase {
 }
 
 /**
- * A request that the engine makes of a CAT engine and waits on (E18): Create Session when the candidate enters an adaptive
- * section; Submit Results with the results of the items to report, per the policy of C4, and the state the engine handed
- * over; End Session when the candidate leaves before the engine ends the session. The host makes the request through its
- * `CatPort`, or `drainCat` does, and answers with a `cat-response` action.
+ * A request that the engine makes of a CAT engine and waits on: Create Session when the candidate enters an adaptive
+ * section; Submit Results with the results of the items to report, per the reporting policy of the section, and the
+ * state the engine handed over; End Session when the candidate leaves before the engine ends the session.
+ *
+ * @remarks
+ * The host makes the request through its `CatPort`, or `drainCat` does, and answers with a `cat-response` action.
  */
 export type CatRequest =
   | (CatRequestBase & {
-      /** Create Session (CAT §3.3). */
+      /** Create Session. */
       readonly kind: "create-session";
-      /** The body of the request: the candidate's PNP as `writePnp` writes it, in base64, when the session has one (C3). */
+      /** The body of the request: the candidate's PNP as `writePnp` writes it, in base64, when the session has one. */
       readonly body: CreateSessionRequest;
     })
   | (CatRequestBase & {
-      /** Submit Results (CAT §3.4). */
+      /** Submit Results. */
       readonly kind: "submit-results";
       /** The identifier of the session. */
       readonly sessionIdentifier: string;
-      /** The minimal results report of the items presented since the last request (C10), with their earlier results again when they changed (B98). */
+      /** The minimal results report of the items presented since the last request, with their earlier results again when they changed. */
       readonly assessmentResult: AssessmentResult;
       /** The state the engine handed over with its last answer; absent when it sent none. */
       readonly sessionState?: string;
     })
   | (CatRequestBase & {
-      /** End Session (CAT §3.5). */
+      /** End Session. */
       readonly kind: "end-session";
       /** The identifier of the session. */
       readonly sessionIdentifier: string;
     });
 
-/** What the engine waits on the host for (E13, E18): scoring requests with no value yet, and CAT requests. */
+/** What the engine waits on the host for: scoring requests with no value yet, and CAT requests. */
 export interface PendingWork {
   /** The scoring requests whose value has not been supplied, in the order they were made. */
   readonly scoring: readonly ScoringRequest[];
@@ -91,7 +93,7 @@ function catRequestOf(course: Course, state: DeliveryState, session: CatSession)
   }
 }
 
-/** Returns what the engine waits on the host for in a state (E13, E18). */
+/** Returns what the engine waits on the host for in a state. */
 export function pendingWork(course: Course, state: DeliveryState): PendingWork {
   return {
     scoring: state.scoring.filter((request) => request.supplied === undefined),

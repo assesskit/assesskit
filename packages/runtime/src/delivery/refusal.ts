@@ -1,6 +1,8 @@
 /**
- * Why the engine refuses an action that is well formed but that the rules do not allow. The delivery guide lists the codes
- * and says when each is given.
+ * Why the engine refuses an action that is well formed but that the rules do not allow.
+ *
+ * @remarks
+ * The delivery guide lists the codes and says when each is given.
  */
 export type RefusalCode =
   | "attempts-exhausted"

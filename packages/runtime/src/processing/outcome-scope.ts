@@ -1,8 +1,7 @@
 import type { AssessmentTest, OutcomeDeclaration } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { DataError, ProcessingError } from "../errors.js";
-import type { Value } from "../values/index.js";
-import { normalizeValue } from "../values/value.js";
+import { normalizeValue, type Value } from "../values/index.js";
 import { assign, describeType, fitValue, type VariableType } from "./assign.js";
 import type { Environment } from "./context.js";
 import { declaredValue } from "./declared-value.js";
@@ -12,7 +11,11 @@ import type { DeclaredResponse, Scope } from "./scope.js";
 import type { ItemSessionView, TestScope } from "./test-scope.js";
 import { initialOutcome } from "./variables.js";
 
-/** The instance number in `ITEM.n.VAR`: a positive integer (INFO §2.11.1.2). */
+/**
+ * The instance number in `ITEM.n.VAR`: a positive integer.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const INSTANCE = /^[1-9][0-9]*$/;
 
 function undeclared(identifier: string, kind = "variable"): ProcessingError {
@@ -70,7 +73,8 @@ export class OutcomeScope implements Scope {
 
   /**
    * @param given - The values the outcomes start from; an outcome left out starts from its default value, else 0 for a
-   * single integer or float, else NULL (INFO §2.2.2.3, §2.9).
+   * single integer or float, else NULL.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   constructor(
     test: AssessmentTest,
@@ -175,7 +179,7 @@ export class OutcomeScope implements Scope {
     this.outcomes.set(identifier, assign(value, declaration, identifier));
   }
 
-  /** Returns the outcomes as they are now. */
+  /** Returns the current outcomes. */
   values(): ReadonlyMap<string, Value | null> {
     return new Map(this.outcomes);
   }

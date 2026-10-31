@@ -30,8 +30,7 @@ import {
 } from "../src/index.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
 import { interactionKinds } from "./asi-elements.js";
-
-// Helpers ---------------------------------------------------------------------------------------------------------------
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -98,7 +97,7 @@ function counting(seed: number): Random & { draws: number } {
   };
 }
 
-/** The interactions of INFO §2.4 as markup, with the bindings that §2.4.1 to §2.4.5 give each. */
+/** The interactions of the information model as markup, with the bindings that it gives each. */
 const INTERACTIONS: readonly {
   readonly kind: InteractionKind;
   readonly body: string;
@@ -206,13 +205,20 @@ const INTERACTIONS: readonly {
   },
 ];
 
-describe("describeInteractions", () => {
-  it.each(INTERACTIONS)("$kind: accepts the bindings that INFO §2.4 gives it", ({ kind, body, bindings }) => {
-    const descriptor = descriptorOf(body);
-    expect(descriptor.kind).toBe(kind);
-    expect(descriptor.responseIdentifier).toBe("R");
-    expect(namesOf(descriptor.bindings)).toEqual(bindings);
-  });
+/** The fields of a numeric record as a plain object. */
+const fields = (record: RecordValue | null): Record<string, string | number> =>
+  Object.fromEntries([...(record?.fields ?? [])].map(([name, field]) => [name, field.value as string | number]));
+
+describe("describing interactions", () => {
+  it.each(INTERACTIONS)(
+    "$kind: accepts the bindings that the information model gives it",
+    ({ kind, body, bindings }) => {
+      const descriptor = descriptorOf(body);
+      expect(descriptor.kind).toBe(kind);
+      expect(descriptor.responseIdentifier).toBe("R");
+      expect(namesOf(descriptor.bindings)).toEqual(bindings);
+    },
+  );
 
   it("covers every kind of interaction that the ASI schema declares: the table above and the two custom kinds below", () => {
     const covered = new Set<string>(INTERACTIONS.map(({ kind }) => kind));
@@ -370,7 +376,7 @@ describe("describeInteractions", () => {
     expect(descriptorOf('<qti-upload-interaction response-identifier="R"/>').constraints).toEqual({});
   });
 
-  it("rounds the bounds of a slider bound to an integer outward and gives it the step 1 (INFO §5.134)", () => {
+  it("rounds the bounds of a slider bound to an integer outward and gives it the step 1", () => {
     const slider = (type: string, step = ""): InteractionDescriptor =>
       descriptorOf(
         `<qti-slider-interaction response-identifier="R" lower-bound="0.5" upper-bound="9.2"${step}/>`,
@@ -467,7 +473,7 @@ describe("the vocabularies of the interactions", () => {
   });
 });
 
-describe("checkBindings", () => {
+describe("checking bindings", () => {
   const issueCodes = (body: string, declarations: string): string[] =>
     checkBindings(itemOf(body, declarations)).map(({ code }) => code);
   const Choice = `<qti-choice-interaction response-identifier="R">${choice("A")}</qti-choice-interaction>`;
@@ -501,7 +507,7 @@ describe("checkBindings", () => {
     expect(issueCodes(inline, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
   });
 
-  it("reports a single value where max-choices allows more than one (INFO §5.30.2)", () => {
+  it("reports a single value where max-choices allows more than one", () => {
     const three = `<qti-choice-interaction response-identifier="R" max-choices="3">${choice("A")}</qti-choice-interaction>`;
     expect(issueCodes(three, declare("single", "identifier"))).toEqual(["assesskit/interactions/binding"]);
     expect(issueCodes(three, declare("multiple", "identifier"))).toEqual([]);
@@ -515,7 +521,7 @@ describe("checkBindings", () => {
     );
   });
 
-  it("reports a response variable that two interactions bind (INFO §2.2.2.2)", () => {
+  it("reports a response variable that two interactions bind", () => {
     expect(issueCodes(`${Choice}${Choice}`, declare("single", "identifier"))).toEqual([
       "assesskit/interactions/response-bound-twice",
     ]);
@@ -553,7 +559,7 @@ describe("checkBindings", () => {
   });
 });
 
-describe("checkResponse", () => {
+describe("checking responses", () => {
   const check = (descriptor: InteractionDescriptor, response: Value | null): [string, readonly ResponseViolation[]] => {
     const { status, reasons } = checkResponse(descriptor, response);
     return [status, reasons];
@@ -595,7 +601,7 @@ describe("checkResponse", () => {
     expect(check(choiceInteraction("", declare("single", "identifier")), id("B"))).toEqual(["answered", []]);
   });
 
-  it("order: without min-choices every choice is ordered and max-choices is ignored (INFO §5.97.2)", () => {
+  it("order: without min-choices every choice is ordered and max-choices is ignored", () => {
     const body = (attributes: string): string =>
       `<qti-order-interaction response-identifier="R"${attributes}>${choice("A")}${choice("B")}${choice("C")}</qti-order-interaction>`;
     const declaration = declare("ordered", "identifier");
@@ -701,7 +707,7 @@ describe("checkResponse", () => {
       ]);
     });
 
-    it("gap match: each gap takes one choice (INFO §2.4.1.5), a gap that is required must be filled", () => {
+    it("gap match: each gap takes one choice, a gap that is required must be filled", () => {
       const descriptor = descriptorOf(
         '<qti-gap-match-interaction response-identifier="R" max-associations="2"><qti-gap-text identifier="W1" match-max="2">a</qti-gap-text><qti-gap-text identifier="W2" match-max="1">b</qti-gap-text><p><qti-gap identifier="G1"/> <qti-gap identifier="G2" required="true"/></p></qti-gap-match-interaction>',
         declare("multiple", "directedPair"),
@@ -846,70 +852,7 @@ describe("checkResponse", () => {
   });
 });
 
-describe("checkResponse: properties", () => {
-  it("a choice interaction breaks min-choices exactly below the minimum and max-choices exactly above the maximum", () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 6 }),
-        fc.integer({ min: 0, max: 4 }),
-        fc.integer({ min: 0, max: 6 }),
-        fc.nat(6),
-        (size, min, max, picked) => {
-          fc.pre(max === 0 || min <= max);
-          const names = ["A", "B", "C", "D", "E", "F"].slice(0, size);
-          const descriptor = descriptorOf(
-            `<qti-choice-interaction response-identifier="R" min-choices="${min}" max-choices="${max}">${names.map((name) => choice(name)).join("")}</qti-choice-interaction>`,
-            declare("multiple", "identifier"),
-          );
-          const count = Math.min(picked, size);
-          const response = count === 0 ? null : identifiers("multiple", names.slice(0, count));
-          const { status, reasons } = checkResponse(descriptor, response);
-          expect(reasons.includes("min-choices")).toBe(count < min);
-          expect(reasons.includes("max-choices")).toBe(max > 0 && count > max);
-          expect(status).toBe(count === 0 ? "presented" : reasons.length === 0 ? "answered" : "attempted");
-        },
-      ),
-    );
-  });
-
-  it("an order interaction takes every ordering of all its choices, and refuses a part of them when min-choices is absent", () => {
-    fc.assert(
-      fc.property(
-        fc
-          .integer({ min: 2, max: 6 })
-          .chain((size) =>
-            fc
-              .shuffledSubarray(["A", "B", "C", "D", "E", "F"].slice(0, size), { minLength: 1 })
-              .map((order) => ({ size, order })),
-          ),
-        ({ size, order }) => {
-          const names = ["A", "B", "C", "D", "E", "F"].slice(0, size);
-          const descriptor = descriptorOf(
-            `<qti-order-interaction response-identifier="R">${names.map((name) => choice(name)).join("")}</qti-order-interaction>`,
-            declare("ordered", "identifier"),
-          );
-          const { status } = checkResponse(descriptor, identifiers("ordered", order));
-          expect(status).toBe(order.length === size ? "answered" : "attempted");
-        },
-      ),
-    );
-  });
-
-  it("a pattern-mask accepts the strings of a regular expression and no others", () => {
-    const entry = descriptorOf(
-      '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[a-z]+[0-9]?"/></p>',
-      declare("single", "string"),
-    );
-    fc.assert(
-      fc.property(fc.stringMatching(/^[a-z0-9]{1,6}$/), (typed) => {
-        const { reasons } = checkResponse(entry, single("string", typed));
-        expect(reasons.length === 0).toBe(/^[a-z]+[0-9]?$/.test(typed));
-      }),
-    );
-  });
-});
-
-describe("answeredStatus", () => {
+describe("the answered status", () => {
   const body = `<qti-choice-interaction response-identifier="ONE" min-choices="1">${choice("A")}</qti-choice-interaction><qti-choice-interaction response-identifier="TWO" max-choices="1">${choice("B")}</qti-choice-interaction>`;
   const descriptors = describeInteractions(
     itemOf(body, declare("single", "identifier", "ONE") + declare("single", "identifier", "TWO")),
@@ -951,7 +894,7 @@ describe("answeredStatus", () => {
   });
 });
 
-describe("initialResponse", () => {
+describe("the initial response", () => {
   const defaultValue = identifiers("multiple", ["A"]);
 
   it("gives a choice interaction nothing selected, whatever the default value", () => {
@@ -996,7 +939,7 @@ describe("initialResponse", () => {
   });
 });
 
-describe("shuffleChoices", () => {
+describe("shuffling choices", () => {
   /** A source that returns the given draws in turn. */
   function drawing(...draws: number[]): Random & { readonly left: () => number } {
     const queue = [...draws];
@@ -1078,56 +1021,6 @@ describe("shuffleChoices", () => {
     expect(presented.choices.map(({ identifier }) => identifier)).toEqual(["C", "B", "D"]);
   });
 
-  it("gives each set as a permutation of its choices, with the fixed choices where they were, and equal draws give equal orders", () => {
-    fc.assert(
-      fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
-        const orders = shuffleChoices(descriptor, createRandom(seed));
-        const sets = descriptor.matchSets ?? (descriptor.choices.length === 0 ? [] : [descriptor.choices]);
-        expect(orders).toHaveLength(sets.length);
-        sets.forEach((set, place) => {
-          const order = orders[place] ?? [];
-          expect([...order].sort()).toEqual(set.map(({ identifier }) => identifier).sort());
-          set.forEach((member, index) => {
-            if (member.fixed || !descriptor.shuffle) expect(order[index]).toBe(member.identifier);
-          });
-        });
-        expect(shuffleChoices(descriptor, createRandom(seed))).toEqual(orders);
-      }),
-    );
-  });
-
-  it("draws one number for each movable choice but the first, in the sets that it shuffles", () => {
-    fc.assert(
-      fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
-        const random = counting(seed);
-        shuffleChoices(descriptor, random);
-        const sets = descriptor.matchSets ?? [descriptor.choices];
-        const shuffled = !descriptor.shuffle ? 0 : descriptor.kind === "match-interaction" ? sets.length : 1;
-        const expected = sets
-          .slice(0, shuffled)
-          .reduce((sum, set) => sum + Math.max(0, set.filter(({ fixed }) => !fixed).length - 1), 0);
-        expect(random.draws).toBe(expected);
-      }),
-    );
-  });
-
-  it("removing the hidden choices from the order leaves the others in the order of the full shuffle", () => {
-    fc.assert(
-      fc.property(shufflingDescriptor, fc.integer(), fc.infiniteStream(fc.boolean()), (descriptor, seed, hiding) => {
-        const orders = shuffleChoices(descriptor, createRandom(seed));
-        const hiddenIdentifiers = new Set(
-          descriptor.choices.filter(() => hiding.next().value === true).map(({ identifier }) => identifier),
-        );
-        const visible = orders.map((order) => order.filter((identifier) => !hiddenIdentifiers.has(identifier)));
-        const presented = presentChoices(descriptor, visible);
-        const sets = presented.matchSets ?? (presented.choices.length === 0 ? [] : [presented.choices]);
-        expect(sets.map((set) => set.map(({ identifier }) => identifier))).toEqual(
-          visible.filter((order) => descriptor.matchSets !== undefined || order.length > 0),
-        );
-      }),
-    );
-  });
-
   it("rejects a descriptor or a random source of the wrong type", () => {
     expect(() => shuffleChoices(json("null"), createRandom(1))).toThrow(DataError);
     expect(() => shuffleChoices(four(true), json("null"))).toThrow(
@@ -1138,7 +1031,7 @@ describe("shuffleChoices", () => {
   });
 });
 
-describe("presentChoices", () => {
+describe("presenting choices", () => {
   const descriptor = descriptorOf(
     `<qti-choice-interaction response-identifier="R">${choice("A")}${choice("B")}${choice("C")}</qti-choice-interaction>`,
   );
@@ -1177,11 +1070,8 @@ describe("presentChoices", () => {
   });
 });
 
-describe("numericRecord", () => {
-  const fields = (record: RecordValue | null): Record<string, string | number> =>
-    Object.fromEntries([...(record?.fields ?? [])].map(([name, field]) => [name, field.value as string | number]));
-
-  it("reads an integer: all fields but the exponent (INFO §2.4.2.2)", () => {
+describe("the numeric record of a text entry", () => {
+  it("reads an integer: all fields but the exponent", () => {
     expect(fields(numericRecord("123"))).toEqual({
       stringValue: "123",
       floatValue: 123,
@@ -1272,6 +1162,132 @@ describe("numericRecord", () => {
     expect(() => numericRecord("1", 37)).toThrow(DataError);
     expect(() => numericRecord("1", json('"10"'))).toThrow(DataError);
     expect(() => numericRecord("1", 10.5)).toThrow(DataError);
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/interactions.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime": await import("../src/index.js"),
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/interactions": await import("../src/interactions/index.js"),
+      "@assesskit/runtime/values": await import("../src/values/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
+  });
+});
+
+describe("properties", () => {
+  it("a choice interaction breaks min-choices exactly below the minimum and max-choices exactly above the maximum", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 6 }),
+        fc.integer({ min: 0, max: 4 }),
+        fc.integer({ min: 0, max: 6 }),
+        fc.nat(6),
+        (size, min, max, picked) => {
+          fc.pre(max === 0 || min <= max);
+          const names = ["A", "B", "C", "D", "E", "F"].slice(0, size);
+          const descriptor = descriptorOf(
+            `<qti-choice-interaction response-identifier="R" min-choices="${min}" max-choices="${max}">${names.map((name) => choice(name)).join("")}</qti-choice-interaction>`,
+            declare("multiple", "identifier"),
+          );
+          const count = Math.min(picked, size);
+          const response = count === 0 ? null : identifiers("multiple", names.slice(0, count));
+          const { status, reasons } = checkResponse(descriptor, response);
+          expect(reasons.includes("min-choices")).toBe(count < min);
+          expect(reasons.includes("max-choices")).toBe(max > 0 && count > max);
+          expect(status).toBe(count === 0 ? "presented" : reasons.length === 0 ? "answered" : "attempted");
+        },
+      ),
+    );
+  });
+
+  it("an order interaction takes every ordering of all its choices, and refuses a part of them when min-choices is absent", () => {
+    fc.assert(
+      fc.property(
+        fc
+          .integer({ min: 2, max: 6 })
+          .chain((size) =>
+            fc
+              .shuffledSubarray(["A", "B", "C", "D", "E", "F"].slice(0, size), { minLength: 1 })
+              .map((order) => ({ size, order })),
+          ),
+        ({ size, order }) => {
+          const names = ["A", "B", "C", "D", "E", "F"].slice(0, size);
+          const descriptor = descriptorOf(
+            `<qti-order-interaction response-identifier="R">${names.map((name) => choice(name)).join("")}</qti-order-interaction>`,
+            declare("ordered", "identifier"),
+          );
+          const { status } = checkResponse(descriptor, identifiers("ordered", order));
+          expect(status).toBe(order.length === size ? "answered" : "attempted");
+        },
+      ),
+    );
+  });
+
+  it("a pattern-mask accepts the strings of a regular expression and no others", () => {
+    const entry = descriptorOf(
+      '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[a-z]+[0-9]?"/></p>',
+      declare("single", "string"),
+    );
+    fc.assert(
+      fc.property(fc.stringMatching(/^[a-z0-9]{1,6}$/), (typed) => {
+        const { reasons } = checkResponse(entry, single("string", typed));
+        expect(reasons.length === 0).toBe(/^[a-z]+[0-9]?$/.test(typed));
+      }),
+    );
+  });
+
+  it("gives each set as a permutation of its choices, with the fixed choices where they were, and equal draws give equal orders", () => {
+    fc.assert(
+      fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
+        const orders = shuffleChoices(descriptor, createRandom(seed));
+        const sets = descriptor.matchSets ?? (descriptor.choices.length === 0 ? [] : [descriptor.choices]);
+        expect(orders).toHaveLength(sets.length);
+        sets.forEach((set, place) => {
+          const order = orders[place] ?? [];
+          expect([...order].sort()).toEqual(set.map(({ identifier }) => identifier).sort());
+          set.forEach((member, index) => {
+            if (member.fixed || !descriptor.shuffle) expect(order[index]).toBe(member.identifier);
+          });
+        });
+        expect(shuffleChoices(descriptor, createRandom(seed))).toEqual(orders);
+      }),
+    );
+  });
+
+  it("draws one number for each movable choice but the first, in the sets that it shuffles", () => {
+    fc.assert(
+      fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
+        const random = counting(seed);
+        shuffleChoices(descriptor, random);
+        const sets = descriptor.matchSets ?? [descriptor.choices];
+        const shuffled = !descriptor.shuffle ? 0 : descriptor.kind === "match-interaction" ? sets.length : 1;
+        const expected = sets
+          .slice(0, shuffled)
+          .reduce((sum, set) => sum + Math.max(0, set.filter(({ fixed }) => !fixed).length - 1), 0);
+        expect(random.draws).toBe(expected);
+      }),
+    );
+  });
+
+  it("removing the hidden choices from the order leaves the others in the order of the full shuffle", () => {
+    fc.assert(
+      fc.property(shufflingDescriptor, fc.integer(), fc.infiniteStream(fc.boolean()), (descriptor, seed, hiding) => {
+        const orders = shuffleChoices(descriptor, createRandom(seed));
+        const hiddenIdentifiers = new Set(
+          descriptor.choices.filter(() => hiding.next().value === true).map(({ identifier }) => identifier),
+        );
+        const visible = orders.map((order) => order.filter((identifier) => !hiddenIdentifiers.has(identifier)));
+        const presented = presentChoices(descriptor, visible);
+        const sets = presented.matchSets ?? (presented.choices.length === 0 ? [] : [presented.choices]);
+        expect(sets.map((set) => set.map(({ identifier }) => identifier))).toEqual(
+          visible.filter((order) => descriptor.matchSets !== undefined || order.length > 0),
+        );
+      }),
+    );
   });
 
   it("reads every integer in its base and gives the digits of a decimal as typed", () => {

@@ -1,8 +1,7 @@
 import type { AssessmentItem, OutcomeDeclaration, ValueElement } from "../asi/index.js";
 import { checkOptions, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import type { Value } from "../values/index.js";
-import { normalizeValue } from "../values/value.js";
+import { normalizeValue, type Value } from "../values/index.js";
 import { describeType, fitValue, type VariableType } from "./assign.js";
 import {
   BUILT_IN_CONTEXTS,
@@ -17,9 +16,13 @@ import { declaredValue } from "./declared-value.js";
 import { floatResult, integerResult } from "./operands.js";
 
 /**
- * The variables of one item session, NULL as `null` (INFO §2.2.2). Each built-in variable is in the map of its kind:
- * `numAttempts` and `duration` with the responses, `completionStatus` with the outcomes and `QTI_CONTEXT` with the
- * contexts.
+ * The variables of one item session, NULL as `null`.
+ *
+ * @remarks
+ * Each built-in variable is in the map of its kind: `numAttempts` and `duration` with the responses, `completionStatus`
+ * with the outcomes and `QTI_CONTEXT` with the contexts.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export interface ItemVariables {
   /** The context variables, `QTI_CONTEXT` included. */
@@ -30,11 +33,13 @@ export interface ItemVariables {
   readonly outcomes: ReadonlyMap<string, Value | null>;
   /** The template variables. */
   readonly templates: ReadonlyMap<string, Value | null>;
-  /** The correct response of each response variable, as declared or as `qti-set-correct-response` set it (INFO §6.50.5). */
+  /** The correct response of each response variable, as declared or as `qti-set-correct-response` set it. */
   readonly correctResponses: ReadonlyMap<string, Value | null>;
   /**
-   * The default value of each declared variable, as declared or as `qti-set-default-value` set it (INFO §6.50.4).
-   * Template processing restarts its variables from these values.
+   * The default value of each declared variable, as declared or as `qti-set-default-value` set it. Template processing
+   * restarts its variables from these values.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-default-value}
    */
   readonly defaults: ReadonlyMap<string, Value | null>;
 }
@@ -42,18 +47,26 @@ export interface ItemVariables {
 /** The options of {@link createItemVariables}. */
 export interface CreateItemVariablesOptions {
   /**
-   * The values of context variables, `QTI_CONTEXT` included, which the delivery engine sets before any processing (INFO
-   * §2.2.2.1). A context variable left out has its default value, else NULL. Default: none.
+   * The values of context variables, `QTI_CONTEXT` included, which the delivery engine sets before any processing. A
+   * context variable left out has its default value, else NULL.
+   *
+   * @defaultValue none
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly context?: ReadonlyMap<string, Value | null>;
 }
 
-/** The value outcomes of a numeric base type start with when they have no default (INFO §2.2.2.3). */
+/**
+ * The value outcomes of a numeric base type start with when they have no default.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const NUMERIC_START = 0;
 
 /**
- * Returns the value an outcome starts with: its default value, else 0 for a single integer or float, else NULL
- * (INFO §2.2.2.3).
+ * Returns the value an outcome starts with: its default value, else 0 for a single integer or float, else NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function initialOutcome(declaration: OutcomeDeclaration, defaultValue: Value | null): Value | null {
   if (defaultValue !== null || declaration.cardinality !== "single") return defaultValue;
@@ -130,19 +143,23 @@ function givenContexts(item: AssessmentItem, given: unknown): Map<string, Value 
 }
 
 /**
- * Creates the variables of a new item session, before template processing (INFO §2.2.2): response variables are NULL
- * (the delivery engine applies their default values at the start of the first attempt), outcomes have their default
- * values, else 0 for a single integer or float and NULL otherwise (B7), template and context variables have their
- * default values, else NULL, and the correct responses and default values are the declared ones. `numAttempts` is 0,
- * `duration` 0 seconds, `completionStatus` is `not_attempted`, and `QTI_CONTEXT` is NULL unless the option `context`
- * gives it.
+ * Creates the variables of a new item session, before template processing: response variables are NULL (the delivery
+ * engine applies their default values at the start of the first attempt), outcomes have their default values, else 0
+ * for a single integer or float and NULL otherwise, template and context variables have their default values, else
+ * NULL, and the correct responses and default values are the declared ones.
+ *
+ * @remarks
+ * `numAttempts` is 0, `duration` 0 seconds, `completionStatus` is `not_attempted`, and `QTI_CONTEXT` is NULL unless the
+ * option `context` gives it.
  *
  * @param item - The item, as `readAsi` reads it.
  * @param options - See {@link CreateItemVariablesOptions}.
+ * @returns The variables of the session.
  * @throws `DataError` when an argument has the wrong type, or the option `context` names a variable the item does not
  * declare or gives a value of another type than its declaration.
  * @throws `ProcessingError` when a declared value is not in the lexical form of its base type or does not fit its
  * variable.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function createItemVariables(item: AssessmentItem, options: CreateItemVariablesOptions = {}): ItemVariables {
   checkItem(item);

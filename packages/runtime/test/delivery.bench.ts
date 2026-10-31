@@ -135,7 +135,7 @@ test("replays 1,000 actions from a stored state to the state that they gave", as
     }
     return state;
   };
-  // E3: the replay of the actions from the stored state gives the state that the session had.
+  // The replay of the actions from the stored state gives the state that the session had.
   expect(serializeState(replay())).toBe(serializeState(last));
 
   const result = await bench("replay", replay).run(BENCH_OPTIONS);

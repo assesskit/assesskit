@@ -13,8 +13,10 @@ export function partModel(structure: TestStructure, placement: Pick<Placement, "
 }
 
 /**
- * Returns how an item instance is submitted: the mode of its test part, except that the items of an adaptive section are
- * processed one by one in a part of either mode (CAT §2.4, B27).
+ * Returns how an item instance is submitted: the mode of its test part, except that the items of an adaptive section
+ * are processed one by one in a part of either mode.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function submissionModeOf(structure: TestStructure, placement: Placement): "individual" | "simultaneous" {
   const adaptive = placement.sections.some(

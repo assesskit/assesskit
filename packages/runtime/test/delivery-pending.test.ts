@@ -101,7 +101,7 @@ describe("scoring requests", () => {
             responseIdentifier: "RESPONSE",
             presented: true,
             interaction: "extended-text-interaction",
-            // Exact string, newline included (B96, G36).
+            // Exact string, newline included.
             response: single("string", "An essay\nof two lines"),
           },
         ],
@@ -131,7 +131,7 @@ describe("scoring requests", () => {
     expect(described(supplied.events)).toEqual(["scores-applied e1 item:e1:1:SCORE@3", "outcome-processed T@3"]);
     expect(supplied.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(single("float", 7));
     expect(supplied.state.outcomes.get("TOTAL")).toEqual(single("float", 7));
-    // INFO §4.5.10: the scorer sets the value after the session closed; response processing is not run again (G25).
+    // The scorer sets the value after the session closed; response processing is not run again.
     expect(runs(supplied.state)).toEqual(single("integer", 1));
     expect(engine.pending(supplied.state).scoring).toEqual([]);
     expect(supplied.state.scoring[0]?.supplied).toEqual({ value: single("float", 7), at: 3, scorer: "human" });
@@ -221,7 +221,7 @@ describe("scoring requests", () => {
   });
 });
 
-/** The rubric block that names the responses an externally scored outcome of the test covers (the runtime convention, §4.16). */
+/** The rubric block that names the responses an externally scored outcome of the test covers (the runtime convention). */
 const covers = (outcomeId: string, entries: readonly (readonly [string, string])[], notes = ""): string =>
   `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="${outcomeId}"><qti-content-body>${notes}<ul>${entries
     .map(([ref, label]) => `<li data-item-ref="${ref}" data-response-identifier="RESPONSE">${label}</li>`)
@@ -358,7 +358,7 @@ describe("scoring requests of the test", () => {
     });
     expect(supplied.state.outcomes.get("CONTENT")).toEqual(single("float", 5));
     expect(supplied.state.outcomes.get("TOTAL")).toEqual(single("float", 10));
-    // The next run resets the outcomes to their defaults (INFO §2.9) but not the supplied one.
+    // The next run resets the outcomes to their defaults but not the supplied one.
     const later = played(engine, supplied.state, next(7), act("submit", "q", 8));
     expect(described(later.events)).toContain("outcome-processed T@8");
     expect(later.state.outcomes.get("CONTENT")).toEqual(single("float", 5));
@@ -398,7 +398,7 @@ describe("scoring requests of the test", () => {
     ]);
   });
 
-  it("gives the scorer the rubric, the items as the candidate saw them, and the answers (R6)", () => {
+  it("gives the scorer the rubric, the items as the candidate saw them, and the answers", () => {
     const first = played(engine, begun(engine).state, write("w1", "First task", 1), act("submit", "w1", 2));
     const ended = played(engine, first.state, { type: "end-test", at: 3 });
     const view = engine.scorerView(ended.state, "test:CONTENT");
@@ -510,7 +510,7 @@ describe("items that a tool delivers", () => {
   });
 });
 
-/** The datestamp of RFC 3339 `date-time` in UTC with milliseconds, which the JSON binding of CAT 1.0 declares (CAT binding B1.2). */
+/** The datestamp of RFC 3339 `date-time` in UTC with milliseconds, which the JSON binding of CAT 1.0 declares. */
 const RFC_3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 
 describe("adaptive sections", () => {
@@ -558,7 +558,7 @@ describe("adaptive sections", () => {
     const pnp = pnpOf("<line-reader/>");
     const start = begun(engine, { pnp });
     const [request] = engine.pending(start.state).cat;
-    // The document that writePnp writes, as UTF-8 bytes, in the base64 of RFC 4648 (CAT §3.3).
+    // The document that writePnp writes, as UTF-8 bytes, in the base64 of RFC 4648.
     const expected = Buffer.from(writePnp(pnp), "utf8").toString("base64");
     expect(request).toMatchObject({ kind: "create-session", body: { personalNeedsAndPreferences: expected } });
     expect(Buffer.from(expected, "base64").toString("utf8")).toBe(writePnp(pnp));
@@ -589,14 +589,14 @@ describe("adaptive sections", () => {
     expect(described(second.events).at(-1)).toBe("cat-requested A submit-results cat:A:1:2@6");
     const request = waiting(engine, second.state);
     expect(request).toMatchObject({ kind: "submit-results", sessionIdentifier: "session-1", id: "cat:A:1:2" });
-    // The candidate waits: the next item depends on the answer (CAT §3.4).
+    // The candidate waits: the next item depends on the answer.
     expect(refusalOf(engine, second.state, next(7)).code).toBe("awaiting-cat");
     const answeredStage = played(
       engine,
       second.state,
       stage(engine, second.state, 8, { itemIdentifiers: ["i4"], stageLength: 1 }),
     );
-    // i3 was never presented, so the new stage replaces it (CAT §4.2); i4 is added at the end.
+    // i3 was never presented, so the new stage replaces it; i4 is added at the end.
     expect(
       answeredStage.state.plan.parts[0]?.children[0]?.children.map((child) =>
         child.kind === "item" ? child.key.ref : "?",
@@ -869,7 +869,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     );
     const ended = played(engine, withNext.state, { type: "end-test", at: 5 });
     expect(waiting(engine, ended.state)).toMatchObject({ kind: "end-session" });
-    // When the engine ends the session by its answer to the last results, nothing more is sent (CAT §3.5).
+    // When the engine ends the session by its answer to the last results, nothing more is sent.
     const finished = played(engine, reported.state, stage(engine, reported.state, 4, null));
     const over = played(engine, finished.state, { type: "end-test", at: 5 });
     expect(engine.pending(over.state).cat).toEqual([]);
@@ -993,7 +993,7 @@ describe("adaptive sections that end at once", () => {
     const left = played(two, start.state, { type: "end-part", at: 1 });
     expect(left.state.current).toEqual(key("s1"));
     expect(described(left.events)).toEqual(["part-ended P@1", "section-entered S@1", "moved s1@1", "presented s1@1"]);
-    // The engine has yet to answer Create Session; the session it creates is ended at once (CAT §3.5).
+    // The engine has yet to answer Create Session; the session it creates is ended at once.
     expect(waiting(two, left.state)).toMatchObject({ kind: "create-session" });
     const answered = played(two, left.state, stage(two, left.state, 2, { itemIdentifiers: ["i1"], stageLength: 1 }));
     expect(waiting(two, answered.state)).toMatchObject({ kind: "end-session", sessionIdentifier: "session-1" });
@@ -1086,7 +1086,7 @@ describe("outcomes that a CAT engine reports", () => {
     return played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
   };
 
-  it("merges the outcomes into the declaration that takes them, keeps the others, and ignores the rest (CAT §4.3.2)", () => {
+  it("merges the outcomes into the declaration that takes them, keeps the others, and ignores the rest", () => {
     const itemResult = {
       identifier: "i1",
       datestamp: "2026-10-30T12:00:00Z",
@@ -1114,7 +1114,7 @@ describe("outcomes that a CAT engine reports", () => {
     // SCORE of the item is declared without external scoring: the engine's value is ignored.
     expect(merged.state.items[0]?.session.variables.outcomes.get("SCORE")).toEqual(single("float", 1));
     expect(merged.state.report.sessionIdentifiers).toEqual([{ sourceId: "https://cat.example", identifier: "run-7" }]);
-    // The reset of outcome processing does not erase the value (G24).
+    // The reset of outcome processing does not erase the value.
     const later = played(engine, merged.state, next(5), pick("i2", "B", 6), act("submit", "i2", 7));
     expect(later.state.outcomes.get("LEVEL")).toEqual(single("float", 2));
     const results = engine.results(later.state);
@@ -1370,7 +1370,7 @@ describe("createEngine with adaptive sections", () => {
 
   it("needs an entry in catSections for each adaptive section, and for no other section", () => {
     expect(() => engineOf(content)).toThrow(
-      'The adaptive section "A" needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned (CAT §3.1).',
+      'The adaptive section "A" needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned.',
     );
     const extra = new Map([...CAT_A, ["S", { prefix: "https://cat.example/api", sectionIdentifier: "x" }]]);
     expect(() =>
@@ -1409,7 +1409,7 @@ describe("results", () => {
     ]);
     const test = results.testResult;
     expect(test?.identifier).toBe("T");
-    // The result of the test has no datestamp of its own: it is the time of the latest step (E24).
+    // The result of the test has no datestamp of its own: it is the time of the latest step.
     expect(test?.datestamp).toBe("1970-01-01T00:00:05.000Z");
     expect(test?.variables.map((variable) => [variable.kind, variable.identifier])).toEqual([
       ["response", "duration"],
@@ -1582,7 +1582,7 @@ describe("datestamps and times", () => {
     return engine.results(started.state).testResult?.datestamp ?? fail("The report has no test result.");
   };
 
-  it("writes the datestamp as RFC 3339 date-time with the offset Z, which an xs:dateTime may lack (CAT binding B1.2)", () => {
+  it("writes the datestamp as RFC 3339 date-time with the offset Z, which an xs:dateTime may lack", () => {
     expect(stampOf(0)).toBe("1970-01-01T00:00:00.000Z");
     expect(stampOf(1_761_825_600_123)).toBe("2025-10-30T12:00:00.123Z");
     expect(stampOf(First)).toBe("0001-01-01T00:00:00.000Z");
@@ -1689,7 +1689,7 @@ describe("properties", () => {
     for (const n of numbers) {
       const action = chosen(walker, state, n);
       const before = serializeState(state);
-      // The view builds in every state, also while a CAT engine is awaited, and lists the types the engine accepts (E19).
+      // The view builds in every state, also while a CAT engine is awaited, and lists the types the engine accepts.
       const view = walker.view(state, action.at);
       expect(viewFromJson(viewToJson(view))).toEqual(view);
       const step = walker.apply(state, action);

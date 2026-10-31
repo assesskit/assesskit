@@ -2,14 +2,20 @@ import type { AssessmentItem } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { AssesskitError, DataError } from "../errors.js";
 import type { SupportName } from "../pnp/index.js";
-import { assign, describeType } from "../processing/assign.js";
-import { evaluateTestExpression, type ProcessingContext, runOutcomeProcessing } from "../processing/index.js";
+import {
+  describeType,
+  evaluateTestExpression,
+  type ProcessingContext,
+  runOutcomeProcessing,
+} from "../processing/index.js";
+import { assign } from "../processing/internal.js";
 import { restoreRandom, type SeededRandom } from "../random.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import type { Action, HostAction } from "./action.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { answerCat, type CatChange, leaveCat, startCat, submitDue } from "./cat-flow.js";
-import { type CatSession, catTestOutcomes, findCat, partOfSection, sectionKeys, withCat } from "./cat-session.js";
+import { catTestOutcomes } from "./cat-outcomes.js";
+import { type CatSession, findCat, partOfSection, sectionKeys, withCat } from "./cat-session.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
 import { expiriesOf, maximumAt, type RunningScope, runningScopes } from "./deadlines.js";
 import {
@@ -46,7 +52,11 @@ import { chooseVariant } from "./variants.js";
 /** The actions on an item that end its attempt, which a test part with simultaneous submission does at its end. */
 const SUBMISSIONS: ReadonlySet<Action["type"]> = new Set(["submit", "skip", "end-attempt"]);
 
-/** Returns the refusal of the first scope whose minimum time is not reached (INFO §2.8.5, §7.40). */
+/**
+ * Returns the refusal of the first scope whose minimum time is not reached.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function minimumNotReached(scopes: readonly RunningScope[]): Refusal | undefined {
   const early = scopes.find(
     ({ limits, spent }) => limits.minTime !== undefined && spent < limits.minTime * MILLISECONDS_PER_SECOND,
@@ -78,8 +88,10 @@ function leaves(
 
 /**
  * One step of a candidate session: it starts from a state, applies a start or an action, and gives the new state with
- * the events, or a refusal. It is the reducer of the engine, and the only place that changes a state; the state it
- * starts from is never changed.
+ * the events, or a refusal.
+ *
+ * @remarks
+ * It is the reducer of the engine, and the only place that changes a state; the state it starts from is never changed.
  */
 export class SessionStep {
   private readonly course: Course;
@@ -100,7 +112,7 @@ export class SessionStep {
     return { ok: true, state: { ...this.state, random: this.random.state() }, events: this.events };
   }
 
-  /** Starts the session at its first item, or ends a test that has none (INFO §2.8). */
+  /** Starts the session at its first item, or ends a test that has none. */
   begin(at: number): Refusal | undefined {
     const { structure } = this.course;
     const first = this.navigate(at, (rules) => startDestination(structure, this.state.plan, rules));
@@ -110,12 +122,14 @@ export class SessionStep {
   }
 
   /**
-   * Applies an action: first the maximum times that passed before it, each at its time (E7), then the action. The
-   * refusals of a test that ended, of a time before the latest step (G27) and of a suspended session come first.
+   * Applies an action: first the maximum times that passed before it, each at its time, then the action. The refusals
+   * of a test that ended, of a time before the latest step and of a suspended session come first.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   apply(action: Action): Refusal | undefined {
     const { at } = action;
-    // The host answers scoring and CAT requests in any state, also after the test ended (E15, E18).
+    // The host answers scoring and CAT requests in any state, also after the test ended.
     const answer = action.type === "supply-scores" || action.type === "cat-response";
     if (this.ended() && !answer) return refusal("ended", "The test has ended.");
     if (at < this.state.at) {
@@ -242,8 +256,10 @@ export class SessionStep {
   }
 
   /**
-   * Takes the result of a step of an item session: stores the session with its events, and notes an attempt that
-   * ended, which is late after a maximum time that allows late submission passed (D9).
+   * Takes the result of a step of an item session: stores the session with its events, and notes an attempt that ended,
+   * which is late after a maximum time that allows late submission passed.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   private settle(item: DeliveredItem, step: ItemStep): Refusal | undefined {
     if (!step.ok) return step.refusal;
@@ -266,9 +282,11 @@ export class SessionStep {
   }
 
   /**
-   * Runs the outcome processing of the test once after the attempts that ended, the submission of an item in
-   * individual mode or of a group in simultaneous mode, before the engine decides where to go (INFO §2.9, B37). The
-   * outcomes start from their defaults; when processing fails, they keep them (E26).
+   * Runs the outcome processing of the test once after the attempts that ended, the submission of an item in individual
+   * mode or of a group in simultaneous mode, before the engine decides where to go. The outcomes start from their
+   * defaults; when processing fails, they keep them.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   private processOutcomes(at: number): void {
     if (!this.submitted) return;
@@ -293,13 +311,15 @@ export class SessionStep {
 
   /**
    * Returns the values that outcome processing starts the external-scored outcomes of the test from: those a scorer
-   * supplied, and those a CAT engine reported, which the reset of INFO §2.9 would otherwise erase (G24, E16, C4).
+   * supplied, and those a CAT engine reported, which the reset of test outcomes before each run would otherwise erase.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   private keptOutcomes(): Map<string, Value | null> {
     return new Map<string, Value | null>([...catTestOutcomes(this.state), ...suppliedTestOutcomes(this.state)]);
   }
 
-  /** Runs a walk of the plan; when an expression of a rule fails, the failure is reported and the test ends (E26). */
+  /** Runs a walk of the plan; when an expression of a rule fails, the failure is reported and the test ends. */
   private navigate(at: number, walk: (rules: RuleContext) => Destination): Destination {
     try {
       return walk(this.rules());
@@ -356,7 +376,7 @@ export class SessionStep {
     return this.present(key, at);
   }
 
-  /** Presents an item instance, opening its session the first time, and records the supports that are on (E28). */
+  /** Presents an item instance, opening its session the first time, and records the supports that are on. */
   private present(key: ItemKey, at: number): Refusal | undefined {
     if (findDelivered(this.state, key) === undefined) {
       const refused = this.open(key, at);
@@ -369,8 +389,8 @@ export class SessionStep {
   }
 
   /**
-   * Opens the session of an item instance at its first presentation: chooses the item or a variant (B100), evaluates
-   * the template defaults of the item reference in the test (B41), and starts the session with the context values (B50).
+   * Opens the session of an item instance at its first presentation: chooses the item or a variant, evaluates the
+   * template defaults of the item reference in the test, and starts the session with the context values.
    */
   private open(key: ItemKey, at: number): Refusal | undefined {
     const entry = this.entry(key.ref);
@@ -394,9 +414,11 @@ export class SessionStep {
   }
 
   /**
-   * Evaluates the `qti-template-default`s of an item reference in the test as it is now (INFO §5.152, B41). A failure, or
-   * a value that does not fit, is reported, and the declared default stays; a template variable that a variant does not
-   * declare is left out.
+   * Evaluates the `qti-template-default`s of an item reference in the test as it is now. A failure, or a value that
+   * does not fit, is reported, and the declared default stays; a template variable that a variant does not declare is
+   * left out.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-template-default}
    */
   private templateDefaults(
     key: ItemKey,
@@ -482,7 +504,7 @@ export class SessionStep {
     return refusal("linear-backward", "The test part is linear, so the candidate moves forward only.");
   }
 
-  /** Moves within a nonlinear test part: the item presented is suspended, with its attempt open (INFO §2.2.1). */
+  /** Moves within a nonlinear test part: the item presented is suspended, with its attempt open. */
   private goTo(here: Placement, key: ItemKey, at: number): Refusal | undefined {
     if (this.expiries(this.placement(key)).includes("closed")) return this.timeOver(key);
     const item = this.delivered(here.key);
@@ -491,11 +513,10 @@ export class SessionStep {
   }
 
   /**
-   * Leaves the item presented for what follows it (B26, B28, B29): the minimum time of the item must be reached; the item
-   * is left; the walk decides where to go, and the minimum times of the sections, part and test that this leaves must
-   * be reached. In an adaptive section the candidate waits where the next item depends on the CAT engine (E18, C4): it is
-   * refused `awaiting-cat` while a request waits, and when leaving makes the engine send one, the move goes on when the
-   * answer has come.
+   * Leaves the item presented for what follows it: the minimum time of the item must be reached; the item is left; the
+   * walk decides where to go, and the minimum times of the sections, part and test that this leaves must be reached. In
+   * an adaptive section the candidate waits where the next item depends on the CAT engine: it is refused `awaiting-cat`
+   * while a request waits, and when leaving makes the engine send one, the move goes on when the answer has come.
    */
   private next(here: Placement, at: number): Refusal | undefined {
     const running = runningScopes(this.course, this.state);
@@ -524,8 +545,8 @@ export class SessionStep {
   }
 
   /**
-   * Ends the CAT session of the section that holds the placement when the candidate goes to a destination outside it and
-   * the session waits for no answer: the results not yet reported are sent and the session ends (C4, C5). A session that
+   * Ends the CAT session of the section that holds the placement when the candidate goes to a destination outside it
+   * and the session waits for no answer: the results not yet reported are sent and the session ends. A session that
    * waits for an answer may still send more items, so it is left as it is.
    */
   private leaveSectionOf(here: Placement, destination: Destination, at: number): void {
@@ -561,8 +582,8 @@ export class SessionStep {
   }
 
   /**
-   * Whether the adaptive section of the placement waits for the CAT engine, so that the candidate cannot go on: a request
-   * waits and the next item of the section has not been presented, or there is none (E18).
+   * Whether the adaptive section of the placement waits for the CAT engine, so that the candidate cannot go on: a
+   * request waits and the next item of the section has not been presented, or there is none.
    */
   private waitsForCat(here: Placement): boolean {
     const session = this.catOf(here);
@@ -572,7 +593,7 @@ export class SessionStep {
     return next === undefined || findDelivered(this.state, next) === undefined;
   }
 
-  /** Notes that the candidate asked to move on while the session of the placement waits (E18). */
+  /** Notes that the candidate asked to move on while the session of the placement waits. */
   private markMoving(here: Placement): void {
     const session = this.catOf(here);
     if (session !== undefined) this.state = withCat(this.state, { ...session, moving: true });
@@ -587,20 +608,20 @@ export class SessionStep {
     return undefined;
   }
 
-  /** Makes the Submit Results requests that the policy of C4 calls for. */
+  /** Makes the Submit Results requests that the reporting policy of the section calls for. */
   private requestCat(at: number): void {
     this.applyCat(submitDue(this.state, at));
   }
 
-  /** Ends the CAT sessions that the candidate leaves: the sessions for which `leaves` is true (C4, C5). */
+  /** Ends the CAT sessions that the candidate leaves: the sessions for which `leaves` is true. */
   private leaveCat(at: number, leaves: (session: CatSession) => boolean): void {
     this.applyCat(leaveCat(this.state, at, leaves));
   }
 
   /**
    * Leaves the item presented. In a linear test part with individual submission the candidate cannot come back, so an
-   * open attempt is submitted, with the checks of skipping and validity, and the session closes (INFO §2.8.2, §7.19.6–7,
-   * B88); otherwise the session is suspended with its attempt open.
+   * open attempt is submitted, with the checks of skipping and validity, and the session closes; otherwise the session
+   * is suspended with its attempt open.
    */
   private leave(here: Placement, at: number): Refusal | undefined {
     const item = this.delivered(here.key);
@@ -618,8 +639,8 @@ export class SessionStep {
   }
 
   /**
-   * Returns the test part the candidate is in: that of the item presented, else that of the adaptive section whose first
-   * stage is awaited.
+   * Returns the test part the candidate is in: that of the item presented, else that of the adaptive section whose
+   * first stage is awaited.
    */
   private currentPart(): string {
     if (this.state.current !== undefined) return this.here().part;
@@ -659,7 +680,7 @@ export class SessionStep {
     }
   }
 
-  /** Ends the sessions of the adaptive sections that hold the item presented and not the destination (C4). */
+  /** Ends the sessions of the adaptive sections that hold the item presented and not the destination. */
   private leaveSectionsFor(destination: Destination, at: number): void {
     const { current } = this.state;
     if (current === undefined) return;
@@ -673,8 +694,8 @@ export class SessionStep {
   }
 
   /**
-   * Starts the CAT session of an adaptive section the candidate enters (C3, E18): the candidate has no item to see until
-   * the engine sends the first stage, so the session presents none.
+   * Starts the CAT session of an adaptive section the candidate enters: the candidate has no item to see until the
+   * engine sends the first stage, so the session presents none.
    */
   private startAdaptive(section: string, instance: number, at: number): undefined {
     this.applyCat(startCat(this.state, section, instance, at));
@@ -684,9 +705,11 @@ export class SessionStep {
   }
 
   /**
-   * Ends the test part of the item presented (INFO §2.8.2): every session of the part closes, so an open attempt ends
-   * with its drafts, which in simultaneous mode submits the group; outcome processing follows. The CAT sessions of the
-   * part end, with the results of the attempts that just closed (C4, C5).
+   * Ends the test part of the item presented: every session of the part closes, so an open attempt ends with its
+   * drafts, which in simultaneous mode submits the group; outcome processing follows. The CAT sessions of the part end,
+   * with the results of the attempts that just closed.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   private endPart(at: number): Refusal | undefined {
     const part = this.currentPart();
@@ -717,7 +740,7 @@ export class SessionStep {
     return minimumNotReached(leaving) ?? this.go(destination, at);
   }
 
-  /** Applies the maximum times that passed up to `at`, earliest first, each at its own time (E7, D9). */
+  /** Applies the maximum times that passed up to `at`, earliest first, each at its own time. */
   private expireUntil(at: number): Refusal | undefined {
     for (let due = this.due(at); due !== undefined; due = this.due(at)) {
       this.advance(due.at);
@@ -741,8 +764,10 @@ export class SessionStep {
   }
 
   /**
-   * Applies a maximum time that passed (D9). With late submission the scope stays open and the step reports
+   * Applies a maximum time that passed. With late submission the scope stays open and the step reports
    * `time-limit-passed`. Without, the step reports `time-out`, and the scope closes.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   private expire(scope: RunningScope, at: number): Refusal | undefined {
     const late = scope.limits.allowLateSubmission;
@@ -816,7 +841,7 @@ export class SessionStep {
     return presented ?? this.continueCat(at);
   }
 
-  /** Turns a support that is an option on or off (BPIG §5.3, E28); one turned on counts for the item presented. */
+  /** Turns a support that is an option on or off; one turned on counts for the item presented. */
   private toggle(name: SupportName, active: boolean, at: number): Refusal | undefined {
     const support = this.state.supports.get(name);
     if (support?.state !== "option") {
@@ -835,7 +860,7 @@ export class SessionStep {
 
   /**
    * Applies an action of the candidate while no item is presented, because the first stage of an adaptive section is
-   * awaited (E18): time passes without effect, a support can be turned on or off, the session can be suspended and resumed,
+   * awaited: time passes without effect, a support can be turned on or off, the session can be suspended and resumed,
    * and the part or the test can be ended. Anything else waits for the CAT engine.
    */
   private idle(action: Action): Refusal | undefined {
@@ -859,8 +884,8 @@ export class SessionStep {
   }
 
   /**
-   * Makes the scoring requests that are due (E13): item outcomes whose session is over, and test outcomes whose covers are
-   * over or whose test has ended. The CAT requests that the submissions call for are made with them (C4).
+   * Makes the scoring requests that are due: item outcomes whose session is over, and test outcomes whose covers are
+   * over or whose test has ended. The CAT requests that the submissions call for are made with them.
    */
   private reconcile(at: number): void {
     this.requestCat(at);
@@ -875,10 +900,11 @@ export class SessionStep {
   }
 
   /**
-   * Takes the value that the host supplied for a scoring request (E15): it must fit the declaration; a second supply
-   * replaces the first. An item outcome is set in the session without running response processing again (G25); the
-   * outcome processing of the test runs again, with the supplied values as the starting values of the external-scored
-   * outcomes (G24, E16).
+   * Takes the value that the host supplied for a scoring request: it must fit the declaration; a second supply replaces
+   * the first. An item outcome is set in the session without running response processing again; the outcome processing
+   * of the test runs again, with the supplied values as the starting values of the external-scored outcomes.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   private supply(action: HostAction & { readonly type: "supply-scores"; readonly at: number }): Refusal | undefined {
     const { at } = action;
@@ -910,7 +936,7 @@ export class SessionStep {
     return undefined;
   }
 
-  /** Takes the answer of the CAT engine to a request (E18); a candidate who waited for it moves on. */
+  /** Takes the answer of the CAT engine to a request; a candidate who waited for it moves on. */
   private catResponse(
     action: HostAction & { readonly type: "cat-response"; readonly at: number },
   ): Refusal | undefined {
@@ -922,8 +948,8 @@ export class SessionStep {
   }
 
   /**
-   * Moves a candidate on who waited for the CAT engine, once nothing is awaited (E18): to the first item of the stage
-   * when none was presented, else where the walk leads from the item left. A candidate who is suspended moves on at
+   * Moves a candidate on who waited for the CAT engine, once nothing is awaited: to the first item of the stage when
+   * none was presented, else where the walk leads from the item left. A candidate who is suspended moves on at
    * resuming.
    */
   private continueCat(at: number): Refusal | undefined {

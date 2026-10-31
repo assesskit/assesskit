@@ -11,16 +11,32 @@ import type { BaseType, ValueDeclaration } from "../values/index.js";
 import { anyBindings, bind, containerBindings, TEXT_BASE_TYPES } from "./bindings.js";
 import type { ChoiceDescriptor, InteractionConstraints, InteractionDescriptor, InteractionKind } from "./descriptor.js";
 
-/** A maximum of 0 means no restriction (INFO §5.30.2, §5.57.3, §5.92.3). */
+/**
+ * A maximum of 0 means no restriction.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const UNLIMITED = 0;
 
-/** The maximum of choices and associations when the attribute is absent (INFO §5.30.2, §5.8, §5.89.2). */
+/**
+ * The maximum of choices and associations when the attribute is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const DEFAULT_MAXIMUM = 1;
 
-/** The number base of a text interaction when `base` is absent (INFO §5.162.2). */
+/**
+ * The number base of a text interaction when `base` is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const DEFAULT_BASE = 10;
 
-/** The step of a slider bound to an integer when `step` is absent (INFO §5.134.3). */
+/**
+ * The step of a slider bound to an integer when `step` is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const INTEGER_STEP = 1;
 
 /** The attributes of the elements that count as choices of an interaction, as the model has them. */
@@ -78,7 +94,9 @@ function associationLimits(
 
 /**
  * Returns the limits of an order interaction: without `min-choices` every choice must be ordered and `max-choices` is
- * ignored; with it the candidate orders between `min-choices` and `max-choices` of the choices (INFO §5.97.2, §5.97.3).
+ * ignored; with it the candidate orders between `min-choices` and `max-choices` of the choices.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function orderLimits(
   min: number | undefined,
@@ -170,7 +188,7 @@ function orderParts(
 
 function textParts(interaction: InteractionOf<"extended-text-interaction" | "text-entry-interaction">): Parts {
   const extended = interaction.kind === "extended-text-interaction";
-  // INFO §5.48.6: max-strings is required when the interaction is bound to a container.
+  // `max-strings` is required when the interaction is bound to a container.
   const containers = extended && interaction.maxStrings !== undefined;
   const minStrings = extended ? minimumOf(interaction.minStrings) : undefined;
   const maxStrings = extended ? maximumOf(interaction.maxStrings, UNLIMITED) : undefined;
@@ -192,7 +210,11 @@ function textParts(interaction: InteractionOf<"extended-text-interaction" | "tex
   };
 }
 
-/** Returns the parts of a slider: its bounds and step, read against the declared base type (INFO §5.134.1–3). */
+/**
+ * Returns the parts of a slider: its bounds and step, read against the declared base type.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function sliderParts(
   interaction: InteractionOf<"slider-interaction">,
   declaration: ValueDeclaration | undefined,
@@ -246,7 +268,11 @@ function inlineChoiceParts(interaction: InteractionOf<"inline-choice-interaction
   };
 }
 
-/** Returns what an interaction of the item adds to the descriptor (INFO §2.4, §5). */
+/**
+ * Returns what an interaction of the item adds to the descriptor.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function partsOf(interaction: Interaction, declaration: ValueDeclaration | undefined): Parts {
   switch (interaction.kind) {
     case "associate-interaction":
@@ -272,8 +298,7 @@ function partsOf(interaction: Interaction, declaration: ValueDeclaration | undef
       return textParts(interaction);
     case "gap-match-interaction": {
       const gaps = descendantNodes(interaction).flatMap((node) => (isGap(node) ? [choiceOf(node)] : []));
-      // The schema defaults max-associations to 1, but a text with several gaps takes several associations (INFO §5.57.8,
-      // §2.4.1.5) and the examples of 1EdTech leave the attribute out: an absent attribute is no limit, since each gap
+      // The schema defaults max-associations to 1, but a text with several gaps takes several associations, and the examples of 1EdTech leave the attribute out: an absent attribute is no limit, since each gap
       // takes one choice.
       return pairParts(
         "directedPair",
@@ -338,7 +363,11 @@ function partsOf(interaction: Interaction, declaration: ValueDeclaration | undef
   }
 }
 
-/** Returns whether a node is an interaction: the elements named `qti-…-interaction` are the 22 interactions (INFO §2.4). */
+/**
+ * Returns whether a node is an interaction: the elements named `qti-…-interaction` are the 22 interactions.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function isInteraction(node: ModelNode): node is Interaction {
   return node.kind.endsWith("-interaction");
 }
@@ -349,17 +378,20 @@ const isHotText = (node: ModelNode): node is HotText => node.kind === "hottext";
 
 /**
  * Describes the interactions of an item in document order: the response variable each binds, the bindings it accepts,
- * its choices, what a valid response needs and whether the choices shuffle. The descriptors hold the item as authored,
- * with every choice, hidden or not, so that shuffling can draw over all of them; {@link presentChoices} drops the hidden
- * ones.
+ * its choices, what a valid response needs and whether the choices shuffle.
  *
- * Attributes that a document omits have the defaults of the schema, and a maximum of 0, which means no restriction
- * (INFO §5.30.2), is left out of the constraints.
+ * @remarks
+ * The descriptors hold the item as authored, with every choice, hidden or not, so that shuffling can draw over all of
+ * them; {@link presentChoices} drops the hidden ones.
+ *
+ * Attributes that a document omits have the defaults of the schema, and a maximum of 0, which means no restriction, is
+ * left out of the constraints.
  *
  * @param item - The item, as `readAsi` reads it.
  * @returns One descriptor for each interaction in the body of the item, including those inside feedback and template
  * content and the position object interactions of a stage; none for an item without a body.
  * @throws `DataError` when `item` is not an object of the model of `qti-assessment-item`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function describeInteractions(item: AssessmentItem): readonly InteractionDescriptor[] {
   const input: unknown = item;

@@ -4,11 +4,15 @@ import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
 
 /**
- * Returns the item that models a link to a tool (E25, G42): no response variables, and the outcomes `SCORE` and
- * `MAXSCORE`, single floats that the tool scores (`external-scored="externalMachine"`). The item has the identifier of
- * the manifest resource of the link.
+ * Returns the item that models a link to a tool: no response variables, and the outcomes `SCORE` and `MAXSCORE`, single
+ * floats that the tool scores (`external-scored="externalMachine"`).
  *
- * @throws `DataError` when the identifier of the resource is not an identifier (INFO §4.1.1).
+ * @remarks
+ * The item has the identifier of the manifest resource of the link.
+ *
+ * @throws `DataError` when the identifier of the resource is not an identifier.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function ltiItem(identifier: string): AssessmentItem {
   if (!isIdentifier(identifier)) {

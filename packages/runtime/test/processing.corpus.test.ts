@@ -125,7 +125,7 @@ describe("the items of the examples", () => {
     for (const [path, text] of CONTENT_ERRORS) expect(failures.get(path), path).toContain(text);
   });
 
-  it("score 1 for the correct responses and 0 for none with match_correct and CC2_match (INFO §2.5.1)", () => {
+  it("score 1 for the correct responses and 0 for none with match_correct and CC2_match", () => {
     const matching = [...items].filter(
       ([path, { responseProcessing }]) =>
         !CONTENT_ERRORS.has(path) &&

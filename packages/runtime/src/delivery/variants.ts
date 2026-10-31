@@ -10,7 +10,7 @@ export interface VariantChoice {
   readonly unavoidable: readonly PnpHazardTerm[];
 }
 
-/** Returns the hazards of a candidate that the candidate avoids, in the terms of the PNP (B99). */
+/** Returns the hazards of a candidate that the candidate avoids, in the terms of the PNP. */
 function avoidedIn(candidate: Candidate, avoided: ReadonlySet<PnpHazardTerm>): PnpHazardTerm[] {
   return candidate.hazards.flatMap((hazard) => {
     const term = HAZARD_TERMS.get(hazard);
@@ -18,17 +18,21 @@ function avoidedIn(candidate: Candidate, avoided: ReadonlySet<PnpHazardTerm>): P
   });
 }
 
-/** Returns the primary subtag of a BCP 47 tag, in lower case: tags ignore case (RFC 5646 §2.1.1). */
+/** Returns the primary subtag of a BCP 47 tag, in lower case: tags ignore case (RFC 5646). */
 function primarySubtag(tag: string): string {
   return tag.toLowerCase().split("-")[0] ?? "";
 }
 
 /**
- * Chooses what an item instance presents, at its first presentation (B100, BPIG §6.6). The candidates are the item and
- * its variants. Every candidate with a hazard that the candidate avoids is dropped (B99). Among the rest, a variant
- * whose `languageOfAdaptation` is the language of `item-translation` is preferred, by the whole tag, then by the
- * primary subtag; else the item itself, or the first variant left when the item was dropped. When every candidate is
- * dropped, the item itself is presented, and its avoided hazards are unavoidable.
+ * Chooses what an item instance presents, at its first presentation.
+ *
+ * @remarks
+ * The candidates are the item and its variants. Every candidate with a hazard that the candidate avoids is dropped.
+ * Among the rest, a variant whose `languageOfAdaptation` is the language of `item-translation` is preferred, by the
+ * whole tag, then by the primary subtag; else the item itself, or the first variant left when the item was dropped.
+ * When every candidate is dropped, the item itself is presented, and its avoided hazards are unavoidable.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function chooseVariant(candidates: readonly [Candidate, ...Candidate[]], needs: CandidateNeeds): VariantChoice {
   const avoided = new Set(needs.avoidedHazards);

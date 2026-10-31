@@ -1,7 +1,8 @@
 import * as v from "valibot";
 import { describe, type Schema } from "../checks.js";
 import type { Value } from "../values/index.js";
-import { toWireValue, type WireValue, wireValueSchema } from "../values/wire.js";
+import { toWireValue, type WireValue } from "../values/index.js";
+import { wireValueSchema } from "../values/internal.js";
 
 /** A value in the JSON form of a session: its wire value, or `null` for NULL. */
 export type ValueJson = WireValue | null;

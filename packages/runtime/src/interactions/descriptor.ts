@@ -1,12 +1,21 @@
 import type { Interaction } from "../asi/index.js";
 import type { BaseType, Cardinality, ValueDeclaration } from "../values/index.js";
 
-/** The kind of an interaction: the name of its element without `qti-`, such as `"choice-interaction"` (INFO §2.4). */
+/**
+ * The kind of an interaction: the name of its element without `qti-`, such as `"choice-interaction"`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-}
+ */
 export type InteractionKind = Interaction["kind"];
 
 /**
  * A response variable that an interaction can be bound to: a cardinality and, except for a record, the base types
- * allowed with it (INFO §2.4). A record has no base type, so its list is empty.
+ * allowed with it.
+ *
+ * @remarks
+ * A record has no base type, so its list is empty.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export interface Binding {
   /** The cardinality. */
@@ -17,66 +26,77 @@ export interface Binding {
 
 /**
  * One choice of an interaction, in the broad sense of the word: a choice, an associable choice, a hotspot, a gap or a
- * hot text. Only what the rules of validity, shuffling and visibility read is here; the content of the choice stays in
- * the body.
+ * hot text.
+ *
+ * @remarks
+ * Only what the rules of validity, shuffling and visibility read is here; the content of the choice stays in the body.
  */
 export interface ChoiceDescriptor {
-  /** The identifier, which a response names (INFO §4.1.1). */
+  /** The identifier, which a response names. */
   readonly identifier: string;
-  /** Whether the position of the choice holds when the choices are shuffled (INFO §5.132.2). */
+  /** Whether the position of the choice holds when the choices are shuffled. */
   readonly fixed: boolean;
-  /** The template variable that makes the choice visible or hidden (INFO §2.7.1). Absent: the choice is always visible. */
+  /** The template variable that makes the choice visible or hidden. Absent: the choice is always visible. */
   readonly templateIdentifier?: string;
   /** How the template variable decides: `show` hides the choice unless the variable names it, `hide` the other way round. */
   readonly showHide: "show" | "hide";
-  /** The most associations the choice takes (INFO §5.131.6); absent when there is no limit. */
+  /** The most associations the choice takes; absent when there is no limit. */
   readonly matchMax?: number;
-  /** The fewest associations the choice needs for a valid response (INFO §5.131.7); absent when there is none. */
+  /** The fewest associations the choice needs for a valid response; absent when there is none. */
   readonly matchMin?: number;
-  /** The identifiers of the choices that this one can be associated with; absent when any can (INFO §5.131.5). */
+  /** The identifiers of the choices that this one can be associated with; absent when any can. */
   readonly matchGroup?: readonly string[];
-  /** Whether a gap must be filled for a valid response (INFO §5.55.5). */
+  /** Whether a gap must be filled for a valid response. */
   readonly required?: boolean;
 }
 
 /**
- * What an interaction demands of a valid response (INFO §2.4). A field is absent when it demands nothing: a minimum of 0,
- * a maximum of 0, which means no restriction, or an attribute the interaction does not have.
+ * What an interaction demands of a valid response.
+ *
+ * @remarks
+ * A field is absent when it demands nothing: a minimum of 0, a maximum of 0, which means no restriction, or an
+ * attribute the interaction does not have.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export interface InteractionConstraints {
-  /** The fewest choices, hotspots or points (INFO §5.30.3). */
+  /** The fewest choices, hotspots or points. */
   readonly minChoices?: number;
-  /** The most choices, hotspots or points (INFO §5.30.2). */
+  /** The most choices, hotspots or points. */
   readonly maxChoices?: number;
-  /** The fewest associations (INFO §5.89.3). */
+  /** The fewest associations. */
   readonly minAssociations?: number;
-  /** The most associations (INFO §5.89.2). */
+  /** The most associations. */
   readonly maxAssociations?: number;
-  /** The fewest non-empty strings of an extended text (INFO §5.48.7). */
+  /** The fewest non-empty strings of an extended text. */
   readonly minStrings?: number;
-  /** The most strings of an extended text (INFO §5.48.6). */
+  /** The most strings of an extended text. */
   readonly maxStrings?: number;
-  /** The fewest times a media object is played (INFO §5.92.2). */
+  /** The fewest times a media object is played. */
   readonly minPlays?: number;
-  /** The most times a media object is played (INFO §5.92.3). */
+  /** The most times a media object is played. */
   readonly maxPlays?: number;
-  /** The lowest value of a slider, rounded down when the response is an integer (INFO §5.134.1). */
+  /** The lowest value of a slider, rounded down when the response is an integer. */
   readonly lowerBound?: number;
-  /** The highest value of a slider, rounded up when the response is an integer (INFO §5.134.2). */
+  /** The highest value of a slider, rounded up when the response is an integer. */
   readonly upperBound?: number;
-  /** The step of a slider; 1 for an integer response without a declared step (INFO §5.134.3). */
+  /** The step of a slider; 1 for an integer response without a declared step. */
   readonly step?: number;
-  /** The pattern in the regular expression language of XML Schema that a text response must match (INFO §5.162.5). */
+  /** The pattern in the regular expression language of XML Schema that a text response must match. */
   readonly patternMask?: string;
-  /** The MIME types an upload may have (INFO §5.165.1); absent when any file is accepted. */
+  /** The MIME types an upload may have; absent when any file is accepted. */
   readonly mimeTypes?: readonly string[];
-  /** Whether a choice must be selected (INFO §5.74.2). */
+  /** Whether a choice must be selected. */
   readonly required?: boolean;
-  /** The number base in which a numeric text is read (INFO §5.162.2); 10 by default. */
+  /** The number base in which a numeric text is read; 10 by default. */
   readonly base?: number;
 }
 
-/** Everything the delivery engine and the player need to know about one interaction, without its content (INFO §2.4). */
+/**
+ * Everything the delivery engine and the player need to know about one interaction, without its content.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export interface InteractionDescriptor {
   /** The kind of the interaction. */
   readonly kind: InteractionKind;
@@ -96,8 +116,8 @@ export interface InteractionDescriptor {
   readonly matchSets?: readonly (readonly ChoiceDescriptor[])[];
   /** What a valid response needs. */
   readonly constraints: InteractionConstraints;
-  /** Whether the initial order of the choices is random, subject to `fixed` (INFO §5.30.1). */
+  /** Whether the initial order of the choices is random, subject to `fixed`. */
   readonly shuffle: boolean;
-  /** The second response variable that keeps the text as typed (INFO §5.162.3); absent when there is none. */
+  /** The second response variable that keeps the text as typed; absent when there is none. */
   readonly stringIdentifier?: string;
 }

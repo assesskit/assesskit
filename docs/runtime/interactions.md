@@ -1,26 +1,40 @@
 # Interactions
 
-`@assesskit/runtime/interactions` describes the interactions of an item for the delivery engine and the player, checks
-that their response variables suit them, decides whether a response is valid, draws the order of the choices, and reads
-the numbers that a candidate types. It imports `values` and `asi` and runs in any JavaScript runtime. It does not render
-an interaction: the content of the choices stays in the body of the item (INFO §2.4).
+`interactions` describes the interactions of an item for the delivery engine and the player, checks that their response variables
+suit them, decides whether a response is valid, draws the order of the choices, and reads the numbers that a candidate types. It
+imports `values` and `asi` and runs in any JavaScript runtime. It does not render an interaction: the content of the choices stays
+in the body of the item.
 
-| Export                                   | Purpose                                                                                                    |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `describeInteractions(item)`             | The `InteractionDescriptor` of each interaction of the item, in document order.                            |
-| `checkBindings(item)`                    | `Issue`s for response variables that the interactions do not accept.                                       |
-| `checkResponse(descriptor, response)`    | The `ResponseStatus` of a response and the `ResponseViolation`s it has.                                    |
-| `answeredStatus(descriptors, responses)` | The status of an item from the responses to all its interactions (RR §2.7.1).                              |
-| `initialResponse(descriptor, default)`   | The response an interaction starts with, given the default value of its variable.                          |
-| `shuffleChoices(descriptor, random)`     | The initial order of the choices, one list of identifiers for each set of choices.                         |
-| `presentChoices(descriptor, orders)`     | The descriptor with the choices in the given orders, and without those that the orders leave out.          |
-| `numericRecord(text, base?)`             | The record that a text interaction bound to a record gives for the text a candidate typed (INFO §2.4.2.2). |
-| `InteractionKind`                        | The 22 kinds of interaction, such as `"choice-interaction"`.                                               |
-| `Binding`, `ChoiceDescriptor`            | A cardinality with its base types; one choice, gap, hotspot or hot text.                                   |
-| `InteractionConstraints`                 | What a valid response needs.                                                                               |
-| `ResponseCheck`, `ResponseStatus`        | The result of `checkResponse`, and `answered`, `attempted` or `presented`.                                 |
+```mermaid
+flowchart LR
+  item["Item"]
+  descriptors["InteractionDescriptor<br/>one for each interaction"]
+  order["Orders of the choices"]
+  presented["Descriptor as presented"]
+  response["Candidate's response"]
+  check["ResponseCheck<br/>status and reasons"]
+  item -- "describeInteractions" --> descriptors
+  item -- "checkBindings" --> issues["Issues"]
+  descriptors -- "shuffleChoices" --> order
+  order -- "presentChoices" --> presented
+  presented --> check
+  response -- "checkResponse" --> check
+  check -- "answeredStatus" --> status["Status of the item"]
+```
 
-## Example
+| Function                                 | Does                                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `describeInteractions(item)`             | Returns the `InteractionDescriptor` of each interaction of the item, in document order              |
+| `checkBindings(item)`                    | Returns `Issue`s for response variables that the interactions do not accept                         |
+| `checkResponse(descriptor, response)`    | Returns the `ResponseStatus` of a response and the `ResponseViolation`s it has                      |
+| `answeredStatus(descriptors, responses)` | Returns the status of an item from the responses to all its interactions                            |
+| `initialResponse(descriptor, default)`   | Returns the response an interaction starts with, given the default value of its variable            |
+| `shuffleChoices(descriptor, random)`     | Returns the initial order of the choices, one list of identifiers for each set of choices           |
+| `presentChoices(descriptor, orders)`     | Returns the descriptor with the choices in the given orders, and without those the orders leave out |
+| `numericRecord(text, base?)`             | Returns the record that a text interaction bound to a record gives for the text a candidate typed   |
+
+The types are `InteractionKind` (the 22 kinds of interaction, such as `"choice-interaction"`), `Binding`, `ChoiceDescriptor`,
+`InteractionConstraints`, `InteractionDescriptor`, `ResponseCheck`, `ResponseStatus` and `ResponseViolation`.
 
 ```ts
 import { createRandom } from "@assesskit/runtime";
@@ -28,7 +42,7 @@ import { readAsi } from "@assesskit/runtime/asi";
 import { checkResponse, describeInteractions, presentChoices, shuffleChoices } from "@assesskit/runtime/interactions";
 import { container } from "@assesskit/runtime/values";
 
-const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="capital" title="Capital" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="identifier"/>
   <qti-item-body>
@@ -40,84 +54,78 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
     </qti-choice-interaction>
   </qti-item-body>
 </qti-assessment-item>`);
-
-if (document.kind === "item") {
-  const [descriptor] = describeInteractions(document.item);
-  if (descriptor) {
-    descriptor.constraints; // { minChoices: 1, maxChoices: 2 }
-    descriptor.bindings; // [{ cardinality: "multiple", baseTypes: ["identifier"] }]
-
-    const orders = shuffleChoices(descriptor, createRandom(42)); // [["Metz", "Lyon", "Paris", "Nice"]]: Lyon stays second
-    const hidden = new Set(["Nice"]); // a template variable hides Nice
-    presentChoices(descriptor, [orders[0]?.filter((identifier) => !hidden.has(identifier)) ?? []]).choices.map(
-      ({ identifier }) => identifier,
-    ); // ["Metz", "Lyon", "Paris"]
-
-    checkResponse(descriptor, container("multiple", "identifier", ["Paris", "Nice", "Metz"]));
-    // { status: "attempted", reasons: ["max-choices"] }
-    checkResponse(descriptor, container("multiple", "identifier", ["Paris"])); // { status: "answered", reasons: [] }
-    checkResponse(descriptor, null); // { status: "presented", reasons: ["min-choices"] }
-  }
-}
+const [descriptor] = describeInteractions(item);
+descriptor.constraints; // => { minChoices: 1, maxChoices: 2 }
+descriptor.bindings; // => [{ cardinality: "multiple", baseTypes: ["identifier"] }]
+const orders = shuffleChoices(descriptor, createRandom(42));
+orders; // => [["Metz", "Lyon", "Paris", "Nice"]]
+presentChoices(descriptor, [orders[0].filter((identifier) => identifier !== "Nice")]).choices.map(
+  ({ identifier }) => identifier,
+);
+// => ["Metz", "Lyon", "Paris"]
+checkResponse(descriptor, container("multiple", "identifier", ["Paris", "Nice", "Metz"]));
+// => { status: "attempted", reasons: ["max-choices"] }
+checkResponse(descriptor, container("multiple", "identifier", ["Paris"])); // => { status: "answered", reasons: [] }
+checkResponse(descriptor, null); // => { status: "presented", reasons: ["min-choices"] }
 ```
 
 ## Descriptors
 
-`describeInteractions` reads the body of the item, including feedback, tables and the position object stage, and gives
-one descriptor for each interaction. The descriptor holds what the rules of validity, shuffling and visibility read; the
-prompt, the images and the content of the choices stay in the `BodyNode`s.
+`describeInteractions` reads the body of the item, including feedback, tables and the position object stage, and gives one
+descriptor for each interaction. The descriptor holds what the rules of validity, shuffling and visibility read; the prompt, the
+images and the content of the choices stay in the `BodyNode`s.
 
-| Field                | Meaning                                                                                                                    |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `kind`               | The kind of interaction.                                                                                                   |
-| `responseIdentifier` | The response variable it binds.                                                                                            |
-| `declaration`        | The declared cardinality and base type of that variable; absent when the item does not declare it.                         |
-| `bindings`           | The bindings the interaction accepts, narrowed by its attributes.                                                          |
-| `choices`            | Every choice in document order. A match interaction lists the first set, then the second.                                  |
-| `matchSets`          | The two sets that a response pairs, as directed pairs from the first to the second: see below. Absent for the other kinds. |
-| `constraints`        | What a valid response needs.                                                                                               |
-| `shuffle`            | Whether the initial order is random.                                                                                       |
-| `stringIdentifier`   | The second response variable of a text interaction that keeps the text as typed.                                           |
+| Field                | Meaning                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `kind`               | The kind of interaction                                                                                        |
+| `responseIdentifier` | The response variable it binds                                                                                 |
+| `declaration`        | The declared cardinality and base type of that variable; absent when the item does not declare it              |
+| `bindings`           | The bindings the interaction accepts, narrowed by its attributes                                               |
+| `choices`            | Every choice in document order; a match interaction lists the first set, then the second                       |
+| `matchSets`          | The two sets that a response pairs, as directed pairs from the first to the second; absent for the other kinds |
+| `constraints`        | What a valid response needs                                                                                    |
+| `shuffle`            | Whether the initial order is random                                                                            |
+| `stringIdentifier`   | The second response variable of a text interaction that keeps the text as typed                                |
 
-A `ChoiceDescriptor` has the `identifier`, `fixed`, `templateIdentifier` and `showHide` (which hide the choice when a
-template variable says so, INFO §2.7.1), and for the choices that take associations `matchMax`, `matchMin` and
-`matchGroup`, and for a gap `required`. A maximum of 0, which means no restriction, and a minimum of 0 are left out.
+A `ChoiceDescriptor` has the `identifier`, `fixed`, `templateIdentifier` and `showHide` (which hide the choice when a template
+variable says so), and for the choices that take associations `matchMax`, `matchMin` and `matchGroup`, and for a gap `required`.
+A maximum of 0, which means no restriction, and a minimum of 0 are left out.
 
 | Kind                                                           | `choices`                               | `matchSets`                   |
 | -------------------------------------------------------------- | --------------------------------------- | ----------------------------- |
-| `choice`, `order`, `inline-choice`, `hotspot`, `graphic-order` | the choices, hotspots or inline choices | absent                        |
-| `hottext`                                                      | the hot texts in the running text       | absent                        |
-| `associate`, `graphic-associate`                               | the associable choices or hotspots      | absent                        |
-| `match`                                                        | both sets                               | the two sets                  |
-| `gap-match`                                                    | the gap choices, then the gaps          | the gap choices, the gaps     |
-| `graphic-gap-match`                                            | the gap choices, then the hotspots      | the gap choices, the hotspots |
-| the others                                                     | none                                    | absent                        |
+| `choice`, `order`, `inline-choice`, `hotspot`, `graphic-order` | The choices, hotspots or inline choices | Absent                        |
+| `hottext`                                                      | The hot texts in the running text       | Absent                        |
+| `associate`, `graphic-associate`                               | The associable choices or hotspots      | Absent                        |
+| `match`                                                        | Both sets                               | The two sets                  |
+| `gap-match`                                                    | The gap choices, then the gaps          | The gap choices, the gaps     |
+| `graphic-gap-match`                                            | The gap choices, then the hotspots      | The gap choices, the hotspots |
+| The others                                                     | None                                    | Absent                        |
 
 ## Bindings
 
-The bindings are those of INFO §2.4. A record has no base type, so its list of base types is empty.
+A record has no base type, so its list of base types is empty.
 
 | Kind                              | Accepts                                                       |
 | --------------------------------- | ------------------------------------------------------------- |
-| `choice`, `hottext`, `hotspot`    | single or multiple identifier                                 |
-| `order`, `graphic-order`          | ordered identifier                                            |
-| `inline-choice`                   | single identifier                                             |
-| `associate`, `graphic-associate`  | single or multiple pair                                       |
-| `match`, `gap-match`              | single or multiple directed pair                              |
-| `graphic-gap-match`               | multiple directed pair                                        |
-| `select-point`, `position-object` | single or multiple point                                      |
-| `text-entry`                      | single float, integer or string, or a record                  |
-| `extended-text`                   | the same, and multiple or ordered when `max-strings` is given |
-| `slider`                          | single float or integer                                       |
-| `media`                           | single integer (the number of plays)                          |
-| `drawing`, `upload`               | single file                                                   |
-| `end-attempt`                     | single boolean                                                |
-| `custom`, `portable-custom`       | any cardinality with any base type                            |
+| `choice`, `hottext`, `hotspot`    | Single or multiple identifier                                 |
+| `order`, `graphic-order`          | Ordered identifier                                            |
+| `inline-choice`                   | Single identifier                                             |
+| `associate`, `graphic-associate`  | Single or multiple pair                                       |
+| `match`, `gap-match`              | Single or multiple directed pair                              |
+| `graphic-gap-match`               | Multiple directed pair                                        |
+| `select-point`, `position-object` | Single or multiple point                                      |
+| `text-entry`                      | Single float, integer or string, or a record                  |
+| `extended-text`                   | The same, and multiple or ordered when `max-strings` is given |
+| `slider`                          | Single float or integer                                       |
+| `media`                           | Single integer (the number of plays)                          |
+| `drawing`, `upload`               | Single file                                                   |
+| `end-attempt`                     | Single boolean                                                |
+| `custom`, `portable-custom`       | Any cardinality with any base type                            |
 
-A single value is accepted only when the interaction takes at most one value: `max-choices` or `max-associations` above 1
-or 0 needs a container (INFO §5.30.2), and so do several gaps (INFO §5.57.8). A gap match or graphic gap match
-interaction without `max-associations` has no limit, where the schema's default is 1: the examples of 1EdTech leave it out
-with several gaps, and each gap takes one choice.
+A single value is accepted only when the interaction takes at most one value: `max-choices` or `max-associations` above 1 or 0
+needs a container, and so do several gaps. A gap match or graphic gap match interaction without `max-associations` has no limit,
+where the schema's default is 1 (see [spec gaps](spec-gaps.md)): the examples of 1EdTech leave it out with several gaps, and each
+gap takes one choice.
 
 `checkBindings(item)` returns an `Issue` for each violation:
 
@@ -130,8 +138,8 @@ with several gaps, and each gap takes one choice.
 
 ## Validity
 
-`checkResponse` applies the rules of INFO §5.30 to §5.165 to the descriptor of the interaction as it is presented: give it
-the descriptor that `presentChoices` returns, so that hidden choices are not demanded.
+`checkResponse` applies the rules of validity to the descriptor of the interaction as it is presented: give it the descriptor that
+`presentChoices` returns, so that hidden choices are not demanded.
 
 | Reason             | The response ...                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -156,69 +164,101 @@ the descriptor that `presentChoices` returns, so that hidden choices are not dem
 | `mime-type`        | is a file of a type that an upload does not accept                                    |
 
 - An order interaction without `min-choices` needs every choice in the response, and its `max-choices` is ignored; with
-  `min-choices` it needs between that and `max-choices`, up to all (INFO §5.97.2, §5.97.3).
-- The `pattern-mask` is a pattern of XML Schema's regular expressions and runs on the linear-time automaton of `values`.
-  A text bound to a number is not checked against it, because the text is not in the value.
-- A slider bound to an integer rounds its lower bound down and its upper bound up, and steps by 1 unless `step` says
-  otherwise (INFO §5.134).
+  `min-choices` it needs between that and `max-choices`, up to all.
+- The `pattern-mask` is a pattern of XML Schema's regular expressions and runs on the linear-time automaton of `values`. A text
+  bound to a number is not checked against it, because the text is not in the value.
+- A slider bound to an integer rounds its lower bound down and its upper bound up, and steps by 1 unless `step` says otherwise.
 - A MIME type is compared without its parameters and without regard to case.
 
-The `status` follows RR §2.7.1: NULL is `presented`, even when it breaks a rule such as `min-choices`; a response without
-violations is `answered` and any other is `attempted`. `answeredStatus` gives the item's status: `answered` when it has a
-response and every interaction is valid (a blank optional interaction is valid), `presented` when it has no response, and
-`attempted` otherwise. The end attempt interaction does not count. `notpresented`, for an item that was never shown, is
-the engine's to report.
+| Status      | When                                                                                                                 |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `presented` | The response is NULL, even when that breaks a rule such as `min-choices`; for an item, no interaction has a response |
+| `attempted` | The response breaks a rule; for an item, a response exists and an interaction's response is invalid                  |
+| `answered`  | The response breaks no rule; for an item, it has a response and every interaction is valid                           |
 
-`initialResponse` gives the response an interaction starts with: the default value, except for a choice interaction, which
-starts with nothing selected (INFO §2.4.1.1), and an end attempt interaction, which ignores its default (INFO §2.4.5). The
-default of an order interaction overrides the initial order of its choices (INFO §2.4.1.2), so shuffle the choices of an
-order only when its default is NULL.
+`answeredStatus` gives the item's status. A blank optional interaction is valid, and the end attempt interaction does not count.
+`notpresented`, for an item that was never shown, is the engine's to report.
+
+`initialResponse` gives the response an interaction starts with: the default value, except for a choice interaction, which starts
+with nothing selected, and an end attempt interaction, which ignores its default. The default of an order interaction overrides
+the initial order of its choices, so shuffle the choices of an order only when its default is NULL.
 
 ## Shuffling
 
-`shuffleChoices` returns one list of identifiers for each set of choices: the one set of most interactions, the two sets
-of a match interaction, and the gap choices and the gaps or hotspots of a gap match and a graphic gap match interaction.
-Only the choices are shuffled in the last two, and each set of a match interaction on its own (INFO §5.89.1, §5.57.1).
+`shuffleChoices` returns one list of identifiers for each set of choices: the one set of most interactions, the two sets of a match
+interaction, and the gap choices and the gaps or hotspots of a gap match and a graphic gap match interaction. Only the choices are
+shuffled in the last two, and each set of a match interaction on its own.
 
-| Rule                 | Statement                                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Draw procedure       | Fisher–Yates from the last index: for a set of n movable choices, one draw `floor(uniform() × (i + 1))` for i from n − 1 down to 1. |
-| Fixed choices        | A choice with `fixed` keeps its position among all the choices of its set.                                                          |
-| Hidden choices (G19) | Choices that a template variable hides are shuffled with the others and dropped afterward, so that fixed positions hold.            |
-| Without `shuffle`    | The order of the document, and no draw.                                                                                             |
+| Rule              | Statement                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Draw procedure    | Fisher-Yates from the last index: for a set of n movable choices, one draw `floor(uniform() × (i + 1))` for i from n − 1 down to 1 |
+| Fixed choices     | A choice with `fixed` keeps its position among all the choices of its set                                                          |
+| Hidden choices    | Choices that a template variable hides are shuffled with the others and dropped afterward, so that fixed positions hold            |
+| Without `shuffle` | The order of the document, and no draw                                                                                             |
 
-Changing the draw procedure is a breaking change. `presentChoices` drops the choices that an order leaves out, and the
-orders the engine stores give the same descriptor again when a session resumes.
+Changing the draw procedure is a breaking change. `presentChoices` drops the choices that an order leaves out, and the orders the
+engine stores give the same descriptor again when a session resumes.
 
 ## Numeric text
 
-`numericRecord(text, base?)` reads a typed number into the fields of INFO §2.4.2.2.
+`numericRecord(text, base?)` reads a typed number into the fields of a record. `base` is 2 to 36 and 10 when omitted.
+
+| Field          | Value                                                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| `stringValue`  | The text, as typed                                                                                  |
+| `floatValue`   | The number                                                                                          |
+| `integerValue` | The number, when the text has no fractional digits and no exponent and the number is a safe integer |
+| `leftDigits`   | The digits left of the point, as typed                                                              |
+| `rightDigits`  | The digits right of the point, as typed                                                             |
+| `ndp`          | `rightDigits` less the exponent, never below 0                                                      |
+| `nsf`          | The digits from the first that is not 0 to the last, at least 1                                     |
+| `exponent`     | The exponent, when the text has one                                                                 |
+
+White space around the number is ignored. In base 10 the text is a decimal with sign, point and exponent; in another base it is an
+integer. Text that is no number has `stringValue` only, and the empty string is NULL.
 
 ```ts
 import { numericRecord } from "@assesskit/runtime/interactions";
 
-const fields = numericRecord("12.50e-3")?.fields;
-[...(fields ?? [])].map(([name, field]) => [name, field.value]);
-// [["stringValue", "12.50e-3"], ["floatValue", 0.0125], ["leftDigits", 2], ["rightDigits", 2], ["ndp", 5], ["nsf", 4], ["exponent", -3]]
+[...numericRecord("12.50e-3").fields].map(([name, field]) => [name, field.value]);
+// => [["stringValue", "12.50e-3"], ["floatValue", 0.0125], ["leftDigits", 2], ["rightDigits", 2], ["ndp", 5], ["nsf", 4], ["exponent", -3]]
+numericRecord(""); // => null
 ```
 
-| Field          | Value                                                                                               |
-| -------------- | --------------------------------------------------------------------------------------------------- |
-| `stringValue`  | the text, as typed                                                                                  |
-| `floatValue`   | the number                                                                                          |
-| `integerValue` | the number, when the text has no fractional digits and no exponent and the number is a safe integer |
-| `leftDigits`   | the digits left of the point, as typed                                                              |
-| `rightDigits`  | the digits right of the point, as typed                                                             |
-| `ndp`          | `rightDigits` less the exponent, never below 0                                                      |
-| `nsf`          | the digits from the first that is not 0 to the last, at least 1                                     |
-| `exponent`     | the exponent, when the text has one                                                                 |
+## Errors
 
-White space around the number is ignored. In base 10 the text is a decimal with sign, point and exponent; in another base,
-2 to 36, it is an integer. Text that is no number has `stringValue` only, and the empty string is NULL.
+| Situation                                                             | Result                                                 |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| An argument of the wrong type, such as a descriptor that is no object | `DataError` that names the argument and what was found |
+| A random source that returns anything but a number in [0, 1)          | `DataError`                                            |
+| Orders that do not name the choices of the sets                       | `DataError`                                            |
+| A `base` that is not an integer from 2 to 36                          | `DataError`                                            |
+| A response that breaks a rule of validity                             | `ResponseCheck` with the reasons; no error             |
+| A response variable that the interactions do not accept               | `Issue`s from `checkBindings`                          |
 
-## Evidence
+## Not included
 
-The tests check the descriptors of the 251 items of the 1EdTech examples against a count of the interaction elements in
-their markup, and the correct response of every example against the rules of validity. The differential tests compare
-descriptors, the validity of generated responses and numeric records with Longsight `qti3-core`: they agree, but for the
-integer value of a number that ends in its point, where the oracle gives none.
+| Not included                                             | Why                                                         |
+| -------------------------------------------------------- | ----------------------------------------------------------- |
+| Rendering an interaction, and the content of its choices | The player draws; the content stays in the body of the item |
+| The status `notpresented`                                | Only the engine knows that an item was never shown          |
+| Evaluating a response against the correct response       | Response processing does, in `processing`                   |
+
+## Files
+
+| File                                                                          | Concept                                                        |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `descriptor.ts`, `describe.ts`, `check-descriptor.ts`, `interaction-kinds.ts` | The descriptor, reading it from an item, and checking it       |
+| `bindings.ts`, `check-bindings.ts`                                            | What each interaction accepts, and checking an item            |
+| `response-check.ts`, `response-status.ts`, `answered-status.ts`               | The validity of a response, and the status it gives            |
+| `initial-response.ts`, `shuffle.ts`, `numeric-record.ts`                      | The starting response, the order of choices, and typed numbers |
+| `internal.ts`                                                                 | The helpers that `delivery` shares                             |
+
+## References
+
+| Topic                                                     | Specification                                                                                             |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Interactions, bindings, validity, shuffling, numeric text | [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                            |
+| Answered status                                           | [QTI 3.0 Results Reporting](https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html) |
+| MIME types                                                | [RFC 2045](https://www.rfc-editor.org/rfc/rfc2045)                                                        |
+| Places where the specifications differ                    | [Spec gaps](spec-gaps.md)                                                                                 |

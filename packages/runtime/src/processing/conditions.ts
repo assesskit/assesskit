@@ -12,8 +12,10 @@ export interface Branch<TRule> {
 }
 
 /**
- * Returns whether the expression of a branch is true. NULL counts as false (INFO §5.150 for constraints, B47 for
- * conditions).
+ * Returns whether the expression of a branch is true.
+ *
+ * @remarks
+ * NULL counts as false, in the constraints of template processing and in conditions.
  *
  * @throws `ProcessingError` when it is not a single boolean.
  */
@@ -28,7 +30,7 @@ export function holds(condition: Expression, scope: Scope, element: string): boo
 
 /**
  * Returns the rules of the first branch whose expression is true, else those of the else branch, `undefined` when there
- * is neither: a NULL or false expression skips its branch (B47).
+ * is neither: a NULL or false expression skips its branch.
  *
  * @throws `ProcessingError` when an expression is not a single boolean.
  */

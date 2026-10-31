@@ -78,7 +78,11 @@ export function booleanResult(value: boolean | null): SingleValue | null {
   return value === null ? null : { cardinality: "single", baseType: "boolean", value };
 }
 
-/** Builds a single integer, NULL when the number is not a safe integer (D3). */
+/**
+ * Builds a single integer, NULL when the number is not a safe integer.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 export function integerResult(value: number): SingleValue | null {
   // Adding 0 turns -0 into 0, as integers have no sign of zero.
   return Number.isSafeInteger(value) ? { cardinality: "single", baseType: "integer", value: value + 0 } : null;
@@ -89,7 +93,11 @@ export function floatResult(value: number): SingleValue {
   return { cardinality: "single", baseType: "float", value };
 }
 
-/** Builds a single integer, NULL when the exact result is outside the safe integers (D3). */
+/**
+ * Builds a single integer, NULL when the exact result is outside the safe integers.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 export function bigIntegerResult(value: bigint): SingleValue | null {
   const safe = value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER);
   return safe ? integerResult(Number(value)) : null;

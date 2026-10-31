@@ -19,7 +19,11 @@ export interface TestNode {
   readonly parts: readonly PartNode[];
 }
 
-/** A test part (INFO §5.159). */
+/**
+ * A test part.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export interface PartNode {
   /** Tells the four kinds of node apart. */
   readonly kind: "part";
@@ -45,8 +49,10 @@ export interface SectionNode {
   readonly children: readonly ContentNode[];
   /**
    * Whether ordering mixes the section into the list of its parent: it is invisible, it is not kept together and not
-   * fixed, and its parent shuffles or is itself mixed (INFO §4.2.6–7). Such a section has no extent of its own: its
-   * pre-conditions, branch rules and time limits are not in force.
+   * fixed, and its parent shuffles or is itself mixed. Such a section has no extent of its own: its pre-conditions,
+   * branch rules and time limits are not in force.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly dissolved: boolean;
 }
@@ -70,8 +76,10 @@ export type ContentNode = SectionNode | ItemRefNode;
 export type StructureNode = TestNode | PartNode | ContentNode;
 
 /**
- * A test with its section references resolved: every part, section and item reference with the document that holds
- * it. The structure is the same for every session of a test; a session adds a plan to it.
+ * A test with its section references resolved: every part, section and item reference with the document that holds it.
+ *
+ * @remarks
+ * The structure is the same for every session of a test; a session adds a plan to it.
  */
 export interface TestStructure {
   /** The root of the structure. */
@@ -90,8 +98,10 @@ const TEST_KIND = "assessment-test";
 const SECTION_KIND = "assessment-section";
 
 /**
- * Whether a section is mixed into the list of its parent when that list is shuffled (INFO §4.2.6–7): an invisible
- * section that is not kept together. A fixed section keeps its place, so it stays a block.
+ * Whether a section is mixed into the list of its parent when that list is shuffled: an invisible section that is not
+ * kept together. A fixed section keeps its place, so it stays a block.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function dissolves(section: AssessmentSection, parent: PartNode | SectionNode): boolean {
   const mixable = section.visible === false && section.keepTogether === false && section.fixed !== true;
@@ -155,7 +165,7 @@ class Builder {
     return new Structure(root, this.parts, this.sections, this.itemRefs);
   }
 
-  /** Test parts, sections and item references share one set of identifiers (INFO §5.6, §5.159). */
+  /** Test parts, sections and item references share one set of identifiers. */
   private claim(identifier: string, what: string): void {
     const earlier = this.claimed.get(identifier);
     if (earlier !== undefined) {
@@ -206,7 +216,7 @@ class Builder {
     }
   }
 
-  /** Resolves a `qti-assessment-section-ref` to its section and the path of that document (INFO §7.5, BIND §8.2). */
+  /** Resolves a `qti-assessment-section-ref` to its section and the path of that document. */
   private reference(ref: AssessmentSectionRef, base: string): { model: AssessmentSection; holder: string } {
     const model = this.resolvers.sections(ref.href, base);
     checkSynchronous(model, "The resolver sections");
@@ -233,19 +243,24 @@ class Builder {
 }
 
 /**
- * Resolves the section references of a test and indexes its parts, sections and item references. The resolver is
- * called once for each reference; the references to items stay unresolved, because a session needs an item only when
- * it presents it. A section reference is replaced by the section it names (INFO §7.5, BIND §8.2), and the references
- * inside that section resolve against the path of its document.
+ * Resolves the section references of a test and indexes its parts, sections and item references.
+ *
+ * @remarks
+ * The resolver is called once for each reference; the references to items stay unresolved, because a session needs an
+ * item only when it presents it. A section reference is replaced by the section it names, and the references inside
+ * that section resolve against the path of its document.
  *
  * @param test - The test, as `readAsi` reads it, with its includes resolved.
  * @param base - The path of the test document, against which its references resolve.
  * @param resolvers - Only `sections` is called, as `packageResolvers` provides it.
+ * @returns The structure of the test.
  * @throws `DataError` when an argument has the wrong type; when two test parts, sections or item references share an
  * identifier, which a section reference to one document from two places also does; when a section reference and the
  * section it names have different identifiers; when a section holds an `xi:include`; when a reference is outside the
  * package; or when the resolver returns a promise.
  * @throws `ReadError` from the resolver, when a reference names no section.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
  */
 export function resolveStructure(
   test: AssessmentTest,
@@ -268,8 +283,14 @@ function parentOf(node: StructureNode): StructureNode | undefined {
 }
 
 /**
- * Returns the nodes that enclose a node, outermost first: the test, the part and the sections. A section that ordering
- * mixes into its parent is among them, because its item session control and its identifier still apply to its items.
+ * Returns the nodes that enclose a node, outermost first: the test, the part and the sections.
+ *
+ * @remarks
+ * A section that ordering mixes into its parent is among them, because its item session control and its identifier
+ * still apply to its items.
+ *
+ * @param node - A node of the structure.
+ * @returns The enclosing nodes, outermost first.
  */
 export function ancestry(node: StructureNode): readonly StructureNode[] {
   const chain: StructureNode[] = [];
@@ -277,7 +298,12 @@ export function ancestry(node: StructureNode): readonly StructureNode[] {
   return chain;
 }
 
-/** Returns the test part that holds a section or an item reference. */
+/**
+ * Returns the test part that holds a section or an item reference.
+ *
+ * @param node - A section or an item reference of the structure.
+ * @returns The part.
+ */
 export function partOf(node: ContentNode): PartNode {
   let at: PartNode | SectionNode = node.parent;
   while (at.kind === "section") at = at.parent;

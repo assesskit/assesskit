@@ -2,7 +2,8 @@ import type { AssessmentItem, ResponseDeclaration } from "../asi/index.js";
 import { checkChoice, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { checkResponse, describeInteractions } from "../interactions/index.js";
-import { describeType, fitValue } from "../processing/assign.js";
+import { describeType } from "../processing/index.js";
+import { fitValue } from "../processing/internal.js";
 import { matchValues, normalizeValue, type Value } from "../values/index.js";
 import { type Ending, endAttempt, endAttemptInteractions, itemEvent, startAttempt } from "./attempt.js";
 import { presentedInteractions } from "./item-display.js";
@@ -20,18 +21,20 @@ import { checkKey, type ItemKey, sameKey } from "./plan.js";
 import { refuse } from "./refusal.js";
 
 /**
- * An action of the candidate on an item (INFO §2.2.1, §7.19):
+ * An action of the candidate on an item:
  *
- * | Type            | The candidate …                                                                                   |
- * | --------------- | ------------------------------------------------------------------------------------------------- |
- * | `set-responses` | enters responses, the drafts, and the opaque states of portable custom interactions (E29)         |
- * | `submit`        | ends the attempt with the drafts as responses                                                     |
- * | `skip`          | ends the attempt without a response: every response variable is NULL (INFO §7.19.6)               |
- * | `end-attempt`   | ends the attempt with the end attempt interaction bound to `interaction` (INFO §2.4.5)            |
- * | `next-attempt`  | starts the next attempt after the feedback of the last one                                        |
- * | `review`        | reviews the closed item (INFO §7.19.3)                                                            |
- * | `solution`      | sees the solution of the closed item (INFO §7.19.4)                                               |
- * | `comment`       | comments on the item (INFO §7.19.5)                                                               |
+ * | Type            | The candidate …                                                                     |
+ * | --------------- | ----------------------------------------------------------------------------------- |
+ * | `set-responses` | enters responses, the drafts, and the opaque states of portable custom interactions |
+ * | `submit`        | ends the attempt with the drafts as responses                                       |
+ * | `skip`          | ends the attempt without a response: every response variable is NULL                |
+ * | `end-attempt`   | ends the attempt with the end attempt interaction bound to `interaction`            |
+ * | `next-attempt`  | starts the next attempt after the feedback of the last one                          |
+ * | `review`        | reviews the closed item                                                             |
+ * | `solution`      | sees the solution of the closed item                                                |
+ * | `comment`       | comments on the item                                                                |
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export type ItemAction =
   | {
@@ -41,7 +44,11 @@ export type ItemAction =
       readonly item: ItemKey;
       /** The responses by response identifier, NULL as `null`. */
       readonly responses: ReadonlyMap<string, Value | null>;
-      /** The opaque state of each portable custom interaction, by response identifier. Default: none. */
+      /**
+       * The opaque state of each portable custom interaction, by response identifier.
+       *
+       * @defaultValue none
+       */
       readonly pciStates?: ReadonlyMap<string, string>;
     }
   | {
@@ -82,10 +89,18 @@ export const ITEM_ACTION_TYPES: readonly ItemAction["type"][] = [
 /** The actions that change or submit responses, which a closed session refuses. */
 const RESPONDING: ReadonlySet<ItemAction["type"]> = new Set(["set-responses", "submit", "skip", "end-attempt"]);
 
-/** The base types whose values are integers, which the runtime holds as safe integers (D3). */
+/**
+ * The base types whose values are integers, which the runtime holds as safe integers.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 const INTEGER_BASE_TYPES: ReadonlySet<unknown> = new Set(["integer", "point"]);
 
-/** Whether a primitive of a base type, before it is checked, is or holds an integer beyond the safe integers (D3). */
+/**
+ * Whether a primitive of a base type, before it is checked, is or holds an integer beyond the safe integers.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 function isUnsafe(baseType: unknown, primitive: unknown): boolean {
   return (
     INTEGER_BASE_TYPES.has(baseType) &&
@@ -93,7 +108,11 @@ function isUnsafe(baseType: unknown, primitive: unknown): boolean {
   );
 }
 
-/** Whether a value, before it is checked, holds an integer beyond the safe integers (D3). */
+/**
+ * Whether a value, before it is checked, holds an integer beyond the safe integers.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 function holdsUnsafeInteger(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.fields instanceof Map) {
@@ -234,8 +253,10 @@ function setResponses(
 }
 
 /**
- * Whether drafts submitted would skip the item: every response the candidate sets is NULL or its default value (INFO
- * §7.19.6). An item without such responses cannot be skipped.
+ * Whether drafts submitted would skip the item: every response the candidate sets is NULL or its default value. An item
+ * without such responses cannot be skipped.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function isSkip(
   drafts: ReadonlyMap<string, Value | null>,
@@ -258,7 +279,11 @@ const SKIPPING_NOT_ALLOWED = refuse(
   "The item does not allow skipping: a response other than the default value must be given before it is submitted.",
 );
 
-/** Returns the response identifiers of the visible interactions whose drafts are not valid (INFO §7.19.7). */
+/**
+ * Returns the response identifiers of the visible interactions whose drafts are not valid.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function invalidResponses(session: ItemSession, context: ItemSessionContext): readonly string[] {
   return presentedInteractions(session, context.item, context.control)
     .filter(
@@ -288,7 +313,7 @@ function submit(session: ItemSession, at: number, context: ItemSessionContext): 
 
 function skip(session: ItemSession, at: number, context: ItemSessionContext): ItemStep {
   const { item } = context;
-  // A skip submits NULL responses, so it skips any item that has responses the candidate sets (INFO §7.19.6).
+  // A skip submits NULL responses, so it skips any item that has responses the candidate sets.
   if (!context.control.allowSkipping && candidateResponses(item).size > 0) return SKIPPING_NOT_ALLOWED;
   const opened = open(session, item);
   const drafts = new Map([...opened.drafts.keys()].map((identifier) => [identifier, null]));
@@ -302,7 +327,11 @@ function endWith(session: ItemSession, at: number, interaction: string, context:
   return ended(open(session, context.item), at, { by: "end-attempt", interaction }, context);
 }
 
-/** Enters the review or solution state of a closed session, when the control allows it (INFO §7.19.3–4). */
+/**
+ * Enters the review or solution state of a closed session, when the control allows it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function revisit(session: ItemSession, at: number, to: "review" | "solution", allowed: boolean): ItemStep {
   const code = to === "review" ? "review-not-allowed" : "solution-not-allowed";
   if (session.status === "interacting") {
@@ -313,35 +342,39 @@ function revisit(session: ItemSession, at: number, to: "review" | "solution", al
 }
 
 /**
- * Applies an action of the candidate to an item session (INFO §2.2.1, §2.5, §7.19). Responses go to the drafts; an
- * attempt ends with `submit`, `skip` or `end-attempt`, and its response processing runs. An action on a session between
- * attempts starts the next attempt first, which `next-attempt` does alone; `next-attempt` during an attempt changes
- * nothing.
+ * Applies an action of the candidate to an item session.
  *
- * | Rule                                     | Refusal                |
- * | ---------------------------------------- | ---------------------- |
- * | the action names another item instance   | `unknown-item`         |
- * | the action is earlier than the session's latest change | `clock-regression` |
- * | the item has not been presented          | `not-current`          |
- * | the session is suspended                 | `suspended`            |
- * | responses of a closed session            | `item-closed`; `next-attempt` gives `attempts-exhausted` |
- * | a variable the candidate does not set, a value of another type, or no such end attempt interaction or PCI | `invalid-response` |
- * | an integer outside the safe integers     | `value-out-of-range` (D3) |
- * | `submit` or `skip` with only NULL or default responses under `allow-skipping="false"`; an item without responses is never skipped | `skipping-not-allowed` |
- * | `submit` with a visible interaction's response invalid under `validate-responses="true"` | `invalid-response` |
- * | `review` before the session closed, or without `allow-review` | `review-not-allowed` |
- * | `solution` before the session closed, or without `show-solution` | `solution-not-allowed` |
- * | `comment` without `allow-comment`         | `comment-not-allowed`  |
+ * @remarks
+ * Responses go to the drafts; an attempt ends with `submit`, `skip` or `end-attempt`, and its response processing runs.
+ * An action on a session between attempts starts the next attempt first, which `next-attempt` does alone;
+ * `next-attempt` during an attempt changes nothing.
  *
- * `end-attempt` is a request of the candidate that ends the attempt at once, typically for a hint (INFO §2.4.5): its
- * response is not a skip, and validity is not checked. The checks of skipping and validity apply to submissions in an
- * individual test part, which is the only place where the candidate submits an item.
+ * | Rule                                                                                                                              | Refusal                                                  |
+ * | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+ * | the action names another item instance                                                                                            | `unknown-item`                                           |
+ * | the action is earlier than the session's latest change                                                                            | `clock-regression`                                       |
+ * | the item has not been presented                                                                                                   | `not-current`                                            |
+ * | the session is suspended                                                                                                          | `suspended`                                              |
+ * | responses of a closed session                                                                                                     | `item-closed`; `next-attempt` gives `attempts-exhausted` |
+ * | a variable the candidate does not set, a value of another type, or no such end attempt interaction or PCI                         | `invalid-response`                                       |
+ * | an integer outside the safe integers                                                                                              | `value-out-of-range`                                     |
+ * | `submit` or `skip` with only NULL or default responses under `allow-skipping="false"`; an item without responses is never skipped | `skipping-not-allowed`                                   |
+ * | `submit` with a visible interaction's response invalid under `validate-responses="true"`                                          | `invalid-response`                                       |
+ * | `review` before the session closed, or without `allow-review`                                                                     | `review-not-allowed`                                     |
+ * | `solution` before the session closed, or without `show-solution`                                                                  | `solution-not-allowed`                                   |
+ * | `comment` without `allow-comment`                                                                                                 | `comment-not-allowed`                                    |
+ *
+ * `end-attempt` is a request of the candidate that ends the attempt at once, typically for a hint: its response is not
+ * a skip, and validity is not checked. The checks of skipping and validity apply to submissions in an individual test
+ * part, which is the only place where the candidate submits an item.
  *
  * @param session - The item session.
  * @param action - The action, with its time in epoch milliseconds.
  * @param context - The item, its control, and the processing.
  * @returns The new session and its events, or a refusal; the session given does not change.
  * @throws `DataError` when an argument has the wrong type, or a response is not a value.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function applyItemAction(
   session: ItemSession,

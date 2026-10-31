@@ -2,6 +2,7 @@ import type { CatResponse, ItemStage } from "../cat/index.js";
 import { isSessionEnd } from "../cat/index.js";
 import { describe } from "../checks.js";
 import type { AssessmentResult, ItemResult, OutcomeVariable, ResultVariable } from "../results/index.js";
+import { type Declared, heldByOther, otherIdentifiers, outcomeFate } from "./cat-outcomes.js";
 import {
   answered,
   appendedStage,
@@ -9,10 +10,6 @@ import {
   type CatSession,
   type CatWait,
   catRequestId,
-  type Declared,
-  heldByOther,
-  otherIdentifiers,
-  outcomeFate,
   planSize,
   poolOf,
   requested,
@@ -64,7 +61,7 @@ function requestEvent(session: CatSession, at: number): DeliveryEvent {
   return { type: "cat-requested", at, scope: session.section, detail: `${kind} ${catRequestId(session)}` };
 }
 
-/** Starts the CAT session of an adaptive section the candidate enters: Create Session waits for the engine (C3, E18). */
+/** Starts the CAT session of an adaptive section the candidate enters: Create Session waits for the engine. */
 export function startCat(state: DeliveryState, section: string, instance: number, at: number): CatChange {
   const session = startedCat(section, instance);
   return changed(withCat(state, session), [requestEvent(session, at)]);
@@ -72,8 +69,13 @@ export function startCat(state: DeliveryState, section: string, instance: number
 
 /**
  * Makes the Submit Results request of each running session that waits for none and whose candidate has submitted the
- * first `stageLength` items of the stage (C4). The request carries the item instances not yet reported, so that results
- * deferred earlier and results that changed in a nonlinear part go with it (CAT §2.4, B98).
+ * first `stageLength` items of the stage.
+ *
+ * @remarks
+ * The request carries the item instances not yet reported, so that results deferred earlier and results that changed in
+ * a nonlinear part go with it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function submitDue(state: DeliveryState, at: number): CatChange {
   let next = state;
@@ -95,9 +97,12 @@ function farewell(state: DeliveryState, session: CatSession): CatWait {
 }
 
 /**
- * Ends the sessions the candidate leaves (C4, C5): the section is left, or the part or the test ends. A running session
- * stops being one; the items of its stage that were not presented leave the plan; the results not yet reported go in a
- * last Submit Results request and, unless the engine ends the session by its answer, End Session follows.
+ * Ends the sessions the candidate leaves: the section is left, or the part or the test ends.
+ *
+ * @remarks
+ * A running session stops being one; the items of its stage that were not presented leave the plan; the results not yet
+ * reported go in a last Submit Results request and, unless the engine ends the session by its answer, End Session
+ * follows.
  *
  * @param leaves - Whether the session is one the candidate leaves.
  */
@@ -125,7 +130,11 @@ export function leaveCat(state: DeliveryState, at: number, leaves: (session: Cat
   return changed(next, events);
 }
 
-/** Resolves the identifier of an item result to an item instance: the plain identifier of a single instance, or `ref.n` (CAT §4.3.1). */
+/**
+ * Resolves the identifier of an item result to an item instance: the plain identifier of a single instance, or `ref.n`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function itemOf(state: DeliveryState, identifier: string): ItemKey | undefined {
   const index = planIndex(state.plan);
   const own = index.instances(identifier);
@@ -149,7 +158,11 @@ function mergedOutcomes(held: readonly CatOutcome[], added: readonly CatOutcome[
   return [...held.filter((outcome) => !replaces(outcome)), ...added];
 }
 
-/** Returns the outcome to keep for a variable the engine reported, `undefined` when it is ignored (CAT §4.3.2). */
+/**
+ * Returns the outcome to keep for a variable the engine reported, `undefined` when it is ignored.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function accepted(
   state: DeliveryState,
   session: CatSession,
@@ -178,7 +191,9 @@ function outcomesOf(variables: readonly ResultVariable[]): OutcomeVariable[] {
 
 /**
  * Merges the outcomes that the report gives an item instance: the declared ones go into the session of the instance, so
- * that the processing of the test reads them (CAT §4.3.2). An instance that was not presented takes none.
+ * that the processing of the test reads them. An instance that was not presented takes none.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 function mergeItem(
   course: Course,
@@ -216,9 +231,11 @@ interface Merged {
 }
 
 /**
- * Merges the report of a CAT engine into the state (CAT §4.3.2, C4, B67): the session identifiers join the context of the
- * results; each outcome goes into the declaration that takes it, or is kept as if it were declared, or is ignored; an
- * outcome that another CAT engine set is not overwritten.
+ * Merges the report of a CAT engine into the state: the session identifiers join the context of the results; each
+ * outcome goes into the declaration that takes it, or is kept as if it were declared, or is ignored; an outcome that
+ * another CAT engine set is not overwritten.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 function mergeReport(
   course: Course,
@@ -251,8 +268,10 @@ function mergeReport(
 
 /**
  * Applies the stage that an answer gives to a session. A session the candidate has left ignores it. A running session
- * drops the items of the old stage that were not presented (CAT §4.2), then ends when the stage ends the session (C8),
- * else appends the items at the end of its section, each an instance as in a selection with replacement (CAT §2.4).
+ * drops the items of the old stage that were not presented, then ends when the stage ends the session, else appends the
+ * items at the end of its section, each an instance as in a selection with replacement.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 function applyStage(
   course: Course,
@@ -308,9 +327,12 @@ interface Answer {
 }
 
 /**
- * Applies the answer of the CAT engine to the request that waits (E18, C3 to C5). Create Session stores the session
- * identifier and state and gives the first stage. Submit Results merges the outcomes, stores the state it returns (an
- * absent state clears it) and gives the next stage, or ends the session. End Session ends the session.
+ * Applies the answer of the CAT engine to the request that waits.
+ *
+ * @remarks
+ * Create Session stores the session identifier and state and gives the first stage. Submit Results merges the outcomes,
+ * stores the state it returns (an absent state clears it) and gives the next stage, or ends the session. End Session
+ * ends the session.
  */
 export function answerCat(
   course: Course,

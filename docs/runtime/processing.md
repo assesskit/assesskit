@@ -1,11 +1,23 @@
-# processing
+# Processing
 
-`@assesskit/runtime/processing` runs the template, response and outcome processing of QTI 3.0: a tree interpreter for
-every expression and rule, the variables of an item session, the six standard response processing templates, custom
-operators, and the signatures of the operators for static checks. It imports `values` and `asi` and runs in any
-JavaScript runtime. The delivery engine decides when each processing runs; these functions run it.
+`processing` runs the template, response and outcome processing of QTI 3.0: a tree interpreter for every expression and rule,
+the variables of an item session, the six standard response processing templates, custom operators, and the signatures of the
+operators for static checks. It imports `values` and `asi` and runs in any JavaScript runtime. The delivery engine decides when
+each processing runs; these functions run it.
 
-| Export                                                         | Purpose                                                                                                                                      |
+```mermaid
+flowchart LR
+  item["Item and options"] -- "createItemVariables" --> v0["Variables<br/>of a new session"]
+  v0 -- "runTemplateProcessing" --> v1["Template variables,<br/>correct responses, defaults"]
+  v1 --> attempt["Candidate responds"]
+  attempt -- "runResponseProcessing" --> v2["Outcomes of the item"]
+  v2 -- "runOutcomeProcessing<br/>reads item sessions through TestScope" --> v3["Outcomes of the test"]
+  expr["evaluate"] -. "every expression" .- v1
+  expr -.- v2
+  expr -.- v3
+```
+
+| Function or constant                                           | Does                                                                                                                                         |
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `createItemVariables(item, options?)`                          | The variables of a new item session, before template processing.                                                                             |
 | `runTemplateProcessing(item, variables, context)`              | Template processing, with the constraint loop.                                                                                               |
@@ -19,7 +31,7 @@ JavaScript runtime. The delivery engine decides when each processing runs; these
 | `STANDARD_TEMPLATES`, `standardTemplateUri(uri)`               | The six standard templates as models, and the normalization of their URIs.                                                                   |
 | `OPERATOR_SIGNATURES`                                          | The operand and result types of the 64 expressions.                                                                                          |
 | `DEFAULT_PROCESSING_LIMITS`, `ProcessingLimits`                | The limit on the size of containers that expressions build.                                                                                  |
-| `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of D5, and the type of a variable.                             |
+| `fitsBaseType(valueType, variableType)`, `VariableType`        | Whether a value of a base type fits a variable of another, with the promotion of an integer, and the type of a variable.                     |
 | `describeType(type)`, `describeCount`, `describeOperand`       | A type, an operand count and an operand signature as text for a message.                                                                     |
 | `operandsOf(expression)`                                       | The operand expressions of an expression, in order.                                                                                          |
 | `declaredValue`, `readPrimitive`                               | The value that a declaration's `qti-value`s give, and one lexical form of a base type.                                                       |
@@ -35,7 +47,7 @@ import { readAsi } from "@assesskit/runtime/asi";
 import { createItemVariables, runResponseProcessing, runTemplateProcessing } from "@assesskit/runtime/processing";
 import { single } from "@assesskit/runtime/values";
 
-const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
     identifier="sum" title="Sum" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="integer"/>
   <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
@@ -54,17 +66,12 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
   <qti-item-body><p>What is <qti-printed-variable identifier="A"/> + <qti-printed-variable identifier="B"/>?</p></qti-item-body>
   <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
 </qti-assessment-item>`);
-
-if (document.kind === "item") {
-  const { item } = document;
-  const context = { random: createRandom(42) };
-  const instance = runTemplateProcessing(item, createItemVariables(item), context);
-  instance.templates.get("A"); // { cardinality: "single", baseType: "integer", value: 6 }
-  instance.correctResponses.get("RESPONSE"); // { cardinality: "single", baseType: "integer", value: 8 }
-
-  const submitted = { ...instance, responses: new Map(instance.responses).set("RESPONSE", single("integer", 8)) };
-  runResponseProcessing(item, submitted, context).outcomes.get("SCORE"); // { cardinality: "single", baseType: "float", value: 1 }
-}
+const context = { random: createRandom(42) };
+const instance = runTemplateProcessing(item, createItemVariables(item), context);
+instance.templates.get("A"); // => { cardinality: "single", baseType: "integer", value: 6 }
+instance.correctResponses.get("RESPONSE"); // => { cardinality: "single", baseType: "integer", value: 8 }
+const submitted = { ...instance, responses: new Map(instance.responses).set("RESPONSE", single("integer", 8)) };
+runResponseProcessing(item, submitted, context).outcomes.get("SCORE"); // => { cardinality: "single", baseType: "float", value: 1 }
 ```
 
 ## Variables
@@ -81,7 +88,7 @@ variables they are given; they return new ones.
 | `correctResponses` | The correct response of each response variable, as declared or set by template processing.     |
 | `defaults`         | The default value of each declared variable, as declared or set by template processing.        |
 
-`createItemVariables` starts a session (INFO §2.2.2):
+`createItemVariables` starts a session:
 
 | Variable           | Start                                                                                                                                        |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -96,15 +103,15 @@ variables they are given; they return new ones.
 
 ## Processing
 
-| Function                | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `runTemplateProcessing` | Template variables start from `variables.defaults`, so a test's template defaults apply when the caller puts them there. A false or NULL `qti-template-constraint` starts again from the start, at most 100 runs in all; after the last, the template variables keep their defaults and processing goes on after the constraint (INFO §5.150). An outcome whose default is set takes it as its value. Rules read only template and context variables (INFO §6.50). |
-| `runResponseProcessing` | Runs the item's own rules, which win over a template; else the standard template its `template` names; else the rules that `resolveTemplate` returns for its `template-location`, or its `template`. An empty `template` names none. Outcomes start as given: the engine resets them for non-adaptive items (INFO §2.5).                                                                                                                                           |
-| `runOutcomeProcessing`  | Outcomes start from the values given, and the others from their defaults, else 0 or NULL; INFO §2.9 resets test outcomes before each run, so the engine gives only the values a reset keeps, such as supplied external scores.                                                                                                                                                                                                                                     |
+| Function                | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runTemplateProcessing` | Template variables start from `variables.defaults`, so a test's template defaults apply when the caller puts them there. A false or NULL `qti-template-constraint` starts again from the start, at most 100 runs in all; after the last, the template variables keep their defaults and processing goes on after the constraint. An outcome whose default is set takes it as its value. Rules read only template and context variables. |
+| `runResponseProcessing` | Runs the item's own rules, which win over a template; else the standard template its `template` names; else the rules that `resolveTemplate` returns for its `template-location`, or its `template`. An empty `template` names none. Outcomes start as given: the engine resets them for non-adaptive items.                                                                                                                            |
+| `runOutcomeProcessing`  | Outcomes start from the values given, and the others from their defaults, else 0 or NULL; the specification resets test outcomes before each run, so the engine gives only the values a reset keeps, such as supplied external scores.                                                                                                                                                                                                  |
 
 A condition runs the rules of its first true branch: a NULL or false expression skips its branch. A fragment runs its
 rules, and an exit rule ends the run. An assignment checks the cardinality and base type of the value against the
-variable, and promotes an integer to a float or duration (D5).
+variable, and promotes an integer to a float or duration.
 
 ## Expressions
 
@@ -114,9 +121,9 @@ variable, and promotes an integer to a float or duration (D5).
 | Topic                                                   | Rule                                                                                                                                                                                                                                                                                                             |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | NULL                                                    | An operator with a NULL operand gives NULL, except `qti-is-null` (true), `qti-container-size` (0), `qti-multiple`, `qti-ordered` and `qti-repeat` (left out), and `qti-and`, `qti-or`, `qti-any-n` (three-valued logic).                                                                                         |
-| Integers                                                | Safe integers, computed exactly; a result outside them is NULL (D3). `qti-sum`, `qti-product`, `qti-subtract`, `qti-min` and `qti-max` give an integer only when every operand is one.                                                                                                                           |
-| Floats                                                  | `qti-divide` and `qti-power` give NULL for a zero divisor and a result that is not finite (INFO §2.11.3.19, §2.11.3.30).                                                                                                                                                                                         |
-| `qti-round`, `qti-truncate`                             | n for x in [n − 0.5, n + 0.5), and toward zero; NULL for NaN and ±INF (D4).                                                                                                                                                                                                                                      |
+| Integers                                                | Safe integers, computed exactly; a result outside them is NULL. `qti-sum`, `qti-product`, `qti-subtract`, `qti-min` and `qti-max` give an integer only when every operand is one.                                                                                                                                |
+| Floats                                                  | `qti-divide` and `qti-power` give NULL for a zero divisor and a result that is not finite.                                                                                                                                                                                                                       |
+| `qti-round`, `qti-truncate`                             | n for x in [n − 0.5, n + 0.5), and toward zero; NULL for NaN and ±INF.                                                                                                                                                                                                                                           |
 | `qti-round-to`, `qti-equal-rounded`                     | By the deciding digit of the shortest decimal of the number, half away from zero: 2.675 rounds to 2.68. `qti-equal-rounded` compares the rounded decimals.                                                                                                                                                       |
 | `qti-math-operator`                                     | Every function of Table 8.21. NULL outside a function's domain, for NaN, for `ln` and `log` of 0, and for a reciprocal function of 0; a finite argument whose result overflows is NULL, an infinite argument keeps the infinite results of the table. `signum`, `floor` and `ceil` give integers, NULL for ±INF. |
 | `qti-stats-operator`                                    | Mean, and sample and population variance and standard deviation; NULL for NaN, and for a variance or deviation of one value.                                                                                                                                                                                     |
@@ -130,7 +137,7 @@ variable, and promotes an integer to a float or duration (D5).
 | Random operators                                        | An index in [0, n) is `floor(uniform() × n)`; `qti-random-integer` draws an index over its admissible values, and `qti-random-float` is `min + uniform() × (max − min)`, in [min, max).                                                                                                                          |
 | Outcome processing only                                 | `qti-number-*`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` raise a `ProcessingError` in an item.                                                                                                                                                                                      |
 
-An attribute that names a variable (INFO §2.7.2) reads a template variable, or an outcome outside template processing:
+An attribute that names a variable reads a template variable, or an outcome outside template processing:
 integer and float attributes and `tolerance` items take the bare identifier, and `pattern` takes `{identifier}`, which
 is the pattern itself when there is no such variable. A NULL variable makes the operator NULL.
 
@@ -146,17 +153,19 @@ of the same algorithm.
 import { standardTemplateUri } from "@assesskit/runtime/processing";
 
 standardTemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response");
-// "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"
+// => "https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/map_response.xml"
 ```
 
 ## Context
 
-| Field             | Meaning                                                                                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `random`          | The source of draws, such as `createRandom(seed)`: equal seeds give equal template values.                                                                                                                   |
-| `customOperators` | Functions by the `definition` of a `qti-custom-operator`, else by its `class`. Default: none. An operator that is not registered is a `ProcessingError`; what an operator returns is checked like any input. |
-| `resolveTemplate` | Returns the response processing of a template that is not standard. Default: none.                                                                                                                           |
-| `limits`          | `maxContainerSize`: the most values a container that an expression builds may hold. Default: `10000`. See [Limits](#limits).                                                                                 |
+Every run takes a `ProcessingContext`.
+
+| Field             | Default                     | Meaning                                                                                                                                                                                          |
+| ----------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `random`          | none, required              | The source of draws, such as `createRandom(seed)`: equal seeds give equal template values                                                                                                        |
+| `customOperators` | none                        | Functions by the `definition` of a `qti-custom-operator`, else by its `class`; an operator that is not registered is a `ProcessingError`, and what an operator returns is checked like any input |
+| `resolveTemplate` | none                        | Returns the response processing of a template that is not standard                                                                                                                               |
+| `limits`          | `DEFAULT_PROCESSING_LIMITS` | `maxContainerSize`: the most values a container that an expression builds may hold, 10,000 by default; see [Limits](#limits)                                                                     |
 
 ## Limits
 
@@ -165,7 +174,7 @@ Processing runs documents that authors wrote and values that candidates supplied
 | What                                            | Bound                                                         | Default | When exceeded                                                                                                                                                                              |
 | ----------------------------------------------- | ------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Values in a container that an expression builds | `limits.maxContainerSize`, in values                          | 10,000  | `SecurityError` with `limit` `maxContainerSize`: `qti-multiple`, `qti-ordered`, `qti-repeat`, `qti-custom-operator`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` |
-| Runs of template processing for its constraints | fixed (INFO §5.150)                                           | 100     | None: after the last run the template variables keep their defaults and processing goes on                                                                                                 |
+| Runs of template processing for its constraints | fixed                                                         | 100     | None: after the last run the template variables keep their defaults and processing goes on                                                                                                 |
 | Nesting of expressions and rules                | `maxDepth` of [xml](xml.md#limits), when the document is read | 256     | `SecurityError` with `limit` `maxDepth`, from the reader; the interpreter recurses no deeper than the document                                                                             |
 | Automaton of a `qti-pattern-match` pattern      | `maxStates` of [`compileXsdRegex`](values.md#limits)          | 100,000 | `ProcessingError` with the message of the compiler                                                                                                                                         |
 | Nesting of a `qti-pattern-match` pattern        | `maxDepth` of `compileXsdRegex`                               | 100     | `ProcessingError` with the message of the compiler                                                                                                                                         |
@@ -200,30 +209,70 @@ the ref's variable mappings, and its weights scale integer and float values into
 
 Correct and incorrect counts leave out items without response variables and items with one that has no correct response.
 
-## Decisions
+## Differences from the references
 
-Where the specifications are silent or contradict themselves:
+Where the specifications are silent or contradict themselves, [spec gaps](spec-gaps.md) gives the reasons.
 
-| Gap      | Decision                                                                                                |
-| -------- | ------------------------------------------------------------------------------------------------------- |
-| G1, G29  | `qti-round`, `qti-truncate`, `floor` and `ceil` of ±INF are NULL (D4).                                  |
-| G3       | An integer is promoted to a float or duration variable; any other mismatch is a `ProcessingError` (D5). |
-| G4       | A relative tolerance with a negative x uses the range between its two ends.                             |
-| G5       | `qti-map-response` of NULL is NULL; the bounds apply to containers only.                                |
-| G6       | Case-insensitive comparison uses `toLowerCase`, independent of locale.                                  |
-| G7       | A custom operator that is not registered is a `ProcessingError`.                                        |
-| G13      | A population variance or standard deviation of one value is NULL.                                       |
-| G15      | `qti-random-float` draws from [min, max), a deviation of measure zero.                                  |
-| G17      | A template that is neither standard nor resolved is a `ProcessingError`.                                |
-| G28      | `ln` and `log` of 0 are NULL: the operator text wins over Table 8.21.                                   |
-| G30      | An ordered `qti-contains` looks for a contiguous run.                                                   |
-| G31      | `qti-index` with n ≤ 0 is NULL.                                                                         |
-| G32, G33 | `qti-random-integer` with min > max or step ≤ 0, and `qti-random-float` with min > max, are NULL.       |
-| G34      | `tolerance` items that are not numbers name variables.                                                  |
-| G35      | `qti-test-variables` ignores a weight with `base-type="integer"`.                                       |
-| G43      | QTI 2.x template URIs name the template of the same algorithm.                                          |
+| Case                                                                                   | Runtime                                                            |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `qti-round`, `qti-truncate`, `floor` and `ceil` of ±INF                                | NULL                                                               |
+| Assigning an integer to a float or duration variable                                   | The integer is promoted; any other mismatch is a `ProcessingError` |
+| A relative tolerance with a negative x                                                 | The range between its two ends                                     |
+| `qti-map-response` of NULL                                                             | NULL; the bounds apply to containers only                          |
+| Case-insensitive comparison                                                            | `toLowerCase`, independent of locale                               |
+| A custom operator that is not registered                                               | A `ProcessingError`                                                |
+| A population variance or standard deviation of one value                               | NULL                                                               |
+| `qti-random-float`                                                                     | Draws from [min, max), a deviation of measure zero                 |
+| A template that is neither standard nor resolved                                       | A `ProcessingError`                                                |
+| `ln` and `log` of 0                                                                    | NULL: the text of the operator wins over the table of functions    |
+| An ordered `qti-contains`                                                              | Looks for a contiguous run                                         |
+| `qti-index` with n ≤ 0                                                                 | NULL                                                               |
+| `qti-random-integer` with min > max or step ≤ 0, and `qti-random-float` with min > max | NULL                                                               |
+| `tolerance` items that are not numbers                                                 | Name variables                                                     |
+| `qti-test-variables` with a weight and `base-type="integer"`                           | The weight is ignored                                              |
+| QTI 2.x template URIs                                                                  | Name the template of the same algorithm                            |
 
-Further readings, each tested: an attribute out of its range at run time (`figures`, a negative tolerance) makes the
-operator NULL, as G31 does for `qti-index`; "not a numerical value" for `qti-min`, `qti-max` and `qti-stats-operator`
-is NaN; `qti-any-n` with min > max is false; a result of `qti-round-to` beyond the floats is NULL; and `qti-test-variables`
-and the outcome bounds leave out items without the variable.
+An attribute out of its range at run time (`figures`, a negative tolerance) makes the operator NULL, as `qti-index` does for n ≤ 0;
+"not a numerical value" for `qti-min`, `qti-max` and `qti-stats-operator` is NaN; `qti-any-n` with min > max is false; a result of
+`qti-round-to` beyond the floats is NULL; and `qti-test-variables` and the outcome bounds leave out items without the variable.
+
+## Errors
+
+| Situation                                                            | Result                                                      |
+| -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| An argument of the wrong type, as plain JavaScript or JSON passes it | `DataError` that says what is wrong and what is expected    |
+| An expression that reads a variable the item does not declare        | `ProcessingError`                                           |
+| An operand of the wrong cardinality or base type                     | `ProcessingError` that names the operator and what it takes |
+| A value that does not fit the variable it is assigned to             | `ProcessingError`                                           |
+| A text that is not in the lexical form of its base type              | `ProcessingError`                                           |
+| A container above `maxContainerSize`                                 | `SecurityError` with `limit` `maxContainerSize`             |
+| A response processing template that cannot be found                  | `ProcessingError`                                           |
+
+## Not included
+
+| Not included                                                      | Why                                                            |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| When each processing runs, and the reset of outcomes before a run | The delivery engine decides                                    |
+| The item sessions of a test                                       | The engine implements `TestScope`; processing reads them       |
+| A percentage coordinate in `qti-inside`                           | It needs the size of the image, which processing does not have |
+| Evaluating a document that failed validation                      | Static checks are `validate`'s                                 |
+
+## Files
+
+| File                                                                                                                                                                                                                  | Concept                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `evaluate.ts`, `operands.ts`, `signatures.ts`, `check-operands.ts`, `references.ts`                                                                                                                                   | The interpreter, its operands and their signatures         |
+| `arithmetic.ts`, `comparison.ts`, `containers.ts`, `logic.ts`, `strings.ts`, `rounding.ts`, `math-operator.ts`, `stats-operator.ts`, `shapes.ts`, `mapping.ts`, `lookup.ts`, `random-values.ts`, `custom-operator.ts` | One family of operators in each file                       |
+| `scope.ts`, `item-scope.ts`, `outcome-scope.ts`, `test-scope.ts`, `test-expressions.ts`, `item-session.ts`                                                                                                            | What expressions read, in an item and in a test            |
+| `variables.ts`, `assign.ts`, `built-ins.ts`, `declared-value.ts`, `limits.ts`, `context.ts`                                                                                                                           | Variables, their types and the context of a run            |
+| `template-processing.ts`, `response-processing.ts`, `outcome-processing.ts`, `outcome-rules.ts`, `conditions.ts`, `standard-templates.ts`                                                                             | Template, response and outcome processing, and their rules |
+| `internal.ts`                                                                                                                                                                                                         | The helpers that `delivery` shares                         |
+
+## References
+
+| Topic                                     | Specification                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| Variables, expressions, rules, processing | [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)         |
+| Standard response processing templates    | [Response processing templates](https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/) |
+| Regular expressions                       | [XML Schema Part 2](https://www.w3.org/TR/xmlschema-2/#regexs)                         |
+| Places where the specifications differ    | [Spec gaps](spec-gaps.md)                                                              |

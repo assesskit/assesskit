@@ -72,10 +72,15 @@ const responseIdentifierOf = (node: ModelNode): string | undefined =>
     : undefined;
 
 /**
- * Returns the content with the choices of each interaction in the order of presentation (E19): every list of choices, of
+ * Returns the content with the choices of each interaction in the order of presentation: every list of choices, of
  * associable choices, of gap choices and the like inside an interaction takes the order that the session drew for the
- * interaction's response identifier (INFO §5.30.1). Lists that mix choices with text, such as the gaps of a gap match
- * interaction or the hot texts of a text, keep the order of the document.
+ * interaction's response identifier.
+ *
+ * @remarks
+ * Lists that mix choices with text, such as the gaps of a gap match interaction or the hot texts of a text, keep the
+ * order of the document.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function arrangeChoices(
   nodes: readonly BodyNode[],

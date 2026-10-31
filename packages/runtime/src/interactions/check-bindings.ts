@@ -34,21 +34,24 @@ function issue(code: string, message: string, descriptor: InteractionDescriptor)
 }
 
 /**
- * Checks that the response variables of an item suit the interactions bound to them (INFO §2.4, §2.2.2.2).
+ * Checks that the response variables of an item suit the interactions bound to them.
  *
- * | Code                                     | Reported when                                                                                  |
- * | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
- * | `assesskit/interactions/response-undeclared`  | an interaction names a response variable that the item does not declare                        |
- * | `assesskit/interactions/binding`              | the variable has a cardinality or base type that the interaction does not accept                |
- * | `assesskit/interactions/response-bound-twice` | a variable is bound to more than one interaction, including through `string-identifier`        |
- * | `assesskit/interactions/string-identifier`    | `string-identifier` names a variable that is not declared as a single string                    |
+ * @remarks
+ * | Code                                          | Reported when                                                                           |
+ * | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+ * | `assesskit/interactions/response-undeclared`  | an interaction names a response variable that the item does not declare                 |
+ * | `assesskit/interactions/binding`              | the variable has a cardinality or base type that the interaction does not accept        |
+ * | `assesskit/interactions/response-bound-twice` | a variable is bound to more than one interaction, including through `string-identifier` |
+ * | `assesskit/interactions/string-identifier`    | `string-identifier` names a variable that is not declared as a single string            |
  *
  * The bindings that an interaction accepts depend on its attributes: with `max-choices` above 1 or 0 the response must
- * have cardinality `multiple`. Custom interactions and portable custom interactions accept any binding (INFO §2.4.4.5).
+ * have cardinality `multiple`. Custom interactions and portable custom interactions accept any binding.
  *
  * @param item - The item, as `readAsi` reads it.
- * @returns One error per violation, in document order; none when every interaction is bound as the specification demands.
+ * @returns One error per violation, in document order; none when every interaction is bound as the specification
+ * demands.
  * @throws `DataError` when `item` is not an object of the model of `qti-assessment-item`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function checkBindings(item: AssessmentItem): readonly Issue[] {
   const descriptors = describeInteractions(item);

@@ -16,12 +16,18 @@ import type { ScoringRequest } from "./scoring.js";
 /** The version of the format of {@link DeliveryState}, which `deserializeState` reads. */
 export const STATE_VERSION = 1;
 
-/** Where a candidate session is: running, suspended (INFO §2.2.1) or ended. */
+/**
+ * Where a candidate session is: running, suspended or ended.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export type DeliveryStatus = "in-progress" | "suspended" | "ended";
 
 /**
- * What a maximum time did when it passed (D9): `closed` the scope, because it does not allow late submission, or left
- * it open, `late`, so that later submissions are late.
+ * What a maximum time did when it passed: `closed` the scope, because it does not allow late submission, or left it
+ * open, `late`, so that later submissions are late.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export type Expiry = "closed" | "late";
 
@@ -32,9 +38,9 @@ export const EXPIRIES: readonly Expiry[] = ["closed", "late"];
 export interface DeliveredItem {
   /** The item session. */
   readonly session: ItemSession;
-  /** The manifest resource of the variant presented in place of the item; absent when the item itself is (B100). */
+  /** The manifest resource of the variant presented in place of the item; absent when the item itself is. */
   readonly variant?: string;
-  /** The supports that were on while the item was presented, in the order they first were (E28). */
+  /** The supports that were on while the item was presented, in the order they first were. */
   readonly supports: readonly SupportName[];
   /** When the latest attempt ended, in epoch milliseconds; absent before the first ends. */
   readonly submittedAt?: number;
@@ -50,7 +56,10 @@ export interface ScopeClock {
   readonly identifier: string;
   /**
    * The milliseconds the candidate spent in the scope up to the time of the state, navigation included and suspended
-   * time excluded (INFO §2.8.5, G23). A section selected more than once has one clock.
+   * time excluded. A section selected more than once has one clock.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   readonly spent: number;
   /** What the maximum time of the scope did when it passed; absent before it passed. */
@@ -64,41 +73,52 @@ export interface SessionSupport {
   /** Whether the support is on. */
   readonly active: boolean;
   /**
-   * The settings that the profile gives the support (BPIG §5.2); absent for a universal support that the profile does
-   * not name, and for a custom support.
+   * The settings that the profile gives the support; absent for a universal support that the profile does not name, and
+   * for a custom support.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
    */
   readonly settings?: SupportSetting;
-  /** Whether the program gives the support to every candidate and the profile does not name it (RR §2.7.2); absent otherwise. */
+  /** Whether the program gives the support to every candidate and the profile does not name it; absent otherwise. */
   readonly universal?: true;
 }
 
-/** What the engine takes from the candidate's PNP besides the supports (BPIG §5.2). */
+/**
+ * What the engine takes from the candidate's PNP besides the supports.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ */
 export interface CandidateNeeds {
   /** The extra testing time, from `additionalTestingTime`; absent when the profile gives none. */
   readonly testingTime?: TestingTime;
-  /** The hazards the candidate avoids, in the terms of the PNP (BPIG §5.2.5). */
+  /** The hazards the candidate avoids, in the terms of the PNP. */
   readonly avoidedHazards: readonly PnpHazardTerm[];
   /** The language of `item-translation`, a BCP 47 tag; absent when the profile asks for no translation. */
   readonly translation?: string;
   /**
-   * The profile as `writePnp` writes it, in UTF-8 and base64, for the Create Session request of an adaptive section
-   * (C3, CAT §3.3); absent when the test has no adaptive section or the session starts without a profile.
+   * The profile as `writePnp` writes it, in UTF-8 and base64, for the Create Session request of an adaptive section;
+   * absent when the test has no adaptive section or the session starts without a profile.
+   *
+   * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
    */
   readonly personalNeeds?: string;
 }
 
 /**
  * The state of a candidate session: plain data that holds no item content, so that it serializes as it is and the
- * engine of its test steps it (E2). Steps return a new state and never change the one they are given.
+ * engine of its test steps it.
+ *
+ * @remarks
+ * Steps return a new state and never change the one they are given.
  */
 export interface DeliveryState {
   /** The version of the format. */
   readonly version: 1;
   /** Whether the candidate session runs, is suspended, or has ended. */
   readonly status: DeliveryStatus;
-  /** The time of the latest step, in epoch milliseconds: an action stamped earlier is refused (G27). */
+  /** The time of the latest step, in epoch milliseconds: an action stamped earlier is refused. */
   readonly at: number;
-  /** The state of the generator after the latest draw, so that a resumed session draws as it would have (E3). */
+  /** The state of the generator after the latest draw, so that a resumed session draws as it would have. */
   readonly random: RandomState;
   /** The sections and item instances of the session, which selection and ordering drew at the start. */
   readonly plan: TestPlan;
@@ -108,19 +128,19 @@ export interface DeliveryState {
   readonly items: readonly DeliveredItem[];
   /** The outcomes of the test, by identifier. */
   readonly outcomes: ReadonlyMap<string, Value | null>;
-  /** The values that the host gave context variables at the start, `QTI_CONTEXT` included (B50). */
+  /** The values that the host gave context variables at the start, `QTI_CONTEXT` included. */
   readonly context: ReadonlyMap<string, Value | null>;
   /** The time of the test and of each test part and section entered, in the order of entry. */
   readonly clocks: readonly ScopeClock[];
-  /** The supports that the profile names or the program gives every candidate, by name (E28). */
+  /** The supports that the profile names or the program gives every candidate, by name. */
   readonly supports: ReadonlyMap<SupportName, SessionSupport>;
   /** What the engine takes from the candidate's PNP besides the supports. */
   readonly needs: CandidateNeeds;
-  /** The scoring requests made so far, in the order they were made; a request stays after its value is supplied (E13, E15). */
+  /** The scoring requests made so far, in the order they were made; a request stays after its value is supplied. */
   readonly scoring: readonly ScoringRequest[];
-  /** The CAT sessions of the adaptive sections the candidate has entered, in the order of entry (E18). */
+  /** The CAT sessions of the adaptive sections the candidate has entered, in the order of entry. */
   readonly cat: readonly CatSession[];
-  /** Who took the test, for the `context` of the results: the host's, with the sessions that CAT engines add (E24, CAT §4.3.2). */
+  /** Who took the test, for the `context` of the results: the host's, with the sessions that CAT engines add. */
   readonly report: ResultContext;
 }
 

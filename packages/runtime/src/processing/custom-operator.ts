@@ -1,17 +1,21 @@
 import { describe } from "../checks.js";
 import { DataError, ProcessingError } from "../errors.js";
-import type { Value } from "../values/index.js";
-import { normalizeValue } from "../values/value.js";
+import { normalizeValue, type Value } from "../values/index.js";
 import { type CustomOperatorExpression, checkContainerSize, type Environment } from "./context.js";
 import { primitivesOf } from "./operands.js";
 
 /**
- * `qti-custom-operator` (INFO §2.11.3.2, §10.1.5): the value that the custom operator registered for its `definition`,
- * else for its `class`, computes from the values of the operands. What the operator returns is checked like any input.
+ * `qti-custom-operator`: the value that the custom operator registered for its `definition`, else for its `class`,
+ * computes from the values of the operands.
  *
- * @throws `ProcessingError` when no operator is registered for either (G7).
+ * @remarks
+ * What the operator returns is checked like any input.
+ *
+ * @throws `ProcessingError` when no operator is registered for either.
  * @throws `DataError` when the operator returns something that is not a value or `null`.
  * @throws `SecurityError` when it returns a container of more than `maxContainerSize` values.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function customOperator(
   expression: CustomOperatorExpression,

@@ -10,7 +10,11 @@ import { checkArray, checkRecord, checkString, describe } from "../checks.js";
 import type { Issue } from "../errors.js";
 import type { SupportName } from "../pnp/index.js";
 
-/** The content of a card: HTML content, or references to files (BPIG §3.7.10). */
+/**
+ * The content of a card: HTML content, or references to files.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ */
 export interface CardContent {
   /** The HTML content; absent when the card gives files. */
   readonly htmlContent?: HtmlContent;
@@ -18,12 +22,15 @@ export interface CardContent {
   readonly fileHrefs: readonly FileHref[];
 }
 
-/** Returns the primary language subtag of a language tag, in lower case: `fr` for `fr-CA` (BCP 47 §2.1). */
+/** Returns the primary language subtag of a language tag, in lower case: `fr` for `fr-CA`. */
 const primaryOf = (tag: string): string => (tag.split("-")[0] ?? "").toLowerCase();
 
 /**
- * Selects the card entry for a language: the entry whose `xml:lang` is the language, ignoring case; else the first entry
- * whose primary subtag is the language's; else the entry designated `default` (BPIG §3.7.10, INFO §5.27.2).
+ * Selects the card entry for a language: the entry whose `xml:lang` is the language, ignoring case; else the first
+ * entry whose primary subtag is the language's; else the entry designated `default`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function entryFor<T extends { readonly language?: string; readonly default?: boolean }>(
   entries: readonly T[],
@@ -39,16 +46,20 @@ function entryFor<T extends { readonly language?: string; readonly default?: boo
 }
 
 /**
- * Selects the content of the card that a catalog has for a support (BPIG §3.7.10, INFO §5.26–5.27). A card without card
- * entries gives its own content. A card with entries gives the entry for the language, by `xml:lang` (the same tag, then
- * the same primary language), and else the entry marked `default`.
+ * Selects the content of the card that a catalog has for a support.
+ *
+ * @remarks
+ * A card without card entries gives its own content. A card with entries gives the entry for the language, by
+ * `xml:lang` (the same tag, then the same primary language), and else the entry marked `default`.
  *
  * @param catalog - The catalog.
  * @param support - The support that was requested, such as `glossary-on-screen` or `ext:name`.
- * @param language - The language tag of the candidate's PNP, such as the `item-translation` language. Default: none, which
- * gives the default entry.
+ * @param language - The language tag of the candidate's PNP, such as the `item-translation` language. Without one, the
+ * default entry is given.
  * @returns The content, or `undefined` when the catalog has no card for the support or no entry fits.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function selectCard(catalog: Catalog, support: SupportName, language?: string): CardContent | undefined {
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");
@@ -66,13 +77,18 @@ export function selectCard(catalog: Catalog, support: SupportName, language?: st
 }
 
 /**
- * Returns the catalogs that a node refers to with `data-catalog-idref` (BPIG §3.7.10.2). A catalog may be anywhere in the
- * item, in its `qti-catalog-info` or in that of feedback or a rubric block, and its `id` is unique.
+ * Returns the catalogs that a node refers to with `data-catalog-idref`.
+ *
+ * @remarks
+ * A catalog may be anywhere in the item, in its `qti-catalog-info` or in that of feedback or a rubric block, and its
+ * `id` is unique.
  *
  * @param item - The item.
  * @param node - A node of the item's content, such as an interaction or a paragraph.
  * @returns The catalogs with the node's `data-catalog-idref` as their `id`; none when the node has no such attribute.
  * @throws `DataError` when an argument has the wrong type.
+ * @see
+ * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, qti-catalog-info}
  */
 export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Catalog[] {
   const input: unknown = item;
@@ -93,17 +109,20 @@ export function catalogsFor(item: AssessmentItem, node: BodyNode): readonly Cata
 }
 
 /**
- * Checks a catalog against the rules of cards (BPIG §3.7.10).
+ * Checks a catalog against the rules of cards.
  *
- * | Code                                    | Reported when                                                          |
- * | --------------------------------------- | ---------------------------------------------------------------------- |
- * | `assesskit/content/duplicate-card`           | two cards of the catalog have the same `support` (INFO §5.26.1)         |
- * | `assesskit/content/empty-card`               | a card or a card entry has neither HTML content nor a file reference    |
- * | `assesskit/content/duplicate-default-entry`  | more than one entry of a card is the `default` (INFO §5.27.2)           |
+ * @remarks
+ * | Code                                        | Reported when                                                        |
+ * | ------------------------------------------- | -------------------------------------------------------------------- |
+ * | `assesskit/content/duplicate-card`          | two cards of the catalog have the same `support`                     |
+ * | `assesskit/content/empty-card`              | a card or a card entry has neither HTML content nor a file reference |
+ * | `assesskit/content/duplicate-default-entry` | more than one entry of a card is the `default`                       |
  *
  * @param catalog - The catalog.
  * @returns One error per violation, in document order.
  * @throws `DataError` when `catalog` is not an object of the model of `qti-catalog`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function checkCatalog(catalog: Catalog): readonly Issue[] {
   checkRecord(catalog, "The catalog must be an object of the model of qti-catalog");

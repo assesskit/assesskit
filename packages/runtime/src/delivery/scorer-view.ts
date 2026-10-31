@@ -9,7 +9,7 @@ import { type ItemKey, sameKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
 import type { ScoringRequest } from "./scoring.js";
 
-/** An item instance as a scorer sees it (E27). */
+/** An item instance as a scorer sees it. */
 export interface ScorerItem {
   /** The item instance. */
   readonly key: ItemKey;
@@ -21,23 +21,27 @@ export interface ScorerItem {
   readonly body: readonly BodyNode[];
   /** The template variables of the instance. */
   readonly templateValues: ReadonlyMap<string, Value | null>;
-  /** The submitted responses, by response identifier; exact strings (B96). */
+  /** The submitted responses, by response identifier; exact strings. */
   readonly responses: ReadonlyMap<string, Value | null>;
   /** The correct responses, by response identifier. */
   readonly correctResponses: ReadonlyMap<string, Value | null>;
 }
 
 /**
- * What a scorer needs to rate the outcome of a scoring request (R6, E27): the request, the rubric for the scorer view, and
- * each item instance it covers. It holds the correct responses, so it belongs on the server and never in a candidate's
- * view.
+ * What a scorer needs to rate the outcome of a scoring request: the request, the rubric for the scorer view, and each
+ * item instance it covers.
+ *
+ * @remarks
+ * It holds the correct responses, so it belongs on the server and never in a candidate's view.
  */
 export interface ScorerView {
   /** The request. */
   readonly request: ScoringRequest;
   /**
    * The rubric blocks of the test, and for an item outcome those of its test part and sections, whose `view` lists
-   * `scorer`, in that order (INFO §2.8.6). The covers blocks of other outcomes (§4.16) are left out.
+   * `scorer`, in that order. The covers blocks of other outcomes are left out.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly rubric: readonly BodyNode[];
   /** The item instances the request covers, in the order of its covers, each once. */
@@ -112,7 +116,7 @@ function rubricFor(course: Course, state: DeliveryState, request: ScoringRequest
 }
 
 /**
- * Builds the scorer view of a scoring request (E27): the rubric for the scorer, and for each covered item instance, and the
+ * Builds the scorer view of a scoring request: the rubric for the scorer, and for each covered item instance, and the
  * item of an item outcome, its body as the candidate saw it with the scorer's rubric, its template values, submitted
  * responses and correct responses.
  *

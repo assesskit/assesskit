@@ -2,12 +2,20 @@ import { checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type RecordValue, record, type SingleValue, single } from "../values/index.js";
 
-/** The smallest and the largest number base that a numeric text can be read in: the digits are 0–9 and a–z (INFO §5.162.2). */
+/**
+ * The smallest and the largest number base that a numeric text can be read in: the digits are 0–9 and a–z.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const MIN_BASE = 2;
 const MAX_BASE = 36;
 const DECIMAL = 10;
 
-/** A decimal number as typed: a sign, the digits left and right of the point, and an exponent (INFO §2.4.2.2). */
+/**
+ * A decimal number as typed: a sign, the digits left and right of the point, and an exponent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const DECIMAL_TEXT = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/;
 
 /** An integer in a base other than 10: a sign and digits, which are checked against the base afterward. */
@@ -61,28 +69,31 @@ function integerField(value: number): SingleValue {
 }
 
 /**
- * Reads the text of a candidate's numeric entry into the record that a text interaction bound to a record gives (INFO
- * §2.4.2.2, §2.4.2.3). The fields, each present only when the text has a number:
+ * Reads the text of a candidate's numeric entry into the record that a text interaction bound to a record gives.
  *
- * | Field          | Value                                                                                          |
- * | -------------- | ---------------------------------------------------------------------------------------------- |
- * | `stringValue`  | the text, as typed                                                                             |
- * | `floatValue`   | the number, as a float                                                                         |
+ * @remarks
+ * The fields, each present only when the text has a number:
+ *
+ * | Field          | Value                                                                                               |
+ * | -------------- | --------------------------------------------------------------------------------------------------- |
+ * | `stringValue`  | the text, as typed                                                                                  |
+ * | `floatValue`   | the number, as a float                                                                              |
  * | `integerValue` | the number, when the text has no fractional digits and no exponent and the number is a safe integer |
- * | `leftDigits`   | the digits left of the point, as typed                                                         |
- * | `rightDigits`  | the digits right of the point, as typed                                                        |
- * | `ndp`          | the fractional digits specified: `rightDigits` less the exponent, never below 0                |
- * | `nsf`          | the significant digits specified: the digits from the first that is not 0 to the last, at least 1 |
- * | `exponent`     | the exponent, when the text has one                                                            |
+ * | `leftDigits`   | the digits left of the point, as typed                                                              |
+ * | `rightDigits`  | the digits right of the point, as typed                                                             |
+ * | `ndp`          | the fractional digits specified: `rightDigits` less the exponent, never below 0                     |
+ * | `nsf`          | the significant digits specified: the digits from the first that is not 0 to the last, at least 1   |
+ * | `exponent`     | the exponent, when the text has one                                                                 |
  *
  * White space around the number is ignored. In base 10 the text is a decimal with an optional sign, point and exponent
- * (`12.50e-3`); in another base it is an integer with an optional sign, and `floatValue` is that integer. A text that is
- * not a number in the base, or that is too large to be a finite float, has `stringValue` only.
+ * (`12.50e-3`); in another base it is an integer with an optional sign, and `floatValue` is that integer. A text that
+ * is not a number in the base, or that is too large to be a finite float, has `stringValue` only.
  *
  * @param text - The text the candidate typed.
- * @param base - The number base, from 2 to 36. Default: `10`.
- * @returns The record, or `null` for the empty string, which is NULL (INFO §2.2.2).
+ * @param base - The number base, from 2 to 36; `10` when omitted.
+ * @returns The record, or `null` for the empty string, which is NULL.
  * @throws `DataError` when `text` is not a string or `base` is not an integer from 2 to 36.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function numericRecord(text: string, base = DECIMAL): RecordValue | null {
   checkString(text, "The text");

@@ -9,7 +9,11 @@ import type { DeliveryStatus } from "./delivery-state.js";
 import type { ItemSessionStatus } from "./item-session.js";
 import type { ItemKey } from "./plan.js";
 
-/** A section of the navigation map: a visible section that holds an item the map lists (INFO §4.2.6). */
+/**
+ * A section of the navigation map: a visible section that holds an item the map lists.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export interface NavigationSection {
   /** Tells a section from an item. */
   readonly kind: "section";
@@ -40,13 +44,22 @@ export interface NavigationItem {
 }
 
 /**
- * An entry of the navigation map (E19): the visible sections and the item instances of the test part presented, in the
- * order of presentation. A nonlinear part lists every instance; a linear part lists those presented so far, because it
- * moves forward only (INFO §2.8.2). Instances of invisible sections stand at the depth of the section that holds them.
+ * An entry of the navigation map: the visible sections and the item instances of the test part presented, in the order
+ * of presentation.
+ *
+ * @remarks
+ * A nonlinear part lists every instance; a linear part lists those presented so far, because it moves forward only.
+ * Instances of invisible sections stand at the depth of the section that holds them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export type NavigationEntry = NavigationSection | NavigationItem;
 
-/** The time left in a scope that has a time limit (INFO §2.8.5, E6). */
+/**
+ * The time left in a scope that has a time limit.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export interface TimerView {
   /** The kind of the scope. */
   readonly scope: Deadline["scope"];
@@ -56,11 +69,15 @@ export interface TimerView {
   readonly remaining?: number;
   /** The milliseconds until the minimum time; absent when there is none or it was reached. */
   readonly minimumRemaining?: number;
-  /** Whether the maximum time passed and the scope still takes submissions (D9). */
+  /** Whether the maximum time passed and the scope still takes submissions. */
   readonly late: boolean;
 }
 
-/** A support of the candidate session as the candidate sees it (BPIG §5.3, R2). */
+/**
+ * A support of the candidate session as the candidate sees it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ */
 export interface SupportView {
   /** The support. */
   readonly name: SupportName;
@@ -80,7 +97,7 @@ export interface StimulusView {
   readonly body: readonly BodyNode[];
 }
 
-/** The variant presented in place of an item (B100). */
+/** The variant presented in place of an item. */
 export interface VariantView {
   /** The identifier of the manifest resource of the variant. */
   readonly resource: string;
@@ -88,7 +105,11 @@ export interface VariantView {
   readonly language?: string;
 }
 
-/** The state of a portable custom interaction that the item passes to its module (E29, BPIG §3.7.12). */
+/**
+ * The state of a portable custom interaction that the item passes to its module.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ */
 export interface PciView {
   /** The template variables the interaction names with `qti-template-variable`, by identifier. */
   readonly templateValues: ReadonlyMap<string, Value | null>;
@@ -98,7 +119,7 @@ export interface PciView {
   readonly state?: string;
 }
 
-/** A hazard of the item presented, in the terms of the PNP (B99, R4). */
+/** A hazard of the item presented, in the terms of the PNP. */
 export interface HazardView {
   /** The hazard. */
   readonly hazard: PnpHazardTerm;
@@ -106,7 +127,7 @@ export interface HazardView {
   readonly avoided: boolean;
 }
 
-/** The link to a tool that an LTI item presents (E25, R5). */
+/** The link to a tool that an LTI item presents. */
 export interface LtiView {
   /** The title of the link. */
   readonly title: string;
@@ -121,10 +142,13 @@ export interface LtiView {
 }
 
 /**
- * The item instance presented, as the candidate sees it (E19). It holds the content after resolution — feedback,
- * template content and printed variables settled, hidden choices removed, choices in presentation order — and never an
- * answer key, a mapping, processing, a template or outcome value, or content that is hidden (E20). References in the
- * content are as the item writes them, against the document of the item; `stylesheets` are package paths.
+ * The item instance presented, as the candidate sees it.
+ *
+ * @remarks
+ * It holds the content after resolution — feedback, template content and printed variables settled, hidden choices
+ * removed, choices in presentation order — and never an answer key, a mapping, processing, a template or outcome value,
+ * or content that is hidden. References in the content are as the item writes them, against the document of the item;
+ * `stylesheets` are package paths.
  */
 export interface CandidateItem {
   /** The item instance. */
@@ -135,7 +159,7 @@ export interface CandidateItem {
   readonly label?: string;
   /** The language of the item, a BCP 47 tag. */
   readonly language?: string;
-  /** Whether the item is time dependent (INFO §5.8, BPIG §4.3). */
+  /** Whether the item is time dependent. */
   readonly timeDependent: boolean;
   /** The state of its item session. */
   readonly status: ItemSessionStatus;
@@ -149,9 +173,9 @@ export interface CandidateItem {
   readonly stimuli: readonly StimulusView[];
   /** The package paths of the stylesheets of the item and its stimuli, each once. */
   readonly stylesheets: readonly string[];
-  /** The catalogs of the cards that the visible content refers to (BPIG §3.7.10). */
+  /** The catalogs of the cards that the visible content refers to. */
   readonly catalogs: readonly Catalog[];
-  /** The materials that go with the item (INFO §5.33). */
+  /** The materials that go with the item. */
   readonly companionMaterials?: CompanionMaterialsInfo;
   /** The interactions in the content, with their choices in the order of presentation. */
   readonly interactions: readonly InteractionDescriptor[];
@@ -160,11 +184,11 @@ export interface CandidateItem {
    * responses once it closed, and in the solution state the correct responses.
    */
   readonly responses: ReadonlyMap<string, Value | null>;
-  /** The modal feedback that is shown (INFO §2.6). */
+  /** The modal feedback that is shown. */
   readonly modalFeedback: readonly BodyNode[];
   /** What each portable custom interaction receives, by response identifier. */
   readonly pci: ReadonlyMap<string, PciView>;
-  /** The variant presented in place of the item (B100); absent when the item itself is. */
+  /** The variant presented in place of the item; absent when the item itself is. */
   readonly variant?: VariantView;
   /** The hazards of the item presented. */
   readonly hazards: readonly HazardView[];
@@ -184,15 +208,15 @@ export interface TestView {
 export interface PartView {
   /** The identifier of the test part. */
   readonly identifier: string;
-  /** Whether the candidate moves forward only (INFO §2.8.2). */
+  /** Whether the candidate moves forward only. */
   readonly navigationMode: "linear" | "nonlinear";
-  /** How the part submits its items; an adaptive section submits item by item in either mode (CAT §2.4). */
+  /** How the part submits its items; an adaptive section submits item by item in either mode. */
   readonly submissionMode: "individual" | "simultaneous";
 }
 
 /**
- * What the candidate sees of a candidate session (E19): the engine builds it from the state field by field, and nothing
- * else reaches it (E20).
+ * What the candidate sees of a candidate session: the engine builds it from the state field by field, and nothing else
+ * reaches it.
  */
 export interface CandidateView {
   /** Whether the session runs, is suspended or has ended. A suspended or ended session shows no item. */
@@ -207,7 +231,7 @@ export interface CandidateView {
   readonly current?: CandidateItem;
   /** The rubric for the candidate: of the test, then of the test part, then of the sections from the top down (F-m25). */
   readonly rubric: readonly BodyNode[];
-  /** The test feedback that is shown (INFO §2.10): the `during` feedback while the session runs, the `atEnd` feedback once it ended. */
+  /** The test feedback that is shown: the `during` feedback while the session runs, the `atEnd` feedback once it ended. */
   readonly testFeedback: readonly BodyNode[];
   /** The time limits that run; none unless the session runs. */
   readonly timers: readonly TimerView[];

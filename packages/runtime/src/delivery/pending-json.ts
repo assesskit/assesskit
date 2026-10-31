@@ -7,11 +7,10 @@ import {
   transformWith,
 } from "../checks.js";
 import { DataError } from "../errors.js";
-import { INTERACTION_KINDS } from "../interactions/bindings.js";
 import type { InteractionKind } from "../interactions/index.js";
+import { INTERACTION_KINDS } from "../interactions/internal.js";
 import type { ResultContext } from "../results/index.js";
-import { baseTypeSchema } from "../values/base-type.js";
-import { cardinalitySchema } from "../values/cardinality.js";
+import { baseTypeSchema, cardinalitySchema } from "../values/internal.js";
 import { CAT_STATUSES, type CatOutcome, type CatSession, type CatWait, type ReportedItem } from "./cat-session.js";
 import { valueJsonSchema, valueToJson } from "./entries-json.js";
 import { itemKeySchema } from "./item-key.js";
@@ -66,7 +65,7 @@ const suppliedSchema: Schema<SuppliedScore> = v.object({
   scorer: v.picklist(SCORERS),
 });
 
-/** Writes scoring requests as plain data that `JSON.stringify` keeps whole: values as wire values (E2, E30). */
+/** Writes scoring requests as plain data that `JSON.stringify` keeps whole: values as wire values. */
 export function scoringToJson(requests: readonly ScoringRequest[]): unknown {
   return requests.map((request) => {
     const { supplied, item, variableIdentifierRef, lti } = request;
@@ -139,7 +138,7 @@ const outcomeSchema: Schema<CatOutcome> = v.object({
 
 const reportedSchema: Schema<ReportedItem> = v.object({ key: itemKeySchema, attempts: nonNegativeIntegerSchema });
 
-/** Writes CAT sessions as plain data that `JSON.stringify` keeps whole (E2, E30). */
+/** Writes CAT sessions as plain data that `JSON.stringify` keeps whole. */
 export function catToJson(sessions: readonly CatSession[]): unknown {
   return sessions.map((session) => {
     const { request, sessionIdentifier, sessionState, moving } = session;

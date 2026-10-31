@@ -1,7 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { CANDIDATE_ACTION_TYPES } from "../src/delivery/candidate-actions.js";
-import { itemSessionFromJson, itemSessionToJson } from "../src/delivery/item-session-json.js";
+import { CANDIDATE_ACTION_TYPES, itemSessionFromJson, itemSessionToJson } from "../src/delivery/internal.js";
 import {
   type AccessForAllResource,
   type Action,
@@ -89,6 +88,7 @@ import {
 } from "../src/index.js";
 import { identifier as identifierArbitrary, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -294,7 +294,7 @@ function counterItem(options: { adaptive?: boolean; countAttempt?: boolean; defa
   );
 }
 
-/** The item session control of INFO §7.19 with its defaults, and the attributes given. */
+/** The item session control of the information model with its defaults, and the attributes given. */
 function controlWith(attributes: Partial<EffectiveSessionControl> = {}): EffectiveSessionControl {
   return {
     showFeedback: false,
@@ -552,7 +552,7 @@ function awaiting<T>(resolver: (href: string, base: string) => T): (href: string
   return (href, base) => Promise.resolve(resolver(href, base)) as never;
 }
 
-describe("createEngine", () => {
+describe("creating an engine", () => {
   it("refuses content that the static checks find an error in, and lists the errors", () => {
     const adaptive = counterItem({ adaptive: true });
     const simultaneous = testPart("P", section("S", refs("a")), "nonlinear", "simultaneous");
@@ -610,7 +610,7 @@ describe("createEngine", () => {
     const { state, events } = begun(engine);
     expect(described(events)).toEqual(["section-entered item-section@0", "presented item@0"]);
     const done = played(engine, state, answer("item", "A", 10), on("submit", "item", 20));
-    // One attempt for a non-adaptive item, as no control sets max-attempts (INFO §7.19.1); review is allowed.
+    // One attempt for a non-adaptive item, as no control sets max-attempts; review is allowed.
     expect(sessionOf(done.state, "item").status).toBe("closed");
     const reviewed = played(engine, done.state, { type: "review", item: key("item"), at: 30 });
     expect(sessionOf(reviewed.state, "item").status).toBe("review");
@@ -666,7 +666,7 @@ describe("createEngine", () => {
   });
 });
 
-describe("Engine.start", () => {
+describe("starting a session", () => {
   const simple = testPart("P", section("S", refs("a", "b")), "linear");
 
   it("plans the session and presents its first item; a test with no item to present ends at once", () => {
@@ -768,7 +768,7 @@ describe("Engine.start", () => {
   });
 });
 
-describe("Engine.apply", () => {
+describe("applying actions", () => {
   const linearAbc = `${TOTAL}${testPart("P", section("S", refs("a", "b", "c")), "linear")}${outcomeProcessing(SUM_SCORES)}`;
   const nonlinearAb = `${TOTAL}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
 
@@ -873,7 +873,7 @@ describe("Engine.apply", () => {
     expect(testOutcome(ended.state, "TOTAL")).toEqual(float(1));
   });
 
-  it("submits the items of an adaptive section one by one in a part that submits simultaneously (CAT §2.4)", () => {
+  it("submits the items of an adaptive section one by one in a part that submits simultaneously", () => {
     const adaptive =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
     const engine = engineOf(
@@ -914,7 +914,7 @@ describe("Engine.apply", () => {
     );
     const first = played(engine, begun(engine).state, on("submit", "a", 1));
     expect(testOutcome(first.state, "COUNT")).toEqual(integer(11));
-    // INFO §2.9: the outcomes are reset to their defaults before each run, so COUNT does not reach 12.
+    // The outcomes are reset to their defaults before each run, so COUNT does not reach 12.
     const second = played(engine, first.state, moveTo(key("b"), 2), on("submit", "b", 3));
     expect(testOutcome(second.state, "COUNT")).toEqual(integer(11));
     expect(described(second.events).filter((event) => event.startsWith("outcome"))).toEqual(["outcome-processed T@3"]);
@@ -969,7 +969,7 @@ describe("Engine.apply", () => {
       )}`,
     );
     const { state } = played(engine, begun(engine).state, answer("a", "B", 1), on("submit", "a", 2));
-    // SCORE of a is 1 and of b 0; b has no weight W, which is 1 (INFO §7.47.2), and no mapping, so its POINTS is not read.
+    // SCORE of a is 1 and of b 0; b has no weight W, which is 1, and no mapping, so its POINTS is not read.
     expect(["WEIGHED", "MAPPED", "SUMMED"].map((name) => testOutcome(state, name))).toEqual([
       float(2),
       float(1),
@@ -1017,7 +1017,7 @@ describe("Engine.apply", () => {
     expect(seconds(left.state)).toEqual([3, 3, 3, 0].map((value) => single("duration", value)));
     const paused = played(engine, left.state, { type: "suspend", at: 4_000 }, { type: "resume", at: 10_000 });
     const ended = played(engine, paused.state, moveTo("next", 12_000));
-    // The test ran from 0 to 4 s and from 10 to 12 s; S2 from 3 to 4 s and from 10 to 12 s (INFO §2.8.5).
+    // The test ran from 0 to 4 s and from 10 to 12 s; S2 from 3 to 4 s and from 10 to 12 s.
     expect(seconds(ended.state)).toEqual([6, 6, 3, 3].map((value) => single("duration", value)));
     expect(response(sessionOf(ended.state, "b"), "duration")).toEqual(single("duration", 3));
   });
@@ -1075,7 +1075,7 @@ describe("Engine.apply", () => {
   const timedEngine = (parts: string, testLimits = ""): Engine =>
     engineOf(`${TOTAL}${testLimits}${parts}${outcomeProcessing(SUM_SCORES)}`);
 
-  it("closes an item at its maximum time with the drafts received before it, and moves on (D9)", () => {
+  it("closes an item at its maximum time with the drafts received before it, and moves on", () => {
     const engine = timedEngine(
       testPart("P", section("S", itemRef("a", limits('max-time="10"')) + refs("b")), "linear"),
     );
@@ -1139,7 +1139,7 @@ describe("Engine.apply", () => {
     expect(refusalOf(testOut, ended.state, answer("a", "B", 12_000)).code).toBe("ended");
   });
 
-  it("leaves a scope open after a maximum time that allows late submission, and marks later submissions (D9)", () => {
+  it("leaves a scope open after a maximum time that allows late submission, and marks later submissions", () => {
     const engine = timedEngine(
       testPart(
         "P",
@@ -1183,7 +1183,7 @@ describe("Engine.apply", () => {
       'The test "T" has a minimum time of 20 s, of which 15 s are spent.',
     );
     expect(played(engine, atC.state, { type: "end-test", at: 20_000 }).state.status).toBe("ended");
-    // In a nonlinear part, items and sections have no minimum time (INFO §2.8.5).
+    // In a nonlinear part, items and sections have no minimum time.
     const free = timedEngine(
       testPart("P", section("S", itemRef("a", limits('min-time="5"')) + refs("b")), "nonlinear"),
     );
@@ -1438,7 +1438,7 @@ describe("Engine.apply", () => {
   });
 });
 
-describe("Engine.deadlines", () => {
+describe("deadlines", () => {
   it("gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(
       "P",
@@ -1554,7 +1554,7 @@ function leakyEngine(head = CONTROL): Engine {
   );
 }
 
-describe("Engine.view", () => {
+describe("the view of a state", () => {
   it("names the test and the test part, and maps a nonlinear part with every item and the reach of a move", () => {
     const engine = engineOf(
       testPart(
@@ -2029,7 +2029,7 @@ describe("Engine.view", () => {
   });
 });
 
-describe("applyItemAction", () => {
+describe("item actions", () => {
   const DefaultA = "<qti-default-value><qti-value>A</qti-value></qti-default-value>";
 
   it("keeps the drafts apart from the submitted responses until the attempt ends", () => {
@@ -2133,7 +2133,7 @@ describe("applyItemAction", () => {
     expect([response(submitted, "HINT"), outcome(submitted, "FEEDBACK")]).toEqual([bool(false), identifier("none")]);
   });
 
-  it("leaves an attempt that an end attempt interaction with count-attempt false ends out of max-attempts, while numAttempts counts it (D8)", () => {
+  it("leaves an attempt that an end attempt interaction with count-attempt false ends out of max-attempts, while numAttempts counts it", () => {
     const free = contextOf(counterItem({ countAttempt: false }));
     const hinted = acts(presented(free), free, HINT);
     expect([hinted.status, hinted.countedAttempts, attempts(hinted)]).toEqual(["interacting", 0, integer(1)]);
@@ -2243,7 +2243,7 @@ describe("applyItemAction", () => {
     });
   });
 
-  it("refuses a variable the candidate does not set, a value of another type, and an integer beyond the safe integers (D3)", () => {
+  it("refuses a variable the candidate does not set, a value of another type, and an integer beyond the safe integers", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="N" cardinality="single" base-type="integer"/>
@@ -2331,7 +2331,7 @@ describe("applyItemAction", () => {
   });
 });
 
-describe("itemFeedback", () => {
+describe("item feedback", () => {
   it("shows the feedback between attempts, and the body as at the start of the attempt while a non-adaptive attempt is open", () => {
     const item = counterItem();
     const context = contextOf(item, { maxAttempts: 2 });
@@ -2396,7 +2396,7 @@ describe("itemFeedback", () => {
   });
 });
 
-describe("itemResponses", () => {
+describe("item responses", () => {
   it("shows the correct responses in the solution state, NULL where none is declared, and keeps the candidate's", () => {
     const context = contextOf(counterItem(), { showSolution: true });
     const answered = acts(presented(context), context, respond("RESPONSE", identifier("A")));
@@ -2424,7 +2424,7 @@ describe("itemResponses", () => {
   });
 });
 
-describe("startItemSession", () => {
+describe("starting an item session", () => {
   it("starts with NULL responses, no attempt, no time, completionStatus not_attempted and the initial outcomes", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
@@ -2474,7 +2474,7 @@ describe("startItemSession", () => {
 
   it("runs template processing once at the start, so that each instance records the values of its own clone", () => {
     const oracle = createRandom(5);
-    // qti-random-integer draws an index over the admissible values: 1 + floor(uniform × 1000000) (§2.5).
+    // qti-random-integer draws an index over the admissible values: 1 + floor(uniform × 1000000).
     const draws = [oracle.uniform(), oracle.uniform()].map((uniform) => 1 + Math.floor(uniform * 1_000_000));
     const random = createRandom(5);
     const context = contextOf(Template, {}, random);
@@ -2542,7 +2542,7 @@ describe("startItemSession", () => {
   });
 });
 
-describe("presentItem", () => {
+describe("presenting an item", () => {
   it("starts the first attempt at the first presentation, with the defaults and completionStatus unknown", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
@@ -2619,7 +2619,7 @@ describe("presentItem", () => {
   });
 });
 
-describe("suspendItem", () => {
+describe("suspending an item", () => {
   it("counts the time of the candidate sessions only, truncated to the millisecond", () => {
     const item = itemOf(
       'time-dependent="true"',
@@ -2649,7 +2649,7 @@ describe("suspendItem", () => {
   });
 });
 
-describe("closeItem", () => {
+describe("closing an item", () => {
   it("closes a session that was never presented without an attempt, so its responses stay NULL", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
@@ -2701,7 +2701,7 @@ describe("closeItem", () => {
   });
 });
 
-describe("itemSessionToJson", () => {
+describe("the JSON of an item session", () => {
   it("writes a session as JSON that reads back equal", () => {
     const item = itemOf(
       'time-dependent="false"',
@@ -2756,7 +2756,7 @@ describe("itemSessionToJson", () => {
   });
 });
 
-describe("nextItem", () => {
+describe("navigation", () => {
   it("gives the next item of the plan in a nonlinear part, ignoring pre-conditions and branch rules", () => {
     const structure = nonlinear(section("S", itemRef("a", branch("c", GO)) + itemRef("b", pre(NOT_GO)) + itemRef("c")));
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a", "b", "c"]);
@@ -2774,8 +2774,8 @@ describe("nextItem", () => {
     expect(nextItem(structure, plan(structure), undefined, rules())).toBeUndefined();
   });
 
-  it("skips an item whose pre-condition is false, and presents one whose is true (RTEST-13)", () => {
-    // INFO §2.8.3: item160 follows a response Y to item034 and item063 a response N.
+  it("skips an item whose pre-condition is false, and presents one whose is true", () => {
+    // The branch rules of the example: item160 follows a response Y to item034 and item063 a response N.
     const structure = linear(
       section(
         "A",
@@ -2828,8 +2828,8 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a"]);
   });
 
-  it("jumps over items to the target of the first branch rule that is true (RTEST-13)", () => {
-    // INFO §2.8.3.2: item347 skips item653 for the response N, and exits the section unless the response is Y.
+  it("jumps over items to the target of the first branch rule that is true", () => {
+    // The branch rules of the example: item347 skips item653 for the response N, and exits the section unless the response is Y.
     const rulesOfFirst =
       branch("item656", answered("N")) + branch("EXIT_SECTION", `<qti-not>${answered("Y")}</qti-not>`);
     const structure = linear(
@@ -3067,7 +3067,7 @@ describe("nextItem", () => {
   });
 });
 
-describe("planTest", () => {
+describe("planning a test", () => {
   it("keeps the test parts and the sections of a part in document order, with their items", () => {
     const structure = structureOf(
       part("P1", section("S", refs("a", "b")) + section("T", refs("c"))) +
@@ -3124,7 +3124,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("keeps an invisible section together in a shuffled parent when it is kept together (RTEST-24)", () => {
+  it("keeps an invisible section together in a shuffled parent when it is kept together", () => {
     const sectionB = section(
       "sectionB",
       '<qti-ordering shuffle="true"/>' +
@@ -3153,7 +3153,7 @@ describe("planTest", () => {
     expect(seen.size).toBeGreaterThan(60);
   });
 
-  it("mixes the children of an invisible section that is not kept together into its shuffled parent (RTEST-12)", () => {
+  it("mixes the children of an invisible section that is not kept together into its shuffled parent", () => {
     const sectionB = section(
       "sectionB",
       '<qti-selection select="2"/><qti-ordering shuffle="true"/>' +
@@ -3347,7 +3347,7 @@ describe("planTest", () => {
   });
 });
 
-describe("resultStatus", () => {
+describe("the result status of an item", () => {
   it("reports initial before the first attempt, pendingSubmission during one, and final after response processing", () => {
     const item = counterItem();
     const context = contextOf(item, { maxAttempts: 2 });
@@ -3430,7 +3430,7 @@ describe("resultStatus", () => {
   });
 });
 
-describe("selection", () => {
+describe("selection and ordering", () => {
   const abcd = (selection: string, ordering = ""): TestStructure =>
     nonlinear(section("S", selection + ordering + refs("a", "b", "c", "d")));
 
@@ -3453,8 +3453,8 @@ describe("selection", () => {
     expect(outlineOf(planWith(select, scripted(0.99, 0.99, 0.99)))).toBe("P{S[a b]}");
   });
 
-  it("includes every required child, and counts a section as one child (RTEST-12)", () => {
-    // INFO §4.2.2: section B selects 2 children, the section B1 is required, so B1 and one of the other three items.
+  it("includes every required child, and counts a section as one child", () => {
+    // The selection of the example: section B selects 2 children, the section B1 is required, so B1 and one of the other three items.
     const structure = nonlinear(
       section(
         "sectionB",
@@ -3477,7 +3477,7 @@ describe("selection", () => {
     expect([...chosen].sort()).toEqual(["item065", "item365", "item434"]);
   });
 
-  it("selects a required item reference always, and keeps document order (RTEST-12 section A)", () => {
+  it("selects a required item reference always, and keeps document order", () => {
     const structure = nonlinear(
       section(
         "sectionA",
@@ -3585,7 +3585,7 @@ describe("selection", () => {
   });
 });
 
-describe("sessionControl", () => {
+describe("item session control", () => {
   const control = (attributes: string): string => `<qti-item-session-control ${attributes}/>`;
   const item = (structure: TestStructure, ref: string) => sessionControl(structure.itemRef(ref) ?? fail(`No ${ref}.`));
 
@@ -3628,7 +3628,7 @@ describe("sessionControl", () => {
     });
   });
 
-  it("follows the item session control of RTEST-13", () => {
+  it("follows the item session control of the part, the sections and the item references", () => {
     const structure = structureOf(
       part(
         "RTEST-13-A",
@@ -3713,7 +3713,7 @@ const anyValue = fc.oneof(
 /** Writes a view or an action as JSON text and reads the text back, as a server and its client do. */
 const throughText = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
-describe("viewToJson", () => {
+describe("the JSON of a view", () => {
   const engine = leakyEngine();
   const { state } = begun(engine, { seed: 3 });
   const closed = played(engine, state, answer("a", "B", 1), on("submit", "a", 2));
@@ -3869,7 +3869,7 @@ describe("viewToJson", () => {
   });
 });
 
-describe("parseCandidateAction", () => {
+describe("candidate actions", () => {
   const item = key("a");
   const actions: CandidateAction[] = [
     {
@@ -4069,7 +4069,7 @@ describe("parseCandidateAction", () => {
   });
 });
 
-describe("actionToJson", () => {
+describe("the JSON of an action", () => {
   it("refuses an action of other types", () => {
     expect(() => actionToJson(json("null"))).toThrow("The action must be an object with a type, found null.");
     expect(() => actionToJson(json('{"type":"time"}'))).toThrow(
@@ -4090,7 +4090,7 @@ describe("actionToJson", () => {
   });
 });
 
-describe("stamp", () => {
+describe("time stamps", () => {
   const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
 
   it("stamps an action with the time now, never before the latest step, so the engine never refuses its time", () => {
@@ -4124,7 +4124,7 @@ describe("stamp", () => {
   });
 });
 
-describe("serializeState", () => {
+describe("the JSON of a state", () => {
   const variants = withVariants(["flashing"], [{ resource: "v", drd: drd([]) }]);
   const pci = itemOf(
     'time-dependent="false"',
@@ -4241,7 +4241,7 @@ describe("serializeState", () => {
   });
 });
 
-describe("resolveStructure", () => {
+describe("the structure of a test", () => {
   const SectionOne = section(
     "S1",
     `${refs("a")}<qti-assessment-section-ref identifier="S2" href="deeper/s2.xml"/>${refs("b")}`,
@@ -4256,7 +4256,7 @@ describe("resolveStructure", () => {
   it("replaces a section reference by the section it names, and resolves what it holds against its document", () => {
     const calls: [string, string][] = [];
     const structure = structureOf(Referencing, Documents, "tests/t.xml", calls);
-    // INFO §7.5, BIND §8.2: the href is relative to the document that holds the reference.
+    // The href is relative to the document that holds the reference.
     expect(calls).toEqual([
       ["../sections/s1.xml", "tests/t.xml"],
       ["deeper/s2.xml", "sections/s1.xml"],
@@ -4385,7 +4385,7 @@ describe("resolveStructure", () => {
   });
 });
 
-describe("timeLimits", () => {
+describe("time limits", () => {
   const TestLimits = limits('min-time="600" max-time="3600"');
   const SectionLimits = limits('min-time="60" max-time="1800" allow-late-submission="true"');
 
@@ -4548,7 +4548,7 @@ describe("timeLimits", () => {
     expect(additionalTestingTime(profile("<additional-testing-time><unlimited/></additional-testing-time>"))).toEqual({
       kind: "unlimited",
     });
-    // The sets of the profile decide only whether the support is prohibited (BPIG §5.3).
+    // The sets of the profile decide only whether the support is prohibited.
     const option =
       "<additional-testing-time><unlimited/></additional-testing-time><activate-as-option-set><additional-testing-time/></activate-as-option-set>";
     expect(additionalTestingTime(profile(option))).toEqual({ kind: "unlimited" });
@@ -4671,6 +4671,19 @@ function planned(children: readonly PlannedChild[]): { items: ItemKey[]; section
   }
   return found;
 }
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/delivery.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime": await import("../src/index.js"),
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/delivery": await import("../src/delivery/index.js"),
+      "@assesskit/runtime/values": await import("../src/values/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
+  });
+});
 
 describe("properties", () => {
   /** A section of items only: each with marks, and a selection and ordering. */
@@ -4833,7 +4846,7 @@ describe("properties", () => {
 
   const preOf = (kind: Condition["pre"]): string => (kind === "none" ? "" : pre(kind === "go" ? GO : NOT_GO));
 
-  /** The structure of generated sections, and what a candidate meets by the rules of INFO §2.8.3 when GO is true. */
+  /** The structure of generated sections, and what a candidate meets by the rules of the information model when GO is true. */
   function navigate(shape: readonly NavSection[]): { structure: TestStructure; expected: string[] } {
     const flat = shape.flatMap((entry, place) => entry.items.map((item) => ({ item, section: place })));
     let at = 0;
@@ -4913,7 +4926,7 @@ describe("properties", () => {
     { nil: undefined },
   );
 
-  it("applies extra time to the maximum times only, by the arithmetic of G41", () => {
+  it("applies extra time to the maximum times only, by the arithmetic of the specification", () => {
     fc.assert(
       fc.property(
         fc.tuple(scopeLimits, scopeLimits, scopeLimits, scopeLimits),
@@ -5338,7 +5351,7 @@ describe("properties", () => {
         const linear = new Set(flow.parts.flatMap((entry, p) => (entry.navigation === "linear" ? [`p${p}`] : [])));
         session(engine, seed, moves, (before, action, step) => {
           const written = serializeState(before);
-          // The reducer never changes the state it is given, and a refusal gives no state (E1, E4).
+          // The reducer never changes the state it is given, and a refusal gives no state.
           expect(serializeState(before)).toBe(written);
           if (!step.ok) {
             expect(step.refusal.code).not.toBe("clock-regression");
@@ -5469,7 +5482,7 @@ describe("properties", () => {
     "linear-backward",
   ];
 
-  /** Where an action that the state does not allow changes nothing and is accepted: `next-attempt` during an attempt (INFO §7.19.1), `resume` of a session that runs. */
+  /** Where an action that the state does not allow changes nothing and is accepted: `next-attempt` during an attempt, `resume` of a session that runs. */
   const NoChange: Partial<Record<CandidateAction["type"], (view: CandidateView) => boolean>> = {
     "next-attempt": (view) => view.current?.status === "interacting",
     resume: (view) => view.status !== "suspended",

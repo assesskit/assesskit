@@ -1,27 +1,30 @@
 import type { PortableCustomInteraction } from "../asi/index.js";
 import { describe } from "../checks.js";
 import type { Issue } from "../errors.js";
-import { type PciModuleConfiguration, resolvePciModules } from "./module-resolution.js";
+import { type PciModuleConfiguration, resolvePciModules } from "./resolve-modules.js";
 
 const ELEMENT = "qti-portable-custom-interaction";
 
-/** The start of a Federated Content URN (RFC 4198), the recommended form of `custom-interaction-type-identifier`. */
+/** The start of a Federated Content URN, the recommended form of `custom-interaction-type-identifier`. */
 const FEDERATED_CONTENT_URN = "urn:fdc:";
 
 /**
- * Checks that a portable custom interaction names modules the configuration defines, and how it names its type (BPIG
- * §3.7.12, §3.7.12.4).
+ * Checks that a portable custom interaction names modules the configuration defines, and how it names its type.
  *
- * | Code                          | Severity | Reported when                                                                            |
- * | ----------------------------- | -------- | ---------------------------------------------------------------------------------------- |
- * | `assesskit/pci/no-module`          | error    | the interaction has neither a `module` attribute nor a `qti-interaction-modules`         |
- * | `assesskit/pci/module-not-configured`| error    | the `module` or a `qti-interaction-module` has no location in the configurations or its own paths |
- * | `assesskit/pci/type-identifier`    | warning  | `custom-interaction-type-identifier` is not a Federated Content URN (`urn:fdc:…`)        |
+ * @remarks
+ * | Code                                  | Severity | Reported when                                                                                     |
+ * | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+ * | `assesskit/pci/no-module`             | error    | the interaction has neither a `module` attribute nor a `qti-interaction-modules`                  |
+ * | `assesskit/pci/module-not-configured` | error    | the `module` or a `qti-interaction-module` has no location in the configurations or its own paths |
+ * | `assesskit/pci/type-identifier`       | warning  | `custom-interaction-type-identifier` is not a Federated Content URN (`urn:fdc:...`)               |
  *
  * @param interaction - The PCI.
  * @param configuration - The configuration files that `moduleConfigurationPaths` names, parsed.
  * @returns The issues, in the order of the table.
  * @throws `DataError` when an argument has the wrong type.
+ * @see
+ * {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4198 | RFC 4198, Federated Content URNs}
  */
 export function checkPortableInteraction(
   interaction: PortableCustomInteraction,

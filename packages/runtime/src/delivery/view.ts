@@ -19,9 +19,9 @@ import { navigationOf } from "./view-navigation.js";
 const NO_TEMPLATES: Pick<AssessmentItem, "templateDeclarations"> = { templateDeclarations: [] };
 
 /**
- * Returns the state as it is at `now` for the candidate: the maximum times that passed are applied, each at its time
- * (E7), as a `time` action would apply them. A suspended or ended session, and a time before the latest step, stay as
- * they are.
+ * Returns the state as it is at `now` for the candidate: the maximum times that passed are applied, each at its time,
+ * as a `time` action would apply them. A suspended or ended session, and a time before the latest step, stay as they
+ * are.
  */
 function settled(course: Course, state: DeliveryState, now: number): DeliveryState {
   const step = new SessionStep(course, state);
@@ -38,7 +38,7 @@ interface Whereabouts {
 }
 
 /**
- * Returns where the candidate is: at the item presented, else in the adaptive section whose first stage is awaited (E18).
+ * Returns where the candidate is: at the item presented, else in the adaptive section whose first stage is awaited.
  *
  * @throws `DataError` when the state presents no item of its plan and awaits no section.
  */
@@ -68,7 +68,7 @@ function supportViews(state: DeliveryState): SupportView[] {
   }));
 }
 
-/** Returns the time limits that run in a state that has been settled at its time (E6, E7). */
+/** Returns the time limits that run in a state that has been settled at its time. */
 function timersOf(course: Course, state: DeliveryState): TimerView[] {
   return runningScopes(course, state).flatMap((scope): TimerView[] => {
     const maximum = scope.expired === "closed" ? undefined : maximumAt(scope, state.at);
@@ -97,13 +97,14 @@ const feedbackContent = (feedback: readonly TestFeedback[]): BodyNode[] =>
   feedback.flatMap((each) => each.contentBody?.children ?? []);
 
 /**
- * Builds the view of a state at `now` (E19): the candidate view of the state after the maximum times that passed.
+ * Builds the view of a state at `now`: the candidate view of the state after the maximum times that passed.
  *
- * | Status        | The view …                                                                                           |
- * | ------------- | ---------------------------------------------------------------------------------------------------- |
+ * @remarks
+ * | Status        | The view …                                                                                                  |
+ * | ------------- | ----------------------------------------------------------------------------------------------------------- |
  * | `in-progress` | has the item presented, the navigation map, the rubric, the `during` test feedback, the timers, the actions |
- * | `suspended`   | has no content, and `resume` as the only action                                                      |
- * | `ended`       | has the `atEnd` test feedback of the test and of the test parts the candidate entered, and no action |
+ * | `suspended`   | has no content, and `resume` as the only action                                                             |
+ * | `ended`       | has the `atEnd` test feedback of the test and of the test parts the candidate entered, and no action        |
  */
 export function candidateView(course: Course, original: DeliveryState, now: number): CandidateView {
   const state = settled(course, original, now);
@@ -136,7 +137,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
   const partView = {
     identifier: where.part,
     navigationMode: partModel(structure, where).navigationMode,
-    // The items of an adaptive section are submitted one by one in either mode of the part (CAT §2.4, B27).
+    // The items of an adaptive section are submitted one by one in either mode of the part.
     submissionMode: placement === undefined ? ("individual" as const) : submissionModeOf(structure, placement),
   };
   if (state.status === "suspended") {
@@ -157,7 +158,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
   const during = [test, ...(part === undefined ? [] : [part])].flatMap((holder) =>
     visibleTestFeedback(holder.testFeedback, state.outcomes, "during"),
   );
-  // No item is presented while the first stage of an adaptive section is awaited (E18): the candidate sees the test part.
+  // No item is presented while the first stage of an adaptive section is awaited: the candidate sees the test part.
   if (placement === undefined) {
     return {
       ...base,

@@ -28,10 +28,18 @@ import { resultStatus } from "./result-status.js";
 import { isCoveredUnscored, outstandingScores } from "./scoring.js";
 import { durationOf, SessionScope } from "./session-scope.js";
 
-/** The prefix of the name of a custom support in the PNP; a results report names the support without it (RR §2.6.4). */
+/**
+ * The prefix of the name of a custom support in the PNP; a results report names the support without it.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 const EXTENSION_PREFIX = "ext:";
 
-/** The `SCORE` outcome that a report to a CAT engine leaves out for an item without a response (CAT §4.3.1). */
+/**
+ * The `SCORE` outcome that a report to a CAT engine leaves out for an item without a response.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 const SCORE = "SCORE";
 
 /** Returns the type of a declaration as a result variable states it. */
@@ -39,7 +47,11 @@ function typeOf({ cardinality, baseType }: ResultVariableType): ResultVariableTy
   return { cardinality, ...(baseType === undefined ? {} : { baseType }) };
 }
 
-/** Returns an outcome variable: the value with what its declaration says about it (RR §2.4.7). */
+/**
+ * Returns an outcome variable: the value with what its declaration says about it.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function outcomeVariable(declaration: OutcomeDeclaration, value: Value | null): OutcomeVariable {
   const {
     view,
@@ -68,7 +80,11 @@ function outcomeVariable(declaration: OutcomeDeclaration, value: Value | null): 
   };
 }
 
-/** Returns an outcome that a CAT engine reported and no declaration takes (CAT §4.3.2). */
+/**
+ * Returns an outcome that a CAT engine reported and no declaration takes.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function reportedOutcome(identifier: string, value: Value, variableIdentifierRef: string | undefined): OutcomeVariable {
   return {
     kind: "outcome",
@@ -81,10 +97,18 @@ function reportedOutcome(identifier: string, value: Value, variableIdentifierRef
   };
 }
 
-/** Returns the type that the built-in `completionStatus` has in a report (INFO §2.2.2.3). */
+/**
+ * Returns the type that the built-in `completionStatus` has in a report.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const COMPLETION: ResultVariableType = { cardinality: "single", baseType: "identifier" };
 
-/** Returns the supports as a report lists them: those that were on while an item or the test ran (E24, RR §2.6.4). */
+/**
+ * Returns the supports as a report lists them: those that were on while an item or the test ran.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function supportUses(state: DeliveryState, names: readonly SupportName[]): SupportUse[] {
   return names.map((name) => {
     const support = state.supports.get(name);
@@ -94,7 +118,11 @@ function supportUses(state: DeliveryState, names: readonly SupportName[]): Suppo
   });
 }
 
-/** Whether an item instance was submitted with no response to any of its response variables (CAT §4.3.1). */
+/**
+ * Whether an item instance was submitted with no response to any of its response variables.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function isSkipped(delivered: DeliveredItem, item: AssessmentItem): boolean {
   if (endedAttempts(delivered) === 0) return false;
   const endAttempts = endAttemptInteractions(item);
@@ -105,7 +133,7 @@ function isSkipped(delivered: DeliveredItem, item: AssessmentItem): boolean {
   );
 }
 
-/** Returns the status of an item session as its result reports it, with the external scores still outstanding (E17). */
+/** Returns the status of an item session as its result reports it, with the external scores still outstanding. */
 function sessionStatusOf(
   course: Course,
   state: DeliveryState,
@@ -127,12 +155,20 @@ interface ItemResultOptions {
   readonly cat?: CatSession;
 }
 
-/** Returns the identifier of an item instance in a report to a CAT engine: instanced when the plan has several (CAT §4.3.1). */
+/**
+ * Returns the identifier of an item instance in a report to a CAT engine: instanced when the plan has several.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function catIdentifier(state: DeliveryState, key: ItemKey): string {
   return planIndex(state.plan).instances(key.ref).length > 1 ? `${key.ref}.${key.instance}` : key.ref;
 }
 
-/** Returns the response variables of an item instance: the built-ins, then the declared ones (RR §2.4.8). */
+/**
+ * Returns the response variables of an item instance: the built-ins, then the declared ones.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function responseVariables(
   course: Course,
   state: DeliveryState,
@@ -186,7 +222,11 @@ function responseVariables(
   return [...builtIns, ...declared];
 }
 
-/** Returns the outcome variables of an item instance: `completionStatus`, then the declared outcomes and the CAT's (RR §2.4.7). */
+/**
+ * Returns the outcome variables of an item instance: `completionStatus`, then the declared outcomes and the CAT's.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function outcomeVariables(
   state: DeliveryState,
   delivered: DeliveredItem,
@@ -217,7 +257,11 @@ function sameInstance(first: ItemKey, second: ItemKey): boolean {
   return first.ref === second.ref && first.instance === second.instance;
 }
 
-/** Returns the template and context variables of an item instance (RR §2.4.3). */
+/**
+ * Returns the template and context variables of an item instance.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function valuedVariables(delivered: DeliveredItem, item: AssessmentItem): (TemplateVariable | ContextVariable)[] {
   const { templates, contexts } = delivered.session.variables;
   return [
@@ -241,10 +285,12 @@ function valuedVariables(delivered: DeliveredItem, item: AssessmentItem): (Templ
 }
 
 /**
- * Returns the result of an item instance (E24): its sequence index in the presentation order, the datestamp of its last
+ * Returns the result of an item instance: its sequence index in the presentation order, the datestamp of its last
  * event, the session status, the response, template, context and outcome variables, the comment and the supports used.
  * A report to a CAT engine names the item instanced when the plan holds several, and gives an item that the candidate
- * skipped no response variables and no `SCORE`, with the status `initial` (CAT §4.3.1, C10).
+ * skipped no response variables and no `SCORE`, with the status `initial`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 function itemResultOf(
   course: Course,
@@ -274,7 +320,11 @@ function itemResultOf(
   };
 }
 
-/** Returns the duration variables of the test: the test's, then those of the parts and sections entered (INFO §2.8.5, T22). */
+/**
+ * Returns the duration variables of the test: the test's, then those of the parts and sections entered.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function durationVariables(course: Course, state: DeliveryState): ResponseVariable[] {
   const { identifier } = course.structure.test.model;
   const named = (name: string, scope: "test" | "part" | "section", owner: string): ResponseVariable => ({
@@ -293,7 +343,11 @@ function durationVariables(course: Course, state: DeliveryState): ResponseVariab
   ];
 }
 
-/** Returns the result of the test (RR §2.4.9): durations, context variables and outcomes, and with them the CAT's. */
+/**
+ * Returns the result of the test: durations, context variables and outcomes, and with them the CAT's.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
 function testResultOf(course: Course, state: DeliveryState, cat: CatSession | undefined): TestResult {
   const { model } = course.structure.test;
   const scope = new SessionScope(course, state);
@@ -330,9 +384,11 @@ function testResultOf(course: Course, state: DeliveryState, cat: CatSession | un
 }
 
 /**
- * Assembles the results report of a session (E24): the context, the result of the test unless an item is delivered alone,
- * and one result for each item instance presented, in the order of presentation. While scoring requests are pending the
- * report is provisional (E17).
+ * Assembles the results report of a session: the context, the result of the test unless an item is delivered alone, and
+ * one result for each item instance presented, in the order of presentation.
+ *
+ * @remarks
+ * While scoring requests are pending the report is provisional.
  */
 export function assembleResults(course: Course, state: DeliveryState): AssessmentResult {
   return {
@@ -343,9 +399,13 @@ export function assembleResults(course: Course, state: DeliveryState): Assessmen
 }
 
 /**
- * Assembles the report that a Submit Results request carries (C10, CAT §4.3.1): the test result without outcomes that
- * other CAT engines set, and the results of the item instances to report, with their sequence indexes in the whole
- * presentation. The context is empty: the CAT engine knows the candidate by its session.
+ * Assembles the report that a Submit Results request carries: the test result without outcomes that other CAT engines
+ * set, and the results of the item instances to report, with their sequence indexes in the whole presentation.
+ *
+ * @remarks
+ * The context is empty: the CAT engine knows the candidate by its session.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export function catReport(
   course: Course,

@@ -7,10 +7,10 @@ import type { Engine } from "./engine.js";
 import type { CatRequest } from "./pending-work.js";
 import { stamp } from "./stamp.js";
 
-/** The methods of the port that the delivery of a session calls (CAT §3.3 to §3.5). */
+/** The methods of the port that the delivery of a session calls (Create Session, Submit Results and End Session). */
 const SESSION_METHODS = ["createSession", "submitResults", "endSession"] as const;
 
-/** Makes a request through the port and returns the answer as the engine takes it (E18). */
+/** Makes a request through the port and returns the answer as the engine takes it. */
 async function ask(port: CatPort, request: CatRequest): Promise<CatResponse> {
   switch (request.kind) {
     case "create-session":
@@ -28,8 +28,11 @@ async function ask(port: CatPort, request: CatRequest): Promise<CatResponse> {
 
 /**
  * Makes the requests that wait for a CAT engine through a port, one after the other, and applies each answer as a
- * `cat-response` action (E18). It repeats until nothing waits: the answer to a last Submit Results can call for End
- * Session. The clock is read once for each answer, and the action is stamped with it, never earlier than the state.
+ * `cat-response` action.
+ *
+ * @remarks
+ * It repeats until nothing waits: the answer to a last Submit Results can call for End Session. The clock is read once
+ * for each answer, and the action is stamped with it, never earlier than the state.
  *
  * A request that the port rejects rejects the call with the port's error, and the answers applied so far are lost with
  * the state that was not returned. The requests of a CAT engine are not idempotent, so a host that must resume after a

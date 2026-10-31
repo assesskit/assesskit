@@ -17,7 +17,11 @@ import { type ItemVariables, initialOutcome } from "./variables.js";
 /** The kinds of item variables. */
 type Kind = "context" | "response" | "outcome" | "template";
 
-/** Which variables expressions read: template processing reads only template and context variables (INFO §6.50). */
+/**
+ * Which variables expressions read: template processing reads only template and context variables.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export type Reach = "template-processing" | "item";
 
 function undeclared(identifier: string, kind = "variable"): ProcessingError {
@@ -25,8 +29,11 @@ function undeclared(identifier: string, kind = "variable"): ProcessingError {
 }
 
 /**
- * The variables of an item while processing reads and sets them. It works on copies, so that the variables it was made
- * from stay as they are; {@link ItemScope.variables} returns the result.
+ * The variables of an item while processing reads and sets them.
+ *
+ * @remarks
+ * It works on copies, so that the variables it was made from stay as they are; {@link ItemScope.variables} returns the
+ * result.
  */
 export class ItemScope implements Scope {
   readonly environment: Environment;
@@ -169,9 +176,10 @@ export class ItemScope implements Scope {
   }
 
   /**
-   * Sets a template variable (`qti-set-template-value`, INFO §6.50.1).
+   * Sets a template variable (`qti-set-template-value`).
    *
    * @throws `ProcessingError` when it is no template variable or the value does not fit it.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-template-value}
    */
   setTemplate(identifier: string, value: Value | null): void {
     const type = this.typeOf(identifier, ["template"], "qti-set-template-value");
@@ -179,9 +187,11 @@ export class ItemScope implements Scope {
   }
 
   /**
-   * Sets the correct response of a response variable (`qti-set-correct-response`, INFO §6.50.5).
+   * Sets the correct response of a response variable (`qti-set-correct-response`).
    *
    * @throws `ProcessingError` when it is no response variable or the value does not fit it.
+   * @see
+   * {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-correct-response}
    */
   setCorrectResponse(identifier: string, value: Value | null): void {
     const type = this.typeOf(identifier, ["response"], "qti-set-correct-response");
@@ -189,10 +199,13 @@ export class ItemScope implements Scope {
   }
 
   /**
-   * Sets the default value of a response variable or outcome (`qti-set-default-value`, INFO §6.50.4). An outcome takes
-   * it as its value too, since outcomes start from their defaults (INFO §2.2.2.3).
+   * Sets the default value of a response variable or outcome (`qti-set-default-value`).
+   *
+   * @remarks
+   * An outcome takes it as its value too, since outcomes start from their defaults.
    *
    * @throws `ProcessingError` when it is neither or the value does not fit it.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-default-value}
    */
   setDefault(identifier: string, value: Value | null): void {
     const type = this.typeOf(identifier, ["response", "outcome"], "qti-set-default-value");
@@ -204,7 +217,9 @@ export class ItemScope implements Scope {
 
   /**
    * Starts template processing again: the template variables take their default values, and the correct responses,
-   * default values and outcomes that it set go back to their values before it (INFO §5.150).
+   * default values and outcomes that it set go back to their values before it.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   restart(start: ItemVariables): void {
     this.outcomes = new Map(start.outcomes);
@@ -216,7 +231,7 @@ export class ItemScope implements Scope {
     }
   }
 
-  /** Returns the variables as they are now. */
+  /** Returns the current variables. */
   variables(): ItemVariables {
     return {
       contexts: new Map(this.contexts),

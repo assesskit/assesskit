@@ -21,8 +21,10 @@ function pairOf(a: Value | null, b: Value | null): readonly [number, number] | u
 }
 
 /**
- * `qti-gt`, `qti-gte`, `qti-lt`, `qti-lte`, `qti-duration-lt` and `qti-duration-gte`: the relation between two numbers or
- * durations, NULL when either is NULL (INFO §2.11.3.20–23, §2.11.3.26–27).
+ * `qti-gt`, `qti-gte`, `qti-lt`, `qti-lte`, `qti-duration-lt` and `qti-duration-gte`: the relation between two numbers
+ * or durations, NULL when either is NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-gt}
  */
 export function compare(relation: Relation, a: Value | null, b: Value | null): Value | null {
   const pair = pairOf(a, b);
@@ -30,7 +32,11 @@ export function compare(relation: Relation, a: Value | null, b: Value | null): V
   return pair === undefined || holds === undefined ? null : booleanResult(holds(...pair));
 }
 
-/** The tolerance of `qti-equal`: its mode, the two amounts and whether each bound is included (INFO §5.46). */
+/**
+ * The tolerance of `qti-equal`: its mode, the two amounts and whether each bound is included.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
+ */
 export interface Tolerance {
   readonly mode: "exact" | "absolute" | "relative";
   readonly lower: number;
@@ -41,9 +47,15 @@ export interface Tolerance {
 
 /**
  * `qti-equal`: whether y, the second number, lies in the range around x, the first: x itself in `exact` mode, [x − t0,
- * x + t1] in `absolute` mode and [x(1 − t0/100), x(1 + t1/100)] in `relative` mode, each bound included unless excluded
- * (INFO §5.46). For a negative x the relative range is the one between its two ends (G4). NULL when either number, or a
- * tolerance, is NULL.
+ * x + t1] in `absolute` mode and [x(1 − t0/100), x(1 + t1/100)] in `relative` mode, each bound included unless
+ * excluded.
+ *
+ * @remarks
+ * For a negative x the relative range is the one between its two ends. NULL when either number, or a tolerance, is
+ * NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function equal(a: Value | null, b: Value | null, tolerance: Tolerance | null): Value | null {
   const pair = pairOf(a, b);
@@ -63,7 +75,12 @@ export function equal(a: Value | null, b: Value | null, tolerance: Tolerance | n
 
 /**
  * `qti-equal-rounded`: whether two numbers are equal once both are rounded as `qti-round-to` rounds them, compared as
- * decimals (INFO §2.11.3.4, §5.47). NULL when either is NULL or NaN, or `figures` is NULL or out of range.
+ * decimals.
+ *
+ * @remarks
+ * NULL when either is NULL or NaN, or `figures` is NULL or out of range.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal-rounded}
  */
 export function equalRounded(
   a: Value | null,
@@ -81,7 +98,9 @@ export function equalRounded(
 
 /**
  * `qti-match`: whether two values of one cardinality and base type are the same value, as `matchValues` compares them;
- * NULL when either is NULL (INFO §2.11.3.28).
+ * NULL when either is NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-match}
  */
 export function match(a: Value | null, b: Value | null): Value | null {
   return a === null || b === null ? null : booleanResult(matchValues(a, b));

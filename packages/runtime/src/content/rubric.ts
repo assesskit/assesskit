@@ -1,20 +1,23 @@
 import type { AssessmentSection, AssessmentTest, RubricBlock, TestPart, TestRubricBlock } from "../asi/index.js";
 import { checkArray, checkChoice, checkRecord } from "../checks.js";
 
-/** Every view of a rubric block: the actor that it is shown to (INFO §9.2.2 `ViewEnum`). */
+/** Every view of a rubric block: the actor that it is shown to (`ViewEnum`). */
 export const VIEWS = ["author", "candidate", "proctor", "scorer", "testConstructor", "tutor"] as const;
 
 /** A view of a rubric block: author, candidate, proctor, scorer, testConstructor or tutor. */
 export type View = (typeof VIEWS)[number];
 
 /**
- * Returns the rubric blocks that are shown in a view (INFO §2.8.6, §5.120.2, §5.160.1): those whose `view` lists it. The
- * blocks of a test, test part or section, and those of an item body, work alike.
+ * Returns the rubric blocks that are shown in a view: those whose `view` lists it.
+ *
+ * @remarks
+ * The blocks of a test, test part or section, and those of an item body, work alike.
  *
  * @param blocks - The rubric blocks.
  * @param view - The view.
  * @returns The blocks that list the view, in the order given.
  * @throws `DataError` when `blocks` is not an array of rubric blocks or `view` is not a view.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function rubricBlocksFor<T extends RubricBlock | TestRubricBlock>(
   blocks: readonly T[],
@@ -33,16 +36,26 @@ export function rubricBlocksFor<T extends RubricBlock | TestRubricBlock>(
 export interface TestPosition {
   /** The test. */
   readonly test: AssessmentTest;
-  /** The test part the candidate is in. Default: none, so that the rubric is that of the test alone. */
+  /**
+   * The test part the candidate is in.
+   *
+   * @defaultValue none, so that the rubric is that of the test alone
+   */
   readonly part?: TestPart;
-  /** The sections that contain the current item or section, from the outermost down. Default: none. */
+  /**
+   * The sections that contain the current item or section, from the outermost down.
+   *
+   * @defaultValue none
+   */
   readonly sections?: readonly AssessmentSection[];
 }
 
 /**
  * Returns the rubric blocks of a test that a view sees at a position, in the order the candidate meets them: the blocks
- * of the test, then those of the test part, then those of the sections from the top section down (INFO §2.8.6, §5.159.11,
- * F-m25). Each level keeps its own order.
+ * of the test, then those of the test part, then those of the sections from the top section down.
+ *
+ * @remarks
+ * Each level keeps its own order.
  *
  * @param position - The test, and the test part and sections that contain the candidate.
  * @param view - The view.

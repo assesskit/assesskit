@@ -34,6 +34,7 @@ import {
 } from "../src/index.js";
 import { qtiMetadata } from "./arbitraries/metadata.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -47,7 +48,7 @@ const REFS = `<qti-adaptive-engine-ref identifier="engine" href="http://example.
   <qti-usagedata-ref identifier="usagedata" href="usagedata.xml"/>
   <qti-metadata-ref identifier="metadata" href="metadata.json"/>`;
 
-/** The item identifiers of the sample test of CAT §2.5. */
+/** The item identifiers of the sample test of the CAT specification. */
 const SAMPLE_ITEMS = ["item434", "item065", "item365", "item347", "item653", "item656"];
 
 const itemRefs = (identifiers: readonly string[]): string =>
@@ -55,7 +56,7 @@ const itemRefs = (identifiers: readonly string[]): string =>
     .map((identifier) => `<qti-assessment-item-ref identifier="${identifier}" href="${identifier}.xml"/>`)
     .join("");
 
-/** A section document as CAT §2.1 and §2.5 show it, in the namespace of the ASI schema. */
+/** A section document as the CAT specification shows it, in the namespace of the ASI schema. */
 function sectionOf(selection: string, content: string): AssessmentSection {
   const document = readAsi(
     `<qti-assessment-section xmlns="${ASI_NAMESPACE}" identifier="sec" title="Adaptive Section" visible="true">${selection}${content}</qti-assessment-section>`,
@@ -72,8 +73,8 @@ function selectionOf(content = REFS): AdaptiveSelection {
 
 const SAMPLE = sectionOf(`<qti-adaptive-selection>${REFS}</qti-adaptive-selection>`, itemRefs(SAMPLE_ITEMS));
 
-describe("checkPool", () => {
-  it("reports nothing when the item references and the pool agree, as CAT §2.1 requires (§2.5 sample)", () => {
+describe("checking an item pool", () => {
+  it("reports nothing when the item references and the pool agree", () => {
     expect(checkPool(SAMPLE, { itemIdentifiers: SAMPLE_ITEMS })).toEqual([]);
   });
 
@@ -82,7 +83,7 @@ describe("checkPool", () => {
     expect(checkPool(SAMPLE, pool)).toEqual([]);
   });
 
-  it("reports an item reference that the pool lacks: the engine can never select it (CAT §2.2)", () => {
+  it("reports an item reference that the pool lacks: the engine can never select it", () => {
     const issues = checkPool(SAMPLE, {
       itemIdentifiers: SAMPLE_ITEMS.filter((identifier) => identifier !== "item365"),
     });
@@ -98,7 +99,7 @@ describe("checkPool", () => {
     ]);
   });
 
-  it("reports an item of the pool that the section does not list: the engine could select it (CAT §2.2)", () => {
+  it("reports an item of the pool that the section does not list: the engine could select it", () => {
     const issues = checkPool(SAMPLE, { itemIdentifiers: [...SAMPLE_ITEMS, "item999"] });
     expect(issues).toEqual([
       {
@@ -129,7 +130,7 @@ describe("checkPool", () => {
     }
   });
 
-  it("counts only the item references that are children: an adaptive section has no nested sections (CAT §2.3)", () => {
+  it("counts only the item references that are children: an adaptive section has no nested sections", () => {
     const section = sectionOf(
       "",
       `${itemRefs(["a"])}<qti-assessment-section identifier="inner" title="i" visible="true">${itemRefs(["b"])}</qti-assessment-section>`,
@@ -173,7 +174,7 @@ describe("checkPool", () => {
   });
 });
 
-describe("catMetadata", () => {
+describe("metadata of the pool", () => {
   const Complete: QtiMetadata = {
     itemTemplate: true,
     timeDependent: false,
@@ -188,7 +189,7 @@ describe("catMetadata", () => {
     toolVendor: "Example",
   };
 
-  it("binds QTI metadata to the fields of CAT Appendix B", () => {
+  it("binds QTI metadata to the fields of the metadata binding", () => {
     const result = catMetadata([{ identifier: "item434", metadata: Complete }]);
     expect(JSON.parse(JSON.stringify(result))).toEqual({
       itemMetadata: [
@@ -209,7 +210,7 @@ describe("catMetadata", () => {
     });
   });
 
-  it("leaves out what the QTI metadata omits, but keeps an empty list of interactions (CAT App. B)", () => {
+  it("leaves out what the QTI metadata omits, but keeps an empty list of interactions", () => {
     const result = catMetadata([{ identifier: "i", metadata: { interactionTypes: [], scoringModes: [] } }]);
     expect(JSON.parse(JSON.stringify(result))).toEqual({ itemMetadata: [{ identifier: "i", interactionType: [] }] });
   });
@@ -237,14 +238,14 @@ describe("catMetadata", () => {
     expect(result.externalMetadata).toEqual([{ type: "lom", content: "" }]);
   });
 
-  it("throws a DataError for an identifier that two items share (CAT App. B: unique)", () => {
+  it("throws a DataError for an identifier that two items share", () => {
     const metadata: QtiMetadata = { interactionTypes: [], scoringModes: [] };
     expect(() =>
       catMetadata([
         { identifier: "a", metadata },
         { identifier: "a", metadata },
       ]),
-    ).toThrow('The identifiers of the items must be unique (CAT App. B), found "a" twice.');
+    ).toThrow('The identifiers of the items must be unique, found "a" twice.');
   });
 
   it("throws a DataError for arguments of other types", () => {
@@ -280,20 +281,20 @@ describe("catMetadata", () => {
   });
 });
 
-describe("isSessionEnd", () => {
-  it("ends the session when the response has no next stage (CAT §3.4: omitted, null or empty nextItems)", () => {
+describe("the end of a session", () => {
+  it("ends the session when the response has no next stage", () => {
     expect(isSessionEnd(undefined)).toBe(true);
     expect(isSessionEnd(null)).toBe(true);
     expect(isSessionEnd({})).toBe(true);
   });
 
-  it("ends the session for a stage without items and with a null or zero stage length (CAT §4.2)", () => {
+  it("ends the session for a stage without items and with a null or zero stage length", () => {
     expect(isSessionEnd({ itemIdentifiers: null, stageLength: null })).toBe(true);
     expect(isSessionEnd({ itemIdentifiers: [], stageLength: 0 })).toBe(true);
     expect(isSessionEnd({ itemIdentifiers: [] })).toBe(true);
   });
 
-  it("continues the session for a stage with items, repeated ones included (CAT §4.2)", () => {
+  it("continues the session for a stage with items, repeated ones included", () => {
     expect(isSessionEnd({ itemIdentifiers: ["item434"], stageLength: 1 })).toBe(false);
     expect(isSessionEnd({ itemIdentifiers: ["a", "a"], stageLength: 2 })).toBe(false);
     expect(isSessionEnd({ itemIdentifiers: ["a"] })).toBe(false);
@@ -320,7 +321,7 @@ describe("isSessionEnd", () => {
   });
 });
 
-/** A CAT engine that follows CAT §4.2's shortest session and records what it receives. */
+/** A CAT engine that follows the shortest session of the CAT specification and records what it receives. */
 class ScriptedEngine implements CatPort {
   readonly calls: unknown[][] = [];
   readonly submitted: SubmitResultsRequest[] = [];
@@ -374,7 +375,7 @@ class ScriptedEngine implements CatPort {
 const PREFIX = "http://example.org/engine";
 const TIME = "2026-10-30T10:00:00";
 
-/** The minimal results report of CAT §4.3.1 for one answered and one skipped item. */
+/** The minimal results report of the CAT specification for one answered and one skipped item. */
 const MINIMAL_REPORT: AssessmentResult = {
   context: { sessionIdentifiers: [] },
   itemResults: [
@@ -418,7 +419,7 @@ const MINIMAL_REPORT: AssessmentResult = {
 
 const DATESTAMP = "2026-10-30T10:05:00";
 
-/** A result as the delivery engine reports it (RR §2.3.1), with every kind of variable the binding has a place for. */
+/** A result as the delivery engine reports it, with every kind of variable the binding has a place for. */
 const RESULT: AssessmentResult = {
   context: {
     sourcedId: "candidate1",
@@ -508,7 +509,7 @@ const RESULT: AssessmentResult = {
   ],
 };
 
-/** The same result in the JSON of the binding (https://www.imsglobal.org/spec/cat/v1p0/bind, §5.2.8, §5.3, §6.11). */
+/** The same result in the JSON of the public binding of CAT 1.0. */
 const RESULT_JSON = {
   context: {
     sourcedId: "candidate1",
@@ -579,7 +580,66 @@ const RESULT_JSON = {
   ],
 };
 
-describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson", () => {
+describe("the CAT port", () => {
+  it("deploys the section data of the files, and the pool Get Section returns agrees with the section", async () => {
+    const engine = new ScriptedEngine();
+    const data = sectionData(selectionOf(), {
+      settings: bytes("{}"),
+      usageData: bytes("<usageData/>"),
+      metadata: bytes("{}"),
+    });
+    const { sectionIdentifier } = await engine.createSection(PREFIX, data);
+    const { sectionData: deployed, items } = await engine.getSection(PREFIX, sectionIdentifier);
+    expect(engine.calls[0]).toEqual([
+      "createSection",
+      PREFIX,
+      { sectionConfiguration: "e30=", qtiUsagedata: "PHVzYWdlRGF0YS8+", qtiMetadata: "e30=" },
+    ]);
+    expect(deployed).toBe(data);
+    expect(checkPool(SAMPLE, items)).toEqual([]);
+  });
+
+  it("runs the shortest session: one stage, one Submit Results that ends it", async () => {
+    const engine = new ScriptedEngine();
+    const created = await engine.createSession(PREFIX, "S1", {});
+    expect(isSessionEnd(created.nextItems)).toBe(false);
+    const answered = await engine.submitResults(PREFIX, "S1", created.sessionIdentifier, {
+      assessmentResult: MINIMAL_REPORT,
+      sessionState: created.sessionState,
+    });
+    expect(isSessionEnd(answered.nextItems)).toBe(true);
+    await engine.endSession(PREFIX, "S1", created.sessionIdentifier);
+    await engine.endSection(PREFIX, "S1");
+    expect(engine.calls).toEqual([
+      ["createSession", PREFIX, "S1", {}],
+      ["submitResults", PREFIX, "S1", "T1"],
+      ["endSession", PREFIX, "S1", "T1"],
+      ["endSection", PREFIX, "S1"],
+    ]);
+    expect(engine.submitted[0]?.sessionState).toBe("state-1");
+  });
+
+  it("carries the typed Assessment Result of the minimal report unchanged: the JSON form is a codec apart", async () => {
+    const engine = new ScriptedEngine();
+    await engine.submitResults(PREFIX, "S1", "T1", { assessmentResult: MINIMAL_REPORT });
+    expect(engine.submitted[0]?.assessmentResult).toBe(MINIMAL_REPORT);
+  });
+
+  it("makes the minimal report a Results Reporting document with the variables that CAT requires", () => {
+    const report = readResults(writeResults(MINIMAL_REPORT));
+    const [answered, skipped] = report.itemResults;
+    expect(answered?.variables.map(({ identifier }) => identifier)).toEqual([
+      "numAttempts",
+      "duration",
+      "completionStatus",
+      "SCORE",
+    ]);
+    expect(answered?.variables.at(-1)).toMatchObject({ cardinality: "single", baseType: "float" });
+    expect(skipped).toMatchObject({ sequenceIndex: 2, sessionStatus: "initial", variables: [] });
+  });
+});
+
+describe("the JSON of results and stages", () => {
   it("writes an assessment result in the JSON of the binding: itemResult, sourceID, and the three lists of variables", () => {
     expect(JSON.parse(JSON.stringify(assessmentResultToJson(RESULT)))).toEqual(RESULT_JSON);
   });
@@ -825,67 +885,8 @@ describe("assessmentResultToJson, assessmentResultFromJson and itemStageFromJson
   });
 });
 
-describe("CatPort", () => {
-  it("deploys the section data of the files, and the pool Get Section returns agrees with the section", async () => {
-    const engine = new ScriptedEngine();
-    const data = sectionData(selectionOf(), {
-      settings: bytes("{}"),
-      usageData: bytes("<usageData/>"),
-      metadata: bytes("{}"),
-    });
-    const { sectionIdentifier } = await engine.createSection(PREFIX, data);
-    const { sectionData: deployed, items } = await engine.getSection(PREFIX, sectionIdentifier);
-    expect(engine.calls[0]).toEqual([
-      "createSection",
-      PREFIX,
-      { sectionConfiguration: "e30=", qtiUsagedata: "PHVzYWdlRGF0YS8+", qtiMetadata: "e30=" },
-    ]);
-    expect(deployed).toBe(data);
-    expect(checkPool(SAMPLE, items)).toEqual([]);
-  });
-
-  it("runs the shortest session of CAT §4.2: one stage, one Submit Results that ends it", async () => {
-    const engine = new ScriptedEngine();
-    const created = await engine.createSession(PREFIX, "S1", {});
-    expect(isSessionEnd(created.nextItems)).toBe(false);
-    const answered = await engine.submitResults(PREFIX, "S1", created.sessionIdentifier, {
-      assessmentResult: MINIMAL_REPORT,
-      sessionState: created.sessionState,
-    });
-    expect(isSessionEnd(answered.nextItems)).toBe(true);
-    await engine.endSession(PREFIX, "S1", created.sessionIdentifier);
-    await engine.endSection(PREFIX, "S1");
-    expect(engine.calls).toEqual([
-      ["createSession", PREFIX, "S1", {}],
-      ["submitResults", PREFIX, "S1", "T1"],
-      ["endSession", PREFIX, "S1", "T1"],
-      ["endSection", PREFIX, "S1"],
-    ]);
-    expect(engine.submitted[0]?.sessionState).toBe("state-1");
-  });
-
-  it("carries the typed Assessment Result of the minimal report unchanged: the JSON form is a codec apart", async () => {
-    const engine = new ScriptedEngine();
-    await engine.submitResults(PREFIX, "S1", "T1", { assessmentResult: MINIMAL_REPORT });
-    expect(engine.submitted[0]?.assessmentResult).toBe(MINIMAL_REPORT);
-  });
-
-  it("makes the minimal report a Results Reporting document with the variables CAT §4.3.1 requires", () => {
-    const report = readResults(writeResults(MINIMAL_REPORT));
-    const [answered, skipped] = report.itemResults;
-    expect(answered?.variables.map(({ identifier }) => identifier)).toEqual([
-      "numAttempts",
-      "duration",
-      "completionStatus",
-      "SCORE",
-    ]);
-    expect(answered?.variables.at(-1)).toMatchObject({ cardinality: "single", baseType: "float" });
-    expect(skipped).toMatchObject({ sequenceIndex: 2, sessionStatus: "initial", variables: [] });
-  });
-});
-
-describe("sectionData", () => {
-  // RFC 4648 §10 test vectors, which CAT §1.5 names as its base64 variant.
+describe("section data", () => {
+  // The test vectors of RFC 4648, which CAT names as its base64 variant.
   it.each([
     ["", ""],
     ["f", "Zg=="],
@@ -894,7 +895,7 @@ describe("sectionData", () => {
     ["foob", "Zm9vYg=="],
     ["fooba", "Zm9vYmE="],
     ["foobar", "Zm9vYmFy"],
-  ])("encodes the settings file %j as the base64 %j of RFC 4648 §10", (text, expected) => {
+  ])("encodes the settings file %j as the base64 %j of RFC 4648", (text, expected) => {
     const data = sectionData(selectionOf(), { settings: bytes(text), usageData: bytes(""), metadata: bytes("") });
     expect(data.sectionConfiguration).toBe(expected);
   });
@@ -905,12 +906,12 @@ describe("sectionData", () => {
     expect(data.sectionConfiguration).toBe(Buffer.from(all).toString("base64"));
   });
 
-  it("gives the section data of CAT §4.1: the three fields, each the base64 of the file", () => {
+  it("gives the section data with the three fields, each the base64 of the file", () => {
     const data = sectionData(selectionOf(), { settings: bytes("S"), usageData: bytes("U"), metadata: bytes("M") });
     expect(data).toEqual({ sectionConfiguration: "Uw==", qtiUsagedata: "VQ==", qtiMetadata: "TQ==" });
   });
 
-  it("sends the usage data file when the selection has a qti-usagedata-ref (CAT §2.2)", () => {
+  it("sends the usage data file when the selection has a qti-usagedata-ref", () => {
     const usage = bytes('<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0"/>');
     const selection = selectionOf(
       `${REFS.split("\n")[0]}<qti-usagedata-ref identifier="usagedata" href="usagedata.xml"/>`,
@@ -920,7 +921,7 @@ describe("sectionData", () => {
     expect(data).not.toHaveProperty("qtiMetadata");
   });
 
-  it("sends no usage data or metadata when the selection references none (CAT §4.1: otherwise omitted)", () => {
+  it("sends no usage data or metadata when the selection references none", () => {
     const selection = selectionOf('<qti-adaptive-engine-ref identifier="engine" href="http://example.org/engine"/>');
     expect(sectionData(selection, { settings: bytes("S") })).toEqual({ sectionConfiguration: "Uw==" });
   });
@@ -941,13 +942,13 @@ describe("sectionData", () => {
     const bare = selectionOf('<qti-adaptive-engine-ref identifier="e" href="e"/>');
     const settings = bytes("S");
     expect(() => sectionData(withUsage, { settings })).toThrow(
-      "The selection has a qti-usagedata-ref, so the file usageData is required (CAT §4.1), found nothing.",
+      "The selection has a qti-usagedata-ref, so the file usageData is required, found nothing.",
     );
     expect(() => sectionData(withMetadata, { settings })).toThrow(
       "The selection has a qti-metadata-ref, so the file metadata is required",
     );
     expect(() => sectionData(bare, { settings, usageData: bytes("U") })).toThrow(
-      "The selection has no qti-usagedata-ref, so the file usageData must be omitted (CAT §4.1), found an object.",
+      "The selection has no qti-usagedata-ref, so the file usageData must be omitted, found an object.",
     );
     expect(() => sectionData(bare, { settings, metadata: bytes("M") })).toThrow(
       "The selection has no qti-metadata-ref, so the file metadata must be omitted",
@@ -976,6 +977,18 @@ describe("sectionData", () => {
     expect(() =>
       sectionData(json('{"kind":"adaptive-selection","usagedataRef":5}'), { settings, usageData: bytes("") }),
     ).toThrow("The qti-usagedata-ref of the selection must be an object, found 5.");
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/cat.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/cat": await import("../src/cat/index.js"),
+      "@assesskit/runtime/values": await import("../src/values/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
   });
 });
 

@@ -13,9 +13,13 @@ function checkChoices(choices: unknown, label: string): void {
 }
 
 /**
- * Checks an interaction descriptor: the properties that the functions of this module read, which are the kind, the
- * response identifier, the bindings, the choices and their sets, the constraints and `shuffle`.
+ * Checks an interaction descriptor.
  *
+ * @remarks
+ * It checks the properties that the functions of this module read: the kind, the response identifier, the bindings, the
+ * choices and their sets, the constraints and `shuffle`.
+ *
+ * @param descriptor - The value to check.
  * @throws `DataError` when it is not a descriptor.
  */
 export function checkDescriptor(descriptor: unknown): asserts descriptor is InteractionDescriptor {

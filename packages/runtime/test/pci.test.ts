@@ -30,8 +30,7 @@ import {
 } from "../src/index.js";
 import { baseType, recordValue, valueArbitrary } from "./arbitraries/values.js";
 import { fuzzJson } from "./fuzz.js";
-
-// Helpers ---------------------------------------------------------------------------------------------------------------
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -61,7 +60,7 @@ const HOST: PciFileLoader & PciFileStore = {
   store: (data) => `stored:${data}`,
 };
 
-// biome-ignore lint/suspicious/noApproximativeNumericConstant: the example of BPIG Appendix C.2 has this value.
+// biome-ignore lint/suspicious/noApproximativeNumericConstant: the example of the best practices guide has this value.
 const PI_TO_SEVEN_PLACES = 3.1415926;
 
 function str(value: string): SingleValue {
@@ -73,10 +72,10 @@ function str(value: string): SingleValue {
 const file = (data: string, mimeType: string, fileName?: string): SingleValue =>
   single("file", { reference: `stored:${data}`, mimeType, ...(fileName === undefined ? {} : { fileName }) });
 
-describe("encodePciValue and decodePciValue", () => {
+describe("the JSON of a value", () => {
   const Single: Cardinality = "single";
 
-  /** The examples of BPIG Appendix C.1 to C.3 with the values they stand for, apart from the duration and the file. */
+  /** The examples of the best practices guide with the values they stand for, apart from the duration and the file. */
   const Examples: readonly {
     readonly json: unknown;
     readonly cardinality: Cardinality;
@@ -216,7 +215,7 @@ describe("encodePciValue and decodePciValue", () => {
     },
   ];
 
-  it.each(Examples)("reads and writes the example %j of BPIG Appendix C", (example) => {
+  it.each(Examples)("reads and writes the example %j of the best practices guide", (example) => {
     const declaration = {
       cardinality: example.cardinality,
       ...(example.baseType === undefined ? {} : { baseType: example.baseType }),
@@ -225,7 +224,7 @@ describe("encodePciValue and decodePciValue", () => {
     expect(encodePciValue(example.value, declaration, HOST)).toEqual(example.json);
   });
 
-  it("reads intOrIdentifier as an integer for a number and as an identifier for a string (G38)", () => {
+  it("reads intOrIdentifier as an integer for a number and as an identifier for a string", () => {
     expect(
       decodePciValue({ base: { intOrIdentifier: 123456 } }, { cardinality: "single", baseType: "integer" }, HOST),
     ).toEqual(single("integer", 123456));
@@ -251,7 +250,7 @@ describe("encodePciValue and decodePciValue", () => {
     );
   });
 
-  it("writes a duration as PT<seconds>S and reads it back, and refuses years and months (G14)", () => {
+  it("writes a duration as PT<seconds>S and reads it back, and refuses years and months", () => {
     const declaration = { cardinality: "single", baseType: "duration" } as const;
     expect(encodePciValue(single("duration", 90.5), declaration, HOST)).toEqual({ base: { duration: "PT90.5S" } });
     expect(decodePciValue({ base: { duration: "PT1H30M" } }, declaration, HOST)).toEqual(single("duration", 5400));
@@ -261,7 +260,7 @@ describe("encodePciValue and decodePciValue", () => {
     ).toThrow(DataError);
   });
 
-  it("leaves out a field of a record that is NULL (G37)", () => {
+  it("leaves out a field of a record that is NULL", () => {
     expect(
       decodePciValue(
         {
@@ -278,7 +277,7 @@ describe("encodePciValue and decodePciValue", () => {
   });
 
   describe("files", () => {
-    it("stores the file of the JSON through the host and keeps its reference, as in the example of Appendix C.1", () => {
+    it("stores the file of the JSON through the host and keeps its reference, as in the example of the best practices guide", () => {
       const calls: unknown[][] = [];
       const files: PciFileStore = {
         store: (...call) => {
@@ -414,42 +413,10 @@ describe("encodePciValue and decodePciValue", () => {
     expect(() => encodePciValue(single("integer", 1), declaration, HOST)).toThrow(DataError);
     expect(() => encodePciValue(json('{"cardinality": "x"}'), declaration, HOST)).toThrow(DataError);
   });
-
-  it("reads back what it writes, for every cardinality and base type, files included", () => {
-    const declared = fc.oneof(
-      fc
-        .tuple(fc.constantFrom<"single" | "multiple" | "ordered">("single", "multiple", "ordered"), baseType)
-        .chain(([cardinality, type]) =>
-          valueArbitrary(cardinality, type).map((value) => ({ value, declaration: { cardinality, baseType: type } })),
-        ),
-      recordValue.map((value) => ({ value, declaration: { cardinality: "record" as const } })),
-    );
-    fc.assert(
-      fc.property(declared, ({ value, declaration }) => {
-        const written = encodePciValue(value, declaration, {
-          // The generated references are file names: stand in for the bytes with their base64 text.
-          load: (reference) => btoa(reference),
-        });
-        const read = decodePciValue(written, declaration, { store: (data) => atob(data) });
-        expect(read).toEqual(value);
-      }),
-    );
-  });
-
-  it("reads or refuses arbitrary JSON from a module with a DataError, and nothing else", () => {
-    const files = { store: () => "reference" };
-    const declarations: readonly [ValueDeclaration, unknown][] = [
-      [{ cardinality: "single", baseType: "integer" }, { base: { integer: 1 } }],
-      [{ cardinality: "single", baseType: "file" }, { base: { file: { data: "AA==", mime: "text/plain" } } }],
-    ];
-    for (const [declaration, example] of declarations) {
-      fuzzJson((json) => decodePciValue(json, declaration, files), [example]);
-    }
-  });
 });
 
-describe("parseModuleResolution", () => {
-  it("reads the example of Appendix D: waitSeconds and the paths in the order of the file", () => {
+describe("module resolution files", () => {
+  it("reads the example of the best practices guide: waitSeconds and the paths in the order of the file", () => {
     const parsed = parseModuleResolution(
       '{ "waitSeconds": 15, "paths": { "graph": "https://example.com/js/modules/graph1.01/graph", "foo": "https://foobar.com/foo/bar1.2/foo" } }',
     );
@@ -492,16 +459,9 @@ describe("parseModuleResolution", () => {
     expect(() => parseModuleResolution('{"paths": {"a": ""}}')).toThrow(DataError);
     expect(() => parseModuleResolution(json("1"))).toThrow(DataError);
   });
-
-  it("reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
-    fuzzJson(
-      (json) => parseModuleResolution(JSON.stringify(json)),
-      [{ waitSeconds: 15, paths: { graph: "https://example.com/js/graph", foo: "foo" } }, {}],
-    );
-  });
 });
 
-describe("isPackageRelative", () => {
+describe("locations in the package", () => {
   it("takes a location with a protocol for a URL and any other for a path in the package", () => {
     for (const location of ["modules/likert", "./likert", "../likert", "likert", "modules/lib/x.min"]) {
       expect(isPackageRelative(location)).toBe(true);
@@ -519,7 +479,7 @@ describe("isPackageRelative", () => {
   });
 });
 
-describe("moduleConfigurationPaths", () => {
+describe("the paths of the configuration files", () => {
   it("reads modules/module_resolution.js and modules/fallback_module_resolution.js by default", () => {
     expect(moduleConfigurationPaths(interactionOf('module="m"'))).toEqual({
       primary: "modules/module_resolution.js",
@@ -551,8 +511,8 @@ describe("moduleConfigurationPaths", () => {
   });
 });
 
-describe("resolvePciModules", () => {
-  it("locates the module of the module attribute and its dependencies in the primary configuration (BPIG §3.7.12.4)", () => {
+describe("the modules of a PCI", () => {
+  it("locates the module of the module attribute and its dependencies in the primary configuration", () => {
     const modules = resolvePciModules(interactionOf('module="exampleLikertScale"'), {
       primary: resolution({ exampleLikertScale: "modules/likert", handlebars: "modules/lib/handlebars.min" }),
     });
@@ -562,7 +522,7 @@ describe("resolvePciModules", () => {
     ]);
   });
 
-  it("lets a qti-interaction-module replace the location of a module, as the graphing example of BPIG §3.7.12.4 does", () => {
+  it("lets a qti-interaction-module replace the location of a module, as the graphing example of the best practices guide does", () => {
     const interaction = interactionOf(
       'module="exampleGraphing"',
       '<qti-interaction-modules primary-configuration="modules/maths_config.js"><qti-interaction-module id="handlebars" primary-path="modules/lib/handlebarsV2.min"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -621,7 +581,7 @@ describe("resolvePciModules", () => {
   });
 });
 
-describe("pciProperties", () => {
+describe("the properties of a PCI", () => {
   it("passes the data- attributes named as element.dataset names them: data-max-choices-message is maxChoicesMessage", () => {
     const interaction = interactionOf(
       'data-label-min="Very Poorly" data-max-choices-message="Too Many" data-toggle="true" data-selected_color="blue" data-n1="x" data-x-1="y" data-a--b="z" class="horizontal"',
@@ -650,8 +610,8 @@ describe("pciProperties", () => {
   });
 });
 
-describe("the variables a PCI is bound to", () => {
-  it("passes the template and context variables that the PCI names, and the markup, as the value of the variable in the JSON of Appendix C", () => {
+describe("the variables that a PCI is bound to", () => {
+  it("passes the template and context variables that the PCI names, and the markup, as the value of the variable in the JSON of a PCI", () => {
     const document = readAsi(
       `<qti-assessment-item ${NS} identifier="item" title="Item" time-dependent="false"><qti-context-declaration identifier="CTX" cardinality="single" base-type="string"/><qti-template-declaration identifier="N" cardinality="multiple" base-type="integer"/><qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:example.com:pci:v" module="m"><qti-interaction-markup><p>Graph <qti-printed-variable identifier="N"/></p></qti-interaction-markup><qti-template-variable template-identifier="N"/><qti-context-variable identifier="CTX"/></qti-portable-custom-interaction></qti-item-body></qti-assessment-item>`,
     );
@@ -671,7 +631,7 @@ describe("the variables a PCI is bound to", () => {
   });
 });
 
-describe("checkPortableInteraction", () => {
+describe("checks of a PCI", () => {
   const codes = (interaction: PortableCustomInteraction, configuration: PciModuleConfiguration): string[] =>
     checkPortableInteraction(interaction, configuration).map(({ code }) => code);
   const configured: PciModuleConfiguration = { primary: resolution({ m: "modules/m" }) };
@@ -722,5 +682,58 @@ describe("checkPortableInteraction", () => {
   it("refuses arguments of the wrong type", () => {
     expect(() => checkPortableInteraction(json("null"), {})).toThrow(DataError);
     expect(() => checkPortableInteraction(interactionOf('module="m"'), json("1"))).toThrow(DataError);
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/pci.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/pci": await import("../src/pci/index.js"),
+      "@assesskit/runtime/values": await import("../src/values/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
+  });
+});
+
+describe("properties", () => {
+  it("reads back what it writes, for every cardinality and base type, files included", () => {
+    const declared = fc.oneof(
+      fc
+        .tuple(fc.constantFrom<"single" | "multiple" | "ordered">("single", "multiple", "ordered"), baseType)
+        .chain(([cardinality, type]) =>
+          valueArbitrary(cardinality, type).map((value) => ({ value, declaration: { cardinality, baseType: type } })),
+        ),
+      recordValue.map((value) => ({ value, declaration: { cardinality: "record" as const } })),
+    );
+    fc.assert(
+      fc.property(declared, ({ value, declaration }) => {
+        const written = encodePciValue(value, declaration, {
+          // The generated references are file names: stand in for the bytes with their base64 text.
+          load: (reference) => btoa(reference),
+        });
+        const read = decodePciValue(written, declaration, { store: (data) => atob(data) });
+        expect(read).toEqual(value);
+      }),
+    );
+  });
+
+  it("reads or refuses arbitrary JSON from a module with a DataError, and nothing else", () => {
+    const files = { store: () => "reference" };
+    const declarations: readonly [ValueDeclaration, unknown][] = [
+      [{ cardinality: "single", baseType: "integer" }, { base: { integer: 1 } }],
+      [{ cardinality: "single", baseType: "file" }, { base: { file: { data: "AA==", mime: "text/plain" } } }],
+    ];
+    for (const [declaration, example] of declarations) {
+      fuzzJson((json) => decodePciValue(json, declaration, files), [example]);
+    }
+  });
+
+  it("reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
+    fuzzJson(
+      (json) => parseModuleResolution(JSON.stringify(json)),
+      [{ waitSeconds: 15, paths: { graph: "https://example.com/js/graph", foo: "foo" } }, {}],
+    );
   });
 });

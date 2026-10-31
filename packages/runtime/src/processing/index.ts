@@ -16,6 +16,7 @@ export {
   NUM_ATTEMPTS,
   QTI_CONTEXT,
 } from "./built-ins.js";
+export { describeCount, describeOperand } from "./check-operands.js";
 export type { CustomOperator, CustomOperatorExpression, ProcessingContext } from "./context.js";
 export { declaredValue, readPrimitive } from "./declared-value.js";
 export { evaluate, operandsOf } from "./evaluate.js";
@@ -25,8 +26,6 @@ export { evaluateTestExpression, runOutcomeProcessing } from "./outcome-processi
 export { DEFAULT_RANDOM_MIN, DEFAULT_RANDOM_STEP } from "./random-values.js";
 export { runResponseProcessing } from "./response-processing.js";
 export {
-  describeCount,
-  describeOperand,
   OPERATOR_SIGNATURES,
   type OperandSignature,
   type OperatorSignature,

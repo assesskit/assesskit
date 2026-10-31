@@ -1,7 +1,7 @@
 import { type AssessmentItem, descendantNodes, type Interaction, isModelNode, type ModelNode } from "../asi/index.js";
 import { isShown, resolveContent } from "../content/index.js";
 import { describeInteractions, type InteractionDescriptor, presentChoices } from "../interactions/index.js";
-import { checkItem } from "../processing/variables.js";
+import { checkItem } from "../processing/internal.js";
 import type { Value } from "../values/index.js";
 import { isAdaptive, resetOutcomes } from "./attempt.js";
 import { checkSession, type ItemSession } from "./item-session.js";
@@ -10,12 +10,13 @@ import { checkSessionControl, type EffectiveSessionControl } from "./session-con
 /** What decides the feedback that an item shows in the state of its session. */
 export interface ItemFeedback {
   /**
-   * The outcomes that decide which integrated feedback the body shows: those of the session when its feedback is
-   * shown, else the values that response processing starts from, which show the body as at the start of an attempt
-   * (INFO §7.19.3).
+   * The outcomes that decide which integrated feedback the body shows: those of the session when its feedback is shown,
+   * else the values that response processing starts from, which show the body as at the start of an attempt.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly outcomes: ReadonlyMap<string, Value | null>;
-  /** Whether the item shows the modal feedback that the outcomes select (INFO §2.6). */
+  /** Whether the item shows the modal feedback that the outcomes select. */
   readonly modal: boolean;
 }
 
@@ -30,14 +31,14 @@ function feedbackShown(
       return { shown: false, modal: false };
     case "interacting":
     case "suspended":
-      // Between attempts the feedback is shown (INFO §7.19.1); during an attempt an adaptive item keeps the feedback of
-      // its earlier attempts, and a non-adaptive item shows its body as at the start of the attempt (INFO §7.19.3).
+      // Between attempts the feedback is shown; during an attempt an adaptive item keeps the feedback of
+      // its earlier attempts, and a non-adaptive item shows its body as at the start of the attempt.
       return session.attempting ? { shown: adaptive, modal: false } : { shown: true, modal: true };
     case "closed":
       return { shown: control.showFeedback, modal: control.showFeedback };
     case "review":
     case "solution": {
-      // An adaptive item ignores show-feedback when review is allowed and shows its final outcomes (INFO §7.19.3, B95).
+      // An adaptive item ignores show-feedback when review is allowed and shows its final outcomes.
       const shown = control.showFeedback || (adaptive && control.allowReview);
       return { shown, modal: shown };
     }
@@ -51,23 +52,25 @@ function feedbackOf(session: ItemSession, item: AssessmentItem, control: Effecti
 }
 
 /**
- * Returns what decides the feedback that an item shows in the state of its session (INFO §2.5, §7.19.1–3, B16, B95):
+ * Returns what decides the feedback that an item shows in the state of its session:
  *
- * | State                         | Feedback shown                                                              |
- * | ----------------------------- | --------------------------------------------------------------------------- |
- * | `initial`                     | none                                                                        |
- * | an attempt open               | integrated feedback of the earlier attempts for an adaptive item; none else |
- * | between attempts              | all, modal included: an item with more attempts must show its feedback      |
- * | `closed`                      | all when `show-feedback` is true, else none                                 |
- * | `review`, `solution`          | all when `show-feedback` is true, or the item is adaptive and review is allowed; else none |
+ * | State                | Feedback shown                                                                             |
+ * | -------------------- | ------------------------------------------------------------------------------------------ |
+ * | `initial`            | none                                                                                       |
+ * | an attempt open      | integrated feedback of the earlier attempts for an adaptive item; none else                |
+ * | between attempts     | all, modal included: an item with more attempts must show its feedback                     |
+ * | `closed`             | all when `show-feedback` is true, else none                                                |
+ * | `review`, `solution` | all when `show-feedback` is true, or the item is adaptive and review is allowed; else none |
  *
- * Feedback that is not shown is decided by the values that response processing starts from, so that the body appears
- * as at the start of an attempt.
+ * Feedback that is not shown is decided by the values that response processing starts from, so that the body appears as
+ * at the start of an attempt.
  *
  * @param session - The item session.
  * @param item - The item of the session.
  * @param control - The item session control in force.
+ * @returns What decides the feedback that is shown.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function itemFeedback(
   session: ItemSession,
@@ -84,8 +87,10 @@ const isInteraction = (node: ModelNode): node is Interaction => node.kind.endsWi
 
 /**
  * Returns the interactions that the candidate sees in the state of the session: those of the body that feedback and
- * template content shown by {@link itemFeedback} hold (INFO §2.3.4), with the choices in the order of the session and
- * those that template variables hide left out (INFO §2.7.1, B14).
+ * template content shown by {@link itemFeedback} hold, with the choices in the order of the session and those that
+ * template variables hide left out.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function presentedInteractions(
   session: ItemSession,
@@ -126,9 +131,15 @@ export function presentedInteractions(
 /**
  * Returns the responses that the item shows, by response identifier: the drafts while the session is open, the
  * submitted responses when it is closed or in review, and in the solution state the correct responses, NULL for a
- * variable that declares none (INFO §2.2.1, B58). The responses of the session do not change.
+ * variable that declares none.
  *
+ * @remarks
+ * The responses of the session do not change.
+ *
+ * @param session - The item session.
+ * @returns The responses by response identifier.
  * @throws `DataError` when `session` is not an item session.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function itemResponses(session: ItemSession): ReadonlyMap<string, Value | null> {
   checkSession(session);

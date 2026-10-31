@@ -8,8 +8,8 @@ import type { StructureNode, TestStructure } from "./structure.js";
 import { type EffectiveTimeLimits, timeLimits } from "./time-limits.js";
 
 /**
- * A time at which a time limit is reached, which the host schedules a `time` action for (E6): the maximum or minimum
- * time of the item presented, of a section that holds it, of its test part or of the test, as an absolute time.
+ * A time at which a time limit is reached, which the host schedules a `time` action for: the maximum or minimum time of
+ * the item presented, of a section that holds it, of its test part or of the test, as an absolute time.
  */
 export interface Deadline {
   /** The kind of the scope. */
@@ -20,7 +20,7 @@ export interface Deadline {
   readonly kind: "max-time" | "min-time";
   /** When the time is reached, in epoch milliseconds, with the candidate's extra time and without suspended time. */
   readonly at: number;
-  /** Whether a submission after the maximum time is still accepted (D9). */
+  /** Whether a submission after the maximum time is still accepted. */
   readonly lateSubmission: boolean;
 }
 
@@ -45,11 +45,14 @@ function notInTest(identifier: string): DataError {
 }
 
 /**
- * Returns the scopes whose time runs, outermost first (INFO §2.8.5): none unless the session is in progress. The time of
- * the test, the test part and the sections runs while the candidate is in them, navigation included; the time of the
- * item while its session is interacting (B4).
+ * Returns the scopes whose time runs, outermost first: none unless the session is in progress.
+ *
+ * @remarks
+ * The time of the test, the test part and the sections runs while the candidate is in them, navigation included; the
+ * time of the item while its session is interacting.
  *
  * @throws `DataError` when the state names what the test does not have.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function runningScopes(course: Course, state: DeliveryState): RunningScope[] {
   const { current } = state;
@@ -116,7 +119,9 @@ export function minimumAt(scope: RunningScope, at: number): number | undefined {
 
 /**
  * Returns what the maximum times did in the scopes of an item instance: its own, then those of the test, its test part
- * and its sections; `undefined` for a scope whose maximum time did not pass (D9).
+ * and its sections; `undefined` for a scope whose maximum time did not pass.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function expiriesOf(
   structure: TestStructure,
@@ -134,11 +139,12 @@ export function expiriesOf(
 }
 
 /**
- * Returns the deadlines of a state (E6): for each running scope whose maximum time has not passed, the time it is
- * reached, and its minimum time while that is not reached; none while the session is suspended or has ended, as time
- * does not run then (G23).
+ * Returns the deadlines of a state: for each running scope whose maximum time has not passed, the time it is reached,
+ * and its minimum time while that is not reached; none while the session is suspended or has ended, as time does not
+ * run then.
  *
  * @throws `DataError` when the state names what the test does not have.
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function deadlinesOf(course: Course, state: DeliveryState): Deadline[] {
   const deadlines: Deadline[] = [];

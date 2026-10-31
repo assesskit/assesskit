@@ -56,8 +56,7 @@ import { expressions } from "./arbitraries/processing.js";
 import { expressionKinds } from "./asi-elements.js";
 import rounding from "./fixtures/rounding.json" with { type: "json" };
 import { FUZZ } from "./fuzz.js";
-
-// Helpers ---------------------------------------------------------------------------------------------------------------
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, which is how plain JavaScript passes a value of the wrong type. */
 function json<T = never>(text: string): T {
@@ -175,12 +174,12 @@ describe("arithmetic", () => {
     expect(op("product", [bv("float", 2), bv("integer", 3)])).toEqual(float(6));
   });
 
-  it("subtracts: an integer when both operands are, else a float (INFO §2.11.3.31)", () => {
+  it("subtracts: an integer when both operands are, else a float", () => {
     expect(op("subtract", [bv("integer", 2), bv("integer", 5)])).toEqual(int(-3));
     expect(op("subtract", [bv("integer", 2), bv("float", 0.5)])).toEqual(float(1.5));
   });
 
-  it("gives NULL for an integer result outside the safe integers, computed exactly (D3)", () => {
+  it("gives NULL for an integer result outside the safe integers, computed exactly", () => {
     const max = Number.MAX_SAFE_INTEGER;
     expect(op("sum", [bv("integer", max), bv("integer", 1)])).toBeNull();
     expect(op("sum", [bv("integer", max), bv("integer", 2), bv("integer", -3)])).toEqual(int(max - 1));
@@ -188,7 +187,7 @@ describe("arithmetic", () => {
     expect(op("subtract", [bv("integer", -max), bv("integer", 1)])).toBeNull();
   });
 
-  it("divides and raises to a power as floats, NULL for a zero divisor or a result beyond float (INFO §2.11.3.19, §2.11.3.30)", () => {
+  it("divides and raises to a power as floats, NULL for a zero divisor or a result beyond float", () => {
     expect(op("divide", [bv("integer", 7), bv("integer", 2)])).toEqual(float(3.5));
     expect(op("divide", [bv("integer", 7), bv("integer", 0)])).toBeNull();
     expect(op("divide", [bv("float", 0), bv("float", 0)])).toBeNull();
@@ -199,7 +198,7 @@ describe("arithmetic", () => {
     expect(op("power", [bv("float", 10), bv("float", 400)])).toBeNull();
   });
 
-  it("divides integers rounding down, and takes the modulus x − z·y; NULL for a zero divisor (INFO §2.11.3.24–25)", () => {
+  it("divides integers rounding down, and takes the modulus x − z·y; NULL for a zero divisor", () => {
     expect(op("integer-divide", [bv("integer", 7), bv("integer", 2)])).toEqual(int(3));
     expect(op("integer-divide", [bv("integer", -7), bv("integer", 2)])).toEqual(int(-4));
     expect(op("integer-modulus", [bv("integer", -7), bv("integer", 2)])).toEqual(int(1));
@@ -208,7 +207,7 @@ describe("arithmetic", () => {
     expect(op("integer-modulus", [bv("integer", 7), bv("integer", 0)])).toBeNull();
   });
 
-  it("takes the gcd and lcm with the zero rules of INFO §2.11.3.11–12", () => {
+  it("takes the gcd and lcm with the zero rules of the specification", () => {
     expect(op("gcd", [bv("integer", 12), bv("integer", -18)])).toEqual(int(6));
     expect(op("gcd", [bv("integer", 0), bv("integer", 0)])).toEqual(int(0));
     expect(op("gcd", [bv("integer", 0), bv("integer", 5)])).toEqual(int(5));
@@ -221,7 +220,7 @@ describe("arithmetic", () => {
     ).toBeNull();
   });
 
-  it("takes the minimum and maximum, an integer only when every operand is one (INFO §2.11.3.13–14)", () => {
+  it("takes the minimum and maximum, an integer only when every operand is one", () => {
     expect(op("min", [bv("integer", 3), `<qti-ordered>${bv("integer", -1)}${bv("integer", 7)}</qti-ordered>`])).toEqual(
       int(-1),
     );
@@ -229,13 +228,13 @@ describe("arithmetic", () => {
     expect(op("max", [bv("float", 3), bv("float", "NaN")])).toBeNull();
   });
 
-  it("rounds to n for [n − 0.5, n + 0.5) and truncates toward zero: INFO §2.11.3.37–38's examples", () => {
+  it("rounds to n for [n − 0.5, n + 0.5) and truncates toward zero as the specification's examples do", () => {
     expect([6.8, 6.5, 6.49, -6.5].map((x) => opPrimitive("round", [bv("float", x)]))).toEqual([7, 7, 6, -6]);
     expect([6.8, -6.8].map((x) => opPrimitive("truncate", [bv("float", x)]))).toEqual([6, -6]);
     expect(op("round", [bv("integer", 4)])).toEqual(int(4));
   });
 
-  it("gives NULL for rounding or truncating NaN, ±INF (D4) and numbers beyond the safe integers (D3)", () => {
+  it("gives NULL for rounding or truncating NaN, ±INF and numbers beyond the safe integers", () => {
     for (const name of ["round", "truncate"]) {
       for (const text of ["NaN", "INF", "-INF", "1e300"])
         expect(op(name, [bv("float", text)]), `${name} ${text}`).toBeNull();
@@ -243,7 +242,7 @@ describe("arithmetic", () => {
     expect(op("round", [bv("float", -0.4)])).toEqual(int(0));
   });
 
-  it("converts an integer to a float (INFO §2.11.3.33)", () => {
+  it("converts an integer to a float", () => {
     expect(op("integer-to-float", [bv("integer", 3)])).toEqual(float(3));
   });
 
@@ -267,13 +266,13 @@ describe("assignment", () => {
     processed(Declared, `<qti-set-outcome-value identifier="${identifier}">${expression}</qti-set-outcome-value>`)
       .outcomes;
 
-  it("promotes an integer to a float or duration variable (D5)", () => {
+  it("promotes an integer to a float or duration variable", () => {
     expect(set("SCORE", bv("integer", 2))().get("SCORE")).toEqual(float(2));
     expect(set("TIME", bv("integer", 30))().get("TIME")).toEqual(duration(30));
     expect(set("SET", NULL)().get("SET")).toBeNull();
   });
 
-  it("refuses a float for an integer variable, and a value of another cardinality or base type (INFO §5.130.2)", () => {
+  it("refuses a float for an integer variable, and a value of another cardinality or base type", () => {
     expectProcessingError(
       set("COUNT", bv("float", 2)),
       "The variable COUNT is a single integer and cannot be set to a single float.",
@@ -287,7 +286,7 @@ describe("assignment", () => {
 });
 
 describe("comparison", () => {
-  it("compares numbers, integers with floats (INFO §2.11.3.22–27)", () => {
+  it("compares numbers, integers with floats", () => {
     expect(opPrimitive("gt", [bv("integer", 3), bv("float", 2.5)])).toBe(true);
     expect(opPrimitive("gte", [bv("integer", 3), bv("integer", 3)])).toBe(true);
     expect(opPrimitive("lt", [bv("float", 3), bv("integer", 3)])).toBe(false);
@@ -295,7 +294,7 @@ describe("comparison", () => {
     expect(op("lt", [NULL, bv("integer", 3)])).toBeNull();
   });
 
-  it("compares durations with lt and gte only (INFO §2.11.3.20–21)", () => {
+  it("compares durations with lt and gte only", () => {
     expect(opPrimitive("duration-lt", [bv("duration", 9.5), bv("duration", 10)])).toBe(true);
     expect(opPrimitive("duration-gte", [bv("duration", 10), bv("duration", 10)])).toBe(true);
     expect(op("duration-gte", [NULL, bv("duration", 10)])).toBeNull();
@@ -305,7 +304,7 @@ describe("comparison", () => {
     );
   });
 
-  it("compares exactly, or within an absolute or relative range that includes its bounds by default (INFO §5.46)", () => {
+  it("compares exactly, or within an absolute or relative range that includes its bounds by default", () => {
     const equal = (x: number, y: number, attributes: string) =>
       opPrimitive("equal", [bv("float", x), bv("float", y)], attributes);
     expect(equal(10, 10, "")).toBe(true);
@@ -343,7 +342,7 @@ describe("comparison", () => {
     expect(op("equal", [bv("float", 1), bv("float", 1)], ' tolerance-mode="absolute" tolerance="-1"')).toBeNull();
   });
 
-  it("compares numbers after rounding: INFO §5.47.2's examples", () => {
+  it("compares numbers after rounding as the specification's examples do", () => {
     const equalRounded = (a: string, b: string, attributes: string) =>
       opPrimitive("equal-rounded", [bv("float", a), bv("float", b)], attributes);
     expect(equalRounded("3.175", "3.183", ' figures="3"')).toBe(true);
@@ -364,7 +363,7 @@ describe("comparison", () => {
     expect(equalRounded("1", "1", ' rounding-mode="decimalPlaces" figures="-1"')).toBeNull();
   });
 
-  it("reads every term of RoundingModeEnum and ToleranceModeEnum, and no other (INFO §8.26, §8.38)", () => {
+  it("reads every term of RoundingModeEnum and ToleranceModeEnum, and no other", () => {
     const operands = `${bv("float", 1)}${bv("float", 1)}`;
     for (const mode of ["exact", "absolute", "relative"]) {
       expect(primitive(run(`<qti-equal tolerance-mode="${mode}" tolerance="1">${operands}</qti-equal>`)), mode).toBe(
@@ -383,7 +382,7 @@ describe("comparison", () => {
     ).toThrow(ReadError);
   });
 
-  it("matches values of one cardinality and base type, a pair unordered (INFO §2.11.3.28)", () => {
+  it("matches values of one cardinality and base type, a pair unordered", () => {
     expect(opPrimitive("match", [bv("identifier", "A"), bv("identifier", "A")])).toBe(true);
     expect(opPrimitive("match", [bv("pair", "A B"), bv("pair", "B A")])).toBe(true);
     expect(opPrimitive("match", [bv("directedPair", "A B"), bv("directedPair", "B A")])).toBe(false);
@@ -420,7 +419,7 @@ describe("conditions", () => {
     expect(branch(NULL)).toEqual(id("elseIf"));
   });
 
-  it("refuses a condition that is not a single boolean (INFO §5.117)", () => {
+  it("refuses a condition that is not a single boolean", () => {
     expectProcessingError(
       () => branch(bv("integer", 1)),
       "The expression of qti-response-if must be a single boolean, found a single integer.",
@@ -432,7 +431,7 @@ describe("containers", () => {
   const ids = (cardinality: "multiple" | "ordered", ...items: string[]) =>
     `<qti-${cardinality}>${items.map((item) => (item === "NULL" ? NULL : bv("identifier", item))).join("")}</qti-${cardinality}>`;
 
-  it("flattens operands into a container and leaves out NULL: INFO §2.11.3.8's example", () => {
+  it("flattens operands into a container and leaves out NULL as the specification's example does", () => {
     expect(
       run(`<qti-multiple>${bv("identifier", "A")}${bv("identifier", "B")}${ids("multiple", "C", "D")}</qti-multiple>`),
     ).toEqual(list("multiple", "identifier", ["A", "B", "C", "D"]));
@@ -452,19 +451,19 @@ describe("containers", () => {
     );
   });
 
-  it("counts the values of a container, 0 for NULL (INFO §2.11.3.32)", () => {
+  it("counts the values of a container, 0 for NULL", () => {
     expect(run(`<qti-container-size>${ids("multiple", "A", "B", "A")}</qti-container-size>`)).toEqual(int(3));
     expect(run(`<qti-container-size>${NULL}</qti-container-size>`)).toEqual(int(0));
   });
 
-  it("tells whether a value is NULL, empty strings and containers included (INFO §2.11.3.34)", () => {
+  it("tells whether a value is NULL, empty strings and containers included", () => {
     expect(runPrimitive(`<qti-is-null>${NULL}</qti-is-null>`)).toBe(true);
     expect(runPrimitive(`<qti-is-null>${bv("string", "")}</qti-is-null>`)).toBe(true);
     expect(runPrimitive(`<qti-is-null>${ids("multiple")}</qti-is-null>`)).toBe(true);
     expect(runPrimitive(`<qti-is-null>${bv("integer", 0)}</qti-is-null>`)).toBe(false);
   });
 
-  it("tests membership and deletes every instance: INFO §2.11.3.18's example", () => {
+  it("tests membership and deletes every instance as the specification's example does", () => {
     expect(opPrimitive("member", [bv("identifier", "C"), ids("ordered", "A", "C")])).toBe(true);
     expect(opPrimitive("member", [bv("identifier", "D"), ids("ordered", "A", "C")])).toBe(false);
     expect(op("delete", [bv("identifier", "A"), ids("multiple", "B", "A", "C", "A")])).toEqual(
@@ -475,7 +474,7 @@ describe("containers", () => {
     expect(op("delete", [bv("identifier", "A"), NULL])).toBeNull();
   });
 
-  it("tells whether a multiple container holds another with repeats: INFO §2.11.3.17's examples", () => {
+  it("tells whether a multiple container holds another with repeats as the specification's examples do", () => {
     expect(opPrimitive("contains", [ids("multiple", "A", "B", "C"), ids("multiple", "C", "A")])).toBe(true);
     expect(opPrimitive("contains", [ids("multiple", "A", "B", "C"), ids("multiple", "B", "B")])).toBe(false);
     expect(opPrimitive("contains", [ids("multiple", "A", "B", "B", "C"), ids("multiple", "B", "B")])).toBe(true);
@@ -498,7 +497,7 @@ describe("containers", () => {
     expect(run(`<qti-index n="1">${NULL}</qti-index>`)).toBeNull();
   });
 
-  it("repeats its operands in order number-repeats times, NULL below 1 (INFO §2.11.3.42)", () => {
+  it("repeats its operands in order number-repeats times, NULL below 1", () => {
     const repeat = (times: string, operands: string) =>
       run(`<qti-repeat number-repeats="${times}">${operands}</qti-repeat>`);
     expect(repeat("2", bv("identifier", "A") + ids("ordered", "B", "C") + NULL)).toEqual(
@@ -509,7 +508,7 @@ describe("containers", () => {
     expect(repeat("2", NULL)).toBeNull();
   });
 
-  it("reads a field of a record, NULL when there is none (INFO §2.11.3.5)", () => {
+  it("reads a field of a record, NULL when there is none", () => {
     const item = itemOf(`<qti-context-declaration identifier="R" cardinality="record"><qti-default-value>
       <qti-value field-identifier="x" base-type="integer">4</qti-value></qti-default-value></qti-context-declaration>`);
     expect(run(`<qti-field-value field-identifier="x">${v("R")}</qti-field-value>`, CONTEXT, item)).toEqual(int(4));
@@ -671,7 +670,7 @@ describe("custom operators", () => {
 });
 
 describe("declared values", () => {
-  it("reads default values of each cardinality, a record's fields with their base types (INFO §7.46)", () => {
+  it("reads default values of each cardinality, a record's fields with their base types", () => {
     const item = itemOf(`
       <qti-outcome-declaration identifier="S" cardinality="single" base-type="point"><qti-default-value><qti-value>3 4</qti-value></qti-default-value></qti-outcome-declaration>
       <qti-outcome-declaration identifier="M" cardinality="multiple" base-type="string"><qti-default-value><qti-value>a</qti-value><qti-value></qti-value><qti-value>b</qti-value></qti-default-value></qti-outcome-declaration>
@@ -703,7 +702,7 @@ describe("declared values", () => {
     );
   });
 
-  it("reads a base value as its base type, NULL for an empty string (INFO §2.11.1.1)", () => {
+  it("reads a base value as its base type, NULL for an empty string", () => {
     expect(run(bv("pair", "A B"))).toEqual(single("pair", ["A", "B"]));
     expect(run(bv("boolean", "1"))).toEqual(bool(true));
     expect(run(bv("float", "INF"))).toEqual(float(Number.POSITIVE_INFINITY));
@@ -716,7 +715,7 @@ describe("declared values", () => {
 });
 
 describe("evaluate", () => {
-  it("reads variables, correct responses and default values of the item (INFO §2.11.1.2–4)", () => {
+  it("reads variables, correct responses and default values of the item", () => {
     expect(run(v("N"))).toEqual(int(3));
     expect(run(v("K"))).toEqual(int(2));
     expect(run(`<qti-correct identifier="RESPONSE"/>`)).toEqual(id("B"));
@@ -725,7 +724,7 @@ describe("evaluate", () => {
     expect(run(`<qti-default identifier="numAttempts"/>`)).toBeNull();
   });
 
-  it("raises a ProcessingError for a variable the item does not declare (INFO §2.2.2)", () => {
+  it("raises a ProcessingError for a variable the item does not declare", () => {
     expectProcessingError(() => run(v("MISSING")), "The item declares no variable MISSING.");
     expectProcessingError(
       () => run(`<qti-correct identifier="SCORE"/>`),
@@ -734,7 +733,7 @@ describe("evaluate", () => {
     expectProcessingError(() => run(`<qti-default identifier="MISSING"/>`), "The item declares no variable MISSING.");
   });
 
-  it("gives NULL for qti-null and the constants pi and e (INFO §2.11.1.7, §8.20)", () => {
+  it("gives NULL for qti-null and the constants pi and e", () => {
     expect(run(NULL)).toBeNull();
     expect(run(`<qti-math-constant name="pi"/>`)).toEqual(float(Math.PI));
     expect(run(`<qti-math-constant name="e"/>`)).toEqual(float(Math.E));
@@ -834,7 +833,7 @@ describe("item variables in reach", () => {
       CONTEXT,
     );
 
-  it("lets template processing read only template and context variables (INFO §6.50)", () => {
+  it("lets template processing read only template and context variables", () => {
     expectProcessingError(
       () => template(`<qti-set-template-value identifier="K">${v("N")}</qti-set-template-value>`),
       "Template processing reads the outcome variable N, but it may read only template and context variables.",
@@ -881,7 +880,7 @@ describe("logic", () => {
   const t = bv("boolean", "true");
   const f = bv("boolean", "false");
 
-  it("follows three-valued logic (INFO §2.11.3.10, .15, .35)", () => {
+  it("follows three-valued logic", () => {
     expect([opPrimitive("and", [t, t]), opPrimitive("and", [t, f]), opPrimitive("and", [NULL, f])]).toEqual([
       true,
       false,
@@ -898,7 +897,7 @@ describe("logic", () => {
     expect(op("not", [NULL])).toBeNull();
   });
 
-  it("counts true operands between min and max, NULL when undecided: INFO §2.11.3.1's examples", () => {
+  it("counts true operands between min and max, NULL when undecided as the specification's examples do", () => {
     const anyN = (...operands: string[]) => op("any-n", operands, ' min="3" max="4"');
     expect(anyN(t, t, f, NULL)).toBeNull();
     expect(primitive(anyN(t, f, f, NULL))).toBe(false);
@@ -927,7 +926,7 @@ describe("lookup tables", () => {
       `<qti-lookup-outcome-value identifier="${identifier}">${expression}</qti-lookup-outcome-value>`,
     ).outcomes.get(identifier);
 
-  it("takes the first interpolation entry at or below the value, above it without the boundary (INFO §5.78, §7.18)", () => {
+  it("takes the first interpolation entry at or below the value, above it without the boundary", () => {
     expect(look("GRADE", bv("float", 95))).toEqual(id("A"));
     expect(look("GRADE", bv("integer", 90))).toEqual(id("A"));
     expect(look("GRADE", bv("float", 85))).toEqual(id("B"));
@@ -936,12 +935,12 @@ describe("lookup tables", () => {
     expect(look("GRADE", NULL)).toEqual(id("F"));
   });
 
-  it("takes the match entry of the exact integer, else the default or NULL (INFO §5.90)", () => {
+  it("takes the match entry of the exact integer, else the default or NULL", () => {
     expect(look("TYPE", bv("integer", 2))).toEqual(id("float"));
     expect(look("TYPE", bv("integer", 3))).toBeNull();
   });
 
-  it("refuses a match table for a float and an outcome without a table (INFO §5.87.2)", () => {
+  it("refuses a match table for a float and an outcome without a table", () => {
     expectProcessingError(() => look("TYPE", bv("float", 2)), "needs a single integer, found a single float");
     expectProcessingError(
       () =>
@@ -992,7 +991,7 @@ describe("mapping", () => {
   const mapR = (values: readonly string[]) =>
     primitive(mapped(`<qti-map-response identifier="R"/>`, { R: container("multiple", "identifier", values) }));
 
-  it("maps a single value, and sums the distinct values of a container: INFO §2.11.1.5's example", () => {
+  it("maps a single value, and sums the distinct values of a container as the specification's example does", () => {
     expect(primitive(mapped(`<qti-map-response identifier="S"/>`, { S: id("C") }))).toBe(0.5);
     expect(mapR(["C", "B"])).toBe(1.5);
     expect(mapR(["B", "B", "C"])).toBe(1.5);
@@ -1010,7 +1009,7 @@ describe("mapping", () => {
     expect(mapped(`<qti-map-response identifier="R"/>`, { R: null })).toBeNull();
   });
 
-  it("matches string keys case-insensitively unless the entry is case-sensitive (INFO §7.21.3)", () => {
+  it("matches string keys case-insensitively unless the entry is case-sensitive", () => {
     const mapW = (values: readonly string[]) =>
       primitive(mapped(`<qti-map-response identifier="W"/>`, { W: container("multiple", "string", values) }));
     expect(mapW(["PARIS"])).toBe(1);
@@ -1018,7 +1017,7 @@ describe("mapping", () => {
     expect(mapW(["Rome", "paris"])).toBe(3);
   });
 
-  it("maps each point to the first area that holds it, each area counted once (INFO §2.11.1.6)", () => {
+  it("maps each point to the first area that holds it, each area counted once", () => {
     const mapP = (points: readonly (readonly [number, number])[]) =>
       primitive(mapped(`<qti-map-response-point identifier="P"/>`, { P: container("multiple", "point", points) }));
     expect(mapP([[10, 10]])).toBe(1);
@@ -1105,7 +1104,7 @@ describe("math operators", () => {
     );
   });
 
-  it("gives NULL outside a function's domain and for NaN: INFO §2.11.3.39 and Table 8.21", () => {
+  it("gives NULL outside a function's domain and for NaN as the specification says", () => {
     expect([of("asin", 2), of("acos", -1.5), of("asec", 0.5), of("acsc", -0.5), of("ln", -1), of("log", -1)]).toEqual([
       null,
       null,
@@ -1119,7 +1118,7 @@ describe("math operators", () => {
     expect(math("sin", NULL)).toBeNull();
   });
 
-  it("gives NULL for a reciprocal function of 0 and 0 for one of an infinity (INFO §2.11.3.39)", () => {
+  it("gives NULL for a reciprocal function of 0 and 0 for one of an infinity", () => {
     expect([of("csc", 0), of("cot", 0), of("cot", "-0"), of("csch", 0), of("coth", 0)]).toEqual([
       null,
       null,
@@ -1161,7 +1160,7 @@ describe("math operators", () => {
     expect([of("ln", 0), of("ln", "-0"), of("log", 0)]).toEqual([null, null, null]);
   });
 
-  it("gives NULL for floor and ceil of ±INF, which return integers (D4), and beyond the safe integers (D3)", () => {
+  it("gives NULL for floor and ceil of ±INF, which return integers, and beyond the safe integers", () => {
     expect([of("floor", "INF"), of("ceil", "-INF"), of("floor", "1e300")]).toEqual([null, null, null]);
   });
 
@@ -1304,7 +1303,7 @@ describe("outcome processing", () => {
     return document.processing;
   }
 
-  it("runs the rules from the outcomes given, the others from their defaults, until qti-exit-test (INFO §2.9)", () => {
+  it("runs the rules from the outcomes given, the others from their defaults, until qti-exit-test", () => {
     const outcomes = outcomesAfter(
       `<qti-set-outcome-value identifier="COUNT">${bv("integer", 1)}</qti-set-outcome-value><qti-exit-test/>
        <qti-set-outcome-value identifier="FLAG">${bv("identifier", "late")}</qti-set-outcome-value>`,
@@ -1321,7 +1320,7 @@ describe("outcome processing", () => {
     );
   });
 
-  it("reads item variables as ITEM.VAR, the last instance, and ITEM.n.VAR (INFO §2.11.1.2)", () => {
+  it("reads item variables as ITEM.VAR, the last instance, and ITEM.n.VAR", () => {
     expect(testExpression(v("Q1.RAW"))).toEqual(int(4));
     expect(testExpression(v("Q1.1.RAW"))).toEqual(int(3));
     expect(testExpression(v("Q1.2.RESPONSE"))).toEqual(id("C"));
@@ -1331,7 +1330,7 @@ describe("outcome processing", () => {
     expect(testExpression(v("Q9.SCORE"))).toBeNull();
   });
 
-  it("reads the test's other variables, such as durations, through the scope (INFO §2.8.5)", () => {
+  it("reads the test's other variables, such as durations, through the scope", () => {
     expect(testExpression(v("duration"))).toEqual(duration(600));
     expect(testExpression(v("P.duration"))).toEqual(duration(300));
     expectProcessingError(() => testExpression(v("UNKNOWN")), "The test has no variable UNKNOWN.");
@@ -1341,17 +1340,17 @@ describe("outcome processing", () => {
     );
   });
 
-  it("weights a numeric item variable into a float, with 1 for a missing weight (INFO §7.47.2)", () => {
+  it("weights a numeric item variable into a float, with 1 for a missing weight", () => {
     expect(testExpression(`<qti-variable identifier="Q1.RAW" weight-identifier="W"/>`)).toEqual(float(8));
     expect(testExpression(`<qti-variable identifier="Q1.RAW" weight-identifier="NONE"/>`)).toEqual(float(4));
     expect(testExpression(`<qti-variable identifier="Q1.RESPONSE" weight-identifier="W"/>`)).toEqual(id("C"));
   });
 
-  it("reads an item variable under the name its variable mapping gives it (INFO §7.48)", () => {
+  it("reads an item variable under the name its variable mapping gives it", () => {
     expect(testExpression(v("Q2.SCORE"))).toEqual(int(2));
   });
 
-  it("counts selected, presented, responded, correct and incorrect items (INFO §2.11.2.1–5)", () => {
+  it("counts selected, presented, responded, correct and incorrect items", () => {
     const count = (name: string) => primitive(testExpression(`<qti-number-${name}/>`));
     expect(count("selected")).toBe(4);
     expect(count("presented")).toBe(3);
@@ -1360,7 +1359,7 @@ describe("outcome processing", () => {
     expect(count("incorrect")).toBe(1);
   });
 
-  it("passes the section and categories of the expression to the scope (INFO §7.27)", () => {
+  it("passes the section and categories of the expression to the scope", () => {
     filters.length = 0;
     expect(
       primitive(
@@ -1374,7 +1373,7 @@ describe("outcome processing", () => {
     expect(filters[1]).toEqual({});
   });
 
-  it("looks up normal maxima and minima, weighted, as multiple floats (INFO §2.11.2.6–7, G11)", () => {
+  it("looks up normal maxima and minima, weighted, as multiple floats", () => {
     expect(testExpression(`<qti-outcome-maximum outcome-identifier="SCORE" exclude-category="extra"/>`)).toEqual(
       list("multiple", "float", [1, 1, 2]),
     );
@@ -1385,7 +1384,7 @@ describe("outcome processing", () => {
     expect(testExpression(`<qti-outcome-minimum outcome-identifier="MISSING"/>`)).toBeNull();
   });
 
-  it("collects the single values of a variable, skipping NULL, integer unless a float is among them (INFO §2.11.2.8, §7.39)", () => {
+  it("collects the single values of a variable, skipping NULL, integer unless a float is among them", () => {
     expect(testExpression(`<qti-test-variables variable-identifier="SCORE"/>`)).toEqual(
       list("multiple", "float", [1, 0, 2]),
     );
@@ -1466,7 +1465,7 @@ describe("outcome processing", () => {
 describe("random values", () => {
   const draw = (xml: string, u: number) => primitive(run(xml, { random: { uniform: () => u } }));
 
-  it("draws min + k × step at index floor(u × n) of the admissible values: INFO §7.34's example", () => {
+  it("draws min + k × step at index floor(u × n) of the admissible values as the specification's example does", () => {
     const xml = `<qti-random-integer min="2" max="11" step="3"/>`;
     expect([0, 0.25, 0.5, 0.75, 0.999].map((u) => draw(xml, u))).toEqual([2, 5, 8, 11, 11]);
     expect(draw(`<qti-random-integer max="3"/>`, 0.99)).toBe(3);
@@ -1544,7 +1543,7 @@ describe("response processing", () => {
     return runResponseProcessing(item, { ...variables, responses }, context).outcomes.get("SCORE");
   };
 
-  it("runs a standard template that the item names: SCORE 1 for the correct response, else 0 (INFO §2.5.1)", () => {
+  it("runs a standard template that the item names: SCORE 1 for the correct response, else 0", () => {
     const template = `<qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>`;
     expect(scored(template, id("B"))).toEqual(float(1));
     expect(scored(template, id("A"))).toEqual(float(0));
@@ -1606,7 +1605,7 @@ describe("response processing", () => {
     );
   });
 
-  it("ends processing at qti-exit-response, inside a fragment too (INFO §6.39.5)", () => {
+  it("ends processing at qti-exit-response, inside a fragment too", () => {
     const processing = `<qti-response-processing>
       <qti-set-outcome-value identifier="SCORE">${bv("float", 1)}</qti-set-outcome-value>
       <qti-response-processing-fragment><qti-exit-response/></qti-response-processing-fragment>
@@ -1614,7 +1613,7 @@ describe("response processing", () => {
     expect(scored(processing, id("A"))).toEqual(float(1));
   });
 
-  it("sets completionStatus, one of its four values (INFO §2.2.2.3)", () => {
+  it("sets completionStatus, one of its four values", () => {
     const status = (value: string) =>
       processed(
         Choice,
@@ -1682,7 +1681,7 @@ describe("rounding", () => {
     }
   });
 
-  it("rounds 2.675 to 2.68 by its decimal digits, not by the binary double below it (INFO §2.11.3.43)", () => {
+  it("rounds 2.675 to 2.68 by its decimal digits, not by the binary double below it", () => {
     expect(roundTo(2.675, "decimalPlaces", 2)).toEqual(float(2.68));
     expect(roundTo(9.995, "decimalPlaces", 2)).toEqual(float(10));
     expect(roundTo(-0.04, "decimalPlaces", 1)).toEqual(float(-0));
@@ -1705,7 +1704,7 @@ describe("shapes", () => {
   const inside = (shape: string, coords: string, point: string) =>
     primitive(run(`<qti-inside shape="${shape}" coords="${coords}">${bv("point", point)}</qti-inside>`));
 
-  it("tests a point against every shape, the edge included (INFO §5.75.2, §8.29)", () => {
+  it("tests a point against every shape, the edge included", () => {
     expect([inside("rect", "10,10,20,30", "10 30"), inside("rect", "10,10,20,30", "21 15")]).toEqual([true, false]);
     expect([inside("circle", "10,10,5", "13 14"), inside("circle", "10,10,5", "14 14")]).toEqual([true, false]);
     expect([inside("ellipse", "10,10,6,2", "16 10"), inside("ellipse", "10,10,6,2", "10 13")]).toEqual([true, false]);
@@ -1718,7 +1717,7 @@ describe("shapes", () => {
     expect(inside("default", "", "999 999")).toBe(true);
   });
 
-  it("is true when any point of a container lies inside, and NULL for NULL (INFO §2.11.3.7)", () => {
+  it("is true when any point of a container lies inside, and NULL for NULL", () => {
     const points = `<qti-multiple>${bv("point", "0 0")}${bv("point", "12 12")}</qti-multiple>`;
     expect(runPrimitive(`<qti-inside shape="circle" coords="10,10,5">${points}</qti-inside>`)).toBe(true);
     expect(run(`<qti-inside shape="circle" coords="10,10,5">${NULL}</qti-inside>`)).toBeNull();
@@ -1737,7 +1736,7 @@ describe("shapes", () => {
   });
 });
 
-describe("OPERATOR_SIGNATURES", () => {
+describe("operator signatures", () => {
   it("has a signature for every expression that the ASI schema declares, and for no other", () => {
     expect([...OPERATOR_SIGNATURES.keys()].sort()).toEqual(expressionKinds());
     for (const [kind, signature] of OPERATOR_SIGNATURES) {
@@ -1766,7 +1765,7 @@ describe("OPERATOR_SIGNATURES", () => {
 });
 
 describe("standard templates", () => {
-  it("holds the six templates of INFO §2.5.1 by their purl URIs", () => {
+  it("holds the six standard templates by their purl URIs", () => {
     expect(
       [...STANDARD_TEMPLATES.keys()].map((uri) =>
         uri.replace("https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/", ""),
@@ -1781,7 +1780,7 @@ describe("standard templates", () => {
     ]);
   });
 
-  it("maps a NULL response to 0 with map_response and map_response_point (INFO §2.5.1)", () => {
+  it("maps a NULL response to 0 with map_response and map_response_point", () => {
     for (const [name, mapping] of [
       ["map_response", `<qti-mapping><qti-map-entry map-key="A" mapped-value="2"/></qti-mapping>`],
       [
@@ -1820,7 +1819,7 @@ describe("stats operator", () => {
       ),
     );
 
-  it("computes the mean and the sample and population variance and standard deviation (INFO §8.31)", () => {
+  it("computes the mean and the sample and population variance and standard deviation", () => {
     const values = [2, 4, 4, 4, 5, 5, 7, 9];
     expect(stats("mean", ...values)).toBe(5);
     expect(stats("popVariance", ...values)).toBe(4);
@@ -1841,7 +1840,7 @@ describe("stats operator", () => {
 describe("strings", () => {
   const s = (text: string) => bv("string", text);
 
-  it("matches strings, case-insensitively unless case-sensitive, with the deprecated substring flag (INFO §5.138)", () => {
+  it("matches strings, case-insensitively unless case-sensitive, with the deprecated substring flag", () => {
     expect(opPrimitive("string-match", [s("Paris"), s("paris")], ' case-sensitive="false"')).toBe(true);
     expect(opPrimitive("string-match", [s("Paris"), s("paris")], ' case-sensitive="true"')).toBe(false);
     expect(
@@ -1850,7 +1849,7 @@ describe("strings", () => {
     expect(op("string-match", [s("a"), NULL], ' case-sensitive="true"')).toBeNull();
   });
 
-  it("finds a substring: INFO §5.139.1's example", () => {
+  it("finds a substring as the specification's example does", () => {
     expect(opPrimitive("substring", [s("Hell"), s("Shell")], ' case-sensitive="true"')).toBe(false);
     expect(opPrimitive("substring", [s("Hell"), s("Shell")], ' case-sensitive="false"')).toBe(true);
     expect(op("substring", [NULL, s("Shell")], ' case-sensitive="false"')).toBeNull();
@@ -1861,7 +1860,7 @@ describe("strings", () => {
     expect(opPrimitive("string-match", [s("ΣΊΣΥΦΟΣ"), s("σίσυφος")], ' case-sensitive="false"')).toBe(true);
   });
 
-  it("matches the whole string with a regular expression of XML Schema (INFO §5.104.1)", () => {
+  it("matches the whole string with a regular expression of XML Schema", () => {
     expect(opPrimitive("pattern-match", [s("abc")], ' pattern="[a-c]+"')).toBe(true);
     expect(opPrimitive("pattern-match", [s("abcd")], ' pattern="[a-c]+"')).toBe(false);
     expect(opPrimitive("pattern-match", [s("x^y$")], ' pattern="x^y$"')).toBe(true);
@@ -1909,7 +1908,7 @@ describe("template processing", () => {
     expect(variables.outcomes.get("SCORE")).toEqual(float(1));
   });
 
-  it("restarts from the defaults until a constraint holds (INFO §5.150)", () => {
+  it("restarts from the defaults until a constraint holds", () => {
     const source = counting(0.1, 0.2, 0.9);
     const variables = instance(
       `<qti-set-template-value identifier="A"><qti-random-integer min="1" max="9"/></qti-set-template-value>
@@ -1922,7 +1921,7 @@ describe("template processing", () => {
     expect(variables.templates.get("B")).toEqual(int(9));
   });
 
-  it("keeps the default values after 100 runs, then goes on after the constraint (INFO §5.150)", () => {
+  it("keeps the default values after 100 runs, then goes on after the constraint", () => {
     const source = counting(0.5);
     const variables = instance(
       `<qti-set-template-value identifier="A"><qti-random-integer max="9"/></qti-set-template-value>
@@ -1956,7 +1955,7 @@ describe("template processing", () => {
     expect(variables.templates.get("B")).toEqual(int(7));
   });
 
-  it("starts template variables from the defaults given, as a test's template defaults set them (INFO §5.152)", () => {
+  it("starts template variables from the defaults given, as a test's template defaults set them", () => {
     const variables = instance(
       `<qti-set-template-value identifier="B">${v("A")}</qti-set-template-value>`,
       CONTEXT,
@@ -1969,7 +1968,7 @@ describe("template processing", () => {
     expect(variables.templates.get("A")).toEqual(int(42));
   });
 
-  it("runs the first true branch, and ends at qti-exit-template (INFO §6.50.2)", () => {
+  it("runs the first true branch, and ends at qti-exit-template", () => {
     const variables = instance(`
       <qti-template-condition>
         <qti-template-if>${bv("boolean", "false")}<qti-set-template-value identifier="B">${bv("integer", 1)}</qti-set-template-value></qti-template-if>
@@ -1988,7 +1987,7 @@ describe("template processing", () => {
     expect(new Set([1, 2, 3, 4, 5].map((seed) => JSON.stringify(draw(seed)))).size).toBeGreaterThan(1);
   });
 
-  it("reads QTI_CONTEXT and its fields, NULL when it is not given (INFO §2.2.2.1)", () => {
+  it("reads QTI_CONTEXT and its fields, NULL when it is not given", () => {
     const rules = `<qti-set-template-value identifier="LABEL"><qti-field-value field-identifier="testIdentifier">${v("QTI_CONTEXT")}</qti-field-value></qti-set-template-value>`;
     const item = itemOf(
       `<qti-template-declaration identifier="LABEL" cardinality="single" base-type="string"/><qti-template-processing>${rules}</qti-template-processing>`,
@@ -2010,7 +2009,7 @@ describe("template processing", () => {
   });
 });
 
-describe("createItemVariables", () => {
+describe("item variables", () => {
   const item = itemOf(`
     <qti-context-declaration identifier="TERM" cardinality="single" base-type="identifier"><qti-default-value><qti-value>spring</qti-value></qti-default-value></qti-context-declaration>
     <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
@@ -2188,6 +2187,19 @@ describe("what the static checks of validate read", () => {
   });
 });
 
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/processing.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime": await import("../src/index.js"),
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/processing": await import("../src/processing/index.js"),
+      "@assesskit/runtime/values": await import("../src/values/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
+  });
+});
+
 describe("properties", () => {
   const Variables = createItemVariables(ITEM);
   const evaluated = (expression: Expression, context: ProcessingContext = CONTEXT) =>
@@ -2239,7 +2251,7 @@ describe("properties", () => {
     );
   });
 
-  it("any-n agrees with a brute-force count over every completion of the NULL operands (INFO §2.11.3.1)", () => {
+  it("any-n agrees with a brute-force count over every completion of the NULL operands", () => {
     fc.assert(
       fc.property(truths, fc.nat(6), fc.nat(6), (values, min, max) => {
         const unknown = values.filter((value) => value === null).length;
@@ -2286,7 +2298,7 @@ describe("properties", () => {
     );
   });
 
-  it("gives an integer exactly when every operand is an integer, and NULL outside the safe integers (D3)", () => {
+  it("gives an integer exactly when every operand is an integer, and NULL outside the safe integers", () => {
     const operand = fc.oneof(
       safeInteger.map((x) => ({ value: x, baseType: "integer" as const })),
       fc.double({ noNaN: true, min: -1e6, max: 1e6 }).map((x) => ({ value: x, baseType: "float" as const })),

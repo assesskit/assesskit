@@ -1,6 +1,5 @@
 import { describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { fitValue } from "../processing/assign.js";
 import {
   createItemVariables,
   DURATION,
@@ -10,6 +9,7 @@ import {
   QTI_CONTEXT,
   type TestScope,
 } from "../processing/index.js";
+import { fitValue } from "../processing/internal.js";
 import { single, type Value } from "../values/index.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
@@ -18,13 +18,21 @@ import type { ItemKey } from "./plan.js";
 import { type PlanIndex, planIndex } from "./plan-index.js";
 import { ancestry, type ItemRefNode } from "./structure.js";
 
-/** Returns the time a clock shows as the value of a `duration` variable: seconds, truncated to the millisecond (G20). */
+/**
+ * Returns the time a clock shows as the value of a `duration` variable: seconds, truncated to the millisecond.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 export function durationOf(clocks: readonly ScopeClock[], scope: ScopeClock["scope"], identifier: string): Value {
   const spent = clocks.find((clock) => clock.scope === scope && clock.identifier === identifier)?.spent ?? 0;
   return single("duration", Math.floor(spent) / MILLISECONDS_PER_SECOND);
 }
 
-/** Whether an item reference is in the subset that a filter keeps (INFO §7.27). */
+/**
+ * Whether an item reference is in the subset that a filter keeps.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
   const { sectionIdentifier, includeCategories, excludeCategories } = filter;
   const categories = node.model.category ?? [];
@@ -41,9 +49,14 @@ function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
 }
 
 /**
- * What the expressions of a test read in a session (INFO §2.11): the item sessions of the instances of the plan, and the
- * variables of the test that are not outcomes. An instance not yet presented reads as a session in the state `initial`
- * before template processing, so that it counts as selected and nothing else (INFO §2.11.2.1–5).
+ * What the expressions of a test read in a session: the item sessions of the instances of the plan, and the variables
+ * of the test that are not outcomes.
+ *
+ * @remarks
+ * An instance not yet presented reads as a session in the state `initial` before template processing, so that it counts
+ * as selected and nothing else.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export class SessionScope implements TestScope {
   private readonly course: Course;
@@ -57,7 +70,7 @@ export class SessionScope implements TestScope {
     this.index = planIndex(state.plan);
   }
 
-  /** Returns the instances of the plan that the filter keeps, in presentation order (INFO §2.11.2). */
+  /** Returns the instances of the plan that the filter keeps, in presentation order. */
   *itemSessions(filter: ItemSessionFilter): Iterable<ItemSessionView> {
     for (const { key } of this.index.placements) {
       const entry = this.entry(key.ref);
@@ -66,9 +79,12 @@ export class SessionScope implements TestScope {
   }
 
   /**
-   * Returns the instance that `ITEM.VAR` or `ITEM.n.VAR` names (INFO §2.11.1.2, B38). Without `n`, the instance whose
-   * attempt ended last, so the last submitted instance in simultaneous mode and also in individual mode (G9); before
-   * any ended, the last instance of the plan.
+   * Returns the instance that `ITEM.VAR` or `ITEM.n.VAR` names. Without `n`, the instance whose attempt ended last, so
+   * the last submitted instance in simultaneous mode and also in individual mode; before any ended, the last instance
+   * of the plan.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   itemSession(identifier: string, instance: number | undefined): ItemSessionView | undefined {
     const instances = this.index.instances(identifier);
@@ -90,8 +106,10 @@ export class SessionScope implements TestScope {
 
   /**
    * Returns a variable of the test that is not an outcome: `duration` of the test and `PART.duration` or
-   * `SECTION.duration` (INFO §2.8.5, T22), a context variable of the test or `QTI_CONTEXT` as the host gave it, else
-   * its default (B50), and NULL for a variable of an item reference with no such instance in the plan.
+   * `SECTION.duration`, a context variable of the test or `QTI_CONTEXT` as the host gave it, else its default, and NULL
+   * for a variable of an item reference with no such instance in the plan.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   variable(identifier: string): Value | null | undefined {
     const [prefix = "", ...rest] = identifier.split(".");

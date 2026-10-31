@@ -20,15 +20,15 @@ import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
 import { DataError, type Issue } from "../errors.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
-import type { VariableType } from "../processing/assign.js";
 import {
   BUILT_IN_CONTEXTS,
   type CustomOperator,
   DEFAULT_PROCESSING_LIMITS,
   declaredValue,
   type ProcessingLimits,
+  type VariableType,
 } from "../processing/index.js";
-import { checkItem, initialOutcome } from "../processing/variables.js";
+import { checkItem, initialOutcome } from "../processing/internal.js";
 import { validateAsi, validateTest } from "../validate/index.js";
 import type { Value } from "../values/index.js";
 import type { CatSectionRef } from "./cat-session.js";
@@ -45,8 +45,9 @@ import {
 } from "./structure.js";
 
 /**
- * What the engine delivers: a test, or an item alone for practice (E12).
+ * What the engine delivers: a test, or an item alone for practice.
  *
+ * @remarks
  * - `test`: the test, the path of its document, the resolvers of its references, such as those of `packageResolvers`,
  *   and where the CAT engine of each adaptive section is.
  * - `item`: the item, the path of its document, the resolver of the stimuli it names, and the item session control that
@@ -64,8 +65,10 @@ export type DeliveryDefinition =
       readonly resolvers: Resolvers;
       /**
        * The CAT engine of each adaptive section, by the identifier of the section: the URL prefix of the engine and the
-       * identifier that `CatPort.createSection` returned when the host deployed the section (C1). The test needs an entry
-       * for each of its adaptive sections and for no other section. Default: none.
+       * identifier that `CatPort.createSection` returned when the host deployed the section. The test needs an entry
+       * for each of its adaptive sections and for no other section.
+       *
+       * @defaultValue none
        */
       readonly catSections?: ReadonlyMap<string, CatSectionRef>;
     }
@@ -77,26 +80,38 @@ export type DeliveryDefinition =
       /** The path of the item document, named in the issues of the static checks; its references resolve against it. */
       readonly base: string;
       /**
-       * The resolver of the stimuli the item names, such as that of `packageResolvers`. Default: none, so that an item
-       * that names a stimulus presents it without one.
+       * The resolver of the stimuli the item names, such as that of `packageResolvers`.
+       *
+       * @defaultValue none, so that an item that names a stimulus presents it without one
        */
       readonly resolvers?: Pick<Resolvers, "stimuli">;
-      /** The item session control of the item, as `standaloneSessionControl` applies it. Default: none. */
+      /**
+       * The item session control of the item, as `standaloneSessionControl` applies it.
+       *
+       * @defaultValue none
+       */
       readonly control?: ItemSessionControl;
     };
 
 /** The options of `createEngine`. */
 export interface EngineOptions {
-  /** The custom operators, by the `definition` of a `qti-custom-operator`, else by its `class`. Default: none. */
+  /**
+   * The custom operators, by the `definition` of a `qti-custom-operator`, else by its `class`.
+   *
+   * @defaultValue none
+   */
   readonly customOperators?: ReadonlyMap<string, CustomOperator>;
   /**
    * Returns the response processing that a template URI names, for templates other than the six standard ones.
-   * Default: none.
+   *
+   * @defaultValue none
    */
   readonly resolveTemplate?: (uri: string) => ResponseProcessing | undefined;
   /**
    * Limits that replace those of `DEFAULT_PROCESSING_LIMITS` and `DEFAULT_PLAN_LIMITS`; a limit left out keeps its
-   * default. Default: none.
+   * default.
+   *
+   * @defaultValue none
    */
   readonly limits?: Partial<ProcessingLimits & PlanLimits>;
 }
@@ -113,18 +128,18 @@ interface CandidateStimulus {
 export interface Candidate {
   /** The manifest resource; for an item delivered alone, the identifier of the item. */
   readonly resource: string;
-  /** The item; a link to a tool is modeled as an item (E25). */
+  /** The item; a link to a tool is modeled as an item. */
   readonly item: AssessmentItem;
   /** The link to a tool that the item models; absent for a QTI item. */
   readonly link?: LtiLink;
   /**
-   * The package path of the document of the item, against which its references resolve (B93); absent for a variant,
-   * whose path the resolvers do not give.
+   * The package path of the document of the item, against which its references resolve; absent for a variant, whose
+   * path the resolvers do not give.
    */
   readonly path?: string;
   /** The stimuli the item names, in the order it names them. */
   readonly stimuli: readonly CandidateStimulus[];
-  /** The hazards of the resource, in the terms of the DRD (B99). */
+  /** The hazards of the resource, in the terms of the DRD. */
   readonly hazards: readonly DrdHazardTerm[];
   /** The languages of a variant's adaptation, BCP 47 tags; none for the item itself. */
   readonly languages: readonly string[];
@@ -136,7 +151,7 @@ export interface CourseItem {
   readonly node: ItemRefNode;
   /** The item session control of its instances. */
   readonly control: EffectiveSessionControl;
-  /** The item, then its variants in the order of the manifest (B100). */
+  /** The item, then its variants in the order of the manifest. */
   readonly candidates: readonly [Candidate, ...Candidate[]];
 }
 
@@ -149,9 +164,9 @@ export interface Course {
   readonly structure: TestStructure;
   /** The item references, by identifier. */
   readonly items: ReadonlyMap<string, CourseItem>;
-  /** The starting value of each outcome of the test (INFO §2.2.2.3, §2.9). */
+  /** The starting value of each outcome of the test. */
   readonly outcomes: ReadonlyMap<string, Value | null>;
-  /** The default value of each context variable of the test (INFO §2.2.2.1). */
+  /** The default value of each context variable of the test. */
   readonly contexts: ReadonlyMap<string, Value | null>;
   /** Every declaration of each context variable, the test's and the items', and `QTI_CONTEXT`, by identifier. */
   readonly contextTypes: ReadonlyMap<string, readonly VariableType[]>;
@@ -161,11 +176,11 @@ export interface Course {
   readonly resolveTemplate: ((uri: string) => ResponseProcessing | undefined) | undefined;
   /** The limits of processing and planning. */
   readonly limits: ProcessingLimits & PlanLimits;
-  /** The CAT engine of each adaptive section of the test, by the identifier of the section (E18). */
+  /** The CAT engine of each adaptive section of the test, by the identifier of the section. */
   readonly catSections: ReadonlyMap<string, CatSectionRef>;
-  /** The covers of the externally scored outcomes of the test, by outcome identifier (O2, O4). */
+  /** The covers of the externally scored outcomes of the test, by outcome identifier. */
   readonly covers: ReadonlyMap<string, readonly ScoreCover[]>;
-  /** Whether the course delivers one item alone, so that no test exists to report on (E12). */
+  /** Whether the course delivers one item alone, so that no test exists to report on. */
   readonly standalone: boolean;
 }
 
@@ -185,12 +200,12 @@ export function candidateOf(entry: CourseItem, variant: string | undefined): Can
   return candidate;
 }
 
-/** Returns the title that the candidate sees: the title of the link for an item that models a link to a tool (E25). */
+/** Returns the title that the candidate sees: the title of the link for an item that models a link to a tool. */
 export function candidateTitle(candidate: Candidate): string {
   return candidate.link?.title ?? candidate.item.title;
 }
 
-/** Returns the context values that an item reads: those of the variables it declares, and `QTI_CONTEXT` (B50). */
+/** Returns the context values that an item reads: those of the variables it declares, and `QTI_CONTEXT`. */
 export function itemContextValues(
   values: ReadonlyMap<string, Value | null>,
   item: AssessmentItem,
@@ -232,7 +247,7 @@ function checkEngineOptions(options: EngineOptions): Pick<Course, "customOperato
 }
 
 /**
- * Throws the errors of the static checks, which would fail when a session runs (E26).
+ * Throws the errors of the static checks, which would fail when a session runs.
  *
  * @throws `DataError` when an issue is an error.
  */
@@ -248,7 +263,7 @@ function gate(issues: readonly Issue[], what: string): void {
   );
 }
 
-/** Returns the item that a deliverable presents: a QTI item, or the model of a link to a tool (E25). */
+/** Returns the item that a deliverable presents: a QTI item, or the model of a link to a tool. */
 function itemOf(deliverable: DeliverableItem): AssessmentItem {
   return deliverable.kind === "qti" ? deliverable.item : ltiItem(deliverable.identifier);
 }
@@ -256,8 +271,8 @@ function itemOf(deliverable: DeliverableItem): AssessmentItem {
 const isDrdHazard = (term: string): term is DrdHazardTerm => [...HAZARD_TERMS.keys()].some((known) => known === term);
 
 /**
- * Returns the stimuli an item names, each resolved against the document of the item (B62). Without resolvers an item
- * has none.
+ * Returns the stimuli an item names, each resolved against the document of the item. Without resolvers an item has
+ * none.
  */
 function stimuliOf(
   item: AssessmentItem,
@@ -293,8 +308,8 @@ function makeCandidate(
 }
 
 /**
- * Returns the item and the variants of a resolved item reference. The path is that of the item's document; the variants'
- * paths are not known to the resolvers.
+ * Returns the item and the variants of a resolved item reference. The path is that of the item's document; the
+ * variants' paths are not known to the resolvers.
  */
 function candidatesOf(
   resolved: ResolvedItem,
@@ -361,7 +376,11 @@ function courseOf(
   return { structure, items, outcomes, contexts, contextTypes, covers: readScoreCovers(test), ...options, ...adaptive };
 }
 
-/** Returns the adaptive sections of a structure in document order (CAT §2.1). */
+/**
+ * Returns the adaptive sections of a structure in document order.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 function adaptiveSectionsOf(structure: TestStructure): SectionNode[] {
   const below = (section: SectionNode): SectionNode[] => [
     ...(section.model.adaptiveSelection === undefined ? [] : [section]),
@@ -372,7 +391,7 @@ function adaptiveSectionsOf(structure: TestStructure): SectionNode[] {
 
 /**
  * Checks the CAT engines of the adaptive sections: each adaptive section has one, and each entry names an adaptive
- * section (C1).
+ * section.
  *
  * @throws `DataError` when the entries are not a Map of prefix and identifier, or do not match the adaptive sections.
  */
@@ -397,7 +416,7 @@ function checkCatSections(structure: TestStructure, given: unknown): ReadonlyMap
   for (const identifier of adaptive) {
     if (!given.has(identifier)) {
       throw new DataError(
-        `The adaptive section ${describe(identifier)} needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned (CAT §3.1).`,
+        `The adaptive section ${describe(identifier)} needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned.`,
       );
     }
   }
@@ -434,7 +453,7 @@ function testCourse(definition: Extract<DeliveryDefinition, { kind: "test" }>, o
   });
 }
 
-/** Builds the course of an item delivered alone: a test of one nonlinear part with the item (E12). */
+/** Builds the course of an item delivered alone: a test of one nonlinear part with the item. */
 function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, options: EngineOptions): Course {
   const { item, base, control, resolvers } = definition;
   checkItem(item);
@@ -456,7 +475,7 @@ function itemCourse(definition: Extract<DeliveryDefinition, { kind: "item" }>, o
 }
 
 /**
- * Builds the course of a definition, after the static checks (E26).
+ * Builds the course of a definition, after the static checks.
  *
  * @throws `DataError` when an argument has the wrong type, or the static checks find an error.
  * @throws `ReadError` from a resolver, when a reference cannot be resolved after the checks.

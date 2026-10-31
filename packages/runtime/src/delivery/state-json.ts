@@ -43,11 +43,16 @@ function itemToJson(item: DeliveredItem): unknown {
 }
 
 /**
- * Writes a state as JSON text (E2): plain data whose values are `WireValue`s, NULL as `null`, and whose maps are arrays
- * of entries, so that an identifier such as `__proto__` stays data (E30). File values are references (D7). The text
- * carries the version of the format, which `deserializeState` checks.
+ * Writes a state as JSON text: plain data whose values are `WireValue`s, NULL as `null`, and whose maps are arrays of
+ * entries, so that an identifier such as `__proto__` stays data.
  *
+ * @remarks
+ * File values are references. The text carries the version of the format, which `deserializeState` checks.
+ *
+ * @param state - The state.
+ * @returns The JSON text.
  * @throws `DataError` when the state is not one.
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function serializeState(state: DeliveryState): string {
   checkState(state);
@@ -147,9 +152,13 @@ const stateSchema: Schema<DeliveryState> = v.object({
 });
 
 /**
- * Reads a state that {@link serializeState} wrote, checking it deeply: its version, and the type of every field. A state
- * of another version of the format is refused, as the runtime reads only its own.
+ * Reads a state that {@link serializeState} wrote, checking it deeply: its version, and the type of every field.
  *
+ * @remarks
+ * A state of another version of the format is refused, as the runtime reads only its own.
+ *
+ * @param text - The JSON text that `serializeState` wrote.
+ * @returns The state.
  * @throws `DataError` when the text is not JSON, is of another version, or is not a state.
  */
 export function deserializeState(text: string): DeliveryState {

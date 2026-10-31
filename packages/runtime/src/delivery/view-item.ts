@@ -22,7 +22,11 @@ function responseIdentifiers(interactions: readonly InteractionDescriptor[]): Re
   );
 }
 
-/** Returns the value of the attempts left including the open one; none when the item allows any number (INFO §7.19.1). */
+/**
+ * Returns the value of the attempts left including the open one; none when the item allows any number.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function attemptsLeft(item: AssessmentItem, maxAttempts: number | undefined, counted: number): number | undefined {
   const most = maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
   return isAdaptive(item) || most === 0 ? undefined : Math.max(0, most - counted);
@@ -33,7 +37,7 @@ function distinctCatalogs(catalogs: readonly Catalog[]): Catalog[] {
   return [...new Map(catalogs.map((catalog) => [catalog.id, catalog])).values()];
 }
 
-/** Returns the template and context values that the interactions pass to their modules, by response identifier (E29). */
+/** Returns the template and context values that the interactions pass to their modules, by response identifier. */
 function pciViews(body: readonly BodyNode[], delivered: DeliveredItem): ReadonlyMap<string, PciView> {
   const { variables, pciStates } = delivered.session;
   return new Map(
@@ -76,10 +80,12 @@ function variantViewOf(resource: string, language: string | undefined): VariantV
 }
 
 /**
- * Builds what the candidate sees of the item instance presented (E19). Every field is built from the parts of the
- * session and the item that the candidate may see, named one by one: the item's answer keys, mappings and processing, the
- * template and outcome values, and the content that the variables hide are not read into the view (E20). The correct
- * responses are read only in the solution state (E21).
+ * Builds what the candidate sees of the item instance presented.
+ *
+ * @remarks
+ * Every field is built from the parts of the session and the item that the candidate may see, named one by one: the
+ * item's answer keys, mappings and processing, the template and outcome values, and the content that the variables hide
+ * are not read into the view. The correct responses are read only in the solution state.
  */
 export function candidateItem(state: DeliveryState, delivered: DeliveredItem, entry: CourseItem): CandidateItem {
   const { session } = delivered;

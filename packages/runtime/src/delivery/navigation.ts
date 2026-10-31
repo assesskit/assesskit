@@ -15,9 +15,13 @@ import {
 import type { TestStructure } from "./structure.js";
 
 /**
- * What the expressions of pre-conditions and branch rules read: the outcomes of the test as they are now, the item
- * sessions and other variables of the test, and the processing context (INFO §2.8.3). They are the arguments of
- * `runOutcomeProcessing` after the test.
+ * What the expressions of pre-conditions and branch rules read: the current outcomes of the test, the item
+ * sessions and other variables of the test, and the processing context.
+ *
+ * @remarks
+ * They are the arguments of `runOutcomeProcessing` after the test.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export interface RuleContext {
   /** The values of the outcomes of the test, by identifier; an outcome left out has its starting value. */
@@ -27,13 +31,19 @@ export interface RuleContext {
   /** The source of random draws, the custom operators and the limits. */
   readonly context: ProcessingContext;
   /**
-   * Whether the candidate has entered the instance of an adaptive section, so that the walk stops at one that it has not:
-   * its first stage comes from the CAT engine (E18). Default: none, so that an adaptive section without items is passed.
+   * Whether the candidate has entered the instance of an adaptive section, so that the walk stops at one that it has
+   * not: its first stage comes from the CAT engine.
+   *
+   * @defaultValue none, so that an adaptive section without items is passed
    */
   readonly catStarted?: (section: string, instance: number) => boolean;
 }
 
-/** The branch rule targets that name no node but a place to leave (INFO §5.23.1). */
+/**
+ * The branch rule targets that name no node but a place to leave.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const EXIT_SECTION = "EXIT_SECTION";
 const EXIT_TESTPART = "EXIT_TESTPART";
 const EXIT_TEST = "EXIT_TEST";
@@ -65,8 +75,9 @@ const END: Move = { to: "end" };
 
 /**
  * Where the candidate goes on leaving an item or a section: an item, of the same test part or of another that a branch
- * rule leads to; an adaptive section that the candidate has not entered, whose first stage the CAT engine gives (E18); the end of the test part, after which the walk goes on from the part once it has ended; or the end of
- * the test, at `EXIT_TEST` or after the last part.
+ * rule leads to; an adaptive section that the candidate has not entered, whose first stage the CAT engine gives; the
+ * end of the test part, after which the walk goes on from the part once it has ended; or the end of the test, at
+ * `EXIT_TEST` or after the last part.
  */
 export type Destination =
   | { readonly to: "item"; readonly key: ItemKey }
@@ -140,8 +151,10 @@ function rootOf(frame: Frame): Frame {
 
 /**
  * A walk over a plan in the order of presentation, which decides what follows an item in a linear test part: it skips
- * what a pre-condition rules out and follows the branch rules (INFO §2.8.3). The rules of a test part and of what it
- * holds apply only when the part is linear.
+ * what a pre-condition rules out and follows the branch rules. The rules of a test part and of what it holds apply only
+ * when the part is linear.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 class Walk {
   private readonly structure: TestStructure;
@@ -171,7 +184,10 @@ class Walk {
 
   /**
    * Returns where the candidate goes on leaving a node that holds an item: the item itself, or one of the sections it
-   * lies in. The walk stops where the test part of the item would be completed.
+   * lies in.
+   *
+   * @remarks
+   * The walk stops where the test part of the item would be completed.
    *
    * @throws `DataError` when the plan has no such item instance, or the node does not hold it.
    */
@@ -200,7 +216,8 @@ class Walk {
   }
 
   /**
-   * Returns where the candidate goes once a test part has ended: the part is completed, so that its branch rules follow.
+   * Returns where the candidate goes once a test part has ended: the part is completed, so that its branch rules
+   * follow.
    *
    * @throws `DataError` when the plan has no such test part.
    */
@@ -258,13 +275,16 @@ class Walk {
     return model;
   }
 
-  /** Whether the rules of the frame apply: its test part is linear (INFO §2.8.3). */
+  /** Whether the rules of the frame apply: its test part is linear. */
   private applies(frame: Frame): boolean {
     return navigationMode(this.structure, identifierOf(rootOf(frame).node)) === "linear";
   }
 
   /**
-   * Returns whether an expression is true. NULL counts as false (B47).
+   * Returns whether an expression is true.
+   *
+   * @remarks
+   * NULL counts as false.
    *
    * @throws `ProcessingError` when the expression fails, or is not a single boolean.
    */
@@ -280,12 +300,12 @@ class Walk {
     return value.value === true;
   }
 
-  /** Whether every pre-condition of the frame is true, evaluated in order (INFO §4.2.9). */
+  /** Whether every pre-condition of the frame is true, evaluated in order. */
   private eligible(frame: Frame): boolean {
     return this.modelOf(frame).preConditions.every((condition) => this.holds(condition.operand));
   }
 
-  /** Whether the frame is an item of an adaptive section, whose pre-conditions and branch rules are ignored (B66, CAT §2.3). */
+  /** Whether the frame is an item of an adaptive section, whose pre-conditions and branch rules are ignored. */
   private inAdaptive(frame: Frame): boolean {
     if (frame.node.kind !== "item") return false;
     return pathTo(frame).some(
@@ -331,13 +351,15 @@ class Walk {
   }
 
   /**
-   * Returns where a branch rule of a node leads when it fires, `undefined` when its target is not ahead of the node
-   * (INFO §5.23.1). A target is ahead when it comes after everything in the node and is a test part or lies in the
-   * node's own test part; one that selection left out is not in the plan.
+   * Returns where a branch rule of a node leads when it fires, `undefined` when its target is not ahead of the node. A
+   * target is ahead when it comes after everything in the node and is a test part or lies in the node's own test part;
+   * one that selection left out is not in the plan.
    *
    * - `EXIT_TEST` ends the test and `EXIT_TESTPART` completes the test part, so that its branch rules follow.
    * - `EXIT_SECTION` completes the section that holds the node, so that its branch rules follow. A node that is a
    *   section or a part has nothing to leave: the walk goes on after it.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   private destination(owner: Frame, target: string): Move | undefined {
     switch (target) {
@@ -396,32 +418,36 @@ function checkArguments(structure: TestStructure, plan: TestPlan): void {
 }
 
 /**
- * Returns the item to present after the candidate leaves an item, or the first item of the test (B26, B28, B29).
+ * Returns the item to present after the candidate leaves an item, or the first item of the test.
  *
+ * @remarks
  * - In a nonlinear test part the next item is the next one in the plan, and the first item of the next part after the
- *   last; pre-conditions and branch rules are ignored there, and so are those of the part itself (INFO §2.8.3).
+ *   last; pre-conditions and branch rules are ignored there, and so are those of the part itself.
  * - In a linear part, entering a node evaluates its `qti-pre-condition`s in order and skips the node, with everything
  *   in it, when one is false or NULL. Completing a node, after its last child or after an exit, evaluates its
- *   `qti-branch-rule`s in order and the first that is true decides. A skipped node is not completed, so its branch
- *   rules do not run. A part that has no item to present is passed over.
+ *   `qti-branch-rule`s in order and the first that is true decides. A skipped node is not completed, so its branch rules
+ *   do not run. A part that has no item to present is passed over.
  * - A branch rule target is an item or a section in the same part, or a test part, ahead of the node that has the
- *   rule; a rule whose target is behind it, inside it, in another part, or not in the plan because selection left it
- *   out, is not evaluated. The target is entered, from the outermost section that the walk has not entered; a false
- *   pre-condition on the way skips that section. Of the occurrences of a target that selection with replacement
- *   repeated, the first ahead is the target.
+ *   rule; a rule whose target is behind it, inside it, in another part, or not in the plan because selection left it out,
+ *   is not evaluated. The target is entered, from the outermost section that the walk has not entered; a false
+ *   pre-condition on the way skips that section. Of the occurrences of a target that selection with replacement repeated,
+ *   the first ahead is the target.
  * - `EXIT_SECTION` completes the section that holds the node, `EXIT_TESTPART` the test part, and `EXIT_TEST` ends the
  *   test; the branch rules of what is completed follow. A rule of a section for `EXIT_SECTION`, or of a part for
  *   `EXIT_TESTPART`, finds nothing to leave and the walk goes on after the node.
  * - A section that ordering mixed into its parent is not in the plan, so its pre-conditions and branch rules do not
  *   run.
  *
- * @param from - The item the candidate leaves. Default: the start of the test, which gives its first item.
+ * @param structure - The test, from {@link resolveStructure}.
+ * @param plan - The plan of the session, from {@link planTest}.
+ * @param from - The item the candidate leaves. Without it, the start of the test, which gives its first item.
  * @param rules - What the expressions read.
  * @returns The next item instance; `undefined` when the test has no further item.
  * @throws `DataError` when an argument has the wrong type, the plan does not match the structure, or `from` is not in
  * the plan.
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-pre-condition}
  */
 export function nextItem(
   structure: TestStructure,
@@ -437,14 +463,15 @@ export function nextItem(
 }
 
 /**
- * Returns where the candidate goes on leaving an item, or a section it lies in, as {@link nextItem} decides, except that
- * the walk stops at the end of the test part of the item: the engine ends the part, so that its submissions and outcome
- * processing come first, then calls {@link itemAfterPart} (INFO §2.8.2–3). Its callers pass a structure, a plan and an
- * instance of the session, so the arguments are not checked.
+ * Returns where the candidate goes on leaving an item, or a section it lies in, as {@link nextItem} decides, except
+ * that the walk stops at the end of the test part of the item: the engine ends the part, so that its submissions and
+ * outcome processing come first, then calls {@link itemAfterPart}. Its callers pass a structure, a plan and an instance
+ * of the session, so the arguments are not checked.
  *
  * @param node - The identifier of the item reference of `from`, or of a section that `from` lies in.
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function destinationAfter(
   structure: TestStructure,
@@ -458,7 +485,10 @@ export function destinationAfter(
 
 /**
  * Returns where the candidate goes once a test part ended, as {@link itemAfterPart} decides, with the adaptive sections
- * the candidate has not entered among the destinations. Its callers pass a structure and a plan of the session.
+ * the candidate has not entered among the destinations.
+ *
+ * @remarks
+ * Its callers pass a structure and a plan of the session.
  *
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
@@ -474,7 +504,10 @@ export function destinationAfterPart(
 
 /**
  * Returns where the candidate goes on leaving an adaptive section that has no item to present, as {@link nextItem}
- * decides. Its callers pass a structure and a plan of the session.
+ * decides.
+ *
+ * @remarks
+ * Its callers pass a structure and a plan of the session.
  *
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
@@ -491,7 +524,10 @@ export function destinationAfterSection(
 
 /**
  * Returns where the session starts, as {@link nextItem} decides without a `from`, with an adaptive section among the
- * destinations. Its callers pass a structure and a plan of the session.
+ * destinations.
+ *
+ * @remarks
+ * Its callers pass a structure and a plan of the session.
  *
  * @throws `ProcessingError` when an expression fails, or does not give a single boolean or NULL.
  * @throws `SecurityError` when an expression builds a container above the limit.
@@ -502,8 +538,11 @@ export function startDestination(structure: TestStructure, plan: TestPlan, rules
 
 /**
  * Returns the item before an item in its test part, which the candidate may go back to: only in a nonlinear part, since
- * a linear part moves forward only (B26).
+ * a linear part moves forward only.
  *
+ * @param structure - The test, from {@link resolveStructure}.
+ * @param plan - The plan of the session, from {@link planTest}.
+ * @param from - The item the candidate leaves.
  * @returns The previous item instance; `undefined` for the first item of the part and for any item of a linear part.
  * @throws `DataError` when an argument has the wrong type, the plan does not match the structure, or `from` is not in
  * the plan.

@@ -1,8 +1,8 @@
 import { checkOptions, checkString, describe } from "../checks.js";
 import { AssesskitError, DataError } from "../errors.js";
 import { describeInteractions, initialResponse, shuffleChoices } from "../interactions/index.js";
-import { describeType, fitValue } from "../processing/assign.js";
-import { createItemVariables, type ItemVariables, runTemplateProcessing } from "../processing/index.js";
+import { createItemVariables, describeType, type ItemVariables, runTemplateProcessing } from "../processing/index.js";
+import { fitValue } from "../processing/internal.js";
 import { normalizeValue, type Value } from "../values/index.js";
 import { endAttempt, itemEvent, startAttempt, timed } from "./attempt.js";
 import {
@@ -20,22 +20,29 @@ import { checkKey, type ItemKey } from "./plan.js";
 /** The options of {@link startItemSession}. */
 export interface StartItemSessionOptions {
   /**
-   * The values of context variables, `QTI_CONTEXT` included, which are set before any processing (INFO §2.2.2.1). A
-   * context variable left out has its default value, else NULL. Default: none.
+   * The values of context variables, `QTI_CONTEXT` included, which are set before any processing. A context variable
+   * left out has its default value, else NULL.
+   *
+   * @defaultValue none
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly contextValues?: ReadonlyMap<string, Value | null>;
   /**
    * The default values that the test gives template variables in place of their declared ones, by identifier: the
-   * values of the `qti-template-default`s of the item reference (INFO §5.6.14, §5.152). Default: none.
+   * values of the `qti-template-default`s of the item reference.
+   *
+   * @defaultValue none
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-template-default}
    */
   readonly templateDefaults?: ReadonlyMap<string, Value | null>;
 }
 
 /**
- * Returns the variables with the default values of template variables replaced, before template processing starts
- * from them (INFO §5.152).
+ * Returns the variables with the default values of template variables replaced, before template processing starts from
+ * them.
  *
  * @throws `DataError` when a value names no template variable of the item, or does not fit its declaration.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function withTemplateDefaults(
   variables: ItemVariables,
@@ -71,11 +78,13 @@ function withTemplateDefaults(
 }
 
 /**
- * Starts the session of an item instance, in the state `initial` (INFO §2.2.1). The variables start as
- * `createItemVariables` gives them, with the context values set (B6, B7, T21) and the template defaults of the test in
- * place of the declared ones (B41), and template processing runs once, so that the session records the template values
- * of its clone (INFO §2.7, B11, B59). When template processing fails, the template variables keep their default values
- * and the step reports `processing-failed` (E26).
+ * Starts the session of an item instance, in the state `initial`.
+ *
+ * @remarks
+ * The variables start as `createItemVariables` gives them, with the context values set and the template defaults of the
+ * test in place of the declared ones, and template processing runs once, so that the session records the template
+ * values of its clone. When template processing fails, the template variables keep their default values and the step
+ * reports `processing-failed`.
  *
  * @param key - The item instance: the identifier of its item reference and its instance; for an item delivered alone,
  * such as `{ ref: item.identifier, instance: 1 }`.
@@ -86,6 +95,7 @@ function withTemplateDefaults(
  * @throws `DataError` when an argument has the wrong type, or a context value or template default names no variable of
  * the item or does not fit its declaration.
  * @throws `ProcessingError` when a declared value is not in the lexical form of its base type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function startItemSession(
   key: ItemKey,
@@ -124,9 +134,10 @@ export function startItemSession(
 }
 
 /**
- * Draws the order of the choices of each interaction (INFO §5.30.1, B57), in document order. An order interaction whose
- * response starts from a default value keeps the order of the document, because the default gives the order (INFO
- * §2.4.1.2, B54).
+ * Draws the order of the choices of each interaction, in document order. An order interaction whose response starts
+ * from a default value keeps the order of the document, because the default gives the order.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function drawChoiceOrders(session: ItemSession, context: ItemSessionContext): ItemSession["choiceOrders"] {
   const orders = new Map<string, readonly (readonly string[])[]>();
@@ -142,15 +153,20 @@ function drawChoiceOrders(session: ItemSession, context: ItemSessionContext): It
 }
 
 /**
- * Presents the item to the candidate (INFO §2.2.1). The first presentation draws the order of the choices and starts the
- * first attempt: `numAttempts` becomes 1, the response variables take their default values, and `completionStatus`
- * becomes `unknown` (B3, B5, B6). A suspended session resumes. Either way the session is `interacting`, its time runs
- * (B4), and the step reports `presented`. A session that is interacting or closed stays as it is.
+ * Presents the item to the candidate.
  *
+ * @remarks
+ * The first presentation draws the order of the choices and starts the first attempt: `numAttempts` becomes 1, the
+ * response variables take their default values, and `completionStatus` becomes `unknown`. A suspended session resumes.
+ * Either way the session is `interacting`, its time runs, and the step reports `presented`. A session that is
+ * interacting or closed stays as it is.
+ *
+ * @param session - The item session.
  * @param at - The time, in epoch milliseconds.
  * @param context - The item, its control, and the source of the draws of shuffling.
  * @returns The step, or a refusal `clock-regression` when `at` is earlier than the latest change of the session.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function presentItem(session: ItemSession, at: number, context: ItemSessionContext): ItemStep {
   checkSession(session);
@@ -174,13 +190,17 @@ export function presentItem(session: ItemSession, at: number, context: ItemSessi
 }
 
 /**
- * Suspends an interacting session, as when the candidate moves to another item or the candidate session is suspended
- * (INFO §2.2.1): its time stops and `duration` shows the time spent (B4). An open attempt stays open with its drafts.
- * A session in another state stays as it is.
+ * Suspends an interacting session, as when the candidate moves to another item or the candidate session is suspended:
+ * its time stops and `duration` shows the time spent.
  *
+ * @remarks
+ * An open attempt stays open with its drafts. A session in another state stays as it is.
+ *
+ * @param session - The item session.
  * @param at - The time, in epoch milliseconds.
  * @returns The step, or a refusal `clock-regression` when `at` is earlier than the latest change of the session.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function suspendItem(session: ItemSession, at: number): ItemStep {
   checkSession(session);
@@ -192,15 +212,19 @@ export function suspendItem(session: ItemSession, at: number): ItemStep {
 }
 
 /**
- * Closes the session, as at the end of a test part or when a time limit ends it (INFO §2.2.1, §2.5). An open attempt
- * ends with the drafts as its responses, without the checks of skipping and validity, and response processing runs. A
- * session that was never presented closes without an attempt, so its response variables stay NULL (B6). The time of
- * the session stops. A closed session stays as it is.
+ * Closes the session, as at the end of a test part or when a time limit ends it.
  *
+ * @remarks
+ * An open attempt ends with the drafts as its responses, without the checks of skipping and validity, and response
+ * processing runs. A session that was never presented closes without an attempt, so its response variables stay NULL.
+ * The time of the session stops. A closed session stays as it is.
+ *
+ * @param session - The item session.
  * @param at - The time, in epoch milliseconds.
  * @param context - The item, its control, and the processing.
  * @returns The step, or a refusal `clock-regression` when `at` is earlier than the latest change of the session.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function closeItem(session: ItemSession, at: number, context: ItemSessionContext): ItemStep {
   checkSession(session);

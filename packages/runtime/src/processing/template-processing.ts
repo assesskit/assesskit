@@ -8,8 +8,8 @@ import { ItemScope } from "./item-scope.js";
 import { checkItem, checkVariables, type ItemVariables } from "./variables.js";
 
 /**
- * The most times template processing runs to meet its constraints: the 100 iterations that INFO §5.150 assumes. After
- * the last, the template variables keep their default values and processing goes on.
+ * The most times template processing runs to meet its constraints: the 100 iterations that the specification assumes.
+ * After the last, the template variables keep their default values and processing goes on.
  */
 const MAX_TEMPLATE_RUNS = 100;
 
@@ -43,7 +43,7 @@ function runRule(rule: TemplateRule, run: Run): Flow {
     case "template-constraint":
       if (holds(rule.expression, scope, "qti-template-constraint")) return "continue";
       if (!run.last) return "restart";
-      // The runs are used up: the variables keep their defaults and processing goes on (INFO §5.150).
+      // The runs are used up: the variables keep their defaults and processing goes on.
       scope.restart(run.start);
       return "continue";
     case "exit-template":
@@ -64,16 +64,17 @@ function runRules(rules: readonly TemplateRule[], run: Run): Flow {
 }
 
 /**
- * Runs the template processing of an item for a new item session (INFO §2.7.3, §6.50). Template variables start from
- * their default values in `variables.defaults`, so that a test's template defaults apply when the caller puts them
- * there (INFO §5.152). The rules run in order: `qti-set-template-value`, `qti-set-correct-response` and
+ * Runs the template processing of an item for a new item session.
+ *
+ * @remarks
+ * Template variables start from their default values in `variables.defaults`, so that a test's template defaults apply
+ * when the caller puts them there. The rules run in order: `qti-set-template-value`, `qti-set-correct-response` and
  * `qti-set-default-value` set what they name, a condition runs its first true branch, and `qti-exit-template` ends
  * processing. A `qti-template-constraint` whose expression is false or NULL starts processing again from the defaults
- * (the template variables, and the correct responses, defaults and outcomes as they were given), at most
- * 100 times in all; when the last run fails it, the template variables keep their default values
- * and processing goes on after it (INFO §5.150). An outcome whose default value is set takes it as its value. Template
- * rules read only template and context variables (INFO §6.50). Draws come from `context.random`, so a seeded source
- * reproduces the instance.
+ * (the template variables, and the correct responses, defaults and outcomes as they were given), at most 100 times in
+ * all; when the last run fails it, the template variables keep their default values and processing goes on after it. An
+ * outcome whose default value is set takes it as its value. Template rules read only template and context variables.
+ * Draws come from `context.random`, so a seeded source reproduces the instance.
  *
  * @param item - The item, as `readAsi` reads it.
  * @param variables - The variables of the session, as `createItemVariables` returns them.
@@ -83,6 +84,7 @@ function runRules(rules: readonly TemplateRule[], run: Run): Flow {
  * @throws `ProcessingError` when a rule reads a response or outcome variable or one that is not declared, sets a
  * variable of another kind or with a value of another type, or an expression fails.
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-template-value}
  */
 export function runTemplateProcessing(
   item: AssessmentItem,

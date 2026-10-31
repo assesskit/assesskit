@@ -13,9 +13,9 @@ export interface ItemRules {
   readonly item: AssessmentItem;
   /** The item session control in force. */
   readonly control: EffectiveSessionControl;
-  /** How the test part submits the item (B27). */
+  /** How the test part submits the item. */
   readonly submission: "individual" | "simultaneous";
-  /** Whether a maximum time closed the item or a scope that holds it (D9). */
+  /** Whether a maximum time closed the item or a scope that holds it. */
   readonly closedByTime: boolean;
 }
 
@@ -26,7 +26,7 @@ function respondingTypes({ delivered, item, control, submission }: ItemRules): C
   const types: CandidateAction["type"][] = ["set-responses"];
   if (submission === "individual") {
     types.push("submit");
-    // A skip submits NULL responses, which an item without responses of the candidate cannot refuse (INFO §7.19.6).
+    // A skip submits NULL responses, which an item without responses of the candidate cannot refuse.
     if (control.allowSkipping || !setsResponses) types.push("skip");
     if (endAttempts.size > 0) types.push("end-attempt");
   }
@@ -49,11 +49,13 @@ function itemTypes(rules: ItemRules): CandidateAction["type"][] {
 }
 
 /**
- * Returns the types of the actions of the candidate that the state allows, in the order of `CANDIDATE_ACTION_TYPES`
- * (E19): a suspended session allows `resume` only, an ended one nothing; a running one allows the actions on the item
- * presented that its session allows, `move`, `end-part`, `end-test`, `suspend`, and `support` when a support is an
- * option. The rules are those of `Engine.apply`, which refuses every type left out. While the first stage of an adaptive
- * section is awaited there is no item and nothing to move to, so `move` is left out too (E18).
+ * Returns the types of the actions of the candidate that the state allows, in the order of `CANDIDATE_ACTION_TYPES`: a
+ * suspended session allows `resume` only, an ended one nothing; a running one allows the actions on the item presented
+ * that its session allows, `move`, `end-part`, `end-test`, `suspend`, and `support` when a support is an option.
+ *
+ * @remarks
+ * The rules are those of `Engine.apply`, which refuses every type left out. While the first stage of an adaptive
+ * section is awaited there is no item and nothing to move to, so `move` is left out too.
  */
 export function allowedActions(state: DeliveryState, rules: ItemRules | undefined): readonly CandidateAction["type"][] {
   if (state.status === "ended") return [];

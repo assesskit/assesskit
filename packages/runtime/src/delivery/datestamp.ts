@@ -8,8 +8,8 @@ const FIRST_INSTANT = -62_135_596_800_000;
 const LAST_INSTANT = 253_402_300_799_999;
 
 /**
- * Checks a time of the engine: epoch milliseconds, between the years 1 and 9999, so that a results report can write it as
- * a datestamp (RR `DateTimeDType`).
+ * Checks a time of the engine: epoch milliseconds, between the years 1 and 9999, so that a results report can write it
+ * as a datestamp (RR `DateTimeDType`).
  *
  * @param label - Names the time in the error message, such as `The time of the action`.
  * @throws `DataError` when it is not a finite number in that range.
@@ -24,10 +24,12 @@ export function checkInstant(value: unknown, label: string): asserts value is nu
 }
 
 /**
- * Returns a time as a datestamp: RFC 3339 `date-time` in UTC with milliseconds, such as `2026-10-30T12:00:00.000Z`. The
- * offset is always written because the JSON binding of CAT 1.0 declares `datestamp` as `format: date-time` (CAT binding
- * Appendix B1.2), while an `xs:dateTime` of Results Reporting may lack one; the form is an `xs:dateTime` too, so the same
- * text fills a report in either binding.
+ * Returns a time as a datestamp: RFC 3339 `date-time` in UTC with milliseconds, such as `2026-10-30T12:00:00.000Z`.
+ *
+ * @remarks
+ * The offset is always written because the JSON binding of CAT 1.0 declares `datestamp` as `format: date-time` while an
+ * `xs:dateTime` of Results Reporting may lack one; the form is an `xs:dateTime` too, so the same text fills a report in
+ * either binding.
  */
 export function datestampOf(instant: number): string {
   return new Date(instant).toISOString();

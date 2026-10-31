@@ -1,8 +1,13 @@
 import type { AssessmentResult } from "../results/index.js";
 
 /**
- * The configuration of an adaptive section, as the CAT engine receives it (CAT §4.1). Every file is base64-encoded
- * (RFC 4648).
+ * The configuration of an adaptive section, as the CAT engine receives it.
+ *
+ * @remarks
+ * Every file is base64-encoded.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, section data}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc4648 | RFC 4648, base encodings}
  */
 export interface SectionData {
   /** The settings file of the section, the one `qti-adaptive-settings-ref` references. */
@@ -14,8 +19,9 @@ export interface SectionData {
 }
 
 /**
- * A list of items of the item pool (CAT §4.2): the next stage of a session, or, in the answer to Get Section, the whole
- * pool.
+ * A list of items of the item pool: the next stage of a session, or, in the answer to Get Section, the whole pool.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, item stage}
  */
 export interface ItemStage {
   /**
@@ -31,13 +37,21 @@ export interface ItemStage {
   readonly stageLength?: number | null;
 }
 
-/** The answer to Create Section (CAT §3.1). */
+/**
+ * The answer to Create Section.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Create Section}
+ */
 export interface CreateSectionResponse {
   /** The identifier of the new section, which every later request about it names. */
   readonly sectionIdentifier: string;
 }
 
-/** The answer to Get Section (CAT §3.2): the section as the engine has deployed it. */
+/**
+ * The answer to Get Section: the section as the engine has deployed it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Get Section}
+ */
 export interface GetSectionResponse {
   /** The data from which the section could be created again. */
   readonly sectionData: SectionData;
@@ -45,7 +59,11 @@ export interface GetSectionResponse {
   readonly items: ItemStage;
 }
 
-/** One name and value of the prior data of a candidate; the engine defines the names and the values (CAT §3.3, §7.1). */
+/**
+ * One name and value of the prior data of a candidate; the engine defines the names and the values.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, prior data}
+ */
 export interface PriorDataEntry {
   /** The name of the datum. */
   readonly name: string;
@@ -53,7 +71,14 @@ export interface PriorDataEntry {
   readonly value: unknown;
 }
 
-/** The body of Create Session (CAT §3.3). Every field is optional, and a CAT engine may require some of them. */
+/**
+ * The body of Create Session.
+ *
+ * @remarks
+ * Every field is optional, and a CAT engine may require some of them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Create Session}
+ */
 export interface CreateSessionRequest {
   /** The personal needs and preferences of the candidate, an AfA 3.0 profile (`writePnp`) in base64. */
   readonly personalNeedsAndPreferences?: string;
@@ -63,7 +88,11 @@ export interface CreateSessionRequest {
   readonly priorData?: readonly PriorDataEntry[];
 }
 
-/** The answer to Create Session (CAT §3.3). */
+/**
+ * The answer to Create Session.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Create Session}
+ */
 export interface CreateSessionResponse {
   /** The identifier of the session, which every later request about it names. */
   readonly sessionIdentifier: string;
@@ -73,22 +102,30 @@ export interface CreateSessionResponse {
   readonly sessionState?: string;
 }
 
-/** The body of Submit Results (CAT §3.4). */
+/**
+ * The body of Submit Results.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Submit Results}
+ */
 export interface SubmitResultsRequest {
   /**
    * The results of the items presented since the last request, with at least one `SCORE` for each item the candidate
-   * answered (CAT §4.3.1). The REST binding is the adapter's concern: its field names are not public.
+   * answered. The REST binding is the adapter's concern: its field names are not public.
    */
   readonly assessmentResult: AssessmentResult;
   /** The `sessionState` of the previous answer; required when the engine sent one. */
   readonly sessionState?: string;
 }
 
-/** The answer to Submit Results (CAT §3.4). */
+/**
+ * The answer to Submit Results.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, Submit Results}
+ */
 export interface SubmitResultsResponse {
   /**
-   * The outcome variables that the engine computed (CAT §4.3.2). An engine may leave out the context, which the report
-   * requires; the adapter then supplies an empty one.
+   * The outcome variables that the engine computed. An engine may leave out the context, which the report requires; the
+   * adapter then supplies an empty one.
    */
   readonly assessmentResult?: AssessmentResult;
   /** The next stage. Absent, `null` or without items, it ends the session; `isSessionEnd` tells. */

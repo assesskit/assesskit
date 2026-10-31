@@ -167,8 +167,8 @@ const outcomeOf = (session: ItemSession, identifier: string): Value | null =>
 
 describe("the adaptive items of the examples", () => {
   it("turns the failing rules of feedback_adaptive.xml into data, attempt after attempt", () => {
-    // Its qti-member has the container first, where INFO §2.11.3.29 wants the single value, and for the correct response
-    // it sets the multiple FEEDBACK to a single value (INFO §5.130.2), so that every run fails.
+    // Its qti-member has the container first, where the information model wants the single value, and for the correct response
+    // it sets the multiple FEEDBACK to a single value, so that every run fails.
     const item = itemAt("packaging/items/feedback_adaptive.xml");
     const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
     const member =
@@ -280,7 +280,7 @@ describe("the tests of the examples", () => {
     }
   });
 
-  it("selects 2 of 3 items with item034 required, and one of two with the block required (RTEST-12)", () => {
+  it("selects 2 of 3 items with item034 required, and one of two with the block required", () => {
     const structure = structureAt("tests/rtest12.xml");
     const sectionA = new Set<string>();
     const sectionB = new Set<string>();
@@ -305,7 +305,7 @@ describe("the tests of the examples", () => {
     expect([...sectionB].sort()).toEqual(["item065", "item365", "item434"]);
   });
 
-  it("keeps item034 first and the block B1 together in its order (RTEST-24)", () => {
+  it("keeps item034 first and the block B1 together in its order", () => {
     const structure = structureAt("tests/rtest24.xml");
     for (let seed = 1; seed <= 100; seed++) {
       const plan = planTest(structure, { random: createRandom(seed) });
@@ -318,7 +318,7 @@ describe("the tests of the examples", () => {
     }
   });
 
-  it("presents item160 after the response Y and item063 after N (RTEST-13)", () => {
+  it("presents item160 after the response Y and item063 after N", () => {
     const structure = structureAt("tests/rtest13.xml");
     expect(walk(structure, { item034: "Y", item347: "Y" })).toEqual([
       "item034",
@@ -336,7 +336,7 @@ describe("the tests of the examples", () => {
     ]);
   });
 
-  it("branches to item656, or leaves section B, by the response to item347 (RTEST-13)", () => {
+  it("branches to item656, or leaves section B, by the response to item347", () => {
     const structure = structureAt("tests/rtest13.xml");
     expect(walk(structure, { item034: "Y", item347: "N" })).toEqual(["item034", "item160", "item347", "item656"]);
     // Neither N nor Y: the second rule exits section B, which is the last section.

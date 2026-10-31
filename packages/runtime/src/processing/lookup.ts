@@ -6,14 +6,17 @@ import { readSingle } from "./declared-value.js";
 import { asNumber, primitiveOf } from "./operands.js";
 
 /**
- * `qti-lookup-outcome-value` (INFO §5.87, §5.78, §5.90): the value the outcome's lookup table gives a number. An
- * interpolation table takes the first entry whose `source-value` is at most the number, or below it when
+ * `qti-lookup-outcome-value`: the value the outcome's lookup table gives a number.
+ *
+ * @remarks
+ * An interpolation table takes the first entry whose `source-value` is at most the number, or below it when
  * `include-boundary` is false; a match table takes the first entry whose `source-value` is the integer. Without such an
- * entry, or for a NULL number, the value is the table's `default-value`, else NULL. The target is read as a value of the
- * outcome's base type.
+ * entry, or for a NULL number, the value is the table's `default-value`, else NULL. The target is read as a value of
+ * the outcome's base type.
  *
  * @throws `ProcessingError` when the outcome has no lookup table or is not single, the number is not a single integer,
  * float or duration (an integer for a match table), or a target is not a value of the outcome's base type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-lookup-outcome-value}
  */
 export function lookUp(declaration: OutcomeDeclaration, source: Value | null): Value | null {
   const { identifier, lookupTable: table, baseType } = declaration;

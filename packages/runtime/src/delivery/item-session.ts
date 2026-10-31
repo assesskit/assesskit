@@ -1,9 +1,8 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { checkBoolean, checkChoice, checkFinite, checkNonNegativeInteger, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { checkContext } from "../processing/context.js";
 import type { ItemVariables, ProcessingContext } from "../processing/index.js";
-import { checkItem, checkVariables } from "../processing/variables.js";
+import { checkContext, checkItem, checkVariables } from "../processing/internal.js";
 import type { Value } from "../values/index.js";
 import type { DeliveryEvent } from "./events.js";
 import { checkKey, type ItemKey } from "./item-key.js";
@@ -12,22 +11,27 @@ import { type Refusal, refuse } from "./refusal.js";
 import { checkSessionControl, type EffectiveSessionControl } from "./session-control.js";
 
 /**
- * The state of an item session in its lifecycle (INFO §2.2.1):
+ * The state of an item session in its lifecycle:
  *
- * | State         | The item …                                                                                          |
- * | ------------- | --------------------------------------------------------------------------------------------------- |
- * | `initial`     | will be delivered and has not been presented                                                        |
- * | `interacting` | is presented: the candidate responds in an attempt, or sees the feedback of the attempt that ended  |
+ * | State         | The item …                                                                                         |
+ * | ------------- | -------------------------------------------------------------------------------------------------- |
+ * | `initial`     | will be delivered and has not been presented                                                       |
+ * | `interacting` | is presented: the candidate responds in an attempt, or sees the feedback of the attempt that ended |
  * | `suspended`   | was presented and its candidate session ended, as when the candidate moved to another item         |
- * | `closed`      | allows no further attempt; its responses are fixed                                                  |
- * | `review`      | is presented again after it closed, with its responses fixed                                        |
- * | `solution`    | is presented after it closed, with the correct responses in place of the candidate's                |
+ * | `closed`      | allows no further attempt; its responses are fixed                                                 |
+ * | `review`      | is presented again after it closed, with its responses fixed                                       |
+ * | `solution`    | is presented after it closed, with the correct responses in place of the candidate's               |
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export type ItemSessionStatus = "initial" | "interacting" | "suspended" | "closed" | "review" | "solution";
 
 /**
  * The state of one item instance for one candidate: its variables, its drafts, its attempts and where it is in its
- * lifecycle. It is plain data that holds no item content, so the item comes with every call.
+ * lifecycle.
+ *
+ * @remarks
+ * It is plain data that holds no item content, so the item comes with every call.
  */
 export interface ItemSession {
   /** The item instance. */
@@ -38,31 +42,35 @@ export interface ItemSession {
   readonly attempting: boolean;
   /**
    * The attempts that count toward `max-attempts`: every attempt that ended, except those that an end attempt
-   * interaction with `count-attempt="false"` ended (D8).
+   * interaction with `count-attempt="false"` ended.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
    */
   readonly countedAttempts: number;
   /**
    * The variables: the submitted responses with `numAttempts` and `duration`, the outcomes with `completionStatus`, and
-   * the template and context variables. Processing and the test read these, never the drafts (B96).
+   * the template and context variables. Processing and the test read these, never the drafts.
    */
   readonly variables: ItemVariables;
   /** The responses as the candidate last entered them, for every declared response variable, NULL as `null`. */
   readonly drafts: ReadonlyMap<string, Value | null>;
   /**
    * Whether the response processing of the latest submission failed, so that its outcomes stay as response processing
-   * found them (E26).
+   * found them.
    */
   readonly processingFailed: boolean;
   /**
    * The order in which each interaction with choices presents them, by response identifier: one list of identifiers for
-   * each set of choices, drawn at the first presentation (INFO §5.30.1) and kept for the session.
+   * each set of choices, drawn at the first presentation and kept for the session.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly choiceOrders: ReadonlyMap<string, readonly (readonly string[])[]>;
-  /** The latest state of each portable custom interaction, by response identifier, opaque to the engine (E29). */
+  /** The latest state of each portable custom interaction, by response identifier, opaque to the engine. */
   readonly pciStates: ReadonlyMap<string, string>;
-  /** The candidate's comment on the item (INFO §7.19.5); absent when none was given. */
+  /** The candidate's comment on the item; absent when none was given. */
   readonly comment?: string;
-  /** The milliseconds the candidate spent in the item before the current candidate session (INFO §2.2.2.2). */
+  /** The milliseconds the candidate spent in the item before the current candidate session. */
   readonly spent: number;
   /** When the current candidate session began, in epoch milliseconds; `null` while the session is not interacting. */
   readonly since: number | null;

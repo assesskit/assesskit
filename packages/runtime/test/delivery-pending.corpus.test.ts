@@ -75,7 +75,7 @@ describe("the pending work of the examples", () => {
     const items = await itemsOf("englishBasicLevelV2", "Test_258641331.xml");
     const state = answerAll(engine, items, false);
     const results = engine.results(state);
-    // The test selects among its item references: an item result for each instance presented, from 1 on (INFO §5.98).
+    // The test selects among its item references: an item result for each instance presented, from 1 on.
     expect(state.items.length).toBeGreaterThan(0);
     expect(results.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual(
       Array.from({ length: state.items.length }, (_, place) => place + 1),

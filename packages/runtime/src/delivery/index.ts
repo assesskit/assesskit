@@ -6,10 +6,10 @@
  * presentation in linear test parts under pre-conditions and branch rules, the inheritance of item session control, and
  * the time limits with a candidate's extra time — the item sessions: attempts, adaptive items, drafts and submitted
  * responses, review and solution, comments, PCI states, and processing failures as data — the candidate side: the
- * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions, with
- * the limits that a server puts on the actions of its clients — and the pending work that the engine waits on the host
- * for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine and `drainCat`, links
- * to tools scored by their tool, and the results report of a session.
+ * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions,
+ * with the limits that a server puts on the actions of its clients — and the pending work that the engine waits on the
+ * host for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine and
+ * `drainCat`, links to tools scored by their tool, and the results report of a session.
  *
  * @module @assesskit/runtime/delivery
  */

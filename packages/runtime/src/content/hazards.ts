@@ -5,12 +5,14 @@ import type { PersonalNeedsProfile, PNP_HAZARDS } from "../pnp/index.js";
 /** A hazard of a digital resource in the terms of the DRD schema (DRD XSD `Hazard`). */
 export type DrdHazardTerm = "flashing" | "motionSimulation" | "olfactoryHazard" | "sound";
 
-/** A hazard in the terms of `hazard-avoidance` in a PNP (PNP XSD, BPIG §5.2.5). */
+/** A hazard in the terms of `hazard-avoidance` in a PNP (PNP XSD). */
 export type PnpHazardTerm = (typeof PNP_HAZARDS)[number];
 
 /**
- * The term that a PNP uses for each hazard term of the DRD (B99, BPIG §5.2.5): `flashing` and `sound` are the same,
- * `olfactoryHazard` is `olfactory-hazard` and `motionSimulation` is `motion-simulation`.
+ * The term that a PNP uses for each hazard term of the DRD: `flashing` and `sound` are the same, `olfactoryHazard` is
+ * `olfactory-hazard` and `motionSimulation` is `motion-simulation`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export const HAZARD_TERMS: ReadonlyMap<DrdHazardTerm, PnpHazardTerm> = new Map<DrdHazardTerm, PnpHazardTerm>([
   ["flashing", "flashing"],
@@ -28,14 +30,17 @@ export interface HazardExposure {
 }
 
 /**
- * Maps the hazards of a resource, in the terms of the DRD, to the terms of a PNP and marks those the candidate avoids
- * (B99, BPIG §5.2.5). A candidate who avoids a hazard should not be exposed to content that has it, so a delivery
- * engine prefers a variant without the avoided hazards (B100) and flags the hazards it cannot avoid.
+ * Maps the hazards of a resource, in the terms of the DRD, to the terms of a PNP and marks those the candidate avoids.
+ *
+ * @remarks
+ * A candidate who avoids a hazard should not be exposed to content that has it, so a delivery engine prefers a variant
+ * without the avoided hazards and flags the hazards it cannot avoid.
  *
  * @param hazards - The `hazard` terms of the resource's DRD.
- * @param profile - The candidate's profile; without one nothing is avoided. Default: none.
+ * @param profile - The candidate's profile; without one nothing is avoided.
  * @returns One entry for each hazard, in the order given and each once.
  * @throws `DataError` when `hazards` holds anything but terms of the DRD, or `profile` is not a profile.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function hazardExposure(
   hazards: readonly DrdHazardTerm[],

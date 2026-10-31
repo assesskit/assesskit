@@ -9,11 +9,10 @@ import {
   type SupportSetting,
   writePnp,
 } from "../pnp/index.js";
-import { givenContext } from "../processing/variables.js";
+import { givenContext } from "../processing/internal.js";
 import { createRandom } from "../random.js";
 import type { AssessmentResult, ResultContext } from "../results/index.js";
-import { encodeBase64 } from "../values/base64.js";
-import type { Value } from "../values/index.js";
+import { encodeBase64, type Value } from "../values/index.js";
 import { type Action, checkAction } from "./action.js";
 import type { CandidateView } from "./candidate-view.js";
 import { buildCourse, type Course, type DeliveryDefinition, type EngineOptions } from "./course.js";
@@ -37,33 +36,48 @@ import { candidateView } from "./view.js";
 
 /** The options of `Engine.start`. */
 export interface StartOptions {
-  /** The seed of the generator of the session: selection, ordering, template values, shuffles (E3). */
+  /** The seed of the generator of the session: selection, ordering, template values, shuffles. */
   readonly seed: number;
   /** The time the session starts, in epoch milliseconds. */
   readonly at: number;
-  /** The candidate's personal needs and preferences: supports, extra time, hazards, translation. Default: none. */
+  /**
+   * The candidate's personal needs and preferences: supports, extra time, hazards, translation.
+   *
+   * @defaultValue none
+   */
   readonly pnp?: PersonalNeedsProfile;
   /**
    * The supports that the program gives every candidate, as options the candidate turns on, unless the profile says
-   * otherwise. Default: none.
+   * otherwise.
+   *
+   * @defaultValue none
    */
   readonly universalSupports?: readonly SupportName[];
   /**
    * The values of context variables, `QTI_CONTEXT` included, by identifier: each is given to the test and to every item
-   * that declares it (INFO §2.2.2.1, B50). A variable left out has its default value, else NULL. Default: none.
+   * that declares it. A variable left out has its default value, else NULL.
+   *
+   * @defaultValue none
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   readonly context?: ReadonlyMap<string, Value | null>;
   /**
-   * Who took the test, for the `context` of the results report: the `sourcedId` of the candidate and the sessions of the
-   * delivery system (RR §2.4.2, E24). Default: `{ sessionIdentifiers: [] }`.
+   * Who took the test, for the `context` of the results report: the `sourcedId` of the candidate and the sessions of
+   * the delivery system.
+   *
+   * @defaultValue `{ sessionIdentifiers: [] }`
+   * @see
+   * {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
    */
   readonly resultContext?: ResultContext;
 }
 
 /**
- * The delivery engine of a test or an item (E1): a pure reducer of states. It reads no clock and does no I/O; each step
- * takes the time it happened, and the host schedules the `time` actions of the deadlines. One engine serves every session
- * of its test.
+ * The delivery engine of a test or an item: a pure reducer of states.
+ *
+ * @remarks
+ * It reads no clock and does no I/O; each step takes the time it happened, and the host schedules the `time` actions of
+ * the deadlines. One engine serves every session of its test.
  */
 export interface Engine {
   /**
@@ -75,48 +89,62 @@ export interface Engine {
    */
   start(options: StartOptions): Step;
   /**
-   * Applies an action to a state (E1, E4, E7): the maximum times that passed before it first, each at its time, then
-   * the action; a refusal leaves the state as it was. It never throws on a state of this engine: a processing failure
-   * is reported as a `processing-failed` event (E26). The host's `supply-scores` and `cat-response` are accepted in any
-   * state, also when the session is suspended or has ended, as long as the request they answer exists (E15, E18).
+   * Applies an action to a state: the maximum times that passed before it first, each at its time, then the action; a
+   * refusal leaves the state as it was.
+   *
+   * @remarks
+   * It never throws on a state of this engine: a processing failure is reported as a `processing-failed` event. The
+   * host's `supply-scores` and `cat-response` are accepted in any state, also when the session is suspended or has
+   * ended, as long as the request they answer exists.
    *
    * @throws `DataError` when the state or the action is not one.
    */
   apply(state: DeliveryState, action: Action): Step;
   /**
-   * Returns the deadlines of a state (E6): the maximum and minimum times that run, as absolute times. Time runs only
-   * while the session is in progress, so a suspended or ended session has none.
+   * Returns the deadlines of a state: the maximum and minimum times that run, as absolute times.
+   *
+   * @remarks
+   * Time runs only while the session is in progress, so a suspended or ended session has none.
    *
    * @throws `DataError` when the state is not one of this engine.
    */
   deadlines(state: DeliveryState): readonly Deadline[];
   /**
-   * Returns what the candidate sees of a state at the time `now` (E19–E21): the state after the maximum times that passed
-   * up to `now` are applied, as a `time` action applies them, built field by field so that no answer key, processing or
-   * hidden content reaches it. A time before the latest step of the state counts as that step.
+   * Returns what the candidate sees of a state at the time `now`: the state after the maximum times that passed up to
+   * `now` are applied, as a `time` action applies them, built field by field so that no answer key, processing or
+   * hidden content reaches it.
+   *
+   * @remarks
+   * A time before the latest step of the state counts as that step.
    *
    * @throws `DataError` when the state is not one of this engine, or `now` is not a finite number.
    */
   view(state: DeliveryState, now: number): CandidateView;
   /**
-   * Returns what the engine waits on the host for (E13, E18): the scoring requests with no value yet, and the requests to
-   * CAT engines. The host answers the first with `supply-scores` actions and the second with `cat-response` actions, or
-   * has `drainCat` answer them.
+   * Returns what the engine waits on the host for: the scoring requests with no value yet, and the requests to CAT
+   * engines.
+   *
+   * @remarks
+   * The host answers the first with `supply-scores` actions and the second with `cat-response` actions, or has
+   * `drainCat` answer them.
    *
    * @throws `DataError` when the state is not one of this engine.
    */
   pending(state: DeliveryState): PendingWork;
   /**
    * Returns what a scorer needs to rate the outcome of a scoring request, including the correct responses, so that it
-   * belongs on the server (E27, R6).
+   * belongs on the server.
    *
    * @throws `DataError` when the state is not one of this engine, or has no such request.
    */
   scorerView(state: DeliveryState, requestId: string): ScorerView;
   /**
-   * Assembles the results report of a state (E24): the context, the result of the test and one result for each item
-   * instance presented, with the datestamps of the actions. It is provisional while scoring requests are pending (E17).
-   * A report has no single datestamp of its own: the result of the test carries the time of the latest step.
+   * Assembles the results report of a state: the context, the result of the test and one result for each item instance
+   * presented, with the datestamps of the actions.
+   *
+   * @remarks
+   * It is provisional while scoring requests are pending. A report has no single datestamp of its own: the result of
+   * the test carries the time of the latest step.
    *
    * @throws `DataError` when the state is not one of this engine.
    */
@@ -124,15 +152,21 @@ export interface Engine {
 }
 
 /**
- * Returns the profile as the Create Session request carries it: the document `writePnp` writes, as UTF-8 in base64
- * (CAT §3.3, C3). A test without an adaptive section sends no request, so nothing is encoded for it.
+ * Returns the profile as the Create Session request carries it: the document `writePnp` writes, as UTF-8 in base64. A
+ * test without an adaptive section sends no request, so nothing is encoded for it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 function personalNeedsOf(course: Course, profile: PersonalNeedsProfile | undefined): string | undefined {
   if (profile === undefined || course.catSections.size === 0) return undefined;
   return encodeBase64(new TextEncoder().encode(writePnp(profile)));
 }
 
-/** Returns what the engine takes from a profile besides the supports (BPIG §5.2.4–5). */
+/**
+ * Returns what the engine takes from a profile besides the supports.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
+ */
 function needsOf(profile: PersonalNeedsProfile | undefined, personalNeeds: string | undefined): CandidateNeeds {
   if (profile === undefined) return { avoidedHazards: [] };
   const testingTime = additionalTestingTime(profile);
@@ -172,9 +206,10 @@ function checkedResultContext(context: ResultContext): ResultContext {
 }
 
 /**
- * Returns the supports of a session (BPIG §5.3): those the profile names, with the state `resolveSupports` gives them,
- * on from the start when they are `active` or `assigned`; and the universal supports the profile does not name, as
- * options.
+ * Returns the supports of a session: those the profile names, with the state `resolveSupports` gives them, on from the
+ * start when they are `active` or `assigned`; and the universal supports the profile does not name, as options.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 function supportsOf(
   profile: PersonalNeedsProfile | undefined,
@@ -261,17 +296,20 @@ function start(course: Course, options: StartOptions): Step {
 }
 
 /**
- * Creates the delivery engine of a test, or of an item delivered alone for practice (E12). It first runs the static
- * checks over everything a session can reach, as `validateTest` or `validateAsi` runs them with the custom operators
- * and the resolver of templates given, and refuses content with an error, so that no session fails on it (E26); then it
- * resolves the section references and every item reference with its variants. An item delivered alone is a test of
- * one nonlinear test part with individual submission, whose item session control is `standaloneSessionControl` of
- * the control given.
+ * Creates the delivery engine of a test, or of an item delivered alone for practice.
+ *
+ * @remarks
+ * It first runs the static checks over everything a session can reach, as `validateTest` or `validateAsi` runs them
+ * with the custom operators and the resolver of templates given, and refuses content with an error, so that no session
+ * fails on it; then it resolves the section references and every item reference with its variants. An item delivered
+ * alone is a test of one nonlinear test part with individual submission, whose item session control is
+ * `standaloneSessionControl` of the control given.
  *
  * @param definition - What to deliver; see {@link DeliveryDefinition}.
  * @param options - See {@link EngineOptions}.
- * @throws `DataError` when an argument has the wrong type, the static checks find an error (the message lists them), or a
- * resolver returns a promise.
+ * @returns The engine.
+ * @throws `DataError` when an argument has the wrong type, the static checks find an error (the message lists them), or
+ * a resolver returns a promise.
  * @throws `ReadError` from a resolver, when a reference cannot be resolved.
  */
 export function createEngine(definition: DeliveryDefinition, options: EngineOptions = {}): Engine {

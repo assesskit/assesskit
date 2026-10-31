@@ -8,12 +8,14 @@ import { STANDARD_TEMPLATES, standardTemplateUri } from "./standard-templates.js
 import { checkItem, checkVariables, type ItemVariables } from "./variables.js";
 
 /**
- * Returns the rules of an item's response processing (INFO §4.6, §2.5.1): its own rules when it has any, which win over
- * a template; else those of the standard template its `template` names; else those the resolver returns for its
- * `template-location`, or its `template` when it has no location. An empty `template` names none.
+ * Returns the rules of an item's response processing: its own rules when it has any, which win over a template; else
+ * those of the standard template its `template` names; else those the resolver returns for its `template-location`, or
+ * its `template` when it has no location. An empty `template` names none.
  *
- * @throws `ProcessingError` when a template URI is neither standard nor resolved (G17).
+ * @throws `ProcessingError` when a template URI is neither standard nor resolved.
  * @throws `DataError` when the resolver returns something that is not response processing.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 function responseRules(processing: ResponseProcessing | undefined, environment: Environment): readonly ResponseRule[] {
   if (processing === undefined || processing.rules.length > 0) return processing?.rules ?? [];
@@ -39,20 +41,25 @@ function responseRules(processing: ResponseProcessing | undefined, environment: 
 }
 
 /**
- * Runs the response processing of an item (INFO §2.5, §6.39): its rules, or those of the template it names (B45), in
- * order from the outcomes as given, so that the delivery engine decides whether they were reset to their defaults first
- * (INFO §2.5: reset for non-adaptive items, kept for adaptive ones). `qti-set-outcome-value` and
- * `qti-lookup-outcome-value` set outcomes, `completionStatus` included, a condition runs its first true branch, a
- * fragment its rules, and `qti-exit-response` ends processing. Responses are read as given: the last submitted values.
+ * Runs the response processing of an item: its rules, or those of the template it names, in order from the outcomes as
+ * given, so that the delivery engine decides whether they were reset to their defaults first (the specification resets
+ * them for non-adaptive items and keeps them for adaptive ones).
+ *
+ * @remarks
+ * `qti-set-outcome-value` and `qti-lookup-outcome-value` set outcomes, `completionStatus` included, a condition runs
+ * its first true branch, a fragment its rules, and `qti-exit-response` ends processing. Responses are read as given:
+ * the last submitted values.
  *
  * @param item - The item, as `readAsi` reads it, with its includes resolved.
  * @param variables - The variables of the session.
  * @param context - The source of random draws, the custom operators, the resolver of templates and the limits.
  * @returns The variables after response processing; the variables given are not changed.
  * @throws `DataError` when an argument has the wrong type.
- * @throws `ProcessingError` when a template cannot be resolved (G17), an include is left, a rule sets something other
- * than an outcome or with a value of another type, or an expression fails.
+ * @throws `ProcessingError` when a template cannot be resolved, an include is left, a rule sets something other than an
+ * outcome or with a value of another type, or an expression fails.
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-outcome-value}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function runResponseProcessing(
   item: AssessmentItem,

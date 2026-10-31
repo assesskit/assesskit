@@ -1,6 +1,6 @@
 import type { AssessmentItem, OutcomeDeclaration } from "../asi/index.js";
 import { describeInteractions, type InteractionKind } from "../interactions/index.js";
-import { fitValue } from "../processing/assign.js";
+import { fitValue } from "../processing/internal.js";
 import type { BaseType, Cardinality, Value } from "../values/index.js";
 import { endAttemptInteractions } from "./attempt.js";
 import { type Course, candidateOf } from "./course.js";
@@ -8,10 +8,18 @@ import { type DeliveredItem, type DeliveryState, findDelivered } from "./deliver
 import type { ItemKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
 
-/** Who supplies the value of an outcome that processing does not set: a person or a machine (INFO §4.5.10, W18). */
+/**
+ * Who supplies the value of an outcome that processing does not set: a person or a machine.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export type Scorer = "human" | "externalMachine";
 
-/** The declaration of the outcome that a scoring request asks for, as the scorer needs to know it (INFO §4.5). */
+/**
+ * The declaration of the outcome that a scoring request asks for, as the scorer needs to know it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export interface ScoringDeclaration {
   /** The cardinality of the outcome. */
   readonly cardinality: Cardinality;
@@ -29,7 +37,7 @@ export interface ScoringDeclaration {
   readonly longInterpretation?: string;
 }
 
-/** A response that an externally scored outcome rates, with what the candidate submitted (O12, E14). */
+/** A response that an externally scored outcome rates, with what the candidate submitted. */
 export interface ScoringCover {
   /** The item instance. */
   readonly item: ItemKey;
@@ -37,15 +45,15 @@ export interface ScoringCover {
   readonly responseIdentifier: string;
   /** The label of the cover in the test, the text of its list entry; absent when it has none. */
   readonly label?: string;
-  /** Whether the instance was presented; if not, `response` is NULL (G26). */
+  /** Whether the instance was presented; if not, `response` is NULL. */
   readonly presented: boolean;
   /** The kind of the interaction that binds the response; absent when no interaction does. */
   readonly interaction?: InteractionKind;
-  /** The last submitted response, exact (B96, G36). */
+  /** The last submitted response, exact. */
   readonly response: Value | null;
 }
 
-/** What a scorer supplied for a request (E15). */
+/** What a scorer supplied for a request. */
 export interface SuppliedScore {
   /** The value of the outcome, or NULL. */
   readonly value: Value | null;
@@ -56,9 +64,14 @@ export interface SuppliedScore {
 }
 
 /**
- * A request for the value of one externally scored outcome (E13, E14): of an item outcome when its item session has
- * closed, of a test outcome when every response it covers has closed or the test has ended (G26). The host answers with
- * a `supply-scores` action; a request stays in the state after that, so that a second supply can replace the value.
+ * A request for the value of one externally scored outcome: of an item outcome when its item session has closed, of a
+ * test outcome when every response it covers has closed or the test has ended.
+ *
+ * @remarks
+ * The host answers with a `supply-scores` action; a request stays in the state after that, so that a second supply can
+ * replace the value.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export interface ScoringRequest {
   /** The identifier of the request: `item:<ref>:<instance>:<outcome>` or `test:<outcome>`. */
@@ -73,7 +86,7 @@ export interface ScoringRequest {
   readonly mode: Scorer;
   /** The `variable-identifier-ref` of the declaration; absent when it has none. */
   readonly variableIdentifierRef?: string;
-  /** Whether the item is a link to a tool (E25); absent otherwise. */
+  /** Whether the item is a link to a tool; absent otherwise. */
   readonly lti?: true;
   /** The declaration of the outcome. */
   readonly declaration: ScoringDeclaration;
@@ -155,7 +168,7 @@ function isOver(delivered: DeliveredItem): boolean {
   return status === "closed" || status === "review" || status === "solution";
 }
 
-/** Returns the requests for the outcomes of items whose sessions are over and that have no request yet (E13). */
+/** Returns the requests for the outcomes of items whose sessions are over and that have no request yet. */
 function itemRequests(course: Course, state: DeliveryState, at: number): ScoringRequest[] {
   const made = new Set(state.scoring.map(({ id }) => id));
   const requests: ScoringRequest[] = [];
@@ -184,8 +197,8 @@ function itemRequests(course: Course, state: DeliveryState, at: number): Scoring
 }
 
 /**
- * Returns the covers of a test outcome resolved to the instances of the plan, presented or not (O12, O4): each cover of
- * the test's blocks names an item reference, and every instance of it that the plan holds is a cover.
+ * Returns the covers of a test outcome resolved to the instances of the plan, presented or not: each cover of the
+ * test's blocks names an item reference, and every instance of it that the plan holds is a cover.
  */
 function testCovers(course: Course, state: DeliveryState, outcome: string): ScoringCover[] {
   const index = planIndex(state.plan);
@@ -210,7 +223,9 @@ function testCovers(course: Course, state: DeliveryState, outcome: string): Scor
 
 /**
  * Whether the request of a test outcome is due: the test has ended, or the outcome covers responses and every instance
- * it covers has been presented and is over (G26). A test without covers waits for its end (O5).
+ * it covers has been presented and is over. A test without covers waits for its end.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 function isTestRequestDue(state: DeliveryState, covers: readonly ScoringCover[]): boolean {
   if (state.status === "ended") return true;
@@ -223,7 +238,7 @@ function isTestRequestDue(state: DeliveryState, covers: readonly ScoringCover[])
   );
 }
 
-/** Returns the requests for the external-scored outcomes of the test that are due and have no request yet (E13). */
+/** Returns the requests for the external-scored outcomes of the test that are due and have no request yet. */
 function testRequests(course: Course, state: DeliveryState, at: number): ScoringRequest[] {
   const made = new Set(state.scoring.map(({ id }) => id));
   const requests: ScoringRequest[] = [];
@@ -245,22 +260,31 @@ function testRequests(course: Course, state: DeliveryState, at: number): Scoring
 }
 
 /**
- * Returns the scoring requests that the state makes due and has not made (E13): for each externally scored outcome of an
- * item whose session is over, and of the test when its covers are over or the test has ended. A request is made once.
+ * Returns the scoring requests that the state makes due and has not made: for each externally scored outcome of an item
+ * whose session is over, and of the test when its covers are over or the test has ended.
+ *
+ * @remarks
+ * A request is made once.
  */
 export function dueRequests(course: Course, state: DeliveryState, at: number): ScoringRequest[] {
   return [...itemRequests(course, state, at), ...testRequests(course, state, at)];
 }
 
 /**
- * Returns a score as the declaration of its request holds it, `undefined` when it does not fit: NULL fits, and an integer
- * fits a float or duration outcome (D5).
+ * Returns a score as the declaration of its request holds it, `undefined` when it does not fit: NULL fits, and an
+ * integer fits a float or duration outcome.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function fitScore(request: ScoringRequest, value: Value | null): Value | null | undefined {
   return value === null ? null : fitValue(value, request.declaration);
 }
 
-/** Returns the values that supplied scores give the external-scored outcomes of the test: their reset values (G24, E16). */
+/**
+ * Returns the values that supplied scores give the external-scored outcomes of the test: their reset values.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
 export function suppliedTestOutcomes(state: DeliveryState): Map<string, Value | null> {
   const values = new Map<string, Value | null>();
   for (const { scope, outcome, supplied } of state.scoring) {
@@ -271,7 +295,7 @@ export function suppliedTestOutcomes(state: DeliveryState): Map<string, Value | 
 
 /**
  * Returns the external-scored outcomes of an item instance that are not yet supplied: the item declares them and no
- * request for them has a supplied value (E17).
+ * request for them has a supplied value.
  */
 export function outstandingScores(state: DeliveryState, key: ItemKey, item: AssessmentItem): string[] {
   return externalOutcomes(item.outcomeDeclarations)
@@ -284,7 +308,7 @@ export function outstandingScores(state: DeliveryState, key: ItemKey, item: Asse
 
 /**
  * Whether a response of an item instance is rated by an externally scored outcome of the test whose value has not been
- * supplied, so that the response is not scored yet (E17): the outcome has a cover for it, and no supplied request.
+ * supplied, so that the response is not scored yet: the outcome has a cover for it, and no supplied request.
  */
 export function isCoveredUnscored(
   course: Course,

@@ -22,17 +22,19 @@ function itemReferencesOf(section: Readonly<Record<string, unknown>>): Set<strin
 }
 
 /**
- * Compares the item references of an adaptive section with the item pool of the CAT engine, which Get Section returns
- * (CAT §3.2). The two lists must agree: an item of the pool that the section does not list can be selected and not
- * presented, and an item reference that the pool lacks can never be selected (CAT §2.1, §2.2). Only item references that
- * are children of the section count, because an adaptive section has no nested sections (CAT §2.3); the section must have
- * its includes resolved.
+ * Compares the item references of an adaptive section with the item pool that Get Section returns.
+ *
+ * @remarks
+ * The two lists must agree: an item of the pool that the section does not list can be selected and not presented, and
+ * an item reference that the pool lacks can never be selected. Only item references that are children of the section
+ * count, because an adaptive section has no nested sections; the section must have its includes resolved.
  *
  * @param section - The adaptive section of the test.
  * @param pool - The `items` of the answer to Get Section.
  * @returns One error per identifier that only one side lists: first the item references of the section that the pool
  * lacks, then the items of the pool that the section lacks, each in list order.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, item pool}
  */
 export function checkPool(section: AssessmentSection, pool: ItemStage): readonly Issue[] {
   const input: unknown = section;

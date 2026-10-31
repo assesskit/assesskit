@@ -1,8 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 import * as v from "valibot";
 import {
-  checkArray,
-  checkRecord,
   describe,
   finiteSchema,
   nonEmptyStringSchema,
@@ -22,16 +20,11 @@ import {
   type ResultVariable,
   type ResultVariableType,
   SESSION_STATUSES,
-  type SessionStatus,
   type TemplateVariable,
   type TestResult,
 } from "../results/index.js";
-import { baseTypeSchema } from "../values/base-type.js";
-import { cardinalitySchema } from "../values/cardinality.js";
 import {
-  type BaseType,
   container,
-  formatPrimitive,
   isBaseType,
   parsePrimitive,
   record,
@@ -39,144 +32,10 @@ import {
   single,
   type Value,
 } from "../values/index.js";
-import { itemStageSchema } from "./item-stage.js";
-import type { ItemStage } from "./model.js";
+import { baseTypeSchema, cardinalitySchema } from "../values/internal.js";
 
-// The JSON of the public binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind, §5 and Appendix B1.2). Its
-// field names differ from the runtime's model in `sourceID`, `itemResult` and the three lists of variables of a result.
-
-/** The `sessionStatus` terms of the binding: those of QTI 2.2 Results Reporting, without `pendingExternalScoring`. */
-const BINDING_STATUSES: readonly SessionStatus[] = [
-  "final",
-  "initial",
-  "pendingResponseProcessing",
-  "pendingSubmission",
-];
-
-/** A value in the binding: the lexical form, with a field identifier and base type for the field of a record. */
-interface ValueJson {
-  readonly value: string;
-  readonly fieldIdentifier?: string;
-  readonly baseType?: BaseType;
-}
-
-/** Returns the values of a variable in the binding: none for NULL, as the binding says NULL is the absence of a value. */
-function valueToJson(value: Value | null): ValueJson[] {
-  if (value === null) return [];
-  switch (value.cardinality) {
-    case "single":
-      return [{ value: formatPrimitive(value.value, value.baseType) }];
-    case "multiple":
-    case "ordered":
-      return value.values.map((primitive) => ({ value: formatPrimitive(primitive, value.baseType) }));
-    case "record":
-      return [...value.fields].map(([fieldIdentifier, field]) => ({
-        fieldIdentifier,
-        baseType: field.baseType,
-        value: formatPrimitive(field.value, field.baseType),
-      }));
-  }
-}
-
-function typeToJson({ cardinality, baseType }: ResultVariableType): { cardinality: string; baseType?: string } {
-  return baseType === undefined ? { cardinality } : { cardinality, baseType };
-}
-
-function responseToJson(variable: ResponseVariable): unknown {
-  const { identifier, choiceSequence, correctResponse, candidateResponse } = variable;
-  return {
-    identifier,
-    ...typeToJson(variable),
-    choiceSequence,
-    correctResponse: correctResponse && {
-      interpretation: correctResponse.interpretation,
-      value: valueToJson(correctResponse.value),
-    },
-    candidateResponse: { value: valueToJson(candidateResponse) },
-  };
-}
-
-function outcomeToJson(variable: OutcomeVariable): unknown {
-  const { identifier, view, interpretation, longInterpretation, normalMaximum, normalMinimum, masteryValue, value } =
-    variable;
-  return {
-    identifier,
-    ...typeToJson(variable),
-    view,
-    interpretation,
-    longInterpretation,
-    normalMaximum,
-    normalMinimum,
-    masteryValue,
-    value: valueToJson(value),
-  };
-}
-
-function templateToJson(variable: TemplateVariable): unknown {
-  return { identifier: variable.identifier, ...typeToJson(variable), value: valueToJson(variable.value) };
-}
-
-/** Returns the three lists of variables of a result in the binding. The binding has no context variables. */
-function variablesToJson(variables: readonly ResultVariable[]): {
-  readonly responseVariables: unknown[];
-  readonly templateVariables: unknown[];
-  readonly outcomeVariables: unknown[];
-} {
-  return {
-    responseVariables: variables.flatMap((variable) =>
-      variable.kind === "response" ? [responseToJson(variable)] : [],
-    ),
-    templateVariables: variables.flatMap((variable) =>
-      variable.kind === "template" ? [templateToJson(variable)] : [],
-    ),
-    outcomeVariables: variables.flatMap((variable) => (variable.kind === "outcome" ? [outcomeToJson(variable)] : [])),
-  };
-}
-
-function itemResultToJson(result: ItemResult): unknown {
-  const { identifier, sequenceIndex, datestamp, sessionStatus, candidateComment } = result;
-  return {
-    identifier,
-    sequenceIndex,
-    datestamp,
-    // The binding has no term for a result that waits for external scoring; the response is not yet processed.
-    sessionStatus: BINDING_STATUSES.includes(sessionStatus) ? sessionStatus : "pendingResponseProcessing",
-    ...variablesToJson(result.variables),
-    candidateComment,
-  };
-}
-
-function testResultToJson({ identifier, datestamp, variables }: TestResult): unknown {
-  return { identifier, datestamp, ...variablesToJson(variables) };
-}
-
-function contextToJson({ sourcedId, sessionIdentifiers }: ResultContext): unknown {
-  return {
-    sourcedId,
-    sessionIdentifiers: sessionIdentifiers.map(({ sourceId, identifier }) => ({ sourceID: sourceId, identifier })),
-  };
-}
-
-/**
- * Returns an assessment result in the JSON of the CAT binding: `context`, `testResult` and the array `itemResult`, whose
- * variables are sorted into `responseVariables`, `templateVariables` and `outcomeVariables`. Values are in lexical form,
- * NULL is the absence of a value, and the binding leaves out context variables, supports, the score and answered status
- * of a response, and the `externalScored` and `variableIdentifierRef` of an outcome. `JSON.stringify` leaves out the
- * properties that are `undefined`.
- *
- * @throws `DataError` when the result is not an object with a context and an array of item results, or a value is not of
- * its base type.
- */
-export function assessmentResultToJson(result: AssessmentResult): unknown {
-  checkRecord(result, "The assessmentResult must be an object");
-  checkRecord(result.context, "The context of the assessmentResult must be an object");
-  checkArray(result.itemResults, "The itemResults of the assessmentResult must be an array");
-  return {
-    context: contextToJson(result.context),
-    testResult: result.testResult && testResultToJson(result.testResult),
-    itemResult: result.itemResults.map(itemResultToJson),
-  };
-}
+// The field names of the public binding differ from the runtime's model in `sourceID`, `itemResult` and the three lists
+// of variables of a result.
 
 /** One value of a variable in the binding, with the parts that a record's field uses. */
 interface ValueEntry {
@@ -363,7 +222,7 @@ const contextSchema: Schema<ResultContext> = v.pipe(
   })),
 );
 
-// An engine may leave out the context, which the model requires: the result then has no session identifiers (CAT §4.3.2).
+// An engine may leave out the context, which the model requires: the result then has no session identifiers.
 const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
   v.object({
     context: v.optional(contextSchema, { sessionIdentifiers: [] }),
@@ -378,25 +237,18 @@ const assessmentResultSchema: Schema<AssessmentResult> = v.pipe(
 );
 
 /**
- * Reads an assessment result that a CAT engine returned in the JSON of the binding, with the three lists of variables of a
- * result joined in the order responses, templates, outcomes. An engine may leave out the context, which the model requires:
- * the result then has no session identifiers (CAT §4.3.2).
+ * Reads an assessment result that a CAT engine returned in the JSON of the binding.
  *
- * @throws `DataError` when the JSON is not an assessment result of the binding, or a value is not in the lexical form of
- * its base type.
+ * @remarks
+ * The three lists of variables of a result are joined in the order responses, templates, outcomes. An engine may leave
+ * out the context, which the model requires: the result then has no session identifiers.
+ *
+ * @param json - The parsed JSON, which is untrusted.
+ * @returns The assessment result.
+ * @throws `DataError` when the JSON is not an assessment result of the binding, or a value is not in the lexical form
+ * of its base type. see
+ * {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, JSON binding of the assessment result}
  */
 export function assessmentResultFromJson(json: unknown): AssessmentResult {
   return parseWith(assessmentResultSchema, json, "The assessmentResult");
-}
-
-/**
- * Reads an item stage that a CAT engine returned: `itemIdentifiers` and `stageLength`, each of which may be absent or
- * `null`, as CAT §4.2 allows for a stage that ends the session.
- *
- * @param noun - Names the stage in the error message, such as `nextItems of the answer` for `The nextItems of the answer
- * must be an object`.
- * @throws `DataError` when it is not an item stage.
- */
-export function itemStageFromJson(json: unknown, noun: string): ItemStage {
-  return parseWith(itemStageSchema, json, `The ${noun}`);
 }

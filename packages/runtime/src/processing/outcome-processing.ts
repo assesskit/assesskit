@@ -30,16 +30,18 @@ function checkTest(test: AssessmentTest, scope: TestScope): void {
 }
 
 /**
- * Runs the outcome processing of a test (INFO §2.9, §6.32). The outcomes start from the values given, and an outcome
- * left out starts from its default value, else 0 for a single integer or float, else NULL; INFO §2.9 resets them to
- * their defaults before each run, so the delivery engine gives only the values that a reset keeps, such as supplied
- * external scores (G24). The rules run in order: `qti-set-outcome-value` and `qti-lookup-outcome-value` set outcomes, a
- * condition runs its first true branch, a fragment its rules, and `qti-exit-test` ends processing.
+ * Runs the outcome processing of a test.
+ *
+ * @remarks
+ * The outcomes start from the values given, and an outcome left out starts from its default value, else 0 for a single
+ * integer or float, else NULL; the specification resets them to their defaults before each run, so the delivery engine
+ * gives only the values that a reset keeps, such as supplied external scores. The rules run in order:
+ * `qti-set-outcome-value` and `qti-lookup-outcome-value` set outcomes, a condition runs its first true branch, a
+ * fragment its rules, and `qti-exit-test` ends processing.
  *
  * Expressions read the test's outcomes, and through the scope its other variables, item variables as `ITEM.VAR` and
- * `ITEM.n.VAR` with the item ref's variable mappings and weights (INFO §2.11.1.2, §7.47.2, §7.48), and the item
- * sessions that `qti-number-*`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` read (INFO
- * §2.11.2).
+ * `ITEM.n.VAR` with the item ref's variable mappings and weights, and the item sessions that `qti-number-*`,
+ * `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables` read.
  *
  * @param test - The test, as `readAsi` reads it, with its includes resolved.
  * @param outcomes - The values the outcomes start from, by identifier.
@@ -50,6 +52,8 @@ function checkTest(test: AssessmentTest, scope: TestScope): void {
  * @throws `ProcessingError` when an include is left, a rule sets something other than an outcome of the test or with a
  * value of another type, or an expression fails.
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-set-outcome-value}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function runOutcomeProcessing(
   test: AssessmentTest,
@@ -64,8 +68,10 @@ export function runOutcomeProcessing(
 }
 
 /**
- * Evaluates an expression of a test: a pre-condition, a branch rule or a template default (INFO §2.8.3, §5.152). It
- * reads what outcome processing reads; outcomes left out of `outcomes` have their starting values, as in
+ * Evaluates an expression of a test: a pre-condition, a branch rule or a template default.
+ *
+ * @remarks
+ * It reads what outcome processing reads; outcomes left out of `outcomes` have their starting values, as in
  * {@link runOutcomeProcessing}.
  *
  * @param expression - The expression, as `readAsi` reads it.
@@ -73,10 +79,12 @@ export function runOutcomeProcessing(
  * @param outcomes - The values of the outcomes of the test, by identifier.
  * @param scope - The item sessions and the other variables of the test.
  * @param context - The source of random draws, the custom operators and the limits.
+ * @returns The value, or `null` for NULL.
  * @throws `DataError` when an argument has the wrong type, or an outcome given is not declared or does not fit.
  * @throws `ProcessingError` when the expression reads a variable that does not exist, gives an operator an operand of
  * the wrong type, or uses a custom operator that is not registered.
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function evaluateTestExpression(
   expression: Expression,

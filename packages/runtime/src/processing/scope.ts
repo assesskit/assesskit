@@ -11,7 +11,10 @@ export interface DeclaredResponse {
 
 /**
  * What an expression reads while it is evaluated: the variables in reach, the test for the operators of outcome
- * processing, and the checked context. An item and a test each implement it.
+ * processing, and the checked context.
+ *
+ * @remarks
+ * An item and a test each implement it.
  */
 export interface Scope {
   readonly environment: Environment;
@@ -19,32 +22,38 @@ export interface Scope {
   readonly test: TestScope | undefined;
   /**
    * Returns the value of a variable, weighted by the weight that `weightIdentifier` names when the identifier is
-   * prefixed with an item (INFO §2.11.1.2, §7.47.2).
+   * prefixed with an item.
    *
    * @throws `ProcessingError` when there is no such variable or it is out of reach.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   variable(identifier: string, weightIdentifier: string | undefined): Value | null;
   /**
-   * Returns the default value of a variable (INFO §2.11.1.3).
+   * Returns the default value of a variable.
    *
    * @throws `ProcessingError` when there is no such variable.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   defaultValue(identifier: string): Value | null;
   /**
-   * Returns the correct response of a response variable (INFO §2.11.1.4).
+   * Returns the correct response of a response variable.
    *
    * @throws `ProcessingError` when there is no such response variable.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   correctResponse(identifier: string): Value | null;
   /**
-   * Returns a response variable with its declaration (INFO §2.11.1.5).
+   * Returns a response variable with its declaration.
    *
    * @throws `ProcessingError` when there is no such response variable or it is out of reach.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   response(identifier: string): DeclaredResponse;
   /**
-   * Returns the value of the template or outcome variable that an attribute names (INFO §2.7.2), `undefined` when there
-   * is none in reach.
+   * Returns the value of the template or outcome variable that an attribute names, `undefined` when there is none in
+   * reach.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   reference(identifier: string): Value | null | undefined;
 }

@@ -28,7 +28,7 @@ export interface ItemSessionJson {
 
 /**
  * Writes an item session as plain data that `JSON.stringify` keeps whole: maps as arrays of entries, values as
- * `WireValue`s and NULL as `null` (E2, E30).
+ * `WireValue`s and NULL as `null`.
  */
 export function itemSessionToJson(session: ItemSession): ItemSessionJson {
   const { variables } = session;

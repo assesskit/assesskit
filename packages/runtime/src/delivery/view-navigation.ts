@@ -10,7 +10,7 @@ import { type Placement, planIndex } from "./plan-index.js";
 interface Walk {
   readonly course: Course;
   readonly state: DeliveryState;
-  /** Whether the test part moves forward only (INFO §2.8.2). */
+  /** Whether the test part moves forward only. */
   readonly linear: boolean;
 }
 
@@ -52,9 +52,11 @@ function walkChildren(walk: Walk, children: readonly PlannedChild[], depth: numb
 
 /**
  * Returns the navigation map of the test part that holds the item presented, or the adaptive section whose first stage
- * is awaited (E19): the visible sections that hold a
- * listed item, and the item instances in the order of the plan. A nonlinear part lists every instance and marks those a
- * `move` reaches; a linear part lists those presented so far, none reachable.
+ * is awaited: the visible sections that hold a listed item, and the item instances in the order of the plan.
+ *
+ * @remarks
+ * A nonlinear part lists every instance and marks those a `move` reaches; a linear part lists those presented so far,
+ * none reachable.
  */
 export function navigationOf(
   course: Course,

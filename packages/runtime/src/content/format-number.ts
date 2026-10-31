@@ -1,105 +1,34 @@
-/** A conversion type code of the `format` of a printed variable (INFO §2.3.4). */
-export type Conversion = "E" | "e" | "f" | "G" | "g" | "i" | "o" | "R" | "r" | "X" | "x";
-
-/** A format conversion specifier, parsed: `%`, flags, a width, a precision and a conversion (INFO §2.3.4, BPIG App. E). */
-export interface FormatSpecification {
-  /** The flag `-`: align left. */
-  readonly leftAlign: boolean;
-  /** The flag `+`: a sign on every number. */
-  readonly plus: boolean;
-  /** The flag space: a space in place of the sign of a positive number. */
-  readonly space: boolean;
-  /** The flag `#`: the alternate form. */
-  readonly alternate: boolean;
-  /** The flag `0`: pad with zeros. */
-  readonly zeroPad: boolean;
-  /** The minimum width; 0 when the specifier gives none. */
-  readonly width: number;
-  /** The precision; absent when the specifier gives none. */
-  readonly precision: number | undefined;
-  /** The conversion type code. */
-  readonly conversion: Conversion;
-}
-
-const FLAGS = "-+ #0";
-const CONVERSIONS: readonly Conversion[] = ["E", "e", "f", "G", "g", "i", "o", "R", "r", "X", "x"];
+import type { Conversion, FormatSpecification } from "./format-specification.js";
 
 /** The conversions that write `INF`, `NAN` and the exponent letter in capitals. */
 const CAPITAL_CONVERSIONS: readonly Conversion[] = ["E", "G", "R"];
 
 /**
- * The largest width and precision accepted: a double has at most 1074 digits after the point (the exact value of
- * 5e-324), so a larger precision adds only zeros, and a limit keeps a hostile format from asking for gigabytes.
+ * The precision of the float conversions when the specifier gives none.
+ *
+ * @see {@link https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf | ISO/IEC 9899:2011, formatted output}
  */
-const MAX_FIELD = 1100;
-
-/** The precision of the float conversions when the specifier gives none (C11 §7.21.6.1). */
 const DEFAULT_PRECISION = 6;
 
-/** The smallest decimal exponent that `g` and `G` write in the fixed form (C11 §7.21.6.1: "−4 ≤ X"). */
+/**
+ * The smallest decimal exponent that `g` and `G` write in the fixed form.
+ *
+ * @see {@link https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf | ISO/IEC 9899:2011, formatted output}
+ */
 const MIN_FIXED_EXPONENT = -4;
 
+/** The fewest digits of the exponent that `e` and `g` write, as in `e+03`. */
 const EXPONENT_DIGITS = 2;
+/** The bits of the fraction of an IEEE 754 binary64 number. */
 const BITS_OF_FRACTION = 52n;
+/** The mask of the 11 bits of the exponent of an IEEE 754 binary64 number. */
 const EXPONENT_MASK = 0x7ffn;
+/** The mask of the fraction bits. */
 const FRACTION_MASK = (1n << BITS_OF_FRACTION) - 1n;
+/** The bit that a normal number has before its fraction and does not store. */
 const IMPLICIT_BIT = 1n << BITS_OF_FRACTION;
 /** The exponent of a double's integer mantissa: 1023 for the bias and 52 for the fraction bits. */
 const EXPONENT_OFFSET = 1075;
-
-function readDigits(format: string, from: number): { readonly digits: string; readonly end: number } {
-  let end = from;
-  while (end < format.length && format.charAt(end) >= "0" && format.charAt(end) <= "9") end++;
-  return { digits: format.slice(from, end), end };
-}
-
-/** Returns the specifier with no flags, width or precision for a conversion, such as `%i` or `%G`. */
-export function plainSpecification(conversion: Conversion): FormatSpecification {
-  return {
-    leftAlign: false,
-    plus: false,
-    space: false,
-    alternate: false,
-    zeroPad: false,
-    width: 0,
-    precision: undefined,
-    conversion,
-  };
-}
-
-/**
- * Parses a format conversion specifier: `%`, zero or more of the flags `-`, `+`, space, `#` and `0`, an optional width,
- * an optional precision (a point and zero or more digits) and one of the conversions `E e f G g r R i o X x` (INFO
- * §2.3.4). Returns `undefined` when the text is anything else, such as text around the specifier or a width above 1100.
- */
-export function parseFormat(format: string): FormatSpecification | undefined {
-  if (!format.startsWith("%")) return undefined;
-  let at = 1;
-  const flags = new Set<string>();
-  while (at < format.length && FLAGS.includes(format.charAt(at))) flags.add(format.charAt(at++));
-  const width = readDigits(format, at);
-  at = width.end;
-  let precision: number | undefined;
-  if (format.charAt(at) === ".") {
-    const digits = readDigits(format, at + 1);
-    precision = digits.digits === "" ? 0 : Number(digits.digits);
-    at = digits.end;
-  }
-  const conversion = CONVERSIONS.find((candidate) => candidate === format.charAt(at));
-  const widthValue = width.digits === "" ? 0 : Number(width.digits);
-  if (at + 1 !== format.length || conversion === undefined) return undefined;
-  if (widthValue > MAX_FIELD || (precision !== undefined && precision > MAX_FIELD)) return undefined;
-  return {
-    leftAlign: flags.has("-"),
-    plus: flags.has("+"),
-    space: flags.has(" "),
-    alternate: flags.has("#"),
-    zeroPad: flags.has("0"),
-    width: widthValue,
-    precision,
-    conversion,
-  };
-}
 
 /** A non-negative number as an integer times a power of ten: `digits × 10^−scale`, exactly. */
 interface Exact {
@@ -178,9 +107,11 @@ function trimZeros(text: string): string {
 
 /**
  * Writes `g`, `G`, `r` and `R`: P significant digits, in the fixed form unless the exponent X after rounding is P or
- * more, which `g` also does when X is below −4. `r` and `R` never leave the fixed form for a small number (INFO §2.3.4:
- * "scientific format is only used if the requested number of significant figures is less than the number of digits to
- * the left of the decimal point").
+ * more, which `g` also does when X is below −4. `r` and `R` never leave the fixed form for a small number: scientific
+ * form is only used when the requested number of significant figures is less than the number of digits to the left of
+ * the decimal point.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-printed-variable}
  */
 function general(exact: Exact, specification: FormatSpecification): string {
   const { conversion, precision = DEFAULT_PRECISION, alternate } = specification;
@@ -246,13 +177,19 @@ function floatText(specification: FormatSpecification, value: number): string {
 }
 
 /**
- * Formats a number by a conversion specifier, as the C library's `printf` does: the value is rounded from its exact
- * binary value, a tie to the even digit, so that `%.0f` of 2.5 is `2`. `i` writes in the given base and truncates a float;
- * `o`, `x` and `X` write the magnitude with a minus sign for a negative number, where C leaves it undefined.
+ * Formats a number by a conversion specifier, as the C library's `printf` does.
+ *
+ * @remarks
+ * The value is rounded from its exact binary value, a tie to the even digit, so that `%.0f` of 2.5 is `2`. `i` writes
+ * in the given base and truncates a float; `o`, `x` and `X` write the magnitude with a minus sign for a negative
+ * number, where C leaves it undefined.
  *
  * @param specification - The parsed specifier.
  * @param value - The number: a float, a duration in seconds or an integer.
  * @param base - The number base of the conversion `i`, from 2 to 36. It is not used by the others.
+ * @returns The text.
+ * @see {@link https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf | ISO/IEC 9899:2011, formatted output}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-printed-variable}
  */
 export function formatNumber(specification: FormatSpecification, value: number, base: number): string {
   if (!Number.isFinite(value)) return nonFinite(specification, value);

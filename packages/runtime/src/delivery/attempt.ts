@@ -1,23 +1,40 @@
 import { type AssessmentItem, descendantNodes, type EndAttemptInteraction, type ModelNode } from "../asi/index.js";
 import { AssesskitError } from "../errors.js";
 import { describeInteractions, initialResponse } from "../interactions/index.js";
-import { COMPLETION_STATUS, DURATION, NOT_ATTEMPTED, NUM_ATTEMPTS } from "../processing/built-ins.js";
-import { type ItemVariables, runResponseProcessing } from "../processing/index.js";
-import { initialOutcome } from "../processing/variables.js";
+import {
+  COMPLETION_STATUS,
+  DURATION,
+  type ItemVariables,
+  NUM_ATTEMPTS,
+  runResponseProcessing,
+} from "../processing/index.js";
+import { initialOutcome, NOT_ATTEMPTED } from "../processing/internal.js";
 import { single, type Value } from "../values/index.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession, ItemSessionContext } from "./item-session.js";
 
-/** The value of `completionStatus` from the start of the first attempt (INFO §2.2.2.3). */
+/**
+ * The value of `completionStatus` from the start of the first attempt.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const UNKNOWN = "unknown";
 
-/** The value of `completionStatus` with which an adaptive item ends its session (INFO §2.2.2.3, §2.5). */
+/**
+ * The value of `completionStatus` with which an adaptive item ends its session.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const COMPLETED = "completed";
 
 /** The milliseconds in a second, the unit of `duration` and of time limits. */
 export const MILLISECONDS_PER_SECOND = 1000;
 
-/** The maximum number of attempts of a non-adaptive item when no control sets one (INFO §7.19.1). */
+/**
+ * The maximum number of attempts of a non-adaptive item when no control sets one.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export const DEFAULT_MAX_ATTEMPTS = 1;
 
 /** How an attempt ends: a submission, a skip, an end attempt interaction, or the engine closing the session. */
@@ -25,7 +42,11 @@ export type Ending =
   | { readonly by: "submit" | "skip" | "close" }
   | { readonly by: "end-attempt"; readonly interaction: string };
 
-/** Whether an item is adaptive: its outcomes persist between attempts and completion ends its session (INFO §2.5). */
+/**
+ * Whether an item is adaptive: its outcomes persist between attempts and completion ends its session.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export function isAdaptive(item: AssessmentItem): boolean {
   return item.adaptive === true;
 }
@@ -33,8 +54,10 @@ export function isAdaptive(item: AssessmentItem): boolean {
 const isEndAttempt = (node: ModelNode): node is EndAttemptInteraction => node.kind === "end-attempt-interaction";
 
 /**
- * Returns the response variables that end attempt interactions bind, each with whether the attempt it ends counts toward
- * `max-attempts`: `count-attempt` absent means true (D8, G16).
+ * Returns the response variables that end attempt interactions bind, each with whether the attempt it ends counts
+ * toward `max-attempts`: `count-attempt` absent means true.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function endAttemptInteractions(item: AssessmentItem): ReadonlyMap<string, boolean> {
   const nodes = item.body?.children.flatMap((node) => [node, ...descendantNodes(node)]) ?? [];
@@ -55,8 +78,10 @@ function completionOf(variables: ItemVariables): string | undefined {
 
 /**
  * Returns the variables with each declared outcome at the value that response processing of a non-adaptive item starts
- * from: its default value, as template processing may have set it, else 0 for a single integer or float, else NULL
- * (INFO §2.2.2.3, §2.5). `completionStatus` keeps its value, which stays until response processing sets it.
+ * from: its default value, as template processing may have set it, else 0 for a single integer or float, else NULL.
+ * `completionStatus` keeps its value, which stays until response processing sets it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function resetOutcomes(item: AssessmentItem, variables: ItemVariables): ItemVariables {
   const outcomes = new Map(variables.outcomes);
@@ -74,7 +99,13 @@ function withResponse(variables: ItemVariables, identifier: string, value: Value
 
 /**
  * Returns the session brought to time `at`: the time of a running candidate session counts toward what it spent, and
- * `duration` shows the total in seconds, truncated to the millisecond (INFO §2.2.2.2, G20). Suspended time never runs.
+ * `duration` shows the total in seconds, truncated to the millisecond.
+ *
+ * @remarks
+ * Suspended time never runs.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function timed(session: ItemSession, at: number): ItemSession {
   if (session.since === null) return { ...session, updatedAt: at };
@@ -90,9 +121,14 @@ export function timed(session: ItemSession, at: number): ItemSession {
 }
 
 /**
- * Starts an attempt (INFO §2.2.2.2–3): `numAttempts` goes up by 1. The first attempt also sets each response variable to
- * its default value, and the drafts to the responses the interactions start with (B6, B55); the default of an end attempt
- * interaction is ignored (INFO §2.4.5). It changes `completionStatus` from `not_attempted` to `unknown` (B5).
+ * Starts an attempt: `numAttempts` goes up by 1.
+ *
+ * @remarks
+ * The first attempt also sets each response variable to its default value, and the drafts to the responses the
+ * interactions start with; the default of an end attempt interaction is ignored. It changes `completionStatus` from
+ * `not_attempted` to `unknown`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function startAttempt(session: ItemSession, item: AssessmentItem): ItemSession {
   const numAttempts = attemptsOf(session.variables) + 1;
@@ -127,7 +163,7 @@ export function itemEvent(
   return { type, at, item: session.key, ...(detail === undefined ? {} : { detail }) };
 }
 
-/** Runs response processing; a failure leaves the variables as they were given, with the message (E26). */
+/** Runs response processing; a failure leaves the variables as they were given, with the message. */
 function processResponses(
   variables: ItemVariables,
   context: ItemSessionContext,
@@ -140,7 +176,11 @@ function processResponses(
   }
 }
 
-/** Whether the session closes after an attempt: no attempt is left, or an adaptive item completed (INFO §2.5, §7.19.1). */
+/**
+ * Whether the session closes after an attempt: no attempt is left, or an adaptive item completed.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function isLast(session: ItemSession, ending: Ending, context: ItemSessionContext): boolean {
   if (ending.by === "close") return true;
   if (isAdaptive(context.item)) return completionOf(session.variables) === COMPLETED;
@@ -149,13 +189,18 @@ function isLast(session: ItemSession, ending: Ending, context: ItemSessionContex
 }
 
 /**
- * Ends the open attempt at time `at` (INFO §2.5). The drafts become the submitted responses, and the variable of each end
- * attempt interaction is true when that interaction ended the attempt and false otherwise (INFO §2.4.5). The outcomes
- * of a non-adaptive item are reset first, and those of an adaptive item kept. Response processing runs; when it fails,
- * the outcomes stay as it found them and the session records the failure (E26). The attempt counts toward
- * `max-attempts` unless an end attempt interaction with `count-attempt="false"` ended it (D8). The session closes when
- * no attempt is left, when an adaptive item completed, or when the engine closes it; else it stays interacting with no
- * attempt open, and the candidate sees the feedback.
+ * Ends the open attempt at time `at`.
+ *
+ * @remarks
+ * The drafts become the submitted responses, and the variable of each end attempt interaction is true when that
+ * interaction ended the attempt and false otherwise. The outcomes of a non-adaptive item are reset first, and those of
+ * an adaptive item kept. Response processing runs; when it fails, the outcomes stay as it found them and the session
+ * records the failure. The attempt counts toward `max-attempts` unless an end attempt interaction with
+ * `count-attempt="false"` ended it. The session closes when no attempt is left, when an adaptive item completed, or
+ * when the engine closes it; else it stays interacting with no attempt open, and the candidate sees the feedback.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function endAttempt(
   session: ItemSession,

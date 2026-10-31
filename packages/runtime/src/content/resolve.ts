@@ -37,7 +37,11 @@ export interface ResolveContentOptions {
   readonly view: View;
 }
 
-/** The elements that a template variable shows or hides: choices, gaps, hotspots and hot texts (INFO §2.7.1), and template content. */
+/**
+ * The elements that a template variable shows or hides: choices, gaps, hotspots and hot texts, and template content.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const TEMPLATE_CONTROLLED: ReadonlySet<string> = new Set([
   "associable-hotspot",
   "gap",
@@ -159,18 +163,20 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
 }
 
 /**
- * Resolves the content of an item for the candidate, or for another view: it removes what the variables hide, replaces
- * what they print, and keeps the rest.
+ * Resolves the content of an item for the candidate, or for another view.
  *
- * | Content                                              | Resolution                                                                     |
- * | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
- * | `qti-printed-variable`                               | text, by {@link formatPrintedVariable}; a response variable prints nothing      |
- * | `qti-feedback-block`, `qti-feedback-inline`          | kept when {@link isShown} for the outcome, else removed (INFO §5.49, §5.52)    |
- * | `qti-template-block`, `qti-template-inline`          | kept when shown for the template variable, else removed (INFO §5.122, §5.124)  |
- * | choices, gaps, hotspots and hot texts with a `template-identifier` | removed when the template variable hides them (INFO §2.7.1, B14) |
- * | `qti-rubric-block`                                   | kept when its `view` lists the view, else removed (INFO §2.8.6)                |
- * | `param` of an `object`                               | its `value` replaced when it names a template variable with `param-variable` (INFO §7.29.2) |
- * | `mi` and `ci` of MathML                              | `mn` and `cn` with the value of a template variable with `math-variable` (INFO §2.3.3) |
+ * @remarks
+ * It removes what the variables hide, replaces what they print, and keeps the rest.
+ *
+ * | Content                                                            | Resolution                                                                   |
+ * | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+ * | `qti-printed-variable`                                             | text, by {@link formatPrintedVariable}; a response variable prints nothing   |
+ * | `qti-feedback-block`, `qti-feedback-inline`                        | kept when {@link isShown} for the outcome, else removed                      |
+ * | `qti-template-block`, `qti-template-inline`                        | kept when shown for the template variable, else removed                      |
+ * | choices, gaps, hotspots and hot texts with a `template-identifier` | removed when the template variable hides them                                |
+ * | `qti-rubric-block`                                                 | kept when its `view` lists the view, else removed                            |
+ * | `param` of an `object`                                             | its `value` replaced when it names a template variable with `param-variable` |
+ * | `mi` and `ci` of MathML                                            | `mn` and `cn` with the value of a template variable with `math-variable`     |
  *
  * The result has the shape of the input: elements kept have their content resolved in turn, and the choices that stay
  * keep their order. A parameter or a MathML identifier whose variable is NULL, a container or a file stays as authored.
@@ -182,6 +188,8 @@ function checkVariables(variables: unknown): asserts variables is ContentVariabl
  * @param options - See {@link ResolveContentOptions}.
  * @returns New nodes; the input is not changed.
  * @throws `DataError` when an argument has the wrong type.
+ * @see
+ * {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, template processing and printed variables}
  */
 export function resolveContent(
   nodes: readonly BodyNode[],

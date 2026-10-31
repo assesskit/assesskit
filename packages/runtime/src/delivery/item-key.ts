@@ -2,9 +2,13 @@ import * as v from "valibot";
 import { parseWith, positiveIntegerSchema, type Schema } from "../checks.js";
 
 /**
- * One occurrence of an item reference in a session: the identifier of the item reference and the instance, counted
- * from 1 in the order of the plan. Selection with replacement makes several instances of one reference (INFO
- * §2.11.1.2, E11).
+ * One occurrence of an item reference in a session: the identifier of the item reference and the instance, counted from
+ * 1 in the order of the plan.
+ *
+ * @remarks
+ * Selection with replacement makes several instances of one reference.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export interface ItemKey {
   /** The identifier of the item reference. */

@@ -5,11 +5,12 @@ import { isIdentifier } from "../values/index.js";
 import { resolveStructure, type TestStructure } from "./structure.js";
 
 /**
- * Returns the structure of a test that delivers one item alone (E12): the test, named as the item, has one nonlinear
- * test part with individual submission, `<identifier>-part`, holding one section, `<identifier>-section`, whose one item
+ * Returns the structure of a test that delivers one item alone: the test, named as the item, has one nonlinear test
+ * part with individual submission, `<identifier>-part`, holding one section, `<identifier>-section`, whose one item
  * reference has the identifier of the item.
  *
- * @throws `DataError` when the identifier of the item is not an identifier (INFO §4.1.1).
+ * @throws `DataError` when the identifier of the item is not an identifier.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function standaloneTest(item: AssessmentItem): TestStructure {
   const id = item.identifier;

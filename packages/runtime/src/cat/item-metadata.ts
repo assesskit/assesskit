@@ -7,11 +7,13 @@ import {
   type QtiMetadata,
   type ScoringMode,
 } from "../metadata/index.js";
-import { encodeBase64 } from "../values/base64.js";
+import { encodeBase64 } from "../values/index.js";
 
 /**
  * A metadata file that is not QTI metadata, such as IEEE LOM (`lom`) or curriculum standards metadata (`csmd`); other
- * types are allowed by agreement (CAT App. B).
+ * types are allowed by agreement.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
  */
 export interface CatMetadataFile {
   /** The type of the metadata. */
@@ -26,17 +28,29 @@ export interface CatPoolItem {
   readonly identifier: string;
   /** The QTI metadata of the item, for example from `deriveQtiMetadata`. */
   readonly metadata: QtiMetadata;
-  /** The metadata of the item of other types. Default: none. */
+  /**
+   * The metadata of the item of other types.
+   *
+   * @defaultValue none
+   */
   readonly externalMetadata?: readonly CatMetadataFile[];
 }
 
 /** Options of `catMetadata`. */
 export interface CatMetadataOptions {
-  /** The metadata of the section as a whole. Default: none. */
+  /**
+   * The metadata of the section as a whole.
+   *
+   * @defaultValue none
+   */
   readonly externalMetadata?: readonly CatMetadataFile[];
 }
 
-/** A metadata file in the JSON binding (CAT App. B). */
+/**
+ * A metadata file in the JSON binding.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export interface CatExternalMetadata {
   /** The type of the metadata. */
   readonly type: string;
@@ -44,7 +58,14 @@ export interface CatExternalMetadata {
   readonly content: string;
 }
 
-/** The metadata of one item in the JSON binding (CAT App. B). A field that the QTI metadata omits is `undefined`. */
+/**
+ * The metadata of one item in the JSON binding.
+ *
+ * @remarks
+ * A field that the QTI metadata omits is `undefined`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0}
+ */
 export interface CatItemMetadata {
   /** The identifier of the item. */
   readonly identifier: string;
@@ -72,7 +93,11 @@ export interface CatItemMetadata {
   readonly externalMetadata?: readonly CatExternalMetadata[];
 }
 
-/** The metadata of an adaptive section in the JSON binding, the content of the file that `qti-metadata-ref` references (CAT App. B). */
+/**
+ * The metadata of an adaptive section in the JSON binding, the content of the file that `qti-metadata-ref` references.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, qti-metadata-ref}
+ */
 export interface CatMetadata {
   /** The metadata of the section as a whole; absent when there is none. */
   readonly externalMetadata?: readonly CatExternalMetadata[];
@@ -96,9 +121,7 @@ function itemMetadataOf(item: unknown, index: number, seen: Set<string>): CatIte
   const { identifier, metadata, externalMetadata = [] } = item;
   checkString(identifier, `The identifier of the item at index ${index}`);
   if (seen.has(identifier)) {
-    throw new DataError(
-      `The identifiers of the items must be unique (CAT App. B), found ${JSON.stringify(identifier)} twice.`,
-    );
+    throw new DataError(`The identifiers of the items must be unique, found ${JSON.stringify(identifier)} twice.`);
   }
   seen.add(identifier);
   checkQtiMetadata(metadata);
@@ -121,14 +144,18 @@ function itemMetadataOf(item: unknown, index: number, seen: Set<string>): CatIte
 }
 
 /**
- * Builds the metadata of the items of an adaptive section in the JSON binding of CAT Appendix B, which is non-normative.
- * Write it as JSON in UTF-8 to make the file that `qti-metadata-ref` references. The portable custom interaction context
- * of QTI metadata has no field in the binding and is left out.
+ * Builds the metadata of the items of an adaptive section in the JSON binding.
+ *
+ * @remarks
+ * Write the result as JSON in UTF-8 to make the file that `qti-metadata-ref` references. The portable custom
+ * interaction context of QTI metadata has no field in the binding and is left out. The binding is non-normative.
  *
  * @param items - The items of the pool, each with its QTI metadata.
- * @param options - Default: no metadata of the section as a whole.
- * @throws `DataError` when an argument has the wrong type, the QTI metadata of an item is invalid, a metadata file is not
- * bytes, or two items have one identifier.
+ * @param options - Options.
+ * @returns The metadata of the items, in the order given.
+ * @throws `DataError` when an argument has the wrong type, the QTI metadata of an item is invalid, a metadata file is
+ * not bytes, or two items have one identifier.
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, metadata binding}
  */
 export function catMetadata(items: readonly CatPoolItem[], options: CatMetadataOptions = {}): CatMetadata {
   checkArray(items, "The items must be an array");

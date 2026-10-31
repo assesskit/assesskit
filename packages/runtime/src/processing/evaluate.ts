@@ -13,6 +13,7 @@ import {
   subtract,
   toInteger,
 } from "./arithmetic.js";
+import { checkOperands } from "./check-operands.js";
 import { compare, equal, equalRounded, match, toleranceOf } from "./comparison.js";
 import {
   collect,
@@ -39,28 +40,48 @@ import { floatAttribute, integerAttribute, stringAttribute } from "./references.
 import { roundTo } from "./rounding.js";
 import type { Scope } from "./scope.js";
 import { inside } from "./shapes.js";
-import { checkOperands } from "./signatures.js";
 import { statsOperator } from "./stats-operator.js";
 import { patternMatch, stringMatch, substring } from "./strings.js";
 import { count, filterOf, outcomeBound, testOf, testVariables } from "./test-expressions.js";
 import { checkItem, checkVariables, type ItemVariables } from "./variables.js";
 
-/** The constants of `qti-math-constant` (INFO §8.20). */
+/**
+ * The constants of `qti-math-constant`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-math-constant}
+ */
 const MATH_CONSTANTS: ReadonlyMap<string, number> = new Map([
   ["pi", Math.PI],
   ["e", Math.E],
 ]);
 
-/** The rounding mode of `qti-equal-rounded` when the attribute is absent (INFO §5.47.1). */
+/**
+ * The rounding mode of `qti-equal-rounded` when the attribute is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal-rounded}
+ */
 const DEFAULT_ROUNDING_MODE = "significantFigures";
 
-/** The tolerance mode of `qti-equal` when the attribute is absent (INFO §5.46.1). */
+/**
+ * The tolerance mode of `qti-equal` when the attribute is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
+ */
 const DEFAULT_TOLERANCE_MODE = "exact";
 
-/** Whether `qti-equal` includes a bound when the attribute is absent (INFO §5.46.3–4). */
+/**
+ * Whether `qti-equal` includes a bound when the attribute is absent.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-equal}
+ */
 const DEFAULT_INCLUDE_BOUND = true;
 
-/** Returns the expressions of the operands of an expression, in order. */
+/**
+ * Returns the expressions of the operands of an expression, in order.
+ *
+ * @param expression - The expression.
+ * @returns The expressions of its operands; none when it has none.
+ */
 export function operandsOf(expression: Expression): readonly Expression[] {
   if ("operands" in expression) return expression.operands;
   return "operand" in expression ? [expression.operand] : [];
@@ -233,19 +254,24 @@ export function evaluateIn(expression: Expression, scope: Scope): Value | null {
 }
 
 /**
- * Evaluates an expression with the variables of an item session (INFO §2.11): a tree interpreter with the semantics of
- * the Information Model, NULL as `null`. Every variable of the item is in reach; the expressions of outcome processing
- * are not, as they read the sessions of a test (use `evaluateTestExpression`).
+ * Evaluates an expression with the variables of an item session: a tree interpreter with the semantics of the
+ * Information Model, NULL as `null`.
+ *
+ * @remarks
+ * Every variable of the item is in reach; the expressions of outcome processing are not, as they read the sessions of a
+ * test (use `evaluateTestExpression`).
  *
  * @param expression - The expression, as `readAsi` reads it.
  * @param variables - The variables, as `createItemVariables` and the processing functions return them.
  * @param item - The item that declares them.
  * @param context - The source of random draws, the custom operators and the limits.
+ * @returns The value, or `null` for NULL.
  * @throws `DataError` when an argument has the wrong type.
- * @throws `ProcessingError` when the expression reads a variable the item does not declare, gives an operator an operand
- * of the wrong type, or uses a custom operator that is not registered: conditions the specification does not define as
- * NULL.
+ * @throws `ProcessingError` when the expression reads a variable the item does not declare, gives an operator an
+ * operand of the wrong type, or uses a custom operator that is not registered: conditions the specification does not
+ * define as NULL.
  * @throws `SecurityError` when a container would exceed `maxContainerSize`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function evaluate(
   expression: Expression,

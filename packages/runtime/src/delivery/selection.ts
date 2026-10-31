@@ -3,7 +3,11 @@ import { DataError } from "../errors.js";
 import { drawIndex, type Random, shuffle } from "../random.js";
 import type { ContentNode, SectionNode } from "./structure.js";
 
-/** Whether a child must be selected (INFO §4.2.2): `required` on an item reference or a section. */
+/**
+ * Whether a child must be selected: `required` on an item reference or a section.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 function isRequired(child: ContentNode): boolean {
   return child.model.required === true;
 }
@@ -54,18 +58,21 @@ function copiesWithoutReplacement(children: readonly ContentNode[], extra: numbe
 }
 
 /**
- * Selects the children of a section (INFO §5.129) by the procedure of G8, and returns them in document order, the
- * copies of a child that is selected more than once next to each other: selection never reorders, ordering does.
+ * Selects the children of a section by the procedure that the spec gaps document fixes, and returns them in document
+ * order, the copies of a child that is selected more than once next to each other: selection never reorders, ordering
+ * does.
  *
+ * @remarks
  * - Without selection: every child.
  * - Without replacement: every required child, and a uniform subset of the others, drawn by shuffling the others with
- *   {@link shuffle} and taking the first places; no draw is taken when the subset is all of them. A section counts as
- *   one child (INFO §4.2.2).
+ *   {@link shuffle} and taking the first places; no draw is taken when the subset is all of them. A section counts as one
+ *   child.
  * - With replacement: every required child once, then `select` minus their number independent draws, each
- *   `drawIndex(random, n)` over all `n` children (INFO §5.129.2).
+ *   `drawIndex(random, n)` over all `n` children.
  *
  * @throws `DataError` when `select` is negative, is below the number of required children, is above the number of
  * children without replacement, or asks for children from a section that has none.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function selectChildren(section: SectionNode, random: Random): readonly ContentNode[] {
   const { children } = section;

@@ -1,12 +1,18 @@
 import type { Value } from "../values/index.js";
 import { asNumber, floatResult, primitiveOf } from "./operands.js";
 
-/** The rounding modes of `qti-round-to` and `qti-equal-rounded` (INFO §8.26). */
+/**
+ * The rounding modes of `qti-round-to` and `qti-equal-rounded`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-round-to}
+ */
 export type RoundingMode = "decimalPlaces" | "significantFigures";
 
 /**
- * A finite number as decimal digits: (−1 if `negative`) × 0.`digits` × 10^`point`. `digits` has no leading or trailing
- * zeros, so zero has none.
+ * A finite number as decimal digits: (−1 if `negative`) × 0.`digits` × 10^`point`.
+ *
+ * @remarks
+ * `digits` has no leading or trailing zeros, so zero has none.
  */
 export interface Decimal {
   readonly negative: boolean;
@@ -14,7 +20,11 @@ export interface Decimal {
   readonly point: number;
 }
 
-/** The smallest digit that rounds the digit before it up: half up, away from zero (INFO §2.11.3.43). */
+/**
+ * The smallest digit that rounds the digit before it up: half up, away from zero.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 const ROUND_UP_FROM = "5";
 
 function normalized(negative: boolean, digits: string, point: number): Decimal {
@@ -43,11 +53,12 @@ function increment(digits: string): string {
 }
 
 /**
- * Rounds a decimal by its deciding digit (INFO §2.11.3.43): the (n+1)th digit from the first non-zero digit for n
- * significant figures, or the (n+1)th digit after the decimal point for n decimal places. A deciding digit of 5 or more
- * increases the nth digit by one, carrying; the digits after the nth are discarded. Zero keeps its sign.
+ * Rounds a decimal by its deciding digit: the (n+1)th digit from the first non-zero digit for n significant figures, or
+ * the (n+1)th digit after the decimal point for n decimal places. A deciding digit of 5 or more increases the nth digit
+ * by one, carrying; the digits after the nth are discarded. Zero keeps its sign.
  *
  * @param figures - At least 1 for significant figures, at least 0 for decimal places.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 function roundDecimal(value: Decimal, mode: RoundingMode, figures: number): Decimal {
   const kept = mode === "significantFigures" ? figures : value.point + figures;
@@ -72,25 +83,34 @@ export function sameDecimal(a: Decimal, b: Decimal): boolean {
 }
 
 /**
- * Rounds a number as `qti-round-to` does (INFO §2.11.3.43): an infinity stays as it is, and a finite number becomes its
- * decimal rounded by its deciding digit.
+ * Rounds a number as `qti-round-to` does: an infinity stays as it is, and a finite number becomes its decimal rounded
+ * by its deciding digit.
  *
  * @returns `undefined` for NaN, which rounds to NULL.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-round-to}
  */
 export function rounded(value: number, mode: RoundingMode, figures: number): Decimal | number | undefined {
   if (Number.isNaN(value)) return undefined;
   return Number.isFinite(value) ? roundDecimal(decimalOf(value), mode, figures) : value;
 }
 
-/** Returns whether figures are in range for the mode: at least 1 significant figure, or at least 0 decimal places (INFO §5.119.2). */
+/**
+ * Returns whether figures are in range for the mode: at least 1 significant figure, or at least 0 decimal places.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
 export function figuresInRange(mode: RoundingMode, figures: number): boolean {
   return figures >= (mode === "significantFigures" ? 1 : 0);
 }
 
 /**
- * `qti-round-to`: the float nearest to the number rounded by its deciding digit (INFO §2.11.3.43); an infinity stays as
- * it is. NULL for NULL and NaN, when `figures` is NULL or out of range, and when the rounded decimal is beyond the range
- * of a float.
+ * `qti-round-to`: the float nearest to the number rounded by its deciding digit; an infinity stays as it is.
+ *
+ * @remarks
+ * NULL for NULL and NaN, when `figures` is NULL or out of range, and when the rounded decimal is beyond the range of a
+ * float.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-round-to}
  */
 export function roundTo(operand: Value | null, mode: RoundingMode, figures: number | null): Value | null {
   if (operand === null || figures === null || !figuresInRange(mode, figures)) return null;

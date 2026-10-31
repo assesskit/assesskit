@@ -81,7 +81,7 @@ describe("the interactions of the 1EdTech examples", () => {
     }
     expect(checked).toBe(240);
     // media_coords.xml gives the correct response "C1 squirrel", from the hotspot C1 to the gap image squirrel, where
-    // INFO §2.4.3.4 pairs a choice with a hotspot.
+    // The information model pairs a choice with a hotspot.
     expect(rejected).toEqual(["packaging/items/media_coords.xml RESPONSE: unknown-choice"]);
   });
 
