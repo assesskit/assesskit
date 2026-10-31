@@ -1,5 +1,5 @@
 {
-  "name": "olah-monorepo",
+  "name": "assesskit",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.8.1",

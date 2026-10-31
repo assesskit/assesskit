@@ -244,18 +244,52 @@ importers:
 
   differential:
     dependencies:
+      '@assesskit/runtime':
+        specifier: workspace:*
+        version: link:../packages/runtime
       '@longsightgroup/qti3-core':
         specifier: 0.13.3
         version: 0.13.3
-      '@luthfanwakan/olah':
-        specifier: workspace:*
-        version: link:../packages/olah
     devDependencies:
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
 
-  packages/olah:
+  packages/player:
+    dependencies:
+      '@assesskit/runtime':
+        specifier: workspace:^
+        version: link:../runtime
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
+      uuid:
+        specifier: 14.0.3
+        version: 14.0.3
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
+    devDependencies:
+      '@measurekit/psychometrics':
+        specifier: link:../../../measurekit/packages/psychometrics
+        version: link:../../../measurekit/packages/psychometrics
+      axe-core:
+        specifier: ^4.14.0
+        version: 4.14.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+      mathjax:
+        specifier: 4.1.3
+        version: 4.1.3
+      requirejs:
+        specifier: 2.3.8
+        version: 2.3.8
+
+  packages/runtime:
     dependencies:
       fflate:
         specifier: 0.8.3
@@ -273,46 +307,12 @@ importers:
         specifier: 2.2.0
         version: 2.2.0
     devDependencies:
-      '@luthfanwakan/takar':
-        specifier: link:../../../takar/packages/takar
-        version: link:../../../takar/packages/takar
+      '@measurekit/psychometrics':
+        specifier: link:../../../measurekit/packages/psychometrics
+        version: link:../../../measurekit/packages/psychometrics
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
-
-  packages/tempuh:
-    dependencies:
-      '@luthfanwakan/olah':
-        specifier: workspace:^
-        version: link:../olah
-      jose:
-        specifier: 6.2.12
-        version: 6.2.12
-      uuid:
-        specifier: 14.0.3
-        version: 14.0.3
-      valibot:
-        specifier: 1.5.0
-        version: 1.5.0(typescript@6.0.3)
-    devDependencies:
-      '@luthfanwakan/takar':
-        specifier: link:../../../takar/packages/takar
-        version: link:../../../takar/packages/takar
-      axe-core:
-        specifier: ^4.14.0
-        version: 4.14.0
-      esbuild:
-        specifier: 0.28.2
-        version: 0.28.2
-      fast-check:
-        specifier: ^4.10.2
-        version: 4.10.2
-      mathjax:
-        specifier: 4.1.3
-        version: 4.1.3
-      requirejs:
-        specifier: 2.3.8
-        version: 2.3.8
 
 packages:
 

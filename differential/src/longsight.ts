@@ -1,5 +1,5 @@
+import type { Random } from "@assesskit/runtime";
 import { createItemSession, parseQtiXml, type QtiDiagnostic, type QtiDocument } from "@longsightgroup/qti3-core";
-import type { Random } from "@luthfanwakan/olah";
 import type { Implementation, ItemCase, Observed, SessionCase, TurnObservation } from "./model.ts";
 
 /** The multiplier and increment of the oracle's generator, a linear congruential generator (Numerical Recipes). */
@@ -9,7 +9,7 @@ const TWO_TO_32 = 2 ** 32;
 
 /**
  * Returns the generator that the oracle draws template values with for a numeric seed (`seededRandom` of its
- * `processing-random.js`), as an olah `Random`, so that olah can draw the values that the oracle draws.
+ * `processing-random.js`), as a runtime `Random`, so that the runtime can draw the values that the oracle draws.
  */
 export function longsightRandom(seed: number): Random {
   let state = seed >>> 0;
@@ -46,7 +46,7 @@ export function correctResponses(xml: string, seed: number): Record<string, Obse
 /** The code of the oracle's diagnostic for an action on an adaptive item that completed. */
 const COMPLETED_CODE = "session.completed";
 
-/** Longsight `qti3-core`: the oracle that olah's item processing is compared with. */
+/** Longsight `qti3-core`: the oracle that the runtime's item processing is compared with. */
 export const longsight: Implementation = {
   name: "Longsight qti3-core",
   run: ({ xml, responses, seed }: ItemCase) => {

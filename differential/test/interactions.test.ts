@@ -1,10 +1,4 @@
 import {
-  captureQtiTextResponse,
-  parseQtiXml,
-  type QtiInteraction,
-  validateQtiResponseVariables,
-} from "@longsightgroup/qti3-core";
-import {
   checkResponse,
   container,
   describeInteractions,
@@ -12,7 +6,13 @@ import {
   readAsi,
   single,
   type Value,
-} from "@luthfanwakan/olah";
+} from "@assesskit/runtime";
+import {
+  captureQtiTextResponse,
+  parseQtiXml,
+  type QtiInteraction,
+  validateQtiResponseVariables,
+} from "@longsightgroup/qti3-core";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
@@ -37,7 +37,7 @@ function oracleValid(testCase: ValidityCase): boolean | undefined {
   return validateQtiResponseVariables({ item: parsed.document.item, responses: { R: testCase.oracle } }).ok;
 }
 
-/** Whether olah takes the response as valid. */
+/** Whether the runtime takes the response as valid. */
 function subjectValid(testCase: ValidityCase): boolean {
   const document = readAsi(testCase.xml);
   if (document.kind !== "item") throw new Error("The case is no item.");
@@ -69,7 +69,7 @@ const attribute = (name: string, value: number | undefined): string =>
 const pickedFrom = (choices: readonly string[]): fc.Arbitrary<string[]> =>
   fc.uniqueArray(fc.constantFrom(...choices, "Z"), { maxLength: choices.length + 1 });
 
-describe("olah against the oracle on the validity of responses", () => {
+describe("runtime against the oracle on the validity of responses", () => {
   it("[B56][D] agree on min-choices, max-choices and the choices of a choice interaction", () => {
     agree(
       fc
@@ -179,8 +179,8 @@ function oracleFields(text: string, base: number): Record<string, unknown> {
 const FLOAT_FIELDS = new Set(["stringValue", "floatValue"]);
 
 /**
- * The fields of the record that olah makes for a text, by name, and those of the oracle that are not NULL. An integer has
- * no sign of zero in olah (T2), and the oracle's `integerValue` and `exponent` are `-0` for the text `-0` and `e-0`, so
+ * The fields of the record that the runtime makes for a text, by name, and those of the oracle that are not NULL. An integer has
+ * no sign of zero in the runtime (T2), and the oracle's `integerValue` and `exponent` are `-0` for the text `-0` and `e-0`, so
  * the integers of the oracle are compared without it.
  */
 function numericFields(
@@ -201,7 +201,7 @@ function numericFields(
   return { subject, oracle };
 }
 
-describe("olah against the oracle on numeric text", () => {
+describe("runtime against the oracle on numeric text", () => {
   const digits = fc.stringMatching(/^[0-9]{0,5}$/);
   const decimalText = fc
     .record({
@@ -243,7 +243,7 @@ describe("olah against the oracle on numeric text", () => {
     }
   });
 
-  it("[B53][D] differ in the sign of a zero integer: olah has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
+  it("[B53][D] differ in the sign of a zero integer: the runtime has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
     expect(Object.is(oracleFields("-0", 10).integerValue, -0)).toBe(true);
     expect(Object.is(oracleFields("1e-0", 10).exponent, -0)).toBe(true);
     const { subject } = numericFields("-0", 10);

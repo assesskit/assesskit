@@ -1,8 +1,8 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "name": "olah",
+  "name": "assesskit",
   "entryPointStrategy": "packages",
-  "entryPoints": ["packages/olah", "packages/tempuh"],
+  "entryPoints": ["packages/runtime", "packages/player"],
   "readme": "README.md",
   "out": "docs/api",
   "treatWarningsAsErrors": true,

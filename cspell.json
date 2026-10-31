@@ -35,6 +35,7 @@
     "APPNOTE",
     "AQAB",
     "asec",
+    "assesskit",
     "associatedcontent",
     "atau",
     "autoplay",
@@ -180,7 +181,6 @@
     "longsightgroup",
     "lticm",
     "lticp",
-    "luthfanwakan",
     "maju",
     "masih",
     "mathjax",
@@ -188,6 +188,7 @@
     "mathml",
     "maxfiles",
     "MAXSCORE",
+    "measurekit",
     "mediagroup",
     "melanjutkan",
     "menerima",
@@ -228,7 +229,6 @@
     "notpresented",
     "notscored",
     "OEBPS",
-    "olah",
     "oncompleted",
     "ondone",
     "onready",
@@ -306,11 +306,9 @@
     "subtags",
     "sudah",
     "Sympson",
-    "takar",
     "tautan",
     "TEKS",
     "telah",
-    "tempuh",
     "terakhir",
     "terbuka",
     "terhitung",
@@ -363,25 +361,25 @@
     "ˈrɛdɪŋ"
   ],
   "ignorePaths": [
-    "packages/olah/docs/conformance.md",
-    "packages/olah/src/asi/element-table.ts",
-    "packages/olah/src/values/unicode-blocks.ts",
-    "packages/olah/src/values/unicode-categories.ts"
+    "packages/runtime/docs/conformance.md",
+    "packages/runtime/src/asi/element-table.ts",
+    "packages/runtime/src/values/unicode-blocks.ts",
+    "packages/runtime/src/values/unicode-categories.ts"
   ],
   "ignoreRegExpList": ["[A-Za-z0-9_-]+\\.xsd\\b"],
   "overrides": [
     {
       "filename": [
-        "packages/tempuh/src/messages/id.ts",
-        "packages/tempuh/test/messages.test.ts",
-        "packages/tempuh/docs/messages.md",
-        "packages/tempuh/README.md",
+        "packages/player/src/messages/id.ts",
+        "packages/player/test/messages.test.ts",
+        "packages/player/docs/messages.md",
+        "packages/player/README.md",
         "compat/smoke.ts",
-        "packages/tempuh/test/elements.browser.test.ts",
-        "packages/tempuh/test/elements.test.ts",
-        "packages/tempuh/test/tools.browser.test.ts",
-        "packages/tempuh/test/supports.test.ts",
-        "packages/tempuh/test/supports.browser.test.ts"
+        "packages/player/test/elements.browser.test.ts",
+        "packages/player/test/elements.test.ts",
+        "packages/player/test/tools.browser.test.ts",
+        "packages/player/test/supports.test.ts",
+        "packages/player/test/supports.browser.test.ts"
       ],
       "words": [
         "Akar",

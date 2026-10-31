@@ -8,7 +8,7 @@ const directories: string[] = [];
 
 /** Makes a package directory with the given files. */
 function packageWith(files: Readonly<Record<string, string>>): string {
-  const directory = mkdtempSync(join(tmpdir(), "tempuh-compat-"));
+  const directory = mkdtempSync(join(tmpdir(), "player-compat-"));
   directories.push(directory);
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(directory, path)), { recursive: true });

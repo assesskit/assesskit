@@ -1,15 +1,15 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-// `olah schemas fetch` runs the same code, so that one implementation downloads the schemas.
+// `assesskit schemas fetch` runs the same code, so that one implementation downloads the schemas.
 import {
   download,
   fetchSchemas,
   mapConcurrently,
   type SchemaFile,
   sha256,
-} from "../packages/olah/src/cli/fetch-schemas.ts";
+} from "../packages/runtime/src/cli/fetch-schemas.ts";
 
-const LIST_PATH = "packages/olah/src/node/schema-files.json";
+const LIST_PATH = "packages/runtime/src/node/schema-files.json";
 const CACHE_PATH = ".cache/schemas";
 
 /** Reads the list of schemas that the package pins. */

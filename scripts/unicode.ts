@@ -13,7 +13,7 @@ interface UnicodeFile {
 
 /**
  * The block names of XML Schema 1.0 (Datatypes, Appendix F.1.1) are those of Unicode 3.1, which `Blocks-4.txt` lists.
- * The general categories come from the Unicode version that olah pins, so that a pattern matches the same text in every
+ * The general categories come from the Unicode version that the runtime pins, so that a pattern matches the same text in every
  * JavaScript runtime whatever Unicode version the runtime has.
  */
 export const UNICODE_FILES = {
@@ -36,7 +36,7 @@ const MAX_CODE_POINT = 0x10ffff;
 /** The category of the code points that `UnicodeData.txt` does not list. */
 const UNASSIGNED = "Cn";
 
-const TARGET_DIRECTORY = "packages/olah/src/values";
+const TARGET_DIRECTORY = "packages/runtime/src/values";
 
 /** A block of Unicode: the first and last code point, both included, and the name as the pattern language spells it. */
 export interface Block {

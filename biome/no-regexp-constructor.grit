@@ -2,5 +2,5 @@ or {
   `new RegExp($...)`,
   `RegExp($...)`
 } as $regexp where {
-  register_diagnostic(span=$regexp, message="Author patterns run on olah's linear-time automaton, never on a backtracking RegExp: compile them with compileXsdRegex.", severity="error")
+  register_diagnostic(span=$regexp, message="Author patterns run on the runtime's linear-time automaton, never on a backtracking RegExp: compile them with compileXsdRegex.", severity="error")
 }

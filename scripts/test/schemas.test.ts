@@ -7,7 +7,7 @@ import { loadList, requireSchemas, schemaDirectory } from "../schemas.ts";
 let directory = "";
 
 beforeAll(() => {
-  directory = mkdtempSync(join(tmpdir(), "olah-schemas-"));
+  directory = mkdtempSync(join(tmpdir(), "runtime-schemas-"));
 });
 
 afterAll(() => {

@@ -7,21 +7,21 @@ const inventory = parseInventory({
   merged: ["OB1"],
   rows: [
     { id: "T1", construct: "`a|b`", source: "INFO §8.13", modules: ["values"], evidence: ["S", "P"], unit: "OB2" },
-    { id: "N1", construct: "Rendering", owner: "Item renderer: tempuh (browser)" },
+    { id: "N1", construct: "Rendering", owner: "Item renderer: the player (browser)" },
   ],
 });
 const input = {
   inventory,
   features: [
     { id: "T-4", name: "Test Part", group: "tests", levels: ["basic", "advanced"] },
-    { id: "T-3", name: "Stylesheet", group: "tests", levels: [], owner: "olah", rows: ["T1"] },
+    { id: "T-3", name: "Stylesheet", group: "tests", levels: [], owner: "runtime", rows: ["T1"] },
   ],
   accepted: [],
   references: [
-    { file: "packages/olah/test/values.test.ts", ids: ["T1"], criteria: [] },
+    { file: "packages/runtime/test/values.test.ts", ids: ["T1"], criteria: [] },
     { file: "differential/test/items.test.ts", ids: ["T1"], criteria: [] },
   ],
-  directory: "packages/olah/docs",
+  directory: "packages/runtime/docs",
 } as const;
 
 describe("renderMatrix", () => {
@@ -40,13 +40,13 @@ describe("renderMatrix", () => {
 
   it("lists the features with their levels, and elective ones as such", () => {
     expect(document).toContain("| T-4 | Test Part | Basic, Advanced |  |  |  |");
-    expect(document).toContain("| T-3 | Stylesheet | elective |  | olah | T1 |");
+    expect(document).toContain("| T-3 | Stylesheet | elective |  | runtime | T1 |");
   });
 
   it("lists the rows that are out of scope with their owner, and states that no difference is accepted", () => {
-    expect(document).toContain("| N1 | Rendering |  | Item renderer: tempuh (browser) |");
+    expect(document).toContain("| N1 | Rendering |  | Item renderer: the player (browser) |");
     expect(document).toContain(
-      "## Accepted differences\n\nDifferences between olah and Longsight qti3-core that the specification settles.\n\nNone.",
+      "## Accepted differences\n\nDifferences between the runtime and Longsight qti3-core that the specification settles.\n\nNone.",
     );
   });
 

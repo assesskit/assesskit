@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@assesskit/runtime": ["../runtime/src/index.ts"],
+      "@assesskit/runtime/errors": ["../runtime/src/errors.ts"],
+      "@assesskit/runtime/*": ["../runtime/src/*/index.ts"]
+    },
+    "types": ["node"]
+  },
+  "include": ["scripts", "test"]
+}

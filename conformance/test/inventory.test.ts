@@ -19,7 +19,7 @@ const inventory = (rows: readonly unknown[], merged: readonly string[] = ["OB1"]
 });
 
 describe("the shipped inventory", () => {
-  const shipped = loadInventory(resolve(ROOT, "conformance/olah-inventory.json"));
+  const shipped = loadInventory(resolve(ROOT, "conformance/runtime-inventory.json"));
 
   it("numbers the rows of every table without gaps", () => {
     for (const { letter } of TABLES) {
@@ -29,7 +29,7 @@ describe("the shipped inventory", () => {
     }
   });
 
-  it("gives every row of a table that olah implements a unit, and every other row an owner", () => {
+  it("gives every row of a table that the runtime implements a unit, and every other row an owner", () => {
     const out: Inventory["rows"] = shipped.rows.filter((r) => "owner" in r);
     expect(out.map((r) => r.id).sort()).toEqual(
       ["C12", "C13", "J10", ...Array.from({ length: 15 }, (_, i) => `N${i + 1}`)].sort(),
@@ -58,7 +58,7 @@ describe("the shipped inventory", () => {
 });
 
 describe("parseInventory", () => {
-  it("accepts rows that olah implements and rows it leaves to others", () => {
+  it("accepts rows that the runtime implements and rows it leaves to others", () => {
     const parsed = parseInventory(inventory([row, { id: "N1", construct: "Rendering", owner: "Item renderer" }]));
     expect(parsed.rows).toHaveLength(2);
   });

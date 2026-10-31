@@ -11,7 +11,7 @@ import json
 import random
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "olah" / "test" / "fixtures" / "printf.json"
+OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "runtime" / "test" / "fixtures" / "printf.json"
 SEED = 20260101
 FLAGS = ["", "-", "+", " ", "#", "0", "+0", "-+"]
 WIDTHS = [None, 1, 6, 12]

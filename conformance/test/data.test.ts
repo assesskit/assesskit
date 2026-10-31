@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { loadAcceptedDifferences } from "../accepted.ts";
 import { loadFeatures } from "../features.ts";
 
-const directory = mkdtempSync(join(tmpdir(), "olah-conformance-"));
+const directory = mkdtempSync(join(tmpdir(), "runtime-conformance-"));
 afterAll(() => {
   rmSync(directory, { recursive: true, force: true });
 });
@@ -41,7 +41,7 @@ describe("loadFeatures", () => {
         "T-6: group should be one of tests, sections, items, interactions, accessibility, metadata, packaging.",
         "T-7: levels should be an array of basic, advanced, elevated-accessibility, pnp.",
         "T-8: capabilities should be an array of import, export, authoring, delivery, scoring.",
-        "T-8: owner should be one of olah, tempuh, both.",
+        "T-8: owner should be one of runtime, player, both.",
         "T-9: rows should be an array of inventory row identifiers.",
       ].join("\n- "),
     );

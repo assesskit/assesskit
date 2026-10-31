@@ -13,7 +13,7 @@ import type {
   TypeDef,
   Wildcard,
   // biome-ignore lint/style/noRestrictedImports: A type-only import, erased before Node runs the script; the table types are not part of the public API.
-} from "../packages/olah/src/asi/table.ts";
+} from "../packages/runtime/src/asi/table.ts";
 import { loadList, schemaDirectory } from "./schemas.ts";
 
 /** An element of the schema, without its annotations. */
@@ -55,7 +55,7 @@ export interface Table {
 }
 
 const SCHEMA_FILE = "imsqti_asiv3p0p1_v1p0.xsd";
-const TARGET = "packages/olah/src/asi/element-table.ts";
+const TARGET = "packages/runtime/src/asi/element-table.ts";
 const UNBOUNDED = Number.POSITIVE_INFINITY;
 
 /** The elements that are documents: every element that the schema declares at the top level and that is not HTML. */
@@ -1006,7 +1006,7 @@ export function renderTable(table: Table, schema: { readonly url: string; readon
     ...attributes.declarations(),
     ...lists.declarations(),
     "",
-    "/** The element types of the ASI schema that olah reads and writes, by name. */",
+    "/** The element types of the ASI schema that the runtime reads and writes, by name. */",
     `export const ELEMENT_TYPES = ${literal(types)} as const satisfies Readonly<Record<string, TypeDef>>;`,
     "",
     "/** The elements that are documents, with the name of their type. */",
@@ -1025,7 +1025,7 @@ function format(root: string, source: string): string {
 }
 
 /**
- * Generates the source of `packages/olah/src/asi/element-table.ts` from the pinned ASI schema in the schema cache.
+ * Generates the source of `packages/runtime/src/asi/element-table.ts` from the pinned ASI schema in the schema cache.
  *
  * @param root - The repository root.
  */

@@ -45,7 +45,10 @@ const MEDIA_TYPES: ReadonlyMap<string, string> = new Map([
 ]);
 
 /** The built package, which engines/<name>/ runs in: `playwright test` starts there. */
-const DIST = resolve(process.cwd(), "../../../packages/tempuh/dist");
+const DIST = resolve(process.cwd(), "../../../packages/player/dist");
+
+/** The root of the package with its dependencies in one file, which `run-engines.ts` makes before the containers start. */
+const ROOT_BUNDLE = resolve(process.cwd(), "../../.smoke/index.js");
 
 /** The player with its dependencies in one file, which `run-engines.ts` makes before the containers start. */
 const PLAYER_BUNDLE = resolve(process.cwd(), "../../.smoke/player.js");
@@ -54,10 +57,10 @@ const PLAYER_BUNDLE = resolve(process.cwd(), "../../.smoke/player.js");
 const PROTOCOL_BUNDLE = resolve(process.cwd(), "../../.smoke/protocol.js");
 
 /** The directory that holds `mathjax` and `@mathjax` as npm lays them out, which the pages load MathJax from. */
-const MATHJAX_FILES = dirname(realpathSync(resolve(process.cwd(), "../../../packages/tempuh/node_modules/mathjax")));
+const MATHJAX_FILES = dirname(realpathSync(resolve(process.cwd(), "../../../packages/player/node_modules/mathjax")));
 
 /** The stylesheet of the player, which the package ships as it is. */
-const PLAYER_CSS_FILE = resolve(process.cwd(), "../../../packages/tempuh/player.css");
+const PLAYER_CSS_FILE = resolve(process.cwd(), "../../../packages/player/player.css");
 
 /** The module of the portable custom interaction that the page loads into the frame: it changes its response once and tries a request. */
 const PCI_MODULE = `define(["qtiCustomInteractionContext"], function (context) {
@@ -82,6 +85,7 @@ const PCI_MODULE = `define(["qtiCustomInteractionContext"], function (context) {
 /** Returns the file that serves a path, or `undefined` when the server has none. */
 function locate(path: string): string | undefined {
   if (path === "/player.css" || path === "/dist/player.css") return PLAYER_CSS_FILE;
+  if (path === "/dist/index.js") return ROOT_BUNDLE;
   if (path === "/dist/player/index.js") return PLAYER_BUNDLE;
   if (path === "/dist/protocol/index.js") return PROTOCOL_BUNDLE;
   const within = (directory: string, relative: string): string | undefined => {
@@ -94,8 +98,8 @@ function locate(path: string): string | undefined {
 }
 
 /**
- * Serves `dist/` at `/dist/`, except that `/dist/player/index.js` and `/dist/protocol/index.js` are the bundles of the player
- * and the protocol, which import olah; `player.css` at `/player.css`
+ * Serves `dist/` at `/dist/`, except that `/dist/index.js`, `/dist/player/index.js` and `/dist/protocol/index.js` are the bundles of
+ * the root, the player and the protocol, which import the runtime; `player.css` at `/player.css`
  * and `/dist/player.css`; MathJax and its fonts at `/mathjax/` and `/@mathjax/`; the module of the interaction at
  * `/pci/echo.js`; and an empty page at `/`. Returns the URL of the page and a function that stops it.
  */
@@ -104,7 +108,7 @@ async function serve(): Promise<{ readonly url: string; readonly stop: () => Pro
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
     if (path === "/") {
       response.setHeader("content-type", "text/html");
-      response.end("<!doctype html><title>tempuh</title>");
+      response.end("<!doctype html><title>the player</title>");
       return;
     }
     if (path === "/pci/echo.js") {
@@ -161,7 +165,7 @@ const PLAYER_CSS = `(async () => {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(await (await fetch("/player.css")).text());
   const host = document.createElement("div");
-  host.setAttribute("data-tempuh-contrast", "high");
+  host.setAttribute("data-ak-contrast", "high");
   const root = host.attachShadow({ mode: "open" });
   root.adoptedStyleSheets = [sheet];
   const choices = [1, 2, 3, 4, 5, 6].map((n) => "<qti-simple-choice>" + n + "</qti-simple-choice>").join("");
@@ -249,7 +253,7 @@ const MOUNT_TOOLS = `(async () => {
     ],
   });
   window.scene = { host, stage };
-  const button = (name) => [...host.querySelectorAll(".tempuh-row > button")].find((each) => each.textContent === name);
+  const button = (name) => [...host.querySelectorAll(".ak-row > button")].find((each) => each.textContent === name);
   window.scene.button = button;
   button("Ruler").focus();
 })()`;
@@ -259,7 +263,7 @@ const READ_TOOLS = `(() => {
   const { host, stage } = window.scene;
   let active = document.activeElement;
   while (active && active.shadowRoot && active.shadowRoot.activeElement) active = active.shadowRoot.activeElement;
-  const rule = stage.querySelector('.tempuh-placed[aria-label="Ruler"]');
+  const rule = stage.querySelector('.ak-placed[aria-label="Ruler"]');
   const band = stage.querySelector("[role=slider]");
   const display = host.querySelector("output");
   return JSON.stringify({
@@ -346,8 +350,8 @@ const SUPPORTS = `(async () => {
   applyPresentation(host, presentationOf(supports));
   const shadow = root.root;
   const paragraph = shadow.querySelector("p");
-  shadow.querySelector(".tempuh-card-trigger").click();
-  const popup = shadow.querySelector(".tempuh-popup");
+  shadow.querySelector(".ak-card-trigger").click();
+  const popup = shadow.querySelector(".ak-popup");
   const inside = popup.getBoundingClientRect();
   const box = host.getBoundingClientRect();
   const opened = !popup.hidden && inside.left >= box.left - 1 && inside.right <= box.right + 1;
@@ -362,7 +366,7 @@ const SUPPORTS = `(async () => {
     replaced: paragraph.firstChild.textContent,
     opened,
     dismissed: popup.hidden,
-    contrast: host.getAttribute("data-tempuh-contrast"),
+    contrast: host.getAttribute("data-ak-contrast"),
     color: getComputedStyle(paragraph).color,
     requests,
   };
@@ -435,7 +439,7 @@ const CONTENT_ROOT = `(async () => {
   dialog.close();
   await closed;
   return {
-    tags: [...shadow.querySelectorAll(".tempuh-body *")].map((element) => element.localName),
+    tags: [...shadow.querySelectorAll(".ak-body *")].map((element) => element.localName),
     image: query("img").getAttribute("src"),
     width: query("img").getAttribute("width"),
     link: query("a").getAttribute("href"),
@@ -455,7 +459,7 @@ const CONTENT_ROOT = `(async () => {
 
 /**
  * Mounts a choice, an order, a slider and a text entry with the renderers of the interactions, in a shadow root, and gives
- * them the descriptors that olah would. It collects the responses in `window.scene.responses`, and `window.scene.focus` focuses the
+ * them the descriptors that the runtime would. It collects the responses in `window.scene.responses`, and `window.scene.focus` focuses the
  * element that a selector finds in the root.
  */
 const MOUNT_INTERACTIONS = `(async () => {
@@ -495,7 +499,7 @@ const MOUNT_INTERACTIONS = `(async () => {
       bindings: [{ cardinality: "single", baseTypes: ["string"] }], choices: [], constraints: { base: 10 }, shuffle: false }],
   ]);
   const responses = [];
-  root.addEventListener("tempuh-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
+  root.addEventListener("ak-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
   for (const element of root.querySelectorAll("*")) {
     const descriptor = descriptors.get(element.getAttribute("response-identifier"));
     if (descriptor) element.descriptor = descriptor;
@@ -505,7 +509,7 @@ const MOUNT_INTERACTIONS = `(async () => {
 
 /**
  * Mounts a hotspot, a select point, a position object, a graphic gap match and a drawing with the renderers of the interactions,
- * in a shadow root, and gives them the descriptors that olah would. It collects the responses and the types of the pictures
+ * in a shadow root, and gives them the descriptors that the runtime would. It collects the responses and the types of the pictures
  * that the drawing stored in `window.graphic`, and `window.graphic.focus` focuses the element that a selector finds in the root.
  */
 const MOUNT_GRAPHIC = `(async () => {
@@ -559,7 +563,7 @@ const MOUNT_GRAPHIC = `(async () => {
     ["D", describe("drawing-interaction", "D", "single", "file", [], {})],
   ]);
   const responses = [];
-  root.addEventListener("tempuh-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
+  root.addEventListener("ak-response", (event) => responses.push([event.detail.responseIdentifier, event.detail.value]));
   const elements = [];
   for (const element of root.querySelectorAll("*")) {
     const descriptor = descriptors.get(element.getAttribute("response-identifier"));
@@ -577,7 +581,7 @@ const READ_GRAPHIC = `(async () => {
   const { root, elements, responses, uploads } = window.graphic;
   await Promise.all(elements.map((element) => element.settled()));
   const [circle, rect] = [...root.querySelectorAll("qti-hotspot-choice")].map((area) => area.getBoundingClientRect());
-  const stage = root.querySelector(".tempuh-layer").getBoundingClientRect();
+  const stage = root.querySelector(".ak-layer").getBoundingClientRect();
   const inStage = (box) => [box.left - stage.left, box.top - stage.top, box.width, box.height].map(Math.round);
   return JSON.stringify({
     responses,
@@ -602,7 +606,7 @@ interface GraphicReading {
 const RECORDER_WORKLET = `(async () => {
   const context = new AudioContext();
   await context.audioWorklet.addModule("/dist/recorder-worklet.js");
-  const node = new AudioWorkletNode(context, "tempuh-recorder");
+  const node = new AudioWorkletNode(context, "ak-recorder");
   await context.close();
   return node.numberOfOutputs;
 })()`;
@@ -632,7 +636,7 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
     },
   },
   {
-    title: "loads the shared modules of tempuh and runs them",
+    title: "loads the shared modules of the player and runs them",
     async run({ page }) {
       const { url, stop } = await serve();
       try {
@@ -708,7 +712,7 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
         await page.evaluate(`window.scene.stage.querySelector("[role=slider]").focus()`);
         await page.keyboard.press("ArrowDown");
         assert.match(String((await readTools(page)).line), /^2 of \d+$/);
-        await page.evaluate(`window.scene.stage.querySelector(".tempuh-mask button").focus()`);
+        await page.evaluate(`window.scene.stage.querySelector(".ak-mask button").focus()`);
         await page.keyboard.press("Enter");
         assert.equal((await readTools(page)).masked, false);
       } finally {
@@ -807,9 +811,9 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
         await page.evaluate(MOUNT_INTERACTIONS);
         await page.evaluate(`window.scene.focus("qti-choice-interaction input")`);
         await page.keyboard.press("Space");
-        await page.evaluate(`window.scene.focus("qti-order-interaction .tempuh-choices button")`);
+        await page.evaluate(`window.scene.focus("qti-order-interaction .ak-choices button")`);
         await page.keyboard.press("Enter");
-        await page.evaluate(`window.scene.focus("qti-order-interaction button.tempuh-drop")`);
+        await page.evaluate(`window.scene.focus("qti-order-interaction button.ak-drop")`);
         await page.keyboard.press("Enter");
         await page.evaluate(`window.scene.focus("[role=slider]")`);
         await page.keyboard.press("End");
@@ -838,19 +842,19 @@ export const SMOKE_CASES: readonly SmokeCase[] = [
         await page.evaluate(MOUNT_GRAPHIC);
         await page.evaluate(`window.graphic.focus("qti-hotspot-choice:nth-of-type(2) > input")`);
         await page.keyboard.press(" ");
-        await page.evaluate(`window.graphic.focus("qti-select-point-interaction .tempuh-surface")`);
+        await page.evaluate(`window.graphic.focus("qti-select-point-interaction .ak-surface")`);
         await page.keyboard.press("Enter");
-        await page.evaluate(`window.graphic.focus("button.tempuh-pick")`);
+        await page.evaluate(`window.graphic.focus("button.ak-pick")`);
         await page.keyboard.press("Enter");
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("Enter");
-        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.tempuh-token")`);
+        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.ak-token")`);
         await page.keyboard.press(" ");
-        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.tempuh-drop")`);
+        await page.evaluate(`window.graphic.focus("qti-graphic-gap-match-interaction button.ak-drop")`);
         await page.keyboard.press(" ");
         await page.evaluate(`window.graphic.focus('button[data-tool="rectangle"]')`);
         await page.keyboard.press(" ");
-        await page.evaluate(`window.graphic.focus("qti-drawing-interaction .tempuh-surface")`);
+        await page.evaluate(`window.graphic.focus("qti-drawing-interaction .ak-surface")`);
         await page.keyboard.press("Enter");
         await page.keyboard.press("ArrowRight");
         await page.keyboard.press("ArrowDown");

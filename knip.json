@@ -1,14 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
-    "packages/olah": {
+    "packages/runtime": {
       "entry": ["src/index.ts", "src/*/index.ts", "src/cli/bin.ts"]
     },
-    "packages/tempuh": {
+    "packages/player": {
       "entry": [
         "src/index.ts",
         "src/*/index.ts",
-        "src/cat/takar/index.ts",
+        "src/cat/measurekit/index.ts",
         "src/player/pci/frame/bridge.ts",
         "src/player/recording/worklet/recorder-worklet.ts"
       ],

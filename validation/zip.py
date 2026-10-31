@@ -15,7 +15,7 @@ import zipfile
 import zlib
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "olah" / "test" / "fixtures" / "zip"
+OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "runtime" / "test" / "fixtures" / "zip"
 SEED = 20260103
 MANIFEST = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'

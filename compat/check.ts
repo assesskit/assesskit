@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { lintBaseline } from "./lint.ts";
 
-const packageDirectory = resolve(import.meta.dirname, "../packages/tempuh");
+const packageDirectory = resolve(import.meta.dirname, "../packages/player");
 const { problems, scripts } = await lintBaseline(packageDirectory);
 
 if (scripts === 0) {

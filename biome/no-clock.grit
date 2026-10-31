@@ -4,5 +4,5 @@ or {
   `Date()`,
   `performance.now()`
 } as $clock where {
-  register_diagnostic(span=$clock, message="olah never reads a clock: take the time from the caller, as an action's at or a now argument.", severity="error")
+  register_diagnostic(span=$clock, message="assesskit never reads a clock: take the time from the caller, as an action's at or a now argument.", severity="error")
 }

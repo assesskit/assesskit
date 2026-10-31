@@ -1,0 +1,2771 @@
+/*
+ * player.css: the base and the shared vocabulary of the player.
+ *
+ * It styles a content root: the shadow root of an item, which adopts it, and the document of a PCI frame, which loads it.
+ * docs/styling.md lists the markup it expects and the properties and attributes the player sets.
+ *
+ * Sources: [VOCAB] QTI 3 Standardized Shared Vocabulary and CSS Classes, [BPIG] QTI 3 Best Practices and Implementation
+ * Guide (App. B, §5). The stylesheet stays inside the browser baseline (docs/baseline.md): flat selectors, no :has().
+ * !important appears in the utility classes of [VOCAB] §2.3 and §2.4 and in the PNP rules that must win over the item's
+ * own styles; Biome's noImportantStyles is off for stylesheets.
+ */
+
+/* 1. Tokens. A theme sets the palette; the other colors derive from it, so that a color the player sets on the host
+   (a PNP color) keeps them in step. */
+
+:root,
+:host {
+  --ak-fg: #1a1a1a;
+  --ak-bg: #ffffff;
+  --ak-accent: #0b57d0;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #b3261e;
+  --ak-muted: color-mix(in srgb, var(--ak-fg) 78%, var(--ak-bg));
+  --ak-border: color-mix(in srgb, var(--ak-fg) 62%, var(--ak-bg));
+  --ak-surface: color-mix(in srgb, var(--ak-fg) 6%, var(--ak-bg));
+  --ak-accent-surface: color-mix(in srgb, var(--ak-accent) 16%, var(--ak-bg));
+  --ak-focus: var(--ak-accent);
+  --ak-border-width: 1px;
+  --ak-focus-width: 3px;
+  --ak-focus-offset: 2px;
+
+  /* WCAG 2.5.8: the smallest target. */
+  --ak-target-size: 24px;
+  --ak-gutter: 1rem;
+
+  /* The line height as a number, so that line counts in ems follow it. BPIG §5.2.9.7.6–7: the PNP line height
+     multiplies the base, and the line spacing adds to it. */
+  --ak-leading: calc(1.5 * var(--ak-line-height, 1) + var(--ak-line-spacing, 0));
+}
+
+/* 2. Themes: invert display polarity and high contrast (BPIG §5.2.9.1). Each pair of text and background has at least
+   7:1, and the accent at least 4.5:1 against the background. */
+
+:root[data-ak-polarity="inverted"],
+:host([data-ak-polarity="inverted"]) {
+  --ak-fg: #f2f2f2;
+  --ak-bg: #121212;
+  --ak-accent: #8ab4f8;
+  --ak-on-accent: #0a0a0a;
+  --ak-invalid: #f2b8b5;
+}
+
+:root[data-ak-contrast="high"],
+:host([data-ak-contrast="high"]) {
+  --ak-fg: #000000;
+  --ak-bg: #ffffff;
+  --ak-accent: #0000b3;
+  --ak-on-accent: #ffffff;
+  --ak-invalid: #a50000;
+  --ak-border: var(--ak-fg);
+  --ak-border-width: 2px;
+  --ak-focus-width: 4px;
+}
+
+:root[data-ak-contrast="high"][data-ak-polarity="inverted"],
+:host([data-ak-contrast="high"][data-ak-polarity="inverted"]) {
+  --ak-fg: #ffffff;
+  --ak-bg: #000000;
+  --ak-accent: #ffff00;
+  --ak-on-accent: #000000;
+  --ak-invalid: #ff9a9a;
+}
+
+/* 3. The content root. Paint containment clips at the border box, so the padding keeps the focus ring of an item at the
+   edge inside it. The text settings are the PNP text appearance and magnification (BPIG §5.2.9.6–7); rem keeps a
+   root in a root from compounding them. */
+
+:root,
+:host {
+  padding: calc(var(--ak-focus-width) + var(--ak-focus-offset));
+  color: var(--ak-fg);
+  background-color: var(--ak-bg);
+  font-family: var(--ak-font-family, system-ui, sans-serif);
+  font-size: calc(var(--ak-font-scale, 1) * var(--ak-text-zoom, 1) * 1rem);
+  line-height: var(--ak-leading);
+  letter-spacing: var(--ak-letter-spacing, normal);
+  word-spacing: var(--ak-word-spacing, normal);
+  overflow-wrap: break-word;
+}
+
+:host {
+  display: block;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+/* The box of the content. What lies over the item, such as a ruler, is positioned in it. */
+.ak-root-stage {
+  position: relative;
+}
+
+:where(img, video, canvas) {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+:where(svg, object, iframe) {
+  max-inline-size: 100%;
+}
+
+:where(a) {
+  color: var(--ak-accent);
+}
+
+/* 4. Focus and controls. WCAG 2.4.7, 2.4.11, 2.5.8, 1.4.11. The sticky chrome's height keeps a focused element out
+   from under it. */
+
+:where(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]) {
+  scroll-margin-block: var(--ak-sticky-top, 0px) var(--ak-sticky-bottom, 0px);
+}
+
+:where(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible {
+  outline: var(--ak-focus-width) solid var(--ak-focus);
+  outline-offset: var(--ak-focus-offset);
+}
+
+:where(input:not([type="checkbox"], [type="radio"]), textarea, select, button) {
+  box-sizing: border-box;
+  min-inline-size: var(--ak-target-size);
+  min-block-size: var(--ak-target-size);
+  max-inline-size: 100%;
+  padding: 0.25em 0.5em;
+  border: var(--ak-border-width) solid var(--ak-border);
+  border-radius: 0.25rem;
+  color: inherit;
+  background-color: var(--ak-bg);
+  font: inherit;
+}
+
+:where(button) {
+  background-color: var(--ak-surface);
+  cursor: pointer;
+}
+
+/* WebKit ignores min-block-size on a menu, and honors block-size. */
+:where(select:not([multiple])) {
+  block-size: max(var(--ak-target-size), 1.75em);
+}
+
+:where(input[type="checkbox"], input[type="radio"]) {
+  flex: none;
+  inline-size: max(var(--ak-target-size), 1.25em);
+  block-size: max(var(--ak-target-size), 1.25em);
+  margin: 0;
+  accent-color: var(--ak-accent);
+}
+
+/* WCAG 1.4.1: an invalid control also has a thicker border, and the player adds the message. */
+:where(input, textarea, select)[aria-invalid="true"] {
+  border-width: calc(var(--ak-border-width) * 3);
+  border-color: var(--ak-invalid);
+}
+
+/* 5. Shared vocabulary, [VOCAB] §1.1 and §2. */
+
+/* §1.1.1, §1.1.6.1, §2.1: hidden to everyone, and hidden to the eye only. A control that a vocabulary class hides keeps
+   its place in the accessibility tree and in the tab order (§1.2.1.7). */
+
+.qti-hidden {
+  display: none;
+}
+
+.qti-visually-hidden,
+qti-hotspot-choice > .ak-control,
+qti-associable-hotspot > .ak-control,
+.qti-input-control-hidden .ak-control,
+.qti-unselected-hidden .ak-control {
+  position: absolute !important;
+  overflow: hidden;
+  clip: rect(1px 1px 1px 1px);
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+/* §1.1.1.1: the emphasis shows only to a candidate with the keyword-emphasis support, and does not rely on color. */
+:root[data-ak-keyword-emphasis] .qti-keyword-emphasis,
+:host([data-ak-keyword-emphasis]) .qti-keyword-emphasis {
+  border-radius: 0.125em;
+  background-color: var(--ak-accent-surface);
+  font-weight: 700;
+}
+
+/* §1.1.2, §2.12 */
+
+.qti-underline {
+  text-decoration: underline;
+}
+
+.qti-italic {
+  font-style: italic;
+}
+
+.qti-bordered {
+  padding: 2px;
+  border: var(--ak-border-width) solid var(--ak-border);
+}
+
+.qti-well {
+  min-block-size: 20px;
+  margin-block-end: 20px;
+  padding: 19px;
+  border: var(--ak-border-width) solid var(--ak-border);
+  border-radius: 4px;
+  background-color: var(--ak-surface);
+}
+
+/* §1.1.3 and §2.11: a row of twelve columns. A column spans N of them, and an offset starts after N. §2.11's pixel
+   widths and Bootstrap 2 containers are replaced by a grid of fractions, which reflows (see 8). */
+
+.qti-layout-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0 var(--ak-gutter);
+}
+
+.qti-layout-col1 {
+  grid-column-end: span 1;
+}
+
+.qti-layout-col2 {
+  grid-column-end: span 2;
+}
+
+.qti-layout-col3 {
+  grid-column-end: span 3;
+}
+
+.qti-layout-col4 {
+  grid-column-end: span 4;
+}
+
+.qti-layout-col5 {
+  grid-column-end: span 5;
+}
+
+.qti-layout-col6 {
+  grid-column-end: span 6;
+}
+
+.qti-layout-col7 {
+  grid-column-end: span 7;
+}
+
+.qti-layout-col8 {
+  grid-column-end: span 8;
+}
+
+.qti-layout-col9 {
+  grid-column-end: span 9;
+}
+
+.qti-layout-col10 {
+  grid-column-end: span 10;
+}
+
+.qti-layout-col11 {
+  grid-column-end: span 11;
+}
+
+.qti-layout-col12 {
+  grid-column-end: span 12;
+}
+
+.qti-layout-offset1 {
+  grid-column-start: 2;
+}
+
+.qti-layout-offset2 {
+  grid-column-start: 3;
+}
+
+.qti-layout-offset3 {
+  grid-column-start: 4;
+}
+
+.qti-layout-offset4 {
+  grid-column-start: 5;
+}
+
+.qti-layout-offset5 {
+  grid-column-start: 6;
+}
+
+.qti-layout-offset6 {
+  grid-column-start: 7;
+}
+
+.qti-layout-offset7 {
+  grid-column-start: 8;
+}
+
+.qti-layout-offset8 {
+  grid-column-start: 9;
+}
+
+.qti-layout-offset9 {
+  grid-column-start: 10;
+}
+
+.qti-layout-offset10 {
+  grid-column-start: 11;
+}
+
+.qti-layout-offset11 {
+  grid-column-start: 12;
+}
+
+/* §1.1.4, §2.5, §2.6 */
+
+.qti-align-left {
+  text-align: left;
+}
+
+.qti-align-center {
+  text-align: center;
+}
+
+.qti-align-right {
+  text-align: right;
+}
+
+.qti-valign-top {
+  vertical-align: top;
+}
+
+.qti-valign-middle {
+  vertical-align: middle;
+}
+
+.qti-valign-baseline {
+  vertical-align: baseline;
+}
+
+.qti-valign-bottom {
+  vertical-align: bottom;
+}
+
+/* §2.1, §2.2 */
+
+.qti-display-inline {
+  display: inline;
+}
+
+.qti-display-inline-block {
+  display: inline-block;
+}
+
+.qti-display-block {
+  display: block;
+}
+
+.qti-display-flex {
+  display: flex;
+}
+
+.qti-display-inline-flex {
+  display: inline-flex;
+}
+
+.qti-display-grid {
+  display: grid;
+}
+
+.qti-display-inline-grid {
+  display: inline-grid;
+}
+
+.qti-display-table {
+  display: table;
+}
+
+.qti-display-table-cell {
+  display: table-cell;
+}
+
+.qti-display-table-row {
+  display: table-row;
+}
+
+.qti-display-list-item {
+  display: list-item;
+}
+
+.qti-display-inherit {
+  display: inherit;
+}
+
+.qti-flex-direction-column {
+  flex-direction: column;
+}
+
+.qti-flex-direction-row {
+  flex-direction: row;
+}
+
+.qti-flex-grow-1 {
+  flex-grow: 1;
+}
+
+.qti-flex-grow-0 {
+  flex-grow: 0;
+}
+
+/* §2.3 and §2.4: "s" and "e" are the start and the end of the line, which the sample defines for left-to-right text. */
+
+.qti-margin-0 {
+  margin: 0 !important;
+}
+.qti-margin-1 {
+  margin: 0.25rem !important;
+}
+.qti-margin-2 {
+  margin: 0.5rem !important;
+}
+.qti-margin-3 {
+  margin: 1rem !important;
+}
+.qti-margin-4 {
+  margin: 1.5rem !important;
+}
+.qti-margin-5 {
+  margin: 3rem !important;
+}
+.qti-margin-auto {
+  margin: auto !important;
+}
+.qti-margin-x-0 {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+.qti-margin-x-1 {
+  margin-right: 0.25rem !important;
+  margin-left: 0.25rem !important;
+}
+.qti-margin-x-2 {
+  margin-right: 0.5rem !important;
+  margin-left: 0.5rem !important;
+}
+.qti-margin-x-3 {
+  margin-right: 1rem !important;
+  margin-left: 1rem !important;
+}
+.qti-margin-x-4 {
+  margin-right: 1.5rem !important;
+  margin-left: 1.5rem !important;
+}
+.qti-margin-x-5 {
+  margin-right: 3rem !important;
+  margin-left: 3rem !important;
+}
+.qti-margin-x-auto {
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+.qti-margin-y-0 {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.qti-margin-y-1 {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+.qti-margin-y-2 {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+.qti-margin-y-3 {
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+.qti-margin-y-4 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+.qti-margin-y-5 {
+  margin-top: 3rem !important;
+  margin-bottom: 3rem !important;
+}
+.qti-margin-y-auto {
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+}
+.qti-margin-t-0 {
+  margin-top: 0 !important;
+}
+.qti-margin-t-1 {
+  margin-top: 0.25rem !important;
+}
+.qti-margin-t-2 {
+  margin-top: 0.5rem !important;
+}
+.qti-margin-t-3 {
+  margin-top: 1rem !important;
+}
+.qti-margin-t-4 {
+  margin-top: 1.5rem !important;
+}
+.qti-margin-t-5 {
+  margin-top: 3rem !important;
+}
+.qti-margin-t-auto {
+  margin-top: auto !important;
+}
+.qti-margin-b-0 {
+  margin-bottom: 0 !important;
+}
+.qti-margin-b-1 {
+  margin-bottom: 0.25rem !important;
+}
+.qti-margin-b-2 {
+  margin-bottom: 0.5rem !important;
+}
+.qti-margin-b-3 {
+  margin-bottom: 1rem !important;
+}
+.qti-margin-b-4 {
+  margin-bottom: 1.5rem !important;
+}
+.qti-margin-b-5 {
+  margin-bottom: 3rem !important;
+}
+.qti-margin-b-auto {
+  margin-bottom: auto !important;
+}
+.qti-margin-s-0 {
+  margin-inline-start: 0 !important;
+}
+.qti-margin-s-1 {
+  margin-inline-start: 0.25rem !important;
+}
+.qti-margin-s-2 {
+  margin-inline-start: 0.5rem !important;
+}
+.qti-margin-s-3 {
+  margin-inline-start: 1rem !important;
+}
+.qti-margin-s-4 {
+  margin-inline-start: 1.5rem !important;
+}
+.qti-margin-s-5 {
+  margin-inline-start: 3rem !important;
+}
+.qti-margin-s-auto {
+  margin-inline-start: auto !important;
+}
+.qti-margin-e-0 {
+  margin-inline-end: 0 !important;
+}
+.qti-margin-e-1 {
+  margin-inline-end: 0.25rem !important;
+}
+.qti-margin-e-2 {
+  margin-inline-end: 0.5rem !important;
+}
+.qti-margin-e-3 {
+  margin-inline-end: 1rem !important;
+}
+.qti-margin-e-4 {
+  margin-inline-end: 1.5rem !important;
+}
+.qti-margin-e-5 {
+  margin-inline-end: 3rem !important;
+}
+.qti-margin-e-auto {
+  margin-inline-end: auto !important;
+}
+
+.qti-padding-0 {
+  padding: 0 !important;
+}
+.qti-padding-1 {
+  padding: 0.25rem !important;
+}
+.qti-padding-2 {
+  padding: 0.5rem !important;
+}
+.qti-padding-3 {
+  padding: 1rem !important;
+}
+.qti-padding-4 {
+  padding: 1.5rem !important;
+}
+.qti-padding-5 {
+  padding: 3rem !important;
+}
+.qti-padding-x-0 {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+.qti-padding-x-1 {
+  padding-right: 0.25rem !important;
+  padding-left: 0.25rem !important;
+}
+.qti-padding-x-2 {
+  padding-right: 0.5rem !important;
+  padding-left: 0.5rem !important;
+}
+.qti-padding-x-3 {
+  padding-right: 1rem !important;
+  padding-left: 1rem !important;
+}
+.qti-padding-x-4 {
+  padding-right: 1.5rem !important;
+  padding-left: 1.5rem !important;
+}
+.qti-padding-x-5 {
+  padding-right: 3rem !important;
+  padding-left: 3rem !important;
+}
+.qti-padding-y-0 {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.qti-padding-y-1 {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+.qti-padding-y-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+.qti-padding-y-3 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+.qti-padding-y-4 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+.qti-padding-y-5 {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+.qti-padding-t-0 {
+  padding-top: 0 !important;
+}
+.qti-padding-t-1 {
+  padding-top: 0.25rem !important;
+}
+.qti-padding-t-2 {
+  padding-top: 0.5rem !important;
+}
+.qti-padding-t-3 {
+  padding-top: 1rem !important;
+}
+.qti-padding-t-4 {
+  padding-top: 1.5rem !important;
+}
+.qti-padding-t-5 {
+  padding-top: 3rem !important;
+}
+.qti-padding-b-0 {
+  padding-bottom: 0 !important;
+}
+.qti-padding-b-1 {
+  padding-bottom: 0.25rem !important;
+}
+.qti-padding-b-2 {
+  padding-bottom: 0.5rem !important;
+}
+.qti-padding-b-3 {
+  padding-bottom: 1rem !important;
+}
+.qti-padding-b-4 {
+  padding-bottom: 1.5rem !important;
+}
+.qti-padding-b-5 {
+  padding-bottom: 3rem !important;
+}
+.qti-padding-s-0 {
+  padding-inline-start: 0 !important;
+}
+.qti-padding-s-1 {
+  padding-inline-start: 0.25rem !important;
+}
+.qti-padding-s-2 {
+  padding-inline-start: 0.5rem !important;
+}
+.qti-padding-s-3 {
+  padding-inline-start: 1rem !important;
+}
+.qti-padding-s-4 {
+  padding-inline-start: 1.5rem !important;
+}
+.qti-padding-s-5 {
+  padding-inline-start: 3rem !important;
+}
+.qti-padding-e-0 {
+  padding-inline-end: 0 !important;
+}
+.qti-padding-e-1 {
+  padding-inline-end: 0.25rem !important;
+}
+.qti-padding-e-2 {
+  padding-inline-end: 0.5rem !important;
+}
+.qti-padding-e-3 {
+  padding-inline-end: 1rem !important;
+}
+.qti-padding-e-4 {
+  padding-inline-end: 1.5rem !important;
+}
+.qti-padding-e-5 {
+  padding-inline-end: 3rem !important;
+}
+
+/* §2.7 and §2.8. A width counts the padding and the border, and never exceeds the root, so that a wide class does not
+   overflow a narrow screen (WCAG 1.4.10). */
+
+.qti-height-0 {
+  height: 0px;
+}
+.qti-height-px {
+  height: 1px;
+}
+.qti-height-0p5 {
+  height: 0.125rem;
+}
+.qti-height-1 {
+  height: 0.25rem;
+}
+.qti-height-1p5 {
+  height: 0.375rem;
+}
+.qti-height-2 {
+  height: 0.5rem;
+}
+.qti-height-2p5 {
+  height: 0.625rem;
+}
+.qti-height-3 {
+  height: 0.75rem;
+}
+.qti-height-3p5 {
+  height: 0.875rem;
+}
+.qti-height-4 {
+  height: 1rem;
+}
+.qti-height-5 {
+  height: 1.25rem;
+}
+.qti-height-6 {
+  height: 1.5rem;
+}
+.qti-height-7 {
+  height: 1.75rem;
+}
+.qti-height-8 {
+  height: 2rem;
+}
+.qti-height-9 {
+  height: 2.25rem;
+}
+.qti-height-10 {
+  height: 2.5rem;
+}
+.qti-height-11 {
+  height: 2.75rem;
+}
+.qti-height-12 {
+  height: 3rem;
+}
+.qti-height-14 {
+  height: 3.5rem;
+}
+.qti-height-16 {
+  height: 4rem;
+}
+.qti-height-20 {
+  height: 5rem;
+}
+.qti-height-24 {
+  height: 6rem;
+}
+.qti-height-28 {
+  height: 7rem;
+}
+.qti-height-32 {
+  height: 8rem;
+}
+.qti-height-36 {
+  height: 9rem;
+}
+.qti-height-40 {
+  height: 10rem;
+}
+.qti-height-44 {
+  height: 11rem;
+}
+.qti-height-48 {
+  height: 12rem;
+}
+.qti-height-52 {
+  height: 13rem;
+}
+.qti-height-56 {
+  height: 14rem;
+}
+.qti-height-60 {
+  height: 15rem;
+}
+.qti-height-64 {
+  height: 16rem;
+}
+.qti-height-72 {
+  height: 18rem;
+}
+.qti-height-80 {
+  height: 20rem;
+}
+.qti-height-96 {
+  height: 24rem;
+}
+.qti-height-1-2 {
+  height: 50%;
+}
+.qti-height-1-3 {
+  height: 33.333333%;
+}
+.qti-height-2-3 {
+  height: 66.666667%;
+}
+.qti-height-1-4 {
+  height: 25%;
+}
+.qti-height-2-4 {
+  height: 50%;
+}
+.qti-height-3-4 {
+  height: 75%;
+}
+.qti-height-1-5 {
+  height: 20%;
+}
+.qti-height-2-5 {
+  height: 40%;
+}
+.qti-height-3-5 {
+  height: 60%;
+}
+.qti-height-4-5 {
+  height: 80%;
+}
+.qti-height-1-6 {
+  height: 16.666667%;
+}
+.qti-height-2-6 {
+  height: 33.333333%;
+}
+.qti-height-3-6 {
+  height: 50%;
+}
+.qti-height-4-6 {
+  height: 66.666667%;
+}
+.qti-height-5-6 {
+  height: 83.333333%;
+}
+.qti-height-auto {
+  height: auto;
+}
+.qti-height-full {
+  height: 100%;
+}
+
+.qti-width-0 {
+  width: 0px;
+}
+.qti-width-px {
+  width: 1px;
+}
+.qti-width-0p5 {
+  width: 0.125rem;
+}
+.qti-width-1 {
+  width: 0.25rem;
+}
+.qti-width-1p5 {
+  width: 0.375rem;
+}
+.qti-width-2 {
+  width: 0.5rem;
+}
+.qti-width-2p5 {
+  width: 0.625rem;
+}
+.qti-width-3 {
+  width: 0.75rem;
+}
+.qti-width-3p5 {
+  width: 0.875rem;
+}
+.qti-width-4 {
+  width: 1rem;
+}
+.qti-width-5 {
+  width: 1.25rem;
+}
+.qti-width-6 {
+  width: 1.5rem;
+}
+.qti-width-7 {
+  width: 1.75rem;
+}
+.qti-width-8 {
+  width: 2rem;
+}
+.qti-width-9 {
+  width: 2.25rem;
+}
+.qti-width-10 {
+  width: 2.5rem;
+}
+.qti-width-11 {
+  width: 2.75rem;
+}
+.qti-width-12 {
+  width: 3rem;
+}
+.qti-width-14 {
+  width: 3.5rem;
+}
+.qti-width-16 {
+  width: 4rem;
+}
+.qti-width-20 {
+  width: 5rem;
+}
+.qti-width-24 {
+  width: 6rem;
+}
+.qti-width-28 {
+  width: 7rem;
+}
+.qti-width-32 {
+  width: 8rem;
+}
+.qti-width-36 {
+  width: 9rem;
+}
+.qti-width-40 {
+  width: 10rem;
+}
+.qti-width-44 {
+  width: 11rem;
+}
+.qti-width-48 {
+  width: 12rem;
+}
+.qti-width-52 {
+  width: 13rem;
+}
+.qti-width-56 {
+  width: 14rem;
+}
+.qti-width-60 {
+  width: 15rem;
+}
+.qti-width-64 {
+  width: 16rem;
+}
+.qti-width-72 {
+  width: 18rem;
+}
+.qti-width-80 {
+  width: 20rem;
+}
+.qti-width-96 {
+  width: 24rem;
+}
+.qti-width-auto {
+  width: auto;
+}
+.qti-width-1-2 {
+  width: 50%;
+}
+.qti-width-1-3 {
+  width: 33.333333%;
+}
+.qti-width-2-3 {
+  width: 66.666667%;
+}
+.qti-width-1-4 {
+  width: 25%;
+}
+.qti-width-2-4 {
+  width: 50%;
+}
+.qti-width-3-4 {
+  width: 75%;
+}
+.qti-width-1-5 {
+  width: 20%;
+}
+.qti-width-2-5 {
+  width: 40%;
+}
+.qti-width-3-5 {
+  width: 60%;
+}
+.qti-width-4-5 {
+  width: 80%;
+}
+.qti-width-1-6 {
+  width: 16.666667%;
+}
+.qti-width-2-6 {
+  width: 33.333333%;
+}
+.qti-width-3-6 {
+  width: 50%;
+}
+.qti-width-4-6 {
+  width: 66.666667%;
+}
+.qti-width-5-6 {
+  width: 83.333333%;
+}
+.qti-width-1-12 {
+  width: 8.333333%;
+}
+.qti-width-2-12 {
+  width: 16.666667%;
+}
+.qti-width-3-12 {
+  width: 25%;
+}
+.qti-width-4-12 {
+  width: 33.333333%;
+}
+.qti-width-5-12 {
+  width: 41.666667%;
+}
+.qti-width-6-12 {
+  width: 50%;
+}
+.qti-width-7-12 {
+  width: 58.333333%;
+}
+.qti-width-8-12 {
+  width: 66.666667%;
+}
+.qti-width-9-12 {
+  width: 75%;
+}
+.qti-width-10-12 {
+  width: 83.333333%;
+}
+.qti-width-11-12 {
+  width: 91.666667%;
+}
+.qti-width-full,
+.qti-fullwidth {
+  width: 100%;
+}
+
+[class*="qti-width-"],
+.qti-fullwidth {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+/* §1.1.4.4 and §2.9 */
+
+.qti-text-indent-0 {
+  text-indent: 0px;
+}
+.qti-text-indent-px {
+  text-indent: 1px;
+}
+.qti-text-indent-0p5 {
+  text-indent: 0.125rem;
+}
+.qti-text-indent-1 {
+  text-indent: 0.25rem;
+}
+.qti-text-indent-1p5 {
+  text-indent: 0.375rem;
+}
+.qti-text-indent-2 {
+  text-indent: 0.5rem;
+}
+.qti-text-indent-2p5 {
+  text-indent: 0.625rem;
+}
+.qti-text-indent-3 {
+  text-indent: 0.75rem;
+}
+.qti-text-indent-3p5 {
+  text-indent: 0.875rem;
+}
+.qti-text-indent-4 {
+  text-indent: 1rem;
+}
+.qti-text-indent-5 {
+  text-indent: 1.25rem;
+}
+.qti-text-indent-6 {
+  text-indent: 1.5rem;
+}
+.qti-text-indent-7 {
+  text-indent: 1.75rem;
+}
+.qti-text-indent-8 {
+  text-indent: 2rem;
+}
+.qti-text-indent-12 {
+  text-indent: 3rem;
+}
+.qti-text-indent-16 {
+  text-indent: 4rem;
+}
+.qti-text-indent-20 {
+  text-indent: 5rem;
+}
+.qti-text-indent-24 {
+  text-indent: 6rem;
+}
+.qti-text-indent-28 {
+  text-indent: 7rem;
+}
+.qti-text-indent-32 {
+  text-indent: 8rem;
+}
+
+/* §1.1.7 and §2.10. The sample lacks kannada, katakana and katakana-iroha, which §1.1.7 has, and §1.1.7 lacks
+   ethiopic-halehame*, hangul, hangul-consonant and urdu, which the sample has. */
+
+.qti-list-style-type-none {
+  list-style-type: none;
+}
+.qti-list-style-type-arabic-indic {
+  list-style-type: arabic-indic;
+}
+.qti-list-style-type-armenian {
+  list-style-type: armenian;
+}
+.qti-list-style-type-bengali {
+  list-style-type: bengali;
+}
+.qti-list-style-type-cambodian {
+  list-style-type: cambodian;
+}
+.qti-list-style-type-circle {
+  list-style-type: circle;
+}
+.qti-list-style-type-cjk-earthly-branch {
+  list-style-type: cjk-earthly-branch;
+}
+.qti-list-style-type-cjk-heavenly-stem {
+  list-style-type: cjk-heavenly-stem;
+}
+.qti-list-style-type-cjk-ideographic {
+  list-style-type: cjk-ideographic;
+}
+.qti-list-style-type-decimal {
+  list-style-type: decimal;
+}
+.qti-list-style-type-decimal-leading-zero {
+  list-style-type: decimal-leading-zero;
+}
+.qti-list-style-type-devanagari {
+  list-style-type: devanagari;
+}
+.qti-list-style-type-disc {
+  list-style-type: disc;
+}
+.qti-list-style-type-georgian {
+  list-style-type: georgian;
+}
+.qti-list-style-type-gujarati {
+  list-style-type: gujarati;
+}
+.qti-list-style-type-gurmukhi {
+  list-style-type: gurmukhi;
+}
+.qti-list-style-type-hebrew {
+  list-style-type: hebrew;
+}
+.qti-list-style-type-hiragana {
+  list-style-type: hiragana;
+}
+.qti-list-style-type-hiragana-iroha {
+  list-style-type: hiragana-iroha;
+}
+.qti-list-style-type-kannada {
+  list-style-type: kannada;
+}
+.qti-list-style-type-katakana {
+  list-style-type: katakana;
+}
+.qti-list-style-type-katakana-iroha {
+  list-style-type: katakana-iroha;
+}
+.qti-list-style-type-khmer {
+  list-style-type: khmer;
+}
+.qti-list-style-type-korean-hangul-formal {
+  list-style-type: korean-hangul-formal;
+}
+.qti-list-style-type-korean-hanja-formal {
+  list-style-type: korean-hanja-formal;
+}
+.qti-list-style-type-korean-hanja-informal {
+  list-style-type: korean-hanja-informal;
+}
+.qti-list-style-type-lao {
+  list-style-type: lao;
+}
+.qti-list-style-type-lower-alpha {
+  list-style-type: lower-alpha;
+}
+.qti-list-style-type-lower-armenian {
+  list-style-type: lower-armenian;
+}
+.qti-list-style-type-lower-greek {
+  list-style-type: lower-greek;
+}
+.qti-list-style-type-lower-latin {
+  list-style-type: lower-latin;
+}
+.qti-list-style-type-lower-roman {
+  list-style-type: lower-roman;
+}
+.qti-list-style-type-malayalam {
+  list-style-type: malayalam;
+}
+.qti-list-style-type-mongolian {
+  list-style-type: mongolian;
+}
+.qti-list-style-type-myanmar {
+  list-style-type: myanmar;
+}
+.qti-list-style-type-oriya {
+  list-style-type: oriya;
+}
+.qti-list-style-type-persian {
+  list-style-type: persian;
+}
+.qti-list-style-type-simp-chinese-formal {
+  list-style-type: simp-chinese-formal;
+}
+.qti-list-style-type-simp-chinese-informal {
+  list-style-type: simp-chinese-informal;
+}
+.qti-list-style-type-square {
+  list-style-type: square;
+}
+.qti-list-style-type-telugu {
+  list-style-type: telugu;
+}
+.qti-list-style-type-thai {
+  list-style-type: thai;
+}
+.qti-list-style-type-tibetan {
+  list-style-type: tibetan;
+}
+.qti-list-style-type-trad-chinese-formal {
+  list-style-type: trad-chinese-formal;
+}
+.qti-list-style-type-trad-chinese-informal {
+  list-style-type: trad-chinese-informal;
+}
+.qti-list-style-type-upper-alpha {
+  list-style-type: upper-alpha;
+}
+.qti-list-style-type-upper-armenian {
+  list-style-type: upper-armenian;
+}
+.qti-list-style-type-upper-latin {
+  list-style-type: upper-latin;
+}
+.qti-list-style-type-upper-roman {
+  list-style-type: upper-roman;
+}
+.qti-list-style-type-ethiopic-halehame-ti-er {
+  list-style-type: ethiopic-halehame-ti-er;
+}
+.qti-list-style-type-ethiopic-halehame-ti-et {
+  list-style-type: ethiopic-halehame-ti-et;
+}
+.qti-list-style-type-ethiopic-halehame-am {
+  list-style-type: ethiopic-halehame-am;
+}
+.qti-list-style-type-ethiopic-halehame {
+  list-style-type: ethiopic-halehame;
+}
+.qti-list-style-type-hangul {
+  list-style-type: hangul;
+}
+.qti-list-style-type-hangul-consonant {
+  list-style-type: hangul-consonant;
+}
+.qti-list-style-type-urdu {
+  list-style-type: urdu;
+}
+
+/* §1.1.5 and §2.13–2.16: vertical writing. §1.1.5.1 names the horizontal class vertical-tb, §2.13 horizontal-tb; both
+   set the browser default. */
+
+.qti-writing-mode-vertical-rl {
+  writing-mode: vertical-rl;
+}
+
+.qti-writing-mode-vertical-lr {
+  writing-mode: vertical-lr;
+}
+
+.qti-writing-mode-horizontal-tb,
+.qti-writing-mode-vertical-tb {
+  writing-mode: horizontal-tb;
+}
+
+.qti-float-left {
+  float: left;
+}
+
+.qti-float-right {
+  float: right;
+}
+
+.qti-float-none {
+  float: none;
+}
+
+.qti-float-clearfix::after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+.qti-float-clear-left {
+  clear: left;
+}
+
+.qti-float-clear-right {
+  clear: right;
+}
+
+.qti-float-clear-both {
+  clear: both;
+}
+
+.qti-text-orientation-upright {
+  text-orientation: upright;
+}
+
+.qti-text-combine-upright-all {
+  text-combine-upright: all;
+}
+
+/* 6. Interaction classes, [VOCAB] §1.2 and [BPIG] App. B.1. The stylesheet reads the QTI element names and the parts
+   of docs/styling.md. */
+
+:where(
+  qti-prompt,
+  qti-choice-interaction,
+  qti-order-interaction,
+  qti-match-interaction,
+  qti-gap-match-interaction,
+  qti-graphic-gap-match-interaction,
+  qti-hotspot-interaction,
+  qti-hottext-interaction,
+  qti-extended-text-interaction,
+  qti-simple-choice,
+  qti-simple-match-set
+) {
+  display: block;
+}
+
+:where(qti-text-entry-interaction, qti-inline-choice-interaction, qti-gap) {
+  display: inline-block;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+/* The label of a choice or of an order target is the counter of its group, shown before the text (§1.2.1.1–3,
+   §1.2.9.1–2). Without a class there is no label. */
+
+.qti-labels-decimal {
+  --ak-label-style: decimal;
+}
+
+.qti-labels-lower-alpha {
+  --ak-label-style: lower-alpha;
+}
+
+.qti-labels-upper-alpha {
+  --ak-label-style: upper-alpha;
+}
+
+.qti-labels-cjk-ideographic {
+  --ak-label-style: cjk-ideographic;
+}
+
+.qti-labels-suffix-none {
+  --ak-label-suffix: "";
+}
+
+.qti-labels-suffix-period {
+  --ak-label-suffix: ".";
+}
+
+.qti-labels-suffix-parenthesis {
+  --ak-label-suffix: ")";
+}
+
+:is(.qti-labels-decimal, .qti-labels-lower-alpha, .qti-labels-upper-alpha, .qti-labels-cjk-ideographic)
+  :is(qti-simple-choice > .ak-face, .ak-target)::before {
+  content: counter(ak-label, var(--ak-label-style)) var(--ak-label-suffix, "");
+  margin-inline-end: 0.5ch;
+}
+
+/* 6.1 Choice, §1.2.1. A grid of N columns, read across (§1.2.1.6, the Z); a horizontal row wraps after five choices
+   (§1.2.1.4). A vertical stack of several columns reads down each column (the reverse N), which needs the number of
+   rows: the player sets --ak-rows, since CSS cannot count the choices. */
+
+qti-choice-interaction {
+  display: grid;
+  grid-template-columns: repeat(var(--ak-columns, 1), minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--ak-rows, 1), auto);
+  grid-auto-flow: var(--ak-flow, row);
+  gap: 0.5rem var(--ak-gutter);
+  counter-reset: ak-label;
+}
+
+qti-choice-interaction > :not(qti-simple-choice) {
+  grid-area: 1 / 1 / auto / -1;
+}
+
+qti-simple-choice {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  min-block-size: var(--ak-target-size);
+  counter-increment: ak-label;
+}
+
+.qti-choices-stacking-1 {
+  --ak-columns: 1;
+}
+
+.qti-choices-stacking-2 {
+  --ak-columns: 2;
+  --ak-flow: column;
+}
+
+.qti-choices-stacking-3 {
+  --ak-columns: 3;
+  --ak-flow: column;
+}
+
+.qti-choices-stacking-4 {
+  --ak-columns: 4;
+  --ak-flow: column;
+}
+
+.qti-choices-stacking-5 {
+  --ak-columns: 5;
+  --ak-flow: column;
+}
+
+.qti-orientation-horizontal,
+[class*="qti-writing-orientation-vertical"] {
+  --ak-flow: row;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > :not(qti-simple-choice) {
+  flex-basis: 100%;
+}
+
+qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > qti-simple-choice {
+  flex: 1 1 calc(20% - var(--ak-gutter));
+}
+
+.ak-face {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* §1.2.1.7 and §1.2.6.1: the text of a choice or of a hot text is the control, seen. Hidden is visually hidden: the
+   control stays in the tab order, and its face shows the focus. */
+
+.qti-input-control-hidden :is(qti-simple-choice, qti-hottext) > .ak-face {
+  box-shadow: inset 0 0 0 var(--ak-border-width) var(--ak-border);
+  background-color: var(--ak-surface);
+}
+
+/* A selected choice has a border besides the control's mark. With the control hidden its face reverses and the border
+   thickens, so that selection never relies on color alone (WCAG 1.4.1). */
+
+.ak-control:checked + .ak-face {
+  box-shadow: inset 0 0 0 var(--ak-border-width) var(--ak-accent);
+}
+
+:is(.qti-input-control-hidden, .qti-unselected-hidden)
+  :is(qti-simple-choice, qti-hottext)
+  > .ak-control:checked
+  + .ak-face {
+  box-shadow: inset 0 0 0 calc(var(--ak-border-width) * 3) var(--ak-on-accent);
+  color: var(--ak-on-accent);
+  background-color: var(--ak-accent);
+}
+
+qti-hotspot-choice > .ak-control:focus-visible + .ak-face,
+qti-associable-hotspot > .ak-control:focus-visible + .ak-face,
+:is(.qti-input-control-hidden, .qti-unselected-hidden) .ak-control:focus-visible + .ak-face {
+  outline: var(--ak-focus-width) solid var(--ak-focus);
+  outline-offset: var(--ak-focus-offset);
+}
+
+/* §1.2.1.9, §1.2.2.3, §1.2.3.4, §1.2.7.3: vertical writing of choice, text entry, extended text and inline choice. A
+   choice's label stands upright. */
+
+.qti-writing-orientation-vertical-rl {
+  writing-mode: vertical-rl;
+}
+
+.qti-writing-orientation-vertical-lr {
+  writing-mode: vertical-lr;
+}
+
+[class*="qti-writing-orientation-vertical"] :is(input, textarea, select) {
+  writing-mode: inherit;
+}
+
+[class*="qti-writing-orientation-vertical"] qti-simple-choice > .ak-face::before {
+  text-combine-upright: all;
+  text-orientation: upright;
+}
+
+/* 6.2 Text entry, inline choice and gap: at least N characters wide, §1.2.2.1, §1.2.4.3, §1.2.7.1. */
+
+.qti-input-width-1 {
+  --ak-input-chars: 1;
+}
+
+.qti-input-width-2 {
+  --ak-input-chars: 2;
+}
+
+.qti-input-width-3 {
+  --ak-input-chars: 3;
+}
+
+.qti-input-width-4 {
+  --ak-input-chars: 4;
+}
+
+.qti-input-width-6 {
+  --ak-input-chars: 6;
+}
+
+.qti-input-width-10 {
+  --ak-input-chars: 10;
+}
+
+.qti-input-width-15 {
+  --ak-input-chars: 15;
+}
+
+.qti-input-width-20 {
+  --ak-input-chars: 20;
+}
+
+.qti-input-width-25 {
+  --ak-input-chars: 25;
+}
+
+.qti-input-width-30 {
+  --ak-input-chars: 30;
+}
+
+.qti-input-width-35 {
+  --ak-input-chars: 35;
+}
+
+.qti-input-width-40 {
+  --ak-input-chars: 40;
+}
+
+.qti-input-width-45 {
+  --ak-input-chars: 45;
+}
+
+.qti-input-width-50 {
+  --ak-input-chars: 50;
+}
+
+.qti-input-width-72 {
+  --ak-input-chars: 72;
+}
+
+[class*="qti-input-width-"] {
+  inline-size: calc(var(--ak-input-chars) * 1ch + 1em + 2 * var(--ak-border-width));
+}
+
+[class*="qti-input-width-"] > :is(input, select) {
+  inline-size: 100%;
+}
+
+qti-gap {
+  min-block-size: var(--ak-target-size);
+  min-inline-size: var(--ak-target-size);
+  border: var(--ak-border-width) dashed var(--ak-border);
+  vertical-align: middle;
+}
+
+/* 6.3 Extended text: the height in lines, §1.2.3.1. The block size is the width of the lines in vertical writing. */
+
+.qti-height-lines-3 {
+  --ak-input-lines: 3;
+}
+
+.qti-height-lines-6 {
+  --ak-input-lines: 6;
+}
+
+.qti-height-lines-15 {
+  --ak-input-lines: 15;
+}
+
+qti-extended-text-interaction :is(textarea, [role="textbox"]) {
+  inline-size: 100%;
+}
+
+[class*="qti-height-lines-"] :is(textarea, [role="textbox"]) {
+  min-block-size: calc(var(--ak-input-lines) * var(--ak-leading) * 1em + 0.5em);
+}
+
+/* 6.4 Match, gap match, graphic gap match and order: where the choices stand against the targets (§1.2.8.1, §1.2.4.1,
+   §1.2.10.1, §1.2.9.3), and the order's own direction (§1.2.9). The choices come first in the markup, for a screen
+   reader; only the eye sees them elsewhere. The player gives the two sets of a match the classes of the two
+   containers. */
+
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction) {
+  --ak-columns-track: minmax(0, 1fr);
+  --ak-choices-area: 2 / 1;
+  --ak-targets-area: 3 / 1;
+
+  display: grid;
+  grid-template-columns: var(--ak-columns-track);
+  gap: var(--ak-gutter);
+  align-items: start;
+}
+
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction)
+  > :not(.ak-choices, .ak-targets) {
+  grid-area: 1 / 1 / auto / -1;
+}
+
+.qti-choices-bottom {
+  --ak-choices-area: 3 / 1;
+  --ak-targets-area: 2 / 1;
+}
+
+.qti-choices-left {
+  --ak-columns-track: var(--ak-choices-width, fit-content(40%)) minmax(0, 1fr);
+  --ak-choices-area: 2 / 1;
+  --ak-targets-area: 2 / 2;
+}
+
+.qti-choices-right {
+  --ak-columns-track: minmax(0, 1fr) var(--ak-choices-width, fit-content(40%));
+  --ak-choices-area: 2 / 2;
+  --ak-targets-area: 2 / 1;
+}
+
+.ak-choices {
+  grid-area: var(--ak-choices-area);
+  inline-size: var(--ak-choices-width, auto);
+  max-inline-size: 100%;
+}
+
+.ak-targets {
+  grid-area: var(--ak-targets-area);
+  counter-reset: ak-label;
+}
+
+.ak-choices,
+.ak-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-content: flex-start;
+}
+
+qti-order-interaction:not(.qti-orientation-horizontal) :is(.ak-choices, .ak-targets) {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.ak-choices > *,
+.ak-target {
+  box-sizing: border-box;
+  min-block-size: var(--ak-target-size);
+  padding: 0.25rem 0.5rem;
+  border: var(--ak-border-width) solid var(--ak-border);
+  border-radius: 0.25rem;
+  background-color: var(--ak-surface);
+}
+
+.ak-target {
+  min-block-size: 4rem;
+  border-style: dashed;
+  text-align: center;
+  counter-increment: ak-label;
+}
+
+/* §1.2.8.2: a match as a table, the choices of the first set as rows. A hidden header row stays for a screen reader. */
+
+.qti-match-tabular table {
+  border-collapse: collapse;
+}
+
+.qti-match-tabular :is(th, td) {
+  padding: 0.25rem 0.5rem;
+  border: var(--ak-border-width) solid var(--ak-border);
+  text-align: center;
+}
+
+.qti-match-tabular.qti-header-hidden thead {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(1px 1px 1px 1px);
+  inline-size: 1px;
+  block-size: 1px;
+}
+
+/* 6.5 Selections on graphics and in text: hotspot and graphic gap match themes (§1.2.5.1, §1.2.10.3) and hot text
+   (§1.2.6.3). A selection is a line and a fill: the light theme suits a dark image, the dark theme a light one. An
+   unselected hidden choice shows when it has focus or is selected; in a graphic gap match also while the candidate
+   places a choice (the player sets data-ak-placing). */
+
+:is(
+  qti-hotspot-interaction,
+  qti-graphic-order-interaction,
+  qti-graphic-associate-interaction,
+  qti-graphic-gap-match-interaction,
+  qti-select-point-interaction,
+  qti-position-object-interaction,
+  qti-drawing-interaction
+) {
+  --ak-hotspot-line: var(--ak-accent);
+  --ak-hotspot-halo: var(--ak-bg);
+}
+
+.qti-selections-light {
+  --ak-hotspot-line: #ffffff;
+  --ak-hotspot-halo: #000000;
+}
+
+.qti-selections-dark {
+  --ak-hotspot-line: #000000;
+  --ak-hotspot-halo: #ffffff;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot) > .ak-face {
+  display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: 0;
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-line);
+  outline: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-halo);
+  background-color: transparent;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot) > .ak-control:checked + .ak-face {
+  border-width: calc(var(--ak-border-width) * 4);
+  background-color: color-mix(in srgb, var(--ak-hotspot-line) 35%, transparent);
+}
+
+qti-hotspot-interaction.qti-unselected-hidden qti-hotspot-choice > .ak-control:not(:checked, :focus-visible) + .ak-face,
+qti-graphic-gap-match-interaction.qti-unselected-hidden:not([data-ak-placing])
+  qti-associable-hotspot:not(:focus-within)
+  > .ak-face {
+  border-color: transparent;
+  outline-color: transparent;
+}
+
+qti-hottext {
+  display: inline;
+}
+
+qti-hottext > .ak-face {
+  display: inline;
+  padding-inline: 0.125em;
+  border-radius: 0.25em;
+}
+
+.qti-unselected-hidden qti-hottext > .ak-control:not(:checked) + .ak-face {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+/* 6.6 The content of a root, which the renderer builds: the notice of a hazard, the rubric, the stimuli beside the item,
+   feedback and the dialog of modal feedback. The elements of QTI that hold blocks are blocks; a stimulus stands beside
+   the item when the viewport is wide, as in BPIG §3.7.7, and folds above it otherwise (WCAG 1.4.10). */
+
+:where(
+  qti-rubric-block,
+  qti-feedback-block,
+  qti-template-block,
+  qti-content-body,
+  qti-modal-feedback,
+  qti-test-feedback,
+  qti-html-content
+) {
+  display: block;
+}
+
+.ak-hazards {
+  margin-block: 0 1rem;
+  padding: 0.75rem 1rem;
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-border);
+  background-color: var(--ak-surface);
+}
+
+.ak-hazards > p {
+  margin-block: 0 0.5rem;
+}
+
+.ak-hazards > ul {
+  margin: 0;
+  padding-inline-start: 1.5rem;
+}
+
+.ak-rubric {
+  margin-block: 0 1rem;
+}
+
+.ak-test-feedback {
+  margin-block: 1rem 0;
+}
+
+@media (min-width: 48rem) {
+  .ak-main[data-ak-stimuli] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--ak-gutter);
+    align-items: start;
+  }
+
+  :root[data-ak-single-column] .ak-main[data-ak-stimuli],
+  :host([data-ak-single-column]) .ak-main[data-ak-stimuli] {
+    display: block;
+  }
+}
+
+.ak-dialog {
+  box-sizing: border-box;
+  max-inline-size: min(40rem, calc(100% - 2rem));
+  max-block-size: calc(100% - 2rem);
+  padding: 1rem;
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-border);
+  color: var(--ak-fg);
+  background-color: var(--ak-bg);
+  overflow: auto;
+}
+
+/* ::backdrop does not inherit custom properties in the oldest engines of the baseline, so it has a color of its own. */
+.ak-dialog::backdrop {
+  background-color: rgb(0 0 0 / 50%);
+}
+
+.ak-dialog form {
+  margin-block-start: 1rem;
+}
+
+/* 6.7 The controls of the interactions that the player draws: the limits and hints, the choices that are put in places,
+   the slider, and the fields of a text. The classes are those of docs/styling.md. */
+
+/* A choice that is all placed leaves the pool; the display of the elements of a choice would otherwise show it. */
+.ak-choices > [hidden] {
+  display: none;
+}
+
+:where(
+  qti-associate-interaction,
+  qti-slider-interaction,
+  qti-media-interaction,
+  qti-upload-interaction,
+  qti-custom-interaction,
+  qti-end-attempt-interaction,
+  qti-simple-associable-choice,
+  qti-gap-text,
+  qti-gap-img
+) {
+  display: block;
+}
+
+/* The notes come after the content. The interactions that lay their parts out in a grid put them in the row after the
+   last: the rows of a choice, and the three rows of a board. */
+
+.ak-notes {
+  display: block;
+  margin-block-start: 0.5rem;
+}
+
+span.ak-notes {
+  display: inline;
+  margin-inline-start: 0.5rem;
+}
+
+qti-choice-interaction > .ak-notes {
+  grid-area: -1 / 1 / auto / -1;
+}
+
+:is(qti-match-interaction, qti-gap-match-interaction, qti-graphic-gap-match-interaction, qti-order-interaction)
+  > .ak-notes {
+  grid-area: 4 / 1 / auto / -1;
+}
+
+.ak-instruction {
+  color: var(--ak-muted);
+  font-size: 0.9em;
+}
+
+.ak-hint {
+  color: var(--ak-invalid);
+  font-weight: 600;
+}
+
+/* WCAG 1.4.1: the hint is text with a mark in front, so that it does not rely on its color. */
+.ak-hint:not(:empty)::before {
+  content: "! ";
+}
+
+.ak-instruction:empty,
+.ak-hint:empty {
+  display: none;
+}
+
+/* Choices in places. A token is a button that fills the box of its choice; a chip is the same choice in a place, with
+   the button that takes it out. The choice that the candidate picked up has a thicker outline (WCAG 1.4.1). */
+
+.ak-token,
+.ak-chip-button {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: var(--ak-target-size);
+  min-block-size: var(--ak-target-size);
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  color: inherit;
+  background-color: transparent;
+  font: inherit;
+  text-align: start;
+}
+
+.ak-token[aria-pressed="true"],
+.ak-chip-button[aria-pressed="true"] {
+  outline: calc(var(--ak-border-width) * 3) solid var(--ak-accent);
+  background-color: var(--ak-accent-surface);
+}
+
+.ak-chip {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  border: var(--ak-border-width) solid var(--ak-border);
+  border-radius: 0.25rem;
+  background-color: var(--ak-accent-surface);
+}
+
+.ak-chip-button {
+  inline-size: auto;
+}
+
+.ak-remove {
+  flex: none;
+  inline-size: var(--ak-target-size);
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+}
+
+.ak-remove::before {
+  content: "\00d7";
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.ak-drop {
+  display: block;
+  inline-size: 100%;
+  color: var(--ak-muted);
+  background-color: transparent;
+  border-style: dashed;
+}
+
+qti-gap {
+  line-height: 1;
+}
+
+qti-gap > .ak-drop {
+  inline-size: auto;
+}
+
+[data-ak-over] {
+  outline: calc(var(--ak-border-width) * 3) solid var(--ak-accent);
+}
+
+.ak-dragging {
+  position: relative;
+  z-index: 1;
+  cursor: grabbing;
+  box-shadow: 0 0.25rem 0.5rem color-mix(in srgb, var(--ak-fg) 35%, transparent);
+}
+
+qti-gap-match-interaction .ak-targets,
+qti-graphic-gap-match-interaction .ak-targets {
+  display: block;
+}
+
+.ak-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ak-pair > .ak-target {
+  flex: 1 1 8rem;
+}
+
+.ak-target-content {
+  margin-block-end: 0.25rem;
+}
+
+qti-simple-associable-choice.ak-target {
+  text-align: start;
+}
+
+/* The slider is a track and a thumb. The thumb is as large as the smallest target (WCAG 2.5.8). Until the candidate
+   chooses a value it is an empty mark, so that it claims no value (INFO §5.134). */
+
+.ak-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ak-slider[data-orientation="vertical"] {
+  flex-direction: column;
+  block-size: 14rem;
+}
+
+.ak-slider-end {
+  flex: none;
+  min-inline-size: 2ch;
+  text-align: center;
+}
+
+.ak-slider-track {
+  position: relative;
+  flex: 1 1 12rem;
+  min-inline-size: 8rem;
+  block-size: var(--ak-target-size);
+}
+
+.ak-slider[data-orientation="vertical"] .ak-slider-track {
+  flex: 1 1 8rem;
+  min-inline-size: 0;
+  inline-size: var(--ak-target-size);
+  min-block-size: 8rem;
+  block-size: auto;
+}
+
+.ak-slider-track::before {
+  content: "";
+  position: absolute;
+  inset-block: calc(50% - var(--ak-border-width) * 2) auto;
+  inset-inline: 0;
+  block-size: calc(var(--ak-border-width) * 4);
+  border-radius: 999px;
+  background-color: var(--ak-border);
+}
+
+.ak-slider[data-orientation="vertical"] .ak-slider-track::before {
+  inset-block: 0;
+  inset-inline: calc(50% - var(--ak-border-width) * 2) auto;
+  inline-size: calc(var(--ak-border-width) * 4);
+  block-size: auto;
+}
+
+.ak-slider-thumb {
+  position: absolute;
+  box-sizing: border-box;
+  inset-block-start: 50%;
+  inset-inline-start: calc(var(--ak-slider-position, 0) * 100%);
+  inline-size: var(--ak-target-size);
+  block-size: var(--ak-target-size);
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-on-accent);
+  border-radius: 50%;
+  background-color: var(--ak-accent);
+  transform: translate(-50%, -50%);
+}
+
+.ak-slider[data-orientation="vertical"] .ak-slider-thumb {
+  inset-block-start: calc(var(--ak-slider-position, 0) * 100%);
+  inset-inline-start: 50%;
+}
+
+.ak-slider[data-ak-unset] .ak-slider-thumb {
+  border: calc(var(--ak-border-width) * 2) dashed var(--ak-accent);
+  background-color: var(--ak-bg);
+}
+
+.ak-slider[data-ak-disabled] .ak-slider-thumb {
+  background-color: var(--ak-border);
+}
+
+/* The labels of the steps stand below a horizontal scale and beside a vertical one, so the slider keeps room for them. */
+
+.ak-slider-stepped {
+  padding-block-end: 1.5rem;
+}
+
+.ak-slider-stepped[data-orientation="vertical"] {
+  padding-block-end: 0;
+  padding-inline-end: 2.5rem;
+}
+
+.ak-slider-ticks {
+  position: absolute;
+  inset: 0;
+  font-size: 0.75em;
+  pointer-events: none;
+}
+
+.ak-slider-tick {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: calc(var(--ak-slider-position, 0) * 100%);
+  transform: translateX(-50%);
+}
+
+.ak-slider[data-orientation="vertical"] .ak-slider-tick {
+  inset-block-start: calc(var(--ak-slider-position, 0) * 100%);
+  inset-inline-start: 100%;
+  margin-inline-start: 0.25rem;
+  transform: translateY(-50%);
+}
+
+/* The player of a media interaction and the controls of an upload. A recording shows a dot and the word, so that the
+   indicator does not rely on color (WCAG 1.4.1). */
+
+.ak-media-bar,
+.ak-upload,
+.ak-stored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ak-media-status,
+.ak-media-time,
+.ak-media-notice,
+.ak-file-name,
+.ak-upload-status {
+  color: var(--ak-muted);
+}
+
+.ak-media-notice:empty,
+.ak-upload-status:empty,
+.ak-stored:empty {
+  display: none;
+}
+
+.ak-recording::before {
+  content: "\25cf";
+  margin-inline-end: 0.25em;
+  color: var(--ak-invalid);
+}
+
+/* The fields of a text. */
+
+.ak-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ak-preformatted {
+  font-family: monospace;
+  white-space: pre;
+}
+
+.ak-editor [role="toolbar"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-block-end: 0.25rem;
+}
+
+.ak-editable {
+  box-sizing: border-box;
+  min-block-size: calc(3 * var(--ak-leading) * 1em + 0.5em);
+  padding: 0.25em 0.5em;
+  border: var(--ak-border-width) solid var(--ak-border);
+  border-radius: 0.25rem;
+  overflow: auto;
+}
+
+.ak-editable:focus-visible {
+  outline: var(--ak-focus-width) solid var(--ak-focus);
+  outline-offset: var(--ak-focus-offset);
+}
+
+.ak-editable[aria-invalid="true"] {
+  border-width: calc(var(--ak-border-width) * 3);
+  border-color: var(--ak-invalid);
+}
+
+.ak-counter {
+  color: var(--ak-muted);
+  font-size: 0.9em;
+  text-align: end;
+}
+
+/* 6.8 Graphic interactions: an image with a layer over it that has the drawn size of the image, and in the layer what
+   the candidate points at. The player sets --ak-image-width and --ak-image-height on the layer, the size of the
+   image in the units of its coordinates, and --ak-x, --ak-y, --ak-w and --ak-h on a hotspot, its box in
+   those units, so that the boxes follow the image at any scale. The layer is positioned by its left and top, not
+   by logical properties, because coordinates run from the top left whatever the direction of the text. */
+
+:where(
+  qti-select-point-interaction,
+  qti-graphic-order-interaction,
+  qti-graphic-associate-interaction,
+  qti-position-object-interaction,
+  qti-drawing-interaction
+) {
+  display: block;
+}
+
+.ak-stage,
+qti-position-object-stage {
+  position: relative;
+  display: inline-block;
+  max-inline-size: 100%;
+  vertical-align: top;
+}
+
+:is(.ak-stage, qti-position-object-stage) > :is(img, picture),
+:is(.ak-stage, qti-position-object-stage) > picture > img {
+  display: block;
+}
+
+.ak-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  aspect-ratio: var(--ak-image-width) / var(--ak-image-height);
+  pointer-events: none;
+}
+
+.ak-layer > * {
+  pointer-events: auto;
+}
+
+.ak-layer > :is(qti-hotspot-choice, qti-associable-hotspot, .ak-object) {
+  position: absolute;
+  left: calc(var(--ak-x) / var(--ak-image-width) * 100%);
+  top: calc(var(--ak-y) / var(--ak-image-height) * 100%);
+  inline-size: calc(var(--ak-w) / var(--ak-image-width) * 100%);
+  block-size: calc(var(--ak-h) / var(--ak-image-height) * 100%);
+}
+
+/* A circle and an ellipse are their box with round corners; a rectangle and the whole image are their box. */
+:is(qti-hotspot-choice, qti-associable-hotspot):is([data-shape="circle"], [data-shape="ellipse"]) > .ak-face {
+  border-radius: 50%;
+}
+
+/* A hotspot or an object drawn smaller than a target (WCAG 2.2, 2.5.8) has a target of the minimum size centered on it. */
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-ak-small] > .ak-face::after,
+.ak-object[data-ak-small]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  inline-size: var(--ak-target-size);
+  block-size: var(--ak-target-size);
+  transform: translate(-50%, -50%);
+  border-radius: inherit;
+}
+
+/* A polygon draws its line and fill as SVG in its box, because a border cannot follow it: the box itself shows only the
+   ring of the focus, and the polygon takes the pointer. */
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"] > .ak-face {
+  border: 0;
+  outline-style: none;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"] > .ak-control:checked + .ak-face,
+:is(qti-hotspot-choice, qti-associable-hotspot)[data-shape="poly"] > .ak-control[aria-pressed="true"] + .ak-face {
+  background-color: transparent;
+}
+
+.ak-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ak-outline polygon {
+  fill: transparent;
+  stroke: var(--ak-hotspot-line);
+  stroke-width: calc(var(--ak-border-width) * 2);
+  pointer-events: all;
+}
+
+.ak-outline polygon.ak-halo {
+  stroke: var(--ak-hotspot-halo);
+  stroke-width: calc(var(--ak-border-width) * 6);
+}
+
+.ak-control:is(:checked, [aria-pressed="true"]) + .ak-face .ak-outline polygon:not(.ak-halo) {
+  fill: color-mix(in srgb, var(--ak-hotspot-line) 35%, transparent);
+  stroke-width: calc(var(--ak-border-width) * 4);
+}
+
+.ak-control:focus-visible + .ak-face .ak-outline polygon:not(.ak-halo) {
+  stroke-dasharray: 6 3;
+}
+
+:is(.qti-unselected-hidden) .ak-control:not(:checked, :focus-visible, [aria-pressed="true"]) + .ak-face .ak-outline {
+  opacity: 0;
+}
+
+/* A control that is a button marks a pressed state as a checked control does. */
+:is(qti-hotspot-choice, qti-associable-hotspot) > .ak-control[aria-pressed="true"] + .ak-face {
+  border-width: calc(var(--ak-border-width) * 4);
+  background-color: color-mix(in srgb, var(--ak-hotspot-line) 35%, transparent);
+}
+
+/* The place of a hotspot in an order: a number on the hotspot, in the colors of its line, which does not rely on color. */
+.ak-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding-inline: 0.3em;
+  border-radius: 999px;
+  color: var(--ak-hotspot-halo);
+  background-color: var(--ak-hotspot-line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.ak-badge[hidden] {
+  display: none;
+}
+
+/* Select point and position object: the surface takes the pointer and the focus of the keyboard, the crosshair shows where
+   the arrow keys have moved to, and a marker is a point or an object that the candidate placed. */
+.ak-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: crosshair;
+}
+
+.ak-surface:focus-visible {
+  outline-offset: calc(var(--ak-focus-width) * -1);
+}
+
+qti-position-object-interaction:not([data-ak-placing]) .ak-surface {
+  pointer-events: none;
+}
+
+.ak-layer > :is(.ak-marker, .ak-crosshair, .ak-start) {
+  position: absolute;
+  left: calc(var(--ak-x) / var(--ak-image-width) * 100%);
+  top: calc(var(--ak-y) / var(--ak-image-height) * 100%);
+  transform: translate(-50%, -50%);
+}
+
+.ak-crosshair {
+  inline-size: 2rem;
+  block-size: 2rem;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--ak-hotspot-line), var(--ak-hotspot-line)) center / 100% 3px no-repeat,
+    linear-gradient(var(--ak-hotspot-line), var(--ak-hotspot-line)) center / 3px 100% no-repeat;
+  filter: drop-shadow(0 0 1px var(--ak-hotspot-halo)) drop-shadow(0 0 1px var(--ak-hotspot-halo));
+}
+
+.ak-layer > .ak-crosshair[hidden] {
+  display: none;
+}
+
+.ak-marker {
+  inline-size: var(--ak-target-size);
+  block-size: var(--ak-target-size);
+  padding: 0;
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-line);
+  border-radius: 50%;
+  outline: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-halo);
+  color: var(--ak-hotspot-line);
+  background-color: var(--ak-hotspot-halo);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ak-object {
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.ak-object > img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* The tray under the image of a stage shared by position object interactions must not widen the stage, whose width is that of
+   the image: a box of no width that is as wide as the stage adds nothing to its width. */
+.ak-tray {
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+
+/* The object in the tray: a pressed one has a thick border and a fill. */
+.ak-pick {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-block-start: 0.5rem;
+}
+
+:is(.ak-pick, .ak-tools button)[aria-pressed="true"] {
+  border-color: var(--ak-accent);
+  background-color: var(--ak-accent-surface);
+  box-shadow: inset 0 0 0 calc(var(--ak-border-width) * 3) var(--ak-accent);
+}
+
+.ak-draggable {
+  position: relative;
+  user-select: none;
+}
+
+/* A graphic gap match: a gap is a hotspot that holds the choices put in it, and its button, which takes the whole gap, puts
+   the choice that is in hand there. The chips stand above the button, so that the pointer reaches the choice, and the face of
+   the gap stays behind them. */
+qti-graphic-gap-match-interaction qti-associable-hotspot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  align-content: center;
+  justify-content: center;
+}
+
+qti-associable-hotspot > .ak-face:not(.ak-control + .ak-face) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+qti-associable-hotspot > .ak-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0;
+}
+
+qti-associable-hotspot .ak-chip {
+  position: relative;
+  z-index: 1;
+}
+
+/* Once a gap holds a choice, the choices cover its button, so the button for the next one is a target of its own beside them
+   (WCAG 2.2, 2.5.8). The chips come first in the gap, so the sibling selector stands for "a gap that holds a choice". */
+qti-associable-hotspot .ak-chip ~ .ak-drop {
+  position: relative;
+  inline-size: var(--ak-target-size);
+  block-size: var(--ak-target-size);
+}
+
+qti-associable-hotspot .ak-chip img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+/* A hotspot that the runtime's rules leave no pair for waits. */
+.ak-control[aria-disabled="true"] + .ak-face {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A graphic associate: the line between two hotspots, and the list of the pairs. */
+.ak-layer > .ak-links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ak-links line {
+  stroke: var(--ak-hotspot-line);
+  stroke-width: calc(var(--ak-border-width) * 3);
+}
+
+.ak-links line.ak-halo {
+  stroke: var(--ak-hotspot-halo);
+  stroke-width: calc(var(--ak-border-width) * 7);
+}
+
+.ak-associations {
+  margin-block: 0.5rem 0;
+  padding-inline-start: 1.25rem;
+}
+
+.ak-associations[hidden] {
+  display: none;
+}
+
+/* A drawing: the toolbar, the canvas over the image, and the mark of the first point of a shape. A swatch shows the color it
+   draws, and its pressed state a ring around it, so that no state relies on color alone. */
+.ak-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-block-end: 0.5rem;
+}
+
+:is(.ak-tools, .ak-colors, .ak-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.ak-colors button {
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  background-color: var(--ak-swatch);
+}
+
+.ak-colors button[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--ak-bg),
+    0 0 0 calc(var(--ak-border-width) * 3 + 2px) var(--ak-fg);
+}
+
+.ak-layer > canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
+
+.ak-start {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-line);
+  border-radius: 50%;
+  outline: calc(var(--ak-border-width) * 2) solid var(--ak-hotspot-halo);
+  pointer-events: none;
+}
+
+.ak-layer > .ak-start[hidden] {
+  display: none;
+}
+
+/* How to operate the interaction, in text beside it (WCAG 2.2, 3.3.2). */
+.ak-usage {
+  margin-block: 0.5rem 0;
+  color: var(--ak-muted);
+  font-size: 0.875em;
+}
+
+/* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping (BPIG §5.2.9.7.9,
+   §5.2.9.7.11). The other settings are properties of 1 to 3. */
+
+:root[data-ak-uniform-font] *,
+:host([data-ak-uniform-font]) * {
+  font-size: 1em !important;
+}
+
+:root[data-ak-wrapping] :not(pre),
+:host([data-ak-wrapping]) :not(pre) {
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+:root[data-ak-wrapping] pre,
+:host([data-ak-wrapping]) pre {
+  white-space: pre-wrap !important;
+}
+
+/* 8. Folding. Below 48rem, about the 767px of §2.11, and for a candidate who wants a single column (BPIG §5.2.9.5),
+   the rows, the stacks and the containers become one column. */
+
+@media (max-width: 48rem) {
+  .qti-layout-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]) {
+    grid-column: 1;
+  }
+
+  [class*="qti-choices-stacking"] {
+    --ak-columns: 1;
+    --ak-flow: row;
+  }
+
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"]) > qti-simple-choice {
+    flex-basis: 100%;
+  }
+
+  .qti-choices-left,
+  .qti-choices-right {
+    --ak-columns-track: minmax(0, 1fr);
+    --ak-choices-area: 2 / 1;
+    --ak-targets-area: 3 / 1;
+  }
+}
+
+:root[data-ak-single-column] .qti-layout-row,
+:host([data-ak-single-column]) .qti-layout-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:root[data-ak-single-column] .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]),
+:host([data-ak-single-column]) .qti-layout-row > :is([class*="qti-layout-col"], [class*="qti-layout-offset"]) {
+  grid-column: 1;
+}
+
+:root[data-ak-single-column] [class*="qti-choices-stacking"],
+:host([data-ak-single-column]) [class*="qti-choices-stacking"] {
+  --ak-columns: 1;
+  --ak-flow: row;
+}
+
+:root[data-ak-single-column]
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"])
+  > qti-simple-choice,
+:host([data-ak-single-column])
+  qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stacking"])
+  > qti-simple-choice {
+  flex-basis: 100%;
+}
+
+:root[data-ak-single-column] .qti-choices-left,
+:root[data-ak-single-column] .qti-choices-right,
+:host([data-ak-single-column]) .qti-choices-left,
+:host([data-ak-single-column]) .qti-choices-right {
+  --ak-columns-track: minmax(0, 1fr);
+  --ak-choices-area: 2 / 1;
+  --ak-targets-area: 3 / 1;
+}
+
+/* 9. The cards of the supports (the player design §2.7, BPIG §3.7.10). A card stands beside the content in a group, or in a
+   popup that its button opens. The host of the root clips at its border box, so script places the popup inside it, against
+   the button, and the popup touches the button: the pointer can go onto it (WCAG 1.4.13). */
+
+.ak-card-anchor {
+  position: relative;
+  display: inline-block;
+  margin-inline-start: 0.25em;
+}
+
+.ak-card-trigger {
+  font-size: 0.875em;
+}
+
+.ak-popup {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 100%;
+  z-index: 2;
+  box-sizing: border-box;
+  inline-size: max-content;
+  max-inline-size: 24rem;
+  padding: 0.5rem 0.75rem;
+  overflow: auto;
+  color: var(--ak-fg);
+  background-color: var(--ak-bg);
+  border: calc(var(--ak-border-width) * 2) solid var(--ak-border);
+  border-radius: 0.375rem;
+  font-weight: normal;
+  text-align: start;
+  white-space: normal;
+}
+
+.ak-popup[hidden] {
+  display: none;
+}
+
+.ak-card-close {
+  float: inline-end;
+  margin-inline-start: 0.5rem;
+}
+
+.ak-popup-body {
+  display: block;
+}
+
+.ak-popup-body > :first-child {
+  margin-block-start: 0;
+}
+
+.ak-popup-body > :last-child {
+  margin-block-end: 0;
+}
+
+.ak-card img,
+.ak-card video,
+.ak-popup img,
+.ak-popup video {
+  max-inline-size: 100%;
+}
+
+.ak-alternative-text {
+  display: block;
+  margin-block: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: var(--ak-border-width) dashed var(--ak-border);
+}

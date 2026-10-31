@@ -36,7 +36,7 @@ export const TABLES = [
   { letter: "C", title: "CAT" },
   { letter: "J", title: "PCI" },
   { letter: "E", title: "Headless delivery engine" },
-  { letter: "O", title: "olah conventions, not QTI" },
+  { letter: "O", title: "runtime conventions, not QTI" },
   { letter: "L", title: "Semantic checks and the validator CLI" },
   { letter: "N", title: "Non-goals" },
   { letter: "G", title: "Spec gaps" },
@@ -52,9 +52,9 @@ interface RowBase {
   readonly source?: string;
 }
 
-/** A row olah implements: it needs a test once its unit is merged. */
+/** A row the runtime implements: it needs a test once its unit is merged. */
 export interface ScopedRow extends RowBase {
-  /** The olah modules that implement it. */
+  /** The runtime modules that implement it. */
   readonly modules: readonly string[];
   /** How it is evidenced: codes of the scheme of the inventory. */
   readonly evidence: readonly string[];
@@ -62,7 +62,7 @@ export interface ScopedRow extends RowBase {
   readonly unit: string;
 }
 
-/** A row olah does not implement: it names the system that owns the construct. */
+/** A row the runtime does not implement: it names the system that owns the construct. */
 export interface OutOfScopeRow extends RowBase {
   /** The kind of system that owns it. */
   readonly owner: string;
@@ -71,7 +71,7 @@ export interface OutOfScopeRow extends RowBase {
 /** One row of the inventory. */
 export type InventoryRow = ScopedRow | OutOfScopeRow;
 
-/** The inventory of `conformance/olah-inventory.json`. */
+/** The inventory of `conformance/runtime-inventory.json`. */
 export interface Inventory {
   /** Every build unit, in the order of the build plan. */
   readonly units: readonly string[];
@@ -81,7 +81,7 @@ export interface Inventory {
   readonly rows: readonly InventoryRow[];
 }
 
-/** Returns whether a row is one olah implements. */
+/** Returns whether a row is one runtime implements. */
 export function isScoped(row: InventoryRow): row is ScopedRow {
   return "unit" in row;
 }
@@ -94,8 +94,8 @@ export interface InventoryScheme {
   readonly evidence: readonly string[];
 }
 
-/** The scheme of `olah-inventory.json`. */
-const OLAH_SCHEME: InventoryScheme = {
+/** The scheme of `runtime-inventory.json`. */
+const RUNTIME_SCHEME: InventoryScheme = {
   letters: TABLES.map(({ letter }) => letter),
   evidence: EVIDENCE.map(({ code }) => code),
 };
@@ -139,7 +139,7 @@ function parseRow(
 }
 
 /** Checks the shape of the inventory and returns it typed; its rows use the letters and evidence of the scheme. */
-export function parseInventory(data: unknown, scheme: InventoryScheme = OLAH_SCHEME): Inventory {
+export function parseInventory(data: unknown, scheme: InventoryScheme = RUNTIME_SCHEME): Inventory {
   const isStrings = listOf(isText);
   if (!(isRecord(data) && isStrings(data.units) && isStrings(data.merged) && Array.isArray(data.rows))) {
     throw new Error("The inventory must be an object with the arrays units, merged and rows.");
@@ -162,6 +162,6 @@ export function parseInventory(data: unknown, scheme: InventoryScheme = OLAH_SCH
 }
 
 /** Reads and checks the inventory file. */
-export function loadInventory(path: string, scheme: InventoryScheme = OLAH_SCHEME): Inventory {
+export function loadInventory(path: string, scheme: InventoryScheme = RUNTIME_SCHEME): Inventory {
   return parseInventory(JSON.parse(readFileSync(path, "utf8")), scheme);
 }

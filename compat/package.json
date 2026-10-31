@@ -1,8 +1,8 @@
 {
-  "name": "@luthfanwakan/tempuh-compat",
+  "name": "@assesskit/player-compat",
   "version": "0.0.0",
   "private": true,
-  "description": "Checks that tempuh stays inside its browser baseline. Never published; not a dependency of tempuh.",
+  "description": "Checks that the player stays inside its browser baseline. Never published; not a dependency of the player.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {

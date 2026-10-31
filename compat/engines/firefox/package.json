@@ -1,5 +1,5 @@
 {
-  "name": "@luthfanwakan/tempuh-compat-firefox",
+  "name": "@assesskit/player-compat-firefox",
   "version": "0.0.0",
   "private": true,
   "description": "Pins Playwright 1.36.2, whose browsers are at the baseline. Never published.",

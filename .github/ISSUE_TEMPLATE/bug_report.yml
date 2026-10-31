@@ -1,26 +1,26 @@
 name: Bug report
-description: Report a result or behavior of olah or tempuh that is wrong.
+description: Report a result or behavior of the runtime or the player that is wrong.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Report vulnerabilities privately, as the [security policy](https://github.com/luthfanwakan/olah/security/policy)
+        Report vulnerabilities privately, as the [security policy](https://github.com/assesskit/assesskit/security/policy)
         describes, not here.
   - type: dropdown
     id: package
     attributes:
       label: Package
       options:
-        - olah
-        - tempuh
+        - "@assesskit/runtime"
+        - "@assesskit/player"
     validations:
       required: true
   - type: input
     id: version
     attributes:
       label: Version
-      description: The version from `npm ls @luthfanwakan/olah` or `npm ls @luthfanwakan/tempuh`, or the commit if you build from source.
+      description: The version from `npm ls @assesskit/runtime` or `npm ls @assesskit/player`, or the commit if you build from source.
       placeholder: 1.0.0
     validations:
       required: true
@@ -56,7 +56,7 @@ body:
     id: section
     attributes:
       label: Specification section
-      description: The section of the specifications that defines the behavior you expected, such as INFO §5.150. The IDs are in packages/olah/docs/evidence.md, under Citations.
+      description: The section of the specifications that defines the behavior you expected, such as INFO §5.150. The IDs are in packages/runtime/docs/evidence.md, under Citations.
   - type: textarea
     id: expected
     attributes:

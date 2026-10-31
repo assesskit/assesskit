@@ -10,7 +10,7 @@ import random
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "olah" / "test" / "fixtures" / "rounding.json"
+OUTPUT = Path(__file__).resolve().parent.parent / "packages" / "runtime" / "test" / "fixtures" / "rounding.json"
 SEED = 20260102
 ROUND_TO_CASES = 600
 EQUAL_ROUNDED_CASES = 200

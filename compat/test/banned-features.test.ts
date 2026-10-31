@@ -4,7 +4,7 @@ import bcd from "@mdn/browser-compat-data";
 import { describe, expect, it } from "vitest";
 import { BANNED_FEATURES, BASELINE } from "../banned-features.ts";
 
-/** The browsers of the baseline in `@mdn/browser-compat-data`, with the version tempuh supports. */
+/** The browsers of the baseline in `@mdn/browser-compat-data`, with the version the player supports. */
 const BROWSERS = [
   { name: "chrome", baseline: Number.parseFloat(BASELINE.chromium) },
   { name: "firefox", baseline: Number.parseFloat(BASELINE.firefox) },

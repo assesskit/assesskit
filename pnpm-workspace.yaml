@@ -7,6 +7,3 @@ packages:
 allowBuilds:
   esbuild: false
   lefthook: false
-
-minimumReleaseAgeExclude:
-  - "@luthfanwakan/takar@1.0.0"

@@ -4,9 +4,10 @@ Conventions for people and coding agents working in this repository. Read this b
 rules are enforced by `pnpm lint` (Biome and cspell), `pnpm typecheck`, `pnpm knip`, `pnpm conformance`,
 `pnpm compat` and `pnpm docs:api`; the rest are checked in review.
 
-olah is a QTI 3.0 runtime for JavaScript and TypeScript, and tempuh is the player built on it, in one repository.
-[packages/olah/docs/architecture.md](packages/olah/docs/architecture.md) and
-[packages/tempuh/docs/architecture.md](packages/tempuh/docs/architecture.md) state the design principles; follow them.
+assesskit is a toolkit for QTI 3.0 in JavaScript and TypeScript, in one repository: `@assesskit/runtime` is the QTI 3.0 runtime, and
+`@assesskit/player` is the player built on it.
+[packages/runtime/docs/architecture.md](packages/runtime/docs/architecture.md) and
+[packages/player/docs/architecture.md](packages/player/docs/architecture.md) state the design principles; follow them.
 
 ## Terms
 
@@ -34,16 +35,17 @@ Use these words with these meanings in code, comments and docs.
 | action                    | An input to the delivery engine, with the time it happened.                                                                        |
 | refusal                   | The engine's answer to a well-formed action that the rules do not allow; the state stays unchanged.                                |
 | pending work              | A request the engine makes to its host and waits for, such as an external score.                                                   |
-| cover                     | The olah convention that names the items an externally scored outcome of a test covers.                                            |
-| inventory row             | One construct of the specifications in `conformance/olah-inventory.json`, such as `A79`.                                           |
+| cover                     | The runtime convention that names the items an externally scored outcome of a test covers.                                         |
+| inventory row             | One construct of the specifications in `conformance/runtime-inventory.json`, such as `A79`.                                        |
 | unit                      | A step of the build plan; a row has the unit that completes its evidence.                                                          |
 
 ## Layout
 
 ```
-packages/olah/            the library
+packages/runtime/         the QTI 3.0 runtime
   src/index.ts            re-exports the modules, the errors and the random number generator
-  src/errors.ts           OlahError, DataError, ReadError, SecurityError, ProcessingError; Issue
+  src/errors.ts           AssesskitError, DataError, ReadError, SecurityError, ProcessingError; Issue; the subpath `errors` exports
+                          them without the rest of the package, for the player
   src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
                           checkFunction, checkString, checkBoolean, checkChoice, checkFinite, checkNonNegative,
                           checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous; and the
@@ -54,9 +56,10 @@ packages/olah/            the library
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
   docs/                   guides, one per module, and architecture, conventions, spec-gaps, evidence and the generated
                           conformance matrix; TypeDoc publishes them with the API reference
-packages/tempuh/          the player
+packages/player/          the player
   src/index.ts            re-exports the errors and the messages
-  src/errors.ts           TempuhError, DataError, AccessError, LtiError, ServiceError
+  src/errors.ts           AccessError, LtiError, ServiceError; they extend the runtime's AssesskitError, and the player throws the
+                          runtime's DataError
   src/checks.ts           describe, isRecord, and checkRecord, checkArray, checkFunction, checkProperties, checkString,
                           checkNonEmptyString, checkNonNegativeInteger, checkPositiveInteger, checkBoolean, checkPositive,
                           checkChoice; and the valibot side: parseWith, mapSchema, recordSchema, guardSchema,
@@ -70,7 +73,7 @@ packages/tempuh/          the player
                           *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
                           commands of the browser tests
   docs/                   guides
-differential/             olah against Longsight qti3-core
+differential/             the runtime against Longsight qti3-core
 compat/                   the browser baseline: the lint of the built code, the banned features, the pinned engines
 conformance/              the inventories and their tooling
 scripts/                  corpus and schema downloads, Unicode and element table generators
@@ -85,17 +88,17 @@ pnpm install
 pnpm lint               # Biome and cspell; `pnpm format` fixes formatting
 pnpm typecheck          # tsc over every package and the tooling
 pnpm test               # Vitest, offline
-pnpm test:browser       # the browser tests of tempuh in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
+pnpm test:browser       # the browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
 pnpm test:corpus        # tests that read the corpus; run `pnpm corpus` first
-pnpm test:differential  # olah against Longsight `qti3-core` on items and item sessions; run `pnpm corpus` first
+pnpm test:differential  # the runtime against Longsight `qti3-core` on items and item sessions; run `pnpm corpus` first
 pnpm test:xsd           # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
-pnpm bench              # the benchmarks of olah against their budgets
+pnpm bench              # the benchmarks of the runtime against their budgets
 pnpm schemas            # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
 pnpm unicode            # regenerates the Unicode tables of `values` from the pinned files
 pnpm asi-table          # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
 pnpm knip               # unused files, exports and dependencies
 pnpm conformance        # every row of a merged unit has a test; docs/conformance.md is current
-pnpm compat             # the built JavaScript and the CSS of tempuh stay inside the browser baseline; run `pnpm build` first
+pnpm compat             # the built JavaScript and the CSS of the player stay inside the browser baseline; run `pnpm build` first
 pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; run `pnpm build` first
 pnpm build              # tsc -b after deleting dist/, so that no stale output ships
 pnpm check:packages     # builds, then publint and Are the Types Wrong on the packed packages
@@ -106,7 +109,7 @@ Run all of them before finishing a change. Development needs Node.js 22.18+ and 
 `compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
 also needs Docker. `pnpm test:browser` runs all three engines, and the Firefox of Playwright does not start on some macOS
 versions (it did not on macOS 27): run the suite in the Linux container of
-[evidence.md](packages/tempuh/docs/evidence.md#tests-in-a-browser) there.
+[evidence.md](packages/player/docs/evidence.md#tests-in-a-browser) there.
 
 ## Releases
 
@@ -117,39 +120,41 @@ merged, the maintainer runs the Release workflow by hand: it builds and publishe
 workflow opens pull requests, and Dependabot version updates are off. Changesets, docs and TSDoc describe current
 behavior only, without "now", "no longer", "renamed" or "previously".
 
-## Boundary between olah and tempuh
+## Boundary between the runtime and the player
 
-olah owns everything QTI defines that is not presentation or platform; tempuh owns presentation and the platform
-([architecture.md](packages/olah/docs/architecture.md#boundary-with-tempuh) lists who owns what).
+The runtime owns everything QTI defines that is not presentation or platform; the player owns presentation and the platform
+([architecture.md](packages/runtime/docs/architecture.md#boundary-with-the-player) lists who owns what).
 
-- Semantics belong to olah: validity, visibility, the choice of a variant, processing, the rules of a session, time limits,
-  the flow of scoring and the view without answer keys. tempuh asks olah and never evaluates an expression, decides what is
-  visible or valid, chooses a variant, or holds an answer key outside olah's solution view.
-- Presentation and the platform belong to tempuh: rendering, the host of portable custom interactions, accessibility in the
-  interface, URLs, clocks and timers, storage, and the network (LTI, CAT adapters, Caliper). olah never renders, reads a
-  clock, builds a URL or fetches, apart from `olah schemas fetch`. The policy about which actions a client may send is
-  tempuh's.
-- A rule that tempuh needs and olah lacks is a change in olah, with its inventory row and test, and not a workaround in
-  tempuh.
+- Semantics belong to the runtime: validity, visibility, the choice of a variant, processing, the rules of a session, time limits,
+  the flow of scoring and the view without answer keys. The player asks the runtime and never evaluates an expression, decides what is
+  visible or valid, chooses a variant, or holds an answer key outside the runtime's solution view.
+- Presentation and the platform belong to the player: rendering, the host of portable custom interactions, accessibility in the
+  interface, URLs, clocks and timers, storage, and the network (LTI, CAT adapters, Caliper). The runtime never renders, reads a
+  clock, builds a URL or fetches, apart from `assesskit schemas fetch`. The policy about which actions a client may send is
+  the player's.
+- A rule that the player needs and the runtime lacks is a change in the runtime, with its inventory row and test, and not a workaround in
+  the player.
 - The packages meet in JSON: views, actions and state, with values as `WireValue`. They have their own versions.
 
 ## Dependencies
 
 - A module imports only the modules in its row of the table in
-  [architecture.md](packages/olah/docs/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
+  [architecture.md](packages/runtime/docs/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
   `random.ts`. Biome enforces the rows, and imports never form cycles.
-- The olah core uses no platform API: no `node:*`, `fetch`, timers, DOM or `process`. Only `node/` and `cli/` may.
-- `scripts/schemas.ts` imports `packages/olah/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
-  `olah schemas fetch` run one implementation. Node runs that file directly, so it imports only `node:*` modules and types.
-- `packages/olah` never imports `tempuh`. `tempuh` and the other packages import olah by package name and subpath, never
+- The runtime core uses no platform API: no `node:*`, `fetch`, timers, DOM or `process`. Only `node/` and `cli/` may.
+- `scripts/schemas.ts` imports `packages/runtime/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
+  `assesskit schemas fetch` run one implementation. Node runs that file directly, so it imports only `node:*` modules and types.
+- `packages/runtime` never imports `@assesskit/player`. `@assesskit/player` and the other packages import the runtime by package name and subpath, never
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
-- A tempuh folder imports only the folders in its row of the table in
-  [architecture.md](packages/tempuh/docs/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
-  of them. Biome enforces the rows. Only `cat/takar/` imports takar, and `fetch` appears only as an option parameter.
-- tempuh's shared folders use no DOM or Node, its browser folders no Node, and its server folders no DOM. Time comes from
+- A player folder imports only the folders in its row of the table in
+  [architecture.md](packages/player/docs/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
+  of them. Biome enforces the rows. Only `cat/measurekit/` imports measurekit, and `fetch` appears only as an option parameter.
+- The player's shared folders use no DOM or Node, its browser folders no Node, and its server folders no DOM. Time comes from
   a clock that the caller passes: `Date.now` appears only in `client/clock.ts` and `server/clock.ts`.
-- Browser folders import from `@luthfanwakan/olah/delivery` only `viewFromJson`, `actionToJson` and types, because the
+- The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors`, never from the root of the runtime: the root
+  loads every module, and the subpath loads none.
+- Browser folders import from `@assesskit/runtime/delivery` only `viewFromJson`, `actionToJson` and types, because the
   engine holds the answer keys: `client/local.ts` alone loads the engine, with `import()`, for practice on a device.
 
 ## Naming
@@ -190,7 +195,7 @@ olah owns everything QTI defines that is not presentation or platform; tempuh ow
   never taken as absent.
 - Validation returns `Issue`s and does not throw; each issue cites the rule that defines it.
 - Never use `Math.random`, read a clock, or construct a `RegExp`. Take a `Random` or a time from the caller, and compile
-  author patterns with the linear-time automaton of `values`. `pnpm lint` fails on all three in `packages/olah/src`.
+  author patterns with the linear-time automaton of `values`. `pnpm lint` fails on all three in `packages/runtime/src`.
 - Identifier-keyed data lives in `Map`s, never in plain objects, so that an identifier such as `__proto__` stays data.
 - Every semantic rule cites its specification section in the TSDoc or in a `//` comment.
 - A number with a meaning is a named constant with its source.
@@ -198,7 +203,7 @@ olah owns everything QTI defines that is not presentation or platform; tempuh ow
 
 ## Browser baseline
 
-tempuh runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. This covers the shared and browser folders:
+The player runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. This covers the shared and browser folders:
 `errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/` and `client/`, and every stylesheet. The `lib` of the browser
 tsconfig is `ES2023`, `DOM` and `DOM.Iterable`, so that TypeScript rejects later built-ins. These features are in the
 baseline and used: custom elements and open shadow roots, constructed stylesheets, `<dialog>`, `inert`, `:focus-visible`,
@@ -229,7 +234,7 @@ would be dead in some browsers and untested in the others.
 
 A new banned feature is a row of `compat/banned-features.ts` with the code that the lint must report and a probe for the
 pinned engines, a pattern in the `.grit` files with the message of that row, and a row of this table; the tests in
-`compat/test/` and `packages/tempuh/test/lint.test.ts` fail until the three agree. [baseline.md](packages/tempuh/docs/baseline.md)
+`compat/test/` and `packages/player/test/lint.test.ts` fail until the three agree. [baseline.md](packages/player/docs/baseline.md)
 describes how the baseline is tested.
 
 ## Comments and docs
@@ -240,7 +245,7 @@ describes how the baseline is tested.
 - `//` comments only explain why something non-obvious is done, or cite a source. No commented-out code.
 - US English. Docs state facts in short sentences; prefer a table or list to prose. Code samples are complete: they
   show their imports. Values shown in samples come from running them. No marketing language, emojis or filler. The Example
-  of `packages/olah/README.md` is the file `packages/olah/test/readme-example.ts`, and `readme.test.ts` fails when the README
+  of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails when the README
   shows other code or other output.
 - Each document has one purpose: `README.md` for users, `docs/` for guides, `CONTRIBUTING.md` for the contribution
   process, `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for running the
@@ -249,9 +254,9 @@ describes how the baseline is tested.
 ## Evidence and tests
 
 - Every test names its inventory row in brackets in its title: `it("[A79] equal: relative tolerance includes both bounds
-  by default")`. A row needs a test once its unit is merged; see [evidence.md](packages/olah/docs/evidence.md).
-- tempuh's tests name the rows of `conformance/tempuh-inventory.json` the same way (`[T97]`) and its WCAG 2.2 criteria as
-  `[SC 3.2.4]`. A test is checked against the inventory of its own package, so `[T1]` in tempuh is not olah's `T1`.
+  by default")`. A row needs a test once its unit is merged; see [evidence.md](packages/runtime/docs/evidence.md).
+- The player's tests name the rows of `conformance/player-inventory.json` the same way (`[T97]`) and its WCAG 2.2 criteria as
+  `[SC 3.2.4]`. A test is checked against the inventory of its own package, so `[T1]` in the player is not the runtime's `T1`.
 - Expected values come from an oracle, never from the code under test: the specification's own statements and worked
   examples, an independent implementation, or a script in `validation/`. Typed by hand only for edge cases small enough to
   derive exactly.
@@ -266,7 +271,7 @@ describes how the baseline is tested.
   `test/arbitraries/xml.ts`) and accepts a result or a `ReadError` or `SecurityError`, nothing else. A defect that fuzzing
   finds gets a regression test with the input that exposed it.
 - Fast-check generators are in `test/arbitraries/`, one file for each module.
-- Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of tempuh that
+- Tests that read the corpus are in files named `*.corpus.test.ts` and run with `pnpm test:corpus`; those of the player that
   also need a browser are named `*.browser.corpus.test.ts`. The tests of `differential/` run with `pnpm test:differential`,
   and `pnpm test` leaves them out.
 - Tests that run in browsers are in files named `*.browser.test.ts` and run with `pnpm test:browser`. They wait for a
@@ -274,26 +279,26 @@ describes how the baseline is tested.
   meet, and for media they wait for the events of the recording and move the timers by hand, never for a time.
 - Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
   builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them
-  ([architecture.md](packages/olah/docs/architecture.md#performance)).
+  ([architecture.md](packages/runtime/docs/architecture.md#performance)).
 - Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
 - Test names describe behavior: `it("shares the places at a tied boundary equally")`.
 
 ## Where things go
 
-- A construct: its row in `conformance/olah-inventory.json` already exists; its tests name it, and its unit joins `merged`
+- A construct: its row in `conformance/runtime-inventory.json` already exists; its tests name it, and its unit joins `merged`
   when the unit completes. The same holds for a duty of the player and a WCAG criterion in
-  `conformance/tempuh-inventory.json`.
-- An olah module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts`
+  `conformance/player-inventory.json`.
+- A runtime module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts`
   unless it is `node` or `cli`, a test file, a guide in `docs/`, import rules in `biome.json` and the table in
-  [architecture.md](packages/olah/docs/architecture.md#layers), and a row in the API table of `packages/olah/README.md`.
-  `node` and `cli`, which the root does not re-export, also get an entry point in `packages/olah/typedoc.json`.
-- A tempuh folder: its row in the table of [architecture.md](packages/tempuh/docs/architecture.md#layers), its Biome
+  [architecture.md](packages/runtime/docs/architecture.md#layers), and a row in the API table of `packages/runtime/README.md`.
+  `node` and `cli`, which the root does not re-export, also get an entry point in `packages/runtime/typedoc.json`.
+- A player folder: its row in the table of [architecture.md](packages/player/docs/architecture.md#layers), its Biome
   overrides and its entry in `lint.test.ts` when it is not one of the folders there, a subpath in `package.json`
   `exports` and `typedoc.json` when the host imports it, a test file and a guide in `docs/`.
 - Checks shared by modules: of one value in `checks.ts`; otherwise with the data they check.
-- A place where the specifications contradict themselves or are silent: its row `G<n>` in `conformance/olah-inventory.json`,
-  the resolution in [spec-gaps.md](packages/olah/docs/spec-gaps.md), a test, and a mention in the guide of the module.
-- Something olah defines because QTI does not: [conventions.md](packages/olah/docs/conventions.md), built from QTI's own
+- A place where the specifications contradict themselves or are silent: its row `G<n>` in `conformance/runtime-inventory.json`,
+  the resolution in [spec-gaps.md](packages/runtime/docs/spec-gaps.md), a test, and a mention in the guide of the module.
+- Something the runtime defines because QTI does not: [conventions.md](packages/runtime/docs/conventions.md), built from QTI's own
   elements so that documents stay valid.
 - A difference from Longsight `qti3-core` that the specification settles: `conformance/accepted-differences.json`.

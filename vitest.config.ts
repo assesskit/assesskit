@@ -1,12 +1,19 @@
 import { resolve } from "node:path";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
-import { COMMANDS } from "./packages/tempuh/test/fixtures/commands.js";
+import { COMMANDS } from "./packages/player/test/fixtures/commands.js";
 
-/** Resolves olah and its subpaths to their sources, so that the differential and tempuh tests run the code and not a build. */
-const OLAH_SOURCES = [
-  { find: /^@luthfanwakan\/olah$/, replacement: resolve(import.meta.dirname, "packages/olah/src/index.ts") },
-  { find: /^@luthfanwakan\/olah\/(.+)$/, replacement: resolve(import.meta.dirname, "packages/olah/src/$1/index.ts") },
+/** Resolves the runtime and its subpaths to their sources, so that the differential and the player tests run the code and not a build. */
+const RUNTIME_SOURCES = [
+  { find: /^@assesskit\/runtime$/, replacement: resolve(import.meta.dirname, "packages/runtime/src/index.ts") },
+  {
+    find: /^@assesskit\/runtime\/errors$/,
+    replacement: resolve(import.meta.dirname, "packages/runtime/src/errors.ts"),
+  },
+  {
+    find: /^@assesskit\/runtime\/(.+)$/,
+    replacement: resolve(import.meta.dirname, "packages/runtime/src/$1/index.ts"),
+  },
 ];
 
 /**
@@ -32,14 +39,14 @@ const browser = () => ({
   commands: COMMANDS,
 });
 
-/** Starts the servers of the browser tests of tempuh, with its static files and the packages they load. */
-const GLOBAL_SETUP = ["packages/tempuh/test/fixtures/global-setup.ts"];
+/** Starts the servers of the browser tests of the player, with its static files and the packages they load. */
+const GLOBAL_SETUP = ["packages/player/test/fixtures/global-setup.ts"];
 
 /** Starts the exam server, which runs session hosts and the asset gate over HTTP for the end-to-end tests. */
-const EXAM_SETUP = "packages/tempuh/test/fixtures/exam-setup.ts";
+const EXAM_SETUP = "packages/player/test/fixtures/exam-setup.ts";
 
 /** Starts the servers of the LTI browser tests: the storage page of a platform and two tools. */
-const LTI_SETUP = "packages/tempuh/test/fixtures/lti-setup.ts";
+const LTI_SETUP = "packages/player/test/fixtures/lti-setup.ts";
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
@@ -47,47 +54,47 @@ export default defineConfig({
     projects: [
       {
         test: {
-          name: "olah",
-          include: ["packages/olah/test/**/*.test.ts"],
+          name: "runtime",
+          include: ["packages/runtime/test/**/*.test.ts"],
           exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
         },
       },
       {
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
-          name: "tempuh",
-          include: ["packages/tempuh/test/**/*.test.ts"],
+          name: "player",
+          include: ["packages/player/test/**/*.test.ts"],
           exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
         },
       },
       {
         // Browser tests run in the engines of the player: the page is the fixture, and the global setup serves the frame.
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
-          name: "tempuh-browser",
-          include: ["packages/tempuh/test/**/*.browser.test.ts"],
+          name: "player-browser",
+          include: ["packages/player/test/**/*.browser.test.ts"],
           globalSetup: [...GLOBAL_SETUP, EXAM_SETUP, LTI_SETUP],
           browser: browser(),
         },
       },
       {
         // The 1EdTech examples in the browsers: `pnpm corpus` downloads them.
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
-          name: "tempuh-corpus",
-          include: ["packages/tempuh/test/**/*.browser.corpus.test.ts"],
+          name: "player-corpus",
+          include: ["packages/player/test/**/*.browser.corpus.test.ts"],
           globalSetup: GLOBAL_SETUP,
           browser: browser(),
         },
       },
       {
         // The asset gate and the session host over the 1EdTech examples, in Node.
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
-          name: "tempuh-corpus-node",
-          include: ["packages/tempuh/test/**/*.corpus.test.ts"],
+          name: "player-corpus-node",
+          include: ["packages/player/test/**/*.corpus.test.ts"],
           exclude: ["**/*.browser.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
         },
@@ -99,7 +106,7 @@ export default defineConfig({
         },
       },
       {
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
           name: "differential",
           include: ["differential/test/**/*.test.ts"],
@@ -107,7 +114,7 @@ export default defineConfig({
         },
       },
       {
-        resolve: { alias: OLAH_SOURCES },
+        resolve: { alias: RUNTIME_SOURCES },
         test: {
           name: "differential-corpus",
           include: ["differential/test/**/*.corpus.test.ts"],
@@ -127,21 +134,21 @@ export default defineConfig({
       },
       {
         test: {
-          name: "olah-corpus",
-          include: ["packages/olah/test/**/*.corpus.test.ts"],
+          name: "runtime-corpus",
+          include: ["packages/runtime/test/**/*.corpus.test.ts"],
           testTimeout: HANG_LIMIT,
         },
       },
       {
-        // The benchmarks and budgets of olah: `pnpm bench` runs them with `vitest bench`, which gives the project the
+        // The benchmarks and budgets of the runtime: `pnpm bench` runs them with `vitest bench`, which gives the project the
         // suffix "(bench)". A test builds its input and runs benchmarks of seconds, so it may take longer than the default.
         test: {
-          name: "olah-bench",
+          name: "runtime-bench",
           include: [],
           testTimeout: 120_000,
           hookTimeout: 120_000,
           benchmark: {
-            include: ["packages/olah/test/**/*.bench.ts"],
+            include: ["packages/runtime/test/**/*.bench.ts"],
             // Vitest counts the export getters that a benchmark reads and warns about them. The counting makes the
             // benchmarks of the engine two to three times slower, so the project turns it off.
             suppressExportGetterWarnings: true,
@@ -151,8 +158,8 @@ export default defineConfig({
       {
         // Compiling the 18.8 MB ASI schema takes seconds.
         test: {
-          name: "olah-xsd",
-          include: ["packages/olah/test/**/*.xsd.test.ts"],
+          name: "runtime-xsd",
+          include: ["packages/runtime/test/**/*.xsd.test.ts"],
           testTimeout: 60_000,
           hookTimeout: 60_000,
         },

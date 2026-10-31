@@ -1,0 +1,385 @@
+import { spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BANNED_FEATURES, lintMessage } from "../../../compat/banned-features.js";
+
+const ROOT = resolve(import.meta.dirname, "../../..");
+const SRC = "packages/player/src";
+const RESTRICTED_IMPORT = "lint/style/noRestrictedImports";
+
+/** The units of the layering, and the units each one may import: the table of docs/architecture.md. */
+const LAYERS: Readonly<Record<string, readonly string[]>> = {
+  messages: [],
+  protocol: ["messages"],
+  player: ["messages", "protocol"],
+  client: ["messages", "protocol"],
+  scoring: ["messages", "protocol"],
+  caliper: ["messages", "protocol"],
+  cat: ["messages", "protocol"],
+  lti: ["messages", "protocol"],
+  server: ["messages", "protocol", "scoring", "caliper", "cat", "lti"],
+};
+const FOLDERS = Object.keys(LAYERS);
+const SERVER = ["scoring", "caliper", "cat", "lti", "server"];
+const SHARED = ["errors", "checks"];
+
+interface Diagnostic {
+  readonly category: string;
+  readonly message: string;
+  readonly location: { readonly path: string; readonly start: { readonly line: number } };
+}
+
+/** A diagnostic of one line of a file: the rule category, or the message of a plugin. */
+interface Finding {
+  readonly line: number;
+  readonly what: string;
+}
+
+/** The files of a project that has the repository's Biome configuration and GritQL rules, by path. */
+const sources = new Map<string, string>();
+const findings = new Map<string, Finding[]>();
+let project = "";
+
+/** Registers a file of the project and returns its path, to look up what Biome reports for it after the run. */
+function source(path: string, lines: readonly string[]): string {
+  sources.set(path, `${lines.join("\n")}\n`);
+  return path;
+}
+
+/** Returns the rule categories and plugin messages Biome reported for a file. */
+function whatFor(path: string): string[] {
+  return (findings.get(path) ?? []).map(({ what }) => what);
+}
+
+/** Returns the plugin messages of a file that start with the given text. */
+function messagesFor(path: string, start: string): string[] {
+  return whatFor(path).filter((what) => what.startsWith(start));
+}
+
+/** Returns the lines of a file that Biome reported with the given rule category. */
+function linesFor(path: string, category: string): number[] {
+  return (findings.get(path) ?? [])
+    .filter(({ what }) => what === category)
+    .map(({ line }) => line)
+    .sort((a, b) => a - b);
+}
+
+/** Every other unit as a folder or a shared file imports it, in the order of the lines of its file. */
+function targetsOf(unit: string): string[] {
+  return [...SHARED, ...FOLDERS].filter((target) => target !== unit);
+}
+const importOf = (target: string): string =>
+  `export * from "../${target}${SHARED.includes(target) ? ".js" : "/index.js"}";`;
+
+const layers = FOLDERS.map((folder) => ({
+  folder,
+  targets: targetsOf(folder),
+  path: source(`${SRC}/${folder}/layers.ts`, targetsOf(folder).map(importOf)),
+}));
+const rootFiles = {
+  errors: source(`${SRC}/errors.ts`, ['export * from "./checks.js";', 'export * from "./messages/index.js";']),
+  checks: source(`${SRC}/checks.ts`, ['export * from "./errors.js";', 'export * from "./messages/index.js";']),
+  index: source(`${SRC}/index.ts`, [
+    'export * from "./errors.js";',
+    'export * from "./checks.js";',
+    'export * from "./messages/index.js";',
+    'export * from "./protocol/index.js";',
+  ]),
+};
+
+const platform = {
+  nodeInShared: source(`${SRC}/protocol/node.ts`, [
+    'import { readFileSync } from "node:fs";',
+    "export const a = readFileSync;",
+  ]),
+  nodeInBrowser: source(`${SRC}/player/node.ts`, [
+    'import { readFileSync } from "node:fs";',
+    "export const a = readFileSync;",
+  ]),
+  nodeInServer: source(`${SRC}/server/node.ts`, [
+    'import { readFileSync } from "node:fs";',
+    "export const a = readFileSync;",
+  ]),
+  documentInShared: source(`${SRC}/protocol/document.ts`, ["export const a = document.title;"]),
+  documentInBrowser: source(`${SRC}/player/document.ts`, ["export const a = document.title;"]),
+  documentInServer: source(`${SRC}/server/document.ts`, ["export const a = document.title;"]),
+  timerInShared: source(`${SRC}/protocol/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
+  timerInBrowser: source(`${SRC}/client/timer.ts`, ["export const a = setTimeout(() => 1, 1);"]),
+  fetchInShared: source(`${SRC}/protocol/fetch.ts`, ['export const a = fetch("https://example.org");']),
+  fetchInBrowser: source(`${SRC}/player/fetch.ts`, ['export const a = fetch("https://example.org");']),
+  fetchInServer: source(`${SRC}/lti/fetch.ts`, ['export const a = fetch("https://example.org");']),
+  fetchOption: source(`${SRC}/lti/option.ts`, [
+    "export async function load(fetch: (url: string) => Promise<string>) {",
+    '  return fetch("https://example.org");',
+    "}",
+  ]),
+  env: source(`${SRC}/player/env.ts`, ["export const a = process.env.HOME;"]),
+  evaluation: source(`${SRC}/server/evaluation.ts`, ['export const a = eval("1");']),
+};
+
+const measurekit = {
+  inPlayer: source(`${SRC}/player/measurekit.ts`, ['export * from "@measurekit/psychometrics/cat";']),
+  inServer: source(`${SRC}/server/measurekit.ts`, ['export * from "@measurekit/psychometrics";']),
+  inCat: source(`${SRC}/cat/engine.ts`, ['export * from "@measurekit/psychometrics/cat";']),
+  inCatFolder: source(`${SRC}/cat/ports.ts`, ['export * from "./measurekit/index.js";']),
+  inCatMeasurekit: source(`${SRC}/cat/measurekit/engine.ts`, ['export * from "@measurekit/psychometrics/cat";']),
+};
+const official = {
+  inPlayer: source(`${SRC}/player/official.ts`, ['export * from "../protocol/official.js";']),
+  inClient: source(`${SRC}/client/official.ts`, ['export { markOfficial } from "../protocol/official";']),
+  inScoring: source(`${SRC}/scoring/official.ts`, ['export * from "../protocol/official.js";']),
+  inServer: source(`${SRC}/server/official.ts`, ['export * from "../protocol/official.js";']),
+  inLti: source(`${SRC}/lti/official.ts`, ['export * from "../protocol/official.js";']),
+  inProtocol: source(`${SRC}/protocol/official-copy.ts`, ['export * from "./official.js";']),
+};
+const runtimeByPath = {
+  inShared: source(`${SRC}/protocol/runtime.ts`, ['export * from "../../../runtime/src/xml/index.js";']),
+  inBrowser: source(`${SRC}/player/runtime.ts`, ['export * from "../../../runtime/dist/index.js";']),
+  inServer: source(`${SRC}/server/runtime.ts`, ['export * from "@assesskit/runtime/xml";']),
+};
+
+const bans = [
+  { ban: "Math.random", code: "Math.random()", message: "assesskit is deterministic" },
+  { ban: "Date.now", code: "Date.now()", message: "assesskit never reads a clock" },
+  { ban: "new Date without arguments", code: "new Date()", message: "assesskit never reads a clock" },
+  { ban: "performance.now", code: "performance.now()", message: "assesskit never reads a clock" },
+].flatMap((entry, i) =>
+  ["protocol", "player", "server"].map((folder) => ({
+    ...entry,
+    folder,
+    path: source(`${SRC}/${folder}/ban-${i}.ts`, [`export const a = ${entry.code};`]),
+  })),
+);
+const clocks = [`${SRC}/client/clock.ts`, `${SRC}/server/clock.ts`].map((path) =>
+  source(path, ["export const a = [Date.now(), new Date(), performance.now()];"]),
+);
+const allowedCalls = source(`${SRC}/player/allowed.ts`, [
+  "export const a = [new Date(0), new Date(2024, 0), /a+/u, Math.floor(1.5)];",
+]);
+
+const DELIVERY = '"@assesskit/runtime/delivery"';
+const delivery = {
+  allowed: source(`${SRC}/player/allowed-delivery.ts`, [
+    `import { actionToJson, viewFromJson } from ${DELIVERY};`,
+    `import { type CandidateView, viewFromJson as read } from ${DELIVERY};`,
+    `import type { CandidateAction, createEngine } from ${DELIVERY};`,
+    `import {\n  actionToJson as write,\n  type CandidateView as View,\n} from ${DELIVERY};`,
+    `export type { CandidateView as Shown } from ${DELIVERY};`,
+    'import { container } from "@assesskit/runtime/values";',
+  ]),
+  denied: source(`${SRC}/client/denied-delivery.ts`, [
+    `import { createEngine } from ${DELIVERY};`,
+    `import { viewFromJson, stamp } from ${DELIVERY};`,
+    `import {\n  actionToJson,\n  createEngine as engine,\n} from ${DELIVERY};`,
+    `import * as delivery from ${DELIVERY};`,
+    `import delivery2 from ${DELIVERY};`,
+    `import ${DELIVERY};`,
+    `export * from ${DELIVERY};`,
+    `export { createEngine } from ${DELIVERY};`,
+    `export const a = import(${DELIVERY});`,
+  ]),
+  local: source(`${SRC}/client/local.ts`, [
+    `import { viewFromJson } from ${DELIVERY};`,
+    `import { createEngine } from ${DELIVERY};`,
+    `export const a = import(${DELIVERY});`,
+  ]),
+  server: source(`${SRC}/server/delivery.ts`, [
+    `import { createEngine, parseCandidateAction } from ${DELIVERY};`,
+    `export const a = import(${DELIVERY});`,
+  ]),
+};
+const IMPORTS = "Browser code imports from @assesskit/runtime/delivery only";
+const REEXPORTS = "Browser code re-exports from @assesskit/runtime/delivery only";
+const LOADS = "Only client/local.ts loads @assesskit/runtime/delivery";
+
+const baseline = BANNED_FEATURES.flatMap((banned, i) =>
+  banned.samples.map((sample, j) => ({
+    banned,
+    sample,
+    path: source(
+      `${SRC}/${sample.language === "js" ? "protocol" : "player"}/banned-${i}-${j}.${sample.language === "js" ? "ts" : "css"}`,
+      [sample.code],
+    ),
+  })),
+);
+const baselineFolders = ["protocol", "messages", "player", "client", ...SERVER].map((folder) => ({
+  folder,
+  path: source(`${SRC}/${folder}/mixed.ts`, [
+    "export const a = Object.groupBy(items, key);",
+    'export const b = "a:has(b) { color: red; }";',
+  ]),
+}));
+const allowedBaseline = source(`${SRC}/protocol/allowed-baseline.ts`, [
+  "export const a = [Object.values(o).map(f), Object.keys(o).filter(f), Array.from(map.values()).map(f)];",
+  "export const b = [/a/u, new RegExp(pattern, 'u'), 'text', `plain`, set.add(1), new Set([1]).has(1)];",
+  "const popover = element;",
+  "export const c = [popover.hidden, [1, 2].toSorted(), structuredClone(o), items.at(-1)];",
+]);
+const allowedCss = source(`${SRC}/player/allowed-baseline.css`, [
+  ".a { color: color-mix(in srgb, red, blue); }",
+  "dialog::backdrop { color: red; }",
+  ".b:focus-visible { outline: 1px solid; }",
+  "@container (min-width: 10px) { .c { display: grid; grid-template-columns: 1fr 1fr; } }",
+  "@media (min-width: 1px) { .d { color: red; } }",
+]);
+
+beforeAll(() => {
+  project = mkdtempSync(join(tmpdir(), "player-lint-"));
+  cpSync(join(ROOT, "biome.json"), join(project, "biome.json"));
+  cpSync(join(ROOT, "biome"), join(project, "biome"), { recursive: true });
+  for (const [path, code] of sources) {
+    mkdirSync(dirname(join(project, path)), { recursive: true });
+    writeFileSync(join(project, path), code);
+  }
+  const run = spawnSync(
+    join(ROOT, "node_modules/.bin/biome"),
+    ["lint", "--vcs-enabled=false", "--reporter=json", "."],
+    { cwd: project, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  const result: { diagnostics: Diagnostic[] } = JSON.parse(run.stdout);
+  for (const { category, message, location } of result.diagnostics) {
+    const list = findings.get(location.path) ?? [];
+    list.push({ line: location.start.line, what: category === "plugin" ? message : category });
+    findings.set(location.path, list);
+  }
+});
+
+afterAll(() => {
+  rmSync(project, { recursive: true, force: true });
+});
+
+describe("layering", () => {
+  for (const { folder, targets, path } of layers) {
+    it(`lets ${folder}/ import exactly its row of the table`, () => {
+      const flagged = linesFor(path, RESTRICTED_IMPORT).map((line) => targets[line - 1]);
+      const forbidden = targets.filter((target) => !SHARED.includes(target) && !LAYERS[folder]?.includes(target));
+      expect(flagged).toEqual(forbidden);
+    });
+  }
+
+  it("limits errors.ts to nothing, checks.ts to errors.ts and index.ts to errors.ts and messages/", () => {
+    expect(linesFor(rootFiles.errors, RESTRICTED_IMPORT)).toEqual([1, 2]);
+    expect(linesFor(rootFiles.checks, RESTRICTED_IMPORT)).toEqual([2]);
+    expect(linesFor(rootFiles.index, RESTRICTED_IMPORT)).toEqual([2, 4]);
+  });
+
+  it("lets only cat/measurekit/ import measurekit, and the rest of cat/ not even import cat/measurekit/", () => {
+    expect(whatFor(measurekit.inPlayer)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(measurekit.inServer)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(measurekit.inCat)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(measurekit.inCatFolder)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(measurekit.inCatMeasurekit)).not.toContain(RESTRICTED_IMPORT);
+  });
+
+  it("[T67] lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
+    for (const path of [official.inPlayer, official.inClient, official.inScoring]) {
+      expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
+    }
+    for (const path of [official.inServer, official.inLti, official.inProtocol]) {
+      expect(whatFor(path), path).not.toContain(RESTRICTED_IMPORT);
+    }
+  });
+
+  it("keeps the player to the published subpaths of the runtime", () => {
+    expect(whatFor(runtimeByPath.inShared)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(runtimeByPath.inBrowser)).toContain(RESTRICTED_IMPORT);
+    expect(whatFor(runtimeByPath.inServer)).not.toContain(RESTRICTED_IMPORT);
+  });
+});
+
+describe("platform rules", () => {
+  it("keeps Node.js out of the shared and browser folders and lets the server folders use it", () => {
+    expect(whatFor(platform.nodeInShared)).toContain("lint/correctness/noNodejsModules");
+    expect(whatFor(platform.nodeInBrowser)).toContain("lint/correctness/noNodejsModules");
+    expect(whatFor(platform.nodeInServer)).not.toContain("lint/correctness/noNodejsModules");
+    expect(whatFor(platform.env)).toContain("lint/style/noProcessEnv");
+  });
+
+  it("keeps the DOM out of the shared and server folders and lets the browser folders use it", () => {
+    expect(whatFor(platform.documentInShared)).toContain("lint/style/noRestrictedGlobals");
+    expect(whatFor(platform.documentInServer)).toContain("lint/style/noRestrictedGlobals");
+    expect(whatFor(platform.documentInBrowser)).not.toContain("lint/style/noRestrictedGlobals");
+  });
+
+  it("keeps timers out of the shared folders only", () => {
+    expect(whatFor(platform.timerInShared)).toContain("lint/style/noRestrictedGlobals");
+    expect(whatFor(platform.timerInBrowser)).not.toContain("lint/style/noRestrictedGlobals");
+  });
+
+  it("lets fetch appear only as an option parameter", () => {
+    for (const path of [platform.fetchInShared, platform.fetchInBrowser, platform.fetchInServer]) {
+      expect(whatFor(path), path).toContain("lint/style/noRestrictedGlobals");
+    }
+    expect(whatFor(platform.fetchOption)).not.toContain("lint/style/noRestrictedGlobals");
+  });
+
+  it("bans eval everywhere", () => {
+    expect(whatFor(platform.evaluation)).toContain("lint/security/noGlobalEval");
+  });
+});
+
+describe("GritQL rules", () => {
+  for (const { ban, folder, path, message } of bans) {
+    it(`bans ${ban} in ${folder}/`, () => {
+      expect(whatFor(path).filter((what) => what.includes(message))).toHaveLength(1);
+    });
+  }
+
+  it("lets the clock files read the clock", () => {
+    for (const path of clocks) expect(messagesFor(path, "assesskit never reads a clock"), path).toEqual([]);
+  });
+
+  it("allows a Date with arguments and a regular expression literal", () => {
+    expect(messagesFor(allowedCalls, "assesskit")).toEqual([]);
+  });
+});
+
+describe("browser-delivery-imports.grit", () => {
+  it("lets browser folders import viewFromJson, actionToJson and types from @assesskit/runtime/delivery", () => {
+    expect(messagesFor(delivery.allowed, "Browser code")).toEqual([]);
+  });
+
+  it("refuses every other import and re-export of @assesskit/runtime/delivery in the browser folders", () => {
+    expect(messagesFor(delivery.denied, IMPORTS)).toHaveLength(6);
+    expect(messagesFor(delivery.denied, REEXPORTS)).toHaveLength(2);
+  });
+
+  it("lets only client/local.ts load @assesskit/runtime/delivery with import()", () => {
+    expect(messagesFor(delivery.denied, LOADS)).toHaveLength(1);
+    expect(messagesFor(delivery.local, LOADS)).toEqual([]);
+    expect(messagesFor(delivery.local, IMPORTS)).toHaveLength(1);
+  });
+
+  it("does not apply to the server folders", () => {
+    expect(messagesFor(delivery.server, "Browser code")).toEqual([]);
+    expect(messagesFor(delivery.server, "Only client")).toEqual([]);
+  });
+});
+
+describe("baseline.grit and baseline-css.grit", () => {
+  for (const { banned, sample, path } of baseline) {
+    it(`bans ${banned.feature}: ${sample.code}`, () => {
+      expect(whatFor(path).filter((what) => what.includes("outside the browser baseline"))).toEqual([
+        lintMessage(banned),
+      ]);
+    });
+  }
+
+  it("applies to the shared and browser folders and not to the server folders", () => {
+    for (const { folder, path } of baselineFolders) {
+      const reported = whatFor(path).filter((what) => what.includes("outside the browser baseline")).length;
+      expect(reported, folder).toBe(SERVER.includes(folder) ? 0 : 2);
+    }
+  });
+
+  it("allows the features that are inside the baseline", () => {
+    for (const path of [allowedBaseline, allowedCss]) {
+      expect(
+        whatFor(path).filter((what) => what.includes("outside the browser baseline")),
+        path,
+      ).toEqual([]);
+    }
+  });
+});

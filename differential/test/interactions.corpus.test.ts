@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { type AsiDocument, describeInteractions, ReadError, readAsi } from "@assesskit/runtime";
 import { parseQtiXml } from "@longsightgroup/qti3-core";
-import { type AsiDocument, describeInteractions, ReadError, readAsi } from "@luthfanwakan/olah";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../scripts/corpus.ts";
 
@@ -49,7 +49,7 @@ function summaries(): Map<string, { readonly oracle: Summary[]; readonly subject
   return found;
 }
 
-describe("olah against the oracle on the interactions of the corpus items", () => {
+describe("runtime against the oracle on the interactions of the corpus items", () => {
   const found = summaries();
 
   it("[B52][B57][D] list the same interactions in the same order, with the same response variables", () => {

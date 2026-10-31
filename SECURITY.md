@@ -4,15 +4,15 @@ Report vulnerabilities privately through the repository's security advisory form
 version, the document or the sequence of actions that shows the problem, and what it lets an attacker do.
 
 Every input is untrusted: packages, documents, personal needs profiles, results, candidate responses, client actions and what
-callbacks and resolvers return. The sections below state the controls of olah and what a deployment adds; the sections that
-start with tempuh state those of the player.
+callbacks and resolvers return. The sections below state the controls of the runtime and what a deployment adds; the sections that
+start with the player state those of the player.
 
-Points to be aware of when deploying olah:
+Points to be aware of when deploying the runtime:
 
-- **No I/O.** The olah core reads no files, makes no network requests, reads no environment variables, reads no clock and
+- **No I/O.** The runtime core reads no files, makes no network requests, reads no environment variables, reads no clock and
   runs no code it is given. Only the `node` and `cli` modules use Node.js. `node` reads only the paths it is given.
 - **No fetching.** Absolute URLs in content are data. The core never fetches them, and callers supply the callbacks that
-  resolve references. The only network access in olah is the command `olah schemas fetch`: it downloads the addresses of
+  resolve references. The only network access in the runtime is the command `assesskit schemas fetch`: it downloads the addresses of
   `SCHEMA_FILES`, which the command line cannot change, and writes a file only when its SHA-256 is the pinned one.
 - **CAT engines.** The core never calls a CAT engine. `qti-adaptive-engine-ref` names the URL prefix of an engine, so a
   document chooses where a host sends a candidate's results. A host that implements `CatPort` checks the prefix against
@@ -37,7 +37,7 @@ Points to be aware of when deploying olah:
   `Map`. `decodePciValue` checks everything a module returns before it becomes a value, and refuses a file that is not
   `{ data, mime, name }` and a duration with years or months; the bytes of a file go to a callback of the host and never
   into a value. A package path from a configuration file is still untrusted: the host serves only paths of the package.
-- **Printed variables.** A `format` runs on olah's own arithmetic, over the exact value of the number, and a width or
+- **Printed variables.** A `format` runs on the runtime's own arithmetic, over the exact value of the number, and a width or
   precision above 1,100 is ignored, so that a document cannot make the formatter allocate gigabytes.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
   entity expansion, BPIG §6.7). It reads only the five predefined entities and character references. It also limits the
@@ -45,11 +45,11 @@ Points to be aware of when deploying olah:
   surrogate, a namespace declaration with white space at its start or end, and a qualified name that is not made of two
   names. `resolveIncludes` calls only the resolver the caller passes, rejects `xpointer`, detects loops and counts the nodes
   of the result.
-- **Schemas.** olah ships no schema. `loadSchemaSet` checks the SHA-256 of every file it reads against the list in
+- **Schemas.** The runtime ships no schema. `loadSchemaSet` checks the SHA-256 of every file it reads against the list in
   `SCHEMA_FILES`, and again when it compiles a file. `validateXmlFiles` parses every document with `parseXml` first and
   runs libxml2 with network access and external entities off. A document has no way to name another schema file than the
   pinned ones.
-- **Command line.** `olah validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
+- **Command line.** `assesskit validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
   of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
   `maxBytes` of `parseXml` before it reads the file, with the exit code 2.
 - **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (§2.6, BPIG §6.7). An archive
@@ -60,7 +60,7 @@ Points to be aware of when deploying olah:
   read with `lstat` and `realpath`: a symbolic link or a file that is not a regular file rejects it, and a file replaced by a
   link after the listing is not followed. A reference in a document that leaves the package, and an `xi:include` that names a
   file outside it, are never resolved; a file that many includes of a document name is read and parsed once. A package
-  directory that another process can change while olah reads it is not protected against a race.
+  directory that another process can change while the runtime reads it is not protected against a race.
 - **Server mode.** The answer keys and the seed of an exam session must not reach the candidate's device. Run the engine on
   the server and send the client views only: the view is built field by field from an allowlist, with no correct response
   (outside the solution state the item session control allows), processing, mapping, outcome or template value, hidden
@@ -72,16 +72,16 @@ Points to be aware of when deploying olah:
   stamps the time. The engine checks every action against the rules and answers a refusal, never a state change, and an
   out-of-range integer response is a refusal. The engine does not decide which candidate actions a client may send: it
   applies `suspend` and `resume`, which stop the clock, from whoever sends them, so a deployment that must not let candidates
-  pause filters them before it applies them (the exam default of tempuh does).
+  pause filters them before it applies them (the exam default of the player does).
 - **Resolvers and callbacks.** The functions a host passes in (`resolvers`, `resolveTemplate`, `customOperators`, the file
   callbacks of PCI values, `CatPort`) are the host's code and run with its authority. What they return is data and is checked
   where it is used. A resolver returns its value synchronously.
 - **Scoring.** `scorerView` holds the correct responses, so it belongs on the server. `supply-scores` is a host action: accept
   a score only from the scorer or the tool it belongs to.
 
-## tempuh: the frame of portable custom interactions
+## The player: the frame of portable custom interactions
 
-A portable custom interaction is code of the package, and it runs in the candidate's browser. tempuh runs each one in an
+A portable custom interaction is code of the package, and it runs in the candidate's browser. The player runs each one in an
 `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so the code has an opaque origin: no cookie, storage or
 access to the player. The frame restricts itself with a content security policy before it loads the code: no connection,
 frame, form or `base`, no inline script and no `eval`, and scripts, styles, images, media and fonts only from the asset
@@ -93,7 +93,7 @@ origin and the origins the host allows. The frame refuses to start where the bro
 - Allow other origins in `origins` only for hosts that you trust to serve scripts.
 - The code is visible to the candidate: keep answer keys in response processing, which the asset gate never serves.
 
-## tempuh: the interactions
+## The player: the interactions
 
 An upload interaction can record the candidate's voice, and a WAV recording loads a script into an audio worklet.
 
@@ -108,20 +108,20 @@ An upload interaction can record the candidate's voice, and a WAV recording load
   response that holds anything else is shown as its text. A host that shows a response to a rater treats it as it treats
   any answer: untrusted text.
 
-## tempuh: the session host and the asset gate
+## The player: the session host and the asset gate
 
-In an exam the engine, the seeds and the answer keys stay on the server ([server.md](packages/tempuh/docs/server.md)). The
-browser code imports only the wire functions of olah's `delivery`, and a test fails if the bundle of the player and the remote
+In an exam the engine, the seeds and the answer keys stay on the server ([server.md](packages/player/docs/server.md)). The
+browser code imports only the wire functions of the runtime's `delivery`, and a test fails if the bundle of the player and the remote
 session holds any file of the engine. Practice runs the engine on the device, so its keys are visible there.
 
 - The host's authentication gives `{ session, principal }` to every call. Envelopes carry no session identifier, and a
   request for a session that is not bound to the principal, or that does not exist, is the same `AccessError`: map it to 403
   and tell nothing else. `start` never rebinds a session.
-- A client may not send `suspend` or `resume` in an exam, because olah counts suspended time nowhere. Breaks are the proctor's.
+- A client may not send `suspend` or `resume` in an exam, because the runtime counts suspended time nowhere. Breaks are the proctor's.
   Keep the proctor's and the scheduler's endpoints away from candidates.
 - The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is
   started once.
-- Serve package files only through the asset gate ([asset-gate.md](packages/tempuh/docs/asset-gate.md)), from an origin
+- Serve package files only through the asset gate ([asset-gate.md](packages/player/docs/asset-gate.md)), from an origin
   without cookies. A token is in the path and names a session, a prefix and an expiry (an hour by default). The gate sends
   `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`; do not strip them. Keep the HMAC key out of the
   browser and rotate it to end every token.
@@ -130,10 +130,10 @@ session holds any file of the engine. Practice runs the engine on the device, so
   references is served, so keep one folder for each item and its media.
 - The files of the candidate have tokens of their own, valid for five minutes, and are served in a sandbox.
 
-## tempuh: the LTI tool role
+## The player: the LTI tool role
 
-A learning platform launches tempuh through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
-checked it ([lti.md](packages/tempuh/docs/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
+A learning platform launches the player through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
+checked it ([lti.md](packages/player/docs/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
 key, to the tool's client and deployment, and to one use.
 
 - Serve the login URL and the launch URL over HTTPS, and limit the size of a request body: the handlers read what the host
@@ -149,7 +149,7 @@ key, to the tool's client and deployment, and to one use.
 - The tool's private key is the host's to keep. It signs client assertions and Deep Linking responses, which expire after
   five minutes.
 
-## tempuh: CAT engines
+## The player: CAT engines
 
 `restCatPort` sends a candidate's results and an OAuth bearer token to a remote engine, so it is built to send them to one
 place only.
@@ -161,21 +161,21 @@ place only.
 - The personal needs and preferences of a candidate go to the engine only with `sharePnp: true`.
 - The client secret goes only to the token URL, as HTTP Basic credentials.
 
-`takarCatPort` and `takarPanelPort` run in process and send nothing. The session seed travels in the `sessionState`, which
-olah keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
-parameters of the items and the settings of the test: keep it on the server. takar is an optional peer dependency of
-tempuh, and only `cat/takar/` imports it.
+`measurekitCatPort` and `measurekitPanelPort` run in process and send nothing. The session seed travels in the `sessionState`, which
+the runtime keeps in the delivery state, so keep it on the server like the seed of an exam session. The `SectionStore` holds the
+parameters of the items and the settings of the test: keep it on the server. measurekit is an optional peer dependency of
+the player, and only `cat/measurekit/` imports it.
 
-## tempuh: Caliper
+## The player: Caliper
 
 `sendCaliper` sends events about a candidate and a bearer token to a Caliper endpoint that the host configures
-([caliper.md](packages/tempuh/docs/caliper.md)).
+([caliper.md](packages/player/docs/caliper.md)).
 
 - The endpoint must be `https`. A redirect is an error, so it cannot carry the token to another address. Every call is
   aborted after `timeoutMs`.
 - The candidate is the IRI that the host gives as `actor`. Give an opaque identifier, such as `urn:uuid:` and a UUID that the
   host keeps in its own records, never an email address, a name or an identifier that another service knows. The
-  identifiers that tempuh makes (events, attempts, scores, items and sections) are UUIDs of names that hold the session
+  identifiers that the player makes (events, attempts, scores, items and sections) are UUIDs of names that hold the session
   identifier and the item reference, and the session identifier does not leave the server in them.
 - The events hold times, the identifiers of item references and sections, and, for `caliperGrade`, the score that the host
   gives. They hold no response, no answer key and no personal needs and preferences. Call `caliperGrade` only for a score that
@@ -183,10 +183,10 @@ tempuh, and only `cat/takar/` imports it.
 - The token goes only in the `Authorization` header of that endpoint. A `ServiceError` carries the endpoint's answer as
   `body`: log it as untrusted text.
 
-## tempuh: external scoring
+## The player: external scoring
 
 A `Submission` of `toSubmission` carries what a rater needs to score a response, which includes the correct responses of the
-items and the rubric for the scorer ([scoring.md](packages/tempuh/docs/scoring.md)).
+items and the rubric for the scorer ([scoring.md](packages/player/docs/scoring.md)).
 
 - Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
   candidate's session or to the candidate's browser. It is not a view of the candidate.
@@ -199,13 +199,13 @@ items and the rubric for the scorer ([scoring.md](packages/tempuh/docs/scoring.m
 - `toSupplyScores` checks a score against the declaration, but the host decides who may score. The engine
   trusts a score it is given, so authenticate the rater and log who supplied it.
 
-## tempuh: content
+## The player: content
 
-The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from olah's typed
+The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from the runtime's typed
 nodes and never with `innerHTML`, and keeps only the attributes listed in
-[content](packages/tempuh/docs/content.md#attributes): no event handler, no `style`, no attribute of another namespace.
+[content](packages/player/docs/content.md#attributes): no event handler, no `style`, no attribute of another namespace.
 An element of any namespace but MathML, SSML and CML is left out with what it holds, so a script, an SVG or a frame in
-the content is not built, even from a view that a reader of olah would have refused. A reference goes through one policy:
+the content is not built, even from a view that a reader of the runtime would have refused. A reference goes through one policy:
 a path in the package is resolved and given to `assets`, an origin must be listed in `origins`, and `javascript:`, `vbscript:`,
 `blob:` and every `data:` URL but a raster image are refused. A file embedded by an `object` runs nothing: a page is in a
 frame with an empty `sandbox`, and a file of another type is a link.
@@ -220,22 +220,22 @@ Serve the files of a package from an origin of their own and put it, and the ori
 stylesheets with CORS headers. A page with a strict `style-src` needs nothing for item stylesheets: they are constructed
 sheets, not `<style>` elements or attributes.
 
-## tempuh: MathJax and speech
+## The player: MathJax and speech
 
-MathJax is code that the host chooses and serves: tempuh loads the script from the URL it is given and bundles none. Serve
+MathJax is code that the host chooses and serves: the player loads the script from the URL it is given and bundles none. Serve
 MathJax and its fonts from the asset origin, from the files of the pinned version of the npm package `mathjax`, and put
 that origin in the `script-src`, `font-src` and `connect-src` of the page and `blob:` in its `worker-src`
-([math](packages/tempuh/docs/math.md#serving-mathjax)). tempuh sets MathJax's fonts to the host, so that it reaches no CDN. A
+([math](packages/player/docs/math.md#serving-mathjax)). The player sets MathJax's fonts to the host, so that it reaches no CDN. A
 page loads MathJax from one URL.
 
 A speech request is made from the content of the page and goes to the voice of the host. The `ssml` holds only the SSML
 elements and attributes of SSML 1.1 that the ASI schema allows, with every value escaped, and an `audio` keeps its source
-only for an `http` or `https` URL. Lexicons are parsed by olah's XML reader, with its limits, and become `sub` and `phoneme`
+only for an `http` or `https` URL. Lexicons are parsed by the runtime's XML reader, with its limits, and become `sub` and `phoneme`
 in the request, so that a voice fetches no lexicon.
 
-## tempuh: the LTI platform role
+## The player: the LTI platform role
 
-tempuh launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](packages/tempuh/docs/lti-platform.md)).
+The player launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](packages/player/docs/lti-platform.md)).
 A tool is code of another party, and its frame has `allow-same-origin`: it is the same origin as any page of the platform
 on the player's origin, so the platform's handlers must never share that origin.
 
@@ -322,14 +322,14 @@ Measured on Node.js 26 with documents built to reach each XML limit, a document 
 
 ## Runtime dependencies
 
-The packages that olah and tempuh load at run time are pinned to exact versions:
+The packages that the runtime and the player load at run time are pinned to exact versions:
 
-| Package        | Version | License | Used by                                                                                                                                                                                                                                 |
-| -------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `saxes`        | 6.0.0   | ISC     | `xml`: a namespace-aware parser that rejects documents that are not well-formed. It expands no entity but the five predefined ones and reads no DTD. It has not changed since 2021; if a defect needs a fix, olah forks it.             |
-| `xmlchars`     | 2.2.0   | MIT     | `xml`: the character and name tables of XML 1.0 (a dependency of `saxes`, also used by the writer).                                                                                                                                     |
-| `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. olah reads the central directory itself.                                     |
-| `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                                |
-| `valibot`      | 1.5.0   | MIT     | olah and tempuh: the schemas that read untrusted JSON (actions, views, state, envelopes, answers of services, options). One function in `checks.ts` turns the first issue into a `DataError` that names its path. It has no dependency. |
-| `jose`         | 6.2.12  | MIT     | tempuh `lti`: signs and verifies the JWS and JWT of LTI messages, assertions and hints (algorithm allowlist, `crit`, `iss`, `aud`, `sub`, `exp`), computes JWK thumbprints and fetches key sets. Web Crypto only.                       |
-| `uuid`         | 14.0.3  | MIT     | tempuh `caliper`: the name-based UUID of version 5 (RFC 9562) of the identifiers of events, attempts, scores, items and sections.                                                                                                       |
+| Package        | Version | License | Used by                                                                                                                                                                                                                                            |
+| -------------- | ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `saxes`        | 6.0.0   | ISC     | `xml`: a namespace-aware parser that rejects documents that are not well-formed. It expands no entity but the five predefined ones and reads no DTD. It has not changed since 2021; if a defect needs a fix, the runtime forks it.                 |
+| `xmlchars`     | 2.2.0   | MIT     | `xml`: the character and name tables of XML 1.0 (a dependency of `saxes`, also used by the writer).                                                                                                                                                |
+| `fflate`       | 0.8.3   | MIT     | `package`: inflates the entries of ZIP archives in steps of 8 KiB, so that the output can be counted, and deflates the entries that `writePackage` writes. The runtime reads the central directory itself.                                         |
+| `libxml2-wasm` | 0.7.2   | MIT     | `node`: libxml2 2.15.1 compiled to WebAssembly, which compiles and runs the XSD schemas.                                                                                                                                                           |
+| `valibot`      | 1.5.0   | MIT     | The runtime and the player: the schemas that read untrusted JSON (actions, views, state, envelopes, answers of services, options). One function in `checks.ts` turns the first issue into a `DataError` that names its path. It has no dependency. |
+| `jose`         | 6.2.12  | MIT     | The player `lti`: signs and verifies the JWS and JWT of LTI messages, assertions and hints (algorithm allowlist, `crit`, `iss`, `aud`, `sub`, `exp`), computes JWK thumbprints and fetches key sets. Web Crypto only.                              |
+| `uuid`         | 14.0.3  | MIT     | The player `caliper`: the name-based UUID of version 5 (RFC 9562) of the identifiers of events, attempts, scores, items and sections.                                                                                                              |

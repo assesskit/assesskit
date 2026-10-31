@@ -20,11 +20,11 @@ export const GROUPS = [
   { id: "packaging", title: "Packaging" },
 ] as const;
 
-/** The capabilities of CERT §2.2 that olah and tempuh can offer. */
+/** The capabilities of CERT §2.2 that the runtime and the player can offer. */
 const CAPABILITIES = ["import", "export", "authoring", "delivery", "scoring"] as const;
 
 /** Which package supports a feature. */
-const OWNERS = ["olah", "tempuh", "both"] as const;
+const OWNERS = ["runtime", "player", "both"] as const;
 
 /** A certification level. */
 type Level = (typeof LEVELS)[number]["id"];
@@ -35,7 +35,7 @@ type Capability = (typeof CAPABILITIES)[number];
 /** The package that supports a feature. */
 type Owner = (typeof OWNERS)[number];
 
-/** A feature of CERT Appendix A and what olah and tempuh do about it. */
+/** A feature of CERT Appendix A and what the runtime and the player do about it. */
 export interface CertFeature {
   /** The identifier in Appendix A, such as `T-4`. */
   readonly id: string;

@@ -1,7 +1,7 @@
 /** A browser engine of the baseline, by the name Playwright gives it: Chromium, Firefox and Safari's WebKit. */
 export type Engine = "chromium" | "firefox" | "webkit";
 
-/** The oldest version of each engine that tempuh supports (docs/baseline.md), as `browser.version()` starts. */
+/** The oldest version of each engine that the player supports (docs/baseline.md), as `browser.version()` starts. */
 export const BASELINE: Readonly<Record<Engine, string>> = { chromium: "111.", firefox: "115.", webkit: "16.4" };
 
 /** A check in a page: an expression that is true where the engine has the feature. */

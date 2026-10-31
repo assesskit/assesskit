@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
-import { compare, compareSessions, type ItemCase, longsight, olah, type Turn } from "../src/index.ts";
+import { compare, compareSessions, type ItemCase, longsight, runtime, type Turn } from "../src/index.ts";
 import { sessionItem } from "./items.ts";
 
 const NAMESPACE = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
@@ -35,7 +35,7 @@ const decimal = fc.integer({ min: -100_000, max: 100_000 }).map((value) => value
 function agree(cases: fc.Arbitrary<ItemCase>): void {
   fc.assert(
     fc.property(cases, (testCase) => {
-      const report = compare([testCase], longsight, olah, []);
+      const report = compare([testCase], longsight, runtime, []);
       expect(report.differences, testCase.xml).toEqual([]);
       expect(report.compared, testCase.xml).toBe(1);
     }),
@@ -43,7 +43,7 @@ function agree(cases: fc.Arbitrary<ItemCase>): void {
   );
 }
 
-describe("olah against the oracle on generated items", () => {
+describe("runtime against the oracle on generated items", () => {
   it("[B82][D] agree on integer and float arithmetic", () => {
     const binary = fc.constantFrom("sum", "product", "subtract", "min", "max");
     agree(
@@ -127,8 +127,8 @@ describe("olah against the oracle on generated items", () => {
     );
   });
 
-  it("[B75][G4][D] differ only for a negative x in relative mode, where the oracle's range is empty and olah's lies between its ends", () => {
-    const report = compare([equalCase(-10, -10.5, "relative", 10, true, true)], longsight, olah, []);
+  it("[B75][G4][D] differ only for a negative x in relative mode, where the oracle's range is empty and the runtime's lies between its ends", () => {
+    const report = compare([equalCase(-10, -10.5, "relative", 10, true, true)], longsight, runtime, []);
     expect(report.differences).toEqual([
       { item: "equal", kind: "outcome", variable: "OUT", reference: false, subject: true },
     ]);
@@ -242,7 +242,7 @@ describe("olah against the oracle on generated items", () => {
         const report = compareSessions(
           [{ name: "session", xml: sessionItem(adaptive), turns: played, seed: 1 }],
           longsight,
-          olah,
+          runtime,
           [],
         );
         expect(report.differences).toEqual([]);
@@ -263,7 +263,7 @@ describe("olah against the oracle on generated items", () => {
       turns,
       seed: 1,
     };
-    const report = compareSessions([testCase], longsight, olah, accepted);
+    const report = compareSessions([testCase], longsight, runtime, accepted);
     expect(report.differences).toEqual([]);
     expect(report.accepted).toEqual([
       { item: `${testCase.name} turn 2`, kind: "session", variable: "numAttempts", reference: 1, subject: 2 },

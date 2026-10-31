@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@assesskit/runtime": ["../runtime/src/index.ts"],
+      "@assesskit/runtime/errors": ["../runtime/src/errors.ts"],
+      "@assesskit/runtime/*": ["../runtime/src/*/index.ts"]
+    },
+    "types": ["node"]
+  },
+  "include": [
+    "src/index.ts",
+    "src/errors.ts",
+    "src/checks.ts",
+    "src/messages",
+    "src/protocol",
+    "src/server",
+    "src/scoring",
+    "src/cat",
+    "src/lti",
+    "src/caliper"
+  ]
+}

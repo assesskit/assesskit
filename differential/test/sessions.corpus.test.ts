@@ -2,15 +2,15 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
 import { requireCorpus } from "../../scripts/corpus.ts";
-import { compareSessions, longsight, olah, SESSION_TURNS, sessionCases } from "../src/index.ts";
+import { compareSessions, longsight, runtime, SESSION_TURNS, sessionCases } from "../src/index.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const examples = resolve(requireCorpus(root), "qti-examples/qtiv3-examples");
 const accepted = loadAcceptedDifferences(resolve(root, "conformance/accepted-differences.json"));
 
-describe("olah against the oracle on sessions of the corpus items", () => {
+describe("runtime against the oracle on sessions of the corpus items", () => {
   const cases = sessionCases(examples);
-  const report = compareSessions(cases, longsight, olah, accepted);
+  const report = compareSessions(cases, longsight, runtime, accepted);
 
   it("builds sessions of the items with interactions that choose identifiers, the adaptive ones included", () => {
     expect(cases.length).toBeGreaterThan(100);

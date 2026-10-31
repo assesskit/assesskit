@@ -7,7 +7,7 @@ import { type CorpusSource, differences, hashFiles, loadLock, selectFiles, sha25
 let directory = "";
 
 beforeAll(() => {
-  directory = mkdtempSync(join(tmpdir(), "olah-corpus-"));
+  directory = mkdtempSync(join(tmpdir(), "runtime-corpus-"));
   mkdirSync(join(directory, "items/deep"), { recursive: true });
   mkdirSync(join(directory, "other"));
   writeFileSync(join(directory, "items/a.xml"), "a");

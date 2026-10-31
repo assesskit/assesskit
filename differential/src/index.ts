@@ -1,5 +1,5 @@
 /**
- * Differential tests of olah against the Longsight `qti3-core` item engine: the cases, the oracle, and the comparison.
+ * Differential tests of the runtime against the Longsight `qti3-core` item engine: the cases, the oracle, and the comparison.
  *
  * @module
  */
@@ -18,4 +18,4 @@ export type {
   Turn,
   TurnObservation,
 } from "./model.ts";
-export { olah } from "./olah.ts";
+export { runtime } from "./runtime.ts";

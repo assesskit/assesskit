@@ -14,7 +14,7 @@
       "!docs/api",
       "!**/test/fixtures",
       "!conformance/corpus.lock.json",
-      "!packages/olah/docs/conformance.md"
+      "!packages/runtime/docs/conformance.md"
     ]
   },
   "formatter": {
@@ -94,7 +94,7 @@
   },
   "overrides": [
     {
-      "includes": ["packages/olah/src/**"],
+      "includes": ["packages/runtime/src/**"],
       "linter": {
         "rules": {
           "security": {
@@ -105,7 +105,7 @@
       "plugins": ["./biome/no-math-random.grit", "./biome/no-clock.grit", "./biome/no-regexp-constructor.grit"]
     },
     {
-      "includes": ["packages/olah/src/**", "!packages/olah/src/node/**", "!packages/olah/src/cli/**"],
+      "includes": ["packages/runtime/src/**", "!packages/runtime/src/node/**", "!packages/runtime/src/cli/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -117,14 +117,14 @@
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "fetch": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "XMLHttpRequest": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "WebSocket": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "window": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "document": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "process": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "setTimeout": "The olah core uses no platform API; only node/ and cli/ may.",
-                  "setInterval": "The olah core uses no platform API; only node/ and cli/ may."
+                  "fetch": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "XMLHttpRequest": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "WebSocket": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "window": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "document": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "process": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "setTimeout": "The runtime core uses no platform API; only node/ and cli/ may.",
+                  "setInterval": "The runtime core uses no platform API; only node/ and cli/ may."
                 }
               }
             }
@@ -133,7 +133,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/errors.ts"],
+      "includes": ["packages/runtime/src/errors.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -146,8 +146,8 @@
                     "message": "errors.ts depends on nothing."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -157,7 +157,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/checks.ts"],
+      "includes": ["packages/runtime/src/checks.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -170,8 +170,8 @@
                     "message": "checks.ts depends only on errors.ts."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -181,7 +181,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/random.ts"],
+      "includes": ["packages/runtime/src/random.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -194,8 +194,8 @@
                     "message": "random.ts depends only on errors.ts and checks.ts."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -205,7 +205,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/xml/**"],
+      "includes": ["packages/runtime/src/xml/**"],
       "linter": {
         "rules": {
           "style": {
@@ -218,8 +218,8 @@
                     "message": "xml/ depends only on errors.ts, checks.ts and random.ts."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -229,7 +229,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/values/**"],
+      "includes": ["packages/runtime/src/values/**"],
       "linter": {
         "rules": {
           "style": {
@@ -242,8 +242,8 @@
                     "message": "values/ depends only on errors.ts, checks.ts and random.ts."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -253,7 +253,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/asi/**"],
+      "includes": ["packages/runtime/src/asi/**"],
       "linter": {
         "rules": {
           "style": {
@@ -274,8 +274,8 @@
                     "message": "asi/ builds on xml/ and values/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -285,7 +285,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/results/**"],
+      "includes": ["packages/runtime/src/results/**"],
       "linter": {
         "rules": {
           "style": {
@@ -306,8 +306,8 @@
                     "message": "results/ builds on xml/ and values/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -317,7 +317,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/usage/**"],
+      "includes": ["packages/runtime/src/usage/**"],
       "linter": {
         "rules": {
           "style": {
@@ -338,8 +338,8 @@
                     "message": "usage/ builds on xml/ and values/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -349,7 +349,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/pnp/**"],
+      "includes": ["packages/runtime/src/pnp/**"],
       "linter": {
         "rules": {
           "style": {
@@ -362,8 +362,8 @@
                     "message": "pnp/ builds on xml/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -373,7 +373,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/metadata/**"],
+      "includes": ["packages/runtime/src/metadata/**"],
       "linter": {
         "rules": {
           "style": {
@@ -394,8 +394,8 @@
                     "message": "metadata/ builds on xml/ and asi/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -405,7 +405,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/processing/**"],
+      "includes": ["packages/runtime/src/processing/**"],
       "linter": {
         "rules": {
           "style": {
@@ -426,8 +426,8 @@
                     "message": "processing/ builds on values/ and asi/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -437,7 +437,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/interactions/**"],
+      "includes": ["packages/runtime/src/interactions/**"],
       "linter": {
         "rules": {
           "style": {
@@ -458,8 +458,8 @@
                     "message": "interactions/ builds on values/ and asi/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -469,7 +469,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/pci/**"],
+      "includes": ["packages/runtime/src/pci/**"],
       "linter": {
         "rules": {
           "style": {
@@ -490,8 +490,8 @@
                     "message": "pci/ builds on values/ and asi/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -501,7 +501,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/content/**"],
+      "includes": ["packages/runtime/src/content/**"],
       "linter": {
         "rules": {
           "style": {
@@ -523,8 +523,8 @@
                     "message": "content/ builds on values/, asi/ and pnp/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -534,7 +534,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/cat/**"],
+      "includes": ["packages/runtime/src/cat/**"],
       "linter": {
         "rules": {
           "style": {
@@ -557,8 +557,8 @@
                     "message": "cat/ builds on values/, asi/, results/ and metadata/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -568,7 +568,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/package/**"],
+      "includes": ["packages/runtime/src/package/**"],
       "linter": {
         "rules": {
           "style": {
@@ -591,8 +591,8 @@
                     "message": "package/ builds on xml/, asi/, metadata/ and usage/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -602,7 +602,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/validate/**"],
+      "includes": ["packages/runtime/src/validate/**"],
       "linter": {
         "rules": {
           "style": {
@@ -634,8 +634,8 @@
                     "message": "validate/ builds on xml/, values/, asi/, results/, usage/, pnp/, metadata/, processing/, interactions/, pci/, content/, cat/ and package/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -645,7 +645,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/delivery/**"],
+      "includes": ["packages/runtime/src/delivery/**"],
       "linter": {
         "rules": {
           "style": {
@@ -675,8 +675,8 @@
                     "message": "delivery/ builds on values/, asi/, results/, pnp/, processing/, interactions/, pci/, content/, cat/, package/ and validate/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -686,7 +686,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/node/**"],
+      "includes": ["packages/runtime/src/node/**"],
       "linter": {
         "rules": {
           "style": {
@@ -708,8 +708,8 @@
                     "message": "node/ builds on xml/, package/ and validate/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -719,7 +719,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/cli/**"],
+      "includes": ["packages/runtime/src/cli/**"],
       "linter": {
         "rules": {
           "style": {
@@ -746,8 +746,8 @@
                     "message": "cli/ builds on xml/, asi/, results/, usage/, pnp/, node/, validate/ and package/ only."
                   },
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -758,8 +758,8 @@
     },
     {
       "includes": [
-        "packages/olah/src/cli/**",
-        "packages/olah/test/readme-example.ts",
+        "packages/runtime/src/cli/**",
+        "packages/runtime/test/readme-example.ts",
         "scripts/**",
         "conformance/**",
         "differential/**",
@@ -774,7 +774,7 @@
       }
     },
     {
-      "includes": ["packages/olah/src/index.ts", "packages/olah/test/**"],
+      "includes": ["packages/runtime/src/index.ts", "packages/runtime/test/**"],
       "linter": {
         "rules": {
           "style": {
@@ -783,8 +783,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@luthfanwakan/tempuh", "@luthfanwakan/tempuh/**"],
-                    "message": "olah is the lower package: it never imports tempuh."
+                    "group": ["@assesskit/player", "@assesskit/player/**"],
+                    "message": "The runtime is the lower package: it never imports the player."
                   }
                 ]
               }
@@ -794,7 +794,7 @@
       }
     },
     {
-      "includes": ["**", "!packages/olah/**", "!scripts/schemas.ts"],
+      "includes": ["**", "!packages/runtime/**", "!scripts/schemas.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -803,8 +803,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   }
                 ]
               }
@@ -831,7 +831,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/**"],
+      "includes": ["packages/player/src/**"],
       "linter": {
         "rules": {
           "security": {
@@ -843,19 +843,19 @@
     },
     {
       "includes": [
-        "packages/tempuh/src/**",
-        "!packages/tempuh/src/client/clock.ts",
-        "!packages/tempuh/src/server/clock.ts"
+        "packages/player/src/**",
+        "!packages/player/src/client/clock.ts",
+        "!packages/player/src/server/clock.ts"
       ],
       "plugins": ["./biome/no-clock.grit"]
     },
     {
       "includes": [
-        "packages/tempuh/src/index.ts",
-        "packages/tempuh/src/errors.ts",
-        "packages/tempuh/src/checks.ts",
-        "packages/tempuh/src/messages/**",
-        "packages/tempuh/src/protocol/**"
+        "packages/player/src/index.ts",
+        "packages/player/src/errors.ts",
+        "packages/player/src/checks.ts",
+        "packages/player/src/messages/**",
+        "packages/player/src/protocol/**"
       ],
       "linter": {
         "rules": {
@@ -885,7 +885,7 @@
       "plugins": ["./biome/baseline.grit"]
     },
     {
-      "includes": ["packages/tempuh/src/player/**", "packages/tempuh/src/client/**"],
+      "includes": ["packages/player/src/player/**", "packages/player/src/client/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -907,7 +907,7 @@
       "plugins": ["./biome/baseline.grit", "./biome/browser-delivery-imports.grit"]
     },
     {
-      "includes": ["packages/tempuh/**/*.css"],
+      "includes": ["packages/player/**/*.css"],
       "linter": {
         "rules": {
           "complexity": { "noImportantStyles": "off" },
@@ -918,11 +918,11 @@
     },
     {
       "includes": [
-        "packages/tempuh/src/scoring/**",
-        "packages/tempuh/src/caliper/**",
-        "packages/tempuh/src/cat/**",
-        "packages/tempuh/src/lti/**",
-        "packages/tempuh/src/server/**"
+        "packages/player/src/scoring/**",
+        "packages/player/src/caliper/**",
+        "packages/player/src/cat/**",
+        "packages/player/src/lti/**",
+        "packages/player/src/server/**"
       ],
       "linter": {
         "rules": {
@@ -942,7 +942,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/errors.ts"],
+      "includes": ["packages/player/src/errors.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -955,12 +955,12 @@
                     "message": "errors.ts depends on nothing."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -970,7 +970,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/index.ts"],
+      "includes": ["packages/player/src/index.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -983,12 +983,12 @@
                     "message": "index.ts re-exports errors.ts and messages/ only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -998,7 +998,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/checks.ts"],
+      "includes": ["packages/player/src/checks.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -1011,12 +1011,12 @@
                     "message": "checks.ts depends only on errors.ts."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1026,7 +1026,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/messages/**"],
+      "includes": ["packages/player/src/messages/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1056,12 +1056,12 @@
                     "message": "messages/ builds on errors.ts and checks.ts only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1071,7 +1071,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/protocol/**"],
+      "includes": ["packages/player/src/protocol/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1099,12 +1099,12 @@
                     "message": "protocol/ builds on errors.ts, checks.ts and messages/ only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1114,7 +1114,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/player/**"],
+      "includes": ["packages/player/src/player/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1144,12 +1144,12 @@
                     "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1159,7 +1159,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/client/**"],
+      "includes": ["packages/player/src/client/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1189,12 +1189,12 @@
                     "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1204,7 +1204,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/scoring/**"],
+      "includes": ["packages/player/src/scoring/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1234,12 +1234,12 @@
                     "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1249,7 +1249,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/caliper/**"],
+      "includes": ["packages/player/src/caliper/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1279,12 +1279,12 @@
                     "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1294,7 +1294,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/cat/**"],
+      "includes": ["packages/player/src/cat/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1324,8 +1324,8 @@
                     "message": "Only server/ and lti/ import protocol/official.ts: it brands a report as official."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   }
                 ]
               }
@@ -1335,7 +1335,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/cat/**", "!packages/tempuh/src/cat/takar/**"],
+      "includes": ["packages/player/src/cat/**", "!packages/player/src/cat/measurekit/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1361,12 +1361,17 @@
                     "message": "cat/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**", "**/takar", "**/takar/**"],
-                    "message": "Only cat/takar/ imports takar, so that a host without takar can import the rest of tempuh."
+                    "group": [
+                      "@measurekit/psychometrics",
+                      "@measurekit/psychometrics/**",
+                      "**/measurekit",
+                      "**/measurekit/**"
+                    ],
+                    "message": "Only cat/measurekit/ imports measurekit, so that a host without measurekit can import the rest of the player."
                   }
                 ]
               }
@@ -1376,7 +1381,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/lti/**"],
+      "includes": ["packages/player/src/lti/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1402,12 +1407,12 @@
                     "message": "lti/ builds on errors.ts, checks.ts, messages/ and protocol/ only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }
@@ -1417,7 +1422,7 @@
       }
     },
     {
-      "includes": ["packages/tempuh/src/server/**"],
+      "includes": ["packages/player/src/server/**"],
       "linter": {
         "rules": {
           "style": {
@@ -1430,12 +1435,12 @@
                     "message": "server/ builds on errors.ts, checks.ts, messages/, protocol/, scoring/, caliper/, cat/ and lti/ only."
                   },
                   {
-                    "group": ["../**/olah/**"],
-                    "message": "Import olah through its published subpaths, such as @luthfanwakan/olah/xml, never by relative path."
+                    "group": ["../**/runtime/**"],
+                    "message": "Import the runtime through its published subpaths, such as @assesskit/runtime/xml, never by relative path."
                   },
                   {
-                    "group": ["@luthfanwakan/takar", "@luthfanwakan/takar/**"],
-                    "message": "Only cat/takar/ imports takar."
+                    "group": ["@measurekit/psychometrics", "@measurekit/psychometrics/**"],
+                    "message": "Only cat/measurekit/ imports measurekit."
                   }
                 ]
               }

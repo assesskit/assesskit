@@ -11,7 +11,7 @@ import {
   UNICODE_FILES,
 } from "../unicode.ts";
 
-const VALUES = resolve(import.meta.dirname, "../../packages/olah/src/values");
+const VALUES = resolve(import.meta.dirname, "../../packages/runtime/src/values");
 
 describe("sha256", () => {
   it("hashes the UTF-8 bytes of a text", () => {

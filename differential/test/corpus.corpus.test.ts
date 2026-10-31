@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
 import { requireCorpus } from "../../scripts/corpus.ts";
-import { compare, corpusCases, longsight, olah } from "../src/index.ts";
+import { compare, corpusCases, longsight, runtime } from "../src/index.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const examples = resolve(requireCorpus(root), "qti-examples/qtiv3-examples");
@@ -25,9 +25,9 @@ describe("the oracle on the corpus items", () => {
   });
 });
 
-describe("olah against the oracle on the corpus items", () => {
+describe("runtime against the oracle on the corpus items", () => {
   const cases = corpusCases(examples);
-  const report = compare(cases, longsight, olah, accepted);
+  const report = compare(cases, longsight, runtime, accepted);
   const names = new Set(cases.map(({ name }) => name));
 
   it("[B11][B45][B47][B48][B76][B77][B84][D] gives the outcome and template values of the oracle on every item both accept", () => {

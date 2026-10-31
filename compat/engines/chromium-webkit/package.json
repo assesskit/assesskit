@@ -1,5 +1,5 @@
 {
-  "name": "@luthfanwakan/tempuh-compat-chromium-webkit",
+  "name": "@assesskit/player-compat-chromium-webkit",
   "version": "0.0.0",
   "private": true,
   "description": "Pins Playwright 1.31.2, whose browsers are at the baseline. Never published.",

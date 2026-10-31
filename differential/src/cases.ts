@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ReadError, readAsi } from "@luthfanwakan/olah";
-import { describeInteractions, type InteractionDescriptor } from "@luthfanwakan/olah/interactions";
+import { ReadError, readAsi } from "@assesskit/runtime";
+import { describeInteractions, type InteractionDescriptor } from "@assesskit/runtime/interactions";
 import { correctResponses, longsightRandom } from "./longsight.ts";
 import type { ItemCase, Observed, SessionCase, Turn } from "./model.ts";
 
@@ -63,7 +63,7 @@ function isAnswered(descriptor: InteractionDescriptor): boolean {
 }
 
 /**
- * Builds session cases from the item documents below a directory: each item that olah reads and that has an interaction
+ * Builds session cases from the item documents below a directory: each item that the runtime reads and that has an interaction
  * choosing identifiers gets {@link SESSION_TURNS} turns. Each turn answers every such interaction with a choice drawn
  * from the oracle's generator, a list of one choice for a multiple variable, and submits; the second turn ends with the
  * first end attempt interaction of the item instead, when it has one. A case is named by the path of its file.
