@@ -113,6 +113,7 @@ function scoreBody(fields: ScoreFields, userId: string, scoreMaximum: number | u
  * Publishes the score of a finished test to the line item of the launch that started it, to the learning platform that
  * launched the tool (LTI AGS 2.0 score publish service).
  *
+ * @remarks
  * - **Official results only.** `result` must be the report that `SessionHost.results` returned. A copy of it, a report of a
  *   practice session and any other object are refused.
  * - **The score.** `scoreGiven` is the outcome `SCORE` raised to 0 when it is negative, with the report's value in the

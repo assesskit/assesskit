@@ -21,7 +21,7 @@ import type { PlatformRegistration } from "./registration.js";
 
 const MESSAGE = "The id_token";
 
-/** Reads the resource link claim (LTI 1.3 Core §5.3.5). */
+/** Reads the resource link claim (LTI 1.3 Core section 5.3.5). */
 function readResourceLink(claims: Claims): ResourceLink {
   const { id, title, description } = required(
     claims,
@@ -32,7 +32,7 @@ function readResourceLink(claims: Claims): ResourceLink {
   return { id, title, description };
 }
 
-/** An endpoint of the grade services; LTI AGS 2.0 §3.1 lets a platform leave `lineitem` blank. */
+/** An endpoint of the grade services; LTI AGS 2.0 section 3.1 lets a platform leave `lineitem` blank. */
 const endpointUrl = v.pipe(
   v.optional(v.nullable(v.string())),
   v.check(
@@ -42,7 +42,7 @@ const endpointUrl = v.pipe(
   v.transform((url) => (url === null || url === "" ? undefined : url)),
 );
 
-/** Reads the grade services claim (LTI AGS 2.0 §3.1), or returns `undefined` when the platform offers none. */
+/** Reads the grade services claim (LTI AGS 2.0 section 3.1), or returns `undefined` when the platform offers none. */
 function readAgs(claims: Claims): AgsEndpoint | undefined {
   const endpoint = optional(
     claims,
@@ -54,7 +54,7 @@ function readAgs(claims: Claims): AgsEndpoint | undefined {
   return { scopes: endpoint.scope ?? [], lineitems: endpoint.lineitems, lineitem: endpoint.lineitem };
 }
 
-/** Reads the Deep Linking settings claim (Deep Linking 2.0 §4.4.1). */
+/** Reads the Deep Linking settings claim (Deep Linking 2.0 section 4.4.1). */
 function readSettings(claims: Claims): DeepLinkingSettings {
   const settings = required(
     claims,
@@ -75,7 +75,7 @@ function readSettings(claims: Claims): DeepLinkingSettings {
   };
 }
 
-/** Reads the claims that every launch has (LTI 1.3 Core §5.3), after checking the version and the deployment. */
+/** Reads the claims that every launch has (LTI 1.3 Core section 5.3), after checking the version and the deployment. */
 function readBase(claims: Claims, registration: PlatformRegistration): LaunchBase {
   const version = required(claims, CLAIM.version, MESSAGE, STRING);
   if (version !== LTI_VERSION) {
@@ -103,7 +103,7 @@ function readBase(claims: Claims, registration: PlatformRegistration): LaunchBas
 }
 
 /**
- * Reads the LTI claims of a verified `id_token` into a launch (LTI 1.3 Core §5.3, Deep Linking 2.0 §4.4): the message
+ * Reads the LTI claims of a verified `id_token` into a launch (LTI 1.3 Core section 5.3, Deep Linking 2.0 section 4.4): the message
  * type, the version, a deployment that the registration lists, and the claims of that message type.
  *
  * @throws `LtiError` with the reason of the failed check: `message-type-unsupported`, `version-unsupported`,

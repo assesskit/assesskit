@@ -8,18 +8,18 @@ import { randomToken } from "./random.js";
 import type { PlatformRegistration } from "./registration.js";
 import type { LoginRecord } from "./store.js";
 
-// Security Framework §7.1.2 recommends 600 seconds for the lifetime of an authorization code. A login is the same kind of
+// Security Framework section 7.1.2 recommends 600 seconds for the lifetime of an authorization code. A login is the same kind of
 // short-lived credential: the platform answers a request with `prompt=none` at once.
 const LOGIN_TTL_SECONDS = 600;
 
 /** Returns the name of the cookie that holds the `state` of a login on the cookie path. */
 export function stateCookieName(state: string): string {
   // The prefix __Host- makes the browser accept the cookie only with Secure and Path=/, from the host that set it and not
-  // from a sibling subdomain (RFC 6265bis §4.1.3.2). A name per state allows several launches in one browser.
+  // from a sibling subdomain (RFC 6265bis section 4.1.3.2). A name per state allows several launches in one browser.
   return `__Host-lti_state_${state}`;
 }
 
-/** The parameters of a third-party initiated login (Security Framework §5.1.1.1, LTI 1.3 Core §4.1). */
+/** The parameters of a third-party initiated login (Security Framework section 5.1.1.1, LTI 1.3 Core section 4.1). */
 interface LoginInitiation {
   readonly iss: string;
   readonly loginHint: string;
@@ -58,7 +58,7 @@ function readInitiation(request: HttpRequest): LoginInitiation {
   };
 }
 
-/** Builds the authentication request of Security Framework §5.1.1.2. */
+/** Builds the authentication request of Security Framework section 5.1.1.2. */
 function authenticationRequest(
   registration: PlatformRegistration,
   initiation: LoginInitiation,
@@ -78,15 +78,16 @@ function authenticationRequest(
     ["prompt", "none"],
   ];
   for (const [name, value] of parameters) url.searchParams.append(name, value);
-  // LTI 1.3 Core §4.1.1: the tool returns lti_message_hint unaltered.
+  // LTI 1.3 Core section 4.1.1: the tool returns lti_message_hint unaltered.
   if (initiation.ltiMessageHint !== undefined) url.searchParams.append("lti_message_hint", initiation.ltiMessageHint);
   return url.href;
 }
 
 /**
  * Starts a launch: answers the platform's third-party initiated login with the authentication request (Security
- * Framework §5.1.1.1 and §5.1.1.2).
+ * Framework sections 5.1.1.1 and 5.1.1.2).
  *
+ * @remarks
  * It creates a `state` and a single-use `nonce` and saves them in `options.store`. Where the `state` also lives depends
  * on the initiation:
  * - With `lti_storage_target`, the answer is a page that stores `state` and `nonce` in the platform's browser storage
@@ -96,6 +97,7 @@ function authenticationRequest(
  *   with `SameSite=None; Secure; HttpOnly`.
  *
  * @param request - The initiation: a GET with the parameters in the query, or a POST with them in a form.
+ * @param options - The registrations and the store of the tool.
  * @returns A redirect or the page. The host sends it.
  * @throws `DataError` when the request is not an initiation: a required parameter is missing or repeated.
  * @throws `LtiError` (`platform-unknown`) when the tool has no registration for the platform.

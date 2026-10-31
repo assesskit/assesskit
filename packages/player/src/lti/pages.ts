@@ -11,7 +11,7 @@ export const STORED_STATE = "stored_state";
 export const STORED_NONCE = "stored_nonce";
 
 // The pages are small and static, so that the CSP names the hash of each script; the values go in a data attribute, which
-// the script parses. The messages follow LTI Client Side OIDC 0.1 §3.1 to §3.4: `lti.put_data` and `lti.get_data`, a
+// the script parses. The messages follow LTI Client Side OIDC 0.1 sections 3.1 to 3.4: `lti.put_data` and `lti.get_data`, a
 // response `<subject>.response` with the same `message_id`, from the origin of the platform's authentication endpoint.
 const PUT_SCRIPT = `(function () {
   "use strict";
@@ -143,7 +143,7 @@ export interface StoragePut {
 
 /**
  * Builds the page that stores `state` and `nonce` in the platform with `lti.put_data` and then redirects the browser
- * to the authentication request (LTI Client Side OIDC 0.1 §2.3, §2.5).
+ * to the authentication request (LTI Client Side OIDC 0.1 sections 2.3 and 2.5).
  */
 export function putDataPage(put: StoragePut): Promise<HttpResponse> {
   const { frame, state, nonce, authenticationRequest } = put;
@@ -169,7 +169,7 @@ export interface StorageGet {
 
 /**
  * Builds the verification page: it fetches `state` and `nonce` from the platform's storage with `lti.get_data` and
- * submits them with the token to the launch URL (LTI Client Side OIDC 0.1 §2.7).
+ * submits them with the token to the launch URL (LTI Client Side OIDC 0.1 section 2.7).
  */
 export function getDataPage(get: StorageGet): Promise<HttpResponse> {
   const { frame, state, nonce, authenticationUrl, redirectUri, idToken } = get;

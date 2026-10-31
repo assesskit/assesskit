@@ -11,7 +11,7 @@ import {
   sendCaliper,
 } from "../caliper/index.js";
 import { checkArray, checkFunction, checkNonEmptyString, checkRecord } from "../checks.js";
-import { type Clock, checkClock, readClock } from "../lti/clock.js";
+import { type Clock, checkClock, readClock } from "../lti/internal.js";
 
 /** The score that a `supply-scores` action supplied: the runtime's events name the request and not the value, so the step carries it. */
 export interface SuppliedGrade {
@@ -31,7 +31,11 @@ export interface StepEvents {
   readonly step: CaliperStep;
   /** The events of the step, as the runtime's `Step.events` gives them. */
   readonly events: readonly DeliveryEvent[];
-  /** The score of the step when a `supply-scores` action made it. Default: none, so that no GradeEvent is made. */
+  /**
+   * The score of the step when a `supply-scores` action made it.
+   *
+   * @defaultValue none, so that no GradeEvent is made
+   */
   readonly supplied?: SuppliedGrade;
 }
 
@@ -52,7 +56,11 @@ export interface ForwardOptions {
    * step, so a log that must not hold a step twice keeps it by the session and the step.
    */
   readonly log: (step: StepEvents) => void | Promise<void>;
-  /** Sends the events that Caliper has a counterpart for. Default: none. */
+  /**
+   * Sends the events that Caliper has a counterpart for.
+   *
+   * @defaultValue none, so that the events go to the log only
+   */
   readonly caliper?: CaliperForwarding;
 }
 
@@ -106,6 +114,7 @@ function checkForwardOptions(value: unknown): asserts value is ForwardOptions {
  * Forwards the events of one step of a session: every one of them to the host's log, in the order the runtime gave them and
  * whatever their type, and the ones that Caliper has a counterpart for to the Caliper endpoint.
  *
+ * @remarks
  * The log goes first, so that a Caliper failure never loses a log entry. A step without events calls nothing. Calling it
  * again for the same step repeats the log call and sends the same Caliper identifiers, so an endpoint holds each event
  * once.

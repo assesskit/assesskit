@@ -3,9 +3,7 @@ import type { LtiLink } from "@assesskit/runtime/package";
 import { checkFunction, checkRecord } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import type { Caller } from "../../protocol/index.js";
-import { type Clock, checkClock } from "../clock.js";
-import type { HttpRequest } from "../http.js";
-import { checkJwksCache, type JwksCache } from "../jwks.js";
+import { type Clock, checkClock, checkJwksCache, type HttpRequest, type JwksCache } from "../internal.js";
 import type { AgsScore } from "./ags-score.js";
 import { checkPlatformConfig, type PlatformConfig } from "./config.js";
 import { checkToolRegistration, type ToolRegistration } from "./registration.js";
@@ -24,7 +22,7 @@ export interface PlatformLoginOptions extends PlatformOptions {
   readonly registration: (link: LtiLink) => Promise<ToolRegistration | undefined>;
   /** Confirms that the session of a caller is the caller's, and throws `AccessError` otherwise; wire it to `SessionHost.check`. */
   readonly check: (caller: Caller) => Promise<void>;
-  /** Gives the highest score of an item, which is the `scoreMaximum` of its line item (LTI AGS 2.0 §3.2.8). */
+  /** Gives the highest score of an item, which is the `scoreMaximum` of its line item (LTI AGS 2.0 section 3.2.8). */
   readonly scoreMaximum: (item: ItemKey) => Promise<number>;
 }
 
@@ -114,7 +112,7 @@ export function checkScoresOptions(options: unknown): asserts options is AgsScor
 
 /**
  * Checks that a request is for the platform's own origin. The tool's frame is same-origin with any platform page on the
- * player's origin (D-M1), so a handler mounted elsewhere would put the player at risk.
+ * player's origin, so a handler mounted elsewhere would put the player at risk.
  *
  * @throws `AccessError` (`wrong-origin`) when the request is for another origin.
  */

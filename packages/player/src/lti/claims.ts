@@ -12,7 +12,7 @@ import { LtiError } from "../errors.js";
 /** The claims of a token: a JSON object. */
 export type Claims = Readonly<Record<string, unknown>>;
 
-/** The most characters of an identifier of a deployment, a resource link or a user (LTI 1.3 Core §5.3.3, §5.3.5, §5.3.6). */
+/** The most characters of an identifier of a deployment, a resource link or a user (LTI 1.3 Core sections 5.3.3 and 5.3.5, section 5.3.6). */
 export const MAX_IDENTIFIER_LENGTH = 255;
 
 /** A string. */
@@ -33,13 +33,13 @@ export const POSITIVE_INTEGER = positiveIntegerSchema;
 /** A boolean. */
 export const BOOLEAN = v.boolean();
 
-/** An absolute `https` URL: LTI requires HTTPS for every URL of a message (LTI 1.3 Core §3.5). */
+/** An absolute `https` URL: LTI requires HTTPS for every URL of a message (LTI 1.3 Core section 3.5). */
 export const HTTPS_URL = httpsUrlSchema;
 
 /** An array of strings. */
 export const STRING_ARRAY = v.array(v.string());
 
-/** An object whose values are strings, such as `custom` (LTI 1.3 Core §5.4.6: a custom value is always a string). */
+/** An object whose values are strings, such as `custom` (LTI 1.3 Core section 5.4.6: a custom value is always a string). */
 export const STRING_RECORD = mapSchema(v.string());
 
 /** The failure of a claim: `claim-missing` when it is absent, else `claim-invalid`. */
@@ -99,7 +99,7 @@ export const CLAIM = {
   agsEndpoint: "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint",
 } as const;
 
-/** The scopes of the Assignment and Grade Services that a launch offers (LTI AGS 2.0 §3.2, §3.4.2). */
+/** The scopes of the Assignment and Grade Services that a launch offers (LTI AGS 2.0 sections 3.2 and 3.4.2). */
 export const AGS_SCOPE = {
   lineitem: "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
   lineitemReadonly: "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly",
@@ -116,5 +116,5 @@ export const MESSAGE_TYPE = {
   deepLinkingResponse: "LtiDeepLinkingResponse",
 } as const;
 
-/** The version of LTI that the tool speaks: `1.3.0` (LTI 1.3 Core §5.3.2). */
+/** The version of LTI that the tool speaks: `1.3.0` (LTI 1.3 Core section 5.3.2). */
 export const LTI_VERSION = "1.3.0";

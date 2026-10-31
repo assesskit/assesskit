@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-// `assesskit schemas fetch` runs the same code, so that one implementation downloads the schemas.
+// `assesskit schemas fetch` runs the same code, so that one implementation downloads the schemas. This import names the file:
+// Node runs the script as TypeScript and does not resolve the `.js` specifiers that `cli/internal.ts` re-exports through.
 import {
   download,
   fetchSchemas,

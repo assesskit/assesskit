@@ -1,19 +1,19 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { checkRecord, describe } from "../../checks.js";
 
-/** The values of `activityProgress` (LTI AGS 2.0 §3.4.7). */
+/** The values of `activityProgress` (LTI AGS 2.0 section 3.4.7). */
 const ACTIVITY_PROGRESS = ["Initialized", "Started", "InProgress", "Submitted", "Completed"] as const;
-/** The values of `gradingProgress` (LTI AGS 2.0 §3.4.8). */
+/** The values of `gradingProgress` (LTI AGS 2.0 section 3.4.8). */
 const GRADING_PROGRESS = ["FullyGraded", "Pending", "PendingManual", "Failed", "NotReady"] as const;
-// LTI AGS 2.0 §3.4.9: ISO 8601 with a time zone designator (`Z`, `+00:00` or `+00`) and, in the examples, a fraction of a second.
+// LTI AGS 2.0 section 3.4.9: ISO 8601 with a time zone designator (`Z`, `+00:00` or `+00`) and, in the examples, a fraction of a second.
 const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)$/u;
 const MS_PER_MINUTE = 60_000;
 
-/** A score that a tool posted to a line item (LTI AGS 2.0 §3.4). */
+/** A score that a tool posted to a line item (LTI AGS 2.0 section 3.4). */
 export interface AgsScore {
   /** The `sub` of the launch: the user the score is for. */
   readonly userId: string;
-  /** The score, from 0; absent when the tool clears the score. It may be higher than `scoreMaximum` (§3.4.4). */
+  /** The score, from 0; absent when the tool clears the score. It may be higher than `scoreMaximum` (section 3.4.4). */
   readonly scoreGiven?: number;
   /** The denominator of `scoreGiven`, above 0; present whenever `scoreGiven` is. */
   readonly scoreMaximum?: number;
@@ -23,7 +23,7 @@ export interface AgsScore {
   readonly gradingProgress: (typeof GRADING_PROGRESS)[number];
   /** The time of the change as the tool wrote it. */
   readonly timestamp: string;
-  /** The same time in milliseconds since 1970-01-01T00:00:00Z; a later score has a larger value (§3.4.9). */
+  /** The same time in milliseconds since 1970-01-01T00:00:00Z; a later score has a larger value (section 3.4.9). */
   readonly timestampMs: number;
 }
 
@@ -73,9 +73,11 @@ function optionalNumber(value: unknown, name: string, positive: boolean): number
 }
 
 /**
- * Reads the body of a score request (media type `application/vnd.ims.lis.v1.score+json`, LTI AGS 2.0 §3.4.3). Properties
- * that it does not know, such as `comment` and the extensions of §3.1.2, are ignored.
+ * Reads the body of a score request (media type `application/vnd.ims.lis.v1.score+json`, LTI AGS 2.0 section 3.4.3). Properties
+ * that it does not know, such as `comment` and the extensions of section 3.1.2, are ignored.
  *
+ * @param body - The parsed JSON of the request.
+ * @returns The score.
  * @throws `DataError` when it is not a score: `userId`, `timestamp`, `activityProgress` or `gradingProgress` is missing or
  * invalid; `scoreGiven` is not a number from 0; or `scoreMaximum` is absent with `scoreGiven`, or not above 0.
  */

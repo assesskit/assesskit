@@ -14,7 +14,7 @@ import { waitFor } from "./wait.js";
 
 /**
  * The pages of the client-side storage path run in the engines of the player. The test page plays the platform: it
- * keeps the storage of LTI Client Side OIDC 0.1 §4.1 for the origin of the tool, and the tool's page runs in a frame of it.
+ * keeps the storage of LTI Client Side OIDC 0.1 section 4.1 for the origin of the tool, and the tool's page runs in a frame of it.
  */
 
 const origin = location.origin;
@@ -59,7 +59,7 @@ function tool(): { options: LtiLaunchOptions; store: ReturnType<typeof memorySto
 
 const storages: PlatformStorage[] = [];
 
-/** The platform's side of the storage: answers `lti.put_data` and `lti.get_data` as LTI Client Side OIDC 0.1 §4.1 does. */
+/** The platform's side of the storage: answers `lti.put_data` and `lti.get_data` as LTI Client Side OIDC 0.1 section 4.1 does. */
 class PlatformStorage {
   readonly buckets = new Map<string, Map<string, string>>();
   private readonly held: (() => void)[] = [];

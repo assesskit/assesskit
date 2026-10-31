@@ -1,6 +1,6 @@
 import type { BodyNode } from "@assesskit/runtime/asi";
 import type { ItemKey, Scorer, ScoringDeclaration } from "@assesskit/runtime/delivery";
-import { BASE_TYPES, type WireValue } from "@assesskit/runtime/values";
+import type { WireValue } from "@assesskit/runtime/values";
 import * as v from "valibot";
 import {
   describe,
@@ -9,8 +9,9 @@ import {
   parseWith,
   positiveIntegerSchema,
   recordSchema,
-  type Schema,
 } from "../checks.js";
+import { SCORERS } from "./scorers.js";
+import { declarationSchema } from "./scoring-declaration.js";
 
 /** A value in a submission: the runtime's {@link WireValue}, which decodes without a declaration, or `null` for NULL. */
 export type SubmissionValue = WireValue | null;
@@ -55,7 +56,7 @@ export interface SubmissionItem {
   readonly correctResponses: readonly SubmissionVariable[];
 }
 
-/** The score that a scorer supplied before. */
+/** A score that a scorer supplied earlier. */
 export interface SubmissionSupplied {
   /** The value of the outcome, or NULL. */
   readonly value: SubmissionValue;
@@ -66,9 +67,11 @@ export interface SubmissionSupplied {
 }
 
 /**
- * What a scorer needs to rate one externally scored outcome, in a form that is JSON text as it is (the player design §2.9): the
- * request, its declaration, the rubric, the responses that the outcome rates and the items they belong to. It holds the
- * correct responses of the items, so it goes only to authorized raters.
+ * What a scorer needs to rate one externally scored outcome, in a form that is JSON text as it is: the request, its
+ * declaration, the rubric, the responses that the outcome rates and the items they belong to.
+ *
+ * @remarks
+ * It holds the correct responses of the items, so it goes only to authorized raters.
  */
 export interface Submission {
   /** The identifier of the scoring request, which `toSupplyScores` answers. */
@@ -95,9 +98,6 @@ export interface Submission {
   readonly items: readonly SubmissionItem[];
 }
 
-/** The scorers of a request (INFO §4.5.10). */
-const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
-
 /**
  * The first and the last time that a submission may carry: `0001-01-01T00:00:00.000Z` and `9999-12-31T23:59:59.999Z` in
  * epoch milliseconds, the range of the runtime's times, so that every time has a four-digit year in a datestamp.
@@ -109,36 +109,6 @@ const LAST_INSTANT = 253_402_300_799_999;
 const instantSchema = v.pipe(finiteSchema, v.minValue(FIRST_INSTANT), v.maxValue(LAST_INSTANT));
 
 const optionalString = v.optional(v.string());
-const optionalFinite = v.optional(finiteSchema);
-
-/** The entries of a declaration that its cardinality does not change. */
-const declarationRest = {
-  normalMinimum: optionalFinite,
-  normalMaximum: optionalFinite,
-  masteryValue: optionalFinite,
-  interpretation: optionalString,
-  longInterpretation: optionalString,
-};
-
-// A record has no base type, so the property is not allowed beside it.
-const declarationSchema: Schema<ScoringDeclaration> = v.variant("cardinality", [
-  v.strictObject({ cardinality: v.literal("record"), ...declarationRest }),
-  v.strictObject({
-    cardinality: v.picklist(["multiple", "ordered", "single"]),
-    baseType: v.picklist(BASE_TYPES),
-    ...declarationRest,
-  }),
-]);
-
-/**
- * Checks the declaration of an outcome as a scoring request carries it: its cardinality and base type, which a record
- * lacks, its numbers and its texts.
- *
- * @throws `DataError` when it is not.
- */
-export function checkDeclaration(declaration: unknown): asserts declaration is ScoringDeclaration {
-  parseWith(declarationSchema, declaration, "The declaration of a submission");
-}
 
 /** A value: NULL or an object, which `fromWireValue` of the runtime reads when the value is shown. */
 const valueSchema = v.nullable(recordSchema);
@@ -208,8 +178,12 @@ const submissionSchema = v.pipe(
 
 /**
  * Checks a submission that arrived as JSON: every property of its form and no other, the type of every field, the content
- * as nodes, and that each part names an item the submission has, which it has once. A value is read when it is shown.
+ * as nodes, and that each part names an item the submission has, which it has once.
  *
+ * @remarks
+ * A value is read when it is shown, not here.
+ *
+ * @param value - The parsed JSON.
  * @throws `DataError` when it is not a submission.
  */
 export function checkSubmission(value: unknown): asserts value is Submission {

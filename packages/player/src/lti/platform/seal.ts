@@ -1,15 +1,14 @@
 import type { webcrypto } from "node:crypto";
 import { CompactSign, compactVerify } from "jose";
 import { isRecord } from "../../checks.js";
-import type { Claims } from "../claims.js";
-import { hasCanonicalParts } from "../jwt.js";
+import { type Claims, hasCanonicalParts } from "../internal.js";
 
 const ALGORITHM = "HS256";
 
 /**
  * Seals claims as a compact JWS signed with HMAC-SHA-256 (RFC 7515). The sealed token is signed and not encrypted, so
  * whoever holds it can read it. The `use` is the `typ` header, and a token of one use is refused for another (RFC 8725
- * §3.11). The claims are the host's: their times, if any, are checked by whoever opens the token.
+ * section 3.11). The claims are the host's: their times, if any, are checked by whoever opens the token.
  */
 export function sealToken(use: string, claims: Claims, key: webcrypto.CryptoKey): Promise<string> {
   return new CompactSign(new TextEncoder().encode(JSON.stringify(claims)))

@@ -90,12 +90,14 @@ function checkView(view: unknown): asserts view is ScorerView {
 }
 
 /**
- * Turns the scorer view of one scoring request into a submission that is JSON text as it is (the player design §2.9, R6): the
- * outcome with its declaration, the covers as parts with their `presented` flag and submitted value, the rubric of the
- * scorer view, and for each covered item the body as the candidate saw it, its template values and its correct responses.
- * Values are the runtime's wire values, so the submission decodes without declarations; NULL is `null`, and a file stays a
- * reference that the host's `files.url` resolves. The submission holds the correct responses: give it only to authorized
- * raters.
+ * Turns the scorer view of one scoring request into a submission that is JSON text as it is.
+ *
+ * @remarks
+ * The submission has the outcome with its declaration, the covers as parts with their `presented` flag and submitted
+ * value, the rubric of the scorer view, and for each covered item the body as the candidate saw it, its template values
+ * and its correct responses. Values are the runtime's wire values, so the submission decodes without declarations; NULL
+ * is `null`, and a file stays a reference that the host's `files.url` resolves. The submission holds the correct
+ * responses: give it only to authorized raters.
  *
  * @param view - What `Engine.scorerView(state, request.id)` returned.
  * @returns The submission, which `mountSubmission` shows and `checkSubmission` accepts.

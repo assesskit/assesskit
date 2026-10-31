@@ -3,8 +3,10 @@ import { DataError } from "@assesskit/runtime/errors";
 import { container, fromWireValue, record, single, type Value } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import scoringGuide from "../../../docs/player/scoring.md?raw";
 import { checkSubmission, type Submission } from "../src/protocol/index.js";
 import { toSubmission, toSupplyScores } from "../src/scoring/index.js";
+import { runGuideSamples } from "./guide-samples.js";
 import {
   accepted,
   act,
@@ -332,6 +334,18 @@ describe("toSupplyScores", () => {
     const stray: ScoringRequest = { ...essayRequest(), id: "item:other:1:SCORE" };
     const step = engine.apply(state, { ...toSupplyScores(stray, 1, "human"), at: 3_000 });
     expect(step.ok ? "accepted" : step.refusal.code).toBe("unknown-request");
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const modules = {
+      "@assesskit/player/scoring": await import("../src/scoring/index.js"),
+      "@assesskit/runtime/asi": await import("@assesskit/runtime/asi"),
+      "@assesskit/runtime/delivery": await import("@assesskit/runtime/delivery"),
+      "@assesskit/runtime/values": await import("@assesskit/runtime/values"),
+    };
+    expect(await runGuideSamples(scoringGuide, modules)).toBeGreaterThan(0);
   });
 });
 

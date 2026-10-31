@@ -12,12 +12,12 @@ import {
   STRING,
   STRING_ARRAY,
   STRING_RECORD,
-} from "../claims.js";
+} from "../internal.js";
 import { openToken, sealToken } from "./seal.js";
 
 const OWNER = "The sealed token";
 
-/** What `lti_message_hint` carries: the launch that the platform prepared for one candidate and one item (D-M1). */
+/** What `lti_message_hint` carries: the launch that the platform prepared for one candidate and one item. */
 export interface Hint {
   /** The session of the candidate. */
   readonly session: string;
@@ -41,7 +41,7 @@ export interface Hint {
   readonly exp: number;
 }
 
-/** What the identifier of a line item carries: the one line item of an item instance of a session (LTI AGS 2.0 §3.1). */
+/** What the identifier of a line item carries: the one line item of an item instance of a session (LTI AGS 2.0 section 3.1). */
 export interface LineItem {
   /** The session of the candidate. */
   readonly session: string;

@@ -4,31 +4,107 @@
 exam mode, the [asset gate](asset-gate.md), the stores a host provides, and the forwarding of each step's events
 ([Caliper](caliper.md#forwarding-the-events-of-a-step)). Keys and seeds stay on the server.
 
+```mermaid
+sequenceDiagram
+  participant B as Browser<br/>(session client)
+  participant R as Host route<br/>(authenticates)
+  participant H as SessionHost
+  participant S as SessionStore
+  participant Q as Scheduler
+  participant F as forwardEvents
+  B->>R: POST ActionEnvelope
+  R->>H: handle(caller, envelope)
+  H->>S: load(session)
+  H->>H: replay a repeated seq, refuse a stale one, apply the policy
+  H->>H: stamp and apply the action with the engine
+  H->>Q: schedule(session, each maximum time)
+  H->>S: save(session, record at its version)
+  alt another request saved first
+    H->>S: load again, handle again, up to MAX_SAVE_RETRIES
+  end
+  H->>F: the events of the step
+  H-->>R: ViewEnvelope with signed asset prefixes
+  R-->>B: JSON
+```
+
+| Export                                                                 | Purpose                                                                     |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `createSessionHost`, `SessionHost`, `SessionHostOptions`               | The session host of exam mode                                               |
+| `MAX_SAVE_RETRIES`                                                     | How many times a request is handled again after a version conflict          |
+| `CANDIDATE_ACTION_TYPES`, `EXAM_CLIENT_ACTIONS`, `CandidateActionType` | The client-action policy                                                    |
+| `SessionStore`, `StoredSession`, `SessionSave`                         | The storage of sessions                                                     |
+| `Scheduler`, `FileStore`, `AgsScoreStore`                              | The scheduler of time-outs, the storage of files, the storage of LTI scores |
+| `createAssetGate`, `collectAssetPrefixes` and the gate's types         | The [asset gate](asset-gate.md)                                             |
+| `forwardEvents`, `StepEvents`, `SuppliedGrade`, `ForwardOptions`       | What the host does with the events of each step                             |
+| `createLtiScoreIntake`, `LtiScoreIntake`                               | The scores of LTI items                                                     |
+| `SYSTEM_CLOCK`                                                         | The clock of the machine                                                    |
+
 ```ts
 import { createEngine } from "@assesskit/runtime/delivery";
-import { createSessionHost, SYSTEM_CLOCK } from "@assesskit/player/server";
-import type { AssetGate, Scheduler, SessionStore } from "@assesskit/player/server";
-import type { QtiPackage } from "@assesskit/runtime/package";
-import type { DeliveryDefinition } from "@assesskit/runtime/delivery";
+import { openPackage, packageResolvers } from "@assesskit/runtime/package";
+import { createAssetGate, createSessionHost, SYSTEM_CLOCK } from "@assesskit/player/server";
 
-declare const definition: DeliveryDefinition; // from packageResolvers
-declare const store: SessionStore;
-declare const scheduler: Scheduler;
-declare const gate: AssetGate;
-declare const packageOf: (session: string) => Promise<QtiPackage>;
-
-const host = createSessionHost({
-  engine: createEngine(definition),
-  store,
-  scheduler,
-  clock: SYSTEM_CLOCK,
-  gate,
-  packages: packageOf,
+const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
+const files = new Map(
+  Object.entries({
+    "imsmanifest.xml": `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="package">
+      <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+      <organizations/>
+      <resources>
+        <resource identifier="exam" type="imsqti_test_xmlv3p0" href="tests/exam.xml"><file href="tests/exam.xml"/></resource>
+        <resource identifier="q1" type="imsqti_item_xmlv3p0" href="items/q1.xml"><file href="items/q1.xml"/></resource>
+      </resources>
+    </manifest>`,
+    "tests/exam.xml": `<qti-assessment-test xmlns="${ASI}" identifier="exam" title="Exam">
+      <qti-test-part identifier="part" navigation-mode="nonlinear" submission-mode="individual">
+        <qti-assessment-section identifier="section" title="Section" visible="true">
+          <qti-assessment-item-ref identifier="q1" href="../items/q1.xml"/>
+        </qti-assessment-section>
+      </qti-test-part>
+    </qti-assessment-test>`,
+    "items/q1.xml": `<qti-assessment-item xmlns="${ASI}" identifier="q1" title="Question" adaptive="false" time-dependent="false">
+      <qti-item-body><p>Hello</p></qti-item-body>
+    </qti-assessment-item>`,
+  }).map(([path, text]) => [path, new TextEncoder().encode(text)]),
+);
+const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files.get(path) });
+const test = pkg.document("tests/exam.xml");
+if (test.kind !== "test") throw new Error("The document is not a test.");
+const engine = createEngine({
+  kind: "test",
+  test: test.test,
+  base: "tests/exam.xml",
+  resolvers: packageResolvers(pkg),
 });
 
+// The stores of a host are its database and its job queue; these keep one session in memory.
+const records = new Map();
+const store = {
+  create: async (session, record) => !records.has(session) && !!records.set(session, { ...record, version: 0, seq: 0 }),
+  load: async (session) => records.get(session),
+  save: async (session, { action, ...record }) => {
+    if (records.get(session)?.version !== record.version) return false;
+    records.set(session, { ...record, version: record.version + 1 });
+    return true;
+  },
+};
+const jobs = [];
+const scheduler = { schedule: async (session, at) => void jobs.push([session, at]) };
+const fileStore = { put: async () => ({ reference: "none", mimeType: "text/plain" }), read: async () => undefined };
+const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+const packages = async () => pkg;
+const gate = createAssetGate({ key, origin: "https://assets.example", packages, files: fileStore });
+
+const host = createSessionHost({ engine, store, scheduler, clock: SYSTEM_CLOCK, gate, packages });
+
 // In the handler of POST /exam/start, for the caller that the host authenticated:
-const first = await host.start({ session: "s1", principal: "candidate-7" }, { seed: 12345 });
-first.seq; // 0
+const caller = { session: "s1", principal: "candidate-7" };
+const first = await host.start(caller, { seed: 12345 });
+first.seq; // => 0
+first.view.current.title; // => "Question"
+const again = await host.handle(caller, { seq: 1, action: { type: "move", to: "next" } });
+again.seq; // => 1
+records.get("s1").version; // => 1
 ```
 
 ## Session host
@@ -90,12 +166,12 @@ first.
 ### Client-action policy
 
 The exam default lists every action of the candidate but `suspend` and `resume`, because the runtime counts suspended time nowhere
-(G23): a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
+a candidate who could suspend would stop the clock. The host filters `view.actions` through the policy, so the chrome
 never offers such an action. Practice allows every action, and so does a host that passes `CANDIDATE_ACTION_TYPES`.
 
 ### The proctor
 
-A break (PNP A-11), a pause and the end of a part are the proctor's, through `proctor(session, action)`. It applies the
+A break, a pause and the end of a part are the proctor's, through `proctor(session, action)`. It applies the
 action as the host and saves it; a refusal of the engine, such as `suspend` on an ended test, is returned as the step and
 saves nothing. The candidate learns of it with the next request: the engine refuses the action as `suspended`, the
 envelope carries the suspended view, and `view(caller)` gives it after a reload.
@@ -142,22 +218,48 @@ of the session. Its `onScore` is the `onScore` of `agsScores`, and its `settle` 
   kept, and `settle` supplies it when a step makes the requests. Call it from the `log` of the host's forwarding:
 
 ```ts
-import {
-  createLtiScoreIntake,
-  createSessionHost,
-  type AgsScoreStore,
-  type SessionHostOptions,
-} from "@assesskit/player/server";
+import { createLtiScoreIntake } from "@assesskit/player/server";
 
-declare const options: Omit<SessionHostOptions, "forward">;
-declare const scores: AgsScoreStore;
+const supplied = [];
+const kept = new Map();
+const intake = createLtiScoreIntake({
+  host: {
+    host: async (session, action) => {
+      supplied.push(`${session} ${action.request} ${action.value?.value}`);
+      return { ok: true };
+    },
+  },
+  scores: {
+    keep: async (session, item, score) => {
+      const key = `${session} ${item.ref} ${item.instance}`;
+      if (kept.has(key) && kept.get(key).timestampMs >= score.timestampMs) return false;
+      kept.set(key, score);
+      return true;
+    },
+    latest: async (session, item) => kept.get(`${session} ${item.ref} ${item.instance}`),
+  },
+});
 
-// The intake and the host need each other: the host logs through the intake, and the intake supplies through the host.
-const intake = createLtiScoreIntake({ host: { host: (...call) => host.host(...call) }, scores });
-const host = createSessionHost({ ...options, forward: { log: (step) => intake.settle(step) } });
-
-// The handler of the score service: agsScores({ ...platformOptions, onScore: intake.onScore }).
+const item = { ref: "q1", instance: 1 };
+const score = {
+  userId: "candidate-7",
+  scoreGiven: 7,
+  scoreMaximum: 10,
+  activityProgress: "Completed",
+  gradingProgress: "FullyGraded",
+  timestamp: "2026-10-31T10:00:00.000Z",
+  timestampMs: Date.UTC(2026, 9, 31, 10),
+};
+await intake.onScore("s1", item, score);
+supplied; // => ["s1 item:q1:1:SCORE 7", "s1 item:q1:1:MAXSCORE 10"]
+await intake.onScore("s1", item, { ...score, scoreGiven: 1 });
+supplied.length; // => 2
 ```
+
+The intake and the host need each other: the host logs through the intake's `settle`, and the intake supplies through the host.
+Create the intake with `host: { host: (...call) => host.host(...call) }`, then the host with
+`forward: { log: (step) => intake.settle(step) }`, and mount the handler of the score service with
+`agsScores({ ...platformOptions, onScore: intake.onScore })`.
 
 A host that logs in other ways calls `settle` after its own log. The intake does not publish the results: that is
 [`publishScore`](lti.md#publishing-a-score) when the session is over, and again when a person or a tool supplies the rest.

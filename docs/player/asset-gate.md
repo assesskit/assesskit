@@ -4,24 +4,70 @@ The asset gate is the one place where package files and candidate files leave th
 of the package, such as images, stylesheets and the modules of portable custom interactions, with URLs that carry a signed
 token. The package also holds the answer keys, so the gate serves no file that can hold one.
 
-```ts
-import { createAssetGate } from "@assesskit/player/server";
-import type { FileStore } from "@assesskit/player/server";
-import type { QtiPackage } from "@assesskit/runtime/package";
+```mermaid
+flowchart TD
+  request["GET /g/token/package path<br/>or GET /f/token/reference"] --> parse{"A gate URL?"}
+  parse -- no --> r404["404"]
+  parse -- yes --> mac{"MAC valid, right purpose,<br/>not expired?"}
+  mac -- no --> r403["403"]
+  mac -- yes --> kind{"Package or file token?"}
+  kind -- file --> same{"Reference equals<br/>the token's?"}
+  same -- no --> r403
+  same -- yes --> exists{"In the FileStore?"}
+  exists -- no --> r404
+  exists -- yes --> r200["200, sandboxed"]
+  kind -- package --> prefix{"Path inside<br/>the token's prefix?"}
+  prefix -- no --> r403
+  prefix -- yes --> served{"A web asset that no<br/>document, include or sniff denies?"}
+  served -- no --> r404
+  served -- yes --> r200p["200 with the media type"]
+```
 
-declare const files: FileStore;
-declare const packageOf: (session: string) => Promise<QtiPackage>;
+| Export                                              | Purpose                                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `createAssetGate(options)`                          | Creates the gate: `sign`, `signFile` and `serve`.                               |
+| `collectAssetPrefixes(view, pkg)`                   | The prefixes that a view needs.                                                 |
+| `AssetGate`, `AssetGateOptions`, `GateResponse`     | The gate, its options and its answer.                                           |
+| `DEFAULT_TTL_SECONDS`, `DEFAULT_UPLOAD_TTL_SECONDS` | The default lifetimes of a token for a prefix and for a file: `3600` and `300`. |
+
+```ts
+import { openPackage } from "@assesskit/runtime/package";
+import { createAssetGate } from "@assesskit/player/server";
+
+const files = new Map(
+  Object.entries({
+    "imsmanifest.xml": `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="package">
+      <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+      <organizations/>
+      <resources>
+        <resource identifier="q1" type="imsqti_item_xmlv3p0" href="items/q1/item.xml">
+          <file href="items/q1/item.xml"/><file href="items/q1/style.css"/>
+        </resource>
+      </resources>
+    </manifest>`,
+    "items/q1/item.xml": `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="q1" title="Question"
+        adaptive="false" time-dependent="false"><qti-item-body><p>Hello</p></qti-item-body></qti-assessment-item>`,
+    "items/q1/style.css": "p { color: #123456; }",
+  }).map(([path, text]) => [path, new TextEncoder().encode(text)]),
+);
+const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files.get(path) });
 
 const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
-const gate = createAssetGate({ key, origin: "https://assets.example", packages: packageOf, files });
+const store = { put: async () => ({ reference: "none", mimeType: "text/plain" }), read: async () => undefined };
+const gate = createAssetGate({ key, origin: "https://assets.example", packages: async () => pkg, files: store });
 
-const bases = await gate.sign("session-1", ["items/q1/"], Date.now());
-bases["items/q1/"]; // "https://assets.example/g/<token>/"
-// A file of the prefix: `${bases["items/q1/"]}items/q1/images/map.png`
+const bases = await gate.sign("session-1", ["items/q1/"], 0);
+const base = bases["items/q1/"];
+base.startsWith("https://assets.example/g/"); // => true
 
 // In the handler of GET /g/* and GET /f/*, with the path of the request and the time:
-const response = await gate.serve({ path: "/g/<token>/items/q1/images/map.png" }, Date.now());
-response.status; // 200, 403 or 404
+const style = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname }, 1_000);
+style.status; // => 200
+style.headers["Content-Type"]; // => "text/css; charset=utf-8"
+const document = await gate.serve({ path: new URL(`${base}items/q1/item.xml`).pathname }, 1_000);
+document.status; // => 404
+const expired = await gate.serve({ path: new URL(`${base}items/q1/style.css`).pathname }, 4_000_000);
+expired.status; // => 403
 ```
 
 ## Options

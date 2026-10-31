@@ -4,6 +4,16 @@ The browser code of the player runs in Chromium 111, Firefox 115 and Safari 16.4
 the shared and browser folders (`errors.ts`, `checks.ts`, `messages/`, `protocol/`, `player/` and `client/`) and every
 stylesheet. Server folders are outside it.
 
+```mermaid
+flowchart LR
+  src["src/: shared and browser folders"] -->|"tsc, lib ES2023, DOM"| types["Built-ins newer than ES2023 fail"]
+  src -->|"esbuild targets"| bundles["PCI frame and recording worklet"]
+  src -->|"pnpm build"| dist["dist/"]
+  dist -->|"eslint-plugin-compat"| js["APIs a baseline browser lacks fail"]
+  css["Stylesheets"] -->|"stylelint-no-unsupported-browser-features"| cssFailure["CSS features a baseline browser lacks fail"]
+  dist -->|"pnpm compat:engines"| engines["Smoke test in Chromium 111,<br/>Firefox 115 and WebKit 16.4"]
+```
+
 ## What the baseline allows
 
 These features are in all three browsers and the player uses them:

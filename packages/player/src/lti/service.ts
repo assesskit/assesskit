@@ -51,6 +51,7 @@ async function readText(response: Response): Promise<{ readonly text: string; re
 /**
  * Calls a service of a platform and returns the body of its successful answer.
  *
+ * @remarks
  * A redirect is an error, because it could lead from HTTPS to another scheme. The call has a time limit, and its answer
  * a size limit.
  *

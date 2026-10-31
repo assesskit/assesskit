@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { answerCapabilities } from "../src/player/lti-frame/internal.js";
 
 describe("answerCapabilities", () => {
-  it("answers a capabilities request as LTI Client Side postMessages 0.1 example 4.1.6.3 does, naming the frame of the storage page", () => {
+  it("answers a capabilities request as the specification shows it, naming the frame of the storage page", () => {
     expect(answerCapabilities({ subject: "lti.capabilities", message_id: "12345" })).toEqual({
       message_id: "12345",
       subject: "lti.capabilities.response",

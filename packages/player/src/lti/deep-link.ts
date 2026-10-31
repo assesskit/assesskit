@@ -16,11 +16,11 @@ import type { DeepLinkingLaunch } from "./launch-model.js";
 import { checkToolOptions, findDeployment, type ToolOptions } from "./options.js";
 import { randomToken } from "./random.js";
 
-// Security Framework §4.1.1: a message of the tool expires "typically five minutes after the iat timestamp".
+// Security Framework section 4.1.1: a message of the tool expires "typically five minutes after the iat timestamp".
 const MESSAGE_TTL_SECONDS = 300;
 const ITEM_TYPE = "ltiResourceLink";
 
-/** A line item that the platform may create for a placed resource (Deep Linking 2.0 §3.2, `lineItem`). */
+/** A line item that the platform may create for a placed resource (Deep Linking 2.0 section 3.2, `lineItem`). */
 export interface DeepLinkLineItem {
   /** The highest score of the resource: a number above 0. */
   readonly scoreMaximum: number;
@@ -32,7 +32,7 @@ export interface DeepLinkLineItem {
   readonly tag?: string;
 }
 
-/** A resource that the tool places in the platform: an LTI resource link (Deep Linking 2.0 §3.2). */
+/** A resource that the tool places in the platform: an LTI resource link (Deep Linking 2.0 section 3.2). */
 export interface DeepLinkItem {
   /** The title of the link. */
   readonly title?: string;
@@ -101,7 +101,7 @@ function checkLaunch(value: unknown): asserts value is DeepLinkingLaunch {
   if (settings.data !== undefined) checkString(settings.data, "The data of the launch");
 }
 
-/** Checks that the platform accepts what the host returns (Deep Linking 2.0 §4.4.1). */
+/** Checks that the platform accepts what the host returns (Deep Linking 2.0 section 4.4.1). */
 function checkAccepted(launch: DeepLinkingLaunch, items: readonly unknown[]): void {
   const { acceptTypes, acceptMultiple } = launch.settings;
   if (items.length > 0 && !acceptTypes.includes(ITEM_TYPE)) {
@@ -112,7 +112,7 @@ function checkAccepted(launch: DeepLinkingLaunch, items: readonly unknown[]): vo
   }
 }
 
-/** Writes an item as the content item of Deep Linking 2.0 §3.2. */
+/** Writes an item as the content item of Deep Linking 2.0 section 3.2. */
 function contentItem(item: DeepLinkItem): Readonly<Record<string, unknown>> {
   const { title, text, url, custom, lineItem } = item;
   return { type: ITEM_TYPE, title, text, url, custom: custom && Object.fromEntries(custom), lineItem };
@@ -120,15 +120,18 @@ function contentItem(item: DeepLinkItem): Readonly<Record<string, unknown>> {
 
 /**
  * Signs the response to a Deep Linking request: an `LtiDeepLinkingResponse` that places the items in the platform
- * (Deep Linking 2.0 §4.5). The result is the value of the form parameter `JWT`, which the host posts to
+ * (Deep Linking 2.0 section 4.5). The result is the value of the form parameter `JWT`, which the host posts to
  * `launch.settings.returnUrl` with an auto-submitted form. The platform may not create the items, and the tool should
- * send the response also when it places none (§2.3).
+ * send the response also when it places none (section 2.3).
  *
+ * @remarks
  * The response carries the `data` of the request when it had one, and a `nonce` and the times that the Security
- * Framework requires of a message of the tool (§5.2.2). It is signed with the key of the registration (RS256).
+ * Framework requires of a message of the tool (section 5.2.2). It is signed with the key of the registration (RS256).
  *
  * @param launch - The Deep Linking request that `ltiLaunch` returned.
  * @param items - The resource links to place; an empty array places none.
+ * @param options - The registrations of the tool and its `fetch`.
+ * @returns The signed JWT, as the text of the form parameter `JWT`.
  * @throws `DataError` when an argument has the wrong type, or the platform does not accept what the items are: it does not
  * accept `ltiResourceLink`, or several items.
  * @throws `LtiError` (`platform-unknown`, `deployment-unknown`) when the registration is gone or no longer lists the

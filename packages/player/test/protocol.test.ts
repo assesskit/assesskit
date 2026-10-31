@@ -5,6 +5,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import protocolGuide from "../../../docs/player/protocol.md?raw";
+import readme from "../README.md?raw";
 import { isRecord } from "../src/checks.js";
 import {
   checkActionEnvelope,
@@ -20,8 +22,9 @@ import {
   REFUSAL_CODES,
   viewDocuments,
 } from "../src/protocol/index.js";
-import { markOfficial } from "../src/protocol/official.js";
+import { markOfficial } from "../src/protocol/internal.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
@@ -532,6 +535,21 @@ describe("checkSubmission", () => {
     expect(() => checkSubmission(changed(["items"], [SUBMISSION.items[0], SUBMISSION.items[0]]))).toThrow(
       new DataError('A submission is invalid: has the item "e" instance 1 twice.'),
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const protocol = await import("../src/protocol/index.js");
+    expect(await runGuideSamples(protocolGuide, { "@assesskit/player/protocol": protocol })).toBeGreaterThan(0);
+  });
+
+  it("shows the results that the example of the README gives", async () => {
+    const modules = {
+      "@assesskit/player": await import("../src/index.js"),
+      "@assesskit/player/protocol": await import("../src/protocol/index.js"),
+    };
+    expect(await runGuideSamples(readme, modules)).toBe(2);
   });
 });
 

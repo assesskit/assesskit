@@ -2,6 +2,28 @@
 
 How the player is tested. The claim that these tests support is stated in [Supported](supported.md).
 
+```mermaid
+flowchart LR
+  spec["Specifications<br/>and the runtime"] -->|derive| complete["Completeness tests"]
+  fixtures["Fixtures and servers<br/>in test/fixtures"] --> node["Node suites<br/>pnpm test"]
+  fixtures --> browsers["Browser suites<br/>Chromium, Firefox, WebKit<br/>pnpm test:browser"]
+  corpus["1EdTech examples<br/>pnpm corpus"] --> corp["Corpus suites<br/>pnpm test:corpus"]
+  schemas["Official schemas<br/>pnpm schemas"] --> xsd["Schema suites<br/>pnpm test:xsd"]
+  built["Built player<br/>pnpm build"] --> engines["Smoke test in the oldest browsers<br/>pnpm compat:engines"]
+  complete --> node
+  complete --> browsers
+```
+
+| Suite                      | Runs in                                   | Command               | Covers                                                                                           |
+| -------------------------- | ----------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
+| `*.test.ts`                | Node                                      | `pnpm test`           | `protocol`, `scoring`, `cat`, `caliper`, `client`, `server`, `lti` and the shared code           |
+| `*.browser.test.ts`        | Chromium, Firefox and WebKit              | `pnpm test:browser`   | Rendering, the shell, accessibility with axe, the clients, the exam server over HTTP, LTI frames |
+| `*.corpus.test.ts`         | Node                                      | `pnpm test:corpus`    | The asset gate over the 1EdTech examples                                                         |
+| `*.browser.corpus.test.ts` | Chromium, Firefox and WebKit              | `pnpm test:corpus`    | The 1EdTech examples drawn, answered and checked with axe                                        |
+| `*.xsd.test.ts`            | Node                                      | `pnpm test:xsd`       | The HTML elements of the ASI schema                                                              |
+| `smoke.ts`                 | Chromium 111, Firefox 115 and WebKit 16.4 | `pnpm compat:engines` | The browser baseline in the oldest engines, in Docker                                            |
+| The guides                 | Node and the browsers                     | with the suites above | Every sample of a guide runs and gives the result that it shows                                  |
+
 ## Completeness
 
 What must be covered is derived from the specifications and from the runtime, not from a list that the repository keeps.
@@ -63,7 +85,7 @@ could carry, and stylesheets with every way to load a resource; the asset server
 browser asked no other origin.
 
 The browser tests of the tools build their page in the test: the toolbar in the document and the item in a shadow root, as
-the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG §3.7.8 with the runtime's `readAsi`, so that the
+the player lays them out. `tools-fixture.ts` reads the companion materials of BPIG section 3.7.8 with the runtime's `readAsi`, so that the
 tools get what the player gets. The tests run axe-core with the rules of WCAG 2.2 A and AA and `label-content-name-mismatch`,
 which axe leaves off by default, and press real keys and pointer buttons.
 
@@ -141,14 +163,14 @@ portable custom interaction with a relative `define` and a stylesheet with a rel
 
 The tests of `caliper/` and of `server/` run in Node with no network. Their oracles are not the code under test.
 
-| Oracle                                        | Used for                                                                                                               |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `validation/caliper_ids.py`                   | The name-based UUIDs of Python's `uuid5`, in `test/fixtures/caliper-ids.json`, and the worked example of RFC 9562 A.4. |
-| `test/fixtures/caliper-context-v1p2.json`     | The JSON-LD context of Caliper 1.2, as 1EdTech serves it at `http://purl.imsglobal.org/ctx/caliper/v1p2/`.             |
-| Caliper 1.2 §3.2, §3.6 and Appendices A and B | The actions, objects and generated entities each event may have, and the properties each entity may have.              |
+| Oracle                                                  | Used for                                                                                                               |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `validation/caliper_ids.py`                             | The name-based UUIDs of Python's `uuid5`, in `test/fixtures/caliper-ids.json`, and the worked example of RFC 9562 A.4. |
+| `test/fixtures/caliper-context-v1p2.json`               | The JSON-LD context of Caliper 1.2, as 1EdTech serves it at `http://purl.imsglobal.org/ctx/caliper/v1p2/`.             |
+| Caliper 1.2 sections 3.2 and 3.6 and Appendices A and B | The actions, objects and generated entities each event may have, and the properties each entity may have.              |
 
 `caliper-fixture.ts` checks an event against the context: every term is defined by it, every value has the type that the context
-coerces its term to, an `@id` value is an absolute IRI, an `@vocab` value is a term, and the properties that §2.1 requires
+coerces its term to, an `@id` value is an absolute IRI, an `@vocab` value is a term, and the properties that section 2.1 requires
 are there. It checks an envelope for its four properties. `sendCaliper` is tested against a fake endpoint that records the
 request, and `forwardEvents` against a log that records its calls. The fixture of the context is a copy of the file that was
 served on 2026-10-30 (SHA-256 `8a78d3d0d380e80c03c7507d1e6d0113d8ab2aa2f772f3e1c8442d958d40837d`); a new version of the context is
@@ -163,7 +185,7 @@ the code under test.
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The runtime's engine: `scorerView`, `pending`, `apply` and `results`        | The scorer view that `toSubmission` reads, and what the engine does with the action of `toSupplyScores`: the events, the pending requests and the results |
 | The runtime's codec, `toWireValue` and `fromWireValue`, and BPIG Appendix C | The form of the values of a submission, which a property test decodes again from JSON text                                                                |
-| INFO §4.5.10 and the runtime's scoring requests                             | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
+| INFO section 4.5.10 and the runtime's scoring requests                      | Which outcomes are scored externally, by whom, and when a request is accepted: after the test ended, and again to replace the score                       |
 
 `scoring.test.ts` plays tests and items through the engine: the request of an item outcome and of a test outcome with covers,
 an item that was not presented, correct responses and template values, a score supplied before, and `unknown-request` for a

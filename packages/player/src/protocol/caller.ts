@@ -17,6 +17,7 @@ const callerSchema: Schema<Caller> = v.object({ session: nonEmptyStringSchema, p
 /**
  * Checks a caller, as a host passes it from JavaScript.
  *
+ * @param value - The caller.
  * @throws `DataError` when it is not an object with a non-empty `session` and `principal`.
  */
 export function checkCaller(value: unknown): asserts value is Caller {

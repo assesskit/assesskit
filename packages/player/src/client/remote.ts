@@ -14,22 +14,25 @@ import {
 } from "../protocol/index.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
+import { notifyListeners } from "./notify.js";
+import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 
-/** How long the client waits after the last change of a response before it sends the responses (the player design §2.3, F-m10). */
+/** How long in milliseconds the client waits after the last change of a response before it sends the responses. */
 export const AUTOSAVE_MS = 1000;
 
-/** How long before the nearest timer reaches 0 the client sends the responses it holds, so that the host has them when the time-out ends the attempt. */
+/** How long in milliseconds before the nearest timer reaches 0 the client sends the responses it holds, so that the host has them when the time-out ends the attempt. */
 export const FLUSH_BEFORE_DEADLINE_MS = 10_000;
-
-/** The longest delay that `setTimeout` takes; a longer one fires at once. */
-const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 /** Sends an envelope to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example. */
 export type Transport = (envelope: ActionEnvelope) => Promise<ViewEnvelope>;
 
 /** The options of {@link createRemoteSession}. */
 export interface RemoteSessionOptions {
-  /** The clock that times a view's age. Default: the clock of the browser. */
+  /**
+   * The clock that times a view's age.
+   *
+   * @defaultValue {@link BROWSER_CLOCK}
+   */
   readonly clock?: Clock;
 }
 
@@ -59,9 +62,9 @@ interface Latest {
 const isRejection = (error: unknown): boolean => error instanceof DataError || error instanceof AccessError;
 
 /**
- * Creates the session client of exam mode (the player design §2.3): the engine is on the server, and the client keeps the
- * latest view.
+ * Creates the session client of exam mode: the engine is on the server, and the client keeps the latest view.
  *
+ * @remarks
  * - **Envelopes.** Each request is an `ActionEnvelope` with the next sequence number and the action in the runtime's JSON form,
  *   sent one at a time. The answer is read with `viewFromJson`.
  * - **Lost answers.** A request that got no answer may or may not have been applied, so it is sent again, unchanged, before
@@ -75,6 +78,7 @@ const isRejection = (error: unknown): boolean => error instanceof DataError || e
  * @param initial - The envelope that `SessionHost.start` or `SessionHost.view` gave. The next request has its sequence
  * number plus one.
  * @param options - See {@link RemoteSessionOptions}.
+ * @returns The session client.
  * @throws `DataError` when an argument has the wrong type.
  */
 export function createRemoteSession(
@@ -129,13 +133,7 @@ export function createRemoteSession(
 
   const accept = (envelope: ViewEnvelope): DispatchResult => {
     latest = read(envelope);
-    for (const listener of [...listeners]) {
-      try {
-        listener(latest.view);
-      } catch (error) {
-        reportError(error);
-      }
-    }
+    notifyListeners(listeners, latest.view);
     arm();
     return { view: latest.view, ...(envelope.refusal === undefined ? {} : { refusal: envelope.refusal }) };
   };

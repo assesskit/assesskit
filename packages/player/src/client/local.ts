@@ -28,25 +28,42 @@ import {
   viewDocuments,
 } from "../protocol/index.js";
 import { BROWSER_CLOCK, type Clock, clockSchema } from "./clock.js";
-
-/** The longest delay that `setTimeout` takes; a longer one fires at once. */
-const MAX_TIMER_DELAY_MS = 2_147_483_647;
+import { notifyListeners } from "./notify.js";
+import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 
 /** The storage of a session on the device, such as IndexedDB: the state as the runtime's `serializeState` writes it. */
 export interface LocalStore {
-  /** Returns the saved state of a session, or `undefined` when there is none. */
+  /**
+   * Returns the saved state of a session.
+   *
+   * @param session - The identifier of the session.
+   * @returns The state, or `undefined` when there is none.
+   */
   load(session: string): Promise<string | undefined>;
-  /** Saves the state of a session in place of the one before. */
+  /**
+   * Saves the state of a session in place of the one before.
+   *
+   * @param session - The identifier of the session.
+   * @param state - The state as `serializeState` writes it.
+   */
   save(session: string, state: string): Promise<void>;
 }
 
 /** The options of {@link createLocalSession}. */
 export interface LocalSessionOptions {
-  /** What to deliver: a test, or an item alone for a preview (E12). */
+  /** What to deliver: a test, or an item alone for a preview. */
   readonly definition: DeliveryDefinition;
-  /** The options of `createEngine`. Default: none. */
+  /**
+   * The options of `createEngine`.
+   *
+   * @defaultValue the defaults of the engine
+   */
   readonly engine?: EngineOptions;
-  /** What `Engine.start` takes besides the seed and the time: the PNP, the universal supports and the context. Default: none. */
+  /**
+   * What `Engine.start` takes besides the seed and the time: the PNP, the universal supports and the context.
+   *
+   * @defaultValue none
+   */
   readonly start?: Omit<StartOptions, "seed" | "at">;
   /** Where the state is saved and restored from. */
   readonly store: LocalStore;
@@ -60,10 +77,14 @@ export interface LocalSessionOptions {
    * Returns the paths of the pronunciation lexicons (PLS) that the item whose document is at the given path depends on,
    * which reading aloud uses. The host reads them from the manifest of the package the definition was made from.
    *
-   * @defaultValue No lexicons.
+   * @defaultValue none, so that no item has a lexicon
    */
   readonly lexicons?: (item: string) => readonly string[];
-  /** The clock that stamps actions and times the deadlines. Default: the clock of the browser. */
+  /**
+   * The clock that stamps actions and times the deadlines.
+   *
+   * @defaultValue {@link BROWSER_CLOCK}
+   */
   readonly clock?: Clock;
 }
 
@@ -111,15 +132,18 @@ function sourceOf(
 }
 
 /**
- * Creates the session client of practice (the player design §2.3): the engine runs on the device, with the same client
- * interface as exam mode. It loads the runtime's engine with `import()`, the one place the browser code does, so an exam's
- * bundle holds no engine; the answer keys are on the device, which practice accepts, and its results are never official.
+ * Creates the session client of practice: the engine runs on the device, with the same client interface as exam mode.
+ *
+ * @remarks
+ * It loads the runtime's engine with `import()`, the one place the browser code does, so an exam's bundle holds no
+ * engine. The answer keys are on the device, which practice accepts, and its results are never official.
  *
  * It stamps each action with the clock, saves the state after each step that is accepted, and fires a `time` action at
  * each maximum time with `setTimeout`. A session that the store has resumes from its state; a preview of one item is a
  * session of the definition of an item.
  *
  * @param options - See {@link LocalSessionOptions}.
+ * @returns The session client.
  * @throws `DataError` when an option has the wrong type, the engine cannot be created, or the session cannot start.
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<SessionClient> {
@@ -182,13 +206,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
         await store.save(session, delivery.serializeState(state));
       }
       look();
-      for (const listener of [...listeners]) {
-        try {
-          listener(latest.view);
-        } catch (error) {
-          reportError(error);
-        }
-      }
+      notifyListeners(listeners, latest.view);
       arm();
       return { view: latest.view, ...(step.ok ? {} : { refusal: step.refusal }) };
     });

@@ -37,7 +37,7 @@ function assessmentEvent(
   context: CaliperContext,
 ): EventParts {
   const time = timeOf(event);
-  // Caliper 1.2 §3.2: Started opens the attempt and Submitted closes it; Paused and Resumed leave it as it is.
+  // Started opens the attempt and Submitted closes it; Paused and Resumed leave it as it is.
   const times = action === "Started" ? { startedAtTime: time } : action === "Submitted" ? { endedAtTime: time } : {};
   return {
     type: "AssessmentEvent",
@@ -72,7 +72,7 @@ const itemPresented: Rule = (event, context) => {
 
 /**
  * An attempt ends in one of four ways, which `detail` names (the runtime's `DeliveryEventType`): `skip` is Skipped, and a
- * submission, an end-attempt interaction and a close are Completed. Skipped generates the attempt (Caliper 1.2 §3.2). The
+ * submission, an end-attempt interaction and a close are Completed. Skipped generates the attempt (Caliper 1.2 section 3.2). The
  * events hold no response, and an answer is not analytics data, so Completed generates no Response.
  */
 const itemAttemptEnded: Rule = (event, context) => {
@@ -96,7 +96,7 @@ const enteredSection: Rule = (event, context) => {
 };
 
 /**
- * What each type of the runtime's `DeliveryEventType` becomes (Caliper 1.2 §3.2), or `null` when Caliper has no event for it. A
+ * What each type of the runtime's `DeliveryEventType` becomes (Caliper 1.2 section 3.2), or `null` when Caliper has no event for it. A
  * record over the whole type, so that a new type of the runtime fails the type check here until someone decides.
  */
 const RULES_BY_TYPE: Readonly<Record<DeliveryEventType, Rule | null>> = {
@@ -139,8 +139,9 @@ function checkEvent(value: unknown, at: number): asserts value is DeliveryEvent 
 }
 
 /**
- * Maps the events of one step of a session to Caliper 1.2 events of the Assessment Profile (Caliper 1.2 §3.2).
+ * Maps the events of one step of a session to Caliper 1.2 events of the Assessment Profile.
  *
+ * @remarks
  * | runtime | Caliper |
  * | --- | --- |
  * | the step of `Engine.start` | AssessmentEvent Started |
@@ -156,8 +157,10 @@ function checkEvent(value: unknown, at: number): asserts value is DeliveryEvent 
  *
  * @param events - The events of the step, as `Step.events` gives them.
  * @param context - The session, the step and the parties.
+ * @returns The Caliper events, in the order of their sources.
  * @throws `DataError` when an argument has the wrong type, an event has an unknown type, or an event lacks what its
  * Caliper event needs: a valid time, an item instance or a scope.
+ * @see {@link https://www.imsglobal.org/spec/caliper/v1p2 | Caliper Analytics 1.2}, Assessment Profile
  */
 export function caliperEvents(events: readonly DeliveryEvent[], context: CaliperContext): readonly CaliperEvent[] {
   checkContext(context);

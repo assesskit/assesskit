@@ -3,11 +3,14 @@ import * as v from "valibot";
 import type { Schema } from "../checks.js";
 
 /**
- * The documents that the content of a view comes from, as paths in the package. A reference in content is written
- * against its own document (B93), and the view does not say which one that is, so the host does.
+ * The documents that the content of a view comes from, as paths in the package.
+ *
+ * @remarks
+ * A reference in content is written against the document that holds it. The view does not say which document that is, so
+ * the host does.
  */
 export interface ViewDocuments {
-  /** The path of the test document, against which the rubric and the test feedback of the view resolve. `""` is the root of the package. */
+  /** The path of the test document, against which the rubric and the test feedback of the view resolve; `""` is the root of the package. */
   readonly test: string;
   /** The path of the document of the item presented; `""` for a variant, whose path the runtime does not know, and when no item is presented. */
   readonly item: string;
@@ -38,20 +41,30 @@ export interface ItemDocuments {
   readonly lexicons: readonly string[];
 }
 
-/** Where the documents of a test are, as the host that runs the engine knows: the path of the test, and for an item reference those of its documents. */
+/** Where the documents of a test are, as the host that runs the engine knows them. */
 export interface DocumentSource {
-  /** The path of the test document; `""` when the test has none, as a test that delivers one item alone. */
+  /** The path of the test document; `""` when the test has none, as when one item is delivered alone. */
   readonly test: string;
-  /** Returns the documents of the item that an item reference names; `undefined` when the test has no such reference, or the reference names a link to a tool, which has no document of QTI. */
+  /**
+   * Returns the documents of the item that an item reference names.
+   *
+   * @param reference - The identifier of the item reference.
+   * @returns The documents; `undefined` when the test has no such reference, or the reference names a link to a tool,
+   * which has no QTI document.
+   */
   item(reference: string): ItemDocuments | undefined;
 }
 
 /**
- * Names the documents the content of a view comes from. A variant is presented from a document whose path the runtime does not
- * know, so its references resolve against the root of the package (the runtime E19); so do those of a view that presents no item.
+ * Names the documents that the content of a view comes from.
+ *
+ * @remarks
+ * A variant is presented from a document whose path the runtime does not know, so its references resolve against the
+ * root of the package; so do those of a view that presents no item.
  *
  * @param view - The view.
  * @param source - Where the documents of the test are; `undefined` for a package that has no test for the view.
+ * @returns The paths of the documents of the view.
  */
 export function viewDocuments(view: CandidateView, source: DocumentSource | undefined): ViewDocuments {
   const { current } = view;

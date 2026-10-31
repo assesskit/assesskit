@@ -31,7 +31,12 @@ export interface CatFetchResponse {
 /** The part of the `fetch` function that the REST client uses, so that a host can pass `fetch`, or a replacement. */
 export type CatFetch = (url: string, request: CatFetchRequest) => Promise<CatFetchResponse>;
 
-/** The OAuth 2.0 client credentials with which the REST client asks for a bearer token (CAT binding §4.2, RFC 6749 §4.4). */
+/**
+ * The OAuth 2.0 client credentials with which the REST client asks for a bearer token.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, security}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc6749#section-4.4 | RFC 6749, client credentials grant}
+ */
 export interface OAuthClientCredentials {
   /** The token endpoint of the authorization server, an `https` URL. */
   readonly tokenUrl: string;
@@ -61,6 +66,10 @@ export interface RestClient {
    * Sends a request with the bearer token and returns the JSON of the answer, or `undefined` for an answer without a body.
    * A `401` makes the client ask for a new token and send the request once more.
    *
+   * @param method - The HTTP method.
+   * @param url - The URL.
+   * @param body - The JSON body; none for a request without one.
+   * @returns The parsed JSON of the answer.
    * @throws `ServiceError` when the service answers with another status than 2xx after that, or with a body that is not JSON.
    */
   send(method: string, url: string, body?: unknown): Promise<unknown>;
@@ -76,11 +85,12 @@ export interface RestClientOptions {
   readonly timeoutMs: number;
 }
 
-/** Encodes a value as `application/x-www-form-urlencoded` does (RFC 6749 §2.3.1 asks for it in a Basic credential). */
+/** Encodes a value as `application/x-www-form-urlencoded` does, which RFC 6749 section 2.3.1 asks for in a Basic credential. */
 function formEncode(value: string): string {
   return new URLSearchParams({ v: value }).toString().slice("v=".length);
 }
 
+/** Parses the JSON body of an answer, or throws the `ServiceError` that names who sent it. */
 function parseBody(text: string, what: string, status: number): unknown {
   try {
     return JSON.parse(text);
@@ -90,12 +100,18 @@ function parseBody(text: string, what: string, status: number): unknown {
 }
 
 /**
- * Creates the client of a REST service. It keeps the bearer token it was given, so that a run of requests asks once; it
- * keeps no clock, so it learns that a token expired from the service's `401`, not from `expires_in`.
+ * Creates the client of a REST service.
+ *
+ * @remarks
+ * It keeps the bearer token it was given, so that a run of requests asks once. It keeps no clock, so it learns that a
+ * token expired from the service's `401`, not from `expires_in`.
+ *
+ * @param options - The `fetch` function, the credentials and the timeout.
+ * @returns The client.
  */
 export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOptions): RestClient {
   const { tokenUrl, clientId, clientSecret, scope } = credentials;
-  // The form-encoded identifier and secret are ASCII (RFC 6749 §2.3.1), so their UTF-8 bytes are their characters.
+  // The form-encoded identifier and secret are ASCII (RFC 6749 section 2.3.1), so their UTF-8 bytes are their characters.
   const basic = encodeBase64(new TextEncoder().encode(`${formEncode(clientId)}:${formEncode(clientSecret)}`));
   let token: Promise<string> | undefined;
 

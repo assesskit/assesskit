@@ -12,6 +12,8 @@ const sectionDataSchema: Schema<SectionData> = v.strictObject({
 /**
  * Checks section data, as a host passes it from JavaScript, and returns a copy that has only its fields.
  *
+ * @param data - The section data.
+ * @returns A copy of the data.
  * @throws `DataError` when it is not an object with the base64 text `sectionConfiguration` and, optionally, the base64
  * text `qtiUsagedata` and `qtiMetadata`.
  */

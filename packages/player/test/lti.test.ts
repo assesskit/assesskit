@@ -5,6 +5,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import fc from "fast-check";
 import { jwtVerify } from "jose";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import ltiGuide from "../../../docs/player/lti.md?raw";
 import { ServiceError } from "../src/index.js";
 import {
   type AccessTokenOptions,
@@ -21,7 +22,8 @@ import {
   ltiLogin,
   type PlatformRegistration,
 } from "../src/lti/index.js";
-import { randomToken } from "../src/lti/random.js";
+import { randomToken } from "../src/lti/internal.js";
+import { runGuideSamples } from "./guide-samples.js";
 import {
   ACCESS_TOKEN_URL,
   AGS_SCOPES,
@@ -123,7 +125,7 @@ async function cookieLogin(
   return { auth, cookie, request: auth.post({ cookie }), response };
 }
 
-/** The platform's storage for the tool, as LTI Client Side OIDC 0.1 §4.1 sketches it: a bucket for each origin. */
+/** The platform's storage for the tool, as LTI Client Side OIDC 0.1 section 4.1 sketches it: a bucket for each origin. */
 class PlatformStorage {
   private readonly buckets = new Map<string, Map<string, string>>();
 
@@ -1633,6 +1635,13 @@ describe("ltiLogin", () => {
       const options = { ...ctx.options, registration: async () => found };
       await expect(ltiLogin(ctx.platform.initiation(), options), message).rejects.toThrow(new DataError(message));
     }
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const modules = { "@assesskit/player/lti": await import("../src/lti/index.js") };
+    expect(await runGuideSamples(ltiGuide, modules)).toBeGreaterThan(0);
   });
 });
 

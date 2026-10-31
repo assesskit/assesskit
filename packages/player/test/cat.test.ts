@@ -5,6 +5,7 @@ import { type CatPort, isSessionEnd, type SectionData } from "@assesskit/runtime
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import { describe, expect, it } from "vitest";
+import catGuide from "../../../docs/player/cat.md?raw";
 import {
   type CatFetch,
   type CatFetchRequest,
@@ -13,7 +14,7 @@ import {
   type RestCatPortOptions,
   restCatPort,
 } from "../src/cat/index.js";
-import { readSectionData } from "../src/cat/section-data.js";
+import { readSectionData } from "../src/cat/internal.js";
 import { ServiceError } from "../src/index.js";
 import {
   ASI,
@@ -34,6 +35,7 @@ import {
   usageXml,
 } from "./cat-fixture.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = <T = never>(text: string): T => JSON.parse(text);
@@ -49,7 +51,7 @@ async function rejection(promise: Promise<unknown>): Promise<string> {
   throw new Error("The promise did not reject.");
 }
 
-/** A result with one answered item, and the same result in the JSON of the binding (§5.2.8, §5.3, §6.11). */
+/** A result with one answered item, and the same result in the JSON of the binding (sections 5.2.8 and 5.3, section 6.11). */
 const RESULT = resultsOf(new Map([["i1", 1]]));
 const RESULT_JSON = {
   context: { sessionIdentifiers: [] },
@@ -119,7 +121,7 @@ const bodyOf = (call: Call | undefined): unknown => JSON.parse(call?.request.bod
 describe("restCatPort", () => {
   const sectionData: SectionData = { sectionConfiguration: "e30=", qtiUsagedata: "PD94", qtiMetadata: "bWV0YQ==" };
 
-  it("asks the token endpoint for a bearer token with the client credentials of RFC 6749 §4.4", async () => {
+  it("asks the token endpoint for a bearer token with the client credentials grant", async () => {
     const service = fakeService(() => ({
       status: 200,
       body: { sectionData: {}, items: {}, section: { sectionConfiguration: "e30=" } },
@@ -129,7 +131,7 @@ describe("restCatPort", () => {
     const [token, get] = service.calls;
     expect(token?.url).toBe(TOKEN_URL);
     expect(token?.request.method).toBe("POST");
-    // The client identifier and secret are form-encoded before they are Basic credentials (RFC 6749 §2.3.1).
+    // The client identifier and secret are form-encoded before they are Basic credentials (RFC 6749 section 2.3.1).
     expect(token?.request.headers).toEqual({
       Authorization: `Basic ${btoa("player:secret%2F%2B")}`,
       "Content-Type": "application/x-www-form-urlencoded",
@@ -149,7 +151,7 @@ describe("restCatPort", () => {
     expect(call?.url).toBe(`${PREFIX}/sections`);
     expect(call?.request.method).toBe("POST");
     expect(call?.request.headers["Content-Type"]).toBe("application/json");
-    // SectionDType (binding §5.2.1): qtiMetadata is one QTI metadata record, and the metadata file is not sent.
+    // SectionDType (binding section 5.2.1): qtiMetadata is one QTI metadata record, and the metadata file is not sent.
     expect(bodyOf(call)).toEqual({ sectionConfiguration: "e30=", qtiUsagedata: "PD94" });
   });
 
@@ -709,6 +711,13 @@ describe("deployCatSections", () => {
     await expect(deployCatSections(DEPLOYABLE, json("5"))).rejects.toThrow(
       new DataError("The port must be a function of an adaptive selection, found 5."),
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const cat = await import("../src/cat/index.js");
+    expect(await runGuideSamples(catGuide, { "@assesskit/player/cat": cat })).toBeGreaterThan(0);
   });
 });
 

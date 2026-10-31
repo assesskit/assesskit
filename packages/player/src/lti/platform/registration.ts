@@ -3,17 +3,15 @@ import { DataError } from "@assesskit/runtime/errors";
 import { errors, type JWTVerifyGetKey } from "jose";
 import { checkArray, checkHttpsUrl, checkNonEmptyString, checkRecord, describe } from "../../checks.js";
 import { checkAllowList } from "../../protocol/index.js";
-import { MAX_IDENTIFIER_LENGTH } from "../claims.js";
-import type { JwksCache } from "../jwks.js";
-import { isRsaKey } from "../keys.js";
+import { isRsaKey, type JwksCache, MAX_IDENTIFIER_LENGTH } from "../internal.js";
 
 /** The host's record of one tool that the platform launches, as the platform's administrator and the tool agreed on it. */
 export interface ToolRegistration {
   /** The OAuth 2.0 client identifier of the tool at this platform. */
   readonly clientId: string;
-  /** The deployment of the tool at this platform (LTI 1.3 Core §3.1.3). */
+  /** The deployment of the tool at this platform (LTI 1.3 Core section 3.1.3). */
   readonly deploymentId: string;
-  /** The tool's login initiation URL (Security Framework §5.1.1): where the platform sends the browser first. */
+  /** The tool's login initiation URL (Security Framework section 5.1.1): where the platform sends the browser first. */
   readonly loginUrl: string;
   /** The tool's launch URLs that the platform may post an `id_token` to: the redirect URIs of the tool. */
   readonly redirectUris: readonly string[];
@@ -42,7 +40,7 @@ export function checkToolRegistration(value: unknown): asserts value is ToolRegi
   checkNonEmptyString(value.deploymentId, "The deployment of a tool");
   if (value.deploymentId.length > MAX_IDENTIFIER_LENGTH) {
     throw new DataError(
-      `The deployment of a tool must have at most 255 characters (LTI 1.3 Core §5.3.3), found ${value.deploymentId.length}.`,
+      `The deployment of a tool must have at most 255 characters (LTI 1.3 Core section 5.3.3), found ${value.deploymentId.length}.`,
     );
   }
   checkHttpsUrl(value.loginUrl, "The login URL of a tool");

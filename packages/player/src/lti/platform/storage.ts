@@ -1,7 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
 import { LTI_TOOL_FRAME } from "../../protocol/index.js";
-import { escapeHtml, pagePolicy } from "../html.js";
-import type { HttpResponse } from "../http.js";
+import { escapeHtml, type HttpResponse, pagePolicy } from "../internal.js";
 import { checkPlatformOptions, type PlatformOptions } from "./options.js";
 
 /**
@@ -127,6 +126,8 @@ export async function storagePage(playerOrigin: string): Promise<HttpResponse> {
  * frame beside the frame of the tool.
  *
  * @see {@link https://www.imsglobal.org/spec/lti-cs-oidc/v0p1 | LTI Client Side OIDC 0.1}
+ * @param options - The platform.
+ * @returns The page.
  * @throws `DataError` when the options are not those of a platform.
  */
 export function platformStorage(options: PlatformOptions): Promise<HttpResponse> {

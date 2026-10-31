@@ -36,7 +36,7 @@ export function jsonResponse(
   return { status, headers: { "content-type": type, ...headers }, body: JSON.stringify(body) };
 }
 
-/** Builds the body of an error answer of OAuth 2.0 (RFC 6749 §5.2) and of the services: an `error` code and a description. */
+/** Builds the body of an error answer of OAuth 2.0 (RFC 6749 section 5.2) and of the services: an `error` code and a description. */
 export function errorBody(error: string, description: string): Record<string, string> {
   return Object.fromEntries([
     ["error", error],
@@ -74,7 +74,7 @@ export function checkHttpRequest(value: unknown): asserts value is HttpRequest {
 function collect(parameters: URLSearchParams, where: string): ReadonlyMap<string, string> {
   const collected = new Map<string, string>();
   for (const [name, value] of parameters) {
-    // RFC 6749 §3.1: a request parameter must not occur more than once.
+    // RFC 6749 section 3.1: a request parameter must not occur more than once.
     if (collected.has(name)) throw new DataError(`${where} has the parameter ${describe(name)} more than once.`);
     collected.set(name, value);
   }

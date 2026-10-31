@@ -12,8 +12,8 @@ import type {
   StringFormat,
   TypeDef,
   Wildcard,
-  // biome-ignore lint/style/noRestrictedImports: A type-only import, erased before Node runs the script; the table types are not part of the public API.
-} from "../packages/runtime/src/asi/table.ts";
+  // biome-ignore lint/style/noRestrictedImports: A type-only import, erased before Node runs the script, so the `.js` specifiers of the module's files are never resolved; the table types are not part of the public API.
+} from "../packages/runtime/src/asi/internal.ts";
 import { loadList, schemaDirectory } from "./schemas.ts";
 
 /** An element of the schema, without its annotations. */
@@ -655,7 +655,7 @@ class TableBuilder {
     if (enumeration?.kind === "enum" && strings.length > 0) return { ...enumeration, extension: true };
     const number = has("integer") ?? has("double");
     if (number !== undefined && strings.length > 0 && (number.kind === "integer" || number.kind === "double")) {
-      // A string that the schema leaves unrestricted holds a reference in braces, `{identifier}` (INFO §9.3.1).
+      // A string that the schema leaves unrestricted holds a reference in braces, `{identifier}` (INFO section 9.3.1).
       const braced = strings.some((member) => member.kind === "string" && member.format === undefined);
       return {
         kind: "reference",

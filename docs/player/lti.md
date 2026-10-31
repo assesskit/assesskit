@@ -4,6 +4,28 @@
 [jose](https://github.com/panva/jose) for the tokens and the key sets. LTI 1.0 to 1.2 launches (OAuth 1.0a, retired on
 2022-06-30) are refused. The same subpath has the [platform role](lti-platform.md), which launches tools.
 
+```mermaid
+sequenceDiagram
+  participant P as Platform
+  participant B as Browser
+  participant T as Tool<br/>(the host's routes)
+  P->>B: send to the tool's login URL
+  B->>T: login (iss, login_hint, target_link_uri, ...)
+  T->>T: ltiLogin: state and nonce into the LtiStore
+  T-->>B: redirect to the authentication request, or the storage page
+  B->>P: authentication request
+  P-->>B: form_post of the id_token to the redirect URI
+  B->>T: POST id_token and state
+  T->>T: ltiLaunch: signature, claims and nonce; delete the login
+  T-->>B: the launch
+  opt Deep Linking request
+    T->>P: deepLinkResponse: a signed JWT posted to the return URL
+  end
+  opt Grade passback
+    T->>P: ltiAccessToken, then publishScore to the line item
+  end
+```
+
 | Function                                         | Does                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | `ltiLogin(request, options)`                     | Answers the platform's third-party initiated login with the authentication request            |
@@ -29,28 +51,20 @@ host owns the routes, the sessions, the database and the keys.
 
 ## Example
 
-A host with the Fetch API request and response types. It generates its key in the sample; a real host keeps the key that
-the platform's administrator registered.
+A host builds the registration of each platform, the store of logins and the options. It generates its key in the sample; a real
+host keeps the key that the platform's administrator registered. The routes of the host turn the request of its web framework into
+an `HttpRequest` (with the header names in lower case, as `Object.fromEntries(request.headers)` gives them) and the
+`HttpResponse` back into a response.
 
 ```ts
-import {
-  createJwksCache,
-  type HttpRequest,
-  type HttpResponse,
-  type LoginRecord,
-  type LtiLaunchOptions,
-  type LtiStore,
-  ltiLaunch,
-  ltiLogin,
-  type PlatformRegistration,
-} from "@assesskit/player/lti";
+import { createJwksCache, ltiLogin } from "@assesskit/player/lti";
 
 const keys = await crypto.subtle.generateKey(
   { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
   false,
   ["sign"],
 );
-const registration: PlatformRegistration = {
+const registration = {
   issuer: "https://lms.example.edu",
   clientId: "962fa4d8-bcbf-49a0-94b2-2de05ad274af",
   deploymentIds: ["07940580-b309-415e-a37c-914d387c1150"],
@@ -62,57 +76,45 @@ const registration: PlatformRegistration = {
   signingKey: keys.privateKey,
 };
 
-const logins = new Map<string, LoginRecord>();
-const store: LtiStore = {
-  put: async (state, record) => {
-    logins.set(state, record);
-  },
+const logins = new Map();
+const store = {
+  put: async (state, record) => void logins.set(state, record),
   get: async (state) => logins.get(state),
   delete: async (state) => logins.delete(state),
 };
-const clock = { now: () => Date.now() };
-const options: LtiLaunchOptions = {
+const options = {
   registration: async (issuer, clientId) =>
     issuer === registration.issuer && (clientId === undefined || clientId === registration.clientId)
       ? registration
       : undefined,
-  clock,
+  clock: { now: () => Date.now() },
   store,
   jwks: createJwksCache({ fetch }),
 };
 
-async function toHttpRequest(request: Request): Promise<HttpRequest> {
-  return {
-    method: request.method,
-    url: request.url,
-    headers: Object.fromEntries(request.headers),
-    body: await request.text(),
-  };
-}
-
-function toResponse({ status, headers, body }: HttpResponse): Response {
-  return new Response(body, { status, headers });
-}
-
-/** The route of the tool's login URL. */
-export async function login(request: Request): Promise<Response> {
-  return toResponse(await ltiLogin(await toHttpRequest(request), options));
-}
-
-/** The route of the tool's launch URL, which the platform knows as the redirect URI. */
-export async function launch(request: Request): Promise<Response> {
-  const result = await ltiLaunch(await toHttpRequest(request), options);
-  if (!("messageType" in result)) return toResponse(result);
-  return Response.json({ user: result.subject, custom: [...result.custom] });
-}
+// The route of the tool's login URL, for a platform that starts the login with a GET.
+const login = new URL("https://tool.example.com/lti/login");
+login.search = new URLSearchParams({
+  iss: registration.issuer,
+  login_hint: "user-1",
+  target_link_uri: "https://tool.example.com/lti/launch",
+  client_id: registration.clientId,
+}).toString();
+const response = await ltiLogin({ method: "GET", url: login.href, headers: {}, body: "" }, options);
+response.status; // => 302
+const authentication = new URL(response.headers.location);
+authentication.origin + authentication.pathname; // => "https://lms.example.edu/auth"
+authentication.searchParams.get("scope"); // => "openid"
+logins.size; // => 1
 ```
 
-`Object.fromEntries(request.headers)` gives the header names in lower case, as `HttpRequest` requires.
+The route of the redirect URI passes the platform's post and, on the storage path, the verification page's post to `ltiLaunch`.
+It returns a launch, or a response that the host sends.
 
 ## Registrations
 
 `options.registration(issuer, clientId)` returns the `PlatformRegistration` of a platform, or `undefined`. `clientId` is
-`undefined` unless the platform names it (`client_id`, LTI 1.3 Core §4.1.3). The returned registration is checked on every
+`undefined` unless the platform names it (`client_id`, LTI 1.3 Core section 4.1.3). The returned registration is checked on every
 call and must match the issuer and the client.
 
 | Property            | Meaning                                                                                    |
@@ -127,7 +129,7 @@ call and must match the issuer and the client.
 | `keyId`             | The `kid` of the tool's public key in the key set that the platform fetches                |
 | `signingKey`        | The tool's private RSA key (`RSASSA-PKCS1-v1_5`, SHA-256, usage `sign`)                    |
 
-Every URL is `https` (LTI 1.3 Core §3.5). The platform needs the tool's public key under `keyId`: the host publishes it, and the sample does not.
+Every URL is `https` (LTI 1.3 Core section 3.5). The platform needs the tool's public key under `keyId`: the host publishes it, and the sample does not.
 
 ## The login store
 
@@ -144,13 +146,13 @@ a login complete once.
 
 ## Login and launch
 
-The platform sends the browser to the login URL (Security Framework §5.1.1.1). `ltiLogin` creates a `state` and a `nonce`
-of 160 random bits each, saves them in the store and answers with the authentication request (§5.1.1.2): `scope=openid`,
+The platform sends the browser to the login URL (Security Framework section 5.1.1.1). `ltiLogin` creates a `state` and a `nonce`
+of 160 random bits each, saves them in the store and answers with the authentication request (section 5.1.1.2): `scope=openid`,
 `response_type=id_token`, `client_id`, `redirect_uri`, `login_hint`, `state`, `response_mode=form_post`, `nonce`,
 `prompt=none`, and `lti_message_hint` unchanged when the platform sent it. The initiation may be a GET or a form POST.
 
 The tool must tie the launch to the browser that logged in, or an attacker could make a victim's browser launch with the
-attacker's token (login CSRF, Security Framework §7.3.1). There are two ways.
+attacker's token (login CSRF, Security Framework section 7.3.1). There are two ways.
 
 | Path    | When                                       | The answer of `ltiLogin`                                                                                                           | What binds the browser                                                                      |
 | ------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -162,7 +164,7 @@ from setting the cookie, and the name holds the `state`, so that several launche
 
 ### The storage path
 
-LTI Client Side OIDC 0.1 §2.3 to §2.7 and §3 define the messages. The page stores `state_<state>` and `nonce_<nonce>` in the
+LTI Client Side OIDC 0.1 sections 2.3 to 2.7 and section 3 define the messages. The page stores `state_<state>` and `nonce_<nonce>` in the
 frame named by `lti_storage_target` (`_parent` for the parent), waits for `lti.put_data.response`, and navigates to the
 authentication request. A message counts only when it comes from the origin of `authenticationUrl`, has the subject
 `<subject>.response` and answers the page's `message_id`. If the platform answers with an error, names no such frame or is
@@ -206,7 +208,7 @@ A request that is not a POST of a form with `id_token` and `state` is a `DataErr
 | The claims of the message type have the shape of the specifications                                                             | `claim-missing`, `claim-invalid`                  |
 | The store deletes the login                                                                                                     | `state-reused`                                    |
 
-A host maps `LtiError` to 401 (Security Framework §5.1.3) and `DataError` to 400.
+A host maps `LtiError` to 401 (Security Framework section 5.1.3) and `DataError` to 400.
 
 ### The launch
 
@@ -229,7 +231,7 @@ A launch holds a `Map`; a host that stores it converts `custom` to an array of e
 
 When `ltiLaunch` returns a Deep Linking request, the host lets the user choose, then calls `deepLinkResponse(launch, items,
 options)`. The result is the signed `LtiDeepLinkingResponse`, the value of the form parameter `JWT`. The host sends the browser
-to `launch.settings.returnUrl` with an auto-submitted form POST (Deep Linking 2.0 §2.3), also when no item was chosen.
+to `launch.settings.returnUrl` with an auto-submitted form POST (Deep Linking 2.0 section 2.3), also when no item was chosen.
 
 An item is an LTI resource link:
 
@@ -250,9 +252,9 @@ RS256 and the registration's key, and its header has `keyId` as `kid`. `deepLink
 
 `ltiAccessToken(deployment, scopes, options)` posts a form to `accessTokenUrl` with `grant_type=client_credentials`,
 `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, `client_assertion` and `scope`
-(space-separated), as Security Framework §4.1.1 describes. The assertion has `iss` and `sub` equal to the client
+(space-separated), as Security Framework section 4.1.1 describes. The assertion has `iss` and `sub` equal to the client
 identifier, `aud` equal to the token endpoint, `iat`, `exp` (300 seconds later), a new `jti` and the deployment claim (LTI 1.3
-Core §6.2.1). `deployment` is a launch or any object with `issuer`, `clientId` and `deploymentId`.
+Core section 6.2.1). `deployment` is a launch or any object with `issuer`, `clientId` and `deploymentId`.
 
 The result is an `AccessToken`: `value`, `expiresAt` (milliseconds) and `scopes`, which are those requested, or the subset the
 platform granted. A service request carries `Authorization: Bearer <value>`. The tool may keep the token until `expiresAt`; the
@@ -283,21 +285,22 @@ is no score yet. A `SCORE` or `MAXSCORE` that is not a finite integer or float, 
 Only the report that the session host returned is accepted. A copy of it, the report of a practice session and any other
 object are refused with `DataError`, because the host marks the reports of its own sessions in a set that no other code reaches.
 
-```ts
-import type { PendingWork } from "@assesskit/runtime/delivery";
-import { type AccessTokenOptions, type LtiLaunch, publishScore } from "@assesskit/player/lti";
-import type { OfficialResult } from "@assesskit/player/protocol";
-
-declare const options: AccessTokenOptions;
-declare const launch: LtiLaunch; // from ltiLaunch, kept with the session
-declare const results: (session: string) => Promise<OfficialResult>; // SessionHost.results
-declare const pending: (session: string) => Promise<PendingWork>; // SessionHost.pending
-
-/** Publishes the state of a finished session; call it again when a person or a service supplies a score. */
-export async function publish(session: string): Promise<void> {
-  await publishScore(await results(session), launch, await pending(session), options);
-}
+```mermaid
+sequenceDiagram
+  participant H as Host
+  participant T as publishScore
+  participant P as Platform
+  H->>T: results(session), launch, pending(session), options
+  T->>T: refuse a report that the session host did not mark official
+  T->>P: ltiAccessToken for the scopes the call needs
+  opt The report has no MAXSCORE
+    T->>P: GET the line item, for its scoreMaximum
+  end
+  T->>P: POST the score to the line item's score service
 ```
+
+Call it for a finished session with `await publishScore(await host.results(session), launch, await host.pending(session), options)`,
+and again when a person or a service supplies a score.
 
 | Error                              | When                                                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -322,11 +325,11 @@ jose takes it.
 | `timeoutMs`      | The most time one fetch may take. Default: `10000`.         |
 
 A set that is older than `ttlSeconds` is fetched again. A `kid` that the cached set lacks fetches it again only after
-`refreshSeconds` (Security Framework §6.4: the platform adds a rotated key under a new `kid`), so a token with an invented
+`refreshSeconds` (Security Framework section 6.4: the platform adds a rotated key under a new `kid`), so a token with an invented
 `kid` cannot make the tool fetch on every request. Requests that wait for one fetch share it. The set resolves the key that
 has the `kid` and is meant for signing with RS256 (`use` is `sig` or absent, `alg` is `RS256` or absent, `key_ops` has
-`verify` when present); a `kid` that two keys share, and a set that is not a JWK Set (RFC 7517 §5), are refused. A key of
-fewer than 2,048 bits does not verify (RFC 7518 §3.3). The cache reads the time of the system, as jose does.
+`verify` when present); a `kid` that two keys share, and a set that is not a JWK Set (RFC 7517 section 5), are refused. A key of
+fewer than 2,048 bits does not verify (RFC 7518 section 3.3). The cache reads the time of the system, as jose does.
 
 ## Calls to the platform
 

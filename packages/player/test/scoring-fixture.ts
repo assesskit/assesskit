@@ -64,7 +64,7 @@ export function pick(identifier: string): AssessmentItem {
   );
 }
 
-/** The rubric block that names the responses an externally scored outcome of the test covers (the runtime convention, §4.16). */
+/** The rubric block that names the responses an externally scored outcome of the test covers (the runtime convention, section 4.16). */
 export const covers = (outcomeId: string, entries: readonly (readonly [string, string])[], notes = ""): string =>
   `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="${outcomeId}"><qti-content-body>${notes}<ul>${entries
     .map(([ref, label]) => `<li data-item-ref="${ref}" data-response-identifier="RESPONSE">${label}</li>`)

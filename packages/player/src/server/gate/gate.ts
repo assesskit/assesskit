@@ -13,16 +13,16 @@ import {
   parseWith,
   positiveIntegerSchema,
 } from "../../checks.js";
-import { isHmacKey } from "../../lti/keys.js";
-import { openToken, sealToken } from "../../lti/platform/seal.js";
-import type { FileStore } from "../stores.js";
+import { isHmacKey } from "../../lti/internal.js";
+import { openToken, sealToken } from "../../lti/platform/internal.js";
+import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
 import { deniedPaths, isQtiData } from "./deny.js";
 
 /** The seconds a token for a prefix of package paths is valid by default: an hour, renewed by every envelope. */
 export const DEFAULT_TTL_SECONDS = 3600;
 
-/** The seconds a token for a file of a candidate is valid by default: five minutes (d-m1). */
+/** The seconds a token for a file of a candidate is valid by default: five minutes. */
 export const DEFAULT_UPLOAD_TTL_SECONDS = 300;
 
 const MILLISECONDS = 1000;
@@ -39,9 +39,17 @@ export interface AssetGateOptions {
   readonly packages: (session: string) => Promise<QtiPackage>;
   /** The storage of the files that candidates upload. */
   readonly files: FileStore;
-  /** The seconds a token for a prefix is valid. Default: `3600`. */
+  /**
+   * The seconds a token for a prefix is valid.
+   *
+   * @defaultValue {@link DEFAULT_TTL_SECONDS}, `3600`
+   */
   readonly ttlSeconds?: number;
-  /** The seconds a token for a file is valid. Default: `300`. */
+  /**
+   * The seconds a token for a file is valid.
+   *
+   * @defaultValue {@link DEFAULT_UPLOAD_TTL_SECONDS}, `300`
+   */
   readonly uploadTtlSeconds?: number;
 }
 
@@ -60,20 +68,27 @@ export interface AssetGate {
   /**
    * Signs the prefixes of a session for `ttlSeconds` from `now`.
    *
+   * @param session - The identifier of the session.
    * @param prefixes - Directories of the package, each `""` or ending in `/`.
+   * @param now - The time in epoch milliseconds.
    * @returns The base URL of each prefix, `https://<origin>/g/<token>/`; the URL of a file is the base plus its path.
    * @throws `DataError` when an argument has the wrong type or a prefix is not a directory.
    */
   sign(session: string, prefixes: Iterable<string>, now: number): Promise<Readonly<Record<string, string>>>;
   /**
-   * Signs the URL of one file of a candidate for `uploadTtlSeconds` from `now`: `https://<origin>/f/<token>/<reference>`.
+   * Signs the URL of one file of a candidate for `uploadTtlSeconds` from `now`.
    *
+   * @param session - The identifier of the session.
+   * @param file - The file value that names the file in the host's store.
+   * @param now - The time in epoch milliseconds.
+   * @returns The URL, `https://<origin>/f/<token>/<reference>`.
    * @throws `DataError` when an argument has the wrong type.
    */
   signFile(session: string, file: FileValue, now: number): Promise<string>;
   /**
    * Answers a request for a path of the form `/g/<token>/<package path>` or `/f/<token>/<reference>`.
    *
+   * @remarks
    * | Status | When |
    * | ------ | ---- |
    * | 403    | The token's MAC is wrong, it expired, or the path is outside its prefix or names another file |
@@ -82,12 +97,13 @@ export interface AssetGate {
    *
    * @param request - The path of the request, without the origin and the query.
    * @param now - The time of the request in epoch milliseconds.
+   * @returns The status, the headers and, for `200`, the bytes.
    * @throws `DataError` when an argument has the wrong type.
    */
   serve(request: { readonly path: string }, now: number): Promise<GateResponse>;
 }
 
-/** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed (d-m1). */
+/** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed. */
 const BASE_HEADERS = { "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff" } as const;
 
 /** The files of a candidate are untrusted content of the asset origin, so they get no script, no frame and no form. */
@@ -168,9 +184,10 @@ async function claimsOf(
 const refused = (status: 403 | 404): GateResponse => ({ status, headers: BASE_HEADERS });
 
 /**
- * Creates the asset gate (the player design §2.3, D-M2, d-m1). The origin it serves holds package files, and a candidate's
- * browser reads them with the tokens that the session host puts in its envelopes:
+ * Creates the asset gate: the origin that serves package files to a candidate's browser, with the tokens that the session
+ * host puts in its envelopes.
  *
+ * @remarks
  * - A token names a session, a prefix of package paths and an expiry, and carries a MAC. Relative URLs inherit it, so a
  *   module that `define`s `./renderer` and a stylesheet with `url(../fonts/x.woff)` load under the prefix.
  * - Whatever the token, the gate never serves the manifest, a file of a QTI resource type, a file that
@@ -178,6 +195,7 @@ const refused = (status: 403 | 404): GateResponse => ({ status, headers: BASE_HE
  * - A file token names one file of a session and expires after `uploadTtlSeconds`.
  *
  * @param options - See {@link AssetGateOptions}.
+ * @returns The gate.
  * @throws `DataError` when an option has the wrong type.
  */
 export function createAssetGate(options: AssetGateOptions): AssetGate {

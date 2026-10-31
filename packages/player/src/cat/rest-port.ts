@@ -34,9 +34,17 @@ export interface RestCatPortOptions {
   readonly endpoint: string;
   /** The OAuth 2.0 client credentials for the engine. */
   readonly credentials: OAuthClientCredentials;
-  /** The milliseconds after which a request is aborted. Default: `10000`. */
+  /**
+   * The milliseconds after which a request is aborted.
+   *
+   * @defaultValue `10000`
+   */
   readonly timeoutMs?: number;
-  /** Whether Create Session sends the candidate's personal needs and preferences to the engine. Default: `false`. */
+  /**
+   * Whether Create Session sends the candidate's personal needs and preferences to the engine.
+   *
+   * @defaultValue `false`
+   */
   readonly sharePnp?: boolean;
 }
 
@@ -64,7 +72,7 @@ const sessionRequestSchema: Schema<CreateSessionRequest> = v.object({
   priorData: v.optional(v.array(v.object({ name: v.string(), value: v.unknown() }))),
 });
 
-/** Returns the body of Create Session in the binding (§5.2.4): the prior data are key and value pairs of text. */
+/** Returns the body of Create Session in the binding: the prior data are key and value pairs of text. */
 function sessionBody(request: CreateSessionRequest, sharePnp: boolean): unknown {
   const { personalNeedsAndPreferences, demographics, priorData } = parseWith(
     sessionRequestSchema,
@@ -125,8 +133,10 @@ const submitResultsSchema = v.object({
 const submitRequestSchema = v.pipe(recordSchema, v.object({ sessionState: v.optional(v.string()) }));
 
 /**
- * Returns a CAT engine that speaks the REST/JSON binding of CAT 1.0 (https://www.imsglobal.org/spec/cat/v1p0/bind) to one
- * remote service, over HTTPS with OAuth 2.0 client credentials. It serves the `prefix` of `endpoint` only: the
+ * Returns a CAT engine that speaks the REST/JSON binding of CAT 1.0 to one remote service.
+ *
+ * @remarks
+ * The port talks HTTPS with OAuth 2.0 client credentials. It serves the `prefix` of `endpoint` only: the
  * `qti-adaptive-engine-ref` of a package is the package's word, and the host trusts the engine it configured, so a
  * request for another prefix is refused before any candidate data or token leaves.
  *
@@ -136,11 +146,15 @@ const submitRequestSchema = v.pipe(recordSchema, v.object({ sessionState: v.opti
  *   network error or a timeout rejects with the error of `fetch`.
  * - **Personal data.** Create Session sends the personal needs and preferences only with `sharePnp`.
  * - **Binding.** The bodies are those of the binding's OpenAPI file, and the port sends no other shape. The `qtiMetadata`
- *   of the binding is one QTI metadata record, which the metadata file of the section data (CAT §4.1, App. B) is not, so
- *   Create Section does not send the metadata file, and Get Section does not return an object as section data. The
- *   assessment result drops what the binding has no field for.
+ *   of the binding is one QTI metadata record, which the metadata file of the section data is not, so Create Section
+ *   does not send the metadata file, and Get Section does not return an object as section data. The assessment result
+ *   drops what the binding has no field for.
  *
- * @throws `DataError` when an option has the wrong type, or an URL is not an `https` URL.
+ * @param options - The `fetch` function, the engine, its credentials, the timeout and whether to share the personal
+ * needs and preferences.
+ * @returns The engine, as the runtime's `CatPort`.
+ * @throws `DataError` when an option has the wrong type, or a URL is not an `https` URL.
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
  */
 export function restCatPort(options: RestCatPortOptions): CatPort {
   const { fetch, endpoint, credentials, timeoutMs, sharePnp } = parseWith(optionsSchema, options, "The options object");
@@ -167,7 +181,7 @@ export function restCatPort(options: RestCatPortOptions): CatPort {
 
   return {
     async createSection(prefix, data) {
-      // The binding's qtiMetadata is one QTI metadata record, and the metadata file is not (see the TSDoc above).
+      // The binding's qtiMetadata is one QTI metadata record, and the metadata file is not (see the TSDoc of restCatPort).
       const { sectionConfiguration, qtiUsagedata } = readSectionData(data);
       const section = { sectionConfiguration, ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }) };
       const body = await client.send("POST", url(prefix, "sections"), section);
@@ -190,7 +204,7 @@ export function restCatPort(options: RestCatPortOptions): CatPort {
       );
       return {
         sessionIdentifier,
-        // A missing stage ends the session (CAT §4.2).
+        // The binding ends a session by sending no stage.
         nextItems:
           nextItems === undefined
             ? { itemIdentifiers: [], stageLength: 0 }

@@ -2,21 +2,20 @@ import { DataError } from "@assesskit/runtime/errors";
 import { describe } from "../../checks.js";
 import { AccessError, LtiError } from "../../errors.js";
 import { checkCaller } from "../../protocol/index.js";
-import { readClock } from "../clock.js";
-import { checkHttpRequest, type HttpRequest, type HttpResponse, readForm, readQuery } from "../http.js";
+import { checkHttpRequest, type HttpRequest, type HttpResponse, readClock, readForm, readQuery } from "../internal.js";
 import { issueIdToken } from "./id-token.js";
 import { checkAuthorizeOptions, checkRequestOrigin, findClient, type PlatformAuthorizeOptions } from "./options.js";
 import { autoPostPage } from "./page.js";
 import { type Hint, openHint, openLoginHint } from "./tokens.js";
 
-/** Reads the parameters of the authentication request: the tool may send it as a GET or as a form POST (OpenID Connect Core §3.1.2.1). */
+/** Reads the parameters of the authentication request: the tool may send it as a GET or as a form POST (OpenID Connect Core section 3.1.2.1). */
 function readParameters(request: HttpRequest): ReadonlyMap<string, string> {
   if (request.method === "GET") return readQuery(request);
   if (request.method === "POST") return readForm(request);
   throw new DataError(`An authentication request must be a GET or a POST request, found ${describe(request.method)}.`);
 }
 
-/** Checks the parameters that have one value (Security Framework §5.1.1.2). */
+/** Checks the parameters that have one value (Security Framework section 5.1.1.2). */
 function checkFixed(parameters: ReadonlyMap<string, string>): void {
   const fixed: readonly (readonly [string, string, string])[] = [
     ["scope", "openid", "scope-invalid"],
@@ -81,17 +80,19 @@ async function bindHint(
 }
 
 /**
- * Answers the tool's authentication request (Security Framework §5.1.1.2 and §5.1.1.3) with the page that posts the
+ * Answers the tool's authentication request (Security Framework sections 5.1.1.2 and 5.1.1.3) with the page that posts the
  * `id_token` to its redirect URI.
  *
+ * @remarks
  * The request is bound to the `lti_message_hint` that `ltiPlatformLogin` made, and not to a cookie: it is a navigation,
  * often a cross-site POST inside the cross-site frame of the tool, where browsers may withhold the host's session cookie
- * (D-M1). The checks, in order: the request is for the platform's origin; `scope=openid`, `response_type=id_token`,
+ * . The checks, in order: the request is for the platform's origin; `scope=openid`, `response_type=id_token`,
  * `response_mode=form_post` and `prompt=none`; `client_id` is a tool of the platform and `redirect_uri` one of its redirect
  * URIs; `nonce` and `state` are present; the hint is valid, unexpired, for this tool, names the principal of `login_hint`
  * and, when `options.caller` is given, the caller; and `options.once` has not seen the hint before, so that it is single-use.
  *
  * @param request - The authentication request, as a GET or a form POST.
+ * @param options - The platform and its tools, and the single-use check of hints.
  * @returns The page, which the host sends.
  * @throws `AccessError` (`wrong-origin`, `hint-missing`, `hint-invalid`, `hint-expired`, `client-mismatch`,
  * `principal-mismatch`, `caller-mismatch`, `hint-used`) when the request is not bound to a launch that the platform made.

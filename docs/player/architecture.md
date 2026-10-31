@@ -3,6 +3,36 @@
 The player is one package with a subpath per side of the wire. These principles hold for every folder; Biome enforces the
 ones marked lint, and the rest are checked in review.
 
+```mermaid
+flowchart TB
+  subgraph L4["Layer 4: server"]
+    server["server<br/>session host, asset gate"]
+  end
+  subgraph L3b["Layer 3: server side"]
+    scoring["scoring"]
+    caliper["caliper"]
+    cat["cat"]
+    lti["lti"]
+  end
+  subgraph L3a["Layer 3: browser side"]
+    player["player"]
+    client["client"]
+  end
+  subgraph L2["Layer 2: shared"]
+    protocol["protocol"]
+  end
+  subgraph L1["Layer 1: shared"]
+    base["errors.ts, checks.ts, messages"]
+  end
+  server --> scoring & caliper & cat & lti
+  server --> protocol
+  scoring & caliper & cat & lti --> protocol
+  player & client --> protocol
+  protocol --> base
+  runtime[("@assesskit/runtime")]
+  player & client & server & scoring & caliper & cat & lti & protocol -.->|package name and subpath| runtime
+```
+
 | Principle              | Rule                                                                                                                                                                                                |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Thin over the runtime  | The player renders what the runtime's candidate view says. It evaluates no expression, decides no visibility or validity, chooses no variant and reimplements no codec.                             |

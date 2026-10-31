@@ -4,23 +4,23 @@ export interface LtiDeployment {
   readonly issuer: string;
   /** The client identifier of the tool at the platform (`aud`). */
   readonly clientId: string;
-  /** The deployment of the tool at the platform (LTI 1.3 Core §5.3.3). */
+  /** The deployment of the tool at the platform (LTI 1.3 Core section 5.3.3). */
   readonly deploymentId: string;
 }
 
 /** What every validated launch carries. */
 export interface LaunchBase extends LtiDeployment {
-  /** The endpoint that the launch is for. The tool relies on this claim and not on the unsigned parameter of the login (LTI 1.3 Core §5.3.4). */
+  /** The endpoint that the launch is for. The tool relies on this claim and not on the unsigned parameter of the login (LTI 1.3 Core section 5.3.4). */
   readonly targetLinkUri: string;
-  /** The identifier of the user in the platform, absent in an anonymous launch (LTI 1.3 Core §5.3.6.1). */
+  /** The identifier of the user in the platform, absent in an anonymous launch (LTI 1.3 Core section 5.3.6.1). */
   readonly subject?: string;
-  /** The role URIs of the user in the context of the launch; possibly empty (LTI 1.3 Core §5.3.7). */
+  /** The role URIs of the user in the context of the launch; possibly empty (LTI 1.3 Core section 5.3.7). */
   readonly roles: readonly string[];
-  /** The custom properties that the platform sent with the link, by name (LTI 1.3 Core §5.4.6). */
+  /** The custom properties that the platform sent with the link, by name (LTI 1.3 Core section 5.4.6). */
   readonly custom: ReadonlyMap<string, string>;
 }
 
-/** The resource link a launch comes from (LTI 1.3 Core §5.3.5). */
+/** The resource link a launch comes from (LTI 1.3 Core section 5.3.5). */
 export interface ResourceLink {
   /** The identifier of the link within the deployment. */
   readonly id: string;
@@ -30,7 +30,7 @@ export interface ResourceLink {
   readonly description?: string;
 }
 
-/** The Assignment and Grade Services that the launch makes available (LTI AGS 2.0 §3.1). */
+/** The Assignment and Grade Services that the launch makes available (LTI AGS 2.0 section 3.1). */
 export interface AgsEndpoint {
   /** The scopes that the tool may ask an access token for. */
   readonly scopes: readonly string[];
@@ -50,7 +50,7 @@ export interface ResourceLinkLaunch extends LaunchBase {
   readonly ags?: AgsEndpoint;
 }
 
-/** What the platform asks of the tool in a Deep Linking request (Deep Linking 2.0 §4.4.1). */
+/** What the platform asks of the tool in a Deep Linking request (Deep Linking 2.0 section 4.4.1). */
 export interface DeepLinkingSettings {
   /** Where the tool sends the response (`deep_link_return_url`). */
   readonly returnUrl: string;

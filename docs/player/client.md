@@ -11,20 +11,52 @@ with `import()`.
 | `createRemoteSession` | exam     | the server            | no                 |
 | `createLocalSession`  | practice | the device            | yes, by design     |
 
+```mermaid
+sequenceDiagram
+  participant P as Player
+  participant C as Remote session client
+  participant H as Session host
+  P->>C: dispatch(set-responses)
+  Note over C: Held and merged by item,<br/>sent AUTOSAVE_MS after the last one
+  P->>C: dispatch(submit)
+  C->>H: the held responses first, then ActionEnvelope (seq + 1)
+  alt no answer arrives
+    Note over C: The request stays in doubt and is sent<br/>again, unchanged, before any later one
+  end
+  H-->>C: ViewEnvelope (same seq)
+  C->>C: viewFromJson, resolve assets, notify listeners
+  C-->>P: DispatchResult {view, refusal?}
+  Note over C,H: At FLUSH_BEFORE_DEADLINE_MS before a timer ends, the held<br/>responses go; at 0 an empty set-responses learns the time-out
+```
+
 ## Remote session
 
 ```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { createEngine, viewToJson } from "@assesskit/runtime/delivery";
 import { createRemoteSession } from "@assesskit/player/client";
-import type { ViewEnvelope } from "@assesskit/player/protocol";
 
-async function transport(envelope: unknown): Promise<ViewEnvelope> {
-  const response = await fetch("/exam/handle", { method: "POST", body: JSON.stringify(envelope) });
-  if (!response.ok) throw new Error(`The host answered ${response.status}.`);
-  return response.json();
-}
+// A page gets the first envelope from the route of `SessionHost.view` and sends the others to the route of `SessionHost.handle`.
+// Here an engine on the page makes the envelopes, which only shows the calls.
+const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="q1" title="Question" adaptive="false" time-dependent="false">
+  <qti-item-body><p>Hello</p></qti-item-body>
+</qti-assessment-item>`);
+const engine = createEngine({ kind: "item", item: document.item, base: "items/q1.xml" });
+const started = engine.start({ seed: 1, at: 0 });
+const view = viewToJson(engine.view(started.state, 0));
 
-const initial: ViewEnvelope = await (await fetch("/exam/view", { method: "POST" })).json();
-const client = createRemoteSession(transport, initial);
+const sent = [];
+const transport = async (envelope) => {
+  sent.push(envelope.seq);
+  return { seq: envelope.seq, view, assets: { "": "https://assets.example/g/token/" } };
+};
+const client = createRemoteSession(transport, { seq: 0, view, assets: {} });
+const answer = await client.dispatch({ type: "end-test" });
+sent; // => [1]
+answer.view.current?.title; // => "Question"
+client.assets("items/q1.xml"); // => "https://assets.example/g/token/items/q1.xml"
+client.close();
 ```
 
 `createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type.
@@ -61,7 +93,7 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 if (document.kind !== "item") throw new Error("The document is not an item.");
 
-const saved = new Map<string, string>();
+const saved = new Map();
 const client = await createLocalSession({
   definition: { kind: "item", item: document.item, base: "items/q1.xml" }, // a preview of one item
   store: {
@@ -72,7 +104,7 @@ const client = await createLocalSession({
   seed: 1,
   assets: (path) => `/package/${path}`,
 });
-client.view.current?.title; // "Question"
+client.view.current?.title; // => "Question"
 ```
 
 `createLocalSession(options)` is asynchronous because it loads the engine. It throws `DataError` when an option is not of its
@@ -80,7 +112,7 @@ type, the engine cannot be created from the definition, or the session cannot st
 
 | Option       | Type                                  | Meaning                                                                                                      |
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview (the runtime E12).                                   |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                     |
 | `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                |
 | `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                            |
 | `store`      | `LocalStore`                          | Where the state is saved and restored from: `load(session)` and `save(session, state)`.                      |
@@ -100,19 +132,8 @@ A preview of one item is a session of `{ kind: "item", item, base }`; `documents
 The session has the engine and the definition but not the package, so a host that wants reading aloud to use the lexicons of
 the items names them with `lexicons`, from the manifest of the package it made the definition from:
 
-```ts
-import { dependencyClosure, type QtiPackage, resourcePath } from "@assesskit/runtime/package";
-
-declare const pkg: QtiPackage;
-
-const lexicons = (item: string): string[] => {
-  const { manifest } = pkg;
-  const resource = manifest.resources.find((each) => resourcePath(manifest, each) === item);
-  if (resource === undefined) return [];
-  return dependencyClosure(manifest, resource.identifier)
-    .filter(({ type }) => type === "pls")
-    .flatMap((each) => resourcePath(manifest, each) ?? []);
-};
-```
+A lexicon is a resource of type `pls` among the dependencies of the item's resource, so a host reads it with `dependencyClosure` of
+`@assesskit/runtime/package` and `resourcePath`: find the resource whose path is the item's, filter its closure for `pls`, and
+return the paths.
 
 The server's session host finds them the same way for an exam.

@@ -36,7 +36,11 @@ export interface LtiLaunchOptions extends ToolOptions {
 export interface AccessTokenOptions extends ToolOptions {
   /** The `fetch` that calls the platform's token endpoint. */
   readonly fetch: Fetch;
-  /** The most time that the call may take, in milliseconds. Default: `10000`. */
+  /**
+   * The most time that the call may take, in milliseconds.
+   *
+   * @defaultValue `10000`
+   */
   readonly timeoutMs?: number;
 }
 

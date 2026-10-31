@@ -5,8 +5,8 @@ import { type KeyPair, readToken, request, signToken, type TestClock, verifyToke
 
 /**
  * A conformant LTI 1.3 platform for the tests of the tool role. It is written from the specifications, not from the code
- * under test: Security Framework §5.1 (the authentication request and the id_token), §4.1.1 (the token endpoint), §6.3
- * (the key set), LTI 1.3 Core §5 (the claims) and Deep Linking 2.0 (the request and the response).
+ * under test: Security Framework section 5.1 (the authentication request and the id_token), section 4.1.1 (the token endpoint), section 6.3
+ * (the key set), LTI 1.3 Core section 5 (the claims) and Deep Linking 2.0 (the request and the response).
  */
 
 export const ISSUER = "https://lms.example.edu";
@@ -159,7 +159,7 @@ export class FakePlatform {
     return new Response("not found", { status: 404 });
   };
 
-  /** A third-party initiated login (Security Framework §5.1.1.1) to the tool's login URL. */
+  /** A third-party initiated login (Security Framework section 5.1.1.1) to the tool's login URL. */
   initiation(
     options: { storageTarget?: string; method?: "GET" | "POST"; clientId?: boolean; messageHint?: string } = {},
   ): HttpRequest {
@@ -185,7 +185,7 @@ export class FakePlatform {
   }
 
   /**
-   * Answers the tool's authentication request (Security Framework §5.1.1.2 and §5.1.1.3): it checks every parameter that
+   * Answers the tool's authentication request (Security Framework sections 5.1.1.2 and 5.1.1.3): it checks every parameter that
    * the request must carry, and issues the id_token with the request's nonce.
    */
   async authenticate(location: string, issue: Issue = {}): Promise<Authenticated> {
@@ -218,7 +218,7 @@ export class FakePlatform {
     };
   }
 
-  /** The tool's token request (Security Framework §4.1.1): checks the assertion and answers a token. */
+  /** The tool's token request (Security Framework section 4.1.1): checks the assertion and answers a token. */
   private async grant(init: Parameters<Fetch>[1]): Promise<Response> {
     expect(init.method).toBe("POST");
     expect(init.headers["content-type"]).toBe("application/x-www-form-urlencoded");
@@ -256,7 +256,7 @@ export class FakePlatform {
   }
 
   /**
-   * The platform's check of the tool's Deep Linking response (Security Framework §5.2.3, Deep Linking 2.0 §4.5): it
+   * The platform's check of the tool's Deep Linking response (Security Framework section 5.2.3, Deep Linking 2.0 section 4.5): it
    * returns the claims when the response is acceptable.
    */
   async acceptDeepLinking(jwt: string, data: string | undefined): Promise<Record<string, unknown>> {

@@ -1,9 +1,29 @@
 # Caliper
 
 `@assesskit/player/caliper` turns the events of a delivery session into [Caliper Analytics 1.2](https://www.imsglobal.org/spec/caliper/v1p2)
-events of the Assessment Profile (§3.2) and the Grading Profile (§3.6), gives them identifiers that stay the same when a
+events of the Assessment Profile (section 3.2) and the Grading Profile (section 3.6), gives them identifiers that stay the same when a
 step is reported again, and sends them to a Caliper endpoint. `@assesskit/player/server` forwards the events of each step
 to the host's log and to Caliper. Both are for servers.
+
+```mermaid
+flowchart LR
+  step["Step.events of the engine"] --> forward["forwardEvents<br/>(server)"]
+  forward -->|every event| log[("The host's log")]
+  forward -->|"the events with a counterpart"| map["caliperEvents"]
+  supplied["A supply-scores step"] -->|"supplied score"| grade["caliperGrade"]
+  map --> send["sendCaliper"]
+  grade --> send
+  send -->|"envelope over HTTPS, bearer token"| endpoint[("Caliper endpoint")]
+```
+
+| Export                           | Purpose                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `caliperEvents(events, context)` | Maps the events of one step to Caliper events of the Assessment Profile.                    |
+| `caliperGrade(grade, context)`   | Builds the GradeEvent Graded of the Grading Profile for a score.                            |
+| `sendCaliper(events, options)`   | Posts the events to an endpoint in one envelope.                                            |
+| `CALIPER_CONTEXT`                | The JSON-LD context of Caliper 1.2.                                                         |
+| `DEFAULT_CALIPER_TIMEOUT_MS`     | The time that a call to the endpoint may take by default: `10000` milliseconds.             |
+| `forwardEvents(step, options)`   | In `@assesskit/player/server`: gives the events of a step to the host's log and to Caliper. |
 
 ```ts
 import { caliperEvents, sendCaliper } from "@assesskit/player/caliper";
@@ -21,10 +41,14 @@ const events = caliperEvents(
     edApp: "https://exam.example",
   },
 );
-events.map(({ type, action }) => `${type} ${action}`);
-// ["AssessmentEvent Started", "NavigationEvent NavigatedTo", "AssessmentItemEvent Started"]
-events[2]?.id; // "urn:uuid:9d93048b-0080-5eca-9ee6-1ac13fb2c05a"
+events.map(({ type, action }) => `${type} ${action}`); // => ["AssessmentEvent Started", "NavigationEvent NavigatedTo", "AssessmentItemEvent Started"]
+events[2]?.id; // => "urn:uuid:9d93048b-0080-5eca-9ee6-1ac13fb2c05a"
 
+const sent = [];
+const fetch = async (url, init) => {
+  sent.push({ url, method: init.method, authorization: init.headers.Authorization });
+  return { ok: true, status: 200, text: async () => "" };
+};
 await sendCaliper(events, {
   endpoint: "https://lrs.example/caliper",
   token: "abc123",
@@ -32,6 +56,7 @@ await sendCaliper(events, {
   sendTime: 1_700_000_001_000,
   fetch,
 });
+sent; // => [{ url: "https://lrs.example/caliper", method: "POST", authorization: "Bearer abc123" }]
 ```
 
 ## From events of the runtime to events of Caliper
@@ -67,13 +92,13 @@ An event whose type is none of these is a `DataError`.
 | `assessment` | The IRI of the test.                                                                                                      | required |
 | `edApp`      | The IRI of the application that delivers the test.                                                                        | required |
 
-Caliper identifies every entity by an absolute IRI (§4.2), which only the host can give the candidate, the test and the
+Caliper identifies every entity by an absolute IRI (section 4.2), which only the host can give the candidate, the test and the
 application. `actor`, `assessment` and `edApp` are checked to be absolute IRIs.
 
 ### What an event holds
 
 Every event has `@context` (`http://purl.imsglobal.org/ctx/caliper/v1p2`), `id`, `type`, `profile`, `actor` (a `Person`),
-`action`, `object`, `eventTime` and `edApp`. The times are `YYYY-MM-DDTHH:mm:ss.SSSZ` in UTC (§2.1); a time before 1970 or after
+`action`, `object`, `eventTime` and `edApp`. The times are `YYYY-MM-DDTHH:mm:ss.SSSZ` in UTC (section 2.1); a time before 1970 or after
 the year 9999 is a `DataError`.
 
 | Event                           | `object`                             | `generated`                                              |
@@ -93,14 +118,14 @@ test and have the identifier of their item reference or section as `name`.
 
 ## Identifiers
 
-An event's `id` is the URN `urn:uuid:` and a name-based UUID of version 5 (RFC 9562 §5.5; Caliper 1.2 §2.1 asks for a
+An event's `id` is the URN `urn:uuid:` and a name-based UUID of version 5 (RFC 9562 section 5.5; Caliper 1.2 asks for a
 UUID URN). Reporting the same step again gives the same identifiers, so an endpoint that keeps an event once by its `id`
 holds each event once.
 
 The UUID is the `v5` of the [uuid](https://github.com/uuidjs/uuid) package: the SHA-1 of the namespace
 `4bcd2e8b-df2f-56d9-b6c1-d17e5077c977` and the UTF-8 bytes of a name. The namespace is
 the UUID of `https://github.com/assesskit/assesskit/tree/main/packages/player/src/caliper` in the URL namespace of RFC 9562
-§6.6. The name is the JSON text of an array, so that no two lists of parts make one name.
+section 6.6. The name is the JSON text of an array, so that no two lists of parts make one name.
 
 | Entity                          | Parts of the name                     |
 | ------------------------------- | ------------------------------------- |
@@ -113,7 +138,7 @@ the UUID of `https://github.com/assesskit/assesskit/tree/main/packages/player/sr
 
 `step` is `"start"` or a number, and `index` is the position of the event in `Step.events`. The AssessmentEvent Started that
 the start step adds has the index `-1`. An item is the same in every session of the test, and an attempt belongs to its
-session. The identifiers of entities are not addresses that a server can dereference (§4.2 says an IRI should be).
+session. The identifiers of entities are not addresses that a server can dereference (section 4.2 says an IRI should be).
 
 ## Scores
 
@@ -135,26 +160,26 @@ The event's `actor` and the score's `scoredBy` are the scorer. The context is th
 
 ## Sending
 
-`sendCaliper(events, options)` posts one envelope (§5.2) with the events as its `data`, over HTTPS (§5.4).
+`sendCaliper(events, options)` posts one envelope (section 5.2) with the events as its `data`, over HTTPS (section 5.4).
 
-| Option      | Meaning                                                                                                | Default  |
-| ----------- | ------------------------------------------------------------------------------------------------------ | -------- |
-| `endpoint`  | The address of the endpoint, an `https` URL.                                                           | required |
-| `token`     | The bearer token the endpoint validates; letters, digits and `-._~+/`, then `=` (RFC 6750 §2.1).       | required |
-| `fetch`     | The `fetch` to send with, or a replacement.                                                            | required |
-| `sensor`    | The identifier of the sensor, which Caliper advises to be an IRI (§5.2).                               | required |
-| `sendTime`  | The time of sending in epoch milliseconds. A resend has the time of the resend.                        | required |
-| `timeoutMs` | The most time in milliseconds that the call may take, from the request to the last byte of the answer. | `10000`  |
+| Option      | Meaning                                                                                                 | Default  |
+| ----------- | ------------------------------------------------------------------------------------------------------- | -------- |
+| `endpoint`  | The address of the endpoint, an `https` URL.                                                            | required |
+| `token`     | The bearer token the endpoint validates; letters, digits and `-._~+/`, then `=` (RFC 6750 section 2.1). | required |
+| `fetch`     | The `fetch` to send with, or a replacement.                                                             | required |
+| `sensor`    | The identifier of the sensor, which Caliper advises to be an IRI (section 5.2).                         | required |
+| `sendTime`  | The time of sending in epoch milliseconds. A resend has the time of the resend.                         | required |
+| `timeoutMs` | The most time in milliseconds that the call may take, from the request to the last byte of the answer.  | `10000`  |
 
 The request is a `POST` with `Content-Type: application/json` and `Authorization: Bearer <token>`. The body has the properties
 `sensor`, `sendTime`, `dataVersion` (the Caliper context) and `data`, and no others. `redirect` is `error`, because a redirect
 would send the token elsewhere. At least one event is needed, as an envelope has at least one.
 
-| Error          | When                                                                                                                        |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`    | An option or an event has the wrong type.                                                                                   |
-| `ServiceError` | The endpoint answers with another status than 2xx, such as 400, 401, 415 or 422 (§6.1); `status` and `body` are its answer. |
-| `ServiceError` | The endpoint does not answer or the time limit passes; `status` is `0`.                                                     |
+| Error          | When                                                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`    | An option or an event has the wrong type.                                                                                          |
+| `ServiceError` | The endpoint answers with another status than 2xx, such as 400, 401, 415 or 422 (section 6.1); `status` and `body` are its answer. |
+| `ServiceError` | The endpoint does not answer or the time limit passes; `status` is `0`.                                                            |
 
 `sendCaliper` does not retry. A host that retries sends the same events, whose identifiers are the same.
 
@@ -168,15 +193,16 @@ the record they saved ([server](server.md#handling-a-request)).
 ```ts
 import { forwardEvents } from "@assesskit/player/server";
 
+const logged = [];
 await forwardEvents(
   {
     session: "session-1",
     step: 3,
     events: [{ type: "support-changed", at: 1_700_000_000_000, detail: "magnification on" }],
   },
-  { log: (step) => console.log(step.session, step.step, step.events.length) },
+  { log: (step) => void logged.push(`${step.session} ${step.step} ${step.events.length}`) },
 );
-// session-1 3 1
+logged; // => ["session-1 3 1"]
 ```
 
 | Property of `step` | Meaning                                                                               |
@@ -219,4 +245,4 @@ These choices are the player's.
 - The start step is dated by its first event. A start step without events gives no Started.
 - A NavigationEvent has no `referrer`, because a step does not know the item before.
 - No event has `group`, `membership`, `session` or `federatedSession`: the host knows them, and they identify the candidate.
-- The Caliper endpoint's configuration (§6.2) is not read, and the envelope is not split by its maximum payload size.
+- The Caliper endpoint's configuration (section 6.2) is not read, and the envelope is not split by its maximum payload size.

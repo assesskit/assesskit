@@ -5,8 +5,8 @@ import { type KeyPair, readToken, request, signToken, type TestClock } from "./l
 
 /**
  * A conformant LTI 1.3 tool for the tests of the platform role. It is written from the specifications, not from the code
- * under test: Security Framework §5.1.1 (the login and the authentication request), §5.1.3 (the validation of the
- * id_token), §4.1.1 (the client assertion) and LTI 1.3 Core §5 (the claims it relies on).
+ * under test: Security Framework section 5.1.1 (the login and the authentication request), section 5.1.3 (the validation of the
+ * id_token), section 4.1.1 (the client assertion) and LTI 1.3 Core section 5 (the claims it relies on).
  */
 
 export const TOOL_ORIGIN = "https://tool.example.com";
@@ -32,7 +32,7 @@ export function toolRegistration(overrides: Partial<ToolRegistration> = {}): Too
   };
 }
 
-/** The parameters of a third-party initiated login (Security Framework §5.1.1.1, LTI 1.3 Core §4.1). */
+/** The parameters of a third-party initiated login (Security Framework section 5.1.1.1, LTI 1.3 Core section 4.1). */
 export interface Initiation {
   readonly iss: string;
   readonly loginHint: string;
@@ -65,9 +65,9 @@ export function readInitiation(url: string, loginUrl = TOOL_LOGIN_URL): Initiati
 }
 
 /**
- * Builds the tool's authentication request (Security Framework §5.1.1.2) as the parameters of the table there: `scope`,
+ * Builds the tool's authentication request (Security Framework section 5.1.1.2) as the parameters of the table there: `scope`,
  * `response_type`, `client_id`, `redirect_uri`, `login_hint`, `state`, `response_mode`, `nonce`, `prompt`, and the
- * `lti_message_hint` that LTI 1.3 Core §4.1.1 has the tool return unaltered.
+ * `lti_message_hint` that LTI 1.3 Core section 4.1.1 has the tool return unaltered.
  */
 export function authenticationParameters(
   initiation: Initiation,
@@ -110,13 +110,13 @@ export interface Delivered {
   readonly state: string;
 }
 
-/** The fields of a key set, as RFC 7517 §5 gives them. */
+/** The fields of a key set, as RFC 7517 section 5 gives them. */
 export interface KeySet {
   readonly keys: readonly Record<string, string>[];
 }
 
 /**
- * Validates an `id_token` as Security Framework §5.1.3 and LTI 1.3 Core §5.3 say a tool must: the signature against the
+ * Validates an `id_token` as Security Framework section 5.1.3 and LTI 1.3 Core section 5.3 say a tool must: the signature against the
  * platform's key set by `kid`, `iss`, `aud` (the client id alone), `exp`, `iat`, `nonce`; and the claims of a resource link
  * launch. It returns the claims.
  */
@@ -161,7 +161,7 @@ export async function acceptIdToken(
   return payload;
 }
 
-/** The grade services of a launch, as LTI AGS 2.0 §3.1 gives the claim. */
+/** The grade services of a launch, as LTI AGS 2.0 section 3.1 gives the claim. */
 export function agsClaim(claims: Record<string, unknown>): { scope: string[]; lineitem: string } {
   const claim = claims[AGS_CLAIM];
   if (typeof claim === "object" && claim !== null && "scope" in claim && "lineitem" in claim) {
@@ -173,7 +173,7 @@ export function agsClaim(claims: Record<string, unknown>): { scope: string[]; li
   throw new Error("The launch has no grade services claim with scope and lineitem.");
 }
 
-/** The options of a client assertion (Security Framework §4.1.1) that a test may change. */
+/** The options of a client assertion (Security Framework section 4.1.1) that a test may change. */
 export interface Assertion {
   readonly iss?: string;
   readonly sub?: string;
@@ -185,7 +185,7 @@ export interface Assertion {
   readonly signer?: KeyPair;
 }
 
-/** Signs the client assertion that Security Framework §4.1.1 describes, with `exp` five minutes after `iat`. */
+/** Signs the client assertion that Security Framework section 4.1.1 describes, with `exp` five minutes after `iat`. */
 export function clientAssertion(
   tool: KeyPair,
   tokenUrl: string,
@@ -205,7 +205,7 @@ export function clientAssertion(
   return signToken(claims, change.signer ?? tool, change.header);
 }
 
-/** The token request of the client-credentials grant with a JWT assertion (Security Framework §4.1.1). */
+/** The token request of the client-credentials grant with a JWT assertion (Security Framework section 4.1.1). */
 export function tokenRequest(
   tokenUrl: string,
   assertion: string,

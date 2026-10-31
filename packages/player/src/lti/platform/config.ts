@@ -2,7 +2,7 @@ import type { webcrypto } from "node:crypto";
 import { DataError } from "@assesskit/runtime/errors";
 import { calculateJwkThumbprint } from "jose";
 import { checkHttpsUrl, checkRecord, describe, isRecord } from "../../checks.js";
-import { isHmacKey, isRsaKey } from "../keys.js";
+import { isHmacKey, isRsaKey } from "../internal.js";
 
 const AUTHORIZATION_PATH = "/authorize";
 const JWKS_PATH = "/jwks";
@@ -69,7 +69,7 @@ export function checkPlatformConfig(value: unknown): asserts value is PlatformCo
   checkOrigin(value.playerOrigin, "The origin of the player");
   checkOrigin(value.assetOrigin, "The origin of the assets");
   if (new Set([value.origin, value.playerOrigin, value.assetOrigin]).size !== 3) {
-    // D-M1: the tool's frame has allow-same-origin, so a platform page on the player's origin would share it with the player.
+    // The tool's frame has allow-same-origin, so a platform page on the player's origin would share it with the player.
     throw new DataError(
       "The platform, the player and the assets must have three different origins, found " +
         `${describe(value.origin)}, ${describe(value.playerOrigin)} and ${describe(value.assetOrigin)}.`,
@@ -103,6 +103,8 @@ export function endpointsOf(config: PlatformConfig): PlatformEndpoints {
 /**
  * Returns the URLs of the endpoints of a platform: what its administrator registers with a tool.
  *
+ * @param config - The platform's configuration.
+ * @returns The URLs.
  * @throws `DataError` when the configuration is not one.
  */
 export function platformEndpoints(config: PlatformConfig): PlatformEndpoints {
@@ -114,7 +116,7 @@ const keyIds = new WeakMap<webcrypto.CryptoKey, Promise<string>>();
 
 /**
  * Returns the `kid` of the platform's signing key: its JWK thumbprint (RFC 7638), so that a new key has a new `kid` and no
- * host needs to name it. Security Framework §6.3 requires a `kid` for every key of a key set.
+ * host needs to name it. Security Framework section 6.3 requires a `kid` for every key of a key set.
  */
 export function platformKeyId(config: PlatformConfig): Promise<string> {
   const { publicKey } = config.keys;

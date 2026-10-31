@@ -1,9 +1,24 @@
 # Scoring
 
-An outcome with `external-scored` is one that a person or a machine sets, not processing (INFO §4.5.10). The runtime's engine asks
-the host for each one with a scoring request and waits (see Scoring requests in the runtime's delivery guide).
-`@assesskit/player/scoring` hands a request to a scorer and the score back to the engine; the player shows the request to
-a rater.
+An outcome with `external-scored` is one that a person or a machine sets, not processing. The runtime's engine asks the host
+for each one with a scoring request and waits (see Scoring requests in the runtime's delivery guide).
+`@assesskit/player/scoring` hands a request to a scorer and the score back to the engine; the player shows the request to a
+rater.
+
+```mermaid
+sequenceDiagram
+  participant E as Engine<br/>(runtime)
+  participant H as Host<br/>(server)
+  participant R as Rater or<br/>scoring service
+  E-->>H: pending(state).scoring: a scoring request
+  H->>H: toSubmission(scorerView)
+  H->>R: Submission as JSON, with the correct responses
+  Note over R: mountSubmission shows it to a person
+  R-->>H: the score
+  H->>H: toSupplyScores(request, score, scorer)
+  H->>E: apply(state, action with at)
+  E-->>H: scores-applied, or scores-replaced for a second score
+```
 
 | Step                                  | Where                                | Function                                 |
 | ------------------------------------- | ------------------------------------ | ---------------------------------------- |
@@ -13,8 +28,8 @@ a rater.
 | Turn the rater's score into an action | server, `@assesskit/player/scoring`  | `toSupplyScores`                         |
 | Give the action to the engine         | server, the runtime                  | `engine.apply(state, { ...action, at })` |
 
-The rating form and the rating workflow, such as assignment and double scoring, are the host's. A submission holds the
-correct responses of the items, so the host gives it only to authorized raters.
+The rating form and the rating workflow, such as assignment and double scoring, are the host's. A submission holds the correct
+responses of the items, so the host gives it only to authorized raters.
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
@@ -53,22 +68,22 @@ if (!submitted.ok) throw new Error(submitted.refusal.message);
 const [request] = engine.pending(submitted.state).scoring;
 if (request === undefined) throw new Error("No request waits.");
 const submission = toSubmission(engine.scorerView(submitted.state, request.id));
-submission.request; // "item:essay:1:SCORE"
-submission.declaration; // { cardinality: "single", baseType: "float", normalMinimum: 0, normalMaximum: 10 }
-submission.parts[0]?.value; // { cardinality: "single", baseType: "string", value: { base: { string: "Dear Sir" } } }
+submission.request; // => "item:essay:1:SCORE"
+submission.declaration; // => { cardinality: "single", baseType: "float", normalMinimum: 0, normalMaximum: 10 }
+submission.parts[0]?.value; // => { cardinality: "single", baseType: "string", value: { base: { string: "Dear Sir" } } }
 
 // The rater scores it; the host gives the score to the engine.
 const action = toSupplyScores(request, 7.5, "human");
-action; // { type: "supply-scores", request: "item:essay:1:SCORE", value: { cardinality: "single", baseType: "float", value: 7.5 }, scorer: "human" }
+action; // => { type: "supply-scores", request: "item:essay:1:SCORE", value: { cardinality: "single", baseType: "float", value: 7.5 }, scorer: "human" }
 const scored = engine.apply(submitted.state, { ...action, at: 3_000 });
 if (!scored.ok) throw new Error(scored.refusal.message);
-scored.events.map(({ type }) => type); // ["scores-applied", "outcome-processed"]
-engine.pending(scored.state).scoring.length; // 0
+scored.events.map(({ type }) => type); // => ["scores-applied", "outcome-processed"]
+engine.pending(scored.state).scoring.length; // => 0
 
 // The rater changes the score: the second supply replaces the first.
 const again = engine.apply(scored.state, { ...toSupplyScores(request, 8, "human"), at: 4_000 });
 if (!again.ok) throw new Error(again.refusal.message);
-again.events.map(({ type }) => type); // ["scores-replaced", "outcome-processed"]
+again.events.map(({ type }) => type); // => ["scores-replaced", "outcome-processed"]
 ```
 
 ## The submission
@@ -108,7 +123,7 @@ rates one outcome. It is JSON text as it is: `JSON.parse(JSON.stringify(submissi
 | `templateValues`   | `SubmissionVariable[]` | The template variables of the instance                                                                            |
 | `correctResponses` | `SubmissionVariable[]` | The correct response of each response variable of the item                                                        |
 
-- A value is the runtime's `WireValue`: `{ cardinality, baseType, value }` whose `value` is the JSON of BPIG Appendix C. It decodes
+- A value is the runtime's `WireValue`: `{ cardinality, baseType, value }` whose `value` is the JSON of the QTI 3.0 Best Practices guide, Appendix C. It decodes
   with `fromWireValue` of `@assesskit/runtime/values` without a declaration. NULL is `null`.
 - A file stays a reference, `{ reference, mime, name }`. The host resolves it to a URL with its own files service.
 - A variable is `{ identifier, value }` in a list, so that an identifier such as `__proto__` stays data.
@@ -133,13 +148,6 @@ and the base type must be the outcome's. An integer fits a float or duration out
 the empty string, which is NULL. A plain value for an outcome that is not single is a `DataError`. The result is the action
 without `at`: the host stamps it.
 
-```ts
-import { single } from "@assesskit/runtime/values";
-import { toSupplyScores } from "@assesskit/player/scoring";
-
-toSupplyScores(request, single("string", "good"), "human");
-// DataError: The outcome SCORE is a single float, found a single string.
-```
 
 The engine accepts the action while the request exists, also after the test ended or while the session is suspended. It
 keeps the request after its value is supplied, so a second action for it replaces the value and reports `scores-replaced`;
@@ -200,3 +208,19 @@ The themes and the PNP presentation of [styling](styling.md) apply when the host
 `host`; the content roots in the display take the colors from it.
 
 Raters have their own tools. The display adds no controls: the rating form belongs beside it, in the host's page.
+
+## Errors
+
+| Call                           | Throws `DataError` when                                                                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `toSubmission(view)`           | `view` is not a scorer view, a part of it has the wrong type, or what it holds is not a submission                                                                                                                                             |
+| `toSupplyScores(request, ...)` | `request` is not a scoring request, `scorer` is not `human` or `externalMachine`, or the score does not fit the declaration, such as a single string for a single float outcome: `The outcome SCORE is a single float, found a single string.` |
+| `checkSubmission(value)`       | `value` is not a submission: see [protocol](protocol.md#errors)                                                                                                                                                                                |
+| `mountSubmission`, `update`    | an option or the submission is not valid, or the host has a shadow root                                                                                                                                                                        |
+
+## Not included
+
+| Not included                                 | Why                                                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| A rating form, assignment and double scoring | They are the workflow of the host, which differs for each                                |
+| A machine scorer                             | A scoring service reads the submission and answers with a score through `toSupplyScores` |

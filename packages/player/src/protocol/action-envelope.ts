@@ -18,9 +18,12 @@ const actionEnvelopeSchema: Schema<ActionEnvelope> = v.strictObject({
 });
 
 /**
- * Checks the shape of an action envelope that arrived as JSON. The action is not read: that is `parseCandidateAction`,
- * with its size limits.
+ * Checks the shape of an action envelope that arrived as JSON.
  *
+ * @remarks
+ * The action is not read here: the runtime's `parseCandidateAction` reads it, with its size limits.
+ *
+ * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `seq` and `action` only, `seq` a non-negative integer.
  */
 export function checkActionEnvelope(value: unknown): asserts value is ActionEnvelope {

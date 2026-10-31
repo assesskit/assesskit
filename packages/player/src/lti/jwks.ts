@@ -10,15 +10,25 @@ const MILLISECONDS = 1000;
 export interface JwksCacheOptions {
   /** The `fetch` that gets the key sets. */
   readonly fetch: Fetch;
-  /** How long a key set stays in the cache, in seconds. Default: `3600`. */
+  /**
+   * How long a key set stays in the cache, in seconds.
+   *
+   * @defaultValue `3600`
+   */
   readonly ttlSeconds?: number;
   /**
    * The least time between two fetches of one key set, in seconds. A `kid` that the cached set lacks fetches it again
    * only after this time, so that a platform that rotates its keys is followed, and a token with an invented `kid`
-   * cannot make the tool fetch on every request. Default: `60`.
+   * cannot make the tool fetch on every request.
+   *
+   * @defaultValue `60`
    */
   readonly refreshSeconds?: number;
-  /** The most time that a fetch may take, in milliseconds. Default: `10000`. */
+  /**
+   * The most time that a fetch may take, in milliseconds.
+   *
+   * @defaultValue `10000`
+   */
   readonly timeoutMs?: number;
 }
 
@@ -48,10 +58,13 @@ export function checkJwksCache(value: unknown): asserts value is JwksCache {
 /**
  * Creates the cache of the key sets of platforms.
  *
+ * @remarks
  * The cache holds one entry per key set URL, and the URLs come from the host's registrations, never from a token. A
  * fetch is shared by the requests that wait for it. The key sets are fetched with the `fetch` of the host, without
  * redirects, within `timeoutMs` and up to 64 KiB. The cache reads the time of the system, as jose does.
  *
+ * @param options - The `fetch`, the lifetimes and the timeout.
+ * @returns The cache.
  * @throws `DataError` when an option has the wrong type.
  */
 export function createJwksCache(options: JwksCacheOptions): JwksCache {

@@ -3,9 +3,9 @@ import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import { checkFunction, checkRecord } from "../checks.js";
 import type { AgsScore } from "../lti/index.js";
+import type { AgsScoreStore } from "./ags-score-store.js";
 import type { StepEvents } from "./forward.js";
-import type { SessionHost } from "./host.js";
-import type { AgsScoreStore } from "./stores.js";
+import type { SessionHost } from "./session-host.js";
 
 /** The options of {@link createLtiScoreIntake}. */
 export interface LtiScoreIntakeOptions {
@@ -27,6 +27,7 @@ export interface LtiScoreIntake {
   /**
    * Receives a score from the line item of an item instance. Pass it as `onScore` of `agsScores`.
    *
+   * @remarks
    * It keeps the score if its time is later than that of the kept one, and ignores it otherwise. A score that is
    * `FullyGraded` is supplied to the session: its `scoreGiven` answers the `SCORE` request of the item and its
    * `scoreMaximum` the `MAXSCORE` request, and a later score replaces the values of an earlier one. Other progress is kept
@@ -71,12 +72,14 @@ function checkIntakeOptions(options: unknown): asserts options is LtiScoreIntake
  * Creates the wiring that turns the scores which the tool of an LTI item posts into the scores of the session: the
  * `onScore` of `agsScores`, and the function that supplies a kept score when the session asks for it.
  *
+ * @remarks
  * - **Latest by time.** The line item keeps the score with the latest `timestamp`; a score that is not later is ignored.
  * - **Final scores only.** A score that is `FullyGraded` answers the requests of the item with `supply-scores`, scored by
  *   an external machine; `Pending`, `PendingManual` and the other progress is kept and not supplied.
  *
  * @see {@link https://www.imsglobal.org/spec/lti-ags/v2p0#score-publish-service | LTI AGS 2.0, score publish service}
  * @param options - See {@link LtiScoreIntakeOptions}.
+ * @returns The wiring.
  * @throws `DataError` when an option has the wrong type.
  */
 export function createLtiScoreIntake(options: LtiScoreIntakeOptions): LtiScoreIntake {

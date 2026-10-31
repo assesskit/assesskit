@@ -21,11 +21,19 @@ export interface CaliperGrade {
   readonly index: number;
   /** When the score was given, in epoch milliseconds. */
   readonly at: number;
-  /** The item instance that was graded. Default: the test. */
+  /**
+   * The item instance that was graded.
+   *
+   * @defaultValue none, the test was graded
+   */
   readonly item?: ItemKey;
   /** The score awarded. */
   readonly scoreGiven: number;
-  /** The greatest score possible. Default: none. */
+  /**
+   * The greatest score possible.
+   *
+   * @defaultValue none
+   */
   readonly maxScore?: number;
   /** Who scored it: a rater is a person, and an external scoring service is a software application. */
   readonly scorer: "human" | "externalMachine";
@@ -46,6 +54,7 @@ const gradeSchema = looseRecord({
 /**
  * Checks a grade, as a host passes it from JavaScript.
  *
+ * @param value - The grade.
  * @throws `DataError` when it is not an object with a non-negative integer `index`, a valid `at`, a finite `scoreGiven`,
  * a `scorer`, an IRI as `scoredBy`, and, when present, an item instance as `item` and a finite `maxScore`.
  */
@@ -54,12 +63,16 @@ function checkGrade(value: unknown): asserts value is CaliperGrade {
 }
 
 /**
- * Builds the GradeEvent Graded of the Grading Profile (Caliper 1.2 §3.6) for a score that was given to an attempt. The
- * event's object is the candidate's attempt at the test, or at the item; the score it generates names that attempt.
+ * Builds the GradeEvent Graded of the Grading Profile for a score that was given to an attempt.
+ *
+ * @remarks
+ * The event's object is the candidate's attempt at the test, or at the item; the score it generates names that attempt.
  *
  * @param grade - The score, who gave it and when.
  * @param context - The session, the step and the parties.
+ * @returns The event.
  * @throws `DataError` when an argument has the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/caliper/v1p2 | Caliper Analytics 1.2}, Grading Profile
  */
 export function caliperGrade(grade: CaliperGrade, context: CaliperContext): CaliperEvent {
   checkContext(context);

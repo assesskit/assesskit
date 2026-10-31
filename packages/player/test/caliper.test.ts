@@ -16,6 +16,7 @@ import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { v5 } from "uuid";
 import { describe, expect, it } from "vitest";
+import caliperGuide from "../../../docs/player/caliper.md?raw";
 import {
   CALIPER_CONTEXT,
   type CaliperEvent,
@@ -26,8 +27,7 @@ import {
   DEFAULT_CALIPER_TIMEOUT_MS,
   sendCaliper,
 } from "../src/caliper/index.js";
-import { caliperTime } from "../src/caliper/time.js";
-import { CALIPER_NAMESPACE, mintUrn } from "../src/caliper/uuid.js";
+import { CALIPER_NAMESPACE, caliperTime, mintUrn } from "../src/caliper/internal.js";
 import { ServiceError } from "../src/index.js";
 import {
   ACTOR,
@@ -40,6 +40,7 @@ import {
   SESSION,
   urnOf,
 } from "./caliper-fixture.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const IDS = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "caliper-ids.json"), "utf8"));
 const Q1: ItemKey = { ref: "q1", instance: 1 };
@@ -139,7 +140,7 @@ describe("mintUrn", () => {
 });
 
 describe("caliperTime", () => {
-  it("writes millisecond precision in UTC, as Caliper 1.2 §2.1 requires", () => {
+  it("writes millisecond precision in UTC, as Caliper requires", () => {
     expect(caliperTime(0, "The time")).toBe("1970-01-01T00:00:00.000Z");
     expect(caliperTime(1_700_000_000_123, "The time")).toBe("2023-11-14T22:13:20.123Z");
     expect(caliperTime(253_402_300_799_999, "The time")).toBe("9999-12-31T23:59:59.999Z");
@@ -385,7 +386,7 @@ describe("caliperEvents", () => {
 
   describe("entities", () => {
     // The properties that Caliper 1.2 Appendix B gives each type of entity, with those of its parent types (Entity, Agent,
-    // DigitalResource and AssignableDigitalResource), and the isPartOf that §3.2 allows an Attempt.
+    // DigitalResource and AssignableDigitalResource), and the isPartOf that section 3.2 allows an Attempt.
     const BASE = ["id", "type", "name", "description", "dateCreated", "dateModified", "otherIdentifiers", "extensions"];
     const RESOURCE = [
       ...BASE,
@@ -802,7 +803,7 @@ describe("sendCaliper", () => {
     expect(Object.keys(JSON.parse(request?.init.body ?? ""))).toEqual(["sensor", "sendTime", "dataVersion", "data"]);
   });
 
-  it("sets the media type, and the bearer token that Caliper 1.2 §5.4 recommends", async () => {
+  it("sets the media type, and the bearer token that Caliper recommends", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch });
     expect(endpoint.requests[0]?.init.headers).toEqual({
@@ -853,7 +854,7 @@ describe("sendCaliper", () => {
     }
   });
 
-  it("fails with the status and the body of a refusal of Caliper 1.2 §6.1", async () => {
+  it("fails with the status and the body of a refusal that Caliper names", async () => {
     for (const status of [400, 401, 415, 422, 500]) {
       const endpoint = fakeEndpoint({ status, body: '{"title":"no"}' });
       const error = await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch }).catch((e: unknown) => e);
@@ -1048,6 +1049,16 @@ describe("the shape check against the published context", () => {
     expect(envelopeProblems({ ...envelope, dataVersion: "v1", data: [{}] })).toContain(
       "dataVersion is not the Caliper context",
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const modules = {
+      "@assesskit/player/caliper": await import("../src/caliper/index.js"),
+      "@assesskit/player/server": await import("../src/server/index.js"),
+    };
+    expect(await runGuideSamples(caliperGuide, modules)).toBeGreaterThan(0);
   });
 });
 

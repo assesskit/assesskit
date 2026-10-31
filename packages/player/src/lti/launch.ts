@@ -37,7 +37,7 @@ async function loadLogin(state: string, options: LtiLaunchOptions): Promise<Logi
   return record;
 }
 
-/** Checks that the browser of the launch is the browser of the login, as the cookie recorded it (Security Framework §5.1.1.4, §7.3.1). */
+/** Checks that the browser of the launch is the browser of the login, as the cookie recorded it (Security Framework sections 5.1.1.4 and 7.3.1). */
 function checkStateCookie(request: HttpRequest, state: string): void {
   if (readCookie(request, stateCookieName(state)) !== state) {
     throw new LtiError(
@@ -64,7 +64,7 @@ function checkVerification(
   registration: PlatformRegistration,
 ): void {
   // Without cookies nothing else ties the post to the browser that logged in: a cross-site form could post a token that the
-  // attacker obtained, with values of its own choosing (login CSRF, Security Framework §7.3.1). The tool's own page is
+  // attacker obtained, with values of its own choosing (login CSRF, Security Framework section 7.3.1). The tool's own page is
   // same-origin.
   const origin = new URL(registration.redirectUri).origin;
   if (request.headers.origin !== origin) {
@@ -84,10 +84,11 @@ function checkVerification(
 /**
  * Completes a launch: validates the `id_token` that the platform posts to the redirect URI and returns the launch.
  *
+ * @remarks
  * The checks, in order: the form has no `oauth_consumer_key` (an LTI 1.0 to 1.2 launch) and has `id_token` and `state`;
  * `state` names a login that the tool started and has not finished; the browser is the one that logged in (the state cookie, or the platform's storage); the signature, the
- * issuer, the audience, the authorized party and the times (Security Framework §5.1.3); the `nonce` equals the login's;
- * the LTI claims (LTI 1.3 Core §5.3, Deep Linking 2.0 §4.4). The login is then deleted, so a launch completes once.
+ * issuer, the audience, the authorized party and the times (Security Framework section 5.1.3); the `nonce` equals the login's;
+ * the LTI claims (LTI 1.3 Core section 5.3, Deep Linking 2.0 section 4.4). The login is then deleted, so a launch completes once.
  *
  * On the client-side storage path the platform's post is answered with a verification page and no launch; the page posts
  * again to the same URL, and that second request completes the launch. The host routes both to this function.
@@ -95,6 +96,7 @@ function checkVerification(
  * LTI 1.0 to 1.2 launches are not supported.
  *
  * @param request - The POST of the platform, or of the verification page.
+ * @param options - The registrations and the store of the tool, and its `fetch` and clock.
  * @returns The launch, or the verification page, which the host sends.
  * @throws `DataError` when the request is not a POST of a form with `id_token` and `state`.
  * @throws `LtiError` with the reason of the failed check: `legacy-launch`, `state-unknown`, `state-expired`,

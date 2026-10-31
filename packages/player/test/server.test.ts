@@ -15,6 +15,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import assetGateGuide from "../../../docs/player/asset-gate.md?raw";
+import serverGuide from "../../../docs/player/server.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
 import type { AgsScore } from "../src/lti/index.js";
 import { isOfficialResult, type ViewEnvelope } from "../src/protocol/index.js";
@@ -55,6 +57,7 @@ import {
   recordingScheduler,
 } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const SECOND = 1000;
 
@@ -1570,6 +1573,18 @@ describe("createLtiScoreIntake", () => {
     expect(() => createLtiScoreIntake(json("null") as never)).toThrow(
       new DataError("The options must be an object, found null."),
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const modules = {
+      "@assesskit/player/server": await import("../src/server/index.js"),
+      "@assesskit/runtime/delivery": await import("@assesskit/runtime/delivery"),
+      "@assesskit/runtime/package": await import("@assesskit/runtime/package"),
+    };
+    expect(await runGuideSamples(serverGuide, modules)).toBeGreaterThan(0);
+    expect(await runGuideSamples(assetGateGuide, modules)).toBeGreaterThan(0);
   });
 });
 

@@ -6,6 +6,16 @@
 export { formatAttributeValue, parseAttributeValue } from "./attribute-value.js";
 export { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION, NUMERIC_EXPRESSION } from "./element-table.js";
 export { readElement } from "./read.js";
-export type { SlotDef, TypeDef } from "./table.js";
+export type {
+  AcceptDef,
+  AttributeDef,
+  AttributeType,
+  ContentDef,
+  ForeignDef,
+  SlotDef,
+  StringFormat,
+  TypeDef,
+  Wildcard,
+} from "./table.js";
 export { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "./type-index.js";
 export { writeElement } from "./write.js";

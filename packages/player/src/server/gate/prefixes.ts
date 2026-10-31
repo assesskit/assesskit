@@ -28,7 +28,7 @@ function pathsOf(pkg: QtiPackage): ReadonlySet<string> {
   return paths;
 }
 
-/** Returns the URLs of the candidates of a `srcset` (HTML Standard §4.8.4.3.1). */
+/** Returns the URLs of the candidates of a `srcset` (HTML Standard, the `srcset` attribute). */
 function srcsetUrls(srcset: string): string[] {
   return srcset.split(",").flatMap((candidate) => candidate.trim().split(/\s+/u).slice(0, 1));
 }
@@ -150,12 +150,15 @@ function interactionsOf(view: CandidateView): PortableCustomInteraction[] {
 }
 
 /**
- * Collects the asset prefixes that a view needs (the player design §2.3, D-M2): one for the content root and one for each
- * portable custom interaction in it. The prefix of the root is the deepest directory that holds the documents of the
- * root, the files its content references, its stylesheets, and the files the manifest lists for the item's resource and
- * its dependencies. The prefix of an interaction is the deepest directory that holds its modules and its module
- * resolution files, since it may keep them apart from the item. A relative URL under a prefix, such as a `define` of
- * RequireJS or a `url()` of a stylesheet, then resolves under the same token.
+ * Collects the asset prefixes that a view needs: one for the content root and one for each portable custom interaction in
+ * it.
+ *
+ * @remarks
+ * The prefix of the root is the deepest directory that holds the documents of the root, the files its content references,
+ * its stylesheets, and the files the manifest lists for the item's resource and its dependencies. The prefix of an
+ * interaction is the deepest directory that holds its modules and its module resolution files, since it may keep them
+ * apart from the item. A relative URL under a prefix, such as a `define` of RequireJS or a `url()` of a stylesheet, then
+ * resolves under the same token.
  *
  * A file under a prefix that no view references is served too: that is the price of relative resolution, and the
  * packaging guide recommends one folder per item. Keys stay safe because the gate denies by type and by content.

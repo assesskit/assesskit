@@ -57,7 +57,7 @@ function testOf(pkg: QtiPackage, identifier: string): LocatedTest | undefined {
   return tests.get(identifier);
 }
 
-/** Returns the path of the main file of the item resource whose item has the identifier: the item of a session that delivers one item alone (E12). */
+/** Returns the path of the main file of the item resource whose item has the identifier: the item of a session that delivers one item alone . */
 function standaloneItemPath(pkg: QtiPackage, identifier: string): string | undefined {
   for (const resource of pkg.manifest.resources) {
     if (resource.type !== "imsqti_item_xmlv3p0") continue;
@@ -69,7 +69,7 @@ function standaloneItemPath(pkg: QtiPackage, identifier: string): string | undef
   return undefined;
 }
 
-/** Tells whether the file at a path is the link of an LTI resource, a document of the LTI schema and not of QTI (BPIG 6.2.9). */
+/** Tells whether the file at a path is the link of an LTI resource, a document of the LTI schema and not of QTI. */
 function isLtiLink(pkg: QtiPackage, path: string): boolean {
   return pkg.manifest.resources.some(
     (resource) => resource.type === "imsbasiclti_xmlv1p3" && resourcePath(pkg.manifest, resource) === path,
@@ -118,6 +118,7 @@ function sourceOf(pkg: QtiPackage, identifier: string): DocumentSource | undefin
  *
  * @param view - The view of a session of a test of the package, or of an item of it that was delivered alone.
  * @param pkg - The package the session delivers.
+ * @returns The paths of the documents.
  * @throws `ReadError` when a document of the package that the lookup needs cannot be read.
  */
 export function locateDocuments(view: CandidateView, pkg: QtiPackage): ViewDocuments {

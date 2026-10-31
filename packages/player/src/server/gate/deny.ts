@@ -21,8 +21,7 @@ import { parseXml, XINCLUDE_NAMESPACE, type XmlElement } from "@assesskit/runtim
 
 /**
  * The resource types whose files the gate never serves: the documents of QTI, which hold answer keys, response processing
- * and templates, the usage data and metadata that describe items, the control files and the links of LTI tools (the player
- * design §2.3).
+ * and templates, the usage data and metadata that describe items, the control files and the links of LTI tools.
  */
 const DENIED_TYPES: ReadonlySet<ResourceType> = new Set<ResourceType>([
   "imsqti_test_xmlv3p0",
@@ -46,13 +45,13 @@ const ADAPTIVE_HOLDERS: ReadonlySet<ResourceType> = new Set<ResourceType>([
   "imsqti_section_xmlv3p0",
 ]);
 
-/** The references of `qti-adaptive-selection` to files: the engine, the settings, the item metadata and the usage data (INFO §7.3). */
+/** The references of `qti-adaptive-selection` to files: the engine, the settings, the item metadata and the usage data. */
 const ADAPTIVE_REFERENCES = ["adaptive-engine-ref", "adaptive-settings-ref", "metadata-ref", "usagedata-ref"];
 
 /** The origin that 1EdTech's namespaces share; its examples also write them without it, as `/xsd/imslticc_v1p0`. */
 const IMS_ORIGIN = "http://www.imsglobal.org";
 
-/** The namespaces whose documents the gate never serves: those runtime reads as QTI data (ASI, CP, RR, UD, QTI metadata, LOM). */
+/** The namespaces whose documents the gate never serves: those that the runtime reads as QTI data (ASI, CP, RR, UD, QTI metadata, LOM). */
 const DENIED_NAMESPACES: readonly string[] = [
   ASI_NAMESPACE,
   CP_NAMESPACE,
@@ -77,10 +76,10 @@ const NAMESPACE_MARKERS: readonly string[] = [
   "/xsd/imslticc_v1p0",
 ];
 
-/** The local name of the root of an LTI link, whatever its namespace (BPIG §6.2.9.2). */
+/** The local name of the root of an LTI link, whatever its namespace. */
 const LTI_LINK_ROOT = "cartridge_basiclti_link";
 
-/** How many bytes of a file the namespace sniff reads (the player design §2.3). */
+/** How many bytes of a file the namespace sniff reads: enough for the root element and its declarations. */
 const SNIFF_BYTES = 4096;
 
 /** The files of a package that the gate denies, per package; the package never changes after it is opened. */
@@ -168,6 +167,7 @@ function includedFiles(pkg: QtiPackage, seeds: Iterable<string>): Set<string> {
 /**
  * Returns the paths of the files of a package that the gate answers 404 for, whatever the token:
  *
+ * @remarks
  * - the manifest;
  * - the main file of every resource of a denied type, whatever its name: these are the item, test, section, stimulus,
  *   fragment and template documents, the usage data, the metadata, the control files and the links of tools. The other files
@@ -175,6 +175,10 @@ function includedFiles(pkg: QtiPackage, seeds: Iterable<string>): Set<string> {
  * - the files that `qti-adaptive-selection` refers to;
  * - the files that any of these documents, and any other XML file of the package, includes with XInclude, since an included
  *   fragment or template can hold what the including document holds, and need not be listed.
+ *
+ * @param pkg - The package.
+ * @returns The paths.
+ * @throws `ReadError` when a document of the package that the lookup needs cannot be read.
  */
 export function deniedPaths(pkg: QtiPackage): ReadonlySet<string> {
   const known = DENIED_PATHS.get(pkg);
@@ -260,6 +264,9 @@ function localNameOf(tag: string): string {
  * first 4 KiB, which also covers a wrapper around QTI elements. It catches a file that no resource declares, and one that
  * the manifest lists as `webcontent`. A file that starts with `<` and shows no first element in those bytes is denied, since
  * the sniff cannot tell what it is.
+ *
+ * @param bytes - The file.
+ * @returns Whether to deny it.
  */
 export function isQtiData(bytes: Uint8Array): boolean {
   const text = startOf(bytes);

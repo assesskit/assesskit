@@ -5,15 +5,13 @@ import * as v from "valibot";
 import { checkHttpsUrl, checkNonEmptyString, checkPositiveInteger, checkRecord, describe } from "../../checks.js";
 import { LtiError } from "../../errors.js";
 import { type Caller, checkCaller, LTI_STORAGE_FRAME, type LtiFrame } from "../../protocol/index.js";
-import { MAX_IDENTIFIER_LENGTH, POSITIVE_NUMBER } from "../claims.js";
-import { readClock } from "../clock.js";
-import { randomToken } from "../random.js";
+import { MAX_IDENTIFIER_LENGTH, POSITIVE_NUMBER, randomToken, readClock } from "../internal.js";
 import { endpointsOf, type PlatformConfig } from "./config.js";
 import { checkLoginOptions, type PlatformLoginOptions } from "./options.js";
 import { checkToolRegistration, type ToolRegistration } from "./registration.js";
 import { sealHint, sealLoginHint } from "./tokens.js";
 
-/** How long a hint is valid, in seconds (D-M1). It is the time for the browser to go to the tool and back. */
+/** How long a hint is valid, in seconds . It is the time for the browser to go to the tool and back. */
 export const LTI_HINT_TTL_SECONDS = 300;
 
 /** Checks the item instance that the host passes. */
@@ -41,7 +39,7 @@ function checkLink(link: unknown): asserts link is LtiLink {
 
 /**
  * Refuses a URL on one of the platform's own origins. The tool's frame has `allow-same-origin`, so a tool on the player's
- * origin could reach the player (F-m8); one on the platform's or the asset origin would reach their pages.
+ * origin could reach the player; one on the platform's or the asset origin would reach their pages.
  */
 function refuseOwnOrigins(urls: readonly string[], config: PlatformConfig): void {
   const own = [config.origin, config.playerOrigin, config.assetOrigin];
@@ -55,7 +53,7 @@ function refuseOwnOrigins(urls: readonly string[], config: PlatformConfig): void
   }
 }
 
-/** Returns the URL that launches the link (BPIG §6.2.9): the secure one when the link has both. */
+/** Returns the URL that launches the link (BPIG section 6.2.9): the secure one when the link has both. */
 function launchUrlOf(link: LtiLink): string {
   const url = link.secureLaunchUrl ?? link.launchUrl;
   if (url === undefined) {
@@ -79,7 +77,7 @@ async function prepare(caller: Caller, item: ItemKey, link: LtiLink, options: Pl
   checkLink(link);
   if (caller.principal.length > MAX_IDENTIFIER_LENGTH) {
     throw new DataError(
-      `The principal of the caller is the sub of the launch and must have at most 255 characters (LTI 1.3 Core §5.3.6), found ${caller.principal.length}.`,
+      `The principal of the caller is the sub of the launch and must have at most 255 characters (LTI 1.3 Core section 5.3.6), found ${caller.principal.length}.`,
     );
   }
   const { config } = options;
@@ -128,6 +126,7 @@ async function prepare(caller: Caller, item: ItemKey, link: LtiLink, options: Pl
  * Prepares the launch of a tool for an item and returns the URL of the tool's third-party initiated login for the player
  * to navigate the item's frame to.
  *
+ * @remarks
  * The URL carries `iss`, `client_id`, `lti_deployment_id`, `target_link_uri` and `lti_storage_target`, and two hints:
  * `lti_message_hint` is HMAC-signed and names the session, the item and the principal with a random `jti` and an expiry of
  * `LTI_HINT_TTL_SECONDS`, and `login_hint` is the principal, signed with the same key. The hint also carries the
@@ -139,6 +138,8 @@ async function prepare(caller: Caller, item: ItemKey, link: LtiLink, options: Pl
  * @param caller - The authenticated caller of the host's route.
  * @param item - The item instance to launch the tool for.
  * @param link - The LTI link of the item, from the runtime's `readLtiLink`.
+ * @param options - The platform and its tools.
+ * @returns The URL of the tool's login.
  * @throws `DataError` when an argument or an option has the wrong type, the principal has more than 255 characters, the
  * link has no `https` launch URL or the highest score is not above 0.
  * @throws `AccessError` when `options.check` finds that the session is not the caller's.
@@ -162,6 +163,8 @@ export async function ltiPlatformLogin(
  * @param caller - The authenticated caller of the host's route.
  * @param item - The item instance to launch the tool for.
  * @param link - The LTI link of the item, from the runtime's `readLtiLink`.
+ * @param options - The platform and its tools.
+ * @returns The frame of the tool.
  * @throws `DataError`, `AccessError` and `LtiError` as {@link ltiPlatformLogin} does.
  */
 export async function ltiPlatformFrame(

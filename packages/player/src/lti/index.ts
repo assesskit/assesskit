@@ -1,6 +1,7 @@
 /**
  * LTI 1.3 in both roles.
  *
+ * @remarks
  * The tool role is a tool that a learning platform launches: it starts the OpenID Connect login (with a cookie, or with the
  * platform's browser storage in an iframe), validates the launch, answers a Deep Linking request and requests access
  * tokens for the platform's services.

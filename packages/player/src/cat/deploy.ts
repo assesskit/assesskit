@@ -5,7 +5,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { packageResolvers, type QtiPackage, resourcePath } from "@assesskit/runtime/package";
 import { checkFunction, checkRecord, describe } from "../checks.js";
 
-/** The section of the engine that deployment made for an adaptive section: the entry of `DeliveryDefinition.catSections`. */
+/** The section that the engine made for an adaptive section: the entry of `DeliveryDefinition.catSections`. */
 export interface DeployedCatSection {
   /** The URL prefix of the engine, the `qti-adaptive-engine-ref` of the section. */
   readonly prefix: string;
@@ -13,7 +13,11 @@ export interface DeployedCatSection {
   readonly sectionIdentifier: string;
 }
 
-/** The resource type of a test (BIND §8). */
+/**
+ * The resource type of a test in a content package.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/imscp/ | QTI 3.0 Best Practices and Implementation Guide, packaging}
+ */
 const TEST_RESOURCE = "imsqti_test_xmlv3p0";
 
 /** Returns the bytes of a file that a reference of an adaptive selection names, or none when the selection has no such reference. */
@@ -60,22 +64,29 @@ function adaptiveSections(pkg: QtiPackage): SectionNode[] {
 }
 
 /**
- * Deploys the adaptive sections of a package: for each one, it reads the files its `qti-adaptive-selection` references,
- * makes Create Section with the section data (CAT §3.1, §4.1), asks Get Section for the pool of the engine and checks it
- * against the item references of the section (CAT §3.2, §2.2). The engine's section identifiers are the result that
- * `DeliveryDefinition.catSections` takes, by the identifier of the section. Create Section is not repeated for a section
- * that already exists, so a host runs this once for a deployment.
+ * Deploys the adaptive sections of a package to their engines.
+ *
+ * @remarks
+ * For each adaptive section, it reads the files that its `qti-adaptive-selection` references, makes Create Section with
+ * the section data, asks Get Section for the pool of the engine and checks it against the item references of the
+ * section. The engine's section identifiers are the result that `DeliveryDefinition.catSections` takes, by the
+ * identifier of the section. Create Section is not repeated for a section that already exists, so a host runs this once
+ * for a deployment.
  *
  * - **Engine.** `port` returns the engine for a selection, by its `qti-adaptive-engine-ref`; the host decides which
  *   prefixes it trusts.
  * - **Settings.** A selection without `qti-adaptive-settings-ref` sends an empty settings file: the engine is configured
- *   elsewhere (CAT §2.2).
- * - **Failure.** The sections made before a failure stay; the error names the section and its identifier at the engine, so
- *   that the host can end it with `endSection`.
+ *   elsewhere.
+ * - **Failure.** The sections made before a failure stay; the error names the section and its identifier at the engine,
+ *   so that the host can end it with `endSection`.
  *
+ * @param pkg - The package that holds the tests.
+ * @param port - Returns the engine for an adaptive selection.
+ * @returns The sections of the engines by the identifier of the adaptive section.
  * @throws `DataError` when an argument has the wrong type, a referenced file is not in the package, two tests have an
  * adaptive section with the same identifier, or the pool of the engine and the section disagree.
- * @throws `ReadError` and `SecurityError` as `readPackage` documents do for a package that cannot be read.
+ * @throws `ReadError` and `SecurityError` as `readPackage` documents for a package that cannot be read.
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, Create Section and Get Section}
  */
 export async function deployCatSections(
   pkg: QtiPackage,

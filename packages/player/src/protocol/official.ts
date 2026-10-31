@@ -12,15 +12,17 @@ export type OfficialResult = AssessmentResult & {
   readonly [official]: true;
 };
 
-/** The reports that {@link markOfficial} returned. Only this file reaches the set. */
+/** The reports that {@link markOfficial} returned; only this file reaches the set. */
 const OFFICIAL_RESULTS = new WeakSet<object>();
 
 /**
- * Brands a results report as official. Only the session host calls it, on the report of a session it ran (the player design
- * §2.3); `server/` and `lti/` are the folders that import this file.
+ * Brands a results report as official.
+ *
+ * @remarks
+ * Only the session host calls it, on the report of a session it ran. `server` and `lti` reach it through `internal.ts`.
  *
  * @param result - A report that `Engine.results` assembled.
- * @returns The same object, now official.
+ * @returns The same object, branded.
  */
 export function markOfficial(result: AssessmentResult): OfficialResult {
   OFFICIAL_RESULTS.add(result);
@@ -29,8 +31,11 @@ export function markOfficial(result: AssessmentResult): OfficialResult {
 }
 
 /**
- * Tells whether a value is a report that the session host branded as official. A structural copy, and a report from anywhere else,
- * is not.
+ * Tells whether a value is a report that the session host branded as official. A structural copy of one, and a report
+ * from anywhere else, is not.
+ *
+ * @param value - Any value.
+ * @returns Whether the host branded it.
  */
 export function isOfficialResult(value: unknown): value is OfficialResult {
   return typeof value === "object" && value !== null && OFFICIAL_RESULTS.has(value);

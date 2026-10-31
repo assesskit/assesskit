@@ -1,13 +1,15 @@
 /**
- * The JSON-LD context of Caliper 1.2. Every event names it as its `@context` (Caliper 1.2 §4.1), and an envelope names it as
- * its `dataVersion` (§5.2).
+ * The JSON-LD context of Caliper 1.2. Every event names it as its `@context`, and an envelope names it as its
+ * `dataVersion`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/caliper/v1p2 | Caliper Analytics 1.2}
  */
 export const CALIPER_CONTEXT = "http://purl.imsglobal.org/ctx/caliper/v1p2";
 
-/** The terms of the Caliper events that the player writes (Caliper 1.2 §3.2 and §3.6). */
+/** The terms of the Caliper events that the player writes (Caliper 1.2 sections 3.2 and 3.6). */
 export type CaliperEventType = "AssessmentEvent" | "AssessmentItemEvent" | "NavigationEvent" | "GradeEvent";
 
-/** The profile that governs an event (Caliper 1.2 §2.1, Appendix E). */
+/** The profile that governs an event (Caliper 1.2 section 2.1, Appendix E). */
 export type CaliperProfile = "AssessmentProfile" | "GradingProfile";
 
 /** The actions of the events that the player writes (Caliper 1.2 Appendix D). */
@@ -22,8 +24,8 @@ export type CaliperAction =
   | "Graded";
 
 /**
- * An entity of an event (Caliper 1.2 §2.2). It always has an `id`, an IRI, and a `type`. The entities that it refers to are
- * named by their IRIs, which Caliper allows for any entity (§4.3).
+ * An entity of an event (Caliper 1.2 section 2.2). It always has an `id`, an IRI, and a `type`. The entities that it refers to are
+ * named by their IRIs, which Caliper allows for any entity (section 4.3).
  */
 export interface CaliperEntity {
   /** The IRI of the entity. */
@@ -54,7 +56,7 @@ export interface CaliperEntity {
   readonly dateCreated?: string;
 }
 
-/** A Caliper event as JSON-LD (Caliper 1.2 §2.1). */
+/** A Caliper event as JSON-LD (Caliper 1.2 section 2.1). */
 export interface CaliperEvent {
   /** The Caliper context, {@link CALIPER_CONTEXT}. */
   readonly "@context": typeof CALIPER_CONTEXT;

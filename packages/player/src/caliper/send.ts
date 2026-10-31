@@ -17,12 +17,12 @@ import { caliperTime } from "./time.js";
 /** The time that a call to the endpoint may take when the host sets none, in milliseconds. */
 export const DEFAULT_CALIPER_TIMEOUT_MS = 10_000;
 
-// RFC 6750 §2.1: the credential of the Bearer scheme is a b64token.
+// The credential of the Bearer scheme is a b64token (RFC 6750 section 2.1).
 const BEARER_TOKEN = /^[A-Za-z0-9\-._~+/]+=*$/u;
 
 /** A request of the sensor: the part of `RequestInit` that it uses. */
 export interface CaliperFetchInit {
-  /** Always `POST` (Caliper 1.2 §5.4). */
+  /** Always `POST` (Caliper 1.2 section 5.4). */
   readonly method: "POST";
   /** The headers: the media type, and the bearer token. */
   readonly headers: Readonly<Record<string, string>>;
@@ -49,15 +49,19 @@ export type CaliperFetch = (url: string, init: CaliperFetchInit) => Promise<Cali
 
 /** Where and as whom `sendCaliper` sends. */
 export interface CaliperSender {
-  /** The address of the Caliper endpoint, an `https` URL (Caliper 1.2 §5.4 requires TLS). */
+  /** The address of the Caliper endpoint, an `https` URL (Caliper 1.2 section 5.4 requires TLS). */
   readonly endpoint: string;
-  /** The bearer token that the endpoint validates (RFC 6750 §2.1). */
+  /** The bearer token that the endpoint validates (RFC 6750 section 2.1). */
   readonly token: string;
   /** Sends the request. */
   readonly fetch: CaliperFetch;
   /** The IRI that identifies the sensor, which is the application that sends. */
   readonly sensor: string;
-  /** The most time in milliseconds that the call may take, from the request to the last byte of the answer. Default: `10000`. */
+  /**
+   * The most time in milliseconds that the call may take, from the request to the last byte of the answer.
+   *
+   * @defaultValue {@link DEFAULT_CALIPER_TIMEOUT_MS}, `10000`
+   */
   readonly timeoutMs?: number;
 }
 
@@ -89,7 +93,7 @@ function checkOptions(value: unknown): asserts value is SendCaliperOptions {
   checkString(value.token, "The option token");
   if (!BEARER_TOKEN.test(value.token)) {
     throw new DataError(
-      "The option token must be a bearer token of RFC 6750 §2.1: letters, digits and -._~+/, then =.",
+      "The option token must be a bearer token of RFC 6750 section 2.1: letters, digits and -._~+/, then =.",
     );
   }
   checkFunction(value.fetch, "The option fetch must be a function");
@@ -98,17 +102,22 @@ function checkOptions(value: unknown): asserts value is SendCaliperOptions {
 }
 
 /**
- * Sends events to a Caliper endpoint in one envelope (Caliper 1.2 §5.2 and §5.4): a POST over HTTPS with the media type
- * `application/json` and the bearer token. A redirect is an error, because it would send the token elsewhere.
+ * Sends events to a Caliper endpoint in one envelope.
+ *
+ * @remarks
+ * The request is a POST over HTTPS with the media type `application/json` and the bearer token. A redirect is an error,
+ * because it would send the token elsewhere.
  *
  * Resending events duplicates nothing: an endpoint identifies an event by its `id`, which `caliperEvents` makes from the
  * session, the step and the position, so the same step always gives the same identifiers.
  *
  * @param events - The events, at least one.
  * @param options - The endpoint, the token, `fetch`, the sensor and the time of sending.
+ * @returns Nothing; the promise resolves when the endpoint answered with a status from 200 to 299.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ServiceError` with status `0` when the endpoint did not answer, and with its status and body when it answered
- * with another status than 2xx (Caliper 1.2 §6.1 names 400, 401, 415 and 422).
+ * with another status than 2xx; Caliper names 400, 401, 415 and 422.
+ * @see {@link https://www.imsglobal.org/spec/caliper/v1p2 | Caliper Analytics 1.2}, transport
  */
 export async function sendCaliper(events: readonly CaliperEvent[], options: SendCaliperOptions): Promise<void> {
   checkOptions(options);

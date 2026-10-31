@@ -1,9 +1,27 @@
 # LTI platform role
 
-`@assesskit/player/lti` also launches tools: an LTI resource in a package (BPIG §6.2.9, resource type
+`@assesskit/player/lti` also launches tools: an LTI resource in a package (resource type
 `imsbasiclti_xmlv1p3`) is an item that a tool delivers, and a conformant tool refuses a launch that skips the OpenID
 Connect handshake. The platform role is the other side of the [tool role](lti.md): it uses the same JWT, key set and HTTP
 primitives, with [jose](https://github.com/panva/jose).
+
+```mermaid
+sequenceDiagram
+  participant P as Player<br/>(browser)
+  participant H as Host route
+  participant T as Tool
+  participant L as Platform handlers<br/>(own origin)
+  P->>H: ltiLogin hook for an LTI item
+  H->>H: ltiPlatformFrame: check the caller, seal the hints
+  H-->>P: LtiFrame {url, storageUrl, allow}
+  P->>L: GET the storage page (hidden frame lti-storage)
+  P->>T: navigate frame lti-tool to the tool's login URL
+  T->>L: authentication request (ltiPlatformAuthorize)
+  L-->>T: page that posts the id_token to the redirect URI
+  T->>L: GET the key set (platformJwks), POST for a token (platformToken)
+  T->>L: GET the line item (agsLineItem), POST scores (agsScores)
+  L->>H: onScore(session, item, score)
+```
 
 | Function                                    | Does                                                                                                        |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -26,7 +44,7 @@ line item and the scores.
 ## Three origins
 
 The platform's handlers are served from `PlatformConfig.origin`, which differs from the origin of the player page and from
-the origin of the assets (D-M1). The frame of a tool has `allow-same-origin`, so a platform page on the player's origin
+the origin of the assets. The frame of a tool has `allow-same-origin`, so a platform page on the player's origin
 would share the origin with the player, and any injection into that page would reach it. Every handler therefore
 
 - refuses a configuration in which two of the three origins coincide, with `DataError`;
@@ -87,7 +105,7 @@ refused with `DataError`.
    `lti_message_hint`, `target_link_uri`, `client_id`, `lti_deployment_id` and `lti_storage_target=lti-storage`. The player
    shows the storage page in a hidden frame named `lti-storage`, and when it has loaded navigates the frame of the tool, named
    `lti-tool`, to the URL ([the storage page](#the-storage-page)).
-2. The tool answers with its authentication request (Security Framework §5.1.1.2) to the authorization endpoint.
+2. The tool answers with its authentication request (Security Framework section 5.1.1.2) to the authorization endpoint.
    `ltiPlatformAuthorize` checks it and answers with a page that posts the `id_token` and the `state` to the redirect URI.
 
 ### The hints
@@ -102,13 +120,13 @@ cross-site frame of the tool, where Safari and Firefox may withhold the host's s
 
 Both are signed and not encrypted, so the tool can read them: the principal is also the `sub` of the launch, and the session
 identifier must be one that the tool may know. Each is a compact JWS (RFC 7515) with `alg: HS256`, and its `typ` header says
-what it is for: `hint` or `login`. A token is refused for any other `typ` (RFC 8725 §3.11), and for any other `alg`. A hint is
+what it is for: `hint` or `login`. A token is refused for any other `typ` (RFC 8725 section 3.11), and for any other `alg`. A hint is
 valid for one use: `options.once` records its `jti`.
 
 ### What `ltiPlatformAuthorize` checks
 
 In this order. An `AccessError` means the request is not bound to a launch that the platform made, and a host maps it to 403.
-An `LtiError` means the tool broke the protocol. Neither redirects the browser to the tool (OpenID Connect Core §3.1.2.6).
+An `LtiError` means the tool broke the protocol. Neither redirects the browser to the tool (OpenID Connect Core section 3.1.2.6).
 
 | Check                                                                              | Error and reason                                                                                |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -184,9 +202,9 @@ offered, because the platform makes the one line item an item needs.
 
 ## The token endpoint
 
-`platformToken` grants the client-credentials grant with a JWT assertion (Security Framework §4.1.1). The access token is
+`platformToken` grants the client-credentials grant with a JWT assertion (Security Framework section 4.1.1). The access token is
 a compact JWS with `alg: HS256` and the `typ` `access`, signed with the hint key; it lasts one hour and holds the requested scopes, which must be among `lineitem.readonly` and `score`.
-A request that fails gets status 400 with an `error` and an `error_description` (RFC 6749 §5.2). The checks, in order:
+A request that fails gets status 400 with an `error` and an `error_description` (RFC 6749 section 5.2). The checks, in order:
 
 | Check                                                                                                      | `error`                  |
 | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
@@ -207,10 +225,10 @@ set that cannot be fetched reaches the host, and the assertion is not used up.
 
 The line item URL is `{origin}/ags/{line item}`. The identifier is a compact JWS with `alg: HS256` and the `typ` `line-item`, signed with the hint key, and names the session, the item
 instance, the tool, the user (`sub`), the label and the highest score, so the platform keeps no state. It has no expiry: a
-tool may post a score long after the test (LTI AGS 2.0 §3.1).
+tool may post a score long after the test (LTI AGS 2.0 section 3.1).
 
 `agsLineItem` answers a GET with `application/vnd.ims.lis.v2.lineitem+json`: `id`, `label` (the title of the link),
-`scoreMaximum` (`options.scoreMaximum(item)` at the login, above 0, LTI AGS 2.0 §3.2.8) and `resourceLinkId`, the `id` of
+`scoreMaximum` (`options.scoreMaximum(item)` at the login, above 0, LTI AGS 2.0 section 3.2.8) and `resourceLinkId`, the `id` of
 the launch's resource link. `agsScores` receives `POST {line item}/scores` with `application/vnd.ims.lis.v1.score+json` and
 answers 204.
 
@@ -224,45 +242,27 @@ answers 204.
 | 400    | The body is not JSON or not a score                                                                                                              |
 
 `readAgsScore` reads the body of a score. `userId`, `timestamp`, `activityProgress` and `gradingProgress` are required. A
-`scoreGiven` is a number from 0, may be higher than `scoreMaximum` (§3.4.4), and needs a `scoreMaximum` above 0; `null` or
-absent means no score. The `timestamp` is ISO 8601 with a time zone designator (`Z`, `+00:00` or `+00`; §3.4.9); a fraction
+`scoreGiven` is a number from 0, may be higher than `scoreMaximum` (section 3.4.4), and needs a `scoreMaximum` above 0; `null` or
+absent means no score. The `timestamp` is ISO 8601 with a time zone designator (`Z`, `+00:00` or `+00`; section 3.4.9); a fraction
 of a second is read when it is there. `timestampMs` is the same instant in milliseconds, so that scores of one line item and
-user compare across time zones. The platform must not update a result with an older score (§3.4.9), and `agsScores` does not
+user compare across time zones. The platform must not update a result with an older score (section 3.4.9), and `agsScores` does not
 keep one: `onScore` receives every score that passed the checks, and the host keeps the one with the greatest `timestampMs`.
 `createLtiScoreIntake` of `@assesskit/player/server` does that and supplies the final score to the session
 ([server](server.md#the-scores-of-lti-items)).
 
 ## Example
 
-A host with the Fetch API request and response types, one tool and an in-memory ledger. The tool's key set is fetched from its
-URL.
+A host has one tool and an in-memory ledger of the identifiers that were used. The tool's key set is fetched from its URL.
 
 ```ts
-import type { ItemKey } from "@assesskit/runtime/delivery";
-import type { LtiLink } from "@assesskit/runtime/package";
-import {
-  type AgsScore,
-  agsLineItem,
-  agsScores,
-  createJwksCache,
-  type HttpRequest,
-  type HttpResponse,
-  type LtiFrame,
-  ltiPlatformAuthorize,
-  ltiPlatformFrame,
-  type PlatformConfig,
-  platformJwks,
-  platformStorage,
-  platformToken,
-  type ToolRegistration,
-} from "@assesskit/player/lti";
+import { createJwksCache, ltiPlatformFrame, platformEndpoints, platformJwks } from "@assesskit/player/lti";
 
 const keys = await crypto.subtle.generateKey(
   { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
   true,
   ["sign", "verify"],
 );
-const config: PlatformConfig = {
+const config = {
   issuer: "https://platform.example",
   origin: "https://lti.platform.example",
   playerOrigin: "https://player.platform.example",
@@ -270,7 +270,7 @@ const config: PlatformConfig = {
   keys,
   hintKey: await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]),
 };
-const tool: ToolRegistration = {
+const tool = {
   clientId: "962fa4d8-bcbf-49a0-94b2-2de05ad274af",
   deploymentId: "07940580-b309-415e-a37c-914d387c1150",
   loginUrl: "https://tool.example.com/lti/login",
@@ -278,60 +278,47 @@ const tool: ToolRegistration = {
   jwksUrl: "https://tool.example.com/.well-known/jwks.json",
 };
 
-const clock = { now: () => Date.now() };
-const used = new Map<string, number>();
+const used = new Map();
 const options = {
   config,
-  clock,
-  registration: async (_link: LtiLink) => tool,
-  client: async (clientId: string) => (clientId === tool.clientId ? tool : undefined),
+  clock: { now: () => Date.now() },
+  registration: async (link) => tool,
+  client: async (clientId) => (clientId === tool.clientId ? tool : undefined),
   jwks: createJwksCache({ fetch }),
-  once: async (id: string, expiresAt: number) => {
+  once: async (id, expiresAt) => {
     if (used.has(id)) return false;
     used.set(id, expiresAt);
     return true;
   },
-  scoreMaximum: async (_item: ItemKey) => 10,
-  onScore: async (session: string, item: ItemKey, score: AgsScore) => {
-    console.log(session, item.ref, score.gradingProgress, score.scoreGiven);
-  },
+  scoreMaximum: async (item) => 10,
+  onScore: async (session, item, score) => {},
 };
 
-async function toHttpRequest(request: Request): Promise<HttpRequest> {
-  return {
-    method: request.method,
-    url: request.url,
-    headers: Object.fromEntries(request.headers),
-    body: await request.text(),
-  };
-}
+// The route behind the `ltiLogin` hook of the player, behind the host's own authentication. Take the item and its link from
+// the session, as the host knows them, and not from the request: a candidate must not launch the tool of an item that is not open.
+const link = {
+  title: "Essay tool",
+  secureLaunchUrl: "https://tool.example.com/lti/launch",
+  custom: new Map(),
+  extensions: [],
+};
+const caller = { session: "s1", principal: "candidate-7" };
+const frame = await ltiPlatformFrame(caller, { ref: "q1", instance: 1 }, link, {
+  ...options,
+  check: async () => undefined,
+});
+frame.url.startsWith("https://tool.example.com/lti/login?"); // => true
+frame.storageUrl; // => "https://lti.platform.example/storage"
 
-function toResponse({ status, headers, body }: HttpResponse): Response {
-  return new Response(status === 204 ? null : body, { status, headers });
-}
-
-/**
- * The route of the host behind the `ltiLogin` hook of the player, behind its own authentication. It answers with JSON: the
- * URL of the tool's login, the storage page and the `allow` list. Take the item and its link from the session, as the host
- * knows them, and not from the request: a candidate must not launch the tool of an item that is not open.
- */
-export function frameFor(session: string, principal: string, item: ItemKey, link: LtiLink): Promise<LtiFrame> {
-  return ltiPlatformFrame({ session, principal }, item, link, { ...options, check: async () => undefined });
-}
-
-/** The routes of the platform's own origin. */
-export async function platform(request: Request): Promise<Response> {
-  const { pathname } = new URL(request.url);
-  const http = await toHttpRequest(request);
-  if (pathname === "/authorize") return toResponse(await ltiPlatformAuthorize(http, options));
-  if (pathname === "/jwks") return toResponse(await platformJwks(options));
-  if (pathname === "/storage") return toResponse(await platformStorage(options));
-  if (pathname === "/token") return toResponse(await platformToken(http, options));
-  if (pathname.endsWith("/scores")) return toResponse(await agsScores(http, options));
-  if (pathname.startsWith("/ags/")) return toResponse(await agsLineItem(http, options));
-  return new Response(null, { status: 404 });
-}
+// The routes of the platform's own origin answer at the endpoints that the tool's administrator registers.
+platformEndpoints(config).token; // => "https://lti.platform.example/token"
+const jwks = await platformJwks(options);
+jwks.status; // => 200
 ```
+
+The host routes `/authorize` to `ltiPlatformAuthorize`, `/jwks` to `platformJwks`, `/storage` to `platformStorage`, `/token` to
+`platformToken`, `/ags/{line item}/scores` to `agsScores` and `/ags/{line item}` to `agsLineItem`, each with an `HttpRequest`
+that it builds from the request of its web framework.
 
 ## Deployment
 

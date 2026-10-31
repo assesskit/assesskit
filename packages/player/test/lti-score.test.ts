@@ -16,8 +16,9 @@ import {
   publishScore,
   type ResourceLinkLaunch,
 } from "../src/lti/index.js";
-import { gradingProgressOf, scoreFields } from "../src/lti/score-body.js";
-import { markOfficial, type OfficialResult } from "../src/protocol/official.js";
+import { gradingProgressOf, scoreFields } from "../src/lti/internal.js";
+import type { OfficialResult } from "../src/protocol/index.js";
+import { markOfficial } from "../src/protocol/internal.js";
 import { FakeLms, LINE_ITEM_URL, SCORE_TYPE, SUBJECT } from "./lti-fake-lms.js";
 import { cookieOf, FakePlatform, MemoryStore, registrationOf } from "./lti-fake-platform.js";
 import { createClock, generateKeyPair, type TestClock } from "./lti-fixture.js";
@@ -104,7 +105,7 @@ const waiting = (...modes: readonly ("human" | "externalMachine")[]): PendingWor
 });
 
 describe("publishScore", () => {
-  it("posts a final score as LTI AGS 2.0 example 3.4.3.1 does: scoreGiven with scoreMaximum, Completed and FullyGraded", async () => {
+  it("posts a final score as the specification shows it: scoreGiven with scoreMaximum, Completed and FullyGraded", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 83, MAXSCORE: 100 }), launch, nothing, options);
     expect(lms.accepted).toEqual([
@@ -121,7 +122,7 @@ describe("publishScore", () => {
     expect(lms.platform.grants.map(({ scope }) => scope)).toEqual([`${AGS}score`]);
   });
 
-  it("posts a score that waits for a person as example 3.4.8.1 does, without a score, though the report has one", async () => {
+  it("posts a score that waits for a person without a score, though the report has one", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 12, MAXSCORE: 100 }), launch, waiting("human", "externalMachine"), options);
     expect(lms.accepted).toEqual([

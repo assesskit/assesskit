@@ -5,14 +5,15 @@ import type { ViewDocuments } from "./documents.js";
 export interface DispatchResult {
   /** The view after the action; when it was refused, the view of the state as it was. */
   readonly view: CandidateView;
-  /** Why the engine refused the action. Default: none, the action was applied. */
+  /**
+   * Why the engine refused the action.
+   *
+   * @defaultValue none, the action was applied
+   */
   readonly refusal?: Refusal;
 }
 
-/**
- * The one interface the player mounts against, whether the engine runs on a server (exam mode) or on the device
- * (practice): it never knows the mode (the player design §2.3).
- */
+/** The one interface the player mounts against, whether the engine runs on a server (exam mode) or on the device (practice). */
 export interface SessionClient {
   /** The latest view. */
   readonly view: CandidateView;
@@ -21,19 +22,34 @@ export interface SessionClient {
   /**
    * Returns the milliseconds since `view` was built or received, on the client's clock: the timers of a view count down
    * from the moment it was made.
+   *
+   * @returns The age in milliseconds.
    */
   age(): number;
-  /** Turns the path of a file in the package into the URL to load it from: the base URL of the longest asset prefix of the latest view that holds the path, plus the path. */
+  /**
+   * Turns the path of a file in the package into the URL to load it from: the base URL of the longest asset prefix of the
+   * latest view that holds the path, plus the path.
+   *
+   * @param path - The path in the package.
+   * @returns The URL.
+   */
   assets(path: string): string;
   /**
    * Sends an action and resolves with the view after it. A client may hold back `set-responses` actions, which it sends
    * together after a pause; the promise then resolves when they were answered.
    *
+   * @param action - The action.
+   * @returns The view after the action, and the refusal when the engine did not apply it.
    * @throws `DataError` when the host refuses the action as outside the policy or malformed.
    * @throws `ServiceError` when the host cannot be reached or cannot save.
    */
   dispatch(action: CandidateAction): Promise<DispatchResult>;
-  /** Calls the listener with every new view, and returns the function that removes it. */
+  /**
+   * Calls the listener with every new view.
+   *
+   * @param listener - The function to call.
+   * @returns The function that removes the listener.
+   */
   subscribe(listener: (view: CandidateView) => void): () => void;
   /** Stops the timers and the listeners of the client. The client belongs to the host's page, so unmounting the player does not close it. */
   close(): void;

@@ -14,10 +14,16 @@ export interface ViewEnvelope {
   readonly assets: Readonly<Record<string, string>>;
   /**
    * The documents the content of the view comes from, so that a client resolves the references in it against the right
-   * path. Default: none, so that every reference resolves against the root of the package.
+   * path.
+   *
+   * @defaultValue none, so that every reference resolves against the root of the package
    */
   readonly documents?: ViewDocuments;
-  /** Why the engine refused the action this answers, which then left the state as it was. Default: none, the action was applied. */
+  /**
+   * Why the engine refused the action this answers, which then left the state as it was.
+   *
+   * @defaultValue none, the action was applied
+   */
   readonly refusal?: Refusal;
 }
 
@@ -31,8 +37,12 @@ const viewEnvelopeSchema: Schema<unknown> = v.strictObject({
 });
 
 /**
- * Checks the shape of a view envelope that arrived as JSON. The view is not read: that is `viewFromJson`.
+ * Checks the shape of a view envelope that arrived as JSON.
  *
+ * @remarks
+ * The view is not read here: the runtime's `viewFromJson` reads it.
+ *
+ * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `seq`, `view`, `assets` and, optionally, `documents`
  * and `refusal` only, `seq` a non-negative integer, `assets` an object of strings, `documents` the documents of a view
  * and `refusal` a refusal of the runtime.

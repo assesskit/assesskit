@@ -1,6 +1,12 @@
 import { DataError } from "@assesskit/runtime/errors";
-import { AGS_SCOPE } from "../claims.js";
-import { checkHttpRequest, errorBody, type HttpRequest, type HttpResponse, jsonResponse } from "../http.js";
+import {
+  AGS_SCOPE,
+  checkHttpRequest,
+  errorBody,
+  type HttpRequest,
+  type HttpResponse,
+  jsonResponse,
+} from "../internal.js";
 import { readAccess } from "./access.js";
 import { readAgsScore } from "./ags-score.js";
 import { LINE_ITEM_PATH } from "./config.js";
@@ -48,14 +54,18 @@ function mediaType(request: HttpRequest): string | undefined {
 }
 
 /**
- * Answers a request for the line item of an item instance (LTI AGS 2.0 §3.2.2.1): `GET {origin}/ags/{line item}`.
+ * Answers a request for the line item of an item instance (LTI AGS 2.0 section 3.2.2.1): `GET {origin}/ags/{line item}`.
  *
+ * @remarks
  * The line item is the one that `ltiPlatformAuthorize` named in the launch. The request needs a token of the tool that the
  * line item is for, with the scope `lineitem.readonly` or `lineitem`. The answer has the media type
  * `application/vnd.ims.lis.v2.lineitem+json` and `id`, `label`, `scoreMaximum` and `resourceLinkId`. It is 401 for a missing
  * or unusable token, 403 for a missing scope or another tool's line item, 404 for a path that names no line item, and 405
  * for a method other than GET.
  *
+ * @param request - The request.
+ * @param options - The platform.
+ * @returns The answer.
  * @throws `AccessError` (`wrong-origin`) when the request is for another origin than the platform's.
  * @throws `DataError` when the request or the options have the wrong type.
  */
@@ -80,15 +90,19 @@ export async function agsLineItem(request: HttpRequest, options: PlatformOptions
 }
 
 /**
- * Receives a score (LTI AGS 2.0 §3.4): `POST {origin}/ags/{line item}/scores` with the media type
+ * Receives a score (LTI AGS 2.0 section 3.4): `POST {origin}/ags/{line item}/scores` with the media type
  * `application/vnd.ims.lis.v1.score+json`.
  *
+ * @remarks
  * The request needs a token of the tool that the line item is for, with the scope `score`, and a score that
  * `readAgsScore` accepts and whose `userId` is the `sub` of the launch. A `scoreGiven` above `scoreMaximum` is accepted
- * (§3.4.4). The score goes to `options.onScore` with the session and the item instance, and the answer is 204. It is 401 for
+ * (section 3.4.4). The score goes to `options.onScore` with the session and the item instance, and the answer is 204. It is 401 for
  * a missing or unusable token, 403 for a missing scope, another tool's line item or another user, 404 for a path that
  * names no line item, 405 for a method other than POST, 415 for another media type and 400 for a body that is not a score.
  *
+ * @param request - The request.
+ * @param options - The platform, and what to do with a score.
+ * @returns The answer.
  * @throws `AccessError` (`wrong-origin`) when the request is for another origin than the platform's.
  * @throws `DataError` when the request or the options have the wrong type.
  */

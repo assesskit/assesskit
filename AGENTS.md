@@ -1,13 +1,27 @@
 # AGENTS.md
 
-Conventions for people and coding agents working in this repository. Read this before changing anything. Most
-rules are enforced by `pnpm lint` (Biome and cspell), `pnpm typecheck`, `pnpm knip`,
-`pnpm compat` and `pnpm docs:api`; the rest are checked in review.
+Conventions for people and coding agents working in this repository. Read this before changing anything. Most rules are
+enforced by `pnpm lint` (Biome and cspell), `pnpm check:standards`, `pnpm typecheck`, `pnpm knip`, `pnpm compat` and
+`pnpm docs:api`; the rest are checked in review.
 
-assesskit is a toolkit for QTI 3.0 in JavaScript and TypeScript, in one repository: `@assesskit/runtime` is the QTI 3.0 runtime, and
-`@assesskit/player` is the player built on it.
-[docs/runtime/architecture.md](docs/runtime/architecture.md) and
+assesskit is a toolkit for QTI 3.0 in JavaScript and TypeScript, in one repository: `@assesskit/runtime` is the QTI 3.0 runtime,
+and `@assesskit/player` is the player built on it. [docs/runtime/architecture.md](docs/runtime/architecture.md) and
 [docs/player/architecture.md](docs/player/architecture.md) state the design principles; follow them.
+
+```mermaid
+flowchart TB
+  subgraph pkg["A package"]
+    index["a module's index.ts<br/>the public API"]
+    internal["a module's internal.ts<br/>shared inside the package, never exported"]
+    files["the module's files<br/>one concept each"]
+  end
+  other["another module of the package"] -->|"imports only"| index
+  other -->|"or"| internal
+  other -. "never a deep path" .-> files
+  tests["test/"] -->|"the same entries"| index
+  pkg --> gates["pnpm lint, check:standards, typecheck, test, knip"]
+  gates --> merge["Merge"]
+```
 
 ## Terms
 
@@ -28,7 +42,7 @@ Use these words with these meanings in code, comments and docs.
 | outcome                   | A variable that processing sets, such as `SCORE`.                                                                                  |
 | template variable         | A variable that template processing sets once for an item instance.                                                                |
 | context variable          | A variable that a test declares and its items read.                                                                                |
-| NULL                      | The absence of a value (INFO §2.2.2). In code it is `null`, never `undefined`.                                                     |
+| NULL                      | The absence of a value (INFO section 2.2.2). In code it is `null`, never `undefined`.                                              |
 | container                 | A value of cardinality `multiple`, `ordered` or `record`.                                                                          |
 | interaction               | An element that presents a task and binds a response variable.                                                                     |
 | choice                    | An option of a choice-based interaction.                                                                                           |
@@ -39,68 +53,54 @@ Use these words with these meanings in code, comments and docs.
 
 ## Layout
 
-```
-packages/runtime/         the QTI 3.0 runtime
-  src/index.ts            re-exports the modules, the errors and the random number generator
-  src/errors.ts           AssesskitError, DataError, ReadError, SecurityError, ProcessingError; Issue; the subpath `errors` exports
-                          them without the rest of the package, for the player
-  src/checks.ts           checks of one value: describe, isRecord, and checkRecord, checkArray, checkOptions,
-                          checkFunction, checkString, checkBytes, checkBoolean, checkChoice, checkFinite, checkNonNegative,
-                          checkNonNegativeInteger, checkPositiveInteger, checkSeed, checkSynchronous; and the
-                          valibot side: parseWith, transformWith, mapSchema, recordSchema and the schemas of a
-                          number or a string
-  src/random.ts           Random, SeededRandom, createRandom, restoreRandom
-  src/<module>/           one folder per module, with an index.ts
-  test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output; differential/ holds the harness that
-                          compares the runtime with Longsight qti3-core, a development dependency
-packages/player/          the player
-  src/index.ts            re-exports the errors and the messages
-  src/errors.ts           AccessError, LtiError, ServiceError; they extend the runtime's AssesskitError, and the player throws the
-                          runtime's DataError
-  src/checks.ts           describe, isRecord, and checkRecord, checkArray, checkFunction, checkProperties, checkString,
-                          checkNonEmptyString, checkNonNegativeInteger, checkPositiveInteger, checkBoolean, checkPositive,
-                          checkChoice; and the valibot side: parseWith, mapSchema, recordSchema, guardSchema,
-                          methodsSchema, functionSchema and the schemas of a number or a string
-  src/messages/           Messages, the English and Indonesian catalogs, selectMessages
-  src/protocol/           Caller, ActionEnvelope, ViewEnvelope and Submission, with their checks
-  src/<folder>/           player/, client/, server/, scoring/, cat/, lti/ and caliper/, as the build units add them
-  player.css              the stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation
-  scripts/                build-static.ts writes the static files of the player: the PCI frame and the recording worklet
-  test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
-                          *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
-                          commands of the browser tests
-examples/<package>/       runnable examples, one folder each, a package of its own with the dependencies that only it
-                          needs; the `test/` of an example runs it, and `pnpm test` includes it
-docs/runtime/             guides of the runtime, one per module, and architecture, conventions, spec-gaps, evidence and
-                          supported; TypeDoc publishes them with the API reference
-docs/player/              guides of the player, with architecture, evidence and supported
-compat/                   the browser baseline: the lint of the built code, the smoke test and the pinned engines
-scripts/                  corpus and schema downloads, the pinned corpus, Unicode and element table generators
-validation/               Python scripts that write fixtures
-biome/                    Biome GritQL plugins
-```
+| Path                             | Holds                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/runtime/`              | The QTI 3.0 runtime                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `packages/runtime/src/index.ts`  | Re-exports the modules, the errors and the random number generator                                                                                                                                                                                                                                                                                                                                                        |
+| `packages/runtime/src/errors.ts` | `AssesskitError`, `DataError`, `ReadError`, `SecurityError`, `ProcessingError` and `Issue`; the subpath `errors` exports them without the rest of the package, for the player                                                                                                                                                                                                                                             |
+| `packages/runtime/src/checks.ts` | Checks of one value: `describe`, `isRecord`, and `checkRecord`, `checkArray`, `checkOptions`, `checkFunction`, `checkString`, `checkBytes`, `checkBoolean`, `checkChoice`, `checkFinite`, `checkNonNegative`, `checkNonNegativeInteger`, `checkPositiveInteger`, `checkSeed`, `checkSynchronous`; and the valibot side: `parseWith`, `transformWith`, `mapSchema`, `recordSchema` and the schemas of a number or a string |
+| `packages/runtime/src/random.ts` | `Random`, `SeededRandom`, `createRandom`, `restoreRandom`                                                                                                                                                                                                                                                                                                                                                                 |
+| `packages/runtime/src/<module>/` | One folder per module, with `index.ts`, `internal.ts` where other modules or the tests need more, and one file per concept                                                                                                                                                                                                                                                                                                |
+| `packages/runtime/test/`         | `<module>.test.ts` for each source folder; `fixtures/` holds oracle output; `differential/` holds the harness that compares the runtime with Longsight `qti3-core`, a development dependency                                                                                                                                                                                                                              |
+| `packages/player/`               | The player                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `packages/player/src/index.ts`   | Re-exports the errors and the messages                                                                                                                                                                                                                                                                                                                                                                                    |
+| `packages/player/src/errors.ts`  | `AccessError`, `LtiError`, `ServiceError`; they extend the runtime's `AssesskitError`, and the player throws the runtime's `DataError`                                                                                                                                                                                                                                                                                    |
+| `packages/player/src/checks.ts`  | The checks of the player: `describe`, `isRecord`, `checkRecord`, `checkArray`, `checkFunction`, `checkProperties`, `checkString`, `checkNonEmptyString`, `checkNonNegativeInteger`, `checkPositiveInteger`, `checkBoolean`, `checkPositive`, `checkChoice`; and the valibot side: `parseWith`, `mapSchema`, `recordSchema`, `guardSchema`, `methodsSchema`, `functionSchema` and the schemas of a number or a string      |
+| `packages/player/src/messages/`  | `Messages`, the English and Indonesian catalogs, `selectMessages`                                                                                                                                                                                                                                                                                                                                                         |
+| `packages/player/src/protocol/`  | `Caller`, `ActionEnvelope`, `ViewEnvelope` and `Submission`, with their checks                                                                                                                                                                                                                                                                                                                                            |
+| `packages/player/src/<folder>/`  | `player/`, `client/`, `server/`, `scoring/`, `cat/`, `lti/` and `caliper/`                                                                                                                                                                                                                                                                                                                                                |
+| `packages/player/player.css`     | The stylesheet of a content root: themes, the QTI 3 shared vocabulary, the PNP presentation                                                                                                                                                                                                                                                                                                                               |
+| `packages/player/scripts/`       | `build-static.ts` writes the static files of the player: the PCI frame and the recording worklet                                                                                                                                                                                                                                                                                                                          |
+| `packages/player/test/`          | `<folder>.test.ts` for each source folder; `lint.test.ts` runs Biome on the layering and the GritQL rules; `*.browser.test.ts` render in Chromium, Firefox and WebKit; `fixtures/` holds the servers and commands of the browser tests                                                                                                                                                                                    |
+| `examples/<package>/`            | Runnable examples, one folder each, a package of its own with the dependencies that only it needs; the `test/` of an example runs it, and `pnpm test` includes it                                                                                                                                                                                                                                                         |
+| `docs/runtime/`, `docs/player/`  | The guides of each package, one per module, with architecture, evidence and supported; TypeDoc publishes them with the API reference                                                                                                                                                                                                                                                                                      |
+| `compat/`                        | The browser baseline: the lint of the built code, the smoke test and the pinned engines                                                                                                                                                                                                                                                                                                                                   |
+| `scripts/`                       | Corpus and schema downloads, the pinned corpus, the Unicode and element table generators, and the standards check                                                                                                                                                                                                                                                                                                         |
+| `validation/`                    | Python scripts that write fixtures                                                                                                                                                                                                                                                                                                                                                                                        |
+| `biome/`                         | Biome GritQL plugins                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## Commands
 
-```bash
-pnpm install
-pnpm lint               # Biome and cspell; `pnpm format` fixes formatting
-pnpm typecheck          # tsc over every package and the tooling
-pnpm test               # Vitest, offline
-pnpm test:browser       # the browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
-pnpm test:corpus        # tests that read the corpus; run `pnpm corpus` first
-pnpm test:xsd           # tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first
-pnpm bench              # the benchmarks of the runtime against their budgets
-pnpm schemas            # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
-pnpm unicode            # regenerates the Unicode tables of `values` from the pinned files
-pnpm asi-table          # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
-pnpm knip               # unused files, exports and dependencies
-pnpm compat             # the built JavaScript and the CSS of the player stay inside the browser baseline; run `pnpm build` first
-pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; run `pnpm build` first
-pnpm build              # tsc -b after deleting dist/, so that no stale output ships
-pnpm check:packages     # builds, then publint and Are the Types Wrong on the packed packages
-pnpm docs:api           # TypeDoc into docs/api; fails on undocumented exports
-```
+| Command                | Does                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm install`         | Installs the dependencies and the git hooks                                                                                                      |
+| `pnpm lint`            | Biome and cspell; `pnpm format` fixes formatting                                                                                                 |
+| `pnpm check:standards` | The rules of the engineering standards that a tool can check; `node scripts/check-standards.ts <path>...` reports only the files below the paths |
+| `pnpm typecheck`       | `tsc` over every package and the tooling                                                                                                         |
+| `pnpm test`            | Vitest, offline                                                                                                                                  |
+| `pnpm test:browser`    | The browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first      |
+| `pnpm test:corpus`     | Tests that read the corpus; run `pnpm corpus` first                                                                                              |
+| `pnpm test:xsd`        | Tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first                                                                    |
+| `pnpm bench`           | The benchmarks of the runtime against their budgets                                                                                              |
+| `pnpm schemas`         | Downloads the XSDs into `.cache/schemas`; `pnpm schemas:pin` writes new hashes                                                                   |
+| `pnpm unicode`         | Regenerates the Unicode tables of `values` from the pinned files                                                                                 |
+| `pnpm asi-table`       | Regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first                                                      |
+| `pnpm knip`            | Unused files, exports and dependencies                                                                                                           |
+| `pnpm compat`          | The built JavaScript and the CSS of the player stay inside the browser baseline; run `pnpm build` first                                          |
+| `pnpm compat:engines`  | The smoke test in the pinned old browsers, in Docker; run `pnpm build` first                                                                     |
+| `pnpm build`           | `tsc -b` after deleting `dist/`, so that no stale output ships                                                                                   |
+| `pnpm check:packages`  | Builds, then publint and Are the Types Wrong on the packed packages                                                                              |
+| `pnpm docs:api`        | TypeDoc into `docs/api`; fails on undocumented exports                                                                                           |
 
 Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `compat/` and
 `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
@@ -115,7 +115,7 @@ Changesets version and publish the packages, each on its own version. A release 
 runs `pnpm changeset version`, which bumps the versions, writes `CHANGELOG.md` and consumes the changesets. After it is
 merged, the maintainer runs the Release workflow by hand: it builds and publishes the versions not yet on npm. No
 workflow opens pull requests, and Dependabot version updates are off. Changesets, docs and TSDoc describe current
-behavior only, without "now", "no longer", "renamed" or "previously".
+behavior only, and never how it came to be.
 
 ## Boundary between the runtime and the player
 
@@ -139,8 +139,14 @@ The runtime owns everything QTI defines that is not presentation or platform; th
   [architecture.md](docs/runtime/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
   `random.ts`. Biome enforces the rows, and imports never form cycles.
 - The runtime core uses no platform API: no `node:*`, `fetch`, timers, DOM or `process`. Only `node/` and `cli/` may.
+- A module imports another module of its package only through that module's `index.ts` (its public API) or its `internal.ts`
+  (what the package's other modules and its tests share and the package does not export), never by a deep file path. A file
+  directly in `src/`, such as `errors.ts` and `checks.ts`, is not in a module. `pnpm check:standards` enforces it, for `src/`
+  and `test/`.
 - `scripts/schemas.ts` imports `packages/runtime/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
-  `assesskit schemas fetch` run one implementation. Node runs that file directly, so it imports only `node:*` modules and types.
+  `assesskit schemas fetch` run one implementation. Node runs that file directly and does not resolve the `.js` specifiers of an
+  `internal.ts`, so the file imports only `node:*` modules and types. `scripts/asi-table.ts` imports only types, through
+  `asi/internal.ts`.
 - `packages/runtime` never imports `@assesskit/player`. `@assesskit/player` and the other packages import the runtime by package name and subpath, never
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
@@ -228,13 +234,17 @@ untested in the others.
 - `//` comments only explain why something non-obvious is done: an ambiguity of a specification, a numerical trap, an
   invariant. No commented-out code.
 - US English. Docs state facts in short sentences; prefer a table or list to prose. Code samples are complete: they
-  show their imports. A guide gives the result of a sample as `// => result`, and `runGuideSamples` of
-  `test/guide-samples.ts` runs the samples in the test file of the module and fails on a result that differs. No
-  marketing language, emojis or filler. The Example
-  of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails when the README
-  shows other code or other output.
-- Diagrams are Mermaid in Markdown. GitHub renders them, and the Mermaid plugin of TypeDoc renders them on the docs site
-  (`typedoc.json` pins the version of Mermaid that the site loads).
+  show their imports and hold no TypeScript syntax, so that they run as they are. A guide gives the result of a sample as
+  `// => result`, and `runGuideSamples` of `test/guide-samples.ts` runs the samples in the test file of the module and fails on
+  a result that differs. The guides of the player are imported with `?raw`, and a guide whose samples need a page (the client)
+  runs in `guides.browser.test.ts`. What a call throws goes into a table of errors, not into a sample. No marketing language,
+  emojis or filler. The Example of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and
+  `readme.test.ts` fails when the README shows other code or other output; the Quick start of `packages/player/README.md` runs
+  in `protocol.test.ts`.
+- Visualization comes first, then tables, then short prose. Every README, `CONTRIBUTING.md` and guide opens with a Mermaid
+  diagram of the architecture, the flow or the states that it describes (`pnpm check:standards` fails without one). GitHub
+  renders the diagrams, and the Mermaid plugin of TypeDoc renders them on the docs site (`typedoc.json` pins the version of
+  Mermaid that the site loads).
 - Each document has one purpose: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the contribution
   process, `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for running the
   fixture scripts.

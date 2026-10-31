@@ -49,7 +49,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Checks a value against the XML Schema type that the context coerces the term to (Caliper 1.2 §4.3). */
+/** Checks a value against the XML Schema type that the context coerces the term to (Caliper 1.2 section 4.3). */
 function valueProblem(type: string, value: unknown): string | undefined {
   switch (type) {
     case "xsd:string":
@@ -117,7 +117,7 @@ function nodeProblems(node: unknown, path: string): string[] {
 /**
  * Returns what is wrong with an event as a JSON-LD document of Caliper 1.2. It checks that the document names the Caliper
  * context, that every term is one the context defines, that every value has the type the context coerces its term to,
- * that the properties §2.1 requires are there, and that the event's identifier is a URN of a UUID.
+ * that the properties section 2.1 requires are there, and that the event's identifier is a URN of a UUID.
  */
 export function eventProblems(event: unknown): string[] {
   if (!isRecord(event)) return ["The event is not an object."];
@@ -133,7 +133,7 @@ export function eventProblems(event: unknown): string[] {
   return [...problems, ...nodeProblems(rest, "event")];
 }
 
-/** The properties of an envelope, and no others (Caliper 1.2 §5.2). */
+/** The properties of an envelope, and no others (Caliper 1.2 section 5.2). */
 const ENVELOPE_PROPERTIES = ["sensor", "sendTime", "dataVersion", "data"];
 
 /** Returns what is wrong with a request body as a Caliper envelope, with its events checked as `eventProblems` does. */

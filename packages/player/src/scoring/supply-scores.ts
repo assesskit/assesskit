@@ -3,11 +3,11 @@ import { DataError } from "@assesskit/runtime/errors";
 import { describeType, fitsBaseType } from "@assesskit/runtime/processing";
 import { normalizeValue, promote, single, type Value } from "@assesskit/runtime/values";
 import { checkChoice, checkNonEmptyString, checkRecord } from "../checks.js";
-import { checkDeclaration } from "../protocol/submission.js";
+import { checkDeclaration, SCORERS } from "../protocol/internal.js";
 
 /**
- * The `supply-scores` action of the host, which the runtime's engine applies in any state while the request exists (E15). The host
- * adds the time `at` before it applies the action.
+ * The `supply-scores` action of the host, which the runtime's engine applies in any state while the request exists. The
+ * host adds the time `at` before it applies the action.
  */
 export interface SupplyScores {
   /** The type of the action. */
@@ -23,10 +23,7 @@ export interface SupplyScores {
 /** The score of a supply as a caller gives it: a value, a number, a string or a boolean for a single outcome, or NULL. */
 export type ScoreInput = Value | number | string | boolean | null;
 
-/** The scorers of a request (INFO §4.5.10, W18). */
-const SCORERS: readonly Scorer[] = ["human", "externalMachine"];
-
-/** Returns the value as the declaration holds it: an integer fits a float or duration outcome (D5); else `undefined`. */
+/** Returns the value as the declaration holds it, or `undefined` when it does not fit: an integer fits a float or duration outcome. */
 function fitted(value: Value, request: ScoringRequest): Value | undefined {
   const { cardinality, baseType } = request.declaration;
   if (value.cardinality !== cardinality) return undefined;
@@ -37,7 +34,7 @@ function fitted(value: Value, request: ScoringRequest): Value | undefined {
 
 /**
  * Returns the typed value of a score: a plain number, string or boolean becomes a single value of the outcome's base type;
- * anything else is checked as a value. The empty string is NULL (INFO §2.2.2).
+ * anything else is checked as a value. The empty string is NULL.
  */
 function typedScore(request: ScoringRequest, score: ScoreInput): Value | null {
   if (score === null) return null;
@@ -59,8 +56,10 @@ function typedScore(request: ScoringRequest, score: ScoreInput): Value | null {
 }
 
 /**
- * Builds the `supply-scores` action that gives the value of one externally scored outcome (the player design §2.9, E15). The
- * value is checked against the declaration of the request first, as the engine refuses a mismatch with
+ * Builds the `supply-scores` action that gives the value of one externally scored outcome.
+ *
+ * @remarks
+ * The value is checked against the declaration of the request first, as the engine refuses a mismatch with
  * `score-type-mismatch`: the cardinality and the base type must be the outcome's, and an integer fits a float or
  * duration outcome. A number, string or boolean is taken as a single value of the outcome's base type. NULL fits.
  *
@@ -70,6 +69,7 @@ function typedScore(request: ScoringRequest, score: ScoreInput): Value | null {
  * @param request - The scoring request, such as one of `Engine.pending(state).scoring`.
  * @param score - The value of the outcome; NULL when the scorer gives none.
  * @param scorer - Who scored it: `human` or `externalMachine`.
+ * @returns The action.
  * @throws `DataError` when `request` is not a scoring request, `scorer` is not a scorer, or the score does not fit the
  * declaration of the outcome, and a `DataError` of the runtime when the score is not a value of its base type.
  */

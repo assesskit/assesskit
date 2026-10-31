@@ -1,7 +1,7 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { checkProperties, checkRecord, checkString, describe } from "../checks.js";
 
-/** The name of the frame that holds the tool of an LTI item. The storage page looks for the sender of a message by this name. */
+/** The name of the frame that holds the tool of an LTI item, by which the storage page recognizes the sender of a message. */
 export const LTI_TOOL_FRAME = "lti-tool";
 
 /**
@@ -37,6 +37,7 @@ const ALLOW_LIST = /^[A-Za-z0-9 ;*:/.'-]+$/u;
 /**
  * Checks the `allow` attribute of the frame of a tool.
  *
+ * @param value - The attribute.
  * @param label - Names the value in the error message, such as `The allow list of a tool`.
  * @throws `DataError` when it is not a non-empty string of the characters that a Permissions Policy allow list uses.
  */
@@ -70,6 +71,7 @@ function checkFrameUrl(value: unknown, label: string): asserts value is string {
 /**
  * Checks the frame of an LTI item that arrived as JSON.
  *
+ * @param value - The parsed JSON.
  * @throws `DataError` when it is not an object with the properties `url`, `storageUrl` and, optionally, `allow` only,
  * the URLs absolute `http` or `https` URLs and `allow` an allow list.
  */

@@ -3,6 +3,26 @@
 What `@assesskit/player` draws and operates. A cell says Yes, Partly (the note says what is left out) or No (see Not
 included).
 
+```mermaid
+flowchart LR
+  subgraph host["The host: outside the player"]
+    login["Login and authentication"]
+    storage["Storage of sessions, files and results"]
+    proctor["Proctoring, who gets which support"]
+    tools["Dictionary, thesaurus and the other tools of the host"]
+  end
+  subgraph player["@assesskit/player"]
+    browser["Browser: player, client"]
+    server["Server: session host, asset gate, scoring, LTI, CAT, Caliper"]
+    shared["Shared: protocol, messages"]
+  end
+  runtime[("@assesskit/runtime: the engine and the QTI model")]
+  host --> player
+  browser <--> shared
+  server <--> shared
+  player --> runtime
+```
+
 | Part                                                                                              | Supported | Notes                                                                                         |
 | ------------------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
 | Item and stimulus bodies, shared stimuli, HTML, MathML, SSML, stylesheets, shared CSS classes     | Yes       | Content is sanitized: no script, event handler, inline style or reference outside the package |

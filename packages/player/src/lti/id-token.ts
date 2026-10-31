@@ -7,7 +7,7 @@ import type { PlatformRegistration } from "./registration.js";
 
 /**
  * Verifies an `id_token` as the platform issued it: the signature against the platform's key set, then the issuer, the
- * audience, the authorized party and the times (Security Framework §5.1.3). The `nonce` and the LTI claims are the
+ * audience, the authorized party and the times (Security Framework section 5.1.3). The `nonce` and the LTI claims are the
  * caller's to check.
  *
  * @param nowMilliseconds - The time in milliseconds since 1970-01-01T00:00:00Z.

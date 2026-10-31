@@ -24,8 +24,8 @@ export const CANDIDATE_ACTION_TYPES = [
 ] as const satisfies readonly CandidateActionType[];
 
 /**
- * The actions a client of an exam may send: all but `suspend` and `resume`. The runtime counts suspended time nowhere (G23), so a
- * candidate who could suspend would stop the clock; breaks are the proctor's, through `SessionHost.proctor` (F-M3).
+ * The actions a client of an exam may send: all but `suspend` and `resume`. The runtime counts suspended time nowhere, so a
+ * candidate who could suspend would stop the clock; breaks are the proctor's, through `SessionHost.proctor`.
  */
 export const EXAM_CLIENT_ACTIONS: readonly CandidateActionType[] = CANDIDATE_ACTION_TYPES.filter(
   (type) => type !== "suspend" && type !== "resume",

@@ -41,10 +41,12 @@ export interface CaliperContext extends CaliperParties {
 }
 
 /**
- * Checks that a value is an absolute IRI: Caliper requires one for every entity (Caliper 1.2 §4.2).
+ * Checks that a value is an absolute IRI, which Caliper requires for every entity.
  *
+ * @param value - The value.
  * @param label - Names the value in the error message, such as `The actor of the context`.
- * @throws `DataError` when it is not.
+ * @throws `DataError` when it is not an absolute IRI.
+ * @see {@link https://www.imsglobal.org/spec/caliper/v1p2 | Caliper Analytics 1.2}
  */
 export function checkIri(value: unknown, label: string): asserts value is string {
   checkString(value, label);
@@ -76,6 +78,7 @@ const contextSchema = looseRecord({
 /**
  * Checks a context, as a host passes it from JavaScript.
  *
+ * @param value - The context.
  * @throws `DataError` when it is not an object with a non-empty `session`, a `step` that is `"start"` or a non-negative
  * integer, and the parties.
  */

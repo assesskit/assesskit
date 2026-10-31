@@ -19,20 +19,32 @@ export interface EventParts {
   readonly actor: CaliperEntity;
   /** What the actor acted on. */
   readonly object: CaliperEntity;
-  /** What the action made. */
+  /**
+   * What the action made.
+   *
+   * @defaultValue none
+   */
   readonly generated?: CaliperEntity;
   /** When it happened, in the form Caliper requires. */
   readonly time: string;
 }
 
-/** Returns the profile that governs an event: the Grading Profile for a GradeEvent (Caliper 1.2 §3.6), else the Assessment Profile (§3.2). */
+/** Returns the profile that governs an event: the Grading Profile for a GradeEvent, else the Assessment Profile. */
 function profileOf(type: CaliperEventType): CaliperProfile {
   return type === "GradeEvent" ? "GradingProfile" : "AssessmentProfile";
 }
 
 /**
- * Builds an event. Its identifier is the URN of the session, the step and the index of the event: the position in
- * `Step.events` of the event that it reports, so that reporting a step again gives the same identifier (F-m16).
+ * Builds an event.
+ *
+ * @remarks
+ * Its identifier is the URN of the session, the step and the index of the event: the position in `Step.events` of the
+ * event that it reports, so that reporting a step again gives the same identifier.
+ *
+ * @param index - The position in `Step.events` of the event that it reports.
+ * @param parts - What the event says.
+ * @param context - The session, the step and the parties.
+ * @returns The event.
  */
 export function buildEvent(index: number, parts: EventParts, context: CaliperContext): CaliperEvent {
   const { type, action, actor, object, generated, time } = parts;

@@ -102,9 +102,10 @@ function isHttpsUrl(text: string): boolean {
 }
 
 /**
- * Checks that a value is an absolute `https` URL, which LTI (Core §3.5), the CAT binding (§4.1) and Caliper (§5.4) require
+ * Checks that a value is an absolute `https` URL, which LTI Core (section 3.5), the CAT binding (section 4.1) and Caliper (section 5.4) require
  * of every URL of a message and a service.
  *
+ * @param value - The value.
  * @param label - Names the value in the error message, such as `The option endpoint`.
  * @throws `DataError` when it is not.
  */
@@ -380,7 +381,7 @@ export function mapSchema<TOutput>(value: Schema<TOutput>): Schema<Map<string, T
 /** A value that is not `undefined`: a property that must be present, whatever it holds. */
 export const definedSchema = v.nonOptional(v.unknown(), "expected a value, found undefined");
 
-/** An absolute `https` URL, which LTI (Core §3.5), the CAT binding (§4.1) and Caliper (§5.4) require of every URL of a message and a service. */
+/** An absolute `https` URL, which LTI (Core section 3.5), the CAT binding (section 4.1) and Caliper (section 5.4) require of every URL of a message and a service. */
 export const httpsUrlSchema = v.pipe(
   v.string(),
   v.check(isHttpsUrl, (issue) => `expected an absolute https URL, found ${issue.received}`),

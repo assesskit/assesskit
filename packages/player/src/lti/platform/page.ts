@@ -1,5 +1,4 @@
-import { escapeHtml, pagePolicy } from "../html.js";
-import type { HttpResponse } from "../http.js";
+import { escapeHtml, type HttpResponse, pagePolicy } from "../internal.js";
 
 // The form submits itself; requestSubmit runs the form's validation and its submit event, which submit() does not.
 const SCRIPT = `document.getElementById("form").requestSubmit();`;
@@ -17,9 +16,9 @@ export interface AutoPost {
 }
 
 /**
- * Builds the page that posts the `id_token` to the tool (Security Framework §5.1.1.3, `response_mode=form_post`). The page
+ * Builds the page that posts the `id_token` to the tool (Security Framework section 5.1.1.3, `response_mode=form_post`). The page
  * has a policy that allows its one script by hash, forms only to the origin of the redirect URI and framing only by the
- * player (D-M1); every value in it is HTML-encoded; and the answer is not cached and sends no referrer.
+ * player, because the tool's frame is same-origin with the platform's pages on the player's origin; every value in it is HTML-encoded; and the answer is not cached and sends no referrer.
  */
 export async function autoPostPage(post: AutoPost): Promise<HttpResponse> {
   const { redirectUri, idToken, state, playerOrigin } = post;

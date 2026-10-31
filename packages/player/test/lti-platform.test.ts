@@ -6,6 +6,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
 import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import platformGuide from "../../../docs/player/lti-platform.md?raw";
 import { AccessError, ServiceError } from "../src/index.js";
 import {
   type AgsScore,
@@ -30,6 +31,7 @@ import {
   readAgsScore,
   type ToolRegistration,
 } from "../src/lti/index.js";
+import { runGuideSamples } from "./guide-samples.js";
 import { MemoryStore } from "./lti-fake-platform.js";
 import {
   acceptIdToken,
@@ -343,7 +345,7 @@ describe("readAgsScore", () => {
     userId: "5323497",
   };
 
-  it("reads the final score of LTI AGS 2.0 §3.4.3.1, ignoring the properties it does not use", () => {
+  it("reads a final score and ignores the properties it does not use", () => {
     const body = { ...complete, comment: "This is exceptional work.", scoringUserId: "4567890" };
     expect(readAgsScore(JSON.parse(JSON.stringify(body)))).toEqual({
       userId: "5323497",
@@ -356,7 +358,7 @@ describe("readAgsScore", () => {
     });
   });
 
-  it("reads the score pending manual grading of §3.4.8.1 with no score", () => {
+  it("reads a score that waits for manual grading, with no score", () => {
     const score = readAgsScore({
       timestamp: "2017-04-16T18:54:36.736+00:00",
       activityProgress: "Completed",
@@ -368,7 +370,7 @@ describe("readAgsScore", () => {
     expect(score.scoreMaximum).toBeUndefined();
   });
 
-  it("reads a null score as no score, which clears the previous one (§3.4.4)", () => {
+  it("reads a null score as no score, which clears the previous one", () => {
     const score = readAgsScore({ ...complete, scoreGiven: null, scoreMaximum: null });
     expect(score.scoreGiven).toBeUndefined();
     expect(score.scoreMaximum).toBeUndefined();
@@ -379,7 +381,7 @@ describe("readAgsScore", () => {
     expect(readAgsScore({ ...complete, scoreGiven: 0 }).scoreGiven).toBe(0);
   });
 
-  it("reads the timestamps of §3.4.9.1 and a time zone offset", () => {
+  it("reads a timestamp in UTC and with a time zone offset", () => {
     const utc = Date.UTC(2017, 3, 16, 18, 54, 36, 736);
     for (const text of [
       "2017-04-16T18:54:36.736+00:00",
@@ -487,7 +489,7 @@ describe("readAgsScore", () => {
 });
 
 describe("agsLineItem and agsScores", () => {
-  it("answers the line item of the launch with the media type of §3.2.1", async () => {
+  it("answers the line item of the launch with the media type of a line item", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     const url = agsClaim(claims).lineitem;
@@ -852,7 +854,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(page.body).not.toContain("<script>alert");
   });
 
-  it("issues the id_token with the claims of Security Framework §5.1.2 and LTI 1.3 Core §5", async () => {
+  it("issues the id_token with the claims of the Security Framework and LTI 1.3 Core", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     expect(claims).toMatchObject({
@@ -1221,7 +1223,7 @@ async function publicJwk(): Promise<JsonWebKey> {
   return crypto.subtle.exportKey("jwk", platformKeys.publicKey);
 }
 
-/** The JWK thumbprint of RFC 7638 §3 for an RSA key: the SHA-256 of its required members in order, in base64url. */
+/** The JWK thumbprint of RFC 7638 section 3 for an RSA key: the SHA-256 of its required members in order, in base64url. */
 async function thumbprint(jwk: JsonWebKey): Promise<string> {
   const json = `{"e":${JSON.stringify(jwk.e)},"kty":"RSA","n":${JSON.stringify(jwk.n)}}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json));
@@ -1362,7 +1364,7 @@ describe("platformEndpoints and the configuration", () => {
 });
 
 describe("platformJwks", () => {
-  it("publishes the public key of the platform as an RSA signing key with a kid (Security Framework §6.3)", async () => {
+  it("publishes the public key of the platform as an RSA signing key with a kid", async () => {
     const ctx = setup();
     const response = await platformJwks(ctx.login);
     const jwk = await publicJwk();
@@ -1374,7 +1376,7 @@ describe("platformJwks", () => {
     });
   });
 
-  it("names the key by its thumbprint, as RFC 7638 §3.1 computes it", async () => {
+  it("names the key by its thumbprint, as RFC 7638 computes it", async () => {
     const rfc = {
       kty: "RSA",
       e: "AQAB",
@@ -1408,7 +1410,7 @@ describe("platformJwks", () => {
 });
 
 describe("ltiPlatformLogin", () => {
-  it("builds the third-party initiated login for the tool of the link, with the parameters of LTI 1.3 Core §4.1", async () => {
+  it("builds the third-party initiated login for the tool of the link, with the parameters of LTI 1.3 Core", async () => {
     const ctx = setup();
     const { initiation, url } = await begin(ctx);
     expect(initiation).toMatchObject({
@@ -1571,7 +1573,7 @@ describe("ltiPlatformLogin", () => {
       [
         "a long deployment",
         toolRegistration({ deploymentId: "d".repeat(256) }),
-        "The deployment of a tool must have at most 255 characters (LTI 1.3 Core §5.3.3), found 256.",
+        "The deployment of a tool must have at most 255 characters (LTI 1.3 Core section 5.3.3), found 256.",
       ],
       [
         "a login URL that is http",
@@ -1646,7 +1648,7 @@ describe("ltiPlatformLogin", () => {
         () => ltiPlatformLogin({ ...caller, principal: "" }, item, link, ctx.login),
       ],
       [
-        "The principal of the caller is the sub of the launch and must have at most 255 characters (LTI 1.3 Core §5.3.6), found 256.",
+        "The principal of the caller is the sub of the launch and must have at most 255 characters (LTI 1.3 Core section 5.3.6), found 256.",
         () => ltiPlatformLogin({ ...caller, principal: "p".repeat(256) }, item, link, ctx.login),
       ],
       ['The item must be an object, found "q".', () => ltiPlatformLogin(caller, JSON.parse('"q"'), link, ctx.login)],
@@ -1774,7 +1776,7 @@ describe("platformToken", () => {
     return platformToken(tokenRequest(endpoints.token, assertion, scope, form), ctx.token);
   }
 
-  it("grants a bearer token for the scopes requested, as Security Framework §4.1.1 describes", async () => {
+  it("grants a bearer token for the scopes requested", async () => {
     const ctx = setup();
     const response = await token(ctx, {}, {}, `${LINEITEM_READONLY} ${SCORE}`);
     expect(response.status).toBe(200);
@@ -1850,7 +1852,7 @@ describe("platformToken", () => {
     expect([first.status, second.status]).toEqual([200, 200]);
   });
 
-  it("refuses an assertion twice (RFC 7523 §3, Security Framework §4.1.1)", async () => {
+  it("refuses an assertion twice", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
     const again = tokenRequest(endpoints.token, assertion, SCORE);
@@ -1931,7 +1933,7 @@ describe("platformToken", () => {
     expect(JSON.parse((await token(ctx, {}, { scope: undefined })).body).error).toBe("invalid_scope");
   });
 
-  it("refuses an assertion that is not what Security Framework §4.1.1 requires, with invalid_client", async () => {
+  it("refuses an assertion that the Security Framework does not allow, with invalid_client", async () => {
     const ctx = setup();
     const iat = SECONDS;
     const cases: readonly [string, Promise<HttpResponse>][] = [
@@ -2105,6 +2107,13 @@ describe("the tool role and the platform role together", () => {
     expect(ctx.scores).toMatchObject([
       { session: "session-1", item, score: { userId: "candidate-7", scoreGiven: 83 } },
     ]);
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const modules = { "@assesskit/player/lti": await import("../src/lti/index.js") };
+    expect(await runGuideSamples(platformGuide, modules)).toBeGreaterThan(0);
   });
 });
 

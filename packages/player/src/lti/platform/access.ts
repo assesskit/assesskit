@@ -1,11 +1,10 @@
-import { readClock } from "../clock.js";
-import { type HttpRequest, type HttpResponse, jsonResponse } from "../http.js";
+import { type HttpRequest, type HttpResponse, jsonResponse, readClock } from "../internal.js";
 import type { PlatformOptions } from "./options.js";
 import { type Access, openAccess } from "./tokens.js";
 
 const BEARER = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/iu;
 
-/** Builds the answer of a service to a request with a missing or unusable token (RFC 6750 §3). */
+/** Builds the answer of a service to a request with a missing or unusable token (RFC 6750 section 3). */
 function refusal(status: 401 | 403, challenge: string, error: string): HttpResponse {
   return jsonResponse(status, { error }, { "www-authenticate": challenge });
 }

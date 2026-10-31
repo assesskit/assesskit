@@ -45,8 +45,10 @@ const TYPES: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
- * Returns the media type for a file, from the extension of its path; `undefined` when the gate does not serve files of that
- * extension, which includes a path without one.
+ * Returns the media type for a file, from the extension of its path.
+ *
+ * @param path - The path of the file.
+ * @returns The media type; `undefined` when the gate does not serve files of that extension, which includes a path without one.
  */
 export function contentTypeOf(path: string): string | undefined {
   const dot = path.lastIndexOf(".");

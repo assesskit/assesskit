@@ -7,7 +7,7 @@ import type { Claims } from "./claims.js";
 import { CLOCK_SKEW_SECONDS } from "./clock.js";
 
 // The only algorithm the tool and the platform sign and accept: `none` and the HMAC algorithms are refused, so that a token
-// cannot choose a weaker check than the public key (Security Framework §5.1.3, §5.4).
+// cannot choose a weaker check than the public key (Security Framework sections 5.1.3 and 5.4).
 const ALGORITHM = "RS256";
 
 /** The protected header of a token that the tool or the platform signs with an RSA key: RS256 and the `kid` of the key set. */
@@ -47,14 +47,17 @@ export function hasCanonicalParts(token: string): boolean {
 export function unverifiedClaims(token: string): Claims {
   if (!hasCanonicalParts(token)) {
     throw new LtiError(
-      "The token must have three parts separated by dots, each in base64url without padding (RFC 7515 §2, §7.1).",
+      "The token must have three parts separated by dots, each in base64url without padding (RFC 7515 sections 2 and 7.1).",
       "token-malformed",
     );
   }
   try {
     return decodeJwt(token);
   } catch {
-    throw new LtiError("The payload of the token must be a JSON object in UTF-8 (RFC 7519 §7.2).", "token-malformed");
+    throw new LtiError(
+      "The payload of the token must be a JSON object in UTF-8 (RFC 7519 section 7.2).",
+      "token-malformed",
+    );
   }
 }
 
@@ -62,7 +65,10 @@ export function unverifiedClaims(token: string): Claims {
 function claimError(error: errors.JWTClaimValidationFailed | errors.JWTExpired, expected: JwtExpectation): LtiError {
   const { claim, reason, payload } = error;
   if (error instanceof errors.JWTExpired) {
-    return new LtiError(`The token expired at ${describe(payload.exp)} (Security Framework §5.1.3).`, "token-expired");
+    return new LtiError(
+      `The token expired at ${describe(payload.exp)} (Security Framework section 5.1.3).`,
+      "token-expired",
+    );
   }
   if (claim === "aud") {
     const found = describe(payload.aud);
@@ -101,14 +107,14 @@ function refuse(error: unknown, expected: JwtExpectation): never {
   }
   if (error instanceof errors.JOSEAlgNotAllowed) {
     throw new LtiError(
-      `The token must be signed with ${ALGORITHM} (Security Framework §5.1.3, §5.4).`,
+      `The token must be signed with ${ALGORITHM} (Security Framework sections 5.1.3 and 5.4).`,
       "algorithm-unsupported",
     );
   }
   if (error instanceof errors.JWSSignatureVerificationFailed) {
     throw new LtiError("The signature of the token is not valid for the key of its issuer.", "signature-invalid");
   }
-  // jose throws a TypeError for a key that cannot verify with RS256, such as one of fewer than 2,048 bits (RFC 7518 §3.3).
+  // jose throws a TypeError for a key that cannot verify with RS256, such as one of fewer than 2,048 bits (RFC 7518 section 3.3).
   if (
     error instanceof errors.JWKSNoMatchingKey ||
     error instanceof errors.JWKSMultipleMatchingKeys ||
@@ -127,7 +133,7 @@ function refuse(error: unknown, expected: JwtExpectation): never {
     );
   }
   if (error instanceof errors.JOSEError) {
-    throw new DataError(`The key set must be a JWK Set (RFC 7517 §5): ${error.message}.`);
+    throw new DataError(`The key set must be a JWK Set (RFC 7517 section 5): ${error.message}.`);
   }
   throw error;
 }
@@ -135,7 +141,7 @@ function refuse(error: unknown, expected: JwtExpectation): never {
 /**
  * Verifies a compact JWS as the JWT of an LTI message or a client assertion: RS256 only, a `kid` that the key function
  * resolves, the signature, the parties that `expected` names, the times with the leeway for clock skew, and the audience
- * as the one party (Security Framework §5.1.3, §4.1.1; RFC 7523 §3).
+ * as the one party (Security Framework sections 5.1.3 and 4.1.1; RFC 7523 section 3).
  *
  * @param keys - Resolves the public key from the header of the token, such as a key set of `createJwksCache`.
  * @param expected - What the token must say about itself. A present `exp` or `iat` must be a number.
@@ -154,10 +160,13 @@ export async function verifyJwt(
 ): Promise<Claims> {
   // A token that is not one is refused before any key is fetched.
   unverifiedClaims(token);
-  // Security Framework §6.3: every key of a key set has a `kid`, and a token names the one it is signed with.
+  // Security Framework section 6.3: every key of a key set has a `kid`, and a token names the one it is signed with.
   const keyOf: JWTVerifyGetKey = (header, jws) => {
     if (typeof header.kid !== "string" || header.kid === "") {
-      throw new LtiError("The token must name its key with the header kid (Security Framework §6.3).", "key-unknown");
+      throw new LtiError(
+        "The token must name its key with the header kid (Security Framework section 6.3).",
+        "key-unknown",
+      );
     }
     return keys(header, jws);
   };
@@ -188,7 +197,7 @@ function checkSoleAudience(claims: Claims, audience: JwtExpectation["audience"])
   }
 }
 
-/** Checks that a token is not issued in the future (Security Framework §5.1.3), allowing the leeway for clock skew. */
+/** Checks that a token is not issued in the future (Security Framework section 5.1.3), allowing the leeway for clock skew. */
 function checkIssuedAt(claims: Claims, nowSeconds: number): void {
   const { iat } = claims;
   if (typeof iat === "number" && iat - CLOCK_SKEW_SECONDS > nowSeconds) {

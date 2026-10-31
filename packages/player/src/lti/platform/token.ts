@@ -1,8 +1,19 @@
 import { LtiError } from "../../errors.js";
-import { AGS_SCOPE, NUMBER, required, STRING } from "../claims.js";
-import { readClock } from "../clock.js";
-import { checkHttpRequest, errorBody, type HttpRequest, type HttpResponse, jsonResponse, readForm } from "../http.js";
-import { unverifiedClaims, verifyJwt } from "../jwt.js";
+import {
+  AGS_SCOPE,
+  checkHttpRequest,
+  errorBody,
+  type HttpRequest,
+  type HttpResponse,
+  jsonResponse,
+  NUMBER,
+  readClock,
+  readForm,
+  required,
+  STRING,
+  unverifiedClaims,
+  verifyJwt,
+} from "../internal.js";
 import { endpointsOf } from "./config.js";
 import { checkRequestOrigin, checkTokenOptions, findClient, type PlatformTokenOptions } from "./options.js";
 import { toolKeySet } from "./registration.js";
@@ -10,23 +21,23 @@ import { sealAccess } from "./tokens.js";
 
 const GRANT_TYPE = "client_credentials";
 const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
-// Security Framework §4.1.1 and §7.1.1: the recommended lifetime of an access token is one hour.
+// Security Framework sections 4.1.1 and 7.1.1: the recommended lifetime of an access token is one hour.
 const ACCESS_TOKEN_TTL_SECONDS = 3600;
-// RFC 7523 §3 lets the authorization server refuse an assertion whose expiry is unreasonably far; the platform remembers a
-// `jti` until then. Security Framework §4.1.1 has the assertion expire "typically five minutes" after `iat`.
+// RFC 7523 section 3 lets the authorization server refuse an assertion whose expiry is unreasonably far; the platform remembers a
+// `jti` until then. Security Framework section 4.1.1 has the assertion expire "typically five minutes" after `iat`.
 const MAX_ASSERTION_LIFETIME_SECONDS = 3600;
-/** The scopes that a launch offers, and so the only ones a token can have (LTI AGS 2.0 §3.1). */
+/** The scopes that a launch offers, and so the only ones a token can have (LTI AGS 2.0 section 3.1). */
 const OFFERED_SCOPES: readonly string[] = [AGS_SCOPE.lineitemReadonly, AGS_SCOPE.score];
 const OWNER = "The client assertion";
 
-/** The error codes of RFC 6749 §5.2 that the endpoint answers with, by the reason of the check that failed. */
+/** The error codes of RFC 6749 section 5.2 that the endpoint answers with, by the reason of the check that failed. */
 const OAUTH_ERRORS: ReadonlyMap<string, string> = new Map([
   ["unsupported-grant-type", "unsupported_grant_type"],
   ["request-invalid", "invalid_request"],
   ["scope-invalid", "invalid_scope"],
 ]);
 
-/** Builds the answer of RFC 6749 §5.2 and Security Framework §4.1: status 400 and an error code. */
+/** Builds the answer of RFC 6749 section 5.2 and Security Framework section 4.1: status 400 and an error code. */
 function refusal(error: string, description: string): HttpResponse {
   return jsonResponse(400, errorBody(error, description), { "cache-control": "no-store", pragma: "no-cache" });
 }
@@ -59,7 +70,7 @@ function readRequest(request: HttpRequest): { readonly assertion: string; readon
 }
 
 /**
- * Verifies the client assertion (Security Framework §4.1.1, LTI 1.3 Core §6.2, RFC 7523 §3): the tool named by `iss` signed
+ * Verifies the client assertion (Security Framework section 4.1.1, LTI 1.3 Core section 6.2, RFC 7523 section 3): the tool named by `iss` signed
  * it with RS256 and a key of its registration; `iss` and `sub` are its client identifier; `aud` is the token URL; it has
  * not expired and does not expire in too long; it has a `jti` that `options.once` has not seen.
  */
@@ -89,15 +100,19 @@ async function verifyAssertion(assertion: string, options: PlatformTokenOptions)
 }
 
 /**
- * Answers a token request: the OAuth 2.0 client-credentials grant with a JWT assertion (Security Framework §4.1.1, LTI 1.3
- * Core §6.2). It issues a bearer token that is HMAC-signed with the hint key, lasts one hour and holds the requested
+ * Answers a token request: the OAuth 2.0 client-credentials grant with a JWT assertion (Security Framework section 4.1.1, LTI 1.3
+ * Core section 6.2). It issues a bearer token that is HMAC-signed with the hint key, lasts one hour and holds the requested
  * scopes, which must be among `lineitem.readonly` and `score`: the scopes a launch offers.
  *
- * A request that fails a check gets status 400 with the error code of RFC 6749 §5.2 (`invalid_request`,
+ * @remarks
+ * A request that fails a check gets status 400 with the error code of RFC 6749 section 5.2 (`invalid_request`,
  * `unsupported_grant_type`, `invalid_scope`, and `invalid_client` for an assertion that fails). The checks, in order: the
  * method, the form, `grant_type`, `client_assertion_type`, the scopes, the tool, its key and the signature, `sub`, `aud`,
  * the times, and the single use of the `jti`.
  *
+ * @param request - The request.
+ * @param options - The platform and its tools.
+ * @returns The answer: the token, or the error.
  * @throws `AccessError` (`wrong-origin`) when the request is for another origin than the platform's.
  * @throws `DataError` when the request or the options have the wrong type.
  * @throws `ServiceError` when the key set of the tool cannot be fetched.
