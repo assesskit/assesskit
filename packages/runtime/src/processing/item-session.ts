@@ -55,8 +55,11 @@ export function weigh(value: Value | null, weight: number): Value | null {
 
 /** Returns the value of an item variable of any kind, `undefined` when the item has no such variable. */
 export function itemValue(variables: ItemVariables, identifier: string): Value | null | undefined {
-  for (const values of [variables.responses, variables.outcomes, variables.templates, variables.contexts]) {
-    if (values.has(identifier)) return values.get(identifier) ?? null;
-  }
-  return undefined;
+  // A variable holds a value or NULL, never `undefined`, so `get` finds a variable that is in the map even when it is NULL.
+  let value = variables.responses.get(identifier);
+  if (value !== undefined) return value;
+  value = variables.outcomes.get(identifier);
+  if (value !== undefined) return value;
+  value = variables.templates.get(identifier);
+  return value !== undefined ? value : variables.contexts.get(identifier);
 }

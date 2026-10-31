@@ -1,3 +1,4 @@
+import type { AssessmentItem } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import {
@@ -13,7 +14,7 @@ import { fitValue } from "../processing/internal.js";
 import { single, type Value } from "../values/index.js";
 import { MILLISECONDS_PER_SECOND } from "./attempt.js";
 import { type Course, type CourseItem, candidateOf, itemContextValues } from "./course.js";
-import { type DeliveryState, findDelivered, type ScopeClock } from "./delivery-state.js";
+import { type DeliveredItem, type DeliveryState, deliveredLookup, type ScopeClock } from "./delivery-state.js";
 import type { ItemKey } from "./plan.js";
 import { type PlanIndex, planIndex } from "./plan-index.js";
 import { ancestry, type ItemRefNode } from "./structure.js";
@@ -49,6 +50,12 @@ function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
 }
 
 /**
+ * The variables of the instances not yet presented, by the context values of a session and the item reference: the
+ * context values of a session stay the same object through its steps, so each item reference is set up once for them.
+ */
+const INITIAL = new WeakMap<ReadonlyMap<string, Value | null>, WeakMap<CourseItem, ItemVariables>>();
+
+/**
  * What the expressions of a test read in a session: the item sessions of the instances of the plan, and the variables
  * of the test that are not outcomes.
  *
@@ -62,20 +69,23 @@ export class SessionScope implements TestScope {
   private readonly course: Course;
   private readonly state: DeliveryState;
   private readonly index: PlanIndex;
-  private readonly initial = new Map<string, ItemVariables>();
+  private readonly delivered: (key: ItemKey) => DeliveredItem | undefined;
 
   constructor(course: Course, state: DeliveryState) {
     this.course = course;
     this.state = state;
     this.index = planIndex(state.plan);
+    this.delivered = deliveredLookup(state);
   }
 
   /** Returns the instances of the plan that the filter keeps, in presentation order. */
-  *itemSessions(filter: ItemSessionFilter): Iterable<ItemSessionView> {
+  itemSessions(filter: ItemSessionFilter): Iterable<ItemSessionView> {
+    const views: ItemSessionView[] = [];
     for (const { key } of this.index.placements) {
       const entry = this.entry(key.ref);
-      if (keeps(entry.node, filter)) yield this.view(key, entry);
+      if (keeps(entry.node, filter)) views.push(this.view(key, entry));
     }
+    return views;
   }
 
   /**
@@ -95,7 +105,7 @@ export class SessionScope implements TestScope {
     let chosen = instances.at(-1);
     let latest = Number.NEGATIVE_INFINITY;
     for (const placement of instances) {
-      const submittedAt = findDelivered(this.state, placement.key)?.submittedAt;
+      const submittedAt = this.delivered(placement.key)?.submittedAt;
       if (submittedAt !== undefined && submittedAt >= latest) {
         latest = submittedAt;
         chosen = placement;
@@ -163,16 +173,27 @@ export class SessionScope implements TestScope {
 
   private view(key: ItemKey, entry: CourseItem): ItemSessionView {
     const ref = entry.node.model;
-    const delivered = findDelivered(this.state, key);
+    const delivered = this.delivered(key);
     if (delivered !== undefined) {
       return { ref, item: candidateOf(entry, delivered.variant).item, variables: delivered.session.variables };
     }
     const [own] = entry.candidates;
-    let variables = this.initial.get(key.ref);
-    if (variables === undefined) {
-      variables = createItemVariables(own.item, { context: itemContextValues(this.state.context, own.item) });
-      this.initial.set(key.ref, variables);
+    return { ref, item: own.item, variables: this.initialOf(entry, own.item) };
+  }
+
+  /** Returns the variables of an instance not yet presented, which only its item and the context of the session decide. */
+  private initialOf(entry: CourseItem, item: AssessmentItem): ItemVariables {
+    const { context } = this.state;
+    let byEntry = INITIAL.get(context);
+    if (byEntry === undefined) {
+      byEntry = new WeakMap();
+      INITIAL.set(context, byEntry);
     }
-    return { ref, item: own.item, variables };
+    let variables = byEntry.get(entry);
+    if (variables === undefined) {
+      variables = createItemVariables(item, { context: itemContextValues(context, item) });
+      byEntry.set(entry, variables);
+    }
+    return variables;
   }
 }

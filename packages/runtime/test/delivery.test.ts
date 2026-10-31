@@ -705,6 +705,28 @@ describe("starting a session", () => {
     expect(orders.size).toBeGreaterThan(1);
   });
 
+  it("gives the items not yet presented the context values of their own session, whatever sessions ran before", () => {
+    const reader = itemOf(
+      'time-dependent="false"',
+      '<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"/>',
+    );
+    const engine = engineOf(
+      `${outcomeDeclaration("CITIES", "string").replace('cardinality="single"', 'cardinality="multiple"')}${testPart("P", section("S", refs("a", "b", "c")), "nonlinear")}${outcomeProcessing(
+        setOutcome("CITIES", '<qti-test-variables variable-identifier="CITY" base-type="string"/>'),
+      )}`,
+      { "a.xml": reader, "b.xml": reader, "c.xml": reader },
+    );
+    const cities = (state: DeliveryState): Value | null => testOutcome(state, "CITIES");
+    const many = (...values: string[]): Value => ({ cardinality: "multiple", baseType: "string", values });
+    const jakarta = begun(engine, { context: new Map([["CITY", text("Jakarta")]]) }).state;
+    const medan = begun(engine, { context: new Map([["CITY", text("Medan")]]) }).state;
+    const plain = begun(engine).state;
+    expect(cities(played(engine, jakarta, on("submit", "a", 1)).state)).toEqual(many("Jakarta", "Jakarta", "Jakarta"));
+    expect(cities(played(engine, medan, on("submit", "a", 1)).state)).toEqual(many("Medan", "Medan", "Medan"));
+    expect(cities(played(engine, jakarta, on("submit", "a", 2)).state)).toEqual(many("Jakarta", "Jakarta", "Jakarta"));
+    expect(cities(played(engine, plain, on("submit", "a", 1)).state)).toBeNull();
+  });
+
   it("gives the context values to the test and to the items that declare them, and the defaults otherwise", () => {
     const city =
       '<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"><qti-default-value><qti-value>Bandung</qti-value></qti-default-value></qti-context-declaration>';

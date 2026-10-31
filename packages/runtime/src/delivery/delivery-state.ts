@@ -167,6 +167,21 @@ export function findDelivered(state: DeliveryState, key: ItemKey): DeliveredItem
 }
 
 /**
+ * Returns a function that finds item instances of a state as {@link findDelivered} does, for a step that looks up many
+ * of them: it reads the items once, where `findDelivered` reads them for each lookup.
+ */
+export function deliveredLookup(state: DeliveryState): (key: ItemKey) => DeliveredItem | undefined {
+  const byRef = new Map<string, DeliveredItem[]>();
+  for (const item of state.items) {
+    const { ref } = item.session.key;
+    const known = byRef.get(ref);
+    if (known === undefined) byRef.set(ref, [item]);
+    else known.push(item);
+  }
+  return (key) => byRef.get(key.ref)?.find((item) => sameKey(item.session.key, key));
+}
+
+/**
  * Checks a state shallowly: the fields that every step reads have their types.
  *
  * @throws `DataError` when it is not a state.

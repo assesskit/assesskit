@@ -1,4 +1,5 @@
 import {
+  ASI_NAMESPACE,
   type AssessmentItem,
   applyItemAction,
   createRandom,
@@ -7,20 +8,48 @@ import {
   type ItemSessionContext,
   presentItem,
   readAsi,
+  single,
   startItemSession,
   type Value,
 } from "@assesskit/runtime";
-import { createItemSession, parseQtiXml, type QtiDocument, type QtiItemSession } from "@longsightgroup/qti3-core";
+import {
+  createItemSession,
+  parseQtiTest,
+  parseQtiXml,
+  type QtiDocument,
+  type QtiItemSession,
+  startQtiTest,
+  submitQtiTestAnswer,
+} from "@longsightgroup/qti3-core";
 import { expect, type TestContext, test } from "vitest";
 import { BENCH_OPTIONS, expectAgainst, LONGSIGHT_BUDGETS, type LongsightBudget } from "./budgets.js";
 import { EXAMPLES } from "./corpus-items.js";
 import { corpusCases } from "./differential/cases.js";
+import { CHOICE_ITEM } from "./differential/items.js";
 import { longsight } from "./differential/longsight.js";
 import type { ItemCase } from "./differential/model.js";
 import { runtime, sessionContext, turnValues } from "./differential/runtime.js";
+import {
+  act,
+  begun,
+  engineOf,
+  fail,
+  next,
+  outcome,
+  part,
+  pick,
+  played,
+  processing,
+  refs,
+  SUM_SCORES,
+  section,
+  setOutcome,
+} from "./pending-fixtures.js";
 
-// The runtime against Longsight qti3-core on the 1EdTech examples, with the work that both do, on the same items and
-// responses. Longsight has no outcome processing of a test, so the runtime's own benchmark of it stands alone.
+// The runtime against Longsight qti3-core with the work that both do, on the same items and responses: the 1EdTech
+// examples for items, and a fixed test of choice items for a submission with outcome processing. Longsight's tests
+// have a fixed order, individual submission and the sum of the scores, so the test is that, and the runtime's own
+// benchmark of selection, ordering and many rules stands alone in delivery.bench.ts.
 
 /** An example item that both implementations read and score, with the responses the oracle takes as correct. */
 interface Subject extends ItemCase {
@@ -206,6 +235,77 @@ test("takes an item from its document to its score as fast as Longsight", async 
           session.score();
         }
       },
+    },
+  );
+});
+
+/** The sections of the test and the items of each, and the share of the items answered before the one that is timed. */
+const TEST_SECTIONS = 10;
+const TEST_ITEMS_PER_SECTION = 10;
+const ANSWERED_BEFORE = 50;
+
+test("processes the outcomes of a test on a submission as fast as Longsight", async ({ annotate, bench }) => {
+  const itemRefs = Array.from({ length: TEST_SECTIONS }, (_, place) =>
+    Array.from({ length: TEST_ITEMS_PER_SECTION }, (_, item) => `s${place}i${item}`),
+  );
+  const sections = itemRefs.map((list, place) => section(`sec${place}`, refs(...list)));
+  const engine = engineOf(
+    outcome("TOTAL", "float") + part("P", sections.join("")) + processing(setOutcome("TOTAL", SUM_SCORES)),
+  );
+  const names = itemRefs.flat();
+  const answer = (index: number, at: number) => [pick(names[index] ?? fail("No such item."), "B", at)];
+  // The session halfway through: the first items answered rightly, and the draft of the next one entered.
+  let state = begun(engine).state;
+  let at = 0;
+  for (let index = 0; index < ANSWERED_BEFORE; index++) {
+    state = played(
+      engine,
+      state,
+      ...answer(index, ++at),
+      act("submit", names[index] ?? fail("No such item."), ++at),
+      next(++at),
+    ).state;
+  }
+  const ref = names[ANSWERED_BEFORE] ?? fail("No such item.");
+  const drafted = played(engine, state, ...answer(ANSWERED_BEFORE, ++at)).state;
+  const submission = act("submit", ref, ++at);
+  const submitted = engine.apply(drafted, submission);
+  if (!submitted.ok) fail(`The submission was refused: ${submitted.refusal.code}.`);
+  expect(submitted.state.outcomes.get("TOTAL")).toEqual(single("float", ANSWERED_BEFORE + 1));
+
+  const xml = `<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="T" title="T">${outcome("TOTAL", "float")}${part("P", sections.join(""))}${processing(setOutcome("TOTAL", SUM_SCORES))}</qti-assessment-test>`;
+  const parsed = parseQtiTest(xml);
+  if (!parsed.ok) fail("Longsight does not accept the test.");
+  const test = parsed.value;
+  let oracle = startQtiTest(test);
+  if (!oracle.ok) fail("Longsight does not start the test.");
+  for (let index = 0; index < ANSWERED_BEFORE; index++) {
+    oracle = submitQtiTestAnswer(test, oracle.value, { itemRef: names[index] ?? fail("No such item."), score: 1 });
+    if (!oracle.ok) fail("Longsight refuses an answer.");
+  }
+  const before = oracle.value;
+  const item = parseQtiXml(CHOICE_ITEM).document ?? fail("Longsight does not accept the item.");
+  let session: QtiItemSession = createItemSession(item);
+  const prepare = () => {
+    session = createItemSession(item);
+    session.respond("RESPONSE", "B");
+  };
+  prepare();
+  const checked = submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
+  expect(checked.ok && checked.value.outcomes.TOTAL).toBe(ANSWERED_BEFORE + 1);
+
+  await compareRow(
+    { annotate, bench },
+    {
+      name: "submit an item of a test",
+      budget: LONGSIGHT_BUDGETS.testSubmit,
+      runtime: () => {
+        engine.apply(drafted, submission);
+      },
+      longsight: () => {
+        submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
+      },
+      prepareLongsight: prepare,
     },
   );
 });
