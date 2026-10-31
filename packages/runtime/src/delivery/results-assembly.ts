@@ -22,7 +22,7 @@ import { type Course, candidateOf } from "./course.js";
 import { datestampOf } from "./datestamp.js";
 import { type DeliveredItem, type DeliveryState, findDelivered } from "./delivery-state.js";
 import { presentedInteractions } from "./item-display.js";
-import type { ItemKey } from "./plan.js";
+import { type ItemKey, sameKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
 import { resultStatus } from "./result-status.js";
 import { isCoveredUnscored, outstandingScores } from "./scoring.js";
@@ -247,14 +247,10 @@ function outcomeVariables(
     .map((declaration) => outcomeVariable(declaration, outcomes.get(declaration.identifier) ?? null));
   const extra = state.cat.flatMap((cat) =>
     cat.outcomes
-      .filter((outcome) => !outcome.declared && outcome.item !== undefined && sameInstance(outcome.item, session.key))
+      .filter((outcome) => !outcome.declared && outcome.item !== undefined && sameKey(outcome.item, session.key))
       .map((outcome) => reportedOutcome(outcome.identifier, outcome.value, outcome.variableIdentifierRef)),
   );
   return [completion, ...declared, ...extra];
-}
-
-function sameInstance(first: ItemKey, second: ItemKey): boolean {
-  return first.ref === second.ref && first.instance === second.instance;
 }
 
 /**

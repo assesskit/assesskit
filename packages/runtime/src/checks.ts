@@ -39,6 +39,18 @@ export function checkArray(value: unknown, message: string): asserts value is re
 }
 
 /**
+ * Applies a check to an optional field: `undefined` is absent, and every other value, `null` included, is checked.
+ *
+ * @param value - The field.
+ * @param check - The check, which throws when the value is not valid.
+ * @returns The field.
+ */
+export function optional<T>(value: T | undefined, check: (value: T) => void): T | undefined {
+  if (value !== undefined) check(value);
+  return value;
+}
+
+/**
  * Checks a function's options: an object, as a caller from JavaScript may pass `null` or another value.
  *
  * @throws `DataError` when they are not.

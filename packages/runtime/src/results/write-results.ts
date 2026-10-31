@@ -1,15 +1,9 @@
-import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkChoice, checkRecord, checkString, describe, optional } from "../checks.js";
 import { DataError } from "../errors.js";
-import {
-  BASE_TYPES,
-  type BaseType,
-  CARDINALITIES,
-  formatIdentifierList,
-  formatPrimitive,
-  isXsdDateTime,
-  type Primitive,
-} from "../values/index.js";
-import { buildElement, serializeXml, type XmlElement } from "../xml/index.js";
+import { BASE_TYPES, CARDINALITIES, formatIdentifierList, formatPrimitive, isXsdDateTime } from "../values/index.js";
+import { optionalText } from "../values/internal.js";
+import { serializeXml, type XmlElement } from "../xml/index.js";
+import { type Attributes, elementBuilder } from "../xml/internal.js";
 import type {
   AssessmentResult,
   ContextVariable,
@@ -38,23 +32,7 @@ import {
 /** The name of the attribute that holds the system of a session identifier, spelled as the RR schema spells it. */
 const SOURCE_ID = "sourceID";
 
-type Attributes = Readonly<Record<string, string | undefined>>;
-
-const element = (
-  name: string,
-  attributes: Attributes = {},
-  children: readonly (XmlElement | string)[] = [],
-): XmlElement => buildElement(RESULTS_NAMESPACE, name, attributes, children);
-
-/** Writes a field of a base type, which `formatPrimitive` checks; a field that is absent is `undefined`. */
-const optionalText = (value: Primitive | undefined, baseType: BaseType): string | undefined =>
-  value === undefined ? undefined : formatPrimitive(value, baseType);
-
-/** Applies a check to an optional field; `undefined` is absent and every other value, `null` included, is checked. */
-function optional<T>(value: T | undefined, check: (value: T) => void): T | undefined {
-  if (value !== undefined) check(value);
-  return value;
-}
+const element = elementBuilder(RESULTS_NAMESPACE);
 
 function dateTimeText(value: unknown, label: string): string {
   checkString(value, label);

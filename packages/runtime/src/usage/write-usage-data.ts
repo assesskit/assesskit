@@ -1,7 +1,9 @@
-import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, describe } from "../checks.js";
+import { checkArray, checkBoolean, checkChoice, checkRecord, checkString, describe, optional } from "../checks.js";
 import { DataError } from "../errors.js";
-import { BASE_TYPES, type BaseType, formatPrimitive, isXsdDate, type Primitive } from "../values/index.js";
-import { buildElement, serializeXml, type XmlElement } from "../xml/index.js";
+import { BASE_TYPES, formatPrimitive, isXsdDate } from "../values/index.js";
+import { optionalText } from "../values/internal.js";
+import { serializeXml, type XmlElement } from "../xml/index.js";
+import { type Attributes, elementBuilder } from "../xml/internal.js";
 import type {
   ItemStatistic,
   ItemStatisticBase,
@@ -14,23 +16,7 @@ import type {
 import { USAGE_NAMESPACE, USAGE_SCHEMA_LOCATION } from "./namespace.js";
 import { STATISTIC_OBJECT_TYPES } from "./vocabularies.js";
 
-type Attributes = Readonly<Record<string, string | undefined>>;
-
-const element = (
-  name: string,
-  attributes: Attributes = {},
-  children: readonly (XmlElement | string)[] = [],
-): XmlElement => buildElement(USAGE_NAMESPACE, name, attributes, children);
-
-/** Writes a field of a base type, which `formatPrimitive` checks; a field that is absent is `undefined`. */
-const optionalText = (value: Primitive | undefined, baseType: BaseType): string | undefined =>
-  value === undefined ? undefined : formatPrimitive(value, baseType);
-
-/** Applies a check to an optional field; `undefined` is absent and every other value, `null` included, is checked. */
-function optional<T>(value: T | undefined, check: (value: T) => void): T | undefined {
-  if (value !== undefined) check(value);
-  return value;
-}
+const element = elementBuilder(USAGE_NAMESPACE);
 
 function arrayOf<T>(value: readonly T[], label: string, minimum: number): readonly T[] {
   checkArray(value, `${label} must be an array`);

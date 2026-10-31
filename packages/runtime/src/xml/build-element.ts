@@ -14,6 +14,9 @@ function toAttribute(qualified: string, value: string): XmlAttribute {
   return { namespace: ATTRIBUTE_PREFIXES.get(prefix) ?? "", prefix, name: qualified.slice(colon + 1), value };
 }
 
+/** The attributes of an element to build by name; one whose value is `undefined` is left out. */
+export type Attributes = Readonly<Record<string, string | undefined>>;
+
 /**
  * Builds an element for a writer. Attributes whose value is `undefined` are left out, so that an optional field of a model
  * is written only when it is set; the others keep the order of the object.
@@ -29,7 +32,7 @@ function toAttribute(qualified: string, value: string): XmlAttribute {
 export function buildElement(
   namespace: string,
   name: string,
-  attributes: Readonly<Record<string, string | undefined>> = {},
+  attributes: Attributes = {},
   children: readonly (XmlNode | string)[] = [],
 ): XmlElement {
   checkString(namespace, "The namespace of an element");
@@ -48,4 +51,16 @@ export function buildElement(
       return child === "" ? [] : [{ kind: "text", value: child }];
     }),
   };
+}
+
+/**
+ * Returns the function that builds elements of one namespace, as {@link buildElement} does: a writer names its namespace
+ * once.
+ *
+ * @param namespace - The namespace of the elements.
+ */
+export function elementBuilder(
+  namespace: string,
+): (name: string, attributes?: Attributes, children?: readonly (XmlNode | string)[]) => XmlElement {
+  return (name, attributes = {}, children = []) => buildElement(namespace, name, attributes, children);
 }

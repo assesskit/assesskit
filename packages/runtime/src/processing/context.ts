@@ -55,15 +55,15 @@ export interface Environment {
 const NO_OPERATORS: ReadonlyMap<string, CustomOperator> = new Map();
 
 /**
- * Checks a processing context and applies its defaults.
+ * Checks the options of processing that a caller passes in a context or to an engine: the custom operators, the resolver of
+ * templates and the limits of processing. It applies their defaults.
  *
- * @throws `DataError` when it is not a context.
+ * @throws `DataError` when an option has the wrong type or a limit is not a positive integer.
  */
-export function checkContext(context: ProcessingContext): Environment {
-  checkRecord(context, "The processing context must be an object");
-  const { random, customOperators = NO_OPERATORS, resolveTemplate, limits = {} } = context;
-  checkRecord(random, "The option random must be an object with a function uniform");
-  checkFunction(random.uniform, "The option random must be an object with a function uniform");
+export function checkProcessingOptions(
+  options: Pick<ProcessingContext, "customOperators" | "resolveTemplate" | "limits">,
+): Omit<Environment, "random"> {
+  const { customOperators = NO_OPERATORS, resolveTemplate, limits = {} } = options;
   if (!(customOperators instanceof Map)) {
     throw new DataError(
       `The option customOperators must be a Map from a definition or class to a function, found ${describe(customOperators)}.`,
@@ -77,7 +77,20 @@ export function checkContext(context: ProcessingContext): Environment {
   checkRecord(limits, "The option limits must be an object");
   const { maxContainerSize = DEFAULT_PROCESSING_LIMITS.maxContainerSize } = limits;
   checkPositiveInteger(maxContainerSize, "The limit maxContainerSize");
-  return { random, customOperators, resolveTemplate, limits: { maxContainerSize } };
+  return { customOperators, resolveTemplate, limits: { maxContainerSize } };
+}
+
+/**
+ * Checks a processing context and applies its defaults.
+ *
+ * @throws `DataError` when it is not a context.
+ */
+export function checkContext(context: ProcessingContext): Environment {
+  checkRecord(context, "The processing context must be an object");
+  const { random } = context;
+  checkRecord(random, "The option random must be an object with a function uniform");
+  checkFunction(random.uniform, "The option random must be an object with a function uniform");
+  return { random, ...checkProcessingOptions(context) };
 }
 
 /**

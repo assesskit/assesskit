@@ -11,7 +11,7 @@ import {
 } from "../checks.js";
 import { DataError } from "../errors.js";
 import type { CandidateAction } from "./action.js";
-import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
+import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
 import { checkKey, type ItemKey, itemKeySchema } from "./item-key.js";
 import { supportNameSchema } from "./support-json.js";
@@ -167,16 +167,7 @@ export function actionToJson(action: CandidateAction): unknown {
   let json: Readonly<Record<string, unknown>>;
   switch (action.type) {
     case "set-responses":
-      if (!(action.responses instanceof Map)) {
-        throw new DataError(
-          `The responses of set-responses must be a Map from response identifier to value, found ${describe(action.responses)}.`,
-        );
-      }
-      if (action.pciStates !== undefined && !(action.pciStates instanceof Map)) {
-        throw new DataError(
-          `The pciStates of set-responses must be a Map from response identifier to state, found ${describe(action.pciStates)}.`,
-        );
-      }
+      checkResponseMaps(action);
       json = {
         type: action.type,
         item: itemKeyJson(action.item),

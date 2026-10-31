@@ -1,11 +1,11 @@
 import type { AssessmentItem, ResponseDeclaration } from "../asi/index.js";
 import { checkChoice, checkRecord, checkString, describe, isRecord } from "../checks.js";
-import { DataError } from "../errors.js";
 import { checkResponse, describeInteractions } from "../interactions/index.js";
 import { describeType } from "../processing/index.js";
 import { fitValue } from "../processing/internal.js";
 import { matchValues, normalizeValue, type Value } from "../values/index.js";
 import { type Ending, endAttempt, endAttemptInteractions, itemEvent, startAttempt } from "./attempt.js";
+import { checkResponseMaps } from "./candidate-actions.js";
 import { presentedInteractions } from "./item-display.js";
 import {
   applied,
@@ -132,18 +132,7 @@ export function checkItemAction(action: unknown): asserts action is ItemAction &
   checkChoice(action.type, "The type of the action", ITEM_ACTION_TYPES);
   checkKey(action.item);
   checkTime(action.at);
-  if (action.type === "set-responses") {
-    if (!(action.responses instanceof Map)) {
-      throw new DataError(
-        `The responses of set-responses must be a Map from response identifier to value, found ${describe(action.responses)}.`,
-      );
-    }
-    if (action.pciStates !== undefined && !(action.pciStates instanceof Map)) {
-      throw new DataError(
-        `The pciStates of set-responses must be a Map from response identifier to state, found ${describe(action.pciStates)}.`,
-      );
-    }
-  }
+  if (action.type === "set-responses") checkResponseMaps(action);
   if (action.type === "end-attempt") checkString(action.interaction, "The interaction of end-attempt");
   if (action.type === "comment") checkString(action.text, "The text of comment");
 }

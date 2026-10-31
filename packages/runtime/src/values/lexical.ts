@@ -166,3 +166,11 @@ export function formatPrimitive(value: Primitive, baseType: BaseType): string {
   if (isTuple(primitive)) return primitive.join(" ");
   return isFileValue(primitive) ? primitive.reference : "";
 }
+
+/**
+ * Writes a field of a base type that may be absent: `undefined` is absent, and every other value is written by
+ * {@link formatPrimitive}, which checks it.
+ */
+export function optionalText(value: Primitive | undefined, baseType: BaseType): string | undefined {
+  return value === undefined ? undefined : formatPrimitive(value, baseType);
+}

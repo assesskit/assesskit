@@ -1,6 +1,7 @@
 import { checkArray, checkRecord, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { buildElement, serializeXml, type XmlElement } from "../xml/index.js";
+import { serializeXml, type XmlElement } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 import type { PersonalNeedsProfile, PnpRecord } from "./model.js";
 import { PNP_NAMESPACE, PNP_SCHEMA_LOCATION } from "./namespace.js";
 import { checkProfile, SET_ELEMENTS } from "./profile-checks.js";
@@ -8,11 +9,7 @@ import { writeSupport } from "./write-supports.js";
 
 const SCHEMA_LOCATION = { "xsi:schemaLocation": `${PNP_NAMESPACE} ${PNP_SCHEMA_LOCATION}` };
 
-const element = (
-  name: string,
-  attributes: Readonly<Record<string, string | undefined>> = {},
-  children: readonly (XmlElement | string)[] = [],
-): XmlElement => buildElement(PNP_NAMESPACE, name, attributes, children);
+const element = elementBuilder(PNP_NAMESPACE);
 
 function profileElement(profile: PersonalNeedsProfile, attributes: Readonly<Record<string, string>> = {}): XmlElement {
   checkProfile(profile);

@@ -1,6 +1,7 @@
 import { checkArray, checkChoice, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
-import { buildElement, isXmlLanguage, type XmlElement } from "../xml/index.js";
+import { isXmlLanguage, type XmlElement } from "../xml/index.js";
+import { elementBuilder } from "../xml/internal.js";
 import { booleanText, floatText, hexColorText, integerText, termText, volumeText } from "./lexical.js";
 import { PNP_NAMESPACE } from "./namespace.js";
 import type {
@@ -43,16 +44,10 @@ import {
   PNP_TYPING_ECHOES,
 } from "./vocabularies.js";
 
-type Attributes = Readonly<Record<string, string | undefined>>;
-
 /** The grades of braille as the schema lists them. */
 const BRAILLE_GRADES = [1, 2, 3];
 
-const element = (
-  name: string,
-  attributes: Attributes = {},
-  children: readonly (XmlElement | string)[] = [],
-): XmlElement => buildElement(PNP_NAMESPACE, name, attributes, children);
+const element = elementBuilder(PNP_NAMESPACE);
 
 /** Writes a value that may be absent: `undefined` is absent and every other value, `null` included, is formatted. */
 const optionalWith = <T>(value: T | undefined, format: (value: T) => string): string | undefined =>

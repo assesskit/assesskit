@@ -23,12 +23,11 @@ import { resolveReference } from "../package/index.js";
 import {
   BUILT_IN_CONTEXTS,
   type CustomOperator,
-  DEFAULT_PROCESSING_LIMITS,
   declaredValue,
   type ProcessingLimits,
   type VariableType,
 } from "../processing/index.js";
-import { checkItem, initialOutcome } from "../processing/internal.js";
+import { checkItem, checkProcessingOptions, initialOutcome } from "../processing/internal.js";
 import { validateAsi, validateTest } from "../validate/index.js";
 import type { Value } from "../values/index.js";
 import type { CatSectionRef } from "./cat-session.js";
@@ -225,25 +224,10 @@ const TEST_KIND = "assessment-test";
 /** Checks the options of `createEngine` and applies their defaults. */
 function checkEngineOptions(options: EngineOptions): Pick<Course, "customOperators" | "resolveTemplate" | "limits"> {
   checkOptions(options);
-  const { customOperators = new Map<string, CustomOperator>(), resolveTemplate, limits = {} } = options;
-  if (!(customOperators instanceof Map)) {
-    throw new DataError(
-      `The option customOperators must be a Map from a definition or class to a function, found ${describe(customOperators)}.`,
-    );
-  }
-  for (const [name, operator] of customOperators) {
-    checkString(name, "The name of a custom operator");
-    checkFunction(operator, `The custom operator ${describe(name)} must be a function`);
-  }
-  if (resolveTemplate !== undefined) checkFunction(resolveTemplate, "The option resolveTemplate must be a function");
-  checkRecord(limits, "The option limits must be an object");
-  const {
-    maxContainerSize = DEFAULT_PROCESSING_LIMITS.maxContainerSize,
-    maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes,
-  } = limits;
-  checkPositiveInteger(maxContainerSize, "The limit maxContainerSize");
+  const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions(options);
+  const { maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes } = options.limits ?? {};
   checkPositiveInteger(maxPlanNodes, "The limit maxPlanNodes");
-  return { customOperators, resolveTemplate, limits: { maxContainerSize, maxPlanNodes } };
+  return { customOperators, resolveTemplate, limits: { ...processing, maxPlanNodes } };
 }
 
 /**

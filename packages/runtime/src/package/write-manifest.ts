@@ -19,6 +19,7 @@ import {
   type XmlElement,
   type XmlNode,
 } from "../xml/index.js";
+import type { Attributes } from "../xml/internal.js";
 import {
   CPX_NAMESPACE,
   MANIFEST_SCHEMA_VERSION,
@@ -37,7 +38,6 @@ const PREFIXES: ReadonlyMap<string, string> = new Map([
   [CPX_NAMESPACE, "cpx"],
 ]);
 
-type Attributes = Readonly<Record<string, string | undefined>>;
 type Children = readonly (XmlElement | string)[];
 
 function cp(name: string, children: Children = [], attributes: Attributes = {}): XmlElement {
