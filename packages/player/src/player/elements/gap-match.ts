@@ -1,12 +1,10 @@
 import { descendantNodes, type Gap, type GapMatchInteraction } from "@assesskit/runtime/asi";
 import { AssesskitError } from "@assesskit/runtime/errors";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { html } from "../internal.js";
-import type { Assignment, Board } from "./board/model.js";
-import { BoardElement, type BoardLayout, limitsOf, poolOf, tokensOf } from "./board-element.js";
+import { type BoardLayout, DirectedPairElement, limitsOf, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
 import {
@@ -17,7 +15,6 @@ import {
   type RenderedPrompt,
   renderPrompt,
 } from "./parts.js";
-import { pairsOf, responseOf } from "./values.js";
 
 const isGap = (node: { readonly kind: string }): node is Gap => node.kind === "gap";
 
@@ -30,7 +27,7 @@ const isGap = (node: { readonly kind: string }): node is Gap => node.kind === "g
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, gap match interaction}
  */
-export class GapMatchInteractionElement extends BoardElement {
+export class GapMatchInteractionElement extends DirectedPairElement {
   /** The kind of interaction that the element is for. */
   override readonly kind = "gap-match-interaction";
   readonly #choices: BuiltChoice[] = [];
@@ -85,15 +82,6 @@ export class GapMatchInteractionElement extends BoardElement {
       slots,
       pool,
     };
-  }
-
-  protected override toValue(descriptor: InteractionDescriptor, board: Board): Value | null {
-    const pairs = board.assignments().map(([gap, choice]): Pair => [choice, gap]);
-    return responseOf(descriptor, "directedPair", pairs);
-  }
-
-  protected override assignments(_descriptor: InteractionDescriptor, value: Value | null): Iterable<Assignment> {
-    return pairsOf(value).map(([choice, gap]): Assignment => [gap, choice]);
   }
 }
 

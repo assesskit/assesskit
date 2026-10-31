@@ -1,11 +1,10 @@
 import type { MatchInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import type { Pair, Value } from "@assesskit/runtime/values";
+import type { Pair } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { html, uniqueId } from "../internal.js";
-import type { Assignment, Board } from "./board/model.js";
-import { BoardElement, type BoardLayout, limitsOf, tokensOf } from "./board-element.js";
+import { type BoardLayout, DirectedPairElement, limitsOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
 import { type BuiltChoice, buildChoice, choiceName, type RenderedPrompt, renderPrompt } from "./parts.js";
@@ -31,7 +30,7 @@ interface MatchSet {
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, match interaction}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, match interaction}
  */
-export class MatchInteractionElement extends BoardElement {
+export class MatchInteractionElement extends DirectedPairElement {
   /** The kind of interaction that the element is for. */
   override readonly kind = "match-interaction";
   readonly #sets: MatchSet[] = [];
@@ -112,15 +111,6 @@ export class MatchInteractionElement extends BoardElement {
       slots,
       pool,
     };
-  }
-
-  protected override toValue(descriptor: InteractionDescriptor, board: Board): Value | null {
-    const pairs = board.assignments().map(([target, source]): Pair => [source, target]);
-    return responseOf(descriptor, "directedPair", pairs);
-  }
-
-  protected override assignments(_descriptor: InteractionDescriptor, value: Value | null): Iterable<Assignment> {
-    return pairsOf(value).map(([source, target]): Assignment => [target, source]);
   }
 
   /** Draws the match as a table: the first set in the rows, the second in the columns, a checkbox where they meet. */

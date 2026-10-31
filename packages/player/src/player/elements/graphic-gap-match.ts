@@ -1,17 +1,14 @@
 import type { GraphicGapMatchInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
 import { html } from "../internal.js";
-import type { Assignment, Board } from "./board/model.js";
-import { BoardElement, type BoardLayout, limitsOf, poolOf, tokensOf } from "./board-element.js";
+import { type BoardLayout, DirectedPairElement, limitsOf, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
 import { createArea } from "./graphic/areas.js";
 import { createStage } from "./graphic/stage.js";
 import { Notes } from "./notes.js";
 import { type BuiltChoice, buildChoice, type RenderedPrompt, renderPrompt } from "./parts.js";
-import { pairsOf, responseOf } from "./values.js";
 
 /** A gap of the image: its identifier, its element, and the label that the author gave it. */
 interface ImageGap {
@@ -32,7 +29,7 @@ interface ImageGap {
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, graphic gap match interaction}
  */
-export class GraphicGapMatchInteractionElement extends BoardElement {
+export class GraphicGapMatchInteractionElement extends DirectedPairElement {
   /** The kind of interaction that the element is for. */
   override readonly kind = "graphic-gap-match-interaction";
   readonly #choices: BuiltChoice[] = [];
@@ -92,15 +89,6 @@ export class GraphicGapMatchInteractionElement extends BoardElement {
       slots,
       pool,
     };
-  }
-
-  protected override toValue(descriptor: InteractionDescriptor, board: Board): Value | null {
-    const pairs = board.assignments().map(([gap, choice]): Pair => [choice, gap]);
-    return responseOf(descriptor, "directedPair", pairs);
-  }
-
-  protected override assignments(_descriptor: InteractionDescriptor, value: Value | null): Iterable<Assignment> {
-    return pairsOf(value).map(([choice, gap]): Assignment => [gap, choice]);
   }
 }
 

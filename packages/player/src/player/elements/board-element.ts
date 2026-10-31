@@ -1,11 +1,12 @@
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import type { Value } from "@assesskit/runtime/values";
+import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { html } from "../internal.js";
 import { type Assignment, Board, type BoardPlace, type BoardSource } from "./board/model.js";
 import { type BoardSlot, type BoardToken, BoardView } from "./board/view.js";
 import { InteractionElement, sameValue } from "./element.js";
 import { type BuiltChoice, choiceName, nameByPrompt, type RenderedPrompt } from "./parts.js";
+import { pairsOf, responseOf } from "./values.js";
 
 /** What an interaction on a board draws: the choices, the places, and where they stand. */
 export interface BoardLayout {
@@ -134,5 +135,20 @@ export abstract class BoardElement extends InteractionElement {
     const descriptor = this.descriptor;
     const board = this.#board;
     if (descriptor !== undefined && board !== undefined) this.respond(this.toValue(descriptor, board));
+  }
+}
+
+/**
+ * The element of an interaction whose response is a list of directed pairs, each a choice and the place it fills: a match,
+ * a gap match or a graphic gap match.
+ */
+export abstract class DirectedPairElement extends BoardElement {
+  protected override toValue(descriptor: InteractionDescriptor, board: Board): Value | null {
+    const pairs = board.assignments().map(([place, source]): Pair => [source, place]);
+    return responseOf(descriptor, "directedPair", pairs);
+  }
+
+  protected override assignments(_descriptor: InteractionDescriptor, value: Value | null): Iterable<Assignment> {
+    return pairsOf(value).map(([source, place]): Assignment => [place, source]);
   }
 }
