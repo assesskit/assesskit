@@ -40,18 +40,18 @@ function canonical(source: Uint8Array | string): string {
 describe("the 1EdTech examples", () => {
   const readable = paths.filter((path) => !REJECTED.has(path));
 
-  it("[S13] have 327 XML files at the pinned commit, of which 325 are read", () => {
+  it("have 327 XML files at the pinned commit, of which 325 are read", () => {
     expect(paths).toHaveLength(327);
     expect(readable).toHaveLength(325);
   });
 
-  it("[S13] are read, except the two that cannot be", () => {
+  it("are read, except the two that cannot be", () => {
     for (const [path, error] of REJECTED) {
       expect(() => parseXml(new Uint8Array(readFileSync(join(examples, path))), { path }), path).toThrow(error);
     }
   });
 
-  it("[S13] are read and written back to a document that libxml2 canonicalizes like the original", () => {
+  it("are read and written back to a document that libxml2 canonicalizes like the original", () => {
     for (const path of readable.filter((candidate) => !WITH_RELATIVE_NAMESPACE.has(candidate))) {
       const bytes = new Uint8Array(readFileSync(join(examples, path)));
       const written = serializeXml(parseXml(bytes, { path }));
@@ -59,7 +59,7 @@ describe("the 1EdTech examples", () => {
     }
   });
 
-  it("[S13] cannot be canonicalized by libxml2 in only the two cases that declare a relative namespace", () => {
+  it("cannot be canonicalized by libxml2 in only the two cases that declare a relative namespace", () => {
     for (const path of WITH_RELATIVE_NAMESPACE) {
       expect(() => canonical(new Uint8Array(readFileSync(join(examples, path)))), path).toThrow(
         "Failed to canonicalize",
@@ -67,7 +67,7 @@ describe("the 1EdTech examples", () => {
     }
   });
 
-  it("[S13] are read from what they are written to as the tree they were", () => {
+  it("are read from what they are written to as the tree they were", () => {
     for (const path of readable) {
       const root = parseXml(new Uint8Array(readFileSync(join(examples, path))), { path });
       const written = serializeXml(root);
@@ -77,7 +77,7 @@ describe("the 1EdTech examples", () => {
     }
   });
 
-  it("[S13] give each element a position inside the file", () => {
+  it("give each element a position inside the file", () => {
     const root: XmlElement = parseXml(new Uint8Array(readFileSync(join(examples, "packaging/items/choice.xml"))));
     expect([root.name, root.line, root.column]).toEqual(["qti-assessment-item", 3, 1]);
   });

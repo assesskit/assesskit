@@ -290,7 +290,7 @@ async function violations(): Promise<string[]> {
 }
 
 describe("styles", () => {
-  it("[T63] adopts its stylesheet into the roots of the toolbar and of the item, and gives it back", () => {
+  it("adopts its stylesheet into the roots of the toolbar and of the item, and gives it back", () => {
     const scene = createScene();
     const root = scene.stage.getRootNode();
     expect(root).toBeInstanceOf(ShadowRoot);
@@ -301,7 +301,7 @@ describe("styles", () => {
     expect([sheets(document), sheets(root)]).toEqual([0, 0]);
   });
 
-  it("[T63] shares the stylesheet between two mounts and takes it away with the last", () => {
+  it("shares the stylesheet between two mounts and takes it away with the last", () => {
     const first = createScene();
     const second = createScene();
     expect(document.adoptedStyleSheets).toHaveLength(1);
@@ -313,7 +313,7 @@ describe("styles", () => {
 });
 
 describe("the rule", () => {
-  it("[T63] shows a button, a panel with the description of the item, and a rule over the item", async () => {
+  it("shows a button, a panel with the description of the item, and a rule over the item", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     const button = toolbarButton(scene, "Ruler");
@@ -327,7 +327,7 @@ describe("the rule", () => {
     expect(rule.getBoundingClientRect().width).toBeCloseTo(376, 0);
   });
 
-  it("[T63] numbers the major ticks in the unit of the major increment and names the unit", async () => {
+  it("numbers the major ticks in the unit of the major increment and names the unit", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -339,7 +339,7 @@ describe("the rule", () => {
     expect(found(paths[0], "path").getAttribute("d")?.split("M").length).toBe(11 + 10 + 1);
   });
 
-  it("[T63] draws a rule of eight centimeters at the size of eight CSS centimeters", async () => {
+  it("draws a rule of eight centimeters at the size of eight CSS centimeters", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -356,7 +356,7 @@ describe("the rule", () => {
     probe.remove();
   });
 
-  it("[T63][SC 2.1.1] is operated by keyboard: Enter on the button opens it, arrows move it and Page Down turns it", async () => {
+  it("is operated by keyboard: Enter on the button opens it, arrows move it and Page Down turns it", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     toolbarButton(scene, "Ruler").focus();
@@ -377,7 +377,7 @@ describe("the rule", () => {
     expect(found(panelOf(scene, "Ruler"), "panel").querySelector("input")?.value).toBe("4");
   });
 
-  it("[T63][SC 2.5.7] moves and turns with the buttons and the angle field of the panel, without a drag", async () => {
+  it("moves and turns with the buttons and the angle field of the panel, without a drag", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -401,7 +401,7 @@ describe("the rule", () => {
     expect(placementOf(rule).angle).toBe(-170);
   });
 
-  it("[T63] moves by dragging the rule", async () => {
+  it("moves by dragging the rule", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -418,7 +418,7 @@ describe("the rule", () => {
     target.remove();
   });
 
-  it("[T63][SC 2.4.11] moves out of the way of an element that takes the focus and that it would hide", async () => {
+  it("moves out of the way of an element that takes the focus and that it would hide", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -433,7 +433,7 @@ describe("the rule", () => {
     expect(rule.bottom).toBeLessThanOrEqual(layer.bottom + 1);
   });
 
-  it("[T63][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", async () => {
+  it("has controls of at least 24 by 24 CSS pixels", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -441,14 +441,14 @@ describe("the rule", () => {
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T63] passes axe at WCAG 2.2 A and AA", async () => {
+  it("passes axe at WCAG 2.2 A and AA", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
     expect(await violations()).toEqual([]);
   });
 
-  it("[T63] closes with the button of its panel and gives the focus back to the toolbar", async () => {
+  it("closes with the button of its panel and gives the focus back to the toolbar", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -461,7 +461,7 @@ describe("the rule", () => {
 });
 
 describe("the protractor", () => {
-  it("[T63] shows the description of the item and a protractor of the size that the item has room for", async () => {
+  it("shows the description of the item and a protractor of the size that the item has room for", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -471,7 +471,7 @@ describe("the protractor", () => {
     expect(getComputedStyle(protractor).transformOrigin).toBe("188px 188px");
   });
 
-  it("[T63] draws a tick for each degree and for each five, and numbers every third major tick on both rings", async () => {
+  it("draws a tick for each degree and for each five, and numbers every third major tick on both rings", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -485,7 +485,7 @@ describe("the protractor", () => {
     expect(numbers).toContain("°");
   });
 
-  it("[T63] measures in radians when the item says so", async () => {
+  it("measures in radians when the item says so", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [protractorXml("Radians", ["0.5", "Radian"], undefined, "si")] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -497,7 +497,7 @@ describe("the protractor", () => {
     expect(numbers).toContain("3");
   });
 
-  it("[T63][SC 2.1.1] is operated by keyboard: the arrows move it and the Page keys turn it about the base line", async () => {
+  it("is operated by keyboard: the arrows move it and the Page keys turn it about the base line", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     toolbarButton(scene, "Protractor").focus();
@@ -513,7 +513,7 @@ describe("the protractor", () => {
     expect(placementOf(protractor).angle).toBe(5);
   });
 
-  it("[T63][SC 2.5.7] moves and turns with the buttons of its panel, without a drag", async () => {
+  it("moves and turns with the buttons of its panel, without a drag", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -526,7 +526,7 @@ describe("the protractor", () => {
     expect(placementOf(protractor)).toEqual({ x: start.x + 10, y: start.y + 10, angle: -5 });
   });
 
-  it("[T63][SC 2.4.11] moves out of the way of an element in its half circle that takes the focus", async () => {
+  it("moves out of the way of an element in its half circle that takes the focus", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -536,7 +536,7 @@ describe("the protractor", () => {
     expect(entirelyHidden(middle)).toBe(false);
   });
 
-  it("[T63] leaves an element outside the half circle reachable by the pointer, and does not move for it", async () => {
+  it("leaves an element outside the half circle reachable by the pointer, and does not move for it", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -548,14 +548,14 @@ describe("the protractor", () => {
     expect(placementOf(protractor)).toEqual(before);
   });
 
-  it("[T63][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", async () => {
+  it("has controls of at least 24 by 24 CSS pixels", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T63] passes axe at WCAG 2.2 A and AA", async () => {
+  it("passes axe at WCAG 2.2 A and AA", async () => {
     const scene = createScene();
     scene.show(items({ protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Protractor"));
@@ -567,7 +567,7 @@ describe("the line reader", () => {
   const optional = (overrides: ToolSupportFields = {}): ToolsInput =>
     profile(support("line-reader", { state: "option", ...overrides }));
 
-  it("[T86] asks to turn it on from the button, and follows the next input, not the request", async () => {
+  it("asks to turn it on from the button, and follows the next input, not the request", async () => {
     const scene = createScene({ follow: false });
     scene.show(optional());
     const button = toolbarButton(scene, "Line reader");
@@ -582,7 +582,7 @@ describe("the line reader", () => {
     expect(focused()).toBe(found(scene.stage.querySelector("[role=slider]"), "band"));
   });
 
-  it("[T86] puts the band over the first line and moves it line by line with the arrows, Home and End", async () => {
+  it("puts the band over the first line and moves it line by line with the arrows, Home and End", async () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional({ active: true }));
@@ -604,7 +604,7 @@ describe("the line reader", () => {
     expect(lineOf()).toBe(2);
   });
 
-  it("[T86][SC 2.5.7] moves with the buttons of its panel, without a drag", async () => {
+  it("moves with the buttons of its panel, without a drag", async () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional({ active: true }));
@@ -619,7 +619,7 @@ describe("the line reader", () => {
     expect(band.getAttribute("aria-valuenow")).toBe("2");
   });
 
-  it("[T86] gives the band the color of the profile, with the text showing through", () => {
+  it("gives the band the color of the profile, with the text showing through", () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional({ active: true, highlightColor: "#336699" }));
@@ -630,7 +630,7 @@ describe("the line reader", () => {
     expect(getComputedStyle(band).pointerEvents).toBe("none");
   });
 
-  it("[T86] has a color of its own when the profile gives none", () => {
+  it("has a color of its own when the profile gives none", () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional({ active: true }));
@@ -639,7 +639,7 @@ describe("the line reader", () => {
     expect([red, green, blue].map(Math.round)).toEqual([0xff, 0xd4, 0x00]);
   });
 
-  it("[T86] follows the text when it changes and when it wraps", async () => {
+  it("follows the text when it changes and when it wraps", async () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional({ active: true }));
@@ -658,7 +658,7 @@ describe("the line reader", () => {
     expect(Number(band.getAttribute("aria-valuemax"))).toBeGreaterThan(3);
   });
 
-  it("[T86] says that there is no text to follow, and has no band, for an item without text", async () => {
+  it("says that there is no text to follow, and has no band, for an item without text", async () => {
     const scene = createScene();
     setContent(scene, '<div style="height: 50px"></div>');
     scene.show(optional({ active: true }));
@@ -669,14 +669,14 @@ describe("the line reader", () => {
     expect(found(scene.stage.querySelector<HTMLElement>("[role=slider]"), "band").hidden).toBe(true);
   });
 
-  it("[T86] is not offered when the profile prohibits it", () => {
+  it("is not offered when the profile prohibits it", () => {
     const scene = createScene();
     scene.show(profile(support("line-reader", { state: "prohibited", active: true })));
     expect(scene.host.querySelectorAll(".ak-tools > .ak-row > button")).toHaveLength(0);
     expect(scene.stage.querySelector("[role=slider]")).toBeNull();
   });
 
-  it("[T86][SC 2.1.1] is operated by keyboard: Enter on the button turns it on, the arrows move it, Enter on Close turns it off", async () => {
+  it("is operated by keyboard: Enter on the button turns it on, the arrows move it, Enter on Close turns it off", async () => {
     const scene = createScene();
     setContent(scene, THREE_LINES);
     scene.show(optional());
@@ -696,7 +696,7 @@ describe("the line reader", () => {
     expect(focused()).toBe(toolbarButton(scene, "Line reader"));
   });
 
-  it("[T86][SC 2.4.11] hides no element: the text and the controls under it stay in view and reachable", () => {
+  it("hides no element: the text and the controls under it stay in view and reachable", () => {
     const scene = createScene();
     scene.show(optional({ active: true }));
     const corner = found(scene.stage.querySelector<HTMLElement>(".corner"), "corner control");
@@ -708,13 +708,13 @@ describe("the line reader", () => {
     expect(rgbaOf(getComputedStyle(band).backgroundColor)[3]).toBeLessThan(1);
   });
 
-  it("[T86][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", () => {
+  it("has controls of at least 24 by 24 CSS pixels", () => {
     const scene = createScene();
     scene.show(optional({ active: true }));
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T86] passes axe at WCAG 2.2 A and AA", async () => {
+  it("passes axe at WCAG 2.2 A and AA", async () => {
     const scene = createScene();
     scene.show(optional({ active: true }));
     expect(await violations()).toEqual([]);
@@ -726,7 +726,7 @@ describe("answer masking", () => {
   const choices = (scene: Scene): HTMLElement[] => [...scene.stage.querySelectorAll<HTMLElement>("qti-simple-choice")];
   const isHidden = (element: HTMLElement): boolean => getComputedStyle(element).display === "none";
 
-  it("[T92] hides the choices of a choice interaction, visually and to assistive technology, with a mask in their place (BPIG §5.2.9.4)", () => {
+  it("hides the choices of a choice interaction, visually and to assistive technology, with a mask in their place (BPIG §5.2.9.4)", () => {
     const scene = createScene();
     scene.show(masking(true));
     expect(choices(scene)).toHaveLength(2);
@@ -739,7 +739,7 @@ describe("answer masking", () => {
     expect(mask.nextElementSibling).toBe(choices(scene)[0]);
   });
 
-  it("[T92] gives focus to no hidden choice", () => {
+  it("gives focus to no hidden choice", () => {
     const scene = createScene();
     scene.show(masking(true));
     const input = found(scene.stage.querySelector<HTMLInputElement>("input"), "choice input");
@@ -747,7 +747,7 @@ describe("answer masking", () => {
     expect(focused()).not.toBe(input);
   });
 
-  it("[T92] takes the mask off at the candidate's choice, and puts it back", async () => {
+  it("takes the mask off at the candidate's choice, and puts it back", async () => {
     const scene = createScene();
     scene.show(masking(true));
     const button = found(scene.stage.querySelector<HTMLButtonElement>(".ak-mask button"), "mask button");
@@ -760,7 +760,7 @@ describe("answer masking", () => {
     expect(button.textContent).toBe("Show answer choices");
   });
 
-  it("[T92][SC 2.1.1] is operated by keyboard, and keeps the focus on the button that the candidate pressed", async () => {
+  it("is operated by keyboard, and keeps the focus on the button that the candidate pressed", async () => {
     const scene = createScene();
     scene.show(masking(true));
     const button = found(scene.stage.querySelector<HTMLButtonElement>(".ak-mask button"), "mask button");
@@ -773,7 +773,7 @@ describe("answer masking", () => {
     expect(focused()).toBe(button);
   });
 
-  it("[T92] is on at the start of the session for a candidate who has it, and off for one who has not", () => {
+  it("is on at the start of the session for a candidate who has it, and off for one who has not", () => {
     const scene = createScene();
     scene.show(masking(false));
     expect(scene.stage.querySelector(".ak-mask")).toBeNull();
@@ -781,7 +781,7 @@ describe("answer masking", () => {
     expect(scene.stage.querySelector("[data-ak-masked]")).toBeNull();
   });
 
-  it("[T92] asks to turn masking on from the toolbar, and masks when the next input says it is on", async () => {
+  it("asks to turn masking on from the toolbar, and masks when the next input says it is on", async () => {
     const scene = createScene();
     scene.show(masking(false));
     const button = toolbarButton(scene, "Answer masking");
@@ -795,7 +795,7 @@ describe("answer masking", () => {
     expect(scene.stage.querySelector("[data-ak-masked]")).toBeNull();
   });
 
-  it("[T92] masks an interaction that the renderer adds, and the mask that the renderer removes comes back", async () => {
+  it("masks an interaction that the renderer adds, and the mask that the renderer removes comes back", async () => {
     const scene = createScene();
     scene.show(masking(true));
     scene.stage.insertAdjacentHTML(
@@ -810,14 +810,14 @@ describe("answer masking", () => {
     expect(scene.stage.querySelectorAll(".ak-mask")).toHaveLength(2);
   });
 
-  it("[T92] leaves an interaction without choices alone", () => {
+  it("leaves an interaction without choices alone", () => {
     const scene = createScene();
     setContent(scene, "<qti-choice-interaction><qti-prompt>Empty</qti-prompt></qti-choice-interaction>");
     scene.show(masking(true));
     expect(scene.stage.querySelector(".ak-mask")).toBeNull();
   });
 
-  it("[T92] takes every mask away with the tool", () => {
+  it("takes every mask away with the tool", () => {
     const scene = createScene();
     scene.show(masking(true));
     scene.tools.destroy();
@@ -826,7 +826,7 @@ describe("answer masking", () => {
     expect(choices(scene).some(isHidden)).toBe(false);
   });
 
-  it("[T92][SC 2.4.11] leaves the button that shows the choices in view, since the choices cannot take focus", async () => {
+  it("leaves the button that shows the choices in view, since the choices cannot take focus", async () => {
     const scene = createScene();
     scene.show(masking(true));
     const button = found(scene.stage.querySelector<HTMLButtonElement>(".ak-mask button"), "mask button");
@@ -835,14 +835,14 @@ describe("answer masking", () => {
     expect(entirelyHidden(button)).toBe(false);
   });
 
-  it("[T92][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", () => {
+  it("has controls of at least 24 by 24 CSS pixels", () => {
     const scene = createScene();
     scene.show(masking(true));
     expect(targetsOf(scene).length).toBeGreaterThan(1);
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T92] passes axe at WCAG 2.2 A and AA, masked and unmasked", async () => {
+  it("passes axe at WCAG 2.2 A and AA, masked and unmasked", async () => {
     const scene = createScene();
     scene.show(masking(true));
     expect(await violations()).toEqual([]);
@@ -863,7 +863,7 @@ describe("the calculators", () => {
     for (const name of names) await userEvent.click(key(panel, name));
   };
 
-  it("[T63][T93] opens the basic calculator for an item that asks for one, with its description", async () => {
+  it("opens the basic calculator for an item that asks for one, with its description", async () => {
     const scene = createScene();
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -875,7 +875,7 @@ describe("the calculators", () => {
     expect(panel.querySelector('[aria-label="MC, clear memory"]')).toBeNull();
   });
 
-  it("[T93] adds, subtracts, multiplies and divides with the keys, and clears", async () => {
+  it("adds, subtracts, multiplies and divides with the keys, and clears", async () => {
     const scene = createScene();
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -892,7 +892,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("0.3");
   });
 
-  it("[T93] shows an error for a division by zero, in the language of the interface", async () => {
+  it("shows an error for a division by zero, in the language of the interface", async () => {
     const english = createScene();
     english.show(calculators("basic"));
     await userEvent.click(toolbarButton(english, "Basic calculator"));
@@ -911,7 +911,7 @@ describe("the calculators", () => {
     expect(display(panelId)).toBe("Galat");
   });
 
-  it("[T93] opens the standard calculator with the memory, percent, square root and sign of BPIG §3.7.8.1", async () => {
+  it("opens the standard calculator with the memory, percent, square root and sign of BPIG §3.7.8.1", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
@@ -934,7 +934,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("-5");
   });
 
-  it("[T93][SC 2.1.1] is operated by keyboard: the focus goes to the display, and typing works there", async () => {
+  it("is operated by keyboard: the focus goes to the display, and typing works there", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     toolbarButton(scene, "Standard calculator").focus();
@@ -953,7 +953,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("9");
   });
 
-  it("[T93][SC 2.1.1] presses the focused button with Enter and types on any other control of the calculator", async () => {
+  it("presses the focused button with Enter and types on any other control of the calculator", async () => {
     const scene = createScene();
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -969,7 +969,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("76");
   });
 
-  it("[SC 2.1.4] has no key that works while the focus is outside the calculator", async () => {
+  it("has no one-key shortcut that works while the focus is outside the calculator", async () => {
     const scene = createScene();
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -982,7 +982,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("0");
   });
 
-  it("[T93] types a standard-only key only into the standard calculator", async () => {
+  it("types a standard-only key only into the standard calculator", async () => {
     const scene = createScene();
     scene.show(calculators("basic"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -993,7 +993,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("50");
   });
 
-  it("[T93] names every key that shows letters with a name that starts with them, so that the label is in the name (WCAG 2.5.3)", async () => {
+  it("names every key that shows letters with a name that starts with them, so that the label is in the name (WCAG 2.5.3)", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
@@ -1016,7 +1016,7 @@ describe("the calculators", () => {
     }
   });
 
-  it("[T93] shows the file of a calculator below the keys of the built-in calculator, as the viewer shows a file", async () => {
+  it("shows the file of a calculator below the keys of the built-in calculator, as the viewer shows a file", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1046,7 +1046,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("15");
   });
 
-  it("[T93] shows no file for a calculator that has none, and loads nothing from a path with a scheme", async () => {
+  it("shows no file for a calculator that has none, and loads nothing from a path with a scheme", async () => {
     const assets = vi.fn((path: string) => `/package/${path}`);
     const scene = createScene({ assets });
     scene.show(
@@ -1066,7 +1066,7 @@ describe("the calculators", () => {
     expect(assets).not.toHaveBeenCalled();
   });
 
-  it("[T93] makes one tool of the calculator that the item and the profile both ask for, and turns it on by the profile", async () => {
+  it("makes one tool of the calculator that the item and the profile both ask for, and turns it on by the profile", async () => {
     const scene = createScene();
     const input = (active: boolean): ToolsInput => ({
       companion: companion({ calculators: [calculatorXml("standard", "Standard of the item.")] }),
@@ -1079,7 +1079,7 @@ describe("the calculators", () => {
     expect(found(panelOf(scene, "Standard calculator"), "panel").textContent).toContain("Standard of the item.");
   });
 
-  it("[T93] puts the calculator of the profile on the screen for an item that has none, whatever the type of calculator", async () => {
+  it("puts the calculator of the profile on the screen for an item that has none, whatever the type of calculator", async () => {
     const scene = createScene();
     scene.show(profile(support("calculator-on-screen", { state: "active", active: true })));
     expect(found(panelOf(scene, "Basic calculator"), "panel")).toBeTruthy();
@@ -1088,7 +1088,7 @@ describe("the calculators", () => {
     expect(found(panelOf(other, "Standard calculator"), "panel")).toBeTruthy();
   });
 
-  it("[T93] leaves no calculator to a candidate whose profile prohibits it, though the item asks for one", () => {
+  it("leaves no calculator to a candidate whose profile prohibits it, though the item asks for one", () => {
     const scene = createScene();
     scene.show({
       companion: companion({ calculators: [calculatorXml("basic", "Basic")], rules: [RULE_XML] }),
@@ -1098,7 +1098,7 @@ describe("the calculators", () => {
     expect(names).toEqual(["Ruler"]);
   });
 
-  it("[T93][SC 2.4.11] shows every key: the panel is in the tray, where nothing lies over it", async () => {
+  it("shows every key: the panel is in the tray, where nothing lies over it", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
@@ -1109,7 +1109,7 @@ describe("the calculators", () => {
     }
   });
 
-  it("[T93][SC 2.5.8] has keys of at least 24 by 24 CSS pixels", async () => {
+  it("has keys of at least 24 by 24 CSS pixels", async () => {
     const scene = createScene();
     scene.show(calculators("basic", "standard"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -1118,7 +1118,7 @@ describe("the calculators", () => {
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T93] passes axe at WCAG 2.2 A and AA, both calculators open", async () => {
+  it("passes axe at WCAG 2.2 A and AA, both calculators open", async () => {
     const scene = createScene();
     scene.show(calculators("basic", "standard"));
     await userEvent.click(toolbarButton(scene, "Basic calculator"));
@@ -1135,7 +1135,7 @@ describe("digital and physical materials", () => {
     return found(panelOf(scene, name), "panel");
   };
 
-  it("[T63] shows an image of the package in the viewer, by the URL that the package paths map to", async () => {
+  it("shows an image of the package in the viewer, by the URL that the package paths map to", async () => {
     const scene = createScene();
     scene.show(items({ digital: [material({ label: "Periodic table", mimeType: "image/png" })] }));
     const panel = await open(scene, "Periodic table");
@@ -1144,13 +1144,13 @@ describe("digital and physical materials", () => {
     expect(image.getAttribute("alt")).toBe("Periodic table");
   });
 
-  it("[T63] names a material without a label by its file", async () => {
+  it("names a material without a label by its file", async () => {
     const scene = createScene();
     scene.show(items({ digital: [material({ mimeType: "image/png" })] }));
     expect(await open(scene, "periodic.png")).toBeTruthy();
   });
 
-  it("[T63] shows audio and video with their controls", async () => {
+  it("shows audio and video with their controls", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1164,7 +1164,7 @@ describe("digital and physical materials", () => {
     expect((await open(scene, "Film")).querySelector("video")?.getAttribute("src")).toBe("/package/v.mp4");
   });
 
-  it("[T63] puts a page in a frame with an empty sandbox, which runs nothing of it", async () => {
+  it("puts a page in a frame with an empty sandbox, which runs nothing of it", async () => {
     const scene = createScene();
     scene.show(items({ digital: [digitalXml("table.html", { label: "Table", mimeType: "text/html" })] }));
     const frameElement = found((await open(scene, "Table")).querySelector("iframe"), "frame");
@@ -1173,7 +1173,7 @@ describe("digital and physical materials", () => {
     expect(frameElement.getAttribute("title")).toBe("Table");
   });
 
-  it("[T63] offers any other file as a link that opens in a tab of its own", async () => {
+  it("offers any other file as a link that opens in a tab of its own", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1194,7 +1194,7 @@ describe("digital and physical materials", () => {
     );
   });
 
-  it("[T63] loads nothing from a path with a scheme, which is not a package path, and says that the material is not available", async () => {
+  it("loads nothing from a path with a scheme, which is not a package path, and says that the material is not available", async () => {
     const assets = vi.fn((path: string) => `/package/${path}`);
     const scene = createScene({ assets });
     scene.show(
@@ -1218,7 +1218,7 @@ describe("digital and physical materials", () => {
     expect(toolbarButton(scene, "Remote").querySelector("img")).toBeNull();
   });
 
-  it("[T63] shows the icon of a material in its button, as a picture that the name of the button already names", () => {
+  it("shows the icon of a material in its button, as a picture that the name of the button already names", () => {
     const scene = createScene();
     scene.show(items({ digital: [material({ label: "Periodic table", icon: "files/table.svg" })] }));
     const icon = found(toolbarButton(scene, "Periodic table").querySelector("img"), "icon");
@@ -1226,7 +1226,7 @@ describe("digital and physical materials", () => {
     expect(icon.getAttribute("alt")).toBe("");
   });
 
-  it("[T63] lists the physical materials in a notice, and has none when the item names none", () => {
+  it("lists the physical materials in a notice, and has none when the item names none", () => {
     const scene = createScene();
     scene.show(items({ physical: ["Supply scissors.", "Supply 2 sheets of 8.5 x 11 inch white paper."] }));
     const notice = found(scene.host.querySelector<HTMLElement>(".ak-physical"), "notice");
@@ -1241,14 +1241,14 @@ describe("digital and physical materials", () => {
     expect(notice.hidden).toBe(true);
   });
 
-  it("[T63] shows the text of a physical material as text, never as markup", () => {
+  it("shows the text of a physical material as text, never as markup", () => {
     const scene = createScene();
     scene.show(items({ physical: ["<img src=x onerror=alert(1)>"] }));
     expect(scene.host.querySelector(".ak-physical img")).toBeNull();
     expect(scene.host.querySelector(".ak-physical li")?.textContent).toBe("<img src=x onerror=alert(1)>");
   });
 
-  it("[T63][SC 2.1.1] is operated by keyboard: Enter opens the viewer, with the focus on its heading, and Enter on Close closes it", async () => {
+  it("is operated by keyboard: Enter opens the viewer, with the focus on its heading, and Enter on Close closes it", async () => {
     const scene = createScene();
     scene.show(items({ digital: [material({ label: "Periodic table", mimeType: "image/png" })] }));
     toolbarButton(scene, "Periodic table").focus();
@@ -1261,7 +1261,7 @@ describe("digital and physical materials", () => {
     expect(focused()).toBe(toolbarButton(scene, "Periodic table"));
   });
 
-  it("[T63][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", async () => {
+  it("has controls of at least 24 by 24 CSS pixels", async () => {
     const scene = createScene();
     scene.show(
       items({ digital: [digitalXml("a.pdf", { label: "Sheet", mimeType: "application/pdf" })], physical: ["Paper."] }),
@@ -1270,7 +1270,7 @@ describe("digital and physical materials", () => {
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T63] passes axe at WCAG 2.2 A and AA", async () => {
+  it("passes axe at WCAG 2.2 A and AA", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1299,7 +1299,7 @@ describe("the tools of the host", () => {
     ["spell-checker-on-screen", "spell-checker", "Spell checker"],
   ] as const;
 
-  it("[T94] builds each on-screen tool of the profile in its panel with the function of the host, and takes it down when it goes", async () => {
+  it("builds each on-screen tool of the profile in its panel with the function of the host, and takes it down when it goes", async () => {
     const built: { name: string; language: string }[] = [];
     const unmounted: string[] = [];
     const slots: ToolSlots = {};
@@ -1323,7 +1323,7 @@ describe("the tools of the host", () => {
     expect(scene.host.querySelectorAll(".ak-panel")).toHaveLength(0);
   });
 
-  it("[T94] builds the scientific and the graphing calculator that an item asks for with the functions of the host", async () => {
+  it("builds the scientific and the graphing calculator that an item asks for with the functions of the host", async () => {
     const slots: ToolSlots = {
       "scientific-calculator": (host) => {
         host.textContent = "Scientific";
@@ -1342,7 +1342,7 @@ describe("the tools of the host", () => {
     expect(found(panelOf(scene, "Graphing calculator"), "panel").textContent).toContain("This tool is not available.");
   });
 
-  it("[T94] gives the file of a calculator to the tool of the host that builds the calculator", async () => {
+  it("gives the file of a calculator to the tool of the host that builds the calculator", async () => {
     const options: ToolOptions[] = [];
     const scene = createScene({
       slots: {
@@ -1378,7 +1378,7 @@ describe("the tools of the host", () => {
     expect(panel.querySelector("iframe")).toBeNull();
   });
 
-  it("[T94] shows the file of a calculator that the host does not provide, below the notice", async () => {
+  it("shows the file of a calculator that the host does not provide, below the notice", async () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1400,20 +1400,20 @@ describe("the tools of the host", () => {
     expect(frameElement.getAttribute("title")).toBe("Graphing file");
   });
 
-  it("[T94] says that a tool is not available when the host gives none", () => {
+  it("says that a tool is not available when the host gives none", () => {
     const scene = createScene();
     scene.show(profile(support("dictionary-on-screen", { state: "active", active: true })));
     expect(found(panelOf(scene, "Dictionary"), "panel").textContent).toContain("This tool is not available.");
   });
 
-  it("[T94] leaves out a tool that the profile prohibits", () => {
+  it("leaves out a tool that the profile prohibits", () => {
     const scene = createScene();
     scene.show(profile(support("dictionary-on-screen", { state: "prohibited" }), support("thesaurus-on-screen")));
     const names = [...scene.host.querySelectorAll(".ak-tools > .ak-row > button")].map((button) => button.textContent);
     expect(names).toEqual(["Thesaurus"]);
   });
 
-  it("[T94] refuses a function of the host that returns no function, and takes the panel down", () => {
+  it("refuses a function of the host that returns no function, and takes the panel down", () => {
     const scene = createScene({ slots: { dictionary: () => JSON.parse("1") } });
     expect(() => scene.show(profile(support("dictionary-on-screen", { state: "active", active: true })))).toThrow(
       new DataError("The function of the slot dictionary must return a function, found 1."),
@@ -1421,7 +1421,7 @@ describe("the tools of the host", () => {
     expect(scene.host.querySelectorAll(".ak-panel")).toHaveLength(0);
   });
 
-  it("[T94] takes the panel down and passes on the error of a function of the host that throws", () => {
+  it("takes the panel down and passes on the error of a function of the host that throws", () => {
     const scene = createScene({
       slots: {
         dictionary: () => {
@@ -1435,7 +1435,7 @@ describe("the tools of the host", () => {
     expect(scene.host.querySelectorAll(".ak-panel")).toHaveLength(0);
   });
 
-  it("[T94] shows the other tools when the function of one tool of the host fails", () => {
+  it("shows the other tools when the function of one tool of the host fails", () => {
     const scene = createScene({
       slots: {
         dictionary: () => {
@@ -1461,7 +1461,7 @@ describe("the tools of the host", () => {
     ).toEqual(["Dictionary", "Thesaurus"]);
   });
 
-  it("[T94][SC 2.1.1] is operated by keyboard: Enter on the button turns it on and puts the focus on the heading of its panel", async () => {
+  it("is operated by keyboard: Enter on the button turns it on and puts the focus on the heading of its panel", async () => {
     const scene = createScene({ slots: { dictionary: () => () => undefined } });
     scene.show(profile(support("dictionary-on-screen", { state: "option" })));
     toolbarButton(scene, "Dictionary").focus();
@@ -1470,13 +1470,13 @@ describe("the tools of the host", () => {
     expect(focused()).toBe(found(panelOf(scene, "Dictionary"), "panel").querySelector("h3"));
   });
 
-  it("[T94][SC 2.5.8] has controls of at least 24 by 24 CSS pixels", () => {
+  it("has controls of at least 24 by 24 CSS pixels", () => {
     const scene = createScene();
     scene.show(profile(support("dictionary-on-screen", { state: "active", active: true })));
     expect(tooSmall(scene)).toEqual([]);
   });
 
-  it("[T94] passes axe at WCAG 2.2 A and AA", async () => {
+  it("passes axe at WCAG 2.2 A and AA", async () => {
     const scene = createScene({
       slots: { dictionary: paragraphIn },
     });
@@ -1494,7 +1494,7 @@ describe("mountTools", () => {
   const buttonNames = (scene: Scene): (string | null)[] =>
     [...scene.host.querySelectorAll(".ak-tools > .ak-row > button")].map((button) => button.textContent);
 
-  it("[T63] puts the tools of the item before those of the profile, in a region named Tools", () => {
+  it("puts the tools of the item before those of the profile, in a region named Tools", () => {
     const scene = createScene();
     scene.show({
       companion: companion({
@@ -1519,7 +1519,7 @@ describe("mountTools", () => {
     expect(region.getAttribute("aria-label")).toBe("Tools");
   });
 
-  it("[T63] numbers the buttons of tools that share a name", () => {
+  it("numbers the buttons of tools that share a name", () => {
     const scene = createScene();
     scene.show(
       items({
@@ -1530,14 +1530,14 @@ describe("mountTools", () => {
     expect(buttonNames(scene)).toEqual(["Ruler 1", "Ruler 2", "Protractor"]);
   });
 
-  it("[T97] names the tools in the language of the interface", () => {
+  it("names the tools in the language of the interface", () => {
     const scene = createScene({ messages: ID_MESSAGES });
     scene.show(items({ rules: [RULE_XML], protractors: [PROTRACTOR_XML] }));
     expect(buttonNames(scene)).toEqual(["Penggaris", "Busur derajat"]);
     expect(found(scene.host.querySelector(".ak-tools"), "region").getAttribute("aria-label")).toBe("Alat bantu");
   });
 
-  it("[T63] hides the region when there is nothing to show, and shows it again", () => {
+  it("hides the region when there is nothing to show, and shows it again", () => {
     const scene = createScene();
     scene.show({ companion: null, supports: [] });
     expect(found(scene.host.querySelector<HTMLElement>(".ak-tools"), "region").hidden).toBe(true);
@@ -1547,7 +1547,7 @@ describe("mountTools", () => {
     expect(found(scene.host.querySelector<HTMLElement>(".ak-tools"), "region").hidden).toBe(false);
   });
 
-  it("[T63] keeps a tool open, where it was put, when the next item asks for the same tool", async () => {
+  it("keeps a tool open, where it was put, when the next item asks for the same tool", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -1565,7 +1565,7 @@ describe("mountTools", () => {
     expect(buttonNames(scene)).toEqual(["Ruler", "Basic calculator"]);
   });
 
-  it("[T63] takes down a tool that the next item does not ask for, and the focus goes to the toolbar's button", async () => {
+  it("takes down a tool that the next item does not ask for, and the focus goes to the toolbar's button", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML], protractors: [PROTRACTOR_XML] }));
     await userEvent.click(toolbarButton(scene, "Ruler"));
@@ -1578,7 +1578,7 @@ describe("mountTools", () => {
     expect(buttonNames(scene)).toEqual(["Ruler"]);
   });
 
-  it("[T63] does not move the button that has the focus when it adds another", async () => {
+  it("does not move the button that has the focus when it adds another", async () => {
     const scene = createScene();
     scene.show(items({ rules: [RULE_XML] }));
     toolbarButton(scene, "Ruler").focus();
@@ -1586,7 +1586,7 @@ describe("mountTools", () => {
     expect(focused()).toBe(toolbarButton(scene, "Ruler"));
   });
 
-  it("[T93] follows the profile, not the candidate, for the tools that the profile puts on the screen", async () => {
+  it("follows the profile, not the candidate, for the tools that the profile puts on the screen", async () => {
     const scene = createScene({ follow: false });
     scene.show(profile(support("calculator-on-screen", { state: "option", active: true })));
     const button = toolbarButton(scene, "Basic calculator");
@@ -1601,14 +1601,14 @@ describe("mountTools", () => {
     expect(button.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("[T63] does not move the focus into a tool that an input opens without the candidate asking", () => {
+  it("does not move the focus into a tool that an input opens without the candidate asking", () => {
     const scene = createScene();
     scene.before.focus();
     scene.show(profile(support("line-reader", { state: "active", active: true })));
     expect(focused()).toBe(scene.before);
   });
 
-  it("[T63] takes everything down on destroy and leaves the item as it was", async () => {
+  it("takes everything down on destroy and leaves the item as it was", async () => {
     const scene = createScene();
     const markup = scene.stage.innerHTML.replace('<div class="ak-tool-layer"></div>', "");
     scene.show({
@@ -1621,7 +1621,7 @@ describe("mountTools", () => {
     expect(scene.stage.innerHTML).toBe(markup);
   });
 
-  it("[T63] puts the physical materials in one place whatever the tools in force", () => {
+  it("puts the physical materials in one place whatever the tools in force", () => {
     const scene = createScene();
     scene.show(items({ physical: ["A", "B"] }));
     expect(scene.host.querySelectorAll(".ak-physical li")).toHaveLength(2);
@@ -1629,7 +1629,7 @@ describe("mountTools", () => {
     expect([...scene.host.querySelectorAll(".ak-physical li")].map((item) => item.textContent)).toEqual(["C"]);
   });
 
-  it("[T63] passes axe at WCAG 2.2 A and AA with every kind of tool in force and open", async () => {
+  it("passes axe at WCAG 2.2 A and AA with every kind of tool in force and open", async () => {
     const scene = createScene({
       slots: { dictionary: paragraphIn },
     });
@@ -1654,7 +1654,7 @@ describe("mountTools", () => {
 });
 
 describe("a content root with player.css", () => {
-  it("[T63] shows and operates the tools in a content root that adopts player.css, with the contrast and the sizes that they have without it", async () => {
+  it("shows and operates the tools in a content root that adopts player.css, with the contrast and the sizes that they have without it", async () => {
     const scene = createScene({ playerCss: true });
     scene.show({
       companion: companion({
@@ -1682,7 +1682,7 @@ describe("a content root with player.css", () => {
 });
 
 describe("color schemes", () => {
-  it("[T63] keeps the contrast of every tool in a dark color scheme, since the stylesheet uses system colors", async () => {
+  it("keeps the contrast of every tool in a dark color scheme, since the stylesheet uses system colors", async () => {
     const scene = createScene();
     scene.show({
       companion: companion({

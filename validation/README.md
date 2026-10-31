@@ -12,4 +12,4 @@ python3 validation/caliper_ids.py  # Caliper identifiers: the name-based UUIDs t
 
 They write the same files every time they run: random samples use a fixed seed. Commit regenerated fixtures; CI runs only
 the TypeScript tests. The oracles, the cases the scripts leave out and why are in
-[evidence.md](../packages/runtime/docs/evidence.md), and for the player in [evidence.md](../packages/player/docs/evidence.md#tests-of-caliper).
+[evidence.md](../docs/runtime/evidence.md), and for the player in [evidence.md](../docs/player/evidence.md#tests-of-caliper).

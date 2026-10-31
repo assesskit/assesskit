@@ -113,7 +113,7 @@ async function expectedForPackage(path: string): Promise<readonly Issue[]> {
 }
 
 describe("assesskit validate: documents", () => {
-  it("[L12][L13][C] says that a valid item is valid, in text, and exits with 0", async () => {
+  it("says that a valid item is valid, in text, and exits with 0", async () => {
     const path = example("packaging/items/choice.xml");
     expect(await run(["validate", path])).toEqual({
       code: 0,
@@ -122,7 +122,7 @@ describe("assesskit validate: documents", () => {
     });
   });
 
-  it("[L12][L13][C] gives the report of the design in JSON, with the fields in order, for an item that is valid", async () => {
+  it("gives the report of the design in JSON, with the fields in order, for an item that is valid", async () => {
     const path = example("packaging/items/choice.xml");
     const { code, stdout, stderr } = await run(["validate", path, "--format=json"]);
     expect([code, stderr]).toEqual([0, ""]);
@@ -139,7 +139,7 @@ describe("assesskit validate: documents", () => {
     });
   });
 
-  it("[L13][C] exits with 0 for an item that has warnings only, and prints them", async () => {
+  it("exits with 0 for an item that has warnings only, and prints them", async () => {
     const path = example("packaging/items/Example03-feedbackBlock-solution-random.xml");
     const { code, stdout } = await run(["validate", path]);
     expect(code).toBe(0);
@@ -149,7 +149,7 @@ describe("assesskit validate: documents", () => {
     );
   });
 
-  it("[L12][L13][C] exits with 1 for an item with errors, and reports what the semantic checks find", async () => {
+  it("exits with 1 for an item with errors, and reports what the semantic checks find", async () => {
     // INFO §2.11.3.29: qti-member takes a single value and then a container, and this example has them the wrong way round.
     const path = example("packaging/items/feedback_adaptive.xml");
     const { code, report: found } = await report(path);
@@ -163,7 +163,7 @@ describe("assesskit validate: documents", () => {
     expect(found.issues).toEqual(await expectedForDocument(path));
   });
 
-  it("[L12][C] checks the schema first and then the semantics, and reports a defect that both find with both codes", async () => {
+  it("checks the schema first and then the semantics, and reports a defect that both find with both codes", async () => {
     const path = example("packaging/items/data-attributes.xml");
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
@@ -174,7 +174,7 @@ describe("assesskit validate: documents", () => {
     expect(found.issues).toEqual(await expectedForDocument(path));
   });
 
-  it("[L12][C] reads a test, a results report, usage data and a manifest as the kind their root element names", async () => {
+  it("reads a test, a results report, usage data and a manifest as the kind their root element names", async () => {
     for (const path of [
       "tests/rtest01.xml",
       "results/report.xml",
@@ -186,7 +186,7 @@ describe("assesskit validate: documents", () => {
     }
   });
 
-  it("[L12][L13][C] applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex (RR §2.4.5)", async () => {
+  it("applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex (RR §2.4.5)", async () => {
     const { code, report: found } = await report(example("results/conformance-use-case-1.xml"));
     expect(code).toBe(1);
     expect(found.issues.map(({ code: each, source }) => [each, source])).toEqual(
@@ -194,7 +194,7 @@ describe("assesskit validate: documents", () => {
     );
   });
 
-  it("[L12][C] reports a document that is not well-formed once, with the position the reader found", async () => {
+  it("reports a document that is not well-formed once, with the position the reader found", async () => {
     const { code, report: found } = await report(example("results/full-example.xml"));
     expect(code).toBe(1);
     expect(found.issues).toMatchObject([
@@ -202,20 +202,20 @@ describe("assesskit validate: documents", () => {
     ]);
   });
 
-  it("[L12][L13] reports a document that is not in a namespace with a schema, with exit 1", async () => {
+  it("reports a document that is not in a namespace with a schema, with exit 1", async () => {
     const { code, report: found } = await report(example("packaging/usageData/USAGE-TOTAL-TEST-106391.xml"));
     expect(code).toBe(1);
     expect(found.issues.map(({ code: each }) => each)).toEqual(["assesskit/node/no-schema"]);
   });
 
-  it("[L12][L13] reports a document with a DOCTYPE as an error without reading it (BPIG §6.7)", async () => {
+  it("reports a document with a DOCTYPE as an error without reading it (BPIG §6.7)", async () => {
     const path = write("doctype.xml", '<!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>');
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
     expect(found.issues).toMatchObject([{ code: "assesskit/xml/security", severity: "error", source: "BPIG §6.7" }]);
   });
 
-  it("[L12][L15] reads a PNP document, checks its supports and reports the namespaces of the examples of 1EdTech", async () => {
+  it("reads a PNP document, checks its supports and reports the namespaces of the examples of 1EdTech", async () => {
     const profile = (children: string, namespace = PNP_NAMESPACE): string =>
       `<access-for-all-pnp xmlns="${namespace}">${children}</access-for-all-pnp>`;
     const valid = write("pnp-valid.xml", profile("<spoken/><prohibit-set><magnification/></prohibit-set>"));
@@ -243,7 +243,7 @@ describe("assesskit validate: documents", () => {
     ]);
   });
 
-  it("[L12] reports a manifest that cannot be read with the issues of its reader, and a document that has an xi:include as unresolved", async () => {
+  it("reports a manifest that cannot be read with the issues of its reader, and a document that has an xi:include as unresolved", async () => {
     const manifest = write(
       "bad/imsmanifest.xml",
       '<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"/>',
@@ -256,7 +256,7 @@ describe("assesskit validate: documents", () => {
     expect(fragment.report.issues.map(({ code: each }) => each)).toContain("assesskit/validate/unresolved-include");
   });
 
-  it("[L12][L13] exits with 2 for a path that does not exist, and for a document above the limit maxBytes of parseXml", async () => {
+  it("exits with 2 for a path that does not exist, and for a document above the limit maxBytes of parseXml", async () => {
     const missing = await run(["validate", join(directory, "missing.xml")]);
     expect(missing.code).toBe(2);
     expect(missing.stdout).toBe("");
@@ -272,7 +272,7 @@ describe("assesskit validate: documents", () => {
 });
 
 describe("assesskit validate: the 1EdTech examples", () => {
-  it("[L12][C] reads every XML file and every ZIP file of the examples, and refuses none", async () => {
+  it("reads every XML file and every ZIP file of the examples, and refuses none", async () => {
     const files = readdirSync(examples, { recursive: true, encoding: "utf8" }).filter(
       (path) => path.endsWith(".xml") || path.endsWith(".zip"),
     );
@@ -284,7 +284,7 @@ describe("assesskit validate: the 1EdTech examples", () => {
 });
 
 describe("assesskit validate: packages", () => {
-  it("[L12][L13][C] validates a ZIP file and exits with 0 when the package is valid", async () => {
+  it("validates a ZIP file and exits with 0 when the package is valid", async () => {
     const path = example("packaging/simple/simple.zip");
     expect(await run(["validate", path])).toEqual({
       code: 0,
@@ -293,7 +293,7 @@ describe("assesskit validate: packages", () => {
     });
   });
 
-  it("[L12][C] validates an unpacked directory as it validates the ZIP file of the same files", async () => {
+  it("validates an unpacked directory as it validates the ZIP file of the same files", async () => {
     const zip = example("packaging/items/items.zip");
     const pkg = await readPackageFile(zip);
     const unpacked = join(directory, "unpacked");
@@ -305,7 +305,7 @@ describe("assesskit validate: packages", () => {
     expect(fromDirectory.report.target).toBe(unpacked);
   });
 
-  it("[L12][L13][C] reports a file that the manifest does not list, as the directories of the examples hold their own ZIP file", async () => {
+  it("reports a file that the manifest does not list, as the directories of the examples hold their own ZIP file", async () => {
     const { code, report: found } = await report(example("packaging/simple"));
     expect(code).toBe(1);
     expect(found.issues).toMatchObject([
@@ -318,7 +318,7 @@ describe("assesskit validate: packages", () => {
     ]);
   });
 
-  it("[L12][L13][C] checks every XML file against its schema and then runs validatePackage, which gives the report of the libraries", async () => {
+  it("checks every XML file against its schema and then runs validatePackage, which gives the report of the libraries", async () => {
     const path = example("packaging/items/items.zip");
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
@@ -328,14 +328,14 @@ describe("assesskit validate: packages", () => {
     expect(found.summary.errors).toBe(found.issues.filter(({ severity }) => severity === "error").length);
   });
 
-  it("[L12][C] does not hold an XML file of no schema, such as an LTI link, against the schemas", async () => {
+  it("does not hold an XML file of no schema, such as an LTI link, against the schemas", async () => {
     const path = example("packaging/testWithLti/testWithLti.zip");
     const { report: found } = await report(path);
     expect(found.issues.map(({ code: each }) => each)).not.toContain("assesskit/node/no-schema");
     expect(found.issues).toEqual(await expectedForPackage(path));
   });
 
-  it("[L12][L13] reports a package whose manifest cannot be read with the issues of the reader, with exit 1", async () => {
+  it("reports a package whose manifest cannot be read with the issues of the reader, with exit 1", async () => {
     const zip = write("no-manifest.zip", buildZip([{ name: "readme.txt", data: bytes("x") }]));
     const { code, report: found } = await report(zip);
     expect(code).toBe(1);
@@ -344,7 +344,7 @@ describe("assesskit validate: packages", () => {
     ]);
   });
 
-  it("[L12][L13] refuses a hostile ZIP file with exit 2 and a message on the standard error, and writes no report", async () => {
+  it("refuses a hostile ZIP file with exit 2 and a message on the standard error, and writes no report", async () => {
     const slip = write(
       "slip.zip",
       buildZip([
@@ -362,7 +362,7 @@ describe("assesskit validate: packages", () => {
     expect(bombed.stderr).toMatch(/^assesskit: .*limit maxRatio of 250\./);
   });
 
-  it("[L12][L13] refuses a package directory that holds a symbolic link with exit 2", async () => {
+  it("refuses a package directory that holds a symbolic link with exit 2", async () => {
     const unpacked = join(directory, "linked");
     write("linked/imsmanifest.xml", readFileSync(example("packaging/simple/imsmanifest.xml")));
     symlinkSync(join(directory, "doctype.xml"), join(unpacked, "link.xml"));
@@ -408,7 +408,7 @@ describe("assesskit schemas fetch", () => {
     return fetch(`${base}/${schema.file}`);
   };
 
-  it("[L14][S] downloads the files of SCHEMA_FILES, checks their hashes, and gives a directory that validates", async () => {
+  it("downloads the files of SCHEMA_FILES, checks their hashes, and gives a directory that validates", async () => {
     const target = join(directory, "fetched");
     expect(await run(["schemas", "fetch", "--dir", target], { fetch: fixtureFetch })).toEqual({
       code: 0,
@@ -431,7 +431,7 @@ describe("assesskit schemas fetch", () => {
     });
   });
 
-  it("[L14][N] downloads the other files and exits with 2 when the server changes one, and does not write that file", async () => {
+  it("downloads the other files and exits with 2 when the server changes one, and does not write that file", async () => {
     const target = join(directory, "partial");
     replaced.set("xml.xsd", "<changed/>");
     try {

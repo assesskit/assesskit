@@ -70,7 +70,7 @@ const FAILING = { primary: resolution({ simple: "missing/simple" }) };
 
 describe("mountPciFrame", () => {
   describe("the frame and RequireJS", () => {
-    it("[T49] runs the interaction in a sandboxed frame of an opaque origin and loads its module with RequireJS", async () => {
+    it("runs the interaction in a sandboxed frame of an opaque origin and loads its module with RequireJS", async () => {
       const result = mount();
       await ready(result);
       const { element } = result.frame;
@@ -87,7 +87,7 @@ describe("mountPciFrame", () => {
       expect(element.contentDocument).toBeNull();
     });
 
-    it("[T49] loads the second location when the first is missing", async () => {
+    it("loads the second location when the first is missing", async () => {
       const result = mount({
         configuration: {
           primary: resolution({ simple: "missing/simple" }),
@@ -100,7 +100,7 @@ describe("mountPciFrame", () => {
       expect(paths.indexOf("/g/modules/simple.js")).toBeGreaterThan(paths.indexOf("/g/missing/simple.js"));
     });
 
-    it("[T49] loads the second location when the first does not answer within waitSeconds", async () => {
+    it("loads the second location when the first does not answer within waitSeconds", async () => {
       const started = performance.now();
       const result = mount({
         configuration: {
@@ -113,7 +113,7 @@ describe("mountPciFrame", () => {
       expect(await hits(asset)).toContain("/hang/simple.js");
     });
 
-    it("[T49] resolves a relative dependency against the base URL under the prefix of the package", async () => {
+    it("resolves a relative dependency against the base URL under the prefix of the package", async () => {
       const result = mount({
         interaction: interactionOf('module="relative" custom-interaction-type-identifier="urn:test:relative"'),
         configuration: { primary: resolution({ relative: "modules/relative" }) },
@@ -123,14 +123,14 @@ describe("mountPciFrame", () => {
       expect(await hits(asset)).toContain("/g/modules/helper.js");
     });
 
-    it("[T49] resolves the relative url() of a stylesheet against the stylesheet under the prefix", async () => {
+    it("resolves the relative url() of a stylesheet against the stylesheet under the prefix", async () => {
       const result = mount();
       await ready(result);
       await waitFor(async () => expect(await hits(asset)).toContain("/g/images/dot.svg"));
       expect(probeOf(result.probes, "instance")).toMatchObject({ color: "rgb(10, 20, 30)" });
     });
 
-    it("[T49] loads a module from an origin that is allowed, and from no other", async () => {
+    it("loads a module from an origin that is allowed, and from no other", async () => {
       const external = {
         interaction: interactionOf('module="external" custom-interaction-type-identifier="urn:test:external"'),
         configuration: {
@@ -148,12 +148,12 @@ describe("mountPciFrame", () => {
       expect(await hits(other)).toEqual(["/cdn/cdn-module.js"]);
     });
 
-    it("[T49] reports that no location of a module loads", async () => {
+    it("reports that no location of a module loads", async () => {
       const result = mount({ configuration: FAILING });
       await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "modules" }]));
     });
 
-    it("[T49] reports a module that registers no interaction, and a factory that throws", async () => {
+    it("reports a module that registers no interaction, and a factory that throws", async () => {
       const silent = mount({
         interaction: interactionOf('module="unregistered" custom-interaction-type-identifier="urn:test:none"'),
         configuration: { primary: resolution({ unregistered: "modules/unregistered" }) },
@@ -166,7 +166,7 @@ describe("mountPciFrame", () => {
       await waitFor(() => expect(failing.events).toEqual([{ type: "failed", reason: "instance" }]));
     });
 
-    it("[T49] starts the one interaction that the modules register under another identifier, and no interaction of several", async () => {
+    it("starts the one interaction that the modules register under another identifier, and no interaction of several", async () => {
       // The pci-simple example of 1EdTech names a type identifier that its module does not register.
       const renamed = mount({
         interaction: interactionOf('module="simple" custom-interaction-type-identifier="urn-test-simple"'),
@@ -189,7 +189,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("the configuration", () => {
-    it("[T50] gives the interaction its properties, variables, markup, status and language", async () => {
+    it("gives the interaction its properties, variables, markup, status and language", async () => {
       const result = mount({
         interaction: interactionOf(
           `${SIMPLE} class="qti-orientation-horizontal" data-label-min="Very poorly" data-__proto__="data"`,
@@ -229,7 +229,7 @@ describe("mountPciFrame", () => {
       expect(instance?.markup).toContain('<button id="press">Press</button>');
     });
 
-    it("[T50] creates a new interaction without state, and the NULL of its response variable", async () => {
+    it("creates a new interaction without state, and the NULL of its response variable", async () => {
       const result = mount();
       await ready(result);
       expect(probeOf(result.probes, "instance")).toMatchObject({
@@ -238,7 +238,7 @@ describe("mountPciFrame", () => {
       });
     });
 
-    it("[T50] loads player.css, then the stylesheets of the item, in the frame", async () => {
+    it("loads player.css, then the stylesheets of the item, in the frame", async () => {
       const result = mount();
       await ready(result);
       // player.css sets the text of the root to #1a1a1a; the stylesheet of the item, which comes after it, colors the button.
@@ -248,7 +248,7 @@ describe("mountPciFrame", () => {
       });
     });
 
-    it("[T50] takes every status that the item session has", async () => {
+    it("takes every status that the item session has", async () => {
       for (const status of ["interacting", "suspended", "closed", "solution", "review"] as const) {
         const result = mount({ status });
         await ready(result);
@@ -258,7 +258,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("the responses", () => {
-    it("[T51] turns qti-interaction-changed into the value of the response variable, with the state", async () => {
+    it("turns qti-interaction-changed into the value of the response variable, with the state", async () => {
       const result = mount();
       await ready(result);
       await commands.clickInFrame(TITLE, "#press");
@@ -272,7 +272,7 @@ describe("mountPciFrame", () => {
       );
     });
 
-    it("[T51] restores the interaction from the state that getState gave", async () => {
+    it("restores the interaction from the state that getState gave", async () => {
       const result = mount({
         state: JSON.stringify({ count: 2 }),
         response: { value: single("integer", 2), declaration: INTEGER },
@@ -282,7 +282,7 @@ describe("mountPciFrame", () => {
       await waitFor(() => expect(eventOf(result.events, "changed")).toMatchObject({ response: single("integer", 3) }));
     });
 
-    it("[T51] reads the bytes of a file value before the interaction starts, and writes them inline", async () => {
+    it("reads the bytes of a file value before the interaction starts, and writes them inline", async () => {
       const { files } = memoryFiles(new Map([["stored-1", new TextEncoder().encode("pleasure.")]]));
       const result = mount(
         filesPci(files, single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" })),
@@ -294,7 +294,7 @@ describe("mountPciFrame", () => {
       });
     });
 
-    it("[T51] stores the file of a response through the host and delivers its reference", async () => {
+    it("stores the file of a response through the host and delivers its reference", async () => {
       const { files, uploads } = memoryFiles();
       const result = mount(filesPci(files));
       await ready(result);
@@ -308,7 +308,7 @@ describe("mountPciFrame", () => {
       ]);
     });
 
-    it("[T51] stores a file that the interaction gives again only once", async () => {
+    it("stores a file that the interaction gives again only once", async () => {
       const { files, uploads } = memoryFiles();
       const result = mount(filesPci(files));
       await ready(result);
@@ -322,7 +322,7 @@ describe("mountPciFrame", () => {
       ]);
     });
 
-    it("[T51] delivers the events in the order they were sent, although storing a file takes time", async () => {
+    it("delivers the events in the order they were sent, although storing a file takes time", async () => {
       const { files, uploads } = memoryFiles();
       const slow: typeof files = {
         read: files.read,
@@ -340,7 +340,7 @@ describe("mountPciFrame", () => {
       expect(states).toEqual(['{"given":1}', '{"given":2}']);
     });
 
-    it("[T51] drops a response that is not the JSON of a value of the declaration, and goes on", async () => {
+    it("drops a response that is not the JSON of a value of the declaration, and goes on", async () => {
       const result = mount(filesPci(memoryFiles().files));
       await ready(result);
       await commands.clickInFrame(TITLE, "#bad");
@@ -349,7 +349,7 @@ describe("mountPciFrame", () => {
       expect(eventOf(result.events, "changed")).toMatchObject({ state: '{"given":1}' });
     });
 
-    it("[T51] reports that the interaction cannot start when the host cannot read a file", async () => {
+    it("reports that the interaction cannot start when the host cannot read a file", async () => {
       const report = vi.spyOn(window, "reportError").mockImplementation(() => undefined);
       const result = mount(
         filesPci(
@@ -364,13 +364,13 @@ describe("mountPciFrame", () => {
   });
 
   describe("the events", () => {
-    it("[T52] tells that the interaction is ready, with its state", async () => {
+    it("tells that the interaction is ready, with its state", async () => {
       const result = mount({ state: JSON.stringify({ count: 4 }) });
       await ready(result);
       expect(eventOf(result.events, "ready")).toEqual({ type: "ready", state: '{"count":4}' });
     });
 
-    it("[T52] passes ondone with the status that the interaction asks for, and NULL for no response", async () => {
+    it("passes ondone with the status that the interaction asks for, and NULL for no response", async () => {
       const result = mount();
       await ready(result);
       await commands.clickInFrame(TITLE, "#done");
@@ -384,7 +384,7 @@ describe("mountPciFrame", () => {
       );
     });
 
-    it("[T52] asks the validity methods of the interaction", async () => {
+    it("asks the validity methods of the interaction", async () => {
       const result = mount();
       await ready(result);
       expect(await result.frame.checkValidity()).toBe(false);
@@ -397,21 +397,21 @@ describe("mountPciFrame", () => {
       expect(await result.frame.getCustomValidity()).toBe("Press once more.");
     });
 
-    it("[T52] refuses a custom validity message that is not a string", async () => {
+    it("refuses a custom validity message that is not a string", async () => {
       const result = mount();
       await expect(result.frame.setCustomValidity(JSON.parse("5"))).rejects.toThrow(
         "The custom validity message must be a string, found 5.",
       );
     });
 
-    it("[T52] gives no verdict when the interaction is not running", async () => {
+    it("gives no verdict when the interaction is not running", async () => {
       const result = mount({ configuration: FAILING });
       expect(await result.frame.checkValidity()).toBeUndefined();
       await waitFor(() => expect(eventOf(result.events, "failed")).toBeDefined());
       expect(await result.frame.getCustomValidity()).toBeUndefined();
     });
 
-    it("[T52] hands over the response and the state, then calls oncompleted, when the frame goes", async () => {
+    it("hands over the response and the state, then calls oncompleted, when the frame goes", async () => {
       const result = mount({
         state: JSON.stringify({ count: 2 }),
         response: { value: single("integer", 2), declaration: INTEGER },
@@ -428,7 +428,7 @@ describe("mountPciFrame", () => {
       expect(result.container.querySelector("iframe")).toBeNull();
     });
 
-    it("[T52] removes a frame that never started, and does it once", async () => {
+    it("removes a frame that never started, and does it once", async () => {
       const result = mount();
       const first = result.frame.destroy();
       expect(result.frame.destroy()).toBe(first);
@@ -440,7 +440,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("the markup", () => {
-    it("[T53] runs no script of the markup", async () => {
+    it("runs no script of the markup", async () => {
       const result = mount({
         markup: [
           '<img src="data:," alt="" onerror="parent.postMessage({ probe: \'onerror\' }, \'*\')">',
@@ -456,7 +456,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("the height", () => {
-    it("[T49] sets the height of the frame to the height of its content", async () => {
+    it("sets the height of the frame to the height of its content", async () => {
       const result = mount({ markup: '<div style="height: 300px"></div>' });
       await waitFor(() => {
         const height = result.frame.element.getBoundingClientRect().height;
@@ -465,7 +465,7 @@ describe("mountPciFrame", () => {
       });
     });
 
-    it("[T49] keeps the height between the least and the greatest", async () => {
+    it("keeps the height between the least and the greatest", async () => {
       const small = mount({ markup: "" });
       await ready(small);
       expect(small.frame.element.getBoundingClientRect().height).toBe(MIN_PCI_HEIGHT);
@@ -481,17 +481,17 @@ describe("mountPciFrame", () => {
     const look = ({ attributes }: FrameTheme) =>
       Object.fromEntries(Object.entries(attributes).filter(([name]) => name.startsWith("data-ak-")));
 
-    it("[T79][T87] starts with the look that the supports ask for, set on the html of the frame before anything is drawn", async () => {
+    it("starts with the look that the supports ask for, set on the html of the frame before anything is drawn", async () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
       const theme = await commands.frameTheme(TITLE);
       expect(theme.attributes["data-ak-contrast"]).toBe("high");
-      // docs/styling.md: high contrast is black on white.
+      // docs/player/styling.md: high contrast is black on white.
       expect(theme.properties).toEqual({ "--ak-fg": "#000000", "--ak-bg": "#ffffff" });
       expect(theme.color).toBe("rgb(0, 0, 0)");
     });
 
-    it("[T79][T87][T88] changes the look of a running interaction when a setting changes", async () => {
+    it("changes the look of a running interaction when a setting changes", async () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
       mounted.frame.setPresentation(presentationOf([onSupport("invert-display-polarity"), onSupport("magnification")]));
@@ -503,7 +503,7 @@ describe("mountPciFrame", () => {
         }),
       );
       const theme = await commands.frameTheme(TITLE);
-      // docs/styling.md: inverted polarity is #f2f2f2 on #121212, and 200 percent of the 16 pixels of the base size.
+      // docs/player/styling.md: inverted polarity is #f2f2f2 on #121212, and 200 percent of the 16 pixels of the base size.
       expect(theme.properties).toEqual({ "--ak-fg": "#f2f2f2", "--ak-bg": "#121212" });
       expect(theme.color).toBe("rgb(242, 242, 242)");
       expect(theme.fontSize).toBe("32px");
@@ -516,14 +516,14 @@ describe("mountPciFrame", () => {
       });
     });
 
-    it("[T79] keeps the look it was given before the frame started", async () => {
+    it("keeps the look it was given before the frame started", async () => {
       const mounted = mount();
       mounted.frame.setPresentation(highContrast);
       await ready(mounted);
       expect((await commands.frameTheme(TITLE)).attributes["data-ak-contrast"]).toBe("high");
     });
 
-    it("[T79] does not change the interaction, which is told nothing of the look", async () => {
+    it("does not change the interaction, which is told nothing of the look", async () => {
       const mounted = mount({ presentation: highContrast });
       await ready(mounted);
       mounted.frame.setPresentation(presentationOf([]));
@@ -545,7 +545,7 @@ describe("mountPciFrame", () => {
   });
 
   describe("options", () => {
-    it("[T49] refuses a parent that is not an element, options that are not valid, and an interaction with no module", () => {
+    it("refuses a parent that is not an element, options that are not valid, and an interaction with no module", () => {
       const parent = document.createElement("div");
       const options: PciFrameOptions = {
         staticUrl: `${asset}/static/`,
@@ -577,7 +577,7 @@ describe("mountPciFrame", () => {
 
 describe("the frame", () => {
   describe("the policy", () => {
-    it("[T53] reaches no network, no parent, no storage and no other window", async () => {
+    it("reaches no network, no parent, no storage and no other window", async () => {
       const result = mount({
         interaction: interactionOf(
           `module="hostile" custom-interaction-type-identifier="urn:test:hostile" data-evil="${stranger}"`,
@@ -611,7 +611,7 @@ describe("the frame", () => {
       expect(window.localStorage.getItem("stolen")).toBeNull();
     });
 
-    it("[T53] drops forged messages and bounds a forged height", async () => {
+    it("drops forged messages and bounds a forged height", async () => {
       const result = mount({
         interaction: interactionOf('module="forger" custom-interaction-type-identifier="urn:test:forger"'),
         configuration: { primary: resolution({ forger: "modules/forger" }) },
@@ -620,7 +620,7 @@ describe("the frame", () => {
       expect(result.events).toEqual([{ type: "ready", state: "{}" }]);
     });
 
-    it("[T53] ignores a message that does not come from the frame", async () => {
+    it("ignores a message that does not come from the frame", async () => {
       const result = mount();
       await ready(result);
       window.postMessage({ type: "changed", response: { base: { integer: 9 } }, state: "{}" }, "*");
@@ -630,7 +630,7 @@ describe("the frame", () => {
       expect(result.frame.element.style.height).not.toBe("3000px");
     });
 
-    it("[T53] does not start the interaction where the browser sets no policy", async () => {
+    it("does not start the interaction where the browser sets no policy", async () => {
       const result = mount({ staticUrl: `${asset}/unrestricted/` });
       await waitFor(() => expect(result.events).toEqual([{ type: "failed", reason: "csp" }]));
       expect(await hits(asset)).not.toContain("/g/modules/simple.js");
@@ -638,7 +638,7 @@ describe("the frame", () => {
   });
 
   describe("the name and the focus", () => {
-    it("[SC 4.1.2] names the frame from the prompt of the interaction, else by a message", () => {
+    it("names the frame from the prompt of the interaction, else by a message", () => {
       const prompt = mount({ prompt: "  Press   the\n button. " });
       const none = mount({ prompt: null });
       const blank = mount({ prompt: " \n " });
@@ -649,7 +649,7 @@ describe("the frame", () => {
       expect(indonesian.frame.element.title).toBe("Soal interaktif");
     });
 
-    it("[SC 4.1.2] has no axe violation on the frame element, and none inside the frame", async () => {
+    it("has no axe violation on the frame element, and none inside the frame", async () => {
       const axe = (await import("axe-core")).default;
       const result = mount();
       await ready(result);
@@ -658,7 +658,7 @@ describe("the frame", () => {
       expect(await commands.axeInFrame(TITLE, WCAG_TAGS)).toEqual([]);
     });
 
-    it("[SC 4.1.2] exposes the controls of the frame in the accessibility tree, below the frame", async () => {
+    it("exposes the controls of the frame in the accessibility tree, below the frame", async () => {
       const result = mount();
       await ready(result);
       await waitFor(async () => {
@@ -668,7 +668,7 @@ describe("the frame", () => {
       });
     });
 
-    it("[SC 2.1.2] lets the focus enter the frame and leave it, forward and back", async () => {
+    it("lets the focus enter the frame and leave it, forward and back", async () => {
       // Text fields, because Safari's default is to skip buttons when Tab moves the focus.
       const field = (label: string): HTMLInputElement => {
         const input = document.createElement("input");

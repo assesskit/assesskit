@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { answerCapabilities } from "../src/player/lti-frame/capabilities.js";
 
 describe("answerCapabilities", () => {
-  it("[T122] answers a capabilities request as LTI Client Side postMessages 0.1 example 4.1.6.3 does, naming the frame of the storage page", () => {
+  it("answers a capabilities request as LTI Client Side postMessages 0.1 example 4.1.6.3 does, naming the frame of the storage page", () => {
     expect(answerCapabilities({ subject: "lti.capabilities", message_id: "12345" })).toEqual({
       message_id: "12345",
       subject: "lti.capabilities.response",
@@ -16,7 +16,7 @@ describe("answerCapabilities", () => {
     });
   });
 
-  it("[T122] answers nothing to a message that is not a capabilities request", () => {
+  it("answers nothing to a message that is not a capabilities request", () => {
     const messages = [
       JSON.parse("null"),
       JSON.parse("[]"),
@@ -29,7 +29,7 @@ describe("answerCapabilities", () => {
     for (const message of messages) expect(answerCapabilities(message)).toBeUndefined();
   });
 
-  it("[T122] echoes the message id of any request", () => {
+  it("echoes the message id of any request", () => {
     fc.assert(
       fc.property(fc.string(), (id) => {
         expect(answerCapabilities({ subject: "lti.capabilities", message_id: id })).toMatchObject({

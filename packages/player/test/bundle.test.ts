@@ -55,7 +55,7 @@ const engineFilesIn = (inputs: readonly string[]): string[] =>
   ENGINE_FILES.filter((file) => inputs.includes(resolve(RUNTIME, file)));
 
 describe("the exam bundle", () => {
-  it("[T67] holds none of the runtime's engine: the player and the remote session read views and write actions only", async () => {
+  it("holds none of the runtime's engine: the player and the remote session read views and write actions only", async () => {
     const inputs = await bundled(`
       import { mountDelivery } from "./player/index.ts";
       import { createRemoteSession } from "./client/index.ts";
@@ -68,7 +68,7 @@ describe("the exam bundle", () => {
     expect(engineFilesIn(inputs)).toEqual([]);
   });
 
-  it("[T70] holds the engine in a bundle that makes a local session, which is how the check sees it", async () => {
+  it("holds the engine in a bundle that makes a local session, which is how the check sees it", async () => {
     const inputs = await bundled(`
       import { createLocalSession } from "./client/index.ts";
       export { createLocalSession };

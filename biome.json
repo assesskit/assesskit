@@ -13,8 +13,7 @@
       "!**/CHANGELOG.md",
       "!docs/api",
       "!**/test/fixtures",
-      "!conformance/corpus.lock.json",
-      "!packages/runtime/docs/conformance.md"
+      "!scripts/corpus.lock.json"
     ]
   },
   "formatter": {
@@ -761,7 +760,6 @@
         "packages/runtime/src/cli/**",
         "packages/runtime/test/readme-example.ts",
         "scripts/**",
-        "conformance/**",
         "differential/**",
         "compat/**"
       ],
@@ -814,7 +812,7 @@
       }
     },
     {
-      "includes": ["conformance/**", "scripts/**", "differential/**", "compat/**"],
+      "includes": ["scripts/**", "differential/**", "compat/**"],
       "linter": {
         "rules": {
           "correctness": {

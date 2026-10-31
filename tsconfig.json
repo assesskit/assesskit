@@ -6,5 +6,5 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["conformance", "scripts", "vitest.config.ts"]
+  "include": ["scripts", "vitest.config.ts"]
 }

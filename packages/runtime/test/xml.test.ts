@@ -108,7 +108,7 @@ describe("DEFAULT_XML_LIMITS", () => {
 });
 
 describe("parseXml", () => {
-  it("[S13] reads names, namespaces, prefixes and attributes, and keeps the namespace declarations as attributes", () => {
+  it("reads names, namespaces, prefixes and attributes, and keeps the namespace declarations as attributes", () => {
     const xml = `<a xmlns="urn:a" xmlns:b="urn:b" xmlns:xsi="${XSI}" xsi:schemaLocation="urn:a a.xsd" b:x="1" y="2"><b:c/></a>`;
     expect(parsed(xml)).toEqual(
       element(
@@ -127,7 +127,7 @@ describe("parseXml", () => {
     );
   });
 
-  it("[S13] puts an unprefixed element in no namespace when the default namespace is undeclared", () => {
+  it("puts an unprefixed element in no namespace when the default namespace is undeclared", () => {
     expect(parsed('<a xmlns="urn:a"><b xmlns=""/></a>')).toEqual(
       element(
         "a",
@@ -260,7 +260,7 @@ describe("parseXml", () => {
         new Uint8Array([0x3c, 0x61, 0x3e, 0xff, 0x3c, 0x2f, 0x61, 0x3e]),
         /is not valid utf-8/,
       ],
-    ])("[S13] rejects %s", (_name, input, message) => {
+    ])("rejects %s", (_name, input, message) => {
       const issue = issueOf(thrown(() => parseXml(input, { path: "items/a.xml" })));
       expect(issue).toMatchObject({
         severity: "error",
@@ -273,7 +273,7 @@ describe("parseXml", () => {
   });
 
   describe("limits", () => {
-    it("[B94] counts the bytes of UTF-8: a document of exactly maxBytes is read and one byte more is not", () => {
+    it("counts the bytes of UTF-8: a document of exactly maxBytes is read and one byte more is not", () => {
       const xml = "<a>é</a>";
       expect(parseXml(xml, { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
       expect(parseXml(new TextEncoder().encode(xml), { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
@@ -284,7 +284,7 @@ describe("parseXml", () => {
       }
     });
 
-    it("[B94] allows nesting up to maxDepth, counting the root as 1", () => {
+    it("allows nesting up to maxDepth, counting the root as 1", () => {
       expect(parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 3 } }).name).toBe("a");
       expect(thrown(() => parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 2 } }))).toMatchObject({
         limit: "maxDepth",
@@ -292,7 +292,7 @@ describe("parseXml", () => {
       });
     });
 
-    it("[B94] allows maxAttributes on an element, namespace declarations included", () => {
+    it("allows maxAttributes on an element, namespace declarations included", () => {
       expect(parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 2 } }).attributes).toHaveLength(2);
       expect(thrown(() => parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 1 } }))).toMatchObject({
         limit: "maxAttributes",
@@ -300,7 +300,7 @@ describe("parseXml", () => {
       });
     });
 
-    it("[B94] allows maxNodes elements, text, CDATA sections, comments and processing instructions", () => {
+    it("allows maxNodes elements, text, CDATA sections, comments and processing instructions", () => {
       const xml = "<a><b/>t<![CDATA[c]]><!--c--><?p d?></a>";
       expect(parseXml(xml, { limits: { maxNodes: 6 } }).children).toHaveLength(5);
       expect(thrown(() => parseXml(xml, { limits: { maxNodes: 5 } }))).toMatchObject({ limit: "maxNodes", value: 5 });
@@ -322,7 +322,7 @@ describe("parseXml", () => {
       ["a parameter entity that loads a file", '<!DOCTYPE a [<!ENTITY % p SYSTEM "http://example.org/x.dtd">%p;]><a/>'],
       ["an external DTD", '<!DOCTYPE a SYSTEM "http://example.org/a.dtd"><a/>'],
       ["a DOCTYPE without a subset", "<!DOCTYPE html><a/>"],
-    ])("[B94] rejects a DOCTYPE with %s before it declares or expands anything", (_name, xml) => {
+    ])("rejects a DOCTYPE with %s before it declares or expands anything", (_name, xml) => {
       const error = thrownAs(SecurityError, () => parseXml(xml, { path: "evil.xml" }));
       expect(error).toMatchObject({ limit: "doctype", value: 0 });
       expect(error.message).toBe(
@@ -330,7 +330,7 @@ describe("parseXml", () => {
       );
     });
 
-    it("[B94] rejects a DOCTYPE in bytes of every encoding it can arrive in, and reads one inside a comment or a CDATA section as data", () => {
+    it("rejects a DOCTYPE in bytes of every encoding it can arrive in, and reads one inside a comment or a CDATA section as data", () => {
       const doctype = '<!DOCTYPE a [<!ENTITY x "y">]><a/>';
       const utf16 = (text: string, order: readonly [number, number]): Uint8Array =>
         Uint8Array.from([
@@ -355,11 +355,11 @@ describe("parseXml", () => {
       });
     });
 
-    it("[B94] reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
+    it("reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
       expect(issueOf(thrown(() => parseXml("<a>&xxe;</a>")))).toMatchObject({ code: "assesskit/xml/not-well-formed" });
     });
 
-    it("[B94] rejects input over the default size without reading it", () => {
+    it("rejects input over the default size without reading it", () => {
       const error = thrown(() => parseXml(new Uint8Array(DEFAULT_XML_LIMITS.maxBytes + 1)));
       expect(error).toMatchObject({ limit: "maxBytes", value: DEFAULT_XML_LIMITS.maxBytes });
       expect(thrown(() => parseXml(`<a>${"x".repeat(DEFAULT_XML_LIMITS.maxBytes)}</a>`))).toMatchObject({
@@ -367,14 +367,14 @@ describe("parseXml", () => {
       });
     });
 
-    it("[B94] rejects deep nesting at the default depth before it reads the rest", () => {
+    it("rejects deep nesting at the default depth before it reads the rest", () => {
       const error = thrown(() => parseXml("<a>".repeat(100_000)));
       expect(error).toBeInstanceOf(SecurityError);
       expect(error).toMatchObject({ limit: "maxDepth", value: 256 });
       expect(parseXml(`${"<a>".repeat(256)}${"</a>".repeat(256)}`).name).toBe("a");
     });
 
-    it("[B94] rejects more attributes than the default allows on one element", () => {
+    it("rejects more attributes than the default allows on one element", () => {
       const attributes = Array.from({ length: 257 }, (_, index) => ` a${index}="1"`).join("");
       expect(thrown(() => parseXml(`<a${attributes}/>`))).toMatchObject({ limit: "maxAttributes", value: 256 });
     });
@@ -393,7 +393,7 @@ describe("parseXml", () => {
       ["a malformed character reference", "<a>&#0;</a>", 1],
       ["a lone ampersand", "<a>&</a>", 1],
       ["a less-than sign in an attribute value", '<a x="<"/>', 1],
-    ])("[S13] reports %s on the line where the parser stopped", (_name, xml, line) => {
+    ])("reports %s on the line where the parser stopped", (_name, xml, line) => {
       const error = thrownAs(ReadError, () => parseXml(xml, { path: "bad.xml" }));
       expect(error.issues).toHaveLength(1);
       const issue = issueOf(error);
@@ -413,7 +413,7 @@ describe("parseXml", () => {
       ["a high surrogate that no low surrogate follows", "<a b='x'>a\ud800b</a>", 1, 11],
       ["a lone low surrogate in an attribute value", '<a\n b="\udc00"/>', 2, 5],
       ["a lone surrogate in a comment", "<a><!--\ud83d--></a>", 1, 8],
-    ])("[S13] rejects %s, which is no character (XML 1.0 §2.2)", (_name, xml, line, column) => {
+    ])("rejects %s, which is no character (XML 1.0 §2.2)", (_name, xml, line, column) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
         code: "assesskit/xml/not-well-formed",
         source: "XML 1.0 §2.2",
@@ -427,7 +427,7 @@ describe("parseXml", () => {
       ["a no-break space", '<p:a xmlns:p="\u00a0urn:a"/>'],
       ["a byte order mark", '<a xmlns="urn:a\ufeff"/>'],
     ])(
-      "[S13][B94] rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
+      "rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
       (_name, xml) => {
         expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
           code: "assesskit/xml/namespace",
@@ -441,7 +441,7 @@ describe("parseXml", () => {
       ["an element whose local name starts with a digit", '<p:1 xmlns:p="urn:p"/>'],
       ["an attribute whose local name starts with a hyphen", '<a xmlns:p="urn:p" p:-x="1"/>'],
       ["a declaration of a prefix that starts with a digit", '<a xmlns:1p="urn:p"/>'],
-    ])("[S13] rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
+    ])("rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
       expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
         code: "assesskit/xml/not-well-formed",
         source: "Namespaces in XML 1.0 §3",
@@ -527,7 +527,7 @@ describe("serializeXml", () => {
     );
   });
 
-  it("[S13] declares the namespaces that the tree uses and does not declare", () => {
+  it("declares the namespaces that the tree uses and does not declare", () => {
     const tree = element(
       "a",
       [element("c", [], [attribute("x", "1", "urn:b", "b")], "urn:b", "b"), element("d", [], [], "")],
@@ -539,7 +539,7 @@ describe("serializeXml", () => {
     );
   });
 
-  it("[S13] keeps the declarations the tree has, and declares nothing that is in scope", () => {
+  it("keeps the declarations the tree has, and declares nothing that is in scope", () => {
     const xml = `${DECLARATION}<a xmlns="urn:a" xmlns:b="urn:b"><b:c><d/></b:c></a>`;
     expect(serializeXml(parseXml(xml))).toBe(xml);
   });
@@ -674,7 +674,7 @@ describe("resolveIncludes", () => {
     };
   const strip = (node: XmlNode): XmlNode => withoutPositions(node);
 
-  it("[M14][B60] replaces an include with the root element of the fragment it names (INFO §2.12)", () => {
+  it("replaces an include with the root element of the fragment it names (INFO §2.12)", () => {
     const item = parseXml(
       '<item xmlns:xi="http://www.w3.org/2001/XInclude"><body><p>before</p><xi:include href="choice.xml"/><p>after</p></body></item>',
     );
@@ -692,7 +692,7 @@ describe("resolveIncludes", () => {
     );
   });
 
-  it("[B60] expands the includes of an included fragment, resolving them against the fragment's own path", () => {
+  it("expands the includes of an included fragment, resolving them against the fragment's own path", () => {
     const calls: [string, string][] = [];
     const root = parseXml(
       '<test xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="sections/s1.xml"/></test>',
@@ -722,12 +722,12 @@ describe("resolveIncludes", () => {
     ]);
   });
 
-  it("[B60] gives a tree without includes back unchanged in content", () => {
+  it("gives a tree without includes back unchanged in content", () => {
     const root = parseXml("<a><b>t</b><!--c--></a>");
     expect(resolveIncludes(root, "a.xml", () => root)).toEqual(root);
   });
 
-  it("[M14] ignores encoding, accept and accept-language, which concern text and HTTP", () => {
+  it("ignores encoding, accept and accept-language, which concern text and HTTP", () => {
     const root = element("a", [
       include(
         "f.xml",
@@ -738,7 +738,7 @@ describe("resolveIncludes", () => {
     expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
   });
 
-  it("[M15] uses the xi:fallback of an include whose resource cannot be read", () => {
+  it("uses the xi:fallback of an include whose resource cannot be read", () => {
     const root = element("a", [
       include("missing.xml", [xi("fallback", [text("default "), element("p")])]),
       element("z"),
@@ -750,17 +750,17 @@ describe("resolveIncludes", () => {
     ]);
   });
 
-  it("[M15] expands the includes inside a fallback", () => {
+  it("expands the includes inside a fallback", () => {
     const root = element("a", [include("missing.xml", [xi("fallback", [include("other.xml")])])]);
     expect(resolveIncludes(root, "a.xml", resolver({ "other.xml": "<o/>" })).children).toEqual([parseXml("<o/>")]);
   });
 
-  it("[M15] does not use the fallback when the resource is read, and drops it", () => {
+  it("does not use the fallback when the resource is read, and drops it", () => {
     const root = element("a", [include("f.xml", [xi("fallback", [text("unused")])])]);
     expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
   });
 
-  it("[M15] never replaces a SecurityError of the resolver with the fallback", () => {
+  it("never replaces a SecurityError of the resolver with the fallback", () => {
     const refuse = () => {
       throw new SecurityError("The href leaves the package.", "pathEscape", 0);
     };
@@ -768,7 +768,7 @@ describe("resolveIncludes", () => {
     expect(thrown(() => resolveIncludes(root, "a.xml", refuse))).toBeInstanceOf(SecurityError);
   });
 
-  it("[M15] rejects an include whose resource cannot be read and that has no fallback", () => {
+  it("rejects an include whose resource cannot be read and that has no fallback", () => {
     const root = element("a", [include("missing.xml")]);
     const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({}))));
     expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource", source: "XInclude 1.0 §4.4" });
@@ -777,7 +777,7 @@ describe("resolveIncludes", () => {
     );
   });
 
-  it("[M14][B60] rejects an xpointer (INFO §2.12: MUST NOT)", () => {
+  it("rejects an xpointer (INFO §2.12: MUST NOT)", () => {
     const root = element("a", [
       xi("include", [], [attribute("href", "f.xml"), attribute("xpointer", "element(/1/2)")]),
     ]);
@@ -803,13 +803,13 @@ describe("resolveIncludes", () => {
       include("f.xml#part"),
       'The href "f.xml#part" of an xi:include must not have a fragment identifier.',
     ],
-  ])("[M14][B60] rejects an include with %s", (_name, bad, message) => {
+  ])("rejects an include with %s", (_name, bad, message) => {
     const issue = issueOf(thrown(() => resolveIncludes(element("a", [bad]), "a.xml", resolver({ "f.xml": "<f/>" }))));
     expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-attribute" });
     expect(issue.message).toBe(message);
   });
 
-  it("[M15] rejects an include with two fallbacks or another element of the XInclude namespace", () => {
+  it("rejects an include with two fallbacks or another element of the XInclude namespace", () => {
     for (const children of [[xi("fallback"), xi("fallback")], [xi("include")]]) {
       const issue = issueOf(
         thrown(() =>
@@ -820,12 +820,12 @@ describe("resolveIncludes", () => {
     }
   });
 
-  it("[M15] rejects an xi:fallback outside an include", () => {
+  it("rejects an xi:fallback outside an include", () => {
     const issue = issueOf(thrown(() => resolveIncludes(element("a", [xi("fallback")]), "a.xml", resolver({}))));
     expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure", source: "XInclude 1.0 §3.2" });
   });
 
-  it("[B60] rejects includes that form a loop, however long", () => {
+  it("rejects includes that form a loop, however long", () => {
     const documents = {
       "a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="b.xml"/></a>',
       "b.xml": '<b xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="a.xml"/></b>',
@@ -835,7 +835,7 @@ describe("resolveIncludes", () => {
     expect(issue.message).toBe('The xi:include of "a.xml" includes a document that is already being included.');
   });
 
-  it("[B60] finds a loop through a different spelling of the same path", () => {
+  it("finds a loop through a different spelling of the same path", () => {
     const documents = {
       "d/a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="./x/../a.xml"/></a>',
     };
@@ -844,7 +844,7 @@ describe("resolveIncludes", () => {
     expect(issueOf(thrown(run))).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
   });
 
-  it("[B94] allows includes to nest maxIncludeDepth deep and no deeper", () => {
+  it("allows includes to nest maxIncludeDepth deep and no deeper", () => {
     const chain = (href: string) =>
       parseXml(
         href === "f8.xml"
@@ -857,7 +857,7 @@ describe("resolveIncludes", () => {
     expect(error).toMatchObject({ limit: "maxIncludeDepth", value: 7 });
   });
 
-  it("[B94] counts the nodes of the result against maxNodes, so that includes cannot multiply a document", () => {
+  it("counts the nodes of the result against maxNodes, so that includes cannot multiply a document", () => {
     const ten = (href: string) =>
       element(
         "n",
@@ -873,7 +873,7 @@ describe("resolveIncludes", () => {
     expect(error).toMatchObject({ limit: "maxNodes", value: 500 });
   });
 
-  it("[B94] counts the depth of the result against maxDepth", () => {
+  it("counts the depth of the result against maxDepth", () => {
     const root = element("a", [element("b", [include("f.xml")])]);
     const resolve = () => element("f", [element("g")]);
     expect(resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 4 } }).name).toBe("a");
@@ -883,7 +883,7 @@ describe("resolveIncludes", () => {
     });
   });
 
-  it("[B60] lets an include be the root when it is replaced by exactly one element", () => {
+  it("lets an include be the root when it is replaced by exactly one element", () => {
     expect(resolveIncludes(include("f.xml"), "a.xml", resolver({ "f.xml": "<f/>" }))).toEqual(parseXml("<f/>"));
     const two = include("missing.xml", [xi("fallback", [element("x"), element("y")])]);
     expect(issueOf(thrown(() => resolveIncludes(two, "a.xml", resolver({}))))).toMatchObject({
@@ -1362,7 +1362,7 @@ describe("properties", () => {
     return { ...rest, attributes: node.attributes.filter(({ namespace }) => namespace !== XMLNS_NAMESPACE), children };
   }
 
-  it("[S13] parseXml reads back what serializeXml writes, with its namespaces", () => {
+  it("parseXml reads back what serializeXml writes, with its namespaces", () => {
     fc.assert(
       fc.property(tree, (root) => {
         expect(canonical(parseXml(serializeXml(root)))).toEqual(canonical(root));
@@ -1400,7 +1400,7 @@ describe("properties", () => {
       asBytes ? mutateBytes(new TextEncoder().encode(document), changes) : mutateText(document, changes),
     );
 
-  it("[B94][N] parseXml reads a mutated document into a tree that serializeXml writes back, or refuses it with a ReadError or a SecurityError", () => {
+  it("parseXml reads a mutated document into a tree that serializeXml writes back, or refuses it with a ReadError or a SecurityError", () => {
     fc.assert(
       fc.property(hostileInputs, (input) => {
         let root: XmlElement;
@@ -1419,7 +1419,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B94][N] parseXml under small limits reads a document or refuses it with a SecurityError, and never builds a tree beyond a limit", () => {
+  it("parseXml under small limits reads a document or refuses it with a SecurityError, and never builds a tree beyond a limit", () => {
     const small = fc.record(
       {
         maxBytes: fc.integer({ min: 1, max: 400 }),
@@ -1452,7 +1452,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B94][N] resolveIncludes expands hostile includes within the limits, or refuses them with a ReadError or a SecurityError", () => {
+  it("resolveIncludes expands hostile includes within the limits, or refuses them with a ReadError or a SecurityError", () => {
     const hrefs = fc.constantFrom(
       "a.xml",
       "b.xml",

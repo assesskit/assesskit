@@ -63,7 +63,7 @@ const typesOf = (calls: readonly ActionEnvelope[]): string[] =>
   calls.map(({ action }) => (action as { type: string }).type);
 
 describe("createRemoteSession", () => {
-  it("[T67] shows the first view, resolves paths through the signed prefixes and reads the documents of the content", async () => {
+  it("shows the first view, resolves paths through the signed prefixes and reads the documents of the content", async () => {
     const { client, initial } = await remote();
     expect(client.view.current?.key).toEqual(Q1);
     expect(client.documents).toEqual({ test: "tests/exam.xml", item: "items/q1/item.xml", stimuli: [], lexicons: [] });
@@ -74,7 +74,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends each action as an envelope with the next sequence number and gives the view after it", async () => {
+  it("sends each action as an envelope with the next sequence number and gives the view after it", async () => {
     const { client, calls, clock } = await remote();
     clock.advance(4 * SECOND);
     expect(client.age()).toBe(4 * SECOND);
@@ -89,7 +89,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] gives the refusal of the engine with the view as it was", async () => {
+  it("gives the refusal of the engine with the view as it was", async () => {
     const { client } = await remote();
     const before = client.view;
     const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
@@ -98,7 +98,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] holds back responses and sends them together after the pause of the autosave", async () => {
+  it("holds back responses and sends them together after the pause of the autosave", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { client, calls } = await remote();
     const first = client.dispatch(answer("A"));
@@ -115,7 +115,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends the held responses before any other action", async () => {
+  it("sends the held responses before any other action", async () => {
     const { client, calls } = await remote();
     const saved = client.dispatch(answer("A"));
     const moved = await client.dispatch({ type: "move", to: "next" });
@@ -125,7 +125,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends the held responses of one item before those of another", async () => {
+  it("sends the held responses of one item before those of another", async () => {
     const { client, calls } = await remote();
     const first = client.dispatch(answer("A"));
     const other = client.dispatch({
@@ -138,7 +138,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends the held responses when the page is hidden", async () => {
+  it("sends the held responses when the page is hidden", async () => {
     const { client, calls } = await remote();
     const saved = client.dispatch(answer("A"));
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
@@ -152,7 +152,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends the held responses before the nearest timer reaches 0, and asks the host for the view at 0", async () => {
+  it("sends the held responses before the nearest timer reaches 0, and asks the host for the view at 0", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const limit = 11;
     const { client, calls, clock } = await remote({
@@ -175,7 +175,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends a request again, unchanged, before the next one when its answer was lost", async () => {
+  it("sends a request again, unchanged, before the next one when its answer was lost", async () => {
     const { client, calls, store } = await remote({ fail: (_envelope, call) => (call === 1 ? "after" : undefined) });
     await expect(client.dispatch({ type: "move", to: "next" })).rejects.toThrow(ServiceError);
     const answered = await client.dispatch({ type: "move", to: "next" });
@@ -187,7 +187,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] sends a request that never reached the host as it was", async () => {
+  it("sends a request that never reached the host as it was", async () => {
     const { client, calls, store } = await remote({ fail: (_envelope, call) => (call === 1 ? "before" : undefined) });
     await expect(client.dispatch({ type: "move", to: "next" })).rejects.toThrow(ServiceError);
     expect((await client.dispatch({ type: "move", to: "next" })).view.current?.key.ref).toBe("q3");
@@ -196,7 +196,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] does not send a request again that the host rejected", async () => {
+  it("does not send a request again that the host rejected", async () => {
     const { client, calls } = await remote();
     await expect(client.dispatch({ type: "suspend" })).rejects.toMatchObject({ name: "DataError" });
     const moved = await client.dispatch({ type: "move", to: "next" });
@@ -206,7 +206,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] fails when the host answers another sequence number", async () => {
+  it("fails when the host answers another sequence number", async () => {
     const { initial } = await remote();
     const client = createRemoteSession(async (envelope) => ({ ...initial, seq: envelope.seq + 1 }), initial);
     await expect(client.dispatch({ type: "move", to: "next" })).rejects.toThrow(
@@ -215,7 +215,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] tells the listeners of each view until they leave, and a listener that throws does not stop the others", async () => {
+  it("tells the listeners of each view until they leave, and a listener that throws does not stop the others", async () => {
     const { client } = await remote();
     const seen: string[] = [];
     const stop = client.subscribe((view) => seen.push(`a ${view.current?.key.ref}`));
@@ -237,7 +237,7 @@ describe("createRemoteSession", () => {
     client.close();
   });
 
-  it("[T67] stops at close: no timers, no listeners and no more actions", async () => {
+  it("stops at close: no timers, no listeners and no more actions", async () => {
     const { client, calls } = await remote();
     const seen: unknown[] = [];
     client.subscribe((view) => seen.push(view));
@@ -249,7 +249,7 @@ describe("createRemoteSession", () => {
     expect(seen).toEqual([]);
   });
 
-  it("[T67] checks its arguments", async () => {
+  it("checks its arguments", async () => {
     const { initial, transport } = await remote();
     const options = (text: string): { readonly clock?: never } => JSON.parse(text);
     expect(() => createRemoteSession(JSON.parse("null"), initial)).toThrow("The transport must be a function");
@@ -302,7 +302,7 @@ function localOptions(overrides: Partial<Parameters<typeof createLocalSession>[0
 }
 
 describe("createLocalSession", () => {
-  it("[T70] runs the engine on the device behind the interface of the remote session", async () => {
+  it("runs the engine on the device behind the interface of the remote session", async () => {
     const { options, store, clock } = localOptions();
     const client = await createLocalSession(options);
     expect(client.view.current?.key).toEqual(Q1);
@@ -319,7 +319,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T70] lets the candidate suspend and resume, which an exam does not", async () => {
+  it("lets the candidate suspend and resume, which an exam does not", async () => {
     const { options } = localOptions();
     const client = await createLocalSession(options);
     expect((await client.dispatch({ type: "suspend" })).view.status).toBe("suspended");
@@ -327,7 +327,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T69][T70] resumes a session from its store, with its answers", async () => {
+  it("resumes a session from its store, with its answers", async () => {
     const { options, store } = localOptions();
     const first = await createLocalSession(options);
     await first.dispatch(answer("B"));
@@ -341,7 +341,7 @@ describe("createLocalSession", () => {
     second.close();
   });
 
-  it("[T70] gives the refusal of the engine and saves nothing for it", async () => {
+  it("gives the refusal of the engine and saves nothing for it", async () => {
     const { options, store } = localOptions();
     const client = await createLocalSession(options);
     const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
@@ -350,7 +350,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T65] fires a time action at each maximum time with a timer of the browser", async () => {
+  it("fires a time action at each maximum time with a timer of the browser", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const files = examFiles({ limits: '<qti-time-limits max-time="600"/>' });
     const { options, clock, store } = localOptions({ definition: examDefinition(packageOf(files)) });
@@ -369,7 +369,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T65] sets a timer again when its time is far off", async () => {
+  it("sets a timer again when its time is far off", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const files = examFiles({ limits: '<qti-time-limits max-time="3000000"/>' });
     const { options } = localOptions({ definition: examDefinition(packageOf(files)) });
@@ -379,7 +379,7 @@ describe("createLocalSession", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("[T70] previews one item with the definition of an item", async () => {
+  it("previews one item with the definition of an item", async () => {
     const pkg = packageOf(examFiles());
     const document = pkg.document("items/q1/item.xml");
     if (document.kind !== "item") throw new Error("The fixture item is an item.");
@@ -396,7 +396,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T70][T85] names the lexicons that the host gives for the item presented", async () => {
+  it("names the lexicons that the host gives for the item presented", async () => {
     const asked: string[] = [];
     const { options } = localOptions({
       lexicons: (item) => {
@@ -413,7 +413,7 @@ describe("createLocalSession", () => {
     client.close();
   });
 
-  it("[T70] checks its options", async () => {
+  it("checks its options", async () => {
     const { options } = localOptions();
     const make = (changes: string): Promise<unknown> => createLocalSession({ ...options, ...JSON.parse(changes) });
     await expect(createLocalSession(JSON.parse("null"))).rejects.toThrow(

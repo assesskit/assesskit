@@ -52,13 +52,13 @@ afterEach(() => {
 });
 
 describe("the graphic items of the examples of 1EdTech", () => {
-  it("[T35][T36][T37][T38][T39][T40][T44] finds a graphic item of each kind among the examples", () => {
+  it("finds a graphic item of each kind among the examples", () => {
     const kinds = new Set(examples.flatMap(({ kinds: found }) => found));
     expect([...kinds].sort()).toEqual([...GRAPHIC].sort());
     expect(examples.length).toBeGreaterThanOrEqual(20);
   });
 
-  it("[T35][T36][T37][T38][T39][T40][T44][X] renders every graphic item, accepts an answer in each interaction, and logs no error", async () => {
+  it("renders every graphic item, accepts an answer in each interaction, and logs no error", async () => {
     await commands.watchConsole();
     const token = crypto.randomUUID();
     let answered = 0;

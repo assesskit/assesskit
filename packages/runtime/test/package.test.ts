@@ -124,17 +124,17 @@ describe("dependencyClosure", () => {
   );
   const ids = (start: string): string[] => dependencyClosure(manifest, start).map(({ identifier }) => identifier);
 
-  it("[K8] returns the resource, then each dependency once, depth first in the order of the dependency elements", () => {
+  it("returns the resource, then each dependency once, depth first in the order of the dependency elements", () => {
     expect(ids("test")).toEqual(["test", "i1", "s", "m1", "i2"]);
     expect(ids("i2")).toEqual(["i2", "s", "m1", "i1"]);
   });
 
-  it("[K8] ends a cycle where it closes and returns a resource without dependencies alone", () => {
+  it("ends a cycle where it closes and returns a resource without dependencies alone", () => {
     expect(ids("s")).toEqual(["s", "m1"]);
     expect(ids("lonely")).toEqual(["lonely"]);
   });
 
-  it("[K8] throws a DataError for a resource that is not in the manifest and for a dependency that names none", () => {
+  it("throws a DataError for a resource that is not in the manifest and for a dependency that names none", () => {
     expect(() => dependencyClosure(manifest, "missing")).toThrow(DataError);
     const dangling: Manifest = {
       ...manifest,
@@ -143,7 +143,7 @@ describe("dependencyClosure", () => {
     expect(() => dependencyClosure(dangling, "test")).toThrow(/depends on "nowhere"/);
   });
 
-  it("[K8][B94] follows a chain of dependencies as long as a manifest within the default limits can make it", () => {
+  it("follows a chain of dependencies as long as a manifest within the default limits can make it", () => {
     const length = 30_000;
     const [first] = manifest.resources;
     if (first === undefined) throw new Error("The test manifest has no resource.");
@@ -174,7 +174,7 @@ const lti = (inner: string, root = LTI_ROOT): string =>
   `<cartridge_basiclti_link ${root}>${inner}</cartridge_basiclti_link>`;
 
 describe("readLtiLink", () => {
-  it("[K20] reads the title, description, launch URLs, custom properties, extensions and vendor of a link", () => {
+  it("reads the title, description, launch URLs, custom properties, extensions and vendor of a link", () => {
     const link = readLtiLink(
       lti(`
         <blti:title>Student Edition</blti:title>
@@ -206,7 +206,7 @@ describe("readLtiLink", () => {
     });
   });
 
-  it("[K20] reads a link with only a title, and the relative namespace that the 1EdTech examples declare", () => {
+  it("reads a link with only a title, and the relative namespace that the 1EdTech examples declare", () => {
     const link = readLtiLink(
       lti(
         "<blti:title>t</blti:title>",
@@ -216,19 +216,19 @@ describe("readLtiLink", () => {
     expect(link).toEqual({ title: "t", custom: new Map(), extensions: [] });
   });
 
-  it("[K20] reads a link from bytes and from a parsed element", () => {
+  it("reads a link from bytes and from a parsed element", () => {
     const text = lti("<blti:title>t</blti:title>");
     expect(readLtiLink(bytes(text))).toEqual(readLtiLink(parseXml(text)));
   });
 
-  it("[K20] keeps a custom property with an empty value and an attribute name with a prototype name as data", () => {
+  it("keeps a custom property with an empty value and an attribute name with a prototype name as data", () => {
     const link = readLtiLink(
       lti('<blti:title>t</blti:title><blti:custom><lticm:property name="__proto__"/></blti:custom>'),
     );
     expect(link.custom.get("__proto__")).toBe("");
   });
 
-  it("[K20] rejects a document that is not a link, has no title, repeats or leaves out a property name, or has a vendor without a code", () => {
+  it("rejects a document that is not a link, has no title, repeats or leaves out a property name, or has a vendor without a code", () => {
     expect(issueCode(() => readLtiLink("<other/>"))).toBe("assesskit/package/lti-link");
     expect(
       issueCode(() => readLtiLink(lti("<blti:title>t</blti:title>", LTI_ROOT.replace("imslticc_v1p0", "other")))),
@@ -269,7 +269,7 @@ describe("readLtiLink", () => {
 describe("readManifest", () => {
   const minimal = manifestXml(resources(resourceXml("a", "webcontent", "a.txt")));
 
-  it("[K1][K4][K5] reads the identifier, the xml:base attributes and a resource", () => {
+  it("reads the identifier, the xml:base attributes and a resource", () => {
     const manifest = readManifest(
       manifestXml(
         `<resources xml:base="items/">${'<resource identifier="a" type="imsqti_item_xmlv3p0" href="a.xml" xml:base="sub/"><file href="a.xml"/></resource>'}</resources>`,
@@ -286,12 +286,12 @@ describe("readManifest", () => {
     });
   });
 
-  it("[K1][K5] reads a manifest from text, bytes and a parsed element alike", () => {
+  it("reads a manifest from text, bytes and a parsed element alike", () => {
     expect(readManifest(bytes(minimal))).toEqual(readManifest(minimal));
     expect(bare(readManifest(parseXml(minimal)))).toEqual(bare(readManifest(minimal)));
   });
 
-  it("[K2] accepts each of the seven schemas and the version 3.0.0, and nothing else", () => {
+  it("accepts each of the seven schemas and the version 3.0.0, and nothing else", () => {
     expect(MANIFEST_SCHEMAS).toHaveLength(7);
     for (const schema of MANIFEST_SCHEMAS) {
       const metadata = `<metadata><schema>${schema}</schema><schemaversion>3.0.0</schemaversion></metadata>`;
@@ -310,7 +310,7 @@ describe("readManifest", () => {
     ).toBe("assesskit/package/invalid-text");
   });
 
-  it("[K2][Q18][Q27] reads the LOM and the curriculum standards of the manifest metadata", () => {
+  it("reads the LOM and the curriculum standards of the manifest metadata", () => {
     const metadata = `<metadata><schema>QTI Item</schema><schemaversion>3.0.0</schemaversion>
       <csmd:curriculumStandardsMetadataSet xmlns:csmd="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscsmd_v1p1"><csmd:curriculumStandardsMetadata><csmd:setOfGUIDs><csmd:labelledGUID><csmd:GUID>g</csmd:GUID></csmd:labelledGUID></csmd:setOfGUIDs></csmd:curriculumStandardsMetadata></csmd:curriculumStandardsMetadataSet>
       <lom:lom><lom:general><lom:title><lom:string>T</lom:string></lom:title></lom:general></lom:lom></metadata>`;
@@ -319,7 +319,7 @@ describe("readManifest", () => {
     expect(manifest.metadata.lom?.name).toBe("lom");
   });
 
-  it("[K2] rejects a manifest without metadata, without a schema or a version, and with another element in the metadata", () => {
+  it("rejects a manifest without metadata, without a schema or a version, and with another element in the metadata", () => {
     expect(
       issueCode(() =>
         readManifest(`<manifest xmlns="${CP_NAMESPACE}" identifier="m"><organizations/>${resources()}</manifest>`),
@@ -351,12 +351,12 @@ describe("readManifest", () => {
     ).toBe("assesskit/package/unexpected-element");
   });
 
-  it("[K3] reads an empty organizations element and a manifest without one", () => {
+  it("reads an empty organizations element and a manifest without one", () => {
     expect(readManifest(manifestXml(resources(), { organizations: "<organizations/>" })).resources).toEqual([]);
     expect(readManifest(manifestXml(resources(), { organizations: "" })).resources).toEqual([]);
   });
 
-  it("[K3][B89] rejects organizations with an organization or an item, and a nested manifest", () => {
+  it("rejects organizations with an organization or an item, and a nested manifest", () => {
     for (const organizations of [
       "<organizations><organization identifier='o'/></organizations>",
       "<organizations><item identifier='i'/></organizations>",
@@ -373,7 +373,7 @@ describe("readManifest", () => {
     );
   });
 
-  it("[K10][K11][K12][K13][K14][K15][K16][K17][K18][K19][K20][K21][K22][K23][K24][K25][K26][K27][K28] accepts each of the 19 resource types and no other", () => {
+  it("accepts each of the 19 resource types and no other", () => {
     expect(RESOURCE_TYPES).toHaveLength(19);
     for (const type of RESOURCE_TYPES) {
       const manifest = readManifest(manifestXml(resources(resourceXml("a", type, "a.xml"))));
@@ -387,12 +387,12 @@ describe("readManifest", () => {
     }
   });
 
-  it("[K20][G12] reads the type imslti_xmlv1p1 of BIND §8.8, which the 1EdTech examples use, as imsbasiclti_xmlv1p3", () => {
+  it("reads the type imslti_xmlv1p1 of BIND §8.8, which the 1EdTech examples use, as imsbasiclti_xmlv1p3", () => {
     const manifest = readManifest(manifestXml(resources(resourceXml("a", "imslti_xmlv1p1", "links/a.xml"))));
     expect(manifest.resources[0]?.type).toBe("imsbasiclti_xmlv1p3");
   });
 
-  it("[K5] requires an identifier and a type, makes the href optional, and rejects an attribute the schema does not declare", () => {
+  it("requires an identifier and a type, makes the href optional, and rejects an attribute the schema does not declare", () => {
     expect(
       issueCode(() =>
         readManifest(manifestXml('<resources><resource type="webcontent"><file href="a"/></resource></resources>')),
@@ -425,7 +425,7 @@ describe("readManifest", () => {
     );
   });
 
-  it("[K6][Q1][Q18][Q27] reads the metadata of a resource", () => {
+  it("reads the metadata of a resource", () => {
     const manifest = readManifest(
       manifestXml(
         resources(
@@ -437,14 +437,14 @@ describe("readManifest", () => {
     expect(manifest.resources[0]?.metadata?.lom?.name).toBe("lom");
   });
 
-  it("[K6] rejects another element in the metadata of a resource", () => {
+  it("rejects another element in the metadata of a resource", () => {
     const xml = manifestXml(
       resources('<resource identifier="a" type="webcontent"><metadata><other/></metadata><file href="a"/></resource>'),
     );
     expect(issueCode(() => readManifest(xml))).toBe("assesskit/metadata/unexpected-element");
   });
 
-  it("[K7] reads files with their metadata, requires the href, and rejects a child other than metadata", () => {
+  it("reads files with their metadata, requires the href, and rejects a child other than metadata", () => {
     const manifest = readManifest(
       manifestXml(
         resources(
@@ -463,7 +463,7 @@ describe("readManifest", () => {
     );
   });
 
-  it("[K8] reads dependencies, and rejects a dependency without identifierref, with a child, or that names no resource", () => {
+  it("reads dependencies, and rejects a dependency without identifierref, with a child, or that names no resource", () => {
     const manifest = readManifest(
       manifestXml(
         resources(
@@ -490,7 +490,7 @@ describe("readManifest", () => {
     expect(error.message).toContain("2 such problems");
   });
 
-  it("[K1][K5][K9] rejects an identifier declared twice, among the manifest, the resources and the variants", () => {
+  it("rejects an identifier declared twice, among the manifest, the resources and the variants", () => {
     const duplicate = thrownAs(ReadError, () =>
       readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a"), resourceXml("a", "webcontent", "b")))),
     );
@@ -510,7 +510,7 @@ describe("readManifest", () => {
     ).toBe("assesskit/package/duplicate-identifier");
   });
 
-  it("[K9][B90] reads the variants of a resource with their DRD", () => {
+  it("reads the variants of a resource with their DRD", () => {
     const variant = `<cpx:variant identifier="v" identifierref="b"><cpx:metadata><drd:accessForAllResource><drd:hazard>flashing</drd:hazard><drd:languageOfAdaptation>id</drd:languageOfAdaptation></drd:accessForAllResource></cpx:metadata></cpx:variant>`;
     const manifest = readManifest(
       manifestXml(
@@ -528,7 +528,7 @@ describe("readManifest", () => {
     });
   });
 
-  it("[K9][B90] rejects a variant without metadata or an accessibility description, with a missing target, or in another namespace", () => {
+  it("rejects a variant without metadata or an accessibility description, with a missing target, or in another namespace", () => {
     const withVariant = (variant: string): string =>
       manifestXml(resources(resourceXml("a", "webcontent", "a", variant), resourceXml("b", "webcontent", "b")));
     expect(issueCode(() => readManifest(withVariant('<cpx:variant identifier="v" identifierref="b"/>')))).toBe(
@@ -562,7 +562,7 @@ describe("readManifest", () => {
     );
   });
 
-  it("[G12] reads only the content package namespace of the QTI profile, and rejects the IMS CP 1.1 namespace that some samples use", () => {
+  it("reads only the content package namespace of the QTI profile, and rejects the IMS CP 1.1 namespace that some samples use", () => {
     expect(
       issueCode(() => readManifest(minimal.replace(CP_NAMESPACE, "http://www.imsglobal.org/xsd/imscp_v1p1"))),
     ).toBe("assesskit/package/not-a-manifest");
@@ -609,7 +609,7 @@ describe("writeManifest", () => {
     ),
   );
 
-  it("[K1][K2][K3][K4][K5][K6][K7][K8][K9] writes the structure of the CP schema, with the namespaces declared on the root", () => {
+  it("writes the structure of the CP schema, with the namespaces declared on the root", () => {
     const text = writeManifest(manifest);
     const root = parseXml(text);
     expect(root).toMatchObject({ namespace: CP_NAMESPACE, name: "manifest" });
@@ -620,7 +620,7 @@ describe("writeManifest", () => {
     expect(bare(readManifest(text))).toEqual(bare(manifest));
   });
 
-  it("[K1][K2][K4][K5][K6][K7][K8][K9] reads back what it writes, for any manifest", () => {
+  it("reads back what it writes, for any manifest", () => {
     fc.assert(
       fc.property(manifests, (model) => {
         expect(bare(readManifest(writeManifest(model)))).toEqual(bare(model));
@@ -629,12 +629,12 @@ describe("writeManifest", () => {
     );
   });
 
-  it("[K2] writes the schema version 3.0.0 and a manifest without resources", () => {
+  it("writes the schema version 3.0.0 and a manifest without resources", () => {
     const text = writeManifest({ identifier: "m", metadata: { schema: "QTI Item Bank" }, resources: [] });
     expect(text).toContain("<schema>QTI Item Bank</schema><schemaversion>3.0.0</schemaversion>");
   });
 
-  it("[K1][K5][K7][K8][K9] throws a DataError for a manifest that would not be valid", () => {
+  it("throws a DataError for a manifest that would not be valid", () => {
     const base: Manifest = { identifier: "m", metadata: { schema: "QTI Package" }, resources: [] };
     const resource: Resource = {
       identifier: "a",
@@ -724,7 +724,7 @@ describe("QtiPackage.resolve", () => {
 
   // RFC 3986 §5.4.1 resolves references against the base http://a/b/c/d;p?q; on package paths the base is b/c/d;p, and a
   // result above the root of the package is outside it (RFC 3986 would clamp it at the root).
-  it("[B93] resolves the normal examples of RFC 3986 §5.4.1 against the referencing file", () => {
+  it("resolves the normal examples of RFC 3986 §5.4.1 against the referencing file", () => {
     const examples: readonly (readonly [string, string])[] = [
       ["g", "b/c/g"],
       ["./g", "b/c/g"],
@@ -754,7 +754,7 @@ describe("QtiPackage.resolve", () => {
     for (const [reference, expected] of examples) expect(resolve("b/c/d;p", reference), reference).toBe(expected);
   });
 
-  it("[B93] resolves against the directory that an xml:base names, and from the root", () => {
+  it("resolves against the directory that an xml:base names, and from the root", () => {
     expect(resolve("items/", "a.xml")).toBe("items/a.xml");
     expect(resolve("items/sub/", "../b.xml")).toBe("items/b.xml");
     expect(resolve("", "a/b.xml")).toBe("a/b.xml");
@@ -762,14 +762,14 @@ describe("QtiPackage.resolve", () => {
     expect(resolve("items/a.xml", "../media/x.png")).toBe("media/x.png");
   });
 
-  it("[B93] decodes percent-encoded octets and keeps other characters", () => {
+  it("decodes percent-encoded octets and keeps other characters", () => {
     expect(resolve("", "my%20file.png")).toBe("my file.png");
     expect(resolve("", "%C3%BCn%C3%AF.txt")).toBe("ünï.txt");
     expect(resolve("", "ünï/a b.txt")).toBe("ünï/a b.txt");
     expect(resolve("", "%41.xml")).toBe("A.xml");
   });
 
-  it("[B93][B94] reports a reference outside the package as undefined", () => {
+  it("reports a reference outside the package as undefined", () => {
     const outside = [
       "../x.xml",
       "a/../../x.xml",
@@ -802,16 +802,16 @@ describe("QtiPackage.resolve", () => {
     expect(resolve("items/a.xml", "../../x.xml")).toBeUndefined();
   });
 
-  it("[B93][B94] resolves a reference that contains a colon in a segment after a slash as a path", () => {
+  it("resolves a reference that contains a colon in a segment after a slash as a path", () => {
     expect(resolve("", "items/a:b.xml")).toBe("items/a:b.xml");
   });
 
-  it("[B93] throws a DataError when an argument is not a string", () => {
+  it("throws a DataError when an argument is not a string", () => {
     expect(() => pkg.resolve(JSON.parse("null"), "a")).toThrow(DataError);
     expect(() => pkg.resolve("", JSON.parse("3"))).toThrow(DataError);
   });
 
-  it("[B93][P] gives a normalized path that stays inside the package, for any base and reference", () => {
+  it("gives a normalized path that stays inside the package, for any base and reference", () => {
     const paths = (segments: readonly string[]): fc.Arbitrary<string> =>
       fc.array(fc.constantFrom(...segments), { maxLength: 5 }).map((chosen) => chosen.join("/"));
     fc.assert(
@@ -841,18 +841,18 @@ describe("resourcePath", () => {
   );
   const [a, b, c] = manifest.resources;
 
-  it("[B93][K1][K4][K5] resolves an href against the xml:base of the manifest, the resources and the resource, each against the one before", () => {
+  it("resolves an href against the xml:base of the manifest, the resources and the resource, each against the one before", () => {
     expect(resourcePath(manifest, a as Resource)).toBe("pkg/items/sub/a.xml");
     expect(resourcePath(manifest, a as Resource, "../b.png")).toBe("pkg/items/b.png");
     expect(resourcePath(manifest, c as Resource, "x")).toBe("pkg/items/x");
   });
 
-  it("[B93] returns undefined for a resource without an href and for a base outside the package", () => {
+  it("returns undefined for a resource without an href and for a base outside the package", () => {
     expect(resourcePath(manifest, c as Resource)).toBeUndefined();
     expect(resourcePath(manifest, b as Resource, "x")).toBeUndefined();
   });
 
-  it("[B93] resolves against the root when no xml:base is given", () => {
+  it("resolves against the root when no xml:base is given", () => {
     const plain = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "x/a.png"))));
     expect(resourcePath(plain, plain.resources[0] as Resource)).toBe("x/a.png");
   });
@@ -881,7 +881,7 @@ function memoryFiles(files: Readonly<Record<string, string>>): PackageFiles & { 
 describe("openPackage", () => {
   const manifest = manifestXml(resources(resourceXml("a", "imsqti_item_xmlv3p0", "items/a.xml")));
 
-  it("[K5] reads only the manifest when it opens, and each document once when it is asked for", () => {
+  it("reads only the manifest when it opens, and each document once when it is asked for", () => {
     const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
     const pkg = openPackage(files);
     expect(files.reads).toEqual(["imsmanifest.xml"]);
@@ -891,14 +891,14 @@ describe("openPackage", () => {
     expect(files.reads).toEqual(["imsmanifest.xml", "items/a.xml"]);
   });
 
-  it("[K5] returns the bytes of a file, and undefined for a path the package does not list", () => {
+  it("returns the bytes of a file, and undefined for a path the package does not list", () => {
     const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "a.txt": "hello" }));
     expect(pkg.file("a.txt")).toEqual(bytes("hello"));
     expect(pkg.file("b.txt")).toBeUndefined();
     expect(pkg.file("../a.txt")).toBeUndefined();
   });
 
-  it("[B60][B93] resolves an xi:include against the including document, inside the package", () => {
+  it("resolves an xi:include against the including document, inside the package", () => {
     const pkg = openPackage(
       memoryFiles({
         "imsmanifest.xml": manifest,
@@ -909,7 +909,7 @@ describe("openPackage", () => {
     expect(pkg.document("items/a.xml").kind).toBe("item");
   });
 
-  it("[B60][B94] rejects an xi:include that names a file outside the package, even with a fallback", () => {
+  it("rejects an xi:include that names a file outside the package, even with a fallback", () => {
     const files = (href: string): PackageFiles =>
       memoryFiles({
         "imsmanifest.xml": manifest,
@@ -923,7 +923,7 @@ describe("openPackage", () => {
     }
   });
 
-  it("[B60] uses the fallback of an xi:include whose target is missing, and fails without one", () => {
+  it("uses the fallback of an xi:include whose target is missing, and fails without one", () => {
     const pkg = openPackage(
       memoryFiles({
         "imsmanifest.xml": manifest,
@@ -938,7 +938,7 @@ describe("openPackage", () => {
     expect(issueCode(() => pkg.document("items/b.xml"))).toBe("assesskit/xml/xinclude-resource");
   });
 
-  it("[B60] rejects an xi:include with an xpointer and a loop of includes", () => {
+  it("rejects an xi:include with an xpointer and a loop of includes", () => {
     const pkg = openPackage(
       memoryFiles({
         "imsmanifest.xml": manifest,
@@ -951,7 +951,7 @@ describe("openPackage", () => {
     expect(issueCode(() => pkg.document("items/c.xml"))).toBe("assesskit/xml/xinclude-cycle");
   });
 
-  it("[B60][B94] reads and parses a file once for a document, however many includes name it", () => {
+  it("reads and parses a file once for a document, however many includes name it", () => {
     const includes = (href: string): string => `<xi:include href="${href}"/>`.repeat(2_000);
     const files = memoryFiles({
       "imsmanifest.xml": manifest,
@@ -963,7 +963,7 @@ describe("openPackage", () => {
     expect(files.reads.filter((path) => path === "items/p.xml")).toHaveLength(1);
   });
 
-  it("[B60][B94] reads a file that fails once for a document, however many includes with a fallback name it", () => {
+  it("reads a file that fails once for a document, however many includes with a fallback name it", () => {
     const failing = memoryFiles({
       "imsmanifest.xml": manifest,
       "items/a.xml": item(
@@ -977,7 +977,7 @@ describe("openPackage", () => {
     expect(failing.reads.filter((path) => path === "items/bad.xml")).toHaveLength(1);
   });
 
-  it("[B94] never lets a fallback hide a DOCTYPE in the document, in an included file or in the manifest", () => {
+  it("never lets a fallback hide a DOCTYPE in the document, in an included file or in the manifest", () => {
     const doctype = '<!DOCTYPE a [<!ENTITY x "y">]>';
     const pkg = openPackage(
       memoryFiles({
@@ -1002,7 +1002,7 @@ describe("openPackage", () => {
     expect(securityLimit(() => openPackage(files, { xmlLimits: { maxBytes: 100 } }))).toBe("maxBytes");
   });
 
-  it("[K5] rejects a package without a manifest, and a document that is missing or is not an ASI document", () => {
+  it("rejects a package without a manifest, and a document that is missing or is not an ASI document", () => {
     expect(issueCode(() => openPackage(memoryFiles({ "a.txt": "x" })))).toBe("assesskit/package/no-manifest");
     const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": "<x/>" }));
     expect(issueCode(() => pkg.document("items/missing.xml"))).toBe("assesskit/package/missing-file");
@@ -1034,7 +1034,7 @@ describe("openPackage", () => {
 });
 
 describe("readPackage", () => {
-  it("[K30] reads the archives that Python's zipfile writes: stored and deflated entries, UTF-8 names, directories, data descriptors", () => {
+  it("reads the archives that Python's zipfile writes: stored and deflated entries, UTF-8 names, directories, data descriptors", () => {
     for (const name of ["valid.zip", "streamed.zip"]) {
       const pkg = readPackage(fixture(name));
       const expected = expectations[name] ?? [];
@@ -1047,7 +1047,7 @@ describe("readPackage", () => {
     }
   });
 
-  it("[K30] reads an archive with ZIP64 records: the end record markers, the 64-bit directory and the 64-bit extra fields", () => {
+  it("reads an archive with ZIP64 records: the end record markers, the 64-bit directory and the 64-bit extra fields", () => {
     const pkg = readPackage(fixture("zip64.zip"));
     const expected = expectations["zip64.zip"] ?? [];
     expect(pkg.paths).toEqual(expected.map((entry) => entry.name));
@@ -1055,7 +1055,7 @@ describe("readPackage", () => {
     expect(pkg.manifest.identifier).toBe("fixture");
   });
 
-  it("[K30] leaves directory entries out of the paths and returns bytes the caller may change", () => {
+  it("leaves directory entries out of the paths and returns bytes the caller may change", () => {
     const pkg = readPackage(fixture("valid.zip"));
     expect(pkg.paths.some((path) => path.endsWith("/"))).toBe(false);
     const first = pkg.file("media/noise.bin");
@@ -1063,14 +1063,14 @@ describe("readPackage", () => {
     expect(pkg.file("media/noise.bin")?.some((byte) => byte !== 0)).toBe(true);
   });
 
-  it("[K30] reads an archive with a comment, and one made of entries with a data descriptor and stored data", () => {
+  it("reads an archive with a comment, and one made of entries with a data descriptor and stored data", () => {
     const manifest = bytes(manifestXml(resources()));
     const zip = buildZip([{ name: "imsmanifest.xml", data: manifest, method: 0 }]);
     const withComment = concat([zip.subarray(0, zip.length - 2), new Uint8Array([5, 0]), bytes("hello")]);
     expect(readPackage(withComment).manifest.identifier).toBe("m");
   });
 
-  it("[K30][B94] normalizes entry names inside the package and keeps the path as written otherwise", () => {
+  it("normalizes entry names inside the package and keeps the path as written otherwise", () => {
     const manifest = bytes(manifestXml(resources()));
     const zip = buildZip([
       { name: "./imsmanifest.xml", data: manifest },
@@ -1081,7 +1081,7 @@ describe("readPackage", () => {
     expect(readPackage(zip).paths).toEqual(["imsmanifest.xml", "b.xml"]);
   });
 
-  it("[K30][B94] rejects an entry that leaves the package, is absolute, or has a backslash, in archives that tools write", () => {
+  it("rejects an entry that leaves the package, is absolute, or has a backslash, in archives that tools write", () => {
     for (const name of ["zip-slip.zip", "absolute.zip", "backslash.zip"]) {
       expect(
         securityLimit(() => readPackage(fixture(name))),
@@ -1090,7 +1090,7 @@ describe("readPackage", () => {
     }
   });
 
-  it("[K30][B94] rejects names with a drive letter, a control character, a NUL, a parent segment above the root, and a directory that leaves the package", () => {
+  it("rejects names with a drive letter, a control character, a NUL, a parent segment above the root, and a directory that leaves the package", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const names = [
       "C:/x.xml",
@@ -1112,11 +1112,11 @@ describe("readPackage", () => {
     }
   });
 
-  it("[K30][B94] rejects two entries whose names are equal after normalization", () => {
+  it("rejects two entries whose names are equal after normalization", () => {
     expect(securityLimit(() => readPackage(fixture("duplicate.zip")))).toBe("duplicate-path");
   });
 
-  it("[K30][B94] rejects a symbolic link that a Unix tool writes, and ignores the mode of an entry from another system", () => {
+  it("rejects a symbolic link that a Unix tool writes, and ignores the mode of an entry from another system", () => {
     expect(securityLimit(() => readPackage(fixture("symlink.zip")))).toBe("symlink");
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const link = (host: number): Uint8Array =>
@@ -1131,7 +1131,7 @@ describe("readPackage", () => {
     expect(readPackage(regular).paths).toEqual(["imsmanifest.xml", "f"]);
   });
 
-  it("[K30][B94] rejects an encrypted entry", () => {
+  it("rejects an encrypted entry", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     for (const flags of [0x1, 0x40, 0x2000, 0x801]) {
       expect(
@@ -1141,7 +1141,7 @@ describe("readPackage", () => {
     }
   });
 
-  it("[K30][B94] rejects a zip bomb by its ratio, and by its size when the ratio is allowed", () => {
+  it("rejects a zip bomb by its ratio, and by its size when the ratio is allowed", () => {
     const bomb = fixture("bomb.zip");
     expect(securityLimit(() => readPackage(bomb))).toBe("maxRatio");
     expect(securityLimit(() => readPackage(bomb, { limits: { maxRatio: 100_000, maxEntryBytes: 1_000_000 } }))).toBe(
@@ -1154,7 +1154,7 @@ describe("readPackage", () => {
     expect(allowed.file("zeros.bin")?.length).toBe(40_000_000);
   });
 
-  it("[K30][B94] exempts a small entry from the ratio and counts the bytes while inflating, whatever the header says", () => {
+  it("exempts a small entry from the ratio and counts the bytes while inflating, whatever the header says", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const small = readPackage(buildZip([manifest, { name: "z", data: new Uint8Array(100_000) }]));
     expect(small.file("z")?.length).toBe(100_000);
@@ -1166,7 +1166,7 @@ describe("readPackage", () => {
     expect(securityLimit(() => tiny.file("z"))).toBe("declaredBytes");
   });
 
-  it("[K30][B94] rejects an archive with more entries than maxEntries, before it reads the directory", () => {
+  it("rejects an archive with more entries than maxEntries, before it reads the directory", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const zip = buildZip([manifest, { name: "a", data: bytes("x") }, { name: "b", data: bytes("x") }]);
     expect(securityLimit(() => readPackage(zip, { limits: { maxEntries: 2 } }))).toBe("maxEntries");
@@ -1175,7 +1175,7 @@ describe("readPackage", () => {
     expect(securityLimit(() => readPackage(claims, { limits: { maxEntries: 1000 } }))).toBe("maxEntries");
   });
 
-  it("[K30][B94] counts directory entries against maxEntries and the sizes of all files against maxTotalBytes", () => {
+  it("counts directory entries against maxEntries and the sizes of all files against maxTotalBytes", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const zip = buildZip([manifest, { name: "d/", method: 0 }, { name: "e/", method: 0 }]);
     expect(securityLimit(() => readPackage(zip, { limits: { maxEntries: 2 } }))).toBe("maxEntries");
@@ -1187,7 +1187,7 @@ describe("readPackage", () => {
     expect(securityLimit(() => readPackage(big, { limits: { maxTotalBytes: 1000 } }))).toBe("maxTotalBytes");
   });
 
-  it("[K30] rejects data that is not an archive, an archive that is cut off, and records that do not agree", () => {
+  it("rejects data that is not an archive, an archive that is cut off, and records that do not agree", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const zip = buildZip([manifest, { name: "a.txt", data: bytes("hello hello hello") }]);
     expect(issueCode(() => readPackage(new Uint8Array()))).toBe("assesskit/package/zip");
@@ -1204,7 +1204,7 @@ describe("readPackage", () => {
     );
   });
 
-  it("[K30] reports corrupt data when a file is read: a wrong CRC, wrong size, bad deflate data, a local header that disagrees, a cut-off entry", () => {
+  it("reports corrupt data when a file is read: a wrong CRC, wrong size, bad deflate data, a local header that disagrees, a cut-off entry", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const read = (entry: RawEntry): Uint8Array | undefined => readPackage(buildZip([manifest, entry])).file("f");
     const data = bytes("hello hello hello");
@@ -1221,7 +1221,7 @@ describe("readPackage", () => {
     expect(read({ name: "f", data })).toEqual(data);
   });
 
-  it("[K30] throws a DataError for an archive of another type and for options of another type", () => {
+  it("throws a DataError for an archive of another type and for options of another type", () => {
     for (const zip of ["null", '"x"', "[1]", "{}"]) expect(() => readPackage(JSON.parse(zip)), zip).toThrow(DataError);
     const zip = fixture("valid.zip");
     expect(() => readPackage(zip, JSON.parse("null"))).toThrow(DataError);
@@ -1235,7 +1235,7 @@ describe("readPackage", () => {
 });
 
 describe("DEFAULT_ZIP_LIMITS", () => {
-  it("[K30] is about 1,000 times the entries of the largest example, 100 times its largest entry, 200 times its size and 9 times its ratio", () => {
+  it("is about 1,000 times the entries of the largest example, 100 times its largest entry, 200 times its size and 9 times its ratio", () => {
     // The largest 1EdTech example package has 99 entries, an entry of 5,251,725 bytes, 11,018,253 bytes and a ratio of 27.9.
     expect(DEFAULT_ZIP_LIMITS).toEqual({
       maxEntries: 100_000,
@@ -1294,7 +1294,7 @@ describe("packageResolvers", () => {
   });
   const resolvers = packageResolvers(pkg);
 
-  it("[B90][K9] resolves an item reference to the item, its variants and the DRD of the links to them", () => {
+  it("resolves an item reference to the item, its variants and the DRD of the links to them", () => {
     const resolved = resolvers.items("../items/core.xml", "tests/t.xml");
     expect(resolved.resource).toBe("core");
     expect(resolved.deliverable).toMatchObject({ kind: "qti", item: { identifier: "core" } });
@@ -1314,23 +1314,23 @@ describe("packageResolvers", () => {
     });
   });
 
-  it("[B90][K9] gives an item the hazards of the DRD of the variant links that point at it, once each and without extension terms", () => {
+  it("gives an item the hazards of the DRD of the variant links that point at it, once each and without extension terms", () => {
     expect(resolvers.items("items/plain.xml", "").hazards).toEqual(["flashing", "sound"]);
     expect(resolvers.items("items/plain2.xml", "").hazards).toEqual(["sound"]);
     expect(resolvers.items("items/plain2.xml", "").variants.map(({ resource }) => resource)).toEqual(["plain"]);
   });
 
-  it("[K20][K9] resolves an item reference to an LTI link as an LTI deliverable", () => {
+  it("resolves an item reference to an LTI link as an LTI deliverable", () => {
     const resolved = resolvers.items("../links/tool.xml", "tests/t.xml");
     expect(resolved).toMatchObject({ resource: "tool", deliverable: { kind: "lti", identifier: "tool" } });
   });
 
-  it("[B62] resolves a stimulus reference to the stimulus and a section reference to the section", () => {
+  it("resolves a stimulus reference to the stimulus and a section reference to the section", () => {
     expect(resolvers.stimuli("../passages/s.xml", "items/core.xml")).toMatchObject({ identifier: "passage" });
     expect(resolvers.sections("../sections/s.xml", "tests/t.xml")).toMatchObject({ identifier: "sec" });
   });
 
-  it("[B93][B94] reports a reference outside the package, to no item resource, to a missing file or to a document of another kind", () => {
+  it("reports a reference outside the package, to no item resource, to a missing file or to a document of another kind", () => {
     expect(issueCode(() => resolvers.items("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
     expect(issueCode(() => resolvers.items("http://example.com/x.xml", "tests/t.xml"))).toBe(
       "assesskit/package/outside-package",
@@ -1350,7 +1350,7 @@ describe("packageResolvers", () => {
     expect(issueCode(() => resolvers.stimuli("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
   });
 
-  it("[B94] reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
+  it("reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
     const variant = `<cpx:variant identifier="v" identifierref="headless">${drd("")}</cpx:variant>`;
     const linked = packageResolvers(
       packageOf(
@@ -1376,7 +1376,7 @@ describe("packageResolvers", () => {
     expect(issueCode(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
   });
 
-  it("[B91] resolves the outcome declaration and response processing resources that items depend on through the closure", () => {
+  it("resolves the outcome declaration and response processing resources that items depend on through the closure", () => {
     const linked = readManifest(
       manifestXml(
         resources(
@@ -1406,7 +1406,7 @@ describe("packageResolvers", () => {
 describe("writePackage", () => {
   const manifest: Manifest = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a.txt"))));
 
-  it("[K30] writes an archive that readPackage reads back: the manifest first, then the files in the order of the map", () => {
+  it("writes an archive that readPackage reads back: the manifest first, then the files in the order of the map", () => {
     const files = new Map([
       ["b.bin", new Uint8Array([1, 2, 3])],
       ["a/ünï.txt", bytes("hello ".repeat(100))],
@@ -1420,7 +1420,7 @@ describe("writePackage", () => {
     expect(bare(pkg.manifest)).toEqual(bare(manifest));
   });
 
-  it("[K30] writes an archive that fflate's own reader reads, and the same bytes for the same input", () => {
+  it("writes an archive that fflate's own reader reads, and the same bytes for the same input", () => {
     const files = new Map([
       ["a.txt", bytes("x".repeat(500))],
       ["ünï/b.bin", new Uint8Array([9, 8, 7])],
@@ -1434,7 +1434,7 @@ describe("writePackage", () => {
     expect(new TextDecoder().decode(unzipped["imsmanifest.xml"])).toBe(writeManifest(manifest));
   });
 
-  it("[K30] deflates an entry when that makes it smaller and stores it otherwise", () => {
+  it("deflates an entry when that makes it smaller and stores it otherwise", () => {
     const text = bytes("a".repeat(1000));
     const zip = writePackage(
       manifest,
@@ -1449,7 +1449,7 @@ describe("writePackage", () => {
     expect(pkg.file("tiny")).toEqual(bytes("a"));
   });
 
-  it("[K30] throws a DataError for a path that is not normalized, the manifest as a file, bytes of another type, and a manifest that is not valid", () => {
+  it("throws a DataError for a path that is not normalized, the manifest as a file, bytes of another type, and a manifest that is not valid", () => {
     const bad: readonly [string, unknown][] = [
       ["a path with ..", new Map([["../a", bytes("x")]])],
       ["an absolute path", new Map([["/a", bytes("x")]])],
@@ -1465,7 +1465,7 @@ describe("writePackage", () => {
     expect(() => writePackage(JSON.parse('{"identifier":"m"}'), new Map())).toThrow(DataError);
   });
 
-  it("[K30] throws a DataError when the archive would need ZIP64", () => {
+  it("throws a DataError when the archive would need ZIP64", () => {
     const files = new Map<string, Uint8Array>();
     for (let index = 0; index < 65_535; index++) files.set(`f${index}`, new Uint8Array());
     expect(() => writePackage(manifest, files)).toThrow(/needs ZIP64/);
@@ -1473,7 +1473,7 @@ describe("writePackage", () => {
 });
 
 describe("properties", () => {
-  it("[K30] readPackage reads back any set of files that writePackage writes", () => {
+  it("readPackage reads back any set of files that writePackage writes", () => {
     const name = fc
       .array(fc.constantFrom("a", "b", "é", "c d", "1"), { minLength: 1, maxLength: 3 })
       .map((parts) => parts.join("/"));
@@ -1516,7 +1516,7 @@ describe("properties", () => {
     expect(total).toBeLessThanOrEqual(maxTotalBytes);
   }
 
-  it("[K30][B94][N] readPackage reads an archive with hostile headers within its limits, or refuses it with a ReadError or a SecurityError", () => {
+  it("readPackage reads an archive with hostile headers within its limits, or refuses it with a ReadError or a SecurityError", () => {
     fc.assert(
       fc.property(hostileArchives, smallZipLimits, (zip, limits) => {
         expectOutcome(() => expectContained(zip, limits));
@@ -1525,7 +1525,7 @@ describe("properties", () => {
     );
   });
 
-  it("[K30][B94][N] readPackage reads an archive with damaged bytes within its limits, or refuses it with a ReadError or a SecurityError", () => {
+  it("readPackage reads an archive with damaged bytes within its limits, or refuses it with a ReadError or a SecurityError", () => {
     const written = writePackage(
       readManifest(manifestXml(resources(resourceXml("r", "imsqti_item_xmlv3p0", "items/a.xml")))),
       new Map([["items/a.xml", bytes(item("a"))]]),
@@ -1539,7 +1539,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B60][B94][N] reads an item and the file it includes when either is mutated, or refuses them with a ReadError or a SecurityError", () => {
+  it("reads an item and the file it includes when either is mutated, or refuses them with a ReadError or a SecurityError", () => {
     const base = item(
       "a",
       '<qti-item-body><xi:include href="p.xml"><xi:fallback><p>x</p></xi:fallback></xi:include><xi:include href="../a.xml"/></qti-item-body>',
@@ -1561,7 +1561,7 @@ describe("properties", () => {
     );
   });
 
-  it("[K20][B94][N] readLtiLink reads a mutated link or refuses it with a ReadError or a SecurityError", () => {
+  it("readLtiLink reads a mutated link or refuses it with a ReadError or a SecurityError", () => {
     const link = lti(`<blti:title>t</blti:title><blti:custom><lticm:property name="k">v</lticm:property></blti:custom>
       <blti:extensions platform="p"><lticm:property name="e">x</lticm:property></blti:extensions>
       <blti:launch_url>http://localhost/provider</blti:launch_url>
@@ -1569,7 +1569,7 @@ describe("properties", () => {
     fuzzReader(fc.constant(link), readLtiLink);
   });
 
-  it("[K5][B94][N] readManifest reads a mutated manifest or refuses it with a ReadError or a SecurityError", () => {
+  it("readManifest reads a mutated manifest or refuses it with a ReadError or a SecurityError", () => {
     fuzzReader(manifests.map(writeManifest), readManifest);
   });
 });

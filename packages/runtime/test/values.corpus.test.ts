@@ -6,7 +6,7 @@ import { loadRegexSuite } from "./w3c-regex-suite.js";
 
 const suite = loadRegexSuite(resolve(requireCorpus(resolve(import.meta.dirname, "../../..")), "xsdtests"));
 
-describe("[B79] the regular expression tests of the W3C XML Schema test suite", () => {
+describe("the regular expression tests of the W3C XML Schema test suite", () => {
   it("reads the string tests of the suite", () => {
     expect(suite.length).toBeGreaterThan(1900);
   });

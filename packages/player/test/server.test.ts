@@ -133,7 +133,7 @@ function host(...replies: readonly FakeReply[]) {
 }
 
 describe("forwardEvents", () => {
-  it("[T114] forwards every event of every type to the host's log, in the order the runtime gave them", async () => {
+  it("forwards every event of every type to the host's log, in the order the runtime gave them", async () => {
     const events = TYPES.map((type, at) => eventOf(type, at * SECOND));
     const logged: StepEvents[] = [];
     await forwardEvents({ session: SESSION, step: 3, events }, { log: (step) => void logged.push(step) });
@@ -142,7 +142,7 @@ describe("forwardEvents", () => {
     expect(logged[0]?.events.map(({ type }) => type)).toEqual(TYPES);
   });
 
-  it("[T114] forwards the types that the runtime added with the unit that completed it", async () => {
+  it("forwards the types that the runtime added with the unit that completed it", async () => {
     const added: DeliveryEventType[] = ["processing-failed", "time-limit-passed", "late-submission", "support-changed"];
     const logged: StepEvents[] = [];
     const events = added.map((type) => eventOf(type, SECOND));
@@ -150,7 +150,7 @@ describe("forwardEvents", () => {
     expect(logged[0]?.events).toEqual(events);
   });
 
-  it("[T114] forwards an event of a type that it has not heard of, since it filters nothing", async () => {
+  it("forwards an event of a type that it has not heard of, since it filters nothing", async () => {
     const later: DeliveryEvent[] = fromJson(
       '[{"type":"scores-replaced","at":1000,"scope":"essay","detail":"r1"},{"type":"scores-applied","at":2000}]',
     );
@@ -159,21 +159,21 @@ describe("forwardEvents", () => {
     expect(logged[0]?.events).toEqual(later);
   });
 
-  it("[T114] forwards the events of the start step as they are, with the step that tells it", async () => {
+  it("forwards the events of the start step as they are, with the step that tells it", async () => {
     const logged: StepEvents[] = [];
     const events = [eventOf("section-entered", SECOND), eventOf("presented", SECOND)];
     await forwardEvents({ session: SESSION, step: "start", events }, { log: (step) => void logged.push(step) });
     expect(logged).toEqual([{ session: SESSION, step: "start", events }]);
   });
 
-  it("[T114] calls nothing for a step without events", async () => {
+  it("calls nothing for a step without events", async () => {
     const { options, calls, endpoint } = host();
     await forwardEvents({ session: SESSION, step: 2, events: [] }, options);
     expect(calls).toEqual([]);
     expect(endpoint.requests).toEqual([]);
   });
 
-  it("[T114] waits for the log of the host before it goes on", async () => {
+  it("waits for the log of the host before it goes on", async () => {
     const order: string[] = [];
     const slow = async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -191,7 +191,7 @@ describe("forwardEvents", () => {
     expect(order).toEqual(["log done", `parties ${SESSION}`]);
   });
 
-  it("[T114][T109] sends the events that Caliper has a counterpart for after the log, and none of the others", async () => {
+  it("sends the events that Caliper has a counterpart for after the log, and none of the others", async () => {
     const { options, endpoint, calls, logged } = host({ status: 200 });
     const events = TYPES.map((type) => eventOf(type, SECOND));
     await forwardEvents({ session: SESSION, step: 5, events }, options);
@@ -211,7 +211,7 @@ describe("forwardEvents", () => {
     ]);
   });
 
-  it("[T114][T109] maps the step of the start with the Started event, using the session's parties", async () => {
+  it("maps the step of the start with the Started event, using the session's parties", async () => {
     const { options, endpoint } = host({ status: 200 });
     await forwardEvents(
       { session: SESSION, step: "start", events: [eventOf("section-entered", SECOND), eventOf("presented", SECOND)] },
@@ -223,7 +223,7 @@ describe("forwardEvents", () => {
     expect(body.data[0].object.id).toBe(ASSESSMENT);
   });
 
-  it("[T114] sends nothing to Caliper when no event of the step has a counterpart", async () => {
+  it("sends nothing to Caliper when no event of the step has a counterpart", async () => {
     const { options, endpoint, logged } = host();
     const events = [eventOf("responses-set", SECOND), eventOf("outcome-processed", SECOND)];
     await forwardEvents({ session: SESSION, step: 2, events }, options);
@@ -231,7 +231,7 @@ describe("forwardEvents", () => {
     expect(endpoint.requests).toEqual([]);
   });
 
-  it("[T114] reports the same step again with the same Caliper identifiers, so that a resend duplicates nothing", async () => {
+  it("reports the same step again with the same Caliper identifiers, so that a resend duplicates nothing", async () => {
     const { options, endpoint, logged } = host({ status: 200 });
     const step: StepEvents = {
       session: SESSION,
@@ -244,7 +244,7 @@ describe("forwardEvents", () => {
     expect(endpoint.requests[1]?.init.body).toBe(endpoint.requests[0]?.init.body);
   });
 
-  it("[T114] sends to Caliper only after the log accepted the events", async () => {
+  it("sends to Caliper only after the log accepted the events", async () => {
     const { options, endpoint } = host({ status: 200 });
     const failing = { ...options, log: () => Promise.reject(new Error("disk full")) };
     await expect(
@@ -253,7 +253,7 @@ describe("forwardEvents", () => {
     expect(endpoint.requests).toEqual([]);
   });
 
-  it("[T114] keeps the log entry when the Caliper endpoint refuses, and tells the host", async () => {
+  it("keeps the log entry when the Caliper endpoint refuses, and tells the host", async () => {
     const { options, logged } = host({ status: 401, body: "no" });
     const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
     const error = await forwardEvents(step, options).catch((e: unknown) => e);
@@ -262,7 +262,7 @@ describe("forwardEvents", () => {
     expect(logged).toEqual([step]);
   });
 
-  it("[T114] rejects steps and options that are not what the forwarder needs", async () => {
+  it("rejects steps and options that are not what the forwarder needs", async () => {
     const { options } = host();
     const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
     const log = () => undefined;
@@ -286,7 +286,7 @@ describe("forwardEvents", () => {
     );
   });
 
-  it("[T114] rejects Caliper events from parties that are not IRIs, after the log has the events", async () => {
+  it("rejects Caliper events from parties that are not IRIs, after the log has the events", async () => {
     const { options, logged } = host({ status: 200 });
     const parties = () => ({ actor: "candidate-1", assessment: ASSESSMENT, edApp: APPLICATION });
     const step: StepEvents = { session: SESSION, step: 1, events: [eventOf("presented", SECOND)] };
@@ -330,7 +330,7 @@ describe("forwardEvents: a score that a step supplied", () => {
       generated: { id: string; type: string; scoreGiven: number; scoredBy: string; attempt: string };
     }[];
 
-  it("[T114][T109] gives a GradeEvent Graded for the score that a rater supplied, scored by the rater, for the item of the event", async () => {
+  it("gives a GradeEvent Graded for the score that a rater supplied, scored by the rater, for the item of the event", async () => {
     const { options, endpoint } = host({ status: 200 });
     const supplied = { value: single("float", 3.5), scorer: "human" as const, scoredBy: Rater };
     await forwardEvents({ session: SESSION, step: 7, events: [applied("scores-applied")], supplied }, options);
@@ -344,7 +344,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     expect(eventProblems(JSON.parse(endpoint.requests[0]?.init.body ?? "{}").data[0])).toEqual([]);
   });
 
-  it("[T114][T109] names a scoring service a SoftwareApplication, and gives the test's attempt for an outcome of the test", async () => {
+  it("names a scoring service a SoftwareApplication, and gives the test's attempt for an outcome of the test", async () => {
     const { options, endpoint } = host({ status: 200 });
     const supplied = { value: single("integer", 2), scorer: "externalMachine" as const, scoredBy: Rater };
     const event: DeliveryEvent = { type: "scores-applied", at: SECOND, scope: "main", detail: "test:SCORE" };
@@ -355,7 +355,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     expect(grade?.generated.scoreGiven).toBe(2);
   });
 
-  it("[T114][T109] gives a GradeEvent for a replaced score, with the same identifiers when the step is reported again", async () => {
+  it("gives a GradeEvent for a replaced score, with the same identifiers when the step is reported again", async () => {
     const supplied = { value: single("float", 4), scorer: "human" as const, scoredBy: Rater };
     const ids: string[] = [];
     for (const step of [9, 9, 10]) {
@@ -367,7 +367,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     expect(ids[2]).not.toBe(ids[0]);
   });
 
-  it("[T114][T109] sends the grade after the events that the step maps, in one envelope", async () => {
+  it("sends the grade after the events that the step maps, in one envelope", async () => {
     const { options, endpoint } = host({ status: 200 });
     const events = [applied("scores-applied"), eventOf("test-ended", 6 * SECOND)];
     const supplied = { value: single("float", 1), scorer: "human" as const, scoredBy: Rater };
@@ -379,7 +379,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     ]);
   });
 
-  it("[T114][T109] gives no GradeEvent for a value that is not a number, for NULL, or for a step without the events of a score", async () => {
+  it("gives no GradeEvent for a value that is not a number, for NULL, or for a step without the events of a score", async () => {
     const values = [null, single("string", "good"), single("boolean", true)];
     for (const value of values) {
       const { options, endpoint } = host({ status: 200 });
@@ -393,7 +393,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     expect(sent(endpoint).map(({ type }) => type)).toEqual(["AssessmentItemEvent"]);
   });
 
-  it("[T114] logs the step with its score and sends nothing when Caliper is not configured", async () => {
+  it("logs the step with its score and sends nothing when Caliper is not configured", async () => {
     const logged: StepEvents[] = [];
     const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: Rater };
     const step: StepEvents = { session: SESSION, step: 14, events: [applied("scores-applied")], supplied };
@@ -401,7 +401,7 @@ describe("forwardEvents: a score that a step supplied", () => {
     expect(logged).toEqual([step]);
   });
 
-  it("[T114] refuses a score whose rater is not an IRI, after the log", async () => {
+  it("refuses a score whose rater is not an IRI, after the log", async () => {
     const { options, logged } = host({ status: 200 });
     const supplied = { value: single("float", 2), scorer: "human" as const, scoredBy: "rater-17" };
     await expect(
@@ -415,14 +415,14 @@ describe("forwardEvents: a score that a step supplied", () => {
 });
 
 describe("collectAssetPrefixes", () => {
-  it("[T73] gives the content root the deepest directory that holds its document, image and stylesheet", async () => {
+  it("gives the content root the deepest directory that holds its document, image and stylesheet", async () => {
     const { host, pkg } = await examHost();
     const started = await host.start(ALICE, { seed: 1 });
     expect(Object.keys(started.assets)).toEqual(["items/q1/"]);
     expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set(["items/q1/"]));
   });
 
-  it("[T73] gives a portable custom interaction a prefix of its own, over its modules and module resolution files", async () => {
+  it("gives a portable custom interaction a prefix of its own, over its modules and module resolution files", async () => {
     const { host, pkg } = await examHost();
     await host.start(ALICE, { seed: 1 });
     const moved = await host.handle(ALICE, request(1, { type: "move", to: { ref: "q3", instance: 1 } }));
@@ -430,14 +430,14 @@ describe("collectAssetPrefixes", () => {
     expect(Object.keys(moved.assets).sort()).toEqual(["items/q3/", "modules/pci/"]);
   });
 
-  it("[T73] gives no prefix to a view that shows no file", async () => {
+  it("gives no prefix to a view that shows no file", async () => {
     const { host, pkg } = await examHost();
     await host.start(ALICE, { seed: 1 });
     await host.proctor(ALICE.session, { type: "end-test" });
     expect(collectAssetPrefixes(viewOf(await host.view(ALICE)), pkg)).toEqual(new Set());
   });
 
-  it("[T73] climbs to the directory that holds the files that the manifest lists for the resource", async () => {
+  it("climbs to the directory that holds the files that the manifest lists for the resource", async () => {
     const files = examFiles();
     const manifest = String(files["imsmanifest.xml"]).replace(
       '<file href="items/q1/style.css"/>',
@@ -462,7 +462,7 @@ describe("the asset gate", () => {
   const baseOf = async (gate: AssetGate, prefix: string): Promise<string> =>
     (await gate.sign("s1", [prefix], NOW))[prefix] ?? "";
 
-  it("[T73] signs a prefix and serves the files under it with the headers of the gate", async () => {
+  it("signs a prefix and serves the files under it with the headers of the gate", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     expect(base).toMatch(/^https:\/\/assets\.example\/g\/[\w-]+\.[\w-]+\.[\w-]+\/$/u);
@@ -476,7 +476,7 @@ describe("the asset gate", () => {
     expect(response.body?.length).toBeGreaterThan(0);
   });
 
-  it("[T73] sends Referrer-Policy and nosniff with every status", async () => {
+  it("sends Referrer-Policy and nosniff with every status", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     const answers = [
@@ -492,7 +492,7 @@ describe("the asset gate", () => {
     }
   });
 
-  it("[T73] refuses a path outside the prefix of the token, also when dots or percent-encoding lead out of it", async () => {
+  it("refuses a path outside the prefix of the token, also when dots or percent-encoding lead out of it", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     const paths = [
@@ -508,7 +508,7 @@ describe("the asset gate", () => {
     for (const path of paths) expect((await gate.serve({ path: pathOf(base, path) }, NOW)).status, path).toBe(403);
   });
 
-  it("[T73] refuses a token with a wrong MAC, another payload, or no MAC at all", async () => {
+  it("refuses a token with a wrong MAC, another payload, or no MAC at all", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");
     const [header = "", payload = "", mac = ""] = (new URL(base).pathname.split("/")[2] ?? "").split(".");
@@ -528,21 +528,21 @@ describe("the asset gate", () => {
     }
   });
 
-  it("[T73] refuses a token signed with another key", async () => {
+  it("refuses a token signed with another key", async () => {
     const { gate } = await gateOf();
     const other = (await gateOf()).gate;
     const base = await baseOf(other, "items/q1/");
     expect((await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW)).status).toBe(403);
   });
 
-  it("[T73] refuses an expired token, an hour after it was signed by default", async () => {
+  it("refuses an expired token, an hour after it was signed by default", async () => {
     const { gate } = await gateOf();
     const path = pathOf(await baseOf(gate, "items/q1/"), "items/q1/images/map.png");
     expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND)).status).toBe(200);
     expect((await gate.serve({ path }, NOW + DEFAULT_TTL_SECONDS * SECOND + 1)).status).toBe(403);
   });
 
-  it("[T73] never serves the manifest, the test or an item, even under a token for the whole package", async () => {
+  it("never serves the manifest, the test or an item, even under a token for the whole package", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "");
     for (const path of ["imsmanifest.xml", "tests/exam.xml", "items/q1/item.xml", "items/q2/item.xml"]) {
@@ -551,7 +551,7 @@ describe("the asset gate", () => {
     expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
   });
 
-  it("[T73] never serves an XML file of QTI data that the manifest lists as web content or does not list", async () => {
+  it("never serves an XML file of QTI data that the manifest lists as web content or does not list", async () => {
     const asi = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
     const hidden: Readonly<Record<string, string>> = {
       prefixed: `<q:qti-assessment-item xmlns:q="${asi}" identifier="k"/>`,
@@ -595,7 +595,7 @@ describe("the asset gate", () => {
     }
   });
 
-  it("[T73] serves web pages, vector images, scripts and data of the types a browser loads for content", async () => {
+  it("serves web pages, vector images, scripts and data of the types a browser loads for content", async () => {
     const { gate } = await gateOf({
       ...examFiles(),
       "items/q1/page.html": '<!DOCTYPE html><html lang="en"><body>A note</body></html>',
@@ -635,7 +635,7 @@ describe("the asset gate", () => {
     });
   });
 
-  it("[T73] never serves a file of a type that is not a web asset: XML of any namespace, unknown extensions, none", async () => {
+  it("never serves a file of a type that is not a web asset: XML of any namespace, unknown extensions, none", async () => {
     const { gate } = await gateOf({
       ...examFiles(),
       "items/q1/notes.dat": '<notes xmlns="https://example.org/notes"><note>Hi</note></notes>',
@@ -658,7 +658,7 @@ describe("the asset gate", () => {
       .replace('<file href="items/q1/style.css"/>', `<file href="items/q1/style.css"/>${itemFiles}`)
       .replace("</resources>", `${resources}</resources>`);
 
-  it("[T73] never serves a file that the manifest lists for an item unless it is a web asset", async () => {
+  it("never serves a file that the manifest lists for an item unless it is a web asset", async () => {
     const files = ["parts/stem.xml", "parts/stem", "parts/stem.dat", "parts/hint.html", "parts/photo.png"];
     const { gate } = await gateOf({
       ...examFiles(),
@@ -676,7 +676,7 @@ describe("the asset gate", () => {
     expect(statuses).toEqual([404, 404, 404, 200, 200]);
   });
 
-  it("[T73] never serves a fragment that an item or a test includes, whatever its name, namespace or whether it is listed", async () => {
+  it("never serves a fragment that an item or a test includes, whatever its name, namespace or whether it is listed", async () => {
     const xi = 'xmlns:xi="http://www.w3.org/2001/XInclude"';
     const include = (href: string): string => `<xi:include ${xi} href="${href}"/>`;
     const items = String(examFiles()["items/q1/item.xml"]).replace(
@@ -709,7 +709,7 @@ describe("the asset gate", () => {
     expect(await status("items/q1/style.css")).toBe(200);
   });
 
-  it("[T73] never serves the template or the response processing that the manifest lists as a resource, whatever the name", async () => {
+  it("never serves the template or the response processing that the manifest lists as a resource, whatever the name", async () => {
     const resources = [
       '<resource identifier="rp1" type="imsqti_rptemplate_xmlv3p0" href="templates/custom.xml"><file href="templates/custom.xml"/></resource>',
       '<resource identifier="rp2" type="imsqti_resprocessing_xmlv3p0" href="templates/shared.html"><file href="templates/shared.html"/></resource>',
@@ -744,7 +744,7 @@ describe("the asset gate", () => {
     }
   });
 
-  it("[T73] never serves the files that qti-adaptive-selection refers to", async () => {
+  it("never serves the files that qti-adaptive-selection refers to", async () => {
     const adaptive = String(examFiles()["tests/exam.xml"]).replace(
       "</qti-assessment-section>",
       `<qti-adaptive-selection>
@@ -759,14 +759,14 @@ describe("the asset gate", () => {
     expect((await gate.serve({ path: pathOf(base, "items/q1/style.css") }, NOW)).status).toBe(200);
   });
 
-  it("[T73] refuses to sign a prefix that is not a directory", async () => {
+  it("refuses to sign a prefix that is not a directory", async () => {
     const { gate } = await gateOf();
     for (const prefix of ["imsmanifest.xml", "items/q1", "items//", "../", "items/./", "a\\b/"]) {
       await expect(gate.sign("s1", [prefix], NOW), prefix).rejects.toThrow(DataError);
     }
   });
 
-  it("[T72] signs the URL of a file of the candidate, and serves it for five minutes in a sandbox", async () => {
+  it("signs the URL of a file of the candidate, and serves it for five minutes in a sandbox", async () => {
     const { gate, fileStore } = await gateOf();
     const file = await fileStore.put(new TextEncoder().encode("RIFF"), "audio/wav", "answer.wav");
     const url = await gate.signFile("s1", file, NOW);
@@ -785,7 +785,7 @@ describe("the asset gate", () => {
     expect((await gate.serve({ path }, NOW + DEFAULT_UPLOAD_TTL_SECONDS * SECOND + 1)).status).toBe(403);
   });
 
-  it("[T72] refuses a file token for another file, and a token of the other kind", async () => {
+  it("refuses a file token for another file, and a token of the other kind", async () => {
     const { gate, fileStore } = await gateOf();
     const file = await fileStore.put(new Uint8Array([1]), "image/png");
     const token = new URL(await gate.signFile("s1", file, NOW)).pathname.split("/")[2] ?? "";
@@ -797,13 +797,13 @@ describe("the asset gate", () => {
     expect((await gate.serve({ path: `/f/${packageToken}/file-1` }, NOW)).status).toBe(403);
   });
 
-  it("[T72] answers 404 for a file that the store no longer has", async () => {
+  it("answers 404 for a file that the store no longer has", async () => {
     const { gate } = await gateOf();
     const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" }, NOW);
     expect((await gate.serve({ path: new URL(gone).pathname }, NOW)).status).toBe(404);
   });
 
-  it("[T73] checks its options and arguments", async () => {
+  it("checks its options and arguments", async () => {
     const { key, pkg, fileStore, gate } = await gateOf();
     const good = { key, origin: EXAM_ORIGIN, packages: async () => pkg, files: fileStore };
     const make = (changes: Record<string, unknown>): unknown => createAssetGate({ ...good, ...changes });
@@ -852,7 +852,7 @@ describe("the asset gate", () => {
 });
 
 describe("the client-action policy", () => {
-  it("[T67] allows every action of the candidate but suspend and resume in an exam", () => {
+  it("allows every action of the candidate but suspend and resume in an exam", () => {
     const every: Readonly<Record<CandidateAction["type"], true>> = {
       "set-responses": true,
       submit: true,
@@ -877,7 +877,7 @@ describe("the client-action policy", () => {
 });
 
 describe("createSessionHost", () => {
-  it("[T67] starts a session bound to the caller, and answers with the first view, the assets and the documents", async () => {
+  it("starts a session bound to the caller, and answers with the first view, the assets and the documents", async () => {
     const { host, store, scheduler, logged } = await examHost();
     const started = await host.start(ALICE, { seed: 7 });
     expect(started.seq).toBe(0);
@@ -894,7 +894,7 @@ describe("createSessionHost", () => {
     expect(logged.map(({ step }) => step)).toEqual(["start"]);
   });
 
-  it("[T67] keeps the seed and the answer keys out of the envelope", async () => {
+  it("keeps the seed and the answer keys out of the envelope", async () => {
     const { host } = await examHost();
     const text = JSON.stringify(await host.start(ALICE, { seed: 987_654_321 }));
     expect(text).not.toContain("987654321");
@@ -902,7 +902,7 @@ describe("createSessionHost", () => {
     expect(text).not.toContain("match_correct");
   });
 
-  it("[T85][T73] names the pronunciation lexicons that the item presented depends on, and none for an item that depends on none", async () => {
+  it("names the pronunciation lexicons that the item presented depends on, and none for an item that depends on none", async () => {
     const { host } = await examHost({}, lexiconFiles());
     const started = await host.start(ALICE, { seed: 7 });
     expect(started.documents?.lexicons).toEqual(["items/q1/words.pls"]);
@@ -910,7 +910,7 @@ describe("createSessionHost", () => {
     expect(moved.documents?.lexicons).toEqual([]);
   });
 
-  it("[T85][T73] serves a lexicon under the prefix of the item, as a file of web content", async () => {
+  it("serves a lexicon under the prefix of the item, as a file of web content", async () => {
     const { host, gate } = await examHost({}, lexiconFiles());
     const started = await host.start(ALICE, { seed: 7 });
     const base = started.assets["items/q1/"] ?? "";
@@ -919,7 +919,7 @@ describe("createSessionHost", () => {
     expect(response.headers["Content-Type"]).toBe("application/pls+xml");
   });
 
-  it("[T67] answers an action with the view that the engine gives, and keeps the principal that started the session", async () => {
+  it("answers an action with the view that the engine gives, and keeps the principal that started the session", async () => {
     const { host, engine, clock, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     clock.advance(5 * SECOND);
@@ -933,7 +933,7 @@ describe("createSessionHost", () => {
     expect(viewOf(reply).actions).toEqual(engine.view(state, clock.now()).actions.filter((type) => type !== "suspend"));
   });
 
-  it("[T67] puts a refusal of the engine in the envelope, and leaves the state as it was", async () => {
+  it("puts a refusal of the engine in the envelope, and leaves the state as it was", async () => {
     const { host, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const before = store.records.get("exam-1")?.state;
@@ -943,7 +943,7 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.seq).toBe(1);
   });
 
-  it("[T67] gives 403 to a caller that is not the principal of the session, and to a session that does not exist", async () => {
+  it("gives 403 to a caller that is not the principal of the session, and to a session that does not exist", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const attempts = [
@@ -958,7 +958,7 @@ describe("createSessionHost", () => {
     await expect(host.check(ALICE)).resolves.toBeUndefined();
   });
 
-  it("[T67] never starts a session twice, and never binds it to another principal", async () => {
+  it("never starts a session twice, and never binds it to another principal", async () => {
     const { host, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
@@ -973,7 +973,7 @@ describe("createSessionHost", () => {
     await expect(host.check(BOB)).rejects.toThrow(AccessError);
   });
 
-  it("[T67] reports two starts that race as session-exists for the one that loses", async () => {
+  it("reports two starts that race as session-exists for the one that loses", async () => {
     const { host } = await examHost();
     const results = await Promise.allSettled([host.start(ALICE, { seed: 1 }), host.start(BOB, { seed: 2 })]);
     expect(results.map(({ status }) => status).sort()).toEqual(["fulfilled", "rejected"]);
@@ -981,7 +981,7 @@ describe("createSessionHost", () => {
     expect(lost?.status === "rejected" && lost.reason).toMatchObject({ reason: "session-exists" });
   });
 
-  it("[T68] refuses the actions of the host from a client, whatever their form", async () => {
+  it("refuses the actions of the host from a client, whatever their form", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const actions = [
@@ -997,13 +997,13 @@ describe("createSessionHost", () => {
     });
   });
 
-  it("[T68] refuses an action that is larger than the limits", async () => {
+  it("refuses an action that is larger than the limits", async () => {
     const { host } = await examHost({ limits: { maxActionSize: 50 } });
     await host.start(ALICE, { seed: 7 });
     await expect(host.handle(ALICE, request(1, answer("A".repeat(100))))).rejects.toThrow("maxActionSize of 50");
   });
 
-  it("[T68] answers a repeated sequence number with the stored answer and changes nothing", async () => {
+  it("answers a repeated sequence number with the stored answer and changes nothing", async () => {
     const { host, store, logged, clock } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const first = await host.handle(ALICE, request(1, answer("A")));
@@ -1018,7 +1018,7 @@ describe("createSessionHost", () => {
     expect(viewOf(again).current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
   });
 
-  it("[T68] renews the tokens of a repeated answer", async () => {
+  it("renews the tokens of a repeated answer", async () => {
     const { host, clock, gate } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const first = await host.handle(ALICE, request(1, answer("A")));
@@ -1031,7 +1031,7 @@ describe("createSessionHost", () => {
     expect((await gate.serve({ path: `${fresh}items/q1/images/map.png` }, clock.now())).status).toBe(200);
   });
 
-  it("[T68] refuses a stale sequence number", async () => {
+  it("refuses a stale sequence number", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
@@ -1041,7 +1041,7 @@ describe("createSessionHost", () => {
     );
   });
 
-  it("[T68] applies a request once when it is delivered twice at the same time", async () => {
+  it("applies a request once when it is delivered twice at the same time", async () => {
     const { host, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     const [first, second] = await Promise.all([
@@ -1052,7 +1052,7 @@ describe("createSessionHost", () => {
     expect(store.saves).toHaveLength(1);
   });
 
-  it("[T67] refuses suspend and resume from a client in an exam, and takes them out of the actions of the view", async () => {
+  it("refuses suspend and resume from a client in an exam, and takes them out of the actions of the view", async () => {
     const { host, store } = await examHost();
     const started = await host.start(ALICE, { seed: 7 });
     expect(viewOf(started).actions).not.toContain("suspend");
@@ -1065,7 +1065,7 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")).toEqual(before);
   });
 
-  it("[T61] lets the host allow suspend and resume for a client, as practice does", async () => {
+  it("lets the host allow suspend and resume for a client, as practice does", async () => {
     const { host } = await examHost({ clientActions: CANDIDATE_ACTION_TYPES });
     const started = await host.start(ALICE, { seed: 7 });
     expect(viewOf(started).actions).toContain("suspend");
@@ -1076,7 +1076,7 @@ describe("createSessionHost", () => {
     expect(viewOf(resumed).status).toBe("in-progress");
   });
 
-  it("[T61] lets the proctor suspend and resume, and the candidate then sees the break and cannot end it", async () => {
+  it("lets the proctor suspend and resume, and the candidate then sees the break and cannot end it", async () => {
     const { host, logged, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
@@ -1097,7 +1097,7 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.version).toBe(5);
   });
 
-  it("[T61] answers a proctor action that the engine refuses with the step, and saves nothing", async () => {
+  it("answers a proctor action that the engine refuses with the step, and saves nothing", async () => {
     const { host, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.proctor(ALICE.session, { type: "end-test" });
@@ -1111,7 +1111,7 @@ describe("createSessionHost", () => {
     );
   });
 
-  it("[T67] handles the request again when another request saved first, and applies it once", async () => {
+  it("handles the request again when another request saved first, and applies it once", async () => {
     const { host, store, logged } = await examHost();
     await host.start(ALICE, { seed: 7 });
     store.conflictNext(MAX_SAVE_RETRIES);
@@ -1122,7 +1122,7 @@ describe("createSessionHost", () => {
     expect(logged.filter(({ events }) => events.some(({ type }) => type === "responses-set"))).toHaveLength(1);
   });
 
-  it("[T67] fails with a ServiceError of 409 when the conflicts outlast the retries", async () => {
+  it("fails with a ServiceError of 409 when the conflicts outlast the retries", async () => {
     const { host, store } = await examHost();
     await host.start(ALICE, { seed: 7 });
     store.conflictNext(MAX_SAVE_RETRIES + 1);
@@ -1133,7 +1133,7 @@ describe("createSessionHost", () => {
     expect(store.saves).toEqual([]);
   });
 
-  it("[T66] schedules the maximum times of the new state before it saves, and a job of the scheduler applies the time-out", async () => {
+  it("schedules the maximum times of the new state before it saves, and a job of the scheduler applies the time-out", async () => {
     const limits = '<qti-time-limits max-time="600"/>';
     const { host, scheduler, clock, store } = await examHost({}, examFiles({ limits }));
     const start = clock.now();
@@ -1151,7 +1151,7 @@ describe("createSessionHost", () => {
     expect(store.records.get("exam-1")?.version).toBe(3);
   });
 
-  it("[T66] loses no time-out when the scheduler fails: nothing is saved and the request can be sent again", async () => {
+  it("loses no time-out when the scheduler fails: nothing is saved and the request can be sent again", async () => {
     const limits = '<qti-time-limits max-time="600"/>';
     let failing = true;
     const scheduler = {
@@ -1166,7 +1166,7 @@ describe("createSessionHost", () => {
     await expect(host.start(ALICE, { seed: 7 })).resolves.toBeDefined();
   });
 
-  it("[T66] does not schedule a job twice for one time, and does not fail when a job finds nothing to apply", async () => {
+  it("does not schedule a job twice for one time, and does not fail when a job finds nothing to apply", async () => {
     const limits = '<qti-time-limits max-time="600"/>';
     const { host, scheduler, clock } = await examHost({}, examFiles({ limits }));
     await host.start(ALICE, { seed: 7 });
@@ -1181,7 +1181,7 @@ describe("createSessionHost", () => {
     expect(again.ok && again.events).toEqual([]);
   });
 
-  it("[T66] absorbs a time-out whose job came late: the next action applies the deadline first", async () => {
+  it("absorbs a time-out whose job came late: the next action applies the deadline first", async () => {
     const limits = '<qti-time-limits max-time="600"/>';
     const { host, clock } = await examHost({}, examFiles({ limits }));
     await host.start(ALICE, { seed: 7 });
@@ -1192,7 +1192,7 @@ describe("createSessionHost", () => {
     expect(first?.kind === "item" && first.status).toBe("closed");
   });
 
-  it("[T69] restores a session from the store in a host with no memory of it", async () => {
+  it("restores a session from the store in a host with no memory of it", async () => {
     const first = await examHost();
     await first.host.start(ALICE, { seed: 7 });
     await first.host.handle(ALICE, request(1, answer("A")));
@@ -1211,7 +1211,7 @@ describe("createSessionHost", () => {
     expect(viewOf(next).current?.key).toEqual({ ref: "q2", instance: 1 });
   });
 
-  it("[T67] returns the results of a session marked official, and a copy of them is not", async () => {
+  it("returns the results of a session marked official, and a copy of them is not", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
@@ -1224,7 +1224,7 @@ describe("createSessionHost", () => {
     expect(result.itemResults.map(({ identifier }) => identifier)).toContain("q1");
   });
 
-  it("[T67] hands the pending work and the view of a rater to the host only", async () => {
+  it("hands the pending work and the view of a rater to the host only", async () => {
     const { host } = await examHost();
     await host.start(ALICE, { seed: 7 });
     expect(await host.pending(ALICE.session)).toEqual({ scoring: [], cat: [] });
@@ -1232,7 +1232,7 @@ describe("createSessionHost", () => {
     await expect(host.pending("nobody")).rejects.toThrow(DataError);
   });
 
-  it("[T114] numbers the steps of the log by the version of the record they saved", async () => {
+  it("numbers the steps of the log by the version of the record they saved", async () => {
     const { host, logged } = await examHost();
     await host.start(ALICE, { seed: 7 });
     await host.handle(ALICE, request(1, answer("A")));
@@ -1244,7 +1244,7 @@ describe("createSessionHost", () => {
     ]);
   });
 
-  it("[T114][T109] forwards a GradeEvent for a score that the host supplies, scored by the rater it names, for the item", async () => {
+  it("forwards a GradeEvent for a score that the host supplies, scored by the rater it names, for the item", async () => {
     const essay = `<?xml version="1.0" encoding="UTF-8"?>
 <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="q2" title="Item q2" adaptive="false" time-dependent="false">
   <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
@@ -1319,7 +1319,7 @@ describe("createSessionHost", () => {
     expect(endpoint.requests.slice(before)).toHaveLength(2);
   });
 
-  it("[T67] checks its options and arguments", async () => {
+  it("checks its options and arguments", async () => {
     const good = await examHost();
     const options = {
       engine: good.engine,
@@ -1370,7 +1370,7 @@ describe("createSessionHost", () => {
     );
   });
 
-  it("[T67] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
     fuzzJson((options) => createSessionHost(options as never));
     fuzzJson((options) => createAssetGate(options as never));
   });
@@ -1440,7 +1440,7 @@ describe("createLtiScoreIntake", () => {
     events: types.map((type) => ({ type, at: 1, item: Item, detail: "item:draw:1:SCORE" })),
   });
 
-  it("[T106] supplies a final score as floats to the SCORE and MAXSCORE of the item, scored by an external machine", async () => {
+  it("supplies a final score as floats to the SCORE and MAXSCORE of the item, scored by an external machine", async () => {
     const { onScore, calls } = intake();
     await onScore("s1", Item, score());
     expect(supplied(calls)).toEqual([
@@ -1454,7 +1454,7 @@ describe("createLtiScoreIntake", () => {
     expect(calls[0]?.action).toMatchObject({ value: single("float", 6) });
   });
 
-  it("[T106] supplies NULL for a part the score does not have", async () => {
+  it("supplies NULL for a part the score does not have", async () => {
     const { onScore, calls } = intake();
     await onScore("s1", Item, score({ scoreGiven: undefined, scoreMaximum: undefined }));
     expect(supplied(calls)).toEqual([
@@ -1463,7 +1463,7 @@ describe("createLtiScoreIntake", () => {
     ]);
   });
 
-  it("[T106] keeps a score that is not final and supplies nothing", async () => {
+  it("keeps a score that is not final and supplies nothing", async () => {
     const { onScore, calls, kept } = intake();
     for (const [index, gradingProgress] of (["NotReady", "Pending", "PendingManual", "Failed"] as const).entries()) {
       await onScore("s1", Item, later(index, { gradingProgress }));
@@ -1472,7 +1472,7 @@ describe("createLtiScoreIntake", () => {
     expect(kept.get("s1 draw 1")?.gradingProgress).toBe("Failed");
   });
 
-  it("[T106] ignores a score whose time is not later than the kept one", async () => {
+  it("ignores a score whose time is not later than the kept one", async () => {
     const { onScore, calls, kept } = intake();
     await onScore("s1", Item, later(10, { scoreGiven: 6 }));
     await onScore("s1", Item, later(5, { scoreGiven: 9 }));
@@ -1483,7 +1483,7 @@ describe("createLtiScoreIntake", () => {
     expect(kept.get("s1 draw 1")?.scoreGiven).toBe(6);
   });
 
-  it("[T106] supplies a later final score again, which replaces the values of the first", async () => {
+  it("supplies a later final score again, which replaces the values of the first", async () => {
     const { onScore, calls } = intake();
     await onScore("s1", Item, later(1, { scoreGiven: 6 }));
     await onScore("s1", Item, later(2, { scoreGiven: 9 }));
@@ -1493,7 +1493,7 @@ describe("createLtiScoreIntake", () => {
     ]);
   });
 
-  it("[T106] keeps a final score for a session that has made no request yet, and supplies it when a step makes them", async () => {
+  it("keeps a final score for a session that has made no request yet, and supplies it when a step makes them", async () => {
     const { onScore, settle, calls, refusal, kept } = intake([]);
     await onScore("s1", Item, score());
     expect(kept.size).toBe(1);
@@ -1511,7 +1511,7 @@ describe("createLtiScoreIntake", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("[T106] settles only for steps that made scoring requests, and only for items with a kept score", async () => {
+  it("settles only for steps that made scoring requests, and only for items with a kept score", async () => {
     const { settle, calls, kept } = intake();
     await settle(step("moved", "scores-applied", "attempt-ended"));
     await settle(step("scoring-requested"));
@@ -1527,7 +1527,7 @@ describe("createLtiScoreIntake", () => {
     expect(calls).toEqual([]);
   });
 
-  it("[T106] throws DataError when the session refuses the score for a reason other than a request it does not have", async () => {
+  it("throws DataError when the session refuses the score for a reason other than a request it does not have", async () => {
     const { onScore, refusal } = intake();
     refusal.code = "score-type-mismatch";
     await expect(onScore("s1", Item, score())).rejects.toThrow(
@@ -1535,7 +1535,7 @@ describe("createLtiScoreIntake", () => {
     );
   });
 
-  it("[T106] leaves the scorer out of the action when the host names none", async () => {
+  it("leaves the scorer out of the action when the host names none", async () => {
     const calls: unknown[][] = [];
     const bare = createLtiScoreIntake({
       host: {
@@ -1550,7 +1550,7 @@ describe("createLtiScoreIntake", () => {
     expect(calls.map(([, , by]) => by)).toEqual([undefined, undefined]);
   });
 
-  it("[T106] throws DataError for options of other types", () => {
+  it("throws DataError for options of other types", () => {
     const good = {
       host: { host: async () => ({ ok: true }) },
       scores: { keep: async () => true, latest: async () => undefined },
@@ -1589,7 +1589,7 @@ describe("properties", () => {
   ];
   const actions = fc.array(fc.constantFrom(...Actions), { maxLength: 7 });
 
-  it("[T71][T67] returns the view that the engine gives for the same actions, through viewToJson and viewFromJson", async () => {
+  it("returns the view that the engine gives for the same actions, through viewToJson and viewFromJson", async () => {
     await fc.assert(
       fc.asyncProperty(actions, async (list) => {
         const { host, clock, engine } = await examHost();
@@ -1613,7 +1613,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T68] changes nothing when a request is repeated, whatever the actions before it", async () => {
+  it("changes nothing when a request is repeated, whatever the actions before it", async () => {
     await fc.assert(
       fc.asyncProperty(actions, async (list) => {
         const { host, store, logged } = await examHost();
@@ -1637,7 +1637,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T67] converges when competing writes come first, up to the retries, and fails with 409 beyond them", async () => {
+  it("converges when competing writes come first, up to the retries, and fails with 409 beyond them", async () => {
     await fc.assert(
       fc.asyncProperty(actions, fc.integer({ min: 0, max: MAX_SAVE_RETRIES + 2 }), async (list, conflicts) => {
         const free = await examHost();
@@ -1663,7 +1663,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T114] forwards any events, of any type, to the log without a change", async () => {
+  it("forwards any events, of any type, to the log without a change", async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.array(fc.record({ type: fc.string(), at: fc.integer(), detail: fc.string() }, { requiredKeys: ["type"] }), {

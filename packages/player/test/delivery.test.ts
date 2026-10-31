@@ -21,13 +21,13 @@ function firstView(part?: string): CandidateView {
 const ids = (view: CandidateView): string[] => planActions(view).map(({ id }) => id);
 
 describe("planActions", () => {
-  it("[T55] plans a button for each action that the view lists and that a button can send", () => {
+  it("plans a button for each action that the view lists and that a button can send", () => {
     const view = firstView();
     expect(view.actions).toEqual(["set-responses", "submit", "skip", "move", "end-part", "end-test", "suspend"]);
     expect(ids(view)).toEqual(["previous", "next", "submit", "skip", "end-part", "end-test", "suspend"]);
   });
 
-  it("[T55] plans no button for suspend or resume when the view does not list them, as a view for an exam does not", () => {
+  it("plans no button for suspend or resume when the view does not list them, as a view for an exam does not", () => {
     const view = firstView();
     const exam: CandidateView = {
       ...view,
@@ -37,7 +37,7 @@ describe("planActions", () => {
     expect(ids({ ...view, actions: ["resume"] })).toEqual(["resume"]);
   });
 
-  it("[T54] offers moving back only in a nonlinear part, and not before the first item or after the last", () => {
+  it("offers moving back only in a nonlinear part, and not before the first item or after the last", () => {
     const view = firstView();
     const [first, second, third] = view.navigation.filter((entry) => entry.kind === "item");
     expect(planActions(view).find(({ id }) => id === "previous")?.disabled).toBe(true);
@@ -54,7 +54,7 @@ describe("planActions", () => {
     expect(planActions(linear).find(({ id }) => id === "next")?.disabled).toBe(false);
   });
 
-  it("[T55][SC 3.3.4] asks to confirm the end of a part and of the test, and a submit in a linear part only", () => {
+  it("asks to confirm the end of a part and of the test, and a submit in a linear part only", () => {
     const nonlinear = planActions(firstView());
     const confirms = (planned: ReturnType<typeof planActions>) =>
       planned.flatMap(({ id, confirm }) => (confirm === undefined ? [] : [[id, confirm]]));
@@ -69,26 +69,26 @@ describe("planActions", () => {
     ]);
   });
 
-  it("[T55] sends the actions of the item presented with its key", () => {
+  it("sends the actions of the item presented with its key", () => {
     const view = firstView();
     const submit = planActions(view).find(({ id }) => id === "submit");
     expect(submit?.action).toEqual({ type: "submit", item: { ref: "q1", instance: 1 } });
   });
 
-  it("[T55] plans nothing for an ended test", () => {
+  it("plans nothing for an ended test", () => {
     expect(planActions({ ...firstView(), actions: [], current: undefined, navigation: [] })).toEqual([]);
   });
 });
 
 describe("confirmationText", () => {
-  it("[SC 3.3.4] asks the question of the action", () => {
+  it("asks the question of the action", () => {
     const view = firstView();
     expect(confirmationText("submit", view, EN_MESSAGES)).toEqual([EN_MESSAGES.confirmSubmit]);
     expect(confirmationText("end-part", view, EN_MESSAGES)[0]).toBe(EN_MESSAGES.confirmEndPart);
     expect(confirmationText("end-test", view, ID_MESSAGES)[0]).toBe(ID_MESSAGES.confirmEndTest);
   });
 
-  it("[T56] says how many questions have an attempt open and so are not submitted", () => {
+  it("says how many questions have an attempt open and so are not submitted", () => {
     const view = firstView();
     const open = view.navigation.filter((entry) => entry.kind === "item" && entry.status === "interacting").length;
     expect(open).toBe(1);
@@ -103,7 +103,7 @@ describe("confirmationText", () => {
     expect(confirmationText("end-test", closed, EN_MESSAGES)).toEqual([EN_MESSAGES.confirmEndTest]);
   });
 
-  it("[T56] says that a simultaneous part submits all its answers when it ends", () => {
+  it("says that a simultaneous part submits all its answers when it ends", () => {
     const view = firstView('navigation-mode="nonlinear" submission-mode="simultaneous"');
     expect(view.part?.submissionMode).toBe("simultaneous");
     expect(confirmationText("end-part", view, EN_MESSAGES)).toContain(EN_MESSAGES.confirmSimultaneous);
@@ -112,7 +112,7 @@ describe("confirmationText", () => {
 });
 
 describe("duration", () => {
-  it("[T57] writes the time left as a clock, counting a part of a second as a whole one", () => {
+  it("writes the time left as a clock, counting a part of a second as a whole one", () => {
     expect(clockText(0)).toBe("0:00");
     expect(clockText(1)).toBe("0:01");
     expect(clockText(65_000)).toBe("1:05");
@@ -121,20 +121,20 @@ describe("duration", () => {
     expect(clockText(3_661_000)).toBe("1:01:01");
   });
 
-  it("[T57] writes the time left in words of the language of the interface", () => {
+  it("writes the time left in words of the language of the interface", () => {
     expect(spokenText(200_000, "en")).toBe("3 minutes 20 seconds");
     expect(spokenText(60_000, "en")).toBe("1 minute");
     expect(spokenText(3_600_000, "en")).toBe("1 hour");
     expect(spokenText(200_000, "id")).toBe("3 menit 20 detik");
   });
 
-  it("[T57] falls back to English for a language tag that is not one", () => {
+  it("falls back to English for a language tag that is not one", () => {
     expect(spokenText(90_000, "not a tag!")).toBe("1 minute 30 seconds");
   });
 });
 
 describe("REFUSAL_MESSAGES", () => {
-  it("[T55] has a message for every refusal code, in every catalog, and none is the message of another", () => {
+  it("has a message for every refusal code, in every catalog, and none is the message of another", () => {
     expect(Object.keys(REFUSAL_MESSAGES).sort()).toEqual([...REFUSAL_CODES].sort());
     for (const catalog of [EN_MESSAGES, ID_MESSAGES]) {
       const texts = REFUSAL_CODES.map((code) => catalog[REFUSAL_MESSAGES[code]]);
@@ -145,7 +145,7 @@ describe("REFUSAL_MESSAGES", () => {
 });
 
 describe("properties", () => {
-  it("[T55] plans only actions that the view lists", () => {
+  it("plans only actions that the view lists", () => {
     const view = firstView();
     const types = fc.subarray([...view.actions]);
     fc.assert(
@@ -157,7 +157,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T57] writes the clock of any time left with the seconds of the ceiling", () => {
+  it("writes the clock of any time left with the seconds of the ceiling", () => {
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 400_000_000 }), (milliseconds) => {
         const total = Math.ceil(milliseconds / 1000);

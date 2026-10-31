@@ -1,7 +1,7 @@
 /** A browser engine of the baseline, by the name Playwright gives it: Chromium, Firefox and Safari's WebKit. */
 export type Engine = "chromium" | "firefox" | "webkit";
 
-/** The oldest version of each engine that the player supports (docs/baseline.md), as `browser.version()` starts. */
+/** The oldest version of each engine that the player supports (docs/player/baseline.md), as `browser.version()` starts. */
 export const BASELINE: Readonly<Record<Engine, string>> = { chromium: "111.", firefox: "115.", webkit: "16.4" };
 
 /** A check in a page: an expression that is true where the engine has the feature. */
@@ -38,7 +38,7 @@ export interface BannedFeature {
 
 /** The message that the lint reports for a banned feature. */
 export function lintMessage({ feature, instead }: BannedFeature): string {
-  return `${feature}: outside the browser baseline (see docs/baseline.md). Use ${instead}.`;
+  return `${feature}: outside the browser baseline (see docs/player/baseline.md). Use ${instead}.`;
 }
 
 const ALL_ENGINES: readonly Engine[] = ["chromium", "firefox", "webkit"];

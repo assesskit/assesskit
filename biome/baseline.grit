@@ -11,50 +11,50 @@ or {
     `$element.popover = $_`,
     `$element.setAttribute("popover", $_)`
   } as $found where {
-    register_diagnostic(span=$found, message="The Popover API: outside the browser baseline (see docs/baseline.md). Use a dialog, or an element that script positions.", severity="error")
+    register_diagnostic(span=$found, message="The Popover API: outside the browser baseline (see docs/player/baseline.md). Use a dialog, or an element that script positions.", severity="error")
   },
   or {
     JsStringLiteralExpression(),
     JsTemplateChunkElement()
   } as $found where {
     $found <: r"(?s).*:has\(.*",
-    register_diagnostic(span=$found, message="The :has() selector: outside the browser baseline (see docs/baseline.md). Use a class that script sets.", severity="error")
+    register_diagnostic(span=$found, message="The :has() selector: outside the browser baseline (see docs/player/baseline.md). Use a class that script sets.", severity="error")
   },
   `$internals.$property = $_` as $found where {
     $internals <: r".*[iI]nternals$",
     $property <: r"^(?:aria[A-Z].*|role)$",
-    register_diagnostic(span=$found, message="ARIA reflection through ElementInternals: outside the browser baseline (see docs/baseline.md). Use aria-* attributes.", severity="error")
+    register_diagnostic(span=$found, message="ARIA reflection through ElementInternals: outside the browser baseline (see docs/player/baseline.md). Use aria-* attributes.", severity="error")
   },
   or {
     JsRegexLiteralExpression() as $literal where { $literal <: r"^/.*/[a-z]*v[a-z]*$" },
     `new RegExp($_, $flags)` where { $flags <: r".*v.*" },
     `RegExp($_, $flags)` where { $flags <: r".*v.*" }
   } as $found where {
-    register_diagnostic(span=$found, message="The RegExp v flag: outside the browser baseline (see docs/baseline.md). Use the u flag; author patterns go through compileXsdRegex.", severity="error")
+    register_diagnostic(span=$found, message="The RegExp v flag: outside the browser baseline (see docs/player/baseline.md). Use the u flag; author patterns go through compileXsdRegex.", severity="error")
   },
   `Intl.Segmenter` as $found where {
-    register_diagnostic(span=$found, message="Intl.Segmenter: outside the browser baseline (see docs/baseline.md). Use counters that count code points.", severity="error")
+    register_diagnostic(span=$found, message="Intl.Segmenter: outside the browser baseline (see docs/player/baseline.md). Use counters that count code points.", severity="error")
   },
   or {
     JsStringLiteralExpression(),
     JsTemplateChunkElement()
   } as $found where {
     $found <: r"(?is).*shadowrootmode.*",
-    register_diagnostic(span=$found, message="Declarative shadow DOM (shadowrootmode): outside the browser baseline (see docs/baseline.md). Use attachShadow.", severity="error")
+    register_diagnostic(span=$found, message="Declarative shadow DOM (shadowrootmode): outside the browser baseline (see docs/player/baseline.md). Use attachShadow.", severity="error")
   },
   or {
     `Object.groupBy`,
     `Map.groupBy`,
     `Promise.withResolvers`
   } as $found where {
-    register_diagnostic(span=$found, message="Object.groupBy, Map.groupBy and Promise.withResolvers: outside the browser baseline (see docs/baseline.md). Use plain loops.", severity="error")
+    register_diagnostic(span=$found, message="Object.groupBy, Map.groupBy and Promise.withResolvers: outside the browser baseline (see docs/player/baseline.md). Use plain loops.", severity="error")
   },
   or {
     JsStringLiteralExpression(),
     JsTemplateChunkElement()
   } as $found where {
     $found <: r"(?s).*(?:@scope|anchor-name|position-anchor|position-area|anchor-scope|text-wrap(?:-style)?:\s*balance|subgrid).*",
-    register_diagnostic(span=$found, message="CSS @scope, anchor positioning, text-wrap: balance and subgrid: outside the browser baseline (see docs/baseline.md). Use a shadow root to scope styles, script to position elements, and plain wrapping and grids.", severity="error")
+    register_diagnostic(span=$found, message="CSS @scope, anchor positioning, text-wrap: balance and subgrid: outside the browser baseline (see docs/player/baseline.md). Use a shadow root to scope styles, script to position elements, and plain wrapping and grids.", severity="error")
   },
   `$set.$method($...)` as $found where {
     $method <: or {
@@ -66,7 +66,7 @@ or {
       `isSupersetOf`,
       `isDisjointFrom`
     },
-    register_diagnostic(span=$found, message="The ES2025 Set methods: outside the browser baseline (see docs/baseline.md). Use loops over the sets.", severity="error")
+    register_diagnostic(span=$found, message="The ES2025 Set methods: outside the browser baseline (see docs/player/baseline.md). Use loops over the sets.", severity="error")
   },
   or {
     `Iterator.from`,
@@ -92,19 +92,19 @@ or {
       $source <: not `Object`
     }
   } as $found where {
-    register_diagnostic(span=$found, message="Iterator helpers: outside the browser baseline (see docs/baseline.md). Use an array: spread the iterator first.", severity="error")
+    register_diagnostic(span=$found, message="Iterator helpers: outside the browser baseline (see docs/player/baseline.md). Use an array: spread the iterator first.", severity="error")
   },
   `Array.fromAsync` as $found where {
-    register_diagnostic(span=$found, message="Array.fromAsync: outside the browser baseline (see docs/baseline.md). Use for await.", severity="error")
+    register_diagnostic(span=$found, message="Array.fromAsync: outside the browser baseline (see docs/player/baseline.md). Use for await.", severity="error")
   },
   `AbortSignal.any` as $found where {
-    register_diagnostic(span=$found, message="AbortSignal.any: outside the browser baseline (see docs/baseline.md). Use one controller that each source signal aborts.", severity="error")
+    register_diagnostic(span=$found, message="AbortSignal.any: outside the browser baseline (see docs/player/baseline.md). Use one controller that each source signal aborts.", severity="error")
   },
   or {
     JsStringLiteralExpression(),
     JsTemplateChunkElement()
   } as $found where {
     $found <: r"(?s).*(?:text-wrap(?:-style)?:\s*pretty|@starting-style).*",
-    register_diagnostic(span=$found, message="text-wrap: pretty and @starting-style: outside the browser baseline (see docs/baseline.md). Use plain wrapping, and transitions without entry styles.", severity="error")
+    register_diagnostic(span=$found, message="text-wrap: pretty and @starting-style: outside the browser baseline (see docs/player/baseline.md). Use plain wrapping, and transitions without entry styles.", severity="error")
   }
 }

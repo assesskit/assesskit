@@ -8,6 +8,7 @@ import {
   type AssessmentResult,
   container,
   type ItemResult,
+  RESULTS_NAMESPACE,
   readResults,
   record,
   single,
@@ -15,6 +16,7 @@ import {
 } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { assessmentResult } from "./arbitraries/results.js";
+import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const schemaDirectory = requireSchemas(root);
@@ -116,7 +118,7 @@ const everything: AssessmentResult = {
           identifier: "CV",
           cardinality: "single",
           baseType: "file",
-          value: single("file", { reference: "f.pdf", mimeType: "application/pdf" }),
+          value: single("file", { reference: "f.pdf", mimeType: "application/octet-stream" }),
         },
       ],
       candidateComment: "unclear",
@@ -126,16 +128,20 @@ const everything: AssessmentResult = {
 };
 
 describe("writeResults", () => {
-  it("[R1][R2][R3][X] writes a result of which only the context is known", async () => {
+  it("writes a result of which only the context is known", async () => {
     const text = writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] });
     expect(await issuesOf(text)).toEqual([]);
   });
 
-  it("[R1][R2][R3][R4][R5][R6][R7][R8][R9][R10][R11][R12][R13][R14][R15][X] writes every element and attribute of the schema", async () => {
-    expect(await issuesOf(writeResults(everything))).toEqual([]);
+  it("writes every element and attribute that the schema declares, as documents that it accepts and that read back", async () => {
+    const text = writeResults(everything);
+    expect(await issuesOf(text)).toEqual([]);
+    expect(readResults(text)).toEqual(everything);
+    const declared = declaredNames(schemaDirectory, ["imsqti_resultv3p0_v1p0.xsd"]);
+    expect(unusedNames(declared, usedNames([text], [RESULTS_NAMESPACE]))).toEqual([]);
   });
 
-  it("[R16][R17][R18][R19][X] writes every term of the vocabularies", async () => {
+  it("writes every term of the vocabularies", async () => {
     const statuses = [
       "initial",
       "pendingSubmission",
@@ -170,7 +176,7 @@ describe("writeResults", () => {
     expect(await issuesOf(writeResults({ context: { sessionIdentifiers: [] }, itemResults }))).toEqual([]);
   });
 
-  it("[R13][X] writes the value of every base type", async () => {
+  it("writes the value of every base type", async () => {
     const values = [
       ["boolean", true],
       ["directedPair", ["A", "B"]],
@@ -201,7 +207,7 @@ describe("writeResults", () => {
     expect(await issuesOf(writeResults({ context: { sessionIdentifiers: [] }, itemResults: [item] }))).toEqual([]);
   });
 
-  it("[X][N] has a schema that rejects a result without a context, so the checks above can fail", async () => {
+  it("has a schema that rejects a result without a context, so the checks above can fail", async () => {
     const text = writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] }).replace("<context/>", "");
     expect(await issuesOf(text)).toMatchObject([
       { code: "assesskit/node/xsd-invalid", message: expect.stringContaining("context") },
@@ -210,7 +216,7 @@ describe("writeResults", () => {
 });
 
 describe("results of the 1EdTech examples", () => {
-  it("[R1][X][C] writes report.xml and conformance-use-case-1.xml as documents that the schema accepts", async () => {
+  it("writes report.xml and conformance-use-case-1.xml as documents that the schema accepts", async () => {
     for (const name of ["report.xml", "conformance-use-case-1.xml"]) {
       const text = writeResults(readResults(readFileSync(join(examples, name), "utf8")));
       expect(await issuesOf(text, name), name).toEqual([]);
@@ -219,7 +225,7 @@ describe("results of the 1EdTech examples", () => {
 });
 
 describe("properties", () => {
-  it("[R1][X] writes documents that the RR schema accepts", async () => {
+  it("writes documents that the RR schema accepts", async () => {
     const samples = fc.sample(assessmentResult({ extensions: false }), { numRuns: 60, seed: 20_221_101 });
     const files = samples.map((model, index) => ({ path: `result-${index}.xml`, content: writeResults(model) }));
     expect(await validateXmlFiles(schemas, files)).toEqual([]);

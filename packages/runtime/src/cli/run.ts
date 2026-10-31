@@ -12,7 +12,7 @@ function messageOf(error: unknown): string {
 /**
  * Runs the command line of `assesskit` and returns its exit code; the caller sets it as the exit code of the process. The
  * commands are `validate`, which validates a package, a directory or an XML document, and `schemas fetch`, which
- * downloads the schemas. `docs/cli.md` lists their arguments.
+ * downloads the schemas. `docs/runtime/cli.md` lists their arguments.
  *
  * | Exit code | Meaning                                                                              |
  * | --------- | ------------------------------------------------------------------------------------ |

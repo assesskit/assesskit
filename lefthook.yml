@@ -14,5 +14,3 @@ pre-push:
       run: pnpm test
     knip:
       run: pnpm knip
-    conformance:
-      run: pnpm conformance

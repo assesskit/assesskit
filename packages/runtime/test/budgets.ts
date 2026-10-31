@@ -4,7 +4,7 @@ import { expect, type TestContext } from "vitest";
 export const BENCH_OPTIONS = { time: 500, iterations: 10, warmupTime: 100, warmupIterations: 3 } as const;
 
 /**
- * The budgets of the benchmarks, from the first measurements with the headroom that architecture.md#performance
+ * The budgets of the benchmarks, from the first measurements with the headroom that docs/runtime/architecture.md#performance
  * gives. A time is the most that the fastest sample of a benchmark may take, in milliseconds.
  */
 export const BUDGETS = {

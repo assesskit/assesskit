@@ -74,7 +74,7 @@ const IDENTIFIERS = new Set(["mi", "ci"]);
 const NUMBERS = new Set(["mn", "cn"]);
 
 describe("the content of the 1EdTech examples", () => {
-  it("[B20][C] has its printed variables printed, in every example", () => {
+  it("has its printed variables printed, in every example", () => {
     let printed = 0;
     for (const { path, item } of items) {
       const instance = instanceOf(item);
@@ -87,7 +87,7 @@ describe("the content of the 1EdTech examples", () => {
     expect(printed).toBeGreaterThan(20);
   });
 
-  it("[B15][C] keeps no feedback or template content that is hidden, and at most what is shown, in every example", () => {
+  it("keeps no feedback or template content that is hidden, and at most what is shown, in every example", () => {
     let hidden = 0;
     for (const { path, item } of items) {
       const instance = instanceOf(item);
@@ -109,7 +109,7 @@ describe("the content of the 1EdTech examples", () => {
     expect(hidden).toBeGreaterThan(20);
   });
 
-  it("[B13][C] has the MathML identifiers of its math variables replaced by their values: Example04 of the feedback tests", () => {
+  it("has the MathML identifiers of its math variables replaced by their values: Example04 of the feedback tests", () => {
     const example = items.find(({ path }) => path === "packaging/items/Example04-feedbackBlock-templateBlock.xml");
     if (example === undefined) throw new Error("The example is missing.");
     const { item } = example;

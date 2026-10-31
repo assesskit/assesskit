@@ -1,0 +1,14 @@
+{
+  "qti-examples": {
+    "repository": "1EdTech/qti-examples",
+    "commit": "0a92fbbb6d2e620a1f7fad19977be4c418246bc0",
+    "sha256": "c54978bdc78d1d21e8b99e203959b5a73f263d1187fcac4fb9b4d32b966746fd",
+    "include": ["qtiv3-examples/"]
+  },
+  "xsdtests": {
+    "repository": "w3c/xsdtests",
+    "commit": "7bc3365c652a322f3d762021b3879eb92dae7e30",
+    "sha256": "2aeff935632a3a13967fbe3d9a99a874de4bad7d9dde2987ac7adcc517b603ab",
+    "include": ["msData/regex/", "msMeta/Regex_w3c.xml"]
+  }
+}

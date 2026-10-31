@@ -163,7 +163,7 @@ async function openSupported(extra: Parameters<typeof openRoot>[0] = {}, message
 const settings = <T extends SupportSetting>(setting: T): T => setting;
 
 describe("applyPresentation", () => {
-  it("[T79][T87] shows a theme in the content root and changes it with the next presentation", () => {
+  it("shows a theme in the content root and changes it with the next presentation", () => {
     const content = mount("<p>Text</p>");
     const colors = (): string[] => [computed(content.find("p"), "color"), computed(content.host, "background-color")];
     expect(colors()).toEqual(["rgb(26, 26, 26)", "rgb(255, 255, 255)"]);
@@ -176,7 +176,7 @@ describe("applyPresentation", () => {
     expect(content.host.hasAttribute("data-ak-contrast")).toBe(false);
   });
 
-  it("[T89] sets the size, face and spacing of the text appearance and the colors of the profile", () => {
+  it("sets the size, face and spacing of the text appearance and the colors of the profile", () => {
     const content = mount("<p>Text</p>");
     const appearance = settings({
       name: "text-appearance",
@@ -199,7 +199,7 @@ describe("applyPresentation", () => {
     expect(computed(paragraph, "word-spacing")).toBe("4.8px");
   });
 
-  it("[T88] enlarges the text by the zoom of the magnification, and takes it off", () => {
+  it("enlarges the text by the zoom of the magnification, and takes it off", () => {
     const content = mount("<p>Text</p>");
     applyPresentation(content.host, presentationOf([onSupport("magnification")]));
     expect(computed(content.find("p"), "font-size")).toBe("32px");
@@ -207,7 +207,7 @@ describe("applyPresentation", () => {
     expect(computed(content.find("p"), "font-size")).toBe("16px");
   });
 
-  it("[T90][T91] sets the single column and the keyword emphasis as the stylesheet reads them", () => {
+  it("sets the single column and the keyword emphasis as the stylesheet reads them", () => {
     const content = mount('<p class="qti-keyword-emphasis">Key</p>');
     const before = computed(content.find("p"), "font-weight");
     applyPresentation(content.host, presentationOf([onSupport("layout-single-column"), onSupport("keyword-emphasis")]));
@@ -265,7 +265,7 @@ describe("mountSupportPanel", () => {
     supportView("ext:kxz-illustrated-glossary", { state: "option" }),
   ];
 
-  it("[T75] shows a toggle button for each option support, pressed when it is on, and no button for any other", () => {
+  it("shows a toggle button for each option support, pressed when it is on, and no button for any other", () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
     const region = el(host, "section");
@@ -280,7 +280,7 @@ describe("mountSupportPanel", () => {
     expect(region.hidden).toBe(false);
   });
 
-  it("[T75] asks for the opposite of what the last input said, and shows what the next input says, not the request", async () => {
+  it("asks for the opposite of what the last input said, and shows what the next input says, not the request", async () => {
     const { host, panel, requests } = mountPanel();
     panel.update(offered);
     await userEvent.click(buttonOf(host, "Captions"));
@@ -296,7 +296,7 @@ describe("mountSupportPanel", () => {
     expect(requests.at(-1)).toEqual(["captions", false]);
   });
 
-  it("[T75] lists the supports that the candidate cannot change with their state, and gives them no control", () => {
+  it("lists the supports that the candidate cannot change with their state, and gives them no control", () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
     const lines = [...host.querySelectorAll("li")].map((line) => [
@@ -315,7 +315,7 @@ describe("mountSupportPanel", () => {
     expect(host.querySelectorAll("li")[3]?.textContent).toBe("Transcript: off");
   });
 
-  it("[T75][T97] writes the state of a support in the language of the interface", () => {
+  it("writes the state of a support in the language of the interface", () => {
     const { host, panel } = mountPanel({ messages: ID_MESSAGES });
     panel.update([
       supportView("additional-testing-time", { state: "assigned", active: true }),
@@ -327,7 +327,7 @@ describe("mountSupportPanel", () => {
     ]);
   });
 
-  it("[T75] has no region when there is nothing to list, and takes a line away when its support leaves", () => {
+  it("has no region when there is nothing to list, and takes a line away when its support leaves", () => {
     const { host, panel } = mountPanel();
     panel.update([
       supportView("magnification", { state: "prohibited" }),
@@ -345,7 +345,7 @@ describe("mountSupportPanel", () => {
     expect(el(host, "section").hidden).toBe(true);
   });
 
-  it("[T75] turns a line into a button, and back, when the state of its support changes", () => {
+  it("turns a line into a button, and back, when the state of its support changes", () => {
     const { host, panel } = mountPanel();
     panel.update([supportView("captions", { state: "assigned", active: true })]);
     expect(host.querySelector("button")).toBeNull();
@@ -373,7 +373,7 @@ describe("mountSupportPanel", () => {
     ]);
   });
 
-  it("[T97] names the supports in the language of the interface", () => {
+  it("names the supports in the language of the interface", () => {
     const { host, panel } = mountPanel({ messages: ID_MESSAGES });
     panel.update(offered);
     expect(el(host, "section").getAttribute("aria-label")).toBe("Dukungan");
@@ -384,7 +384,7 @@ describe("mountSupportPanel", () => {
     ]);
   });
 
-  it("[T96][SC 2.1.1] is operated by the keyboard alone: each button is in the tab order, and Enter and Space turn it", async () => {
+  it("is operated by the keyboard alone: each button is in the tab order, and Enter and Space turn it", async () => {
     const { host, panel, requests } = mountPanel();
     panel.update(offered);
     // Safari does not Tab to a button unless its settings say so, so the focus is set and the keys are pressed.
@@ -399,14 +399,14 @@ describe("mountSupportPanel", () => {
     ]);
   });
 
-  it("[T96] is operated by the pointer alone: a click turns a support, with no key", async () => {
+  it("is operated by the pointer alone: a click turns a support, with no key", async () => {
     const { host, panel, requests } = mountPanel();
     panel.update(offered);
     await userEvent.click(buttonOf(host, "kxz-illustrated-glossary"));
     expect(requests).toEqual([["ext:kxz-illustrated-glossary", true]]);
   });
 
-  it("[T75][SC 2.5.8][SC 4.1.2] has controls of at least 24 by 24 pixels, and passes axe", async () => {
+  it("has controls of at least 24 by 24 pixels, and passes axe", async () => {
     const { host, panel } = mountPanel();
     panel.update(offered);
     for (const button of host.querySelectorAll("button")) {
@@ -462,7 +462,7 @@ describe("mountContentSupports", () => {
   }
 
   describe("popups", () => {
-    it("[T76] puts a button at the term, and draws no card until the candidate asks for it", async () => {
+    it("puts a button at the term, and draws no card until the candidate asks for it", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -478,7 +478,7 @@ describe("mountContentSupports", () => {
       expect(root.root.querySelectorAll(".ak-card-trigger")).toHaveLength(1);
     });
 
-    it("[T76] shows the glossary in the language of the translation of the question when that is on", async () => {
+    it("shows the glossary in the language of the translation of the question when that is on", async () => {
       const { root, supports } = await openSupported();
       const translation = settings({ name: "item-translation", replaceAccessModes: [], language: "id" });
       supports.update([glossary, onSupport("item-translation", translation)]);
@@ -487,7 +487,7 @@ describe("mountContentSupports", () => {
       expect(el(popup, "[lang]").getAttribute("lang")).toBe("id");
     });
 
-    it("[T76] draws no button for a support that is off or prohibited, or for a term whose catalog has no such card", async () => {
+    it("draws no button for a support that is off or prohibited, or for a term whose catalog has no such card", async () => {
       const { root, supports } = await openSupported();
       supports.update([supportView("glossary-on-screen", { state: "option", active: false })]);
       expect(root.root.querySelector(".ak-card-trigger")).toBeNull();
@@ -497,7 +497,7 @@ describe("mountContentSupports", () => {
       expect(root.root.querySelector(".ak-card-trigger")).toBeNull();
     });
 
-    it("[T77] shows the keyword translation of the language of the support, the same language with a region, or the default entry", async () => {
+    it("shows the keyword translation of the language of the support, the same language with a region, or the default entry", async () => {
       const { root, supports } = await openSupported();
       const translated = (language: string): string => {
         supports.update([
@@ -511,7 +511,7 @@ describe("mountContentSupports", () => {
       expect(translated("de")).toContain("photosynthesis (default)");
     });
 
-    it("[T78] opens the guidance, the additional directions and the keyboard directions on request, each under its name", async () => {
+    it("opens the guidance, the additional directions and the keyboard directions on request, each under its name", async () => {
       const { root, supports } = await openSupported();
       supports.update([
         onSupport("linguistic-guidance"),
@@ -534,7 +534,7 @@ describe("mountContentSupports", () => {
       }
     });
 
-    it("[T76] shows the cards of a custom support (BPIG §5.4) on request, under its local name", async () => {
+    it("shows the cards of a custom support (BPIG §5.4) on request, under its local name", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("ext:kxz-illustrated-glossary")]);
       const { trigger, popup } = popupOn(root.root, "#photo", "kxz-illustrated-glossary");
@@ -542,7 +542,7 @@ describe("mountContentSupports", () => {
       expect(popup.textContent).toContain("An illustrated glossary entry.");
     });
 
-    it("[SC 1.4.13] is hoverable: the pointer goes from the button onto the popup and the popup stays", async () => {
+    it("is hoverable: the pointer goes from the button onto the popup and the popup stays", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -554,7 +554,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(true);
     });
 
-    it("[SC 1.4.13] touches the button, so that the pointer never crosses a gap between it and the popup", async () => {
+    it("touches the button, so that the pointer never crosses a gap between it and the popup", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { anchor, trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -564,7 +564,7 @@ describe("mountContentSupports", () => {
       expect(Math.min(Math.abs(box.top - at.bottom), Math.abs(box.bottom - at.top))).toBeLessThanOrEqual(1);
     });
 
-    it("[SC 1.4.13] is persistent: it stays after a press while the pointer is away, until it is dismissed", async () => {
+    it("is persistent: it stays after a press while the pointer is away, until it is dismissed", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -575,7 +575,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(true);
     });
 
-    it("[SC 1.4.13] is dismissible with Escape while the pointer stays over it, and shows again when the pointer comes back", async () => {
+    it("is dismissible with Escape while the pointer stays over it, and shows again when the pointer comes back", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -588,7 +588,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(false);
     });
 
-    it("[SC 1.4.13] is dismissible with Escape while the focus stays on the button, and shows again when the focus comes back", async () => {
+    it("is dismissible with Escape while the focus stays on the button, and shows again when the focus comes back", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -602,7 +602,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(false);
     });
 
-    it("[SC 1.4.13] shows when the button takes the focus, and hides when the focus leaves both", async () => {
+    it("shows when the button takes the focus, and hides when the focus leaves both", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -616,7 +616,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(true);
     });
 
-    it("[T96][SC 1.4.13] is dismissed by its Close button, which is for the pointer alone", async () => {
+    it("is dismissed by its Close button, which is for the pointer alone", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -627,7 +627,7 @@ describe("mountContentSupports", () => {
       expect(popup.hidden).toBe(true);
     });
 
-    it("[T96] gives the focus to the button when the Close button that has it dismisses the popup", async () => {
+    it("gives the focus to the button when the Close button that has it dismisses the popup", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -638,7 +638,7 @@ describe("mountContentSupports", () => {
       expect(focused()).toBe(trigger);
     });
 
-    it("[T96][SC 2.1.1] is operated by the keyboard alone: the button shows it on focus, Enter keeps it, Escape dismisses it", async () => {
+    it("is operated by the keyboard alone: the button shows it on focus, Enter keeps it, Escape dismisses it", async () => {
       const { root, supports } = await openSupported();
       supports.update([glossary]);
       const { trigger, popup } = popupOn(root.root, "#photo", "Glossary");
@@ -654,7 +654,7 @@ describe("mountContentSupports", () => {
       expect(focused()).toBe(trigger);
     });
 
-    it("[SC 1.4.13] keeps the popup inside the host, which clips what lies outside it", async () => {
+    it("keeps the popup inside the host, which clips what lies outside it", async () => {
       const { root, supports, host } = await openSupported({ hostStyle: "width: 260px;" });
       supports.update([glossary]);
       // The term stands at the right edge of the host.
@@ -668,7 +668,7 @@ describe("mountContentSupports", () => {
       expect(box.bottom).toBeLessThanOrEqual(inside.bottom + 0.5);
     });
 
-    it("[SC 1.4.13] opens above the button when there is more room above than below", async () => {
+    it("opens above the button when there is more room above than below", async () => {
       const { root, supports, host } = await openSupported({
         body: '<p id="top">Above.</p><p id="last"><span id="photo" data-catalog-idref="photo">photosynthesis</span></p>',
       });
@@ -681,7 +681,7 @@ describe("mountContentSupports", () => {
       expect(box.top).toBeGreaterThanOrEqual(host.getBoundingClientRect().top - 0.5);
     });
 
-    it("[SC 1.4.13][SC 1.4.3][SC 4.1.2][T76] passes axe with the popup open, and with every popup button", async () => {
+    it("passes axe with the popup open, and with every popup button", async () => {
       const { host, root, supports } = await openSupported();
       supports.update([
         glossary,
@@ -696,7 +696,7 @@ describe("mountContentSupports", () => {
       expect(await axeViolations(host)).toEqual([]);
     });
 
-    it("[SC 1.4.3][SC 1.4.11] passes axe in the themes of the supports with the popup open", async () => {
+    it("passes axe in the themes of the supports with the popup open", async () => {
       const { host, root, supports } = await openSupported();
       supports.update([glossary]);
       await userEvent.click(buttonOf(el(root.root, "#photo"), "Glossary"));
@@ -712,7 +712,7 @@ describe("mountContentSupports", () => {
   });
 
   describe("replacing the content", () => {
-    it("[T79] puts the card of high contrast in place of the content, and gives the content back when the support goes", async () => {
+    it("puts the card of high contrast in place of the content, and gives the content back when the support goes", async () => {
       const { root, supports } = await openSupported();
       const hard = el(root.root, "#hard");
       const before = [...hard.childNodes];
@@ -723,7 +723,7 @@ describe("mountContentSupports", () => {
       expect(hard.textContent).toBe("The feline reposed upon the rug.");
     });
 
-    it("[T79] hides a picture and shows the card after it", async () => {
+    it("hides a picture and shows the card after it", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("high-contrast")]);
       const picture = el(root.root, "#pic");
@@ -736,7 +736,7 @@ describe("mountContentSupports", () => {
       expect(root.root.querySelector('[data-ak-card="high-contrast"]')).toBeNull();
     });
 
-    it("[T80] puts the simplified language in place of a passage, and the simplified graphic in place of a picture", async () => {
+    it("puts the simplified language in place of a passage, and the simplified graphic in place of a picture", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("simplified-language-portions"), onSupport("simplified-graphics")]);
       expect(el(root.root, "#hard").textContent).toBe("The cat sat on the rug.");
@@ -744,7 +744,7 @@ describe("mountContentSupports", () => {
       expect(el(root.root, '[data-ak-card="simplified-graphics"] img')).toBeTruthy();
     });
 
-    it("[T80] gives the card of a choice for its face and keeps its control", async () => {
+    it("gives the card of a choice for its face and keeps its control", async () => {
       const { root, supports } = await openSupported({
         body: '<div id="choice" data-catalog-idref="hard"><span class="ak-face">First</span></div>',
       });
@@ -762,7 +762,7 @@ describe("mountContentSupports", () => {
       expect(el(choice, ".ak-face").textContent).toBe("First");
     });
 
-    it("[T80] shows the card beside a control it cannot replace", async () => {
+    it("shows the card beside a control it cannot replace", async () => {
       const { root, supports } = await openSupported({ body: '<div id="holder" data-catalog-idref="hard"></div>' });
       const button = document.createElement("button");
       button.textContent = "Press";
@@ -775,7 +775,7 @@ describe("mountContentSupports", () => {
   });
 
   describe("cards beside the content", () => {
-    it("[T81] shows the sign language video of the language of the support", async () => {
+    it("shows the sign language video of the language of the support", async () => {
       const { root, supports } = await openSupported();
       supports.update([
         onSupport("sign-language", settings({ name: "sign-language", replaceAccessModes: [], language: "ins" })),
@@ -793,7 +793,7 @@ describe("mountContentSupports", () => {
       );
     });
 
-    it("[T81] shows no video when the catalog has no entry for the language and none is the default", async () => {
+    it("shows no video when the catalog has no entry for the language and none is the default", async () => {
       const { root, supports } = await openSupported();
       supports.update([
         onSupport("sign-language", settings({ name: "sign-language", replaceAccessModes: [], language: "fr" })),
@@ -801,7 +801,7 @@ describe("mountContentSupports", () => {
       expect(root.root.querySelector('[data-ak-card="sign-language"]')).toBeNull();
     });
 
-    it("[T82][SC 1.2.1] shows the transcript card of audio and video, in a group named Transcript", async () => {
+    it("shows the transcript card of audio and video, in a group named Transcript", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("transcript")]);
       const cards = [...root.root.querySelectorAll('[data-ak-card="transcript"]')];
@@ -814,13 +814,13 @@ describe("mountContentSupports", () => {
       expect(el(root.root, "#clip").nextElementSibling).toBe(cards[1]);
     });
 
-    it("[T82][SC 1.2.3][SC 1.2.5] shows the audio description card", async () => {
+    it("shows the audio description card", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("audio-description")]);
       expect(el(root.root, '[data-ak-card="audio-description"]').textContent).toBe("A description of the paragraph.");
     });
 
-    it("[T84] shows the alternative text of an image as text after it, and takes it away with the support", async () => {
+    it("shows the alternative text of an image as text after it, and takes it away with the support", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("alternative-text")]);
       const picture = el(root.root, "#pic");
@@ -832,13 +832,13 @@ describe("mountContentSupports", () => {
       expect(root.root.querySelector(".ak-alternative-text")).toBeNull();
     });
 
-    it("[T84] shows no alternative text for an image that is decoration", async () => {
+    it("shows no alternative text for an image that is decoration", async () => {
       const { root, supports } = await openSupported({ body: '<div><img src="images/dot.png" alt=""/></div>' });
       supports.update([onSupport("alternative-text")]);
       expect(root.root.querySelector(".ak-alternative-text")).toBeNull();
     });
 
-    it("[T84] hides the long description from sight and leaves it to assistive technology, unless the profile shows it", async () => {
+    it("hides the long description from sight and leaves it to assistive technology, unless the profile shows it", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("long-description")]);
       const description = el(root.root, '[data-ak-card="long-description"] qti-html-content');
@@ -858,7 +858,7 @@ describe("mountContentSupports", () => {
       expect(shown.getBoundingClientRect().height).toBeGreaterThan(1);
     });
 
-    it("[T83] gives the text of a braille card to the screen reader, and the file to take for embossing", async () => {
+    it("gives the text of a braille card to the screen reader, and the file to take for embossing", async () => {
       const { root, supports } = await openSupported();
       supports.update([
         onSupport("braille", settings({ name: "braille", replaceAccessModes: [], deliveryMode: "refreshable" })),
@@ -871,7 +871,7 @@ describe("mountContentSupports", () => {
       expect(link.getBoundingClientRect().height).toBeGreaterThan(1);
     });
 
-    it("[T83] shows the braille text too when the delivery is embossed", async () => {
+    it("shows the braille text too when the delivery is embossed", async () => {
       const { root, supports } = await openSupported();
       supports.update([
         onSupport("braille", settings({ name: "braille", replaceAccessModes: [], deliveryMode: "embossed" })),
@@ -881,7 +881,7 @@ describe("mountContentSupports", () => {
       );
     });
 
-    it("[T83] offers the file of a tactile card", async () => {
+    it("offers the file of a tactile card", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("tactile")]);
       const card = el(root.root, '[data-ak-card="tactile"]');
@@ -889,7 +889,7 @@ describe("mountContentSupports", () => {
       expect(el(card, "a").getAttribute("href")).toBe(`${ASSETS}items/q1/files/rug-tactile.pdf`);
     });
 
-    it("[T82][T84][T83][T81] passes axe with every card beside the content", async () => {
+    it("passes axe with every card beside the content", async () => {
       const { host, supports } = await openSupported();
       supports.update([
         onSupport("sign-language", settings({ name: "sign-language", replaceAccessModes: [], language: "ase" })),
@@ -909,7 +909,7 @@ describe("mountContentSupports", () => {
     const tracks = (root: ParentNode): Record<string, TextTrackMode> =>
       Object.fromEntries([...root.querySelectorAll("track")].map((track) => [track.kind, track.track.mode]));
 
-    it("[T82][SC 1.2.2] shows the captions track of the media when the captions are on, and gives the mode back when they go", async () => {
+    it("shows the captions track of the media when the captions are on, and gives the mode back when they go", async () => {
       const { root, supports } = await openSupported();
       const before = tracks(root.root);
       supports.update([onSupport("captions")]);
@@ -918,14 +918,14 @@ describe("mountContentSupports", () => {
       expect(tracks(root.root)).toEqual(before);
     });
 
-    it("[T82][SC 1.2.3] shows the description track when the audio description is on", async () => {
+    it("shows the description track when the audio description is on", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("audio-description")]);
       expect(tracks(root.root).descriptions).toBe("showing");
       expect(tracks(root.root).captions).not.toBe("showing");
     });
 
-    it("[T82] leaves the chapters alone", async () => {
+    it("leaves the chapters alone", async () => {
       const { root, supports } = await openSupported();
       const before = tracks(root.root).chapters;
       supports.update([onSupport("captions"), onSupport("audio-description")]);
@@ -1013,7 +1013,7 @@ describe("mountSpoken", () => {
       ...settings,
     });
 
-  it("[T85] shows the controls and reads the content with the voice, with the rate, pitch and volume of the support", async () => {
+  it("shows the controls and reads the content with the voice, with the rate, pitch and volume of the support", async () => {
     const { chrome, spoken, voice } = await open();
     spoken.update([reading({ speechRate: 240, pitch: 0.4, volume: 0.8 })]);
     const group = el(chrome, ".ak-read-aloud");
@@ -1032,7 +1032,7 @@ describe("mountSpoken", () => {
     expect(voice.requests[0]?.text).not.toContain("Not for the voice.");
   });
 
-  it("[T85] stops the voice when the candidate asks, and when the support goes", async () => {
+  it("stops the voice when the candidate asks, and when the support goes", async () => {
     const { chrome, spoken, voice } = await open();
     spoken.update([reading()]);
     await userEvent.click(buttonOf(chrome, "Stop reading"));
@@ -1044,7 +1044,7 @@ describe("mountSpoken", () => {
     expect(voice.stops).toBe(2);
   });
 
-  it("[T85] has no controls for the screen reader, which is also the reading type when the support names none, and hides what it suppresses", async () => {
+  it("has no controls for the screen reader, which is also the reading type when the support names none, and hides what it suppresses", async () => {
     const { root, chrome, spoken } = await open();
     spoken.update([onSupport("spoken")]);
     expect(el(chrome, ".ak-read-aloud").hidden).toBe(true);
@@ -1056,7 +1056,7 @@ describe("mountSpoken", () => {
     expect(el(root.root, "#c").hasAttribute("aria-hidden")).toBe(false);
   });
 
-  it("[T85] says that there is nothing to read, and that the voice failed", async () => {
+  it("says that there is nothing to read, and that the voice failed", async () => {
     const failing = fakeVoice();
     failing.speak = async () => {
       throw new Error("The voice is gone.");
@@ -1080,7 +1080,7 @@ describe("mountSpoken", () => {
     expect(errors).toHaveLength(1);
   });
 
-  it("[T85] reads word by word with the buttons for the previous and the next word, and skips what the voice leaves out", async () => {
+  it("reads word by word with the buttons for the previous and the next word, and skips what the voice leaves out", async () => {
     const { chrome, spoken, voice } = await open(
       '<p>One two <span data-qti-suppress-tts="computer-read-aloud">hidden</span> three.</p>',
     );
@@ -1101,7 +1101,7 @@ describe("mountSpoken", () => {
     expect(said().at(-1)).toBe("two");
   });
 
-  it("[T85] starts the word cursor again when the content is replaced", async () => {
+  it("starts the word cursor again when the content is replaced", async () => {
     const { root, chrome, spoken, voice } = await open("<p>One two.</p>");
     spoken.update([reading({ restrictionTypes: ["word-by-word"] })]);
     await userEvent.click(buttonOf(chrome, "Next word"));
@@ -1113,7 +1113,7 @@ describe("mountSpoken", () => {
     expect(voice.requests.at(-1)?.text).toBe("Alpha");
   });
 
-  it("[T85] echoes what the candidate types in a text field, as the typing echo says, and stops when the support goes", async () => {
+  it("echoes what the candidate types in a text field, as the typing echo says, and stops when the support goes", async () => {
     const { root, spoken, voice } = await open("<p>Type.</p>");
     const field = document.createElement("input");
     field.type = "text";
@@ -1128,7 +1128,7 @@ describe("mountSpoken", () => {
     expect(voice.requests).toHaveLength(2);
   });
 
-  it("[T96][SC 2.1.1] is operated by the keyboard alone, and by the pointer alone", async () => {
+  it("is operated by the keyboard alone, and by the pointer alone", async () => {
     const { chrome, spoken, voice } = await open();
     spoken.update([reading()]);
     buttonOf(chrome, "Read aloud").focus();
@@ -1140,7 +1140,7 @@ describe("mountSpoken", () => {
     expect(voice.requests).toHaveLength(2);
   });
 
-  it("[T85][SC 4.1.2][SC 2.5.8] has named controls of at least 24 by 24 pixels that pass axe", async () => {
+  it("has named controls of at least 24 by 24 pixels that pass axe", async () => {
     const { chrome, spoken } = await open();
     spoken.update([reading({ restrictionTypes: ["word-by-word"] })]);
     for (const button of chrome.querySelectorAll("button")) {
@@ -1150,7 +1150,7 @@ describe("mountSpoken", () => {
     expect(await axeViolations(chrome)).toEqual([]);
   });
 
-  it("[T97] names the controls in the language of the interface", async () => {
+  it("names the controls in the language of the interface", async () => {
     const { chrome, spoken } = await open(BodyText, fakeVoice(), ID_MESSAGES);
     spoken.update([reading()]);
     expect([...chrome.querySelectorAll("button")].map(({ textContent }) => textContent)).toEqual([
@@ -1203,14 +1203,14 @@ describe("mountVariantNotice", () => {
     return { host, notice };
   };
 
-  it("[T74] says nothing when the question itself is delivered", () => {
+  it("says nothing when the question itself is delivered", () => {
     const { host, notice } = mountNotice();
     notice.update(undefined);
     expect(el(host, "p").hidden).toBe(true);
     expect(el(host, "p").textContent).toBe("");
   });
 
-  it("[T74] names the language of the delivered variant, in the language of the interface and marked as the language it names", () => {
+  it("names the language of the delivered variant, in the language of the interface and marked as the language it names", () => {
     const { host, notice } = mountNotice("en");
     notice.update({ resource: "q1-id", language: "id" });
     const paragraph = el(host, "p");
@@ -1221,13 +1221,13 @@ describe("mountVariantNotice", () => {
     expect(paragraph.textContent).toBe("Language of this version: Canadian French");
   });
 
-  it("[T74][T97] names the language in Indonesian when that is the language of the interface", () => {
+  it("names the language in Indonesian when that is the language of the interface", () => {
     const { host, notice } = mountNotice("id", ID_MESSAGES);
     notice.update({ resource: "q1-en", language: "en" });
     expect(el(host, "p").textContent).toBe("Bahasa versi ini: Inggris");
   });
 
-  it("[T74] says that an adapted version is shown when the resource names no language, and takes it back", () => {
+  it("says that an adapted version is shown when the resource names no language, and takes it back", () => {
     const { host, notice } = mountNotice();
     notice.update({ resource: "q1-large-print" });
     expect(el(host, "p").textContent).toBe("An adapted version of this question is shown.");
@@ -1235,13 +1235,13 @@ describe("mountVariantNotice", () => {
     expect(el(host, "p").hidden).toBe(true);
   });
 
-  it("[T74] gives the tag when the browser has no name for it", () => {
+  it("gives the tag when the browser has no name for it", () => {
     const { host, notice } = mountNotice();
     notice.update({ resource: "q1-x", language: "x-klingon-invalid-tag-12345678901" });
     expect(el(host, "span").textContent).toBe("x-klingon-invalid-tag-12345678901");
   });
 
-  it("[T74][SC 3.1.2][SC 1.4.3] marks the language of the part and passes axe", async () => {
+  it("marks the language of the part and passes axe", async () => {
     const { host, notice } = mountNotice();
     notice.update({ resource: "q1-id", language: "id" });
     expect(await axeViolations(host)).toEqual([]);
@@ -1318,7 +1318,7 @@ describe("supports and a media interaction", () => {
 
   const barButton = (root: ParentNode, text: string): HTMLButtonElement => buttonOf(el(root, ".ak-media-bar"), text);
 
-  it("[T82][SC 1.2.2] shows the captions of the player when the support is on, and the button of the player follows", async () => {
+  it("shows the captions of the player when the support is on, and the button of the player follows", async () => {
     const { root, supports, recording } = await open();
     const [track] = recording.textTracks;
     expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("false");
@@ -1330,7 +1330,7 @@ describe("supports and a media interaction", () => {
     expect(track?.mode).not.toBe("showing");
   });
 
-  it("[T82] lets the candidate turn the captions off with the button of the player while the support is on", async () => {
+  it("lets the candidate turn the captions off with the button of the player while the support is on", async () => {
     const { root, supports, recording } = await open();
     supports.update([onSupport("captions")]);
     await userEvent.click(barButton(root.root, "Captions"));
@@ -1338,7 +1338,7 @@ describe("supports and a media interaction", () => {
     expect(barButton(root.root, "Captions").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("[T82] shows the transcript inside the interaction, after the player", async () => {
+  it("shows the transcript inside the interaction, after the player", async () => {
     const { root, supports } = await open();
     supports.update([onSupport("transcript")]);
     const card = el(root.root, "qti-media-interaction > [data-ak-card='transcript']");
@@ -1346,7 +1346,7 @@ describe("supports and a media interaction", () => {
     expect(card.previousElementSibling).not.toBeNull();
   });
 
-  it("[T82] makes the audio of a description follow the player, with no controls and no sound of its own", async (context) => {
+  it("makes the audio of a description follow the player, with no controls and no sound of its own", async (context) => {
     if (!(await audioPlaysToEnd(`${ASSETS}${Tone}`))) context.skip();
     const { root, supports, recording } = await open();
     supports.update([onSupport("audio-description")]);
@@ -1361,7 +1361,7 @@ describe("supports and a media interaction", () => {
     expect(recording.paused).toBe(true);
   });
 
-  it("[T82] gives the audio of the card its controls and its sound back when the support goes", async () => {
+  it("gives the audio of the card its controls and its sound back when the support goes", async () => {
     const { root, supports } = await open();
     supports.update([onSupport("audio-description")]);
     supports.update([]);
@@ -1371,7 +1371,7 @@ describe("supports and a media interaction", () => {
     expect(root.root.querySelector("[data-ak-card='audio-description']")).toBeNull();
   });
 
-  it("[T82][SC 4.1.2][SC 1.4.3] passes axe with the captions on and the cards beside the player", async () => {
+  it("passes axe with the captions on and the cards beside the player", async () => {
     const { root, supports } = await open();
     supports.update([onSupport("captions"), onSupport("transcript"), onSupport("audio-description")]);
     expect(await axeViolations(el(root.root, "qti-media-interaction"))).toEqual([]);
@@ -1385,7 +1385,7 @@ describe("the supports with the runtime's engine", () => {
     <prohibit-set><magnification/></prohibit-set>
   </access-for-all-pnp>`;
 
-  it("[T75][T76][T79] turns a support on from the panel, applies it to the next view, and refuses what the profile prohibits", async () => {
+  it("turns a support on from the panel, applies it to the next view, and refuses what the profile prohibits", async () => {
     const document_ = readAsi(
       `<qti-assessment-item ${NAMESPACE} identifier="e" title="E" adaptive="false" time-dependent="false">
          <qti-item-body><p id="term" data-catalog-idref="photo">photosynthesis</p></qti-item-body>

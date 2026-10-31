@@ -41,19 +41,19 @@ beforeEach(async () => {
 describe("themes", () => {
   const Paragraph = "<p>Text <a href='#x'>link</a></p>";
 
-  it("[T13] shows dark text on white by default", () => {
+  it("shows dark text on white by default", () => {
     const { host, find } = mount(Paragraph);
     expect(channels(computed(find("p"), "color")).slice(0, 3)).toEqual([26, 26, 26]);
     expect(channels(computed(host, "background-color")).slice(0, 3)).toEqual([255, 255, 255]);
   });
 
-  it("[T87] inverts the polarity: light text on a dark background", () => {
+  it("inverts the polarity: light text on a dark background", () => {
     const { host, find } = mount(Paragraph, { "data-ak-polarity": "inverted" });
     expect(channels(computed(find("p"), "color")).slice(0, 3)).toEqual([242, 242, 242]);
     expect(channels(computed(host, "background-color")).slice(0, 3)).toEqual([18, 18, 18]);
   });
 
-  it("[T87] takes the foreground and the background that the candidate's profile gives", () => {
+  it("takes the foreground and the background that the candidate's profile gives", () => {
     const { host, find } = mount(
       Paragraph,
       { "data-ak-polarity": "inverted" },
@@ -63,20 +63,20 @@ describe("themes", () => {
     expect(channels(computed(host, "background-color")).slice(0, 3)).toEqual([0, 0, 128]);
   });
 
-  it("[T79] shows black on white with thicker borders and rings for high contrast", () => {
+  it("shows black on white with thicker borders and rings for high contrast", () => {
     const { host, find } = mount("<input type='text' aria-label='x'>", { "data-ak-contrast": "high" });
     expect(channels(computed(host, "color")).slice(0, 3)).toEqual([0, 0, 0]);
     expect(computed(find("input"), "border-top-width")).toBe("2px");
     expect(channels(computed(find("input"), "border-top-color")).slice(0, 3)).toEqual([0, 0, 0]);
   });
 
-  it("[T79][T87] shows white on black for high contrast with inverted polarity", () => {
+  it("shows white on black for high contrast with inverted polarity", () => {
     const { host } = mount(Paragraph, { "data-ak-contrast": "high", "data-ak-polarity": "inverted" });
     expect(channels(computed(host, "color")).slice(0, 3)).toEqual([255, 255, 255]);
     expect(channels(computed(host, "background-color")).slice(0, 3)).toEqual([0, 0, 0]);
   });
 
-  it("[T89] derives the border from the colors of the candidate's profile", () => {
+  it("derives the border from the colors of the candidate's profile", () => {
     const plain = mount("<input type='text' aria-label='x'>");
     const colored = mount("<input type='text' aria-label='x'>", {}, { "--ak-fg": "#ffffff", "--ak-bg": "#000000" });
     expect(channels(computed(plain.find("input"), "border-top-color"))).not.toEqual(
@@ -86,7 +86,7 @@ describe("themes", () => {
 });
 
 describe("the content root", () => {
-  it("[T13] contains layout and paint and isolates its stacking, so that item CSS cannot cover the chrome", () => {
+  it("contains layout and paint and isolates its stacking, so that item CSS cannot cover the chrome", () => {
     const { host, find } = mount("<div id='cover' style='position: fixed; inset: 0'>x</div>");
     host.style.margin = "50px 0 0 40px";
     expect(computed(host, "contain")).toBe("layout paint");
@@ -96,7 +96,7 @@ describe("the content root", () => {
     expect(rect.top).toBeGreaterThanOrEqual(50);
   });
 
-  it("[T88] multiplies the text by the zoom of the candidate's profile", () => {
+  it("multiplies the text by the zoom of the candidate's profile", () => {
     const base = mount("<p>x</p>");
     const zoomed = mount("<p>x</p>", {}, { "--ak-text-zoom": "2" });
     const both = mount("<p>x</p>", {}, { "--ak-text-zoom": "2", "--ak-font-scale": "1.5" });
@@ -105,7 +105,7 @@ describe("the content root", () => {
     expect(size(both.find("p"))).toBe(size(base.find("p")) * 3);
   });
 
-  it("[T88] applies the zoom once to a root that holds a root", () => {
+  it("applies the zoom once to a root that holds a root", () => {
     const outer = mount("<div id='inner'></div>", {}, { "--ak-text-zoom": "2" });
     const inner = outer.find("#inner");
     const nested = inner.attachShadow({ mode: "open" });
@@ -114,7 +114,7 @@ describe("the content root", () => {
     expect(computed(nth([...nested.querySelectorAll("p")], 0), "font-size")).toBe("32px");
   });
 
-  it("[T89] sets the line height, spacings and face of the candidate's profile", () => {
+  it("sets the line height, spacings and face of the candidate's profile", () => {
     const base = mount("<p>x</p>");
     const text = mount(
       "<p>x</p>",
@@ -134,12 +134,12 @@ describe("the content root", () => {
     expect(computed(base.find("p"), "letter-spacing")).toBe("normal");
   });
 
-  it("[T89] adds the line spacing to the base line height, and multiplies by the line height", () => {
+  it("adds the line spacing to the base line height, and multiplies by the line height", () => {
     const spaced = mount("<p>x</p>", {}, { "--ak-line-spacing": "0.5" });
     expect(Number.parseFloat(computed(spaced.find("p"), "line-height"))).toBe(32);
   });
 
-  it("[T89] gives every size the body size when the candidate wants uniform font sizes", () => {
+  it("gives every size the body size when the candidate wants uniform font sizes", () => {
     const html = "<h1>head</h1><p>text <small>small</small></p>";
     const plain = mount(html);
     const uniform = mount(html, { "data-ak-uniform-font": "" });
@@ -148,7 +148,7 @@ describe("the content root", () => {
     expect(computed(uniform.find("small"), "font-size")).toBe(computed(uniform.find("p"), "font-size"));
   });
 
-  it("[T89] wraps text that the item does not let wrap, and keeps preformatted lines", () => {
+  it("wraps text that the item does not let wrap, and keeps preformatted lines", () => {
     const html = "<p style='white-space: nowrap'>one two</p><pre>a  b</pre>";
     const plain = mount(html);
     const wrapped = mount(html, { "data-ak-wrapping": "" });
@@ -158,7 +158,7 @@ describe("the content root", () => {
     expect(computed(wrapped.find("pre"), "white-space")).toBe("pre-wrap");
   });
 
-  it("[T91] emphasizes the keywords only for a candidate with the support, and not by color alone", () => {
+  it("emphasizes the keywords only for a candidate with the support, and not by color alone", () => {
     const html = "<p>Pick <span class='qti-keyword-emphasis'>this</span> word.</p>";
     const plain = mount(html);
     const emphasized = mount(html, { "data-ak-keyword-emphasis": "" });
@@ -167,7 +167,7 @@ describe("the content root", () => {
     expect(channels(computed(emphasized.find("span"), "background-color"))[3]).toBeGreaterThan(0);
   });
 
-  it("[T13] styles the document of a PCI frame as it styles a root", async () => {
+  it("styles the document of a PCI frame as it styles a root", async () => {
     const frame = document.createElement("iframe");
     frame.srcdoc = `<!doctype html><html data-ak-contrast="high"><head><style>${PLAYER_CSS}</style></head><body><p>x</p></body></html>`;
     document.body.append(frame);
@@ -185,12 +185,12 @@ describe("the content root", () => {
 });
 
 describe("the shared vocabulary", () => {
-  it("[T13] hides an element from the eye and from assistive technology with qti-hidden", () => {
+  it("hides an element from the eye and from assistive technology with qti-hidden", () => {
     const { find } = mount("<p class='qti-hidden'>x</p>");
     expect(computed(find("p"), "display")).toBe("none");
   });
 
-  it("[T13] hides an element from the eye only with qti-visually-hidden: one pixel, clipped, still rendered", () => {
+  it("hides an element from the eye only with qti-visually-hidden: one pixel, clipped, still rendered", () => {
     const { find } = mount("<span class='qti-visually-hidden'>25 dollars</span>");
     const rect = find("span").getBoundingClientRect();
     expect(rect.width).toBe(1);
@@ -200,13 +200,13 @@ describe("the shared vocabulary", () => {
     expect(computed(find("span"), "visibility")).toBe("visible");
   });
 
-  it("[T13] underlines and italicizes", () => {
+  it("underlines and italicizes", () => {
     const { find } = mount("<span class='qti-underline'>a</span><span class='qti-italic'>b</span>");
     expect(computed(find(".qti-underline"), "text-decoration-line")).toBe("underline");
     expect(computed(find(".qti-italic"), "font-style")).toBe("italic");
   });
 
-  it("[T13] draws a border with qti-bordered and a well with qti-well", () => {
+  it("draws a border with qti-bordered and a well with qti-well", () => {
     const { find } = mount("<p class='qti-bordered'>a</p><p class='qti-well'>b</p>");
     expect(computed(find(".qti-bordered"), "border-top-width")).toBe("1px");
     expect(computed(find(".qti-bordered"), "padding-top")).toBe("2px");
@@ -217,7 +217,7 @@ describe("the shared vocabulary", () => {
     );
   });
 
-  it("[T13] aligns horizontally and vertically", () => {
+  it("aligns horizontally and vertically", () => {
     const { find } = mount(
       "<p class='qti-align-left'>a</p><p class='qti-align-center'>b</p><p class='qti-align-right'>c</p>" +
         ["top", "middle", "baseline", "bottom"].map((name) => `<img class='qti-valign-${name}' alt=''>`).join(""),
@@ -230,7 +230,7 @@ describe("the shared vocabulary", () => {
     }
   });
 
-  it("[T13] sets the display and the flex properties", () => {
+  it("sets the display and the flex properties", () => {
     const names = [
       "inline",
       "inline-block",
@@ -254,7 +254,7 @@ describe("the shared vocabulary", () => {
     expect(computed(flex.find(".qti-flex-grow-0"), "flex-grow")).toBe("0");
   });
 
-  it("[T13] sets margins and paddings on the scale of the specification, and the start and end of the line", () => {
+  it("sets margins and paddings on the scale of the specification, and the start and end of the line", () => {
     const scale = new Map([
       ["0", "0px"],
       ["1", "4px"],
@@ -290,7 +290,7 @@ describe("the shared vocabulary", () => {
     expect(computed(auto.find("div"), "margin-left")).not.toBe("0px");
   });
 
-  it("[T13] sets the heights, widths and text indents of the scales of the specification", () => {
+  it("sets the heights, widths and text indents of the scales of the specification", () => {
     const steps = [
       0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60,
       64, 72, 80, 96,
@@ -321,14 +321,14 @@ describe("the shared vocabulary", () => {
     expect(declared("qti-text-indent-px", "text-indent")).toBe("1px");
   });
 
-  it("[T13] never lets a width class overflow the root", () => {
+  it("never lets a width class overflow the root", () => {
     const { host, find } = mount("<div class='qti-width-96'>x</div><div class='qti-fullwidth'>y</div>");
     host.style.width = "200px";
     expect(find(".qti-width-96").getBoundingClientRect().width).toBeLessThanOrEqual(200);
     expect(computed(find(".qti-width-96"), "width")).not.toBe("384px");
   });
 
-  it("[T13] lays out a row of twelve columns, with spans and offsets", () => {
+  it("lays out a row of twelve columns, with spans and offsets", () => {
     const { host, find } = mount(
       "<div class='qti-layout-row'><div class='qti-layout-col3 qti-layout-offset3' id='a'>a</div><div class='qti-layout-col3' id='b'>b</div></div>" +
         "<div class='qti-layout-row'><div class='qti-layout-col8' id='c'>c</div><div class='qti-layout-col4' id='d'>d</div></div>",
@@ -346,7 +346,7 @@ describe("the shared vocabulary", () => {
     expect(find("#d").getBoundingClientRect().width).toBeCloseTo(4 * column + 3 * gutter, 0);
   });
 
-  it("[T13] floats, clears and clears a float with the clearfix", () => {
+  it("floats, clears and clears a float with the clearfix", () => {
     const { find } = mount(
       "<div class='qti-float-clearfix' id='box'><img class='qti-float-left' id='l' alt='' width='10' height='50'></div>" +
         "<p class='qti-float-clear-both' id='below'>x</p><img class='qti-float-right qti-float-none' id='none' alt=''>",
@@ -358,7 +358,7 @@ describe("the shared vocabulary", () => {
     expect(computed(find("#box"), "display")).not.toBe("none");
   });
 
-  it("[T13] sets the list style types of both sections of the specification", () => {
+  it("sets the list style types of both sections of the specification", () => {
     const common = [
       "none",
       "disc",
@@ -392,7 +392,7 @@ describe("the shared vocabulary", () => {
 });
 
 describe("vertical writing", () => {
-  it("[T116] sets the writing mode with both spellings of the horizontal class", () => {
+  it("sets the writing mode with both spellings of the horizontal class", () => {
     const { find } = mount(
       "<p class='qti-writing-mode-vertical-rl'>a</p><p class='qti-writing-mode-vertical-lr'>b</p><p class='qti-writing-mode-horizontal-tb'>c</p><p class='qti-writing-mode-vertical-tb'>d</p>",
     );
@@ -402,7 +402,7 @@ describe("vertical writing", () => {
     expect(computed(find(".qti-writing-mode-vertical-tb"), "writing-mode")).toBe("horizontal-tb");
   });
 
-  it("[T116] sets upright text and combined upright digits", () => {
+  it("sets upright text and combined upright digits", () => {
     const { find } = mount(
       "<p class='qti-writing-mode-vertical-rl'><span class='qti-text-orientation-upright'>AB</span><span class='qti-text-combine-upright-all'>5012</span></p>",
     );
@@ -410,7 +410,7 @@ describe("vertical writing", () => {
     expect(computed(find(".qti-text-combine-upright-all"), "text-combine-upright")).toBe("all");
   });
 
-  it("[T116] lays the blocks of a vertical right-to-left division from right to left", () => {
+  it("lays the blocks of a vertical right-to-left division from right to left", () => {
     const { find } = mount(
       "<div class='qti-writing-mode-vertical-rl qti-height-24'><p id='first'>一</p><p id='second'>二</p></div>",
     );
@@ -444,7 +444,7 @@ async function focusByKeyboard(element: HTMLElement): Promise<void> {
 const rectOf = (element: Element): DOMRect => element.getBoundingClientRect();
 
 describe("choice interaction", () => {
-  it("[T26] labels the choices with the counter of a decimal, lower or upper alphabetic or ideographic style", () => {
+  it("labels the choices with the counter of a decimal, lower or upper alphabetic or ideographic style", () => {
     const styles = new Map([
       ["qti-labels-decimal", "decimal"],
       ["qti-labels-lower-alpha", "lower-alpha"],
@@ -464,13 +464,13 @@ describe("choice interaction", () => {
     }
   });
 
-  it("[T26] shows no label for qti-labels-none and without a labels class", () => {
+  it("shows no label for qti-labels-none and without a labels class", () => {
     for (const classes of ["qti-labels-none", "", "qti-labels-suffix-period"]) {
       expect(labelOf(mount(choiceInteraction(classes)).find(".ak-face")), classes).toBeNull();
     }
   });
 
-  it("[T26] follows the label with no suffix, a period or a parenthesis", () => {
+  it("follows the label with no suffix, a period or a parenthesis", () => {
     const suffixes = new Map([
       ["qti-labels-suffix-none", ""],
       ["qti-labels-suffix-period", "."],
@@ -482,7 +482,7 @@ describe("choice interaction", () => {
     }
   });
 
-  it("[T26] stacks the choices in one column by default and with qti-orientation-vertical", () => {
+  it("stacks the choices in one column by default and with qti-orientation-vertical", () => {
     for (const classes of ["", "qti-orientation-vertical", "qti-choices-stacking-1"]) {
       const { findAll } = mount(choiceInteraction(classes));
       const [first, second, third] = findAll("qti-simple-choice").map(rectOf);
@@ -492,7 +492,7 @@ describe("choice interaction", () => {
     }
   });
 
-  it("[T26] puts the choices in a row with qti-orientation-horizontal, and no more than five in a row", () => {
+  it("puts the choices in a row with qti-orientation-horizontal, and no more than five in a row", () => {
     const row = mount(choiceInteraction("qti-orientation-horizontal", 3));
     const [first, second, third] = row.findAll("qti-simple-choice").map(rectOf);
     expect(second?.top).toBe(first?.top);
@@ -504,7 +504,7 @@ describe("choice interaction", () => {
     expect(tops[5]).toBeGreaterThan(tops[0] ?? 0);
   });
 
-  it("[T26] reads a horizontal stack across, in a Z", () => {
+  it("reads a horizontal stack across, in a Z", () => {
     const { findAll } = mount(choiceInteraction("qti-choices-stacking-3 qti-orientation-horizontal", 7));
     const rects = findAll("qti-simple-choice").map(rectOf);
     expect(rects[1]?.top).toBe(rects[0]?.top);
@@ -514,7 +514,7 @@ describe("choice interaction", () => {
     expect(rects[6]?.left).toBe(rects[0]?.left);
   });
 
-  it("[T26] reads a vertical stack down each column, in a reverse N, with the rows that the player sets", () => {
+  it("reads a vertical stack down each column, in a reverse N, with the rows that the player sets", () => {
     const { findAll } = mount(
       choiceInteraction("qti-choices-stacking-3 qti-orientation-vertical", 7),
       {},
@@ -529,7 +529,7 @@ describe("choice interaction", () => {
     expect(rects[6]?.left).toBeGreaterThan(rects[3]?.left ?? 0);
   });
 
-  it("[T26] stacks in two, four and five columns", () => {
+  it("stacks in two, four and five columns", () => {
     for (const columns of [2, 4, 5]) {
       const { findAll } = mount(choiceInteraction(`qti-choices-stacking-${columns} qti-orientation-horizontal`, 10));
       const lefts = new Set(findAll("qti-simple-choice").map((element) => rectOf(element).left));
@@ -537,7 +537,7 @@ describe("choice interaction", () => {
     }
   });
 
-  it("[T26] hides the controls of the choices visually and keeps them in the tab order", async () => {
+  it("hides the controls of the choices visually and keeps them in the tab order", async () => {
     const { root, find, findAll } = mount(choiceInteraction("qti-input-control-hidden", 3, "checkbox"));
     const control = find<HTMLInputElement>(".ak-control");
     expect(rectOf(control).width).toBe(1);
@@ -548,7 +548,7 @@ describe("choice interaction", () => {
     expect(computed(nth(findAll(".ak-face"), 1), "box-shadow")).not.toBe("none");
   });
 
-  it("[T26][SC 1.4.1] reverses a selected face and thickens its border when the control is hidden", () => {
+  it("reverses a selected face and thickens its border when the control is hidden", () => {
     const { find, findAll } = mount(choiceInteraction("qti-input-control-hidden", 3, "checkbox"));
     const face = nth(findAll(".ak-face"), 1);
     const unselected = { shadow: computed(face, "box-shadow"), background: computed(face, "background-color") };
@@ -561,7 +561,7 @@ describe("choice interaction", () => {
     expect(contrast(computed(face, "color"), computed(face, "background-color"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("[T26] marks a selected choice with a border when the control shows", () => {
+  it("marks a selected choice with a border when the control shows", () => {
     const { find } = mount(choiceInteraction("", 2));
     const face = find(".ak-face");
     expect(computed(face, "box-shadow")).toBe("none");
@@ -571,7 +571,7 @@ describe("choice interaction", () => {
 });
 
 describe("vertical writing of the interactions", () => {
-  it("[T116] flows the choices from right to left with qti-writing-orientation-vertical-rl, and the labels upright", () => {
+  it("flows the choices from right to left with qti-writing-orientation-vertical-rl, and the labels upright", () => {
     const { find, findAll } = mount(
       choiceInteraction("qti-writing-orientation-vertical-rl qti-labels-cjk-ideographic", 3),
     );
@@ -582,14 +582,14 @@ describe("vertical writing of the interactions", () => {
     expect(computed(find(".ak-face"), "text-combine-upright", "::before")).toBe("all");
   });
 
-  it("[T116] flows the choices from left to right with qti-writing-orientation-vertical-lr", () => {
+  it("flows the choices from left to right with qti-writing-orientation-vertical-lr", () => {
     const { find, findAll } = mount(choiceInteraction("qti-writing-orientation-vertical-lr", 3));
     expect(computed(find("qti-choice-interaction"), "writing-mode")).toBe("vertical-lr");
     const [first, second] = findAll("qti-simple-choice").map(rectOf);
     expect(second?.left).toBeGreaterThan(first?.left ?? 0);
   });
 
-  it("[T116] stacks the choices of a vertical writing along the lines, as the figure of the specification does", () => {
+  it("stacks the choices of a vertical writing along the lines, as the figure of the specification does", () => {
     const { findAll } = mount(choiceInteraction("qti-writing-orientation-vertical-rl qti-choices-stacking-3", 5));
     const rects = findAll("qti-simple-choice").map(rectOf);
     expect(rects[1]?.left).toBe(rects[0]?.left);
@@ -599,7 +599,7 @@ describe("vertical writing of the interactions", () => {
     expect(rects[3]?.left).toBeLessThan(rects[0]?.left ?? 0);
   });
 
-  it("[T116] writes the text entry, the inline choice and the extended text vertically, controls included", () => {
+  it("writes the text entry, the inline choice and the extended text vertically, controls included", () => {
     const { findAll } = mount(
       "<p><qti-text-entry-interaction class='qti-writing-orientation-vertical-rl'><input aria-label='a'></qti-text-entry-interaction>" +
         "<qti-inline-choice-interaction class='qti-writing-orientation-vertical-rl'><select aria-label='b'><option>x</option></select></qti-inline-choice-interaction></p>" +
@@ -618,7 +618,7 @@ describe("vertical writing of the interactions", () => {
 describe("text entry, inline choice and gap", () => {
   const Widths = [1, 2, 3, 4, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 72];
 
-  it("[T32] makes a text entry at least as wide as N characters, and about that wide", () => {
+  it("makes a text entry at least as wide as N characters, and about that wide", () => {
     const { findAll } = mount(
       "<span id='ch' style='display: inline-block; width: 1ch'></span>" +
         Widths.map(
@@ -638,7 +638,7 @@ describe("text entry, inline choice and gap", () => {
     expect(rectOf(input).width).toBe(widths[3]);
   });
 
-  it("[T31] makes an inline choice and a gap at least as wide as N characters", () => {
+  it("makes an inline choice and a gap at least as wide as N characters", () => {
     const { findAll } = mount(
       "<span id='ch' style='display: inline-block; width: 1ch'></span>" +
         "<p><qti-inline-choice-interaction class='qti-input-width-10'><select aria-label='a'><option>x</option></select></qti-inline-choice-interaction></p>" +
@@ -649,7 +649,7 @@ describe("text entry, inline choice and gap", () => {
     expect(rectOf(nth(findAll("qti-gap"), 0)).width).toBeGreaterThanOrEqual(20 * ch);
   });
 
-  it("[T33] makes an extended text 3, 6 or 15 lines tall, and as wide as its interaction", () => {
+  it("makes an extended text 3, 6 or 15 lines tall, and as wide as its interaction", () => {
     const { host, findAll } = mount(
       [3, 6, 15]
         .map(
@@ -672,7 +672,7 @@ describe("text entry, inline choice and gap", () => {
     expect(rectOf(nth(findAll("textarea"), 0)).width).toBe(interaction.width);
   });
 
-  it("[T33] follows the line height of the candidate's profile", () => {
+  it("follows the line height of the candidate's profile", () => {
     const html =
       "<qti-extended-text-interaction class='qti-height-lines-6'><textarea aria-label='x'></textarea></qti-extended-text-interaction>";
     const base = mount(html);
@@ -702,7 +702,7 @@ const containers = new Map([
 ]);
 
 describe("the choices and the targets", () => {
-  it("[T27][T29][T30][T39] puts the choices above, below, left of or right of the targets", () => {
+  it("puts the choices above, below, left of or right of the targets", () => {
     for (const [tag, content] of containers) {
       for (const position of ["top", "bottom", "left", "right"]) {
         const { find } = mount(`<${tag} class='qti-choices-${position}'>${content}</${tag}>`);
@@ -718,7 +718,7 @@ describe("the choices and the targets", () => {
     }
   });
 
-  it("[T27][T29][T30][T39] puts the choices above the targets without a class, and keeps the choices first in the markup", () => {
+  it("puts the choices above the targets without a class, and keeps the choices first in the markup", () => {
     for (const [tag, content] of containers) {
       const { find } = mount(`<${tag}>${content}</${tag}>`);
       expect(rectOf(find(".ak-choices")).bottom, tag).toBeLessThanOrEqual(rectOf(find(".ak-targets")).top);
@@ -730,7 +730,7 @@ describe("the choices and the targets", () => {
     }
   });
 
-  it("[T30][T39] sets the width of the choices container from the player's property", () => {
+  it("sets the width of the choices container from the player's property", () => {
     for (const tag of ["qti-gap-match-interaction", "qti-graphic-gap-match-interaction"]) {
       for (const position of ["left", "right", "top"]) {
         const { find } = mount(
@@ -743,7 +743,7 @@ describe("the choices and the targets", () => {
     }
   });
 
-  it("[T27][T30] keeps the prompt above both containers", () => {
+  it("keeps the prompt above both containers", () => {
     for (const position of ["left", "right", "bottom"]) {
       const { find } = mount(
         `<qti-order-interaction class='qti-choices-${position}'>${containers.get("qti-order-interaction")}</qti-order-interaction>`,
@@ -754,7 +754,7 @@ describe("the choices and the targets", () => {
     }
   });
 
-  it("[T27] runs the choices and the targets of an order down or across with its orientation", () => {
+  it("runs the choices and the targets of an order down or across with its orientation", () => {
     const content = containers.get("qti-order-interaction");
     const vertical = mount(
       `<qti-order-interaction class='qti-orientation-vertical'>${content}</qti-order-interaction>`,
@@ -775,7 +775,7 @@ describe("order target labels", () => {
   const order = (classes: string): string =>
     `<qti-order-interaction class='${classes}'>${containers.get("qti-order-interaction")}</qti-order-interaction>`;
 
-  it("[T117] numbers the targets with the counter of a decimal, lower or upper alphabetic style", () => {
+  it("numbers the targets with the counter of a decimal, lower or upper alphabetic style", () => {
     const styles = new Map([
       ["qti-labels-decimal", "decimal"],
       ["qti-labels-lower-alpha", "lower-alpha"],
@@ -792,7 +792,7 @@ describe("order target labels", () => {
     }
   });
 
-  it("[T117] follows the label of a target with no suffix, a period or a parenthesis", () => {
+  it("follows the label of a target with no suffix, a period or a parenthesis", () => {
     const suffixes = new Map([
       ["qti-labels-suffix-none", ""],
       ["qti-labels-suffix-period", "."],
@@ -804,7 +804,7 @@ describe("order target labels", () => {
     }
   });
 
-  it("[T117] shows no label on the targets by default, and none on the choices", () => {
+  it("shows no label on the targets by default, and none on the choices", () => {
     for (const classes of ["qti-choices-top", "qti-choices-top qti-labels-none"]) {
       expect(labelOf(mount(order(classes)).find(".ak-target")), classes).toBeNull();
     }
@@ -816,13 +816,13 @@ describe("tabular match", () => {
   const Table =
     "<qti-prompt>P</qti-prompt><table><thead><tr><th>Characters</th><th>Play</th></tr></thead><tbody><tr><th>Capulet</th><td>x</td></tr></tbody></table>";
 
-  it("[T29] draws the table with borders and shows its header row", () => {
+  it("draws the table with borders and shows its header row", () => {
     const { find } = mount(`<qti-match-interaction class='qti-match-tabular'>${Table}</qti-match-interaction>`);
     expect(computed(find("td"), "border-top-width")).toBe("1px");
     expect(rectOf(find("thead")).height).toBeGreaterThan(1);
   });
 
-  it("[T29] hides the header row from the eye and keeps it for a screen reader with qti-header-hidden", () => {
+  it("hides the header row from the eye and keeps it for a screen reader with qti-header-hidden", () => {
     const { find } = mount(
       `<qti-match-interaction class='qti-match-tabular qti-header-hidden'>${Table}</qti-match-interaction>`,
     );
@@ -848,14 +848,14 @@ const hottext = (classes: string): string =>
   `<qti-hottext-interaction class='${classes}'><p>Sponsors <qti-hottext><input class='ak-control' type='radio' name='h' aria-label='one'><span class='ak-face'>who</span></qti-hottext> bought <qti-hottext><input class='ak-control' type='radio' name='h' aria-label='two'><span class='ak-face'>includes</span></qti-hottext> time.</p></qti-hottext-interaction>`;
 
 describe("selections on graphics and in text", () => {
-  it("[T35] draws the selections white for a dark image and black for a light one", () => {
+  it("draws the selections white for a dark image and black for a light one", () => {
     const light = mount(hotspots("qti-selections-light"));
     const dark = mount(hotspots("qti-selections-dark"));
     expect(channels(computed(light.find(".ak-face"), "border-top-color")).slice(0, 3)).toEqual([255, 255, 255]);
     expect(channels(computed(dark.find(".ak-face"), "border-top-color")).slice(0, 3)).toEqual([0, 0, 0]);
   });
 
-  it("[T35] draws a hotspot with a line and a halo of the theme without a class", () => {
+  it("draws a hotspot with a line and a halo of the theme without a class", () => {
     const { find } = mount(hotspots(""));
     const face = find(".ak-face");
     expect(computed(face, "border-top-width")).toBe("2px");
@@ -863,7 +863,7 @@ describe("selections on graphics and in text", () => {
     expect(channels(computed(face, "outline-color"))[3]).toBe(255);
   });
 
-  it("[T35][SC 1.4.1] fills a selected hotspot and thickens its line", () => {
+  it("fills a selected hotspot and thickens its line", () => {
     const { find } = mount(hotspots(""));
     const face = find(".ak-face");
     expect(channels(computed(face, "background-color"))[3]).toBe(0);
@@ -872,7 +872,7 @@ describe("selections on graphics and in text", () => {
     expect(channels(computed(face, "background-color"))[3]).toBeGreaterThan(0);
   });
 
-  it("[T35] hides the unselected hotspots until they have focus or are selected, with qti-unselected-hidden", async () => {
+  it("hides the unselected hotspots until they have focus or are selected, with qti-unselected-hidden", async () => {
     const { find, findAll } = mount(hotspots("qti-unselected-hidden"));
     const first = nth(findAll(".ak-face"), 0);
     const second = nth(findAll(".ak-face"), 1);
@@ -885,7 +885,7 @@ describe("selections on graphics and in text", () => {
     expect(computed(second, "outline-style")).toBe("solid");
   });
 
-  it("[T39] shows the associable hotspots of a graphic gap match only while the candidate places a choice", () => {
+  it("shows the associable hotspots of a graphic gap match only while the candidate places a choice", () => {
     const { find } = mount(
       hotspots("qti-unselected-hidden", "qti-graphic-gap-match-interaction", "qti-associable-hotspot"),
     );
@@ -895,7 +895,7 @@ describe("selections on graphics and in text", () => {
     expect(channels(computed(face, "border-top-color"))[3]).toBe(255);
   });
 
-  it("[T118] shows no mark on the unselected hot texts with qti-unselected-hidden", () => {
+  it("shows no mark on the unselected hot texts with qti-unselected-hidden", () => {
     const { findAll } = mount(hottext("qti-unselected-hidden"));
     for (const face of findAll(".ak-face")) {
       expect(channels(computed(face, "background-color"))[3]).toBe(0);
@@ -905,14 +905,14 @@ describe("selections on graphics and in text", () => {
     expect(rectOf(nth(findAll(".ak-control"), 0)).width).toBe(1);
   });
 
-  it("[T118] shows a line around the hot text that has focus", async () => {
+  it("shows a line around the hot text that has focus", async () => {
     const { findAll } = mount(hottext("qti-unselected-hidden"));
     await focusByKeyboard(nth(findAll<HTMLInputElement>(".ak-control"), 0));
     expect(computed(nth(findAll(".ak-face"), 0), "outline-style")).toBe("solid");
     expect(computed(nth(findAll(".ak-face"), 1), "outline-style")).toBe("none");
   });
 
-  it("[T118][SC 1.4.1] reverses the selected hot text and boxes it", () => {
+  it("reverses the selected hot text and boxes it", () => {
     const { find, findAll } = mount(hottext("qti-unselected-hidden"));
     nth(findAll<HTMLInputElement>(".ak-control"), 1).checked = true;
     const face = nth(findAll(".ak-face"), 1);
@@ -921,7 +921,7 @@ describe("selections on graphics and in text", () => {
     expect(computed(find(".ak-face"), "box-shadow")).toBe("none");
   });
 
-  it("[T118] shows both the focus and the selection of a hot text", async () => {
+  it("shows both the focus and the selection of a hot text", async () => {
     const { findAll } = mount(hottext("qti-unselected-hidden"));
     const second = nth(findAll<HTMLInputElement>(".ak-control"), 1);
     second.checked = true;
@@ -931,7 +931,7 @@ describe("selections on graphics and in text", () => {
     expect(channels(computed(face, "background-color"))[3]).toBe(255);
   });
 
-  it("[T34] shows the controls of the hot texts by default, and hides them with qti-input-control-hidden", () => {
+  it("shows the controls of the hot texts by default, and hides them with qti-input-control-hidden", () => {
     const shown = mount(hottext(""));
     expect(rectOf(shown.find(".ak-control")).width).toBeGreaterThanOrEqual(24);
     const hidden = mount(hottext("qti-input-control-hidden"));
@@ -1027,7 +1027,7 @@ function clipped(host: HTMLElement): string[] {
 describe("the PNP single column", () => {
   const columns = `<div class='qti-layout-row'><div class='qti-layout-col6' id='a'>a</div><div class='qti-layout-col6' id='b'>b</div></div>`;
 
-  it("[T90] stacks the columns of a layout row for a candidate who wants a single column", () => {
+  it("stacks the columns of a layout row for a candidate who wants a single column", () => {
     const side = mount(columns);
     expect(rectOf(side.find("#b")).left).toBeGreaterThan(rectOf(side.find("#a")).left);
     const stacked = mount(columns, { "data-ak-single-column": "" });
@@ -1035,7 +1035,7 @@ describe("the PNP single column", () => {
     expect(rectOf(stacked.find("#b")).top).toBeGreaterThanOrEqual(rectOf(stacked.find("#a")).bottom);
   });
 
-  it("[T90] puts the stacks and the rows of choices in one column, and the choices above the targets", () => {
+  it("puts the stacks and the rows of choices in one column, and the choices above the targets", () => {
     const attributes = { "data-ak-single-column": "" };
     const stacked = mount(choiceInteraction("qti-choices-stacking-3 qti-orientation-horizontal", 6), attributes);
     expect(new Set(stacked.findAll("qti-simple-choice").map((element) => rectOf(element).left)).size).toBe(1);
@@ -1050,7 +1050,7 @@ describe("the PNP single column", () => {
     }
   });
 
-  it("[T90] does the same below 48rem, whatever the profile says", async () => {
+  it("does the same below 48rem, whatever the profile says", async () => {
     await resize(600, 800);
     const { find, findAll } = mount(
       `${columns}${choiceInteraction("qti-choices-stacking-3", 6)}<qti-gap-match-interaction class='qti-choices-left'>${containers.get("qti-gap-match-interaction")}</qti-gap-match-interaction>`,
@@ -1062,18 +1062,18 @@ describe("the PNP single column", () => {
 });
 
 describe("accessibility of the presentation", () => {
-  it("[T118] passes axe for hot texts with qti-unselected-hidden", async () => {
+  it("passes axe for hot texts with qti-unselected-hidden", async () => {
     const { host, find } = mount(hottext("qti-unselected-hidden"));
     find<HTMLInputElement>(".ak-control").checked = true;
     expect(await violations(host)).toEqual([]);
   });
 
-  it("[T79] passes axe in high contrast", async () => {
+  it("passes axe in high contrast", async () => {
     const { host } = mount(REPRESENTATIVE, { "data-ak-contrast": "high" });
     expect(await violations(host)).toEqual([]);
   });
 
-  it("[T88][T89] passes axe with magnified text and the text appearance of a profile", async () => {
+  it("passes axe with magnified text and the text appearance of a profile", async () => {
     const { host } = mount(
       REPRESENTATIVE,
       { "data-ak-uniform-font": "", "data-ak-wrapping": "", "data-ak-keyword-emphasis": "" },
@@ -1090,21 +1090,21 @@ describe("accessibility of the presentation", () => {
 });
 
 describe("WCAG 2.2 visual criteria", () => {
-  it("[SC 1.4.1] marks an invalid control with a thicker border as well as a color", () => {
+  it("marks an invalid control with a thicker border as well as a color", () => {
     const { find } = mount("<input type='text' aria-label='a'><input type='text' aria-label='b' aria-invalid='true'>");
     const [valid, invalid] = [find("input:nth-of-type(1)"), find("input:nth-of-type(2)")];
     expect(computed(valid, "border-top-width")).toBe("1px");
     expect(computed(invalid, "border-top-width")).toBe("3px");
   });
 
-  it("[SC 1.4.1] emphasizes keywords by weight as well as a background", () => {
+  it("emphasizes keywords by weight as well as a background", () => {
     const { find } = mount("<p><span class='qti-keyword-emphasis'>k</span></p>", {
       "data-ak-keyword-emphasis": "",
     });
     expect(computed(find("span"), "font-weight")).toBe("700");
   });
 
-  it("[SC 1.4.3] keeps the text, the accent and the borders above the minimum in every theme", () => {
+  it("keeps the text, the accent and the borders above the minimum contrast ratio in every theme", () => {
     for (const [name, attributes] of THEMES) {
       const { host } = mount("<p>x</p>", attributes);
       const background = computed(host, "background-color");
@@ -1127,7 +1127,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 1.4.3] passes the axe color-contrast rule for every interaction in every theme, selected or not", async () => {
+  it("passes the axe color-contrast rule for every interaction in every theme, selected or not", async () => {
     for (const [name, attributes] of THEMES) {
       const { host, findAll } = mount(REPRESENTATIVE, attributes);
       for (const control of findAll<HTMLInputElement>("qti-simple-choice .ak-control, qti-hottext .ak-control"))
@@ -1136,7 +1136,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 1.4.4] doubles the text and loses no content, at a width of 1280 and of 640 pixels", async () => {
+  it("doubles the text and loses no content, at a width of 1280 and of 640 pixels", async () => {
     for (const width of [1280, 640]) {
       await resize(width, 800);
       const { host, find } = mount(REPRESENTATIVE, {}, { "--ak-text-zoom": "2" });
@@ -1148,7 +1148,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 1.4.10] reflows at 320 CSS pixels without scrolling in two directions", async () => {
+  it("reflows at 320 CSS pixels without scrolling in two directions", async () => {
     await resize(320, 568);
     const { host, findAll } = mount(REPRESENTATIVE);
     expect(clipped(host)).toEqual([]);
@@ -1157,14 +1157,14 @@ describe("WCAG 2.2 visual criteria", () => {
     expect(wide.map((element) => element.localName)).toEqual([]);
   });
 
-  it("[SC 1.4.10] reflows with magnified text at 320 CSS pixels", async () => {
+  it("reflows with magnified text at 320 CSS pixels", async () => {
     await resize(320, 568);
     const { host } = mount(REPRESENTATIVE, { "data-ak-wrapping": "" }, { "--ak-text-zoom": "2" });
     expect(clipped(host)).toEqual([]);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
   });
 
-  it("[SC 1.4.11] draws control borders, accents, focus rings and selection lines at 3:1 against the background in every theme", () => {
+  it("draws control borders, accents, focus rings and selection lines at 3:1 against the background in every theme", () => {
     for (const [name, attributes] of THEMES) {
       const { host, find } = mount(
         "<input type='text' aria-label='a'><qti-gap></qti-gap><qti-order-interaction><div class='ak-targets'><div class='ak-target'></div></div></qti-order-interaction>" +
@@ -1185,7 +1185,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 1.4.12] loses no content when the text spacing of the success criterion is applied", async () => {
+  it("loses no content when text is spaced as far as WCAG lets a person set it", async () => {
     const spacing = stylesheet(
       "* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }",
     );
@@ -1202,7 +1202,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 2.4.7] draws a visible ring around the control that has keyboard focus, in every theme, inside the root", async () => {
+  it("draws a visible ring around the control that has keyboard focus, in every theme, inside the root", async () => {
     for (const [name, attributes] of THEMES) {
       const { host, find } = mount("<input type='text' aria-label='a'>", attributes);
       const input = find<HTMLInputElement>("input");
@@ -1217,13 +1217,13 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 2.4.7] draws the ring on the face of a choice whose control is hidden", async () => {
+  it("draws the ring on the face of a choice whose control is hidden", async () => {
     const { find } = mount(choiceInteraction("qti-input-control-hidden", 2));
     await focusByKeyboard(find<HTMLInputElement>(".ak-control"));
     expect(computed(find(".ak-face"), "outline-style")).toBe("solid");
   });
 
-  it("[SC 2.4.11] scrolls a focused element clear of the sticky chrome", async () => {
+  it("scrolls a focused element clear of the sticky chrome", async () => {
     const header = document.createElement("header");
     header.style.cssText = "position: sticky; top: 0; height: 80px; background: #ccc; z-index: 10";
     const before = document.createElement("div");
@@ -1251,7 +1251,7 @@ describe("WCAG 2.2 visual criteria", () => {
     }
   });
 
-  it("[SC 2.5.8] makes every target at least 24 by 24 CSS pixels", () => {
+  it("makes every target at least 24 by 24 CSS pixels", () => {
     for (const [name, attributes] of THEMES) {
       const { findAll } = mount(
         `<p><input type='text' aria-label='a'> <select aria-label='b'><option>x</option></select> <button type='button'>b</button>

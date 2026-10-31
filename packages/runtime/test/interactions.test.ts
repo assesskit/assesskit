@@ -29,6 +29,7 @@ import {
   type Value,
 } from "../src/index.js";
 import { shufflingDescriptor } from "./arbitraries/interactions.js";
+import { interactionKinds } from "./asi-elements.js";
 
 // Helpers ---------------------------------------------------------------------------------------------------------------
 
@@ -206,45 +207,20 @@ const INTERACTIONS: readonly {
 ];
 
 describe("describeInteractions", () => {
-  it.each(INTERACTIONS)("[B52] $kind: accepts the bindings that INFO §2.4 gives it", ({ kind, body, bindings }) => {
+  it.each(INTERACTIONS)("$kind: accepts the bindings that INFO §2.4 gives it", ({ kind, body, bindings }) => {
     const descriptor = descriptorOf(body);
     expect(descriptor.kind).toBe(kind);
     expect(descriptor.responseIdentifier).toBe("R");
     expect(namesOf(descriptor.bindings)).toEqual(bindings);
   });
 
-  it("[B52] covers all 22 kinds of interaction: the table above and the two custom kinds below", () => {
-    const kinds: Record<InteractionKind, true> = {
-      "associate-interaction": true,
-      "choice-interaction": true,
-      "custom-interaction": true,
-      "drawing-interaction": true,
-      "end-attempt-interaction": true,
-      "extended-text-interaction": true,
-      "gap-match-interaction": true,
-      "graphic-associate-interaction": true,
-      "graphic-gap-match-interaction": true,
-      "graphic-order-interaction": true,
-      "hotspot-interaction": true,
-      "hottext-interaction": true,
-      "inline-choice-interaction": true,
-      "match-interaction": true,
-      "media-interaction": true,
-      "order-interaction": true,
-      "portable-custom-interaction": true,
-      "position-object-interaction": true,
-      "select-point-interaction": true,
-      "slider-interaction": true,
-      "text-entry-interaction": true,
-      "upload-interaction": true,
-    };
+  it("covers every kind of interaction that the ASI schema declares: the table above and the two custom kinds below", () => {
     const covered = new Set<string>(INTERACTIONS.map(({ kind }) => kind));
     covered.add("custom-interaction").add("portable-custom-interaction");
-    expect(covered).toEqual(new Set(Object.keys(kinds)));
-    expect(covered.size).toBe(22);
+    expect([...covered].sort()).toEqual(interactionKinds());
   });
 
-  it("[B52][B65] custom interaction and portable custom interaction: accept every cardinality with every base type", () => {
+  it("custom interaction and portable custom interaction: accept every cardinality with every base type", () => {
     const custom = descriptorOf('<qti-custom-interaction response-identifier="R"/>');
     const portable = descriptorOf(
       '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:x:pci" module="m"><qti-interaction-markup/></qti-portable-custom-interaction>',
@@ -262,7 +238,7 @@ describe("describeInteractions", () => {
     }
   });
 
-  it("[B52] needs a container when more than one value can be given: max-choices above 1 or 0, max-associations, several gaps", () => {
+  it("needs a container when more than one value can be given: max-choices above 1 or 0, max-associations, several gaps", () => {
     const many = (attributes: string): string[] =>
       namesOf(
         descriptorOf(
@@ -286,7 +262,7 @@ describe("describeInteractions", () => {
     expect(namesOf(selectPoint.bindings)).toEqual(["multiple point"]);
   });
 
-  it("[B52] extended text: accepts a container only when max-strings says how many strings", () => {
+  it("extended text: accepts a container only when max-strings says how many strings", () => {
     const without = descriptorOf('<qti-extended-text-interaction response-identifier="R"/>');
     const container = descriptorOf('<qti-extended-text-interaction response-identifier="R" max-strings="3"/>');
     expect(namesOf(without.bindings)).not.toContain("multiple string");
@@ -304,7 +280,7 @@ describe("describeInteractions", () => {
     ]);
   });
 
-  it("[B52] finds the interactions of the body in document order, inside feedback, a table and the position object stage", () => {
+  it("finds the interactions of the body in document order, inside feedback, a table and the position object stage", () => {
     const item = itemOf(
       `<div>${'<qti-text-entry-interaction response-identifier="FIRST"/>'}</div><qti-feedback-block outcome-identifier="O" identifier="x" show-hide="show"><qti-content-body><qti-choice-interaction response-identifier="SECOND">${choice("A")}</qti-choice-interaction></qti-content-body></qti-feedback-block><table><tr><td><qti-slider-interaction response-identifier="THIRD" lower-bound="0" upper-bound="1"/></td></tr></table><qti-position-object-stage>${IMAGE}<qti-position-object-interaction response-identifier="FOURTH">${IMAGE}</qti-position-object-interaction></qti-position-object-stage>`,
     );
@@ -323,7 +299,7 @@ describe("describeInteractions", () => {
     expect(describeInteractions(document.item)).toEqual([]);
   });
 
-  it("[B52] gives the declared type of the response variable, and none when the item does not declare it", () => {
+  it("gives the declared type of the response variable, and none when the item does not declare it", () => {
     const body = `<qti-choice-interaction response-identifier="R">${choice("A")}</qti-choice-interaction>`;
     expect(descriptorOf(body, declare("multiple", "identifier")).declaration).toEqual({
       cardinality: "multiple",
@@ -335,7 +311,7 @@ describe("describeInteractions", () => {
     });
   });
 
-  it("[B56] puts no limit on the associations of a gap match or graphic gap match interaction that gives none: each gap takes one choice", () => {
+  it("puts no limit on the associations of a gap match or graphic gap match interaction that gives none: each gap takes one choice", () => {
     const gaps = descriptorOf(
       '<qti-gap-match-interaction response-identifier="R"><qti-gap-text identifier="W" match-max="2">w</qti-gap-text><p><qti-gap identifier="G1"/><qti-gap identifier="G2"/></p></qti-gap-match-interaction>',
       declare("multiple", "directedPair"),
@@ -352,7 +328,7 @@ describe("describeInteractions", () => {
     expect(graphic.constraints).toEqual({});
   });
 
-  it("[B56] leaves out a maximum of 0, which is no restriction, and a minimum of 0, and applies the defaults of the schema", () => {
+  it("leaves out a maximum of 0, which is no restriction, and a minimum of 0, and applies the defaults of the schema", () => {
     const choices = (attributes: string): InteractionDescriptor =>
       descriptorOf(
         `<qti-choice-interaction response-identifier="R"${attributes}>${choice("A")}</qti-choice-interaction>`,
@@ -368,7 +344,7 @@ describe("describeInteractions", () => {
     expect(associate.choices[0]?.matchMax).toBeUndefined();
   });
 
-  it("[B56] reads the constraints of text, slider, media and upload interactions", () => {
+  it("reads the constraints of text, slider, media and upload interactions", () => {
     expect(
       descriptorOf(
         '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[0-9]+" base="16" string-identifier="S"/></p>',
@@ -394,7 +370,7 @@ describe("describeInteractions", () => {
     expect(descriptorOf('<qti-upload-interaction response-identifier="R"/>').constraints).toEqual({});
   });
 
-  it("[B56] rounds the bounds of a slider bound to an integer outward and gives it the step 1 (INFO §5.134)", () => {
+  it("rounds the bounds of a slider bound to an integer outward and gives it the step 1 (INFO §5.134)", () => {
     const slider = (type: string, step = ""): InteractionDescriptor =>
       descriptorOf(
         `<qti-slider-interaction response-identifier="R" lower-bound="0.5" upper-bound="9.2"${step}/>`,
@@ -405,7 +381,7 @@ describe("describeInteractions", () => {
     expect(slider("float", ' step="0.25"').constraints).toEqual({ lowerBound: 0.5, upperBound: 9.2, step: 0.25 });
   });
 
-  it("[B14][B56] keeps what decides the visibility of a choice and how often it is associated", () => {
+  it("keeps what decides the visibility of a choice and how often it is associated", () => {
     const descriptor = descriptorOf(
       `<qti-match-interaction response-identifier="R"><qti-simple-match-set><qti-simple-associable-choice identifier="A" fixed="true" template-identifier="T" show-hide="hide" match-max="2" match-min="1" match-group="X Y">A</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set>${associable("X")}</qti-simple-match-set></qti-match-interaction>`,
     );
@@ -423,7 +399,7 @@ describe("describeInteractions", () => {
     expect(descriptor.choices[1]).toEqual({ identifier: "X", fixed: false, showHide: "show", matchMax: 1 });
   });
 
-  it("[B52] takes the hot texts and the gaps from the running text of their interaction", () => {
+  it("takes the hot texts and the gaps from the running text of their interaction", () => {
     const hottext = descriptorOf(
       '<qti-hottext-interaction response-identifier="R" max-choices="2"><p>One <qti-hottext identifier="H1">a</qti-hottext> two <em><qti-hottext identifier="H2" template-identifier="T">b</qti-hottext></em></p></qti-hottext-interaction>',
     );
@@ -457,7 +433,7 @@ describe("the vocabularies of the interactions", () => {
     itemOf(body(term));
   }
 
-  it("[W23] OrientationEnum: accepts horizontal and vertical on a choice, an order and a slider interaction and refuses any other term", () => {
+  it("OrientationEnum: accepts horizontal and vertical on a choice, an order and a slider interaction and refuses any other term", () => {
     const places = [
       (term: string) =>
         `<qti-choice-interaction response-identifier="R" orientation="${term}">${choice("A")}</qti-choice-interaction>`,
@@ -472,13 +448,13 @@ describe("the vocabularies of the interactions", () => {
     }
   });
 
-  it("[W37] TextFormatEnum: accepts plain, preformatted and xhtml on an extended text interaction and refuses any other term", () => {
+  it("TextFormatEnum: accepts plain, preformatted and xhtml on an extended text interaction and refuses any other term", () => {
     const place = (term: string): string => `<qti-extended-text-interaction response-identifier="R" format="${term}"/>`;
     for (const term of ["plain", "preformatted", "xhtml"]) expect(() => reads(place, term)).not.toThrow();
     for (const term of ["html", "Plain", ""]) expect(() => reads(place, term)).toThrow(ReadError);
   });
 
-  it("[W45] MimeTypeList: reads the types of an upload interaction as a list, one or more separated by white space", () => {
+  it("MimeTypeList: reads the types of an upload interaction as a list, one or more separated by white space", () => {
     const types = (text: string): readonly string[] | undefined => {
       const [descriptor] = describeInteractions(
         itemOf(`<qti-upload-interaction response-identifier="R" type="${text}"/>`),
@@ -497,7 +473,7 @@ describe("checkBindings", () => {
   const Choice = `<qti-choice-interaction response-identifier="R">${choice("A")}</qti-choice-interaction>`;
 
   it.each(INTERACTIONS)(
-    "[B52] $kind: reports nothing when the response variable has a binding it accepts",
+    "$kind: reports nothing when the response variable has a binding it accepts",
     ({ body, bindings }) => {
       const [first = ""] = bindings;
       const [cardinality = "", baseType = ""] = first.split(" ");
@@ -505,7 +481,7 @@ describe("checkBindings", () => {
     },
   );
 
-  it("[B52][N] reports a response variable whose base type the interaction does not accept, with the section that says so", () => {
+  it("reports a response variable whose base type the interaction does not accept, with the section that says so", () => {
     expect(checkBindings(itemOf(Choice, declare("single", "string")))).toEqual([
       {
         severity: "error",
@@ -518,7 +494,7 @@ describe("checkBindings", () => {
     ]);
   });
 
-  it("[B52][N] reports a cardinality that the interaction does not accept: order needs ordered, inline choice needs single", () => {
+  it("reports a cardinality that the interaction does not accept: order needs ordered, inline choice needs single", () => {
     const order = `<qti-order-interaction response-identifier="R">${choice("A")}</qti-order-interaction>`;
     expect(issueCodes(order, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
     expect(issueCodes(order, declare("ordered", "identifier"))).toEqual([]);
@@ -526,13 +502,13 @@ describe("checkBindings", () => {
     expect(issueCodes(inline, declare("multiple", "identifier"))).toEqual(["assesskit/interactions/binding"]);
   });
 
-  it("[B52][N] reports a single value where max-choices allows more than one (INFO §5.30.2)", () => {
+  it("reports a single value where max-choices allows more than one (INFO §5.30.2)", () => {
     const three = `<qti-choice-interaction response-identifier="R" max-choices="3">${choice("A")}</qti-choice-interaction>`;
     expect(issueCodes(three, declare("single", "identifier"))).toEqual(["assesskit/interactions/binding"]);
     expect(issueCodes(three, declare("multiple", "identifier"))).toEqual([]);
   });
 
-  it("[B52][N] reports a response variable that the item does not declare", () => {
+  it("reports a response variable that the item does not declare", () => {
     const [issue] = checkBindings(itemOf(Choice, ""));
     expect(issue).toMatchObject({ code: "assesskit/interactions/response-undeclared", source: "INFO §2.2.2.2" });
     expect(issue?.message).toBe(
@@ -540,13 +516,13 @@ describe("checkBindings", () => {
     );
   });
 
-  it("[B52][N] reports a response variable that two interactions bind (INFO §2.2.2.2)", () => {
+  it("reports a response variable that two interactions bind (INFO §2.2.2.2)", () => {
     expect(issueCodes(`${Choice}${Choice}`, declare("single", "identifier"))).toEqual([
       "assesskit/interactions/response-bound-twice",
     ]);
   });
 
-  it("[B52][N] a text entry may keep the typed text in a second string variable, and no other variable will do", () => {
+  it("a text entry may keep the typed text in a second string variable, and no other variable will do", () => {
     const entry = (extra: string): string =>
       `<p><qti-text-entry-interaction response-identifier="R" string-identifier="S"${extra}/></p>`;
     const numeric = declare("single", "float");
@@ -563,7 +539,7 @@ describe("checkBindings", () => {
     ).toEqual(["assesskit/interactions/response-bound-twice", "assesskit/interactions/binding"]);
   });
 
-  it("[B65] accepts any binding for a custom interaction and a portable custom interaction", () => {
+  it("accepts any binding for a custom interaction and a portable custom interaction", () => {
     const custom = '<qti-custom-interaction response-identifier="R"/>';
     const portable =
       '<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:x:pci" module="m"><qti-interaction-markup/></qti-portable-custom-interaction>';
@@ -592,14 +568,14 @@ describe("checkResponse", () => {
       declaration,
     );
 
-  it("[B70] says presented for NULL, answered for a valid response and attempted for an invalid one", () => {
+  it("says presented for NULL, answered for a valid response and attempted for an invalid one", () => {
     const descriptor = choiceInteraction(' max-choices="2"');
     expect(check(descriptor, null)).toEqual(["presented", []]);
     expect(check(descriptor, identifiers("multiple", ["A"]))).toEqual(["answered", []]);
     expect(check(descriptor, identifiers("multiple", ["A", "B", "C"]))).toEqual(["attempted", ["max-choices"]]);
   });
 
-  it("[B70][B56] NULL breaks the rules that a missing response breaks: min-choices, required", () => {
+  it("NULL breaks the rules that a missing response breaks: min-choices, required", () => {
     expect(check(choiceInteraction(' min-choices="1" max-choices="2"'), null)).toEqual(["presented", ["min-choices"]]);
     const inline = descriptorOf(
       '<p><qti-inline-choice-interaction response-identifier="R" required="true"><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p>',
@@ -608,7 +584,7 @@ describe("checkResponse", () => {
     expect(check(inline, id("A"))).toEqual(["answered", []]);
   });
 
-  it("[B56] choices: min-choices, max-choices (0 is no limit), unknown and repeated identifiers", () => {
+  it("choices: min-choices, max-choices (0 is no limit), unknown and repeated identifiers", () => {
     const bounded = choiceInteraction(' min-choices="2" max-choices="3"');
     expect(check(bounded, identifiers("multiple", ["A"]))).toEqual(["attempted", ["min-choices"]]);
     expect(check(bounded, identifiers("multiple", ["A", "B"]))).toEqual(["answered", []]);
@@ -620,7 +596,7 @@ describe("checkResponse", () => {
     expect(check(choiceInteraction("", declare("single", "identifier")), id("B"))).toEqual(["answered", []]);
   });
 
-  it("[B56] order: without min-choices every choice is ordered and max-choices is ignored (INFO §5.97.2)", () => {
+  it("order: without min-choices every choice is ordered and max-choices is ignored (INFO §5.97.2)", () => {
     const body = (attributes: string): string =>
       `<qti-order-interaction response-identifier="R"${attributes}>${choice("A")}${choice("B")}${choice("C")}</qti-order-interaction>`;
     const declaration = declare("ordered", "identifier");
@@ -640,7 +616,7 @@ describe("checkResponse", () => {
     expect(check(all, null)).toEqual(["presented", ["min-choices"]]);
   });
 
-  it("[B56] hotspots and hot texts select by identifier like choices; points are counted", () => {
+  it("hotspots and hot texts select by identifier like choices; points are counted", () => {
     const hotspots = descriptorOf(
       `<qti-hotspot-interaction response-identifier="R" max-choices="2">${IMAGE}${hotspot("S1")}${hotspot("S2")}</qti-hotspot-interaction>`,
       declare("multiple", "identifier"),
@@ -674,7 +650,7 @@ describe("checkResponse", () => {
     const pairs = (values: readonly [string, string][], baseType: "pair" | "directedPair" = "pair"): Value =>
       list("multiple", baseType, values);
 
-    it("[B56] associate: min-associations, max-associations and the choices a pair names", () => {
+    it("associate: min-associations, max-associations and the choices a pair names", () => {
       const descriptor = associate(' match-max="0"', ' min-associations="1" max-associations="2"');
       expect(check(descriptor, pairs([pair("A", "B")]))).toEqual(["answered", []]);
       expect(check(descriptor, pairs([pair("A", "B"), pair("B", "C"), pair("A", "C")]))).toEqual([
@@ -685,7 +661,7 @@ describe("checkResponse", () => {
       expect(check(descriptor, null)).toEqual(["presented", ["min-associations"]]);
     });
 
-    it("[B56] match-max limits how often a choice is used, and 0 is no limit; match-min demands it", () => {
+    it("match-max limits how often a choice is used, and 0 is no limit; match-min demands it", () => {
       const limited = associate(' match-max="1"', ' max-associations="3"');
       expect(check(limited, pairs([pair("A", "B")]))).toEqual(["answered", []]);
       expect(check(limited, pairs([pair("A", "B"), pair("A", "C")]))).toEqual(["attempted", ["match-max"]]);
@@ -699,7 +675,7 @@ describe("checkResponse", () => {
       ]);
     });
 
-    it("[B56] match-group: a choice is paired only with the choices of its group, from either side", () => {
+    it("match-group: a choice is paired only with the choices of its group, from either side", () => {
       const descriptor = descriptorOf(
         `<qti-associate-interaction response-identifier="R" max-associations="3">${associable("A", ' match-max="0" match-group="B"')}${associable("B", ' match-max="0"')}${associable("C", ' match-max="0"')}</qti-associate-interaction>`,
         declare("multiple", "pair"),
@@ -709,7 +685,7 @@ describe("checkResponse", () => {
       expect(check(descriptor, pairs([pair("B", "C")]))).toEqual(["answered", []]);
     });
 
-    it("[B56] match: a directed pair runs from a choice of the first set to one of the second", () => {
+    it("match: a directed pair runs from a choice of the first set to one of the second", () => {
       const descriptor = descriptorOf(
         `<qti-match-interaction response-identifier="R" max-associations="3"><qti-simple-match-set>${associable("A", ' match-max="2"')}${associable("B")}</qti-simple-match-set><qti-simple-match-set>${associable("X", ' match-max="2"')}${associable("Y")}</qti-simple-match-set></qti-match-interaction>`,
         declare("multiple", "directedPair"),
@@ -726,7 +702,7 @@ describe("checkResponse", () => {
       ]);
     });
 
-    it("[B56] gap match: each gap takes one choice (INFO §2.4.1.5), a gap that is required must be filled", () => {
+    it("gap match: each gap takes one choice (INFO §2.4.1.5), a gap that is required must be filled", () => {
       const descriptor = descriptorOf(
         '<qti-gap-match-interaction response-identifier="R" max-associations="2"><qti-gap-text identifier="W1" match-max="2">a</qti-gap-text><qti-gap-text identifier="W2" match-max="1">b</qti-gap-text><p><qti-gap identifier="G1"/> <qti-gap identifier="G2" required="true"/></p></qti-gap-match-interaction>',
         declare("multiple", "directedPair"),
@@ -739,7 +715,7 @@ describe("checkResponse", () => {
       expect(check(descriptor, pairs([pair("W1", "G1")], "directedPair"))).toEqual(["attempted", ["required"]]);
     });
 
-    it("[B56] graphic gap match: a hotspot takes as many choices as its match-max, and a choice can fill a hotspot twice", () => {
+    it("graphic gap match: a hotspot takes as many choices as its match-max, and a choice can fill a hotspot twice", () => {
       const descriptor = descriptorOf(
         `<qti-graphic-gap-match-interaction response-identifier="R" max-associations="4">${IMAGE}<qti-gap-img identifier="W1" match-max="2"><img src="a.png" alt="a"/></qti-gap-img>${hotspot("S1", "qti-associable-hotspot", ' match-max="2"')}</qti-graphic-gap-match-interaction>`,
         declare("multiple", "directedPair"),
@@ -752,7 +728,7 @@ describe("checkResponse", () => {
     });
   });
 
-  it("[B56] text: min-strings and max-strings count the non-empty strings; a record is one entry", () => {
+  it("text: min-strings and max-strings count the non-empty strings; a record is one entry", () => {
     const extended = descriptorOf(
       '<qti-extended-text-interaction response-identifier="R" min-strings="2" max-strings="3"/>',
       declare("multiple", "string"),
@@ -769,7 +745,7 @@ describe("checkResponse", () => {
     expect(check(one, null)).toEqual(["presented", ["min-strings"]]);
   });
 
-  it("[B56] pattern-mask: the whole string must match, in the regular expressions of XML Schema", () => {
+  it("pattern-mask: the whole string must match, in the regular expressions of XML Schema", () => {
     const entry = descriptorOf(
       '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[0-9]{2,3}"/></p>',
       declare("single", "string"),
@@ -794,7 +770,7 @@ describe("checkResponse", () => {
     expect(check(numeric, single("integer", 7))).toEqual(["answered", []]);
   });
 
-  it("[B56] slider: the value is within the bounds and on a step", () => {
+  it("slider: the value is within the bounds and on a step", () => {
     const slider = descriptorOf(
       '<qti-slider-interaction response-identifier="R" lower-bound="1" upper-bound="9" step="2"/>',
       declare("single", "float"),
@@ -816,7 +792,7 @@ describe("checkResponse", () => {
     expect(check(continuous, single("float", 0.123456))).toEqual(["answered", []]);
   });
 
-  it("[B56] media: the number of plays is at least min-plays and at most max-plays", () => {
+  it("media: the number of plays is at least min-plays and at most max-plays", () => {
     const media = descriptorOf(
       '<qti-media-interaction response-identifier="R" autostart="false" min-plays="1" max-plays="3"><object data="a.mp3" type="audio/mpeg"/></qti-media-interaction>',
       declare("single", "integer"),
@@ -827,7 +803,7 @@ describe("checkResponse", () => {
     expect(check(media, null)).toEqual(["presented", ["min-plays"]]);
   });
 
-  it("[B56] upload: the MIME type of the file is one of the types, whatever its case and parameters", () => {
+  it("upload: the MIME type of the file is one of the types, whatever its case and parameters", () => {
     const upload = descriptorOf(
       '<qti-upload-interaction response-identifier="R" type="image/png text/plain"/>',
       declare("single", "file"),
@@ -840,7 +816,7 @@ describe("checkResponse", () => {
     expect(check(any, file("application/pdf"))).toEqual(["answered", []]);
   });
 
-  it("[B56] a response of another type than the interaction accepts, or than the declaration states, is a binding violation", () => {
+  it("a response of another type than the interaction accepts, or than the declaration states, is a binding violation", () => {
     const descriptor = choiceInteraction(' max-choices="2"');
     expect(check(descriptor, single("float", 1))).toEqual(["attempted", ["binding"]]);
     expect(check(descriptor, id("A"))).toEqual(["attempted", ["binding"]]);
@@ -850,7 +826,7 @@ describe("checkResponse", () => {
     ]);
   });
 
-  it("[B65] a custom interaction accepts any response", () => {
+  it("a custom interaction accepts any response", () => {
     const custom = descriptorOf('<qti-custom-interaction response-identifier="R"/>', declare("single", "string"));
     expect(check(custom, single("string", "x"))).toEqual(["answered", []]);
   });
@@ -872,7 +848,7 @@ describe("checkResponse", () => {
 });
 
 describe("checkResponse: properties", () => {
-  it("[B56][P] a choice interaction breaks min-choices exactly below the minimum and max-choices exactly above the maximum", () => {
+  it("a choice interaction breaks min-choices exactly below the minimum and max-choices exactly above the maximum", () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 6 }),
@@ -897,7 +873,7 @@ describe("checkResponse: properties", () => {
     );
   });
 
-  it("[B56][P] an order interaction takes every ordering of all its choices, and refuses a part of them when min-choices is absent", () => {
+  it("an order interaction takes every ordering of all its choices, and refuses a part of them when min-choices is absent", () => {
     fc.assert(
       fc.property(
         fc
@@ -920,7 +896,7 @@ describe("checkResponse: properties", () => {
     );
   });
 
-  it("[B56][P] a pattern-mask accepts the strings of a regular expression and no others", () => {
+  it("a pattern-mask accepts the strings of a regular expression and no others", () => {
     const entry = descriptorOf(
       '<p><qti-text-entry-interaction response-identifier="R" pattern-mask="[a-z]+[0-9]?"/></p>',
       declare("single", "string"),
@@ -942,22 +918,22 @@ describe("answeredStatus", () => {
   const status = (responses: Record<string, Value | null>): string =>
     answeredStatus(descriptors, new Map(Object.entries(responses)));
 
-  it("[B70] is presented when no interaction has a response", () => {
+  it("is presented when no interaction has a response", () => {
     expect(status({})).toBe("presented");
     expect(status({ ONE: null, TWO: null })).toBe("presented");
   });
 
-  it("[B70] is answered when there is a response and every interaction is valid, an optional one left blank included", () => {
+  it("is answered when there is a response and every interaction is valid, an optional one left blank included", () => {
     expect(status({ ONE: id("A") })).toBe("answered");
     expect(status({ ONE: id("A"), TWO: id("B") })).toBe("answered");
   });
 
-  it("[B70] is attempted when a response is invalid or a required one is missing", () => {
+  it("is attempted when a response is invalid or a required one is missing", () => {
     expect(status({ TWO: id("B") })).toBe("attempted");
     expect(status({ ONE: id("Z") })).toBe("attempted");
   });
 
-  it("[B70] is presented for an item without interactions and ignores the end attempt interaction", () => {
+  it("is presented for an item without interactions and ignores the end attempt interaction", () => {
     expect(answeredStatus([], new Map())).toBe("presented");
     const hint = describeInteractions(
       itemOf(
@@ -979,7 +955,7 @@ describe("answeredStatus", () => {
 describe("initialResponse", () => {
   const defaultValue = identifiers("multiple", ["A"]);
 
-  it("[B55] gives a choice interaction nothing selected, whatever the default value", () => {
+  it("gives a choice interaction nothing selected, whatever the default value", () => {
     const descriptor = descriptorOf(
       `<qti-choice-interaction response-identifier="R" max-choices="2">${choice("A")}</qti-choice-interaction>`,
       declare("multiple", "identifier"),
@@ -987,7 +963,7 @@ describe("initialResponse", () => {
     expect(initialResponse(descriptor, defaultValue)).toBeNull();
   });
 
-  it("[B55] gives a hot text interaction its default value", () => {
+  it("gives a hot text interaction its default value", () => {
     const descriptor = descriptorOf(
       '<qti-hottext-interaction response-identifier="R" max-choices="2"><p><qti-hottext identifier="A">a</qti-hottext></p></qti-hottext-interaction>',
       declare("multiple", "identifier"),
@@ -996,7 +972,7 @@ describe("initialResponse", () => {
     expect(initialResponse(descriptor, null)).toBeNull();
   });
 
-  it("[B54] gives an order interaction its default value, which overrides the initial order of the choices", () => {
+  it("gives an order interaction its default value, which overrides the initial order of the choices", () => {
     const descriptor = descriptorOf(
       `<qti-order-interaction response-identifier="R" shuffle="true">${choice("A")}${choice("B")}</qti-order-interaction>`,
       declare("ordered", "identifier"),
@@ -1005,7 +981,7 @@ describe("initialResponse", () => {
     expect(initialResponse(descriptor, order)).toEqual(order);
   });
 
-  it("[B10] ignores the default value of an end attempt interaction", () => {
+  it("ignores the default value of an end attempt interaction", () => {
     const descriptor = descriptorOf(
       '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>',
       declare("single", "boolean"),
@@ -1039,23 +1015,23 @@ describe("shuffleChoices", () => {
       `<qti-choice-interaction response-identifier="R" shuffle="${shuffle}">${["A", "B", "C", "D"].map((name) => choice(name, fixed === name ? ' fixed="true"' : "")).join("")}</qti-choice-interaction>`,
     );
 
-  it("[B57] permutes by Fisher–Yates from the last index with floor(uniform × (i + 1)): C A B D for the draws 0.9, 0.5, 0", () => {
+  it("permutes by Fisher–Yates from the last index with floor(uniform × (i + 1)): C A B D for the draws 0.9, 0.5, 0", () => {
     const random = drawing(0.9, 0.5, 0);
     expect(shuffleChoices(four(true), random)).toEqual([["C", "A", "B", "D"]]);
     expect(random.left()).toBe(0);
   });
 
-  it("[B57] keeps a fixed choice in its position and permutes the rest", () => {
+  it("keeps a fixed choice in its position and permutes the rest", () => {
     expect(shuffleChoices(four(true, "B"), drawing(0.9, 0))).toEqual([["C", "B", "A", "D"]]);
   });
 
-  it("[B57] keeps the order of the document and draws nothing without shuffle", () => {
+  it("keeps the order of the document and draws nothing without shuffle", () => {
     const random = counting(1);
     expect(shuffleChoices(four(false), random)).toEqual([["A", "B", "C", "D"]]);
     expect(random.draws).toBe(0);
   });
 
-  it("[B57] shuffles each set of a match interaction on its own, one after the other", () => {
+  it("shuffles each set of a match interaction on its own, one after the other", () => {
     const descriptor = descriptorOf(
       `<qti-match-interaction response-identifier="R" shuffle="true"><qti-simple-match-set>${associable("A")}${associable("B")}${associable("C")}</qti-simple-match-set><qti-simple-match-set>${associable("X")}${associable("Y")}</qti-simple-match-set></qti-match-interaction>`,
       declare("multiple", "directedPair"),
@@ -1067,7 +1043,7 @@ describe("shuffleChoices", () => {
     ]);
   });
 
-  it("[B57] shuffles the choices of a gap match interaction and not its gaps", () => {
+  it("shuffles the choices of a gap match interaction and not its gaps", () => {
     const descriptor = descriptorOf(
       '<qti-gap-match-interaction response-identifier="R" shuffle="true"><qti-gap-text identifier="W1" match-max="1">a</qti-gap-text><qti-gap-text identifier="W2" match-max="1">b</qti-gap-text><p><qti-gap identifier="G1"/><qti-gap identifier="G2"/></p></qti-gap-match-interaction>',
       declare("multiple", "directedPair"),
@@ -1078,7 +1054,7 @@ describe("shuffleChoices", () => {
     ]);
   });
 
-  it("[B57] lists the choices of an interaction that has no shuffle attribute in the order of the document", () => {
+  it("lists the choices of an interaction that has no shuffle attribute in the order of the document", () => {
     const hotspots = descriptorOf(
       `<qti-hotspot-interaction response-identifier="R">${IMAGE}${hotspot("S1")}${hotspot("S2")}</qti-hotspot-interaction>`,
     );
@@ -1091,7 +1067,7 @@ describe("shuffleChoices", () => {
     ).toEqual([]);
   });
 
-  it("[G19] shuffles the choices that a template variable hides with the others, so that the positions of fixed choices hold", () => {
+  it("shuffles the choices that a template variable hides with the others, so that the positions of fixed choices hold", () => {
     const descriptor = descriptorOf(
       `<qti-choice-interaction response-identifier="R" shuffle="true">${choice("A", ' template-identifier="T" show-hide="show"')}${choice("B", ' fixed="true"')}${choice("C")}${choice("D", ' template-identifier="T"')}</qti-choice-interaction>`,
     );
@@ -1103,7 +1079,7 @@ describe("shuffleChoices", () => {
     expect(presented.choices.map(({ identifier }) => identifier)).toEqual(["C", "B", "D"]);
   });
 
-  it("[B57][P] gives each set as a permutation of its choices, with the fixed choices where they were, and equal draws give equal orders", () => {
+  it("gives each set as a permutation of its choices, with the fixed choices where they were, and equal draws give equal orders", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
         const orders = shuffleChoices(descriptor, createRandom(seed));
@@ -1121,7 +1097,7 @@ describe("shuffleChoices", () => {
     );
   });
 
-  it("[B57][P] draws one number for each movable choice but the first, in the sets that it shuffles", () => {
+  it("draws one number for each movable choice but the first, in the sets that it shuffles", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), (descriptor, seed) => {
         const random = counting(seed);
@@ -1136,7 +1112,7 @@ describe("shuffleChoices", () => {
     );
   });
 
-  it("[G19][P] removing the hidden choices from the order leaves the others in the order of the full shuffle", () => {
+  it("removing the hidden choices from the order leaves the others in the order of the full shuffle", () => {
     fc.assert(
       fc.property(shufflingDescriptor, fc.integer(), fc.infiniteStream(fc.boolean()), (descriptor, seed, hiding) => {
         const orders = shuffleChoices(descriptor, createRandom(seed));
@@ -1168,14 +1144,14 @@ describe("presentChoices", () => {
     `<qti-choice-interaction response-identifier="R">${choice("A")}${choice("B")}${choice("C")}</qti-choice-interaction>`,
   );
 
-  it("[B57] puts the choices in the given order and drops those it does not name, such as the hidden ones", () => {
+  it("puts the choices in the given order and drops those it does not name, such as the hidden ones", () => {
     const presented = presentChoices(descriptor, [["C", "A"]]);
     expect(presented.choices.map(({ identifier }) => identifier)).toEqual(["C", "A"]);
     expect(descriptor.choices.map(({ identifier }) => identifier)).toEqual(["A", "B", "C"]);
     expect(presented.constraints).toEqual(descriptor.constraints);
   });
 
-  it("[B57] orders both sets of a match interaction", () => {
+  it("orders both sets of a match interaction", () => {
     const match = descriptorOf(
       `<qti-match-interaction response-identifier="R"><qti-simple-match-set>${associable("A")}${associable("B")}</qti-simple-match-set><qti-simple-match-set>${associable("X")}</qti-simple-match-set></qti-match-interaction>`,
       declare("multiple", "directedPair"),
@@ -1206,7 +1182,7 @@ describe("numericRecord", () => {
   const fields = (record: RecordValue | null): Record<string, string | number> =>
     Object.fromEntries([...(record?.fields ?? [])].map(([name, field]) => [name, field.value as string | number]));
 
-  it("[B53] reads an integer: all fields but the exponent (INFO §2.4.2.2)", () => {
+  it("reads an integer: all fields but the exponent (INFO §2.4.2.2)", () => {
     expect(fields(numericRecord("123"))).toEqual({
       stringValue: "123",
       floatValue: 123,
@@ -1218,7 +1194,7 @@ describe("numericRecord", () => {
     });
   });
 
-  it("[B53] reads a decimal with fractional digits: no integerValue, ndp is rightDigits", () => {
+  it("reads a decimal with fractional digits: no integerValue, ndp is rightDigits", () => {
     expect(fields(numericRecord("12.50"))).toEqual({
       stringValue: "12.50",
       floatValue: 12.5,
@@ -1230,7 +1206,7 @@ describe("numericRecord", () => {
     expect(fields(numericRecord("-.5"))).toMatchObject({ floatValue: -0.5, leftDigits: 0, rightDigits: 1, nsf: 1 });
   });
 
-  it("[B53] reads an exponent: ndp is the fractional digits less the exponent, never below 0", () => {
+  it("reads an exponent: ndp is the fractional digits less the exponent, never below 0", () => {
     expect(fields(numericRecord("1.5e3"))).toEqual({
       stringValue: "1.5e3",
       floatValue: 1500,
@@ -1243,30 +1219,30 @@ describe("numericRecord", () => {
     expect(fields(numericRecord("1.5E-2"))).toMatchObject({ floatValue: 0.015, ndp: 3, exponent: -2 });
   });
 
-  it("[B53] counts the significant digits from the first digit that is not 0, at least one", () => {
+  it("counts the significant digits from the first digit that is not 0, at least one", () => {
     expect(fields(numericRecord("0.0120"))).toMatchObject({ leftDigits: 1, rightDigits: 4, ndp: 4, nsf: 3 });
     expect(fields(numericRecord("1200"))).toMatchObject({ nsf: 4 });
     expect(fields(numericRecord("0"))).toMatchObject({ nsf: 1, integerValue: 0 });
     expect(fields(numericRecord("000.00"))).toMatchObject({ nsf: 1 });
   });
 
-  it("[B53] keeps the text as typed and ignores white space around the number", () => {
+  it("keeps the text as typed and ignores white space around the number", () => {
     expect(fields(numericRecord(" 42 "))).toMatchObject({ stringValue: " 42 ", floatValue: 42, integerValue: 42 });
     expect(fields(numericRecord("5."))).toMatchObject({ floatValue: 5, integerValue: 5, rightDigits: 0 });
   });
 
-  it("[B53] has the string alone when the text is no number", () => {
+  it("has the string alone when the text is no number", () => {
     for (const text of ["abc", "1,5", "1e", "e5", ".", "+", "1 2", "0x10", "Infinity", "1e999"]) {
       expect(fields(numericRecord(text))).toEqual({ stringValue: text });
     }
   });
 
-  it("[B53] has no integerValue for a number beyond the safe integers, but a float", () => {
+  it("has no integerValue for a number beyond the safe integers, but a float", () => {
     expect(fields(numericRecord("9007199254740993"))).toMatchObject({ floatValue: 9007199254740992 });
     expect(fields(numericRecord("9007199254740993"))).not.toHaveProperty("integerValue");
   });
 
-  it("[B53] reads an integer in the base of the interaction", () => {
+  it("reads an integer in the base of the interaction", () => {
     expect(fields(numericRecord("ff", 16))).toMatchObject({
       floatValue: 255,
       integerValue: 255,
@@ -1279,11 +1255,11 @@ describe("numericRecord", () => {
     expect(fields(numericRecord("1.5", 16))).toEqual({ stringValue: "1.5" });
   });
 
-  it("[B53] is NULL for the empty string", () => {
+  it("is NULL for the empty string", () => {
     expect(numericRecord("")).toBeNull();
   });
 
-  it("[B53] makes the record of a text-entry response, which checkResponse accepts as one entry", () => {
+  it("makes the record of a text-entry response, which checkResponse accepts as one entry", () => {
     const descriptor = descriptorOf(
       '<p><qti-text-entry-interaction response-identifier="R"/></p>',
       declare("record", "string").replace(' base-type="string"', ""),
@@ -1299,7 +1275,7 @@ describe("numericRecord", () => {
     expect(() => numericRecord("1", 10.5)).toThrow(DataError);
   });
 
-  it("[B53][P] reads every integer in its base and gives the digits of a decimal as typed", () => {
+  it("reads every integer in its base and gives the digits of a decimal as typed", () => {
     fc.assert(
       fc.property(fc.integer({ min: -1_000_000, max: 1_000_000 }), fc.integer({ min: 2, max: 36 }), (integer, base) => {
         const text = integer.toString(base);

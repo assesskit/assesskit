@@ -3,7 +3,7 @@ import { compare, longsight, longsightRandom, runtime } from "../src/index.ts";
 import { CHOICE_ITEM, TEMPLATE_ITEM } from "./items.ts";
 
 describe("runtime", () => {
-  it("[D] scores a response as the oracle does", () => {
+  it("scores a response as the oracle does", () => {
     const run = (response: string) =>
       runtime.run({ name: "choice", xml: CHOICE_ITEM, responses: { RESPONSE: response }, seed: 1 });
     expect(run("B")).toMatchObject({
@@ -13,7 +13,7 @@ describe("runtime", () => {
     expect(run("A")).toMatchObject({ accepted: true, observation: { outcomes: { SCORE: 0 } } });
   });
 
-  it("[D] draws the template values of the oracle from the oracle's generator", () => {
+  it("draws the template values of the oracle from the oracle's generator", () => {
     const cases = [1, 2, 3].map((seed) => ({ name: `template ${seed}`, xml: TEMPLATE_ITEM, responses: {}, seed }));
     const report = compare(cases, longsight, runtime, []);
     expect(report).toMatchObject({ compared: 3, differences: [] });

@@ -12,7 +12,7 @@ const EXPRESSION = `<p><math ${MATHML}><mi>x</mi><mo>+</mo><mn>1</mn></math></p>
 
 /** This file runs in a page of its own, because MathJax is a global of the page and a failure to load it is final. */
 describe("createMathTypesetter when MathJax cannot be loaded", () => {
-  it("[T9] leaves the MathML in place and rejects when the URL has no script, without asking again", async () => {
+  it("leaves the MathML in place and rejects when the URL has no script, without asking again", async () => {
     const typesetter = createMathTypesetter(`${asset}/mathjax/${TOKEN}/missing.js`);
     const content = mount(EXPRESSION);
     await expect(typesetter.typeset(content.root)).rejects.toThrow(AssesskitError);
@@ -23,13 +23,13 @@ describe("createMathTypesetter when MathJax cannot be loaded", () => {
     expect(paths.filter((path) => path.endsWith(`/${TOKEN}/missing.js`))).toHaveLength(1);
   });
 
-  it("[T9] refuses a second URL, because MathJax is one global of the page", async () => {
+  it("refuses a second URL, because MathJax is one global of the page", async () => {
     const typesetter = createMathTypesetter(`${asset}/mathjax/${TOKEN}/other.js`);
     await expect(typesetter.typeset(mount(EXPRESSION).root)).rejects.toThrow(DataError);
     await expect(typesetter.typeset(mount(EXPRESSION).root)).rejects.toThrow(/missing\.js/u);
   });
 
-  it("[T9] still requests nothing for content without MathML after a failure", async () => {
+  it("still requests nothing for content without MathML after a failure", async () => {
     const typesetter = createMathTypesetter(`${asset}/mathjax/${TOKEN}/other.js`);
     await expect(typesetter.typeset(mount("<p>Words.</p>").root)).resolves.toBeUndefined();
   });

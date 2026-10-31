@@ -173,7 +173,7 @@ const headings = (shadow: ShadowRoot): string[] =>
   );
 
 describe("mountSubmission", () => {
-  it("[T112] shows the outcome, who scores it and its declaration in a shadow root of the host", () => {
+  it("shows the outcome, who scores it and its declaration in a shadow root of the host", () => {
     const { host, shadow } = show(submission());
     expect(host.shadowRoot).toBe(shadow);
     const article = el(shadow, "article.ak-submission");
@@ -189,7 +189,7 @@ describe("mountSubmission", () => {
     expect(fact(shadow, "Requested at")).toBe("2026-10-30T12:00:00.000Z");
   });
 
-  it("[T112] names a machine scorer, a record declaration, the variable reference and the link to a tool", () => {
+  it("names a machine scorer, a record declaration, the variable reference and the link to a tool", () => {
     const { shadow } = show(
       submission({
         mode: "externalMachine",
@@ -204,7 +204,7 @@ describe("mountSubmission", () => {
     expect(el(shadow, ".ak-submission-note").textContent).toBe("This item links to a tool.");
   });
 
-  it("[T112] shows the score supplied before, who gave it and when, and nothing of it while the request is pending", () => {
+  it("shows the score supplied before, who gave it and when, and nothing of it while the request is pending", () => {
     const supplied = {
       value: wire(single("float", 7.5)),
       at: Date.UTC(2026, 9, 30, 13, 30, 0),
@@ -218,7 +218,7 @@ describe("mountSubmission", () => {
     expect(fact(show(submission({ supplied: { ...supplied, value: null } })).shadow, "Earlier score")).toBe("No value");
   });
 
-  it("[T112] draws the body of an item in a content root, with its references at the document of the item", () => {
+  it("draws the body of an item in a content root, with its references at the document of the item", () => {
     const asked: string[] = [];
     const { shadow } = show(submission(), {
       itemPath: (key) => {
@@ -239,7 +239,7 @@ describe("mountSubmission", () => {
     expect(el(scorer, "qti-rubric-block").getAttribute("data-use")).toBe("scoring");
   });
 
-  it("[T112] draws the interactions with the renderers the host gives", () => {
+  it("draws the interactions with the renderers the host gives", () => {
     const interactions: SubmissionOptions["interactions"] = new Map([
       [
         "extended-text-interaction",
@@ -251,7 +251,7 @@ describe("mountSubmission", () => {
     expect(contents(shadow)[0]?.textContent).toContain("[review]");
   });
 
-  it("[T112] shows the rubric of the scorer view before the items", () => {
+  it("shows the rubric of the scorer view before the items", () => {
     const rubric = itemBody("<p>Rate the content once.</p><ul><li>Task 1</li></ul>");
     const { shadow } = show(submission({ rubric }));
     expect(headings(shadow).slice(0, 3)).toEqual([
@@ -264,7 +264,7 @@ describe("mountSubmission", () => {
     expect(headings(show(submission()).shadow)).not.toContain("h3 Rubric for the scorer");
   });
 
-  it("[T112] shows each response the outcome rates, in the order of the covers, with its label, variable and kind", () => {
+  it("shows each response the outcome rates, in the order of the covers, with its label, variable and kind", () => {
     const letter: ItemKey = { ref: "letter", instance: 1 };
     const { shadow } = show(
       submission({
@@ -298,7 +298,7 @@ describe("mountSubmission", () => {
     expect(fact(third, "Response of the candidate")).toBe("Hello Anna");
   });
 
-  it("[T112] keeps the line breaks of a long answer and takes the direction of its text", () => {
+  it("keeps the line breaks of a long answer and takes the direction of its text", () => {
     // Arabic, the first letters of the alphabet: a right-to-left text without its letters in the source.
     const answerText = `Line one\n\n${String.fromCodePoint(0x627, 0x628, 0x62a, 0x62b)}`;
     const { shadow } = show(submission({ parts: [part({ value: text(answerText) })] }));
@@ -308,7 +308,7 @@ describe("mountSubmission", () => {
     expect(computed(shown, "white-space")).toBe("pre-wrap");
   });
 
-  it("[T112] says that the candidate was not shown an item, and draws no content for it", () => {
+  it("says that the candidate was not shown an item, and draws no content for it", () => {
     const { shadow } = show(
       submission({
         parts: [part({ presented: false, value: null })],
@@ -321,7 +321,7 @@ describe("mountSubmission", () => {
     expect(answer(shadow)).toBe("No response");
   });
 
-  it("[T112] shows the correct responses and the template values of an item, and NULL as no value", () => {
+  it("shows the correct responses and the template values of an item, and NULL as no value", () => {
     const { shadow } = show(
       submission({
         items: [
@@ -341,7 +341,7 @@ describe("mountSubmission", () => {
     expect(fact(template, "N")).toBe("4");
   });
 
-  it("[T112] shows a container as a list that keeps the order, and a record as names and values", () => {
+  it("shows a container as a list that keeps the order, and a record as names and values", () => {
     const ordered = show(submission({ parts: [part({ value: wire(container("ordered", "integer", [3, 1, 2])) })] }));
     const list = el(ordered.shadow, "li.ak-submission-part ol.ak-submission-list");
     expect([...list.querySelectorAll("li")].map((entry) => entry.textContent)).toEqual(["3", "1", "2"]);
@@ -358,7 +358,7 @@ describe("mountSubmission", () => {
     expect([fact(dl, "a"), fact(dl, "b")]).toEqual(["1", "true"]);
   });
 
-  it("[T112] shows the other base types in their lexical form", () => {
+  it("shows the other base types in their lexical form", () => {
     const cases: readonly (readonly [Value, string])[] = [
       [single("point", [10, 20]), "10 20"],
       [single("directedPair", ["A", "B"]), "A B"],
@@ -371,7 +371,7 @@ describe("mountSubmission", () => {
     }
   });
 
-  it("[T112] shows a file by its type: images, audio and video play, and anything else is a link that opens in a tab of its own", () => {
+  it("shows a file by its type: images, audio and video play, and anything else is a link that opens in a tab of its own", () => {
     const file = (mimeType: string, fileName?: string): FileValue => ({
       reference: `uploads/${mimeType}`,
       mimeType,
@@ -408,14 +408,14 @@ describe("mountSubmission", () => {
     expect(shown(file("text/html", "page.html")).tagName).toBe("A");
   });
 
-  it("[T112] shows a file as its name when the host gives no way to open it", () => {
+  it("shows a file as its name when the host gives no way to open it", () => {
     const file = { reference: "uploads/1", mimeType: "audio/wav", fileName: "speech.wav" };
     const { shadow } = show(submission({ parts: [part({ value: wire(single("file", file)) })] }));
     expect(answer(shadow)).toBe("speech.wav");
     expect(shadow.querySelector("li.ak-submission-part a, li.ak-submission-part audio")).toBeNull();
   });
 
-  it("[T112] refuses a file URL that is not an http or https URL, and one that is not a string", () => {
+  it("refuses a file URL that is not an http or https URL, and one that is not a string", () => {
     const file = { reference: "uploads/1", mimeType: "image/png" };
     const withFile = submission({ parts: [part({ value: wire(single("file", file)) })] });
     expect(() => show(withFile, { files: { url: () => "javascript:alert(1)" } })).toThrow(
@@ -426,14 +426,14 @@ describe("mountSubmission", () => {
     );
   });
 
-  it("[T112] is read-only: nothing in the display, in its content roots included, takes input", () => {
+  it("is read-only: nothing in the display, in its content roots included, takes input", () => {
     const { shadow } = show(submission({ rubric: itemBody("<p>Rate.</p>") }));
     const controls = "input, textarea, select, button, [contenteditable], [tabindex]";
     expect(shadow.querySelectorAll(controls)).toHaveLength(0);
     for (const root of contents(shadow)) expect(root.querySelectorAll(controls)).toHaveLength(0);
   });
 
-  it("[T112] draws the content as the renderer keeps it for a candidate: no script, no event handler, no foreign origin", () => {
+  it("draws the content as the renderer keeps it for a candidate: no script, no event handler, no foreign origin", () => {
     const hostile = itemBody(
       '<p>Text <a href="javascript:alert(1)" onclick="alert(2)">link</a><img src="//stranger.invalid/x.png" alt=""/></p>',
     );
@@ -444,7 +444,7 @@ describe("mountSubmission", () => {
     expect(body?.querySelector("img")?.hasAttribute("src")).toBe(false);
   });
 
-  it("[T9][T112] typesets the expressions of the content when the host gives MathJax", async () => {
+  it("typesets the expressions of the content when the host gives MathJax", async () => {
     const math = itemBody("<p>Half of x is <m:math><m:mfrac><m:mi>x</m:mi><m:mn>2</m:mn></m:mfrac></m:math>.</p>");
     const { shadow } = show(submission({ items: [item({ body: math })] }), { mathjax: MATHJAX });
     const [content] = contents(shadow);
@@ -452,7 +452,7 @@ describe("mountSubmission", () => {
     expect(await appears(content, "mjx-container mjx-frac")).toBeInstanceOf(Element);
   });
 
-  it("[T112] shows another submission when updated, and keeps the display when the new one is wrong", () => {
+  it("shows another submission when updated, and keeps the display when the new one is wrong", () => {
     const { shadow, mounted } = show(submission());
     const first = contents(shadow);
     mounted.update(submission({ parts: [part({ value: text("Another answer") })] }));
@@ -468,7 +468,7 @@ describe("mountSubmission", () => {
     expect(contents(shadow)[0]?.textContent).toContain("Write about your town.");
   });
 
-  it("[T112] takes the display and its content roots down when destroyed", () => {
+  it("takes the display and its content roots down when destroyed", () => {
     const { shadow, mounted } = show(submission());
     const roots = contents(shadow);
     mounted.destroy();
@@ -476,7 +476,7 @@ describe("mountSubmission", () => {
     expect(roots[0]?.childElementCount).toBe(0);
   });
 
-  it("[T112] speaks the language of the interface that the host gives, and uses its messages", () => {
+  it("speaks the language of the interface that the host gives, and uses its messages", () => {
     const { shadow } = show(submission(), { language: "id" });
     expect(el(shadow, "article").getAttribute("lang")).toBe("id");
     expect(el(shadow, "h2").textContent).toBe(ID_MESSAGES.submissionTitle);
@@ -486,7 +486,7 @@ describe("mountSubmission", () => {
     expect(el(show(submission()).shadow, "article").getAttribute("lang")).toBe("en");
   });
 
-  it("[T112] rejects a host that is not an element or has a shadow root, and leaves a host as it was when the submission is wrong", () => {
+  it("rejects a host that is not an element or has a shadow root, and leaves a host as it was when the submission is wrong", () => {
     const options = { assets: (path: string) => path, stylesheet: stylesheet(PLAYER_CSS) };
     expect(() => mountSubmission(json("null") as HTMLElement, submission(), options)).toThrow(
       new DataError("The host must be an element, found null."),
@@ -502,7 +502,7 @@ describe("mountSubmission", () => {
     expect(() => mountSubmission(free, submission(), options)).not.toThrow();
   });
 
-  it("[T112] rejects options of other types", () => {
+  it("rejects options of other types", () => {
     const base = { assets: (path: string) => path, stylesheet: stylesheet(PLAYER_CSS) };
     const cases: readonly (readonly [unknown, string | RegExp])[] = [
       [null, "The options must be an object, found null."],
@@ -562,12 +562,12 @@ describe("accessibility", () => {
     { "data-ak-contrast": "high", "data-ak-polarity": "inverted" },
   ];
 
-  it("[T112] passes axe at WCAG 2.2 A and AA, with a name and a heading for every part", async () => {
+  it("passes axe at WCAG 2.2 A and AA, with a name and a heading for every part", async () => {
     const { host } = show(full(), { files: { url: () => `${ITEM_DIRECTORY}images/dot.png` } });
     expect(await axeViolations(host)).toEqual([]);
   });
 
-  it("[T112][SC 1.4.3] keeps the contrast of the display, and of the content in it, in every theme", async () => {
+  it("keeps the contrast of the display, and of the content in it, in every theme", async () => {
     for (const theme of Themes) {
       const { host, shadow } = show(full(), {}, theme);
       expect(await axeViolations(host), JSON.stringify(theme)).toEqual([]);

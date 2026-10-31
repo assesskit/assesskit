@@ -62,7 +62,7 @@ const SCHEMA_INVALID = new Set([
 ]);
 
 describe("the 1EdTech example packages", () => {
-  it("[K1][K4][K5] include 24 manifests of the QTI profile and 26 archives, two of which use the namespace of IMS CP 1.1", () => {
+  it("include 24 manifests of the QTI profile and 26 archives, two of which use the namespace of IMS CP 1.1", () => {
     expect(manifests).toHaveLength(24);
     expect(zips).toHaveLength(26);
     for (const path of IMS_CP_ARCHIVES) {
@@ -78,11 +78,11 @@ describe("the 1EdTech example packages", () => {
     }
   });
 
-  it("[K1][K5][G12] read: every one of the 24 manifests of the QTI profile is read", () => {
+  it("read: every one of the 24 manifests of the QTI profile is read", () => {
     for (const path of manifests) expect(manifestOf(path).resources.length, path).toBeGreaterThan(0);
   });
 
-  it("[K10][K12][K14][K15][K17][K19][K20][K22][K24] have the resource types that the manifests spell, counted from their text", () => {
+  it("have the resource types that the manifests spell, counted from their text", () => {
     const counts = new Map<string, number>();
     for (const path of manifests) {
       for (const resource of manifestOf(path).resources)
@@ -102,7 +102,7 @@ describe("the 1EdTech example packages", () => {
     ]);
   });
 
-  it("[K1][K5][K7][K8] read back what they write, as a model and as text", () => {
+  it("read back what they write, as a model and as text", () => {
     for (const path of manifests) {
       const manifest = manifestOf(path);
       const text = writeManifest(manifest);
@@ -112,7 +112,7 @@ describe("the 1EdTech example packages", () => {
   });
 
   it.for(manifests)(
-    "[K30] read from the directory of %s with the files that the file system lists and their bytes",
+    "read from the directory of %s with the files that the file system lists and their bytes",
     async (manifest) => {
       const directory = join(examples, dirname(manifest));
       const listed = readdirSync(directory, { recursive: true, withFileTypes: true })
@@ -126,12 +126,12 @@ describe("the 1EdTech example packages", () => {
     },
   );
 
-  it.for(profileZips)("[K30] read from the archive file %s by readPackageFile", async (path) => {
+  it.for(profileZips)("read from the archive file %s by readPackageFile", async (path) => {
     const pkg = await readPackageFile(join(examples, path));
     expect(pkg.paths, path).toEqual(readPackage(read(path)).paths);
   });
 
-  it("[K7][B89] list files that exist in the package, except the one file that the pci example misses", () => {
+  it("list files that exist in the package, except the one file that the pci example misses", () => {
     const missing: string[] = [];
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
@@ -151,7 +151,7 @@ describe("the 1EdTech example packages", () => {
   });
 
   it.for(profileZips)(
-    "[K30][R] write a package from the files of %s that reads back with the same manifest and bytes",
+    "write a package from the files of %s that reads back with the same manifest and bytes",
     (path) => {
       const pkg = readPackage(read(path));
       const files = new Map(
@@ -165,7 +165,7 @@ describe("the 1EdTech example packages", () => {
     },
   );
 
-  it("[K5][K10][K12] resolve every item of every package to a document, as a QTI item or an LTI link, except the two that the schema rejects", () => {
+  it("resolve every item of every package to a document, as a QTI item or an LTI link, except the two that the schema rejects", () => {
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
       const resolvers = packageResolvers(pkg);
@@ -200,7 +200,7 @@ describe("the ASI documents of the example packages", () => {
     ["imsqti_rptemplate_xmlv3p0", "response-processing"],
   ]);
 
-  it("[K10][K12][K14][K15][K17] are read by document(), with the kind that the resource type names", () => {
+  it("are read by document(), with the kind that the resource type names", () => {
     const counts = new Map<string, number>();
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
@@ -225,7 +225,7 @@ describe("the ASI documents of the example packages", () => {
     ]);
   });
 
-  it("[B91][K14][K17] have items that depend on the outcome declaration and response processing template resources they use", () => {
+  it("have items that depend on the outcome declaration and response processing template resources they use", () => {
     const linked = new Map<string, string[]>();
     for (const path of profileZips) {
       const pkg = readPackage(read(path));
@@ -270,7 +270,7 @@ describe("the LTI example packages", () => {
     ],
   ] as const;
 
-  it("[K20] have link documents with the titles and launch URLs that their text gives", () => {
+  it("have link documents with the titles and launch URLs that their text gives", () => {
     for (const [archive, path, title, launch] of links) {
       const link = readLtiLink(readPackage(read(archive)).file(path) ?? new Uint8Array(), { path });
       expect(link.title, path).toBe(title);
@@ -278,7 +278,7 @@ describe("the LTI example packages", () => {
     }
   });
 
-  it("[K20] have the custom properties and extensions of the streaming video link", () => {
+  it("have the custom properties and extensions of the streaming video link", () => {
     const link = readLtiLink(
       readPackage(read("packaging/lti/lti.zip")).file("links/streaming_video_experiment101.xml") ?? new Uint8Array(),
     );
@@ -289,7 +289,7 @@ describe("the LTI example packages", () => {
     expect(link.vendor).toEqual({ code: "IMSGlobal.org", name: "IMS" });
   });
 
-  it("[K20] resolve the item references of the test to LTI deliverables and a QTI item", () => {
+  it("resolve the item references of the test to LTI deliverables and a QTI item", () => {
     const pkg = readPackage(read("packaging/testWithLti/testWithLti.zip"));
     const resolvers = packageResolvers(pkg);
     const kinds = ["links/Choicesingle_853928446.xml", "links/item1.xml", "elements.xml"].map(
@@ -302,7 +302,7 @@ describe("the LTI example packages", () => {
 describe("the shared stimulus example package", () => {
   const pkg = readPackage(read("packaging/sharedStimulus/sharedStimulus.zip"));
 
-  it("[B62][K8] has items that depend on the stimulus and name it in a stimulus reference", () => {
+  it("has items that depend on the stimulus and name it in a stimulus reference", () => {
     for (const [item, file] of [
       ["Item1", "exemplar06.xml"],
       ["Item2", "exemplar04.xml"],
@@ -328,7 +328,7 @@ describe("the shared stimulus example package", () => {
 });
 
 describe("the closure of the example tests", () => {
-  it("[K8] reaches the items of a test and what they depend on", () => {
+  it("reaches the items of a test and what they depend on", () => {
     const pkg: QtiPackage = readPackage(read("packaging/externalMetadata/externalMetadata.zip"));
     const test = pkg.manifest.resources.find(({ type }) => type === "imsqti_test_xmlv3p0");
     const closure = dependencyClosure(pkg.manifest, test?.identifier ?? "").map(({ identifier }) => identifier);

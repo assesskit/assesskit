@@ -73,12 +73,12 @@ function memoryFiles(stored: ReadonlyMap<string, Uint8Array> = new Map()) {
 }
 
 describe("checkVariable", () => {
-  it("[T50] accepts a value with its declaration, and NULL", () => {
+  it("accepts a value with its declaration, and NULL", () => {
     expect(() => checkVariable({ value: single("integer", 3), declaration: INTEGER })).not.toThrow();
     expect(() => checkVariable({ value: null, declaration: INTEGER })).not.toThrow();
   });
 
-  it("[T50] rejects what is not a variable, and a value that is not of its declaration", () => {
+  it("rejects what is not a variable, and a value that is not of its declaration", () => {
     expect(() => checkVariable(json("null"))).toThrow("A variable must be an object with a value and a declaration");
     expect(() => checkVariable({ value: single("string", "a"), declaration: INTEGER })).toThrow(DATA_ERROR);
     expect(() => checkVariable({ value: single("integer", 1), declaration: json('{"cardinality":"many"}') })).toThrow(
@@ -89,7 +89,7 @@ describe("checkVariable", () => {
 });
 
 describe("encodeVariable", () => {
-  it("[T51] writes a value as the JSON of BPIG App. C.1 to C.3", async () => {
+  it("writes a value as the JSON of BPIG App. C.1 to C.3", async () => {
     const { files } = memoryFiles();
     expect(await encodeVariable({ value: single("integer", 3), declaration: INTEGER }, files)).toEqual({
       base: { integer: 3 },
@@ -106,7 +106,7 @@ describe("encodeVariable", () => {
     ).toEqual({ list: { integer: [3, 4] } });
   });
 
-  it("[T51] reads the bytes of a file from the host and writes them inline as base64, as App. C.1 shows", async () => {
+  it("reads the bytes of a file from the host and writes them inline as base64, as App. C.1 shows", async () => {
     const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
     const value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
     expect(await encodeVariable({ value, declaration: FILE }, files)).toEqual({
@@ -114,7 +114,7 @@ describe("encodeVariable", () => {
     });
   });
 
-  it("[T51] reads each file of a container and of a record", async () => {
+  it("reads each file of a container and of a record", async () => {
     const { files } = memoryFiles(
       new Map([
         ["a", new TextEncoder().encode("a")],
@@ -137,7 +137,7 @@ describe("encodeVariable", () => {
     });
   });
 
-  it("[T51] passes on the error of the host's storage", async () => {
+  it("passes on the error of the host's storage", async () => {
     const files: PciFiles = {
       read: () => Promise.reject(new Error("The storage is down.")),
       upload: async () => ({ reference: "", mimeType: "" }),
@@ -150,7 +150,7 @@ describe("encodeVariable", () => {
 describe("createResponseDecoder", () => {
   const inline = (data: string, name = "helloworld.txt") => ({ base: { file: { data, mime: "text/plain", name } } });
 
-  it("[T51] reads the JSON of a response as a value of the declaration", async () => {
+  it("reads the JSON of a response as a value of the declaration", async () => {
     const decode = createResponseDecoder(memoryFiles().files);
     expect(await decode({ base: { integer: 3 } }, INTEGER)).toEqual(single("integer", 3));
     expect(await decode({ list: { integer: [3, 4] } }, { cardinality: "multiple", baseType: "integer" })).toEqual(
@@ -158,13 +158,13 @@ describe("createResponseDecoder", () => {
     );
   });
 
-  it("[T51] gives NULL for no response, for null, and for the NULL of App. C", async () => {
+  it("gives NULL for no response, for null, and for the NULL of App. C", async () => {
     const decode = createResponseDecoder(memoryFiles().files);
     expect(await decode(json("null"), INTEGER)).toBeNull();
     expect(await decode({ base: null }, INTEGER)).toBeNull();
   });
 
-  it("[T51] stores an inline file through the host and keeps its reference", async () => {
+  it("stores an inline file through the host and keeps its reference", async () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     const value = await decode(inline(PLEASURE.base64), FILE);
@@ -172,13 +172,13 @@ describe("createResponseDecoder", () => {
     expect(uploads).toEqual([{ bytes: PLEASURE.bytes, mimeType: "text/plain", fileName: "helloworld.txt" }]);
   });
 
-  it("[T51] stores a file without a name without one", async () => {
+  it("stores a file without a name without one", async () => {
     const { files, uploads } = memoryFiles();
     await createResponseDecoder(files)({ base: { file: { data: PLEASURE.base64, mime: "text/plain" } } }, FILE);
     expect(uploads[0]?.fileName).toBeUndefined();
   });
 
-  it("[T51] stores the files of a container in order, each with its own reference", async () => {
+  it("stores the files of a container in order, each with its own reference", async () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     const value = await decode(
@@ -201,7 +201,7 @@ describe("createResponseDecoder", () => {
     expect(uploads.map(({ bytes }) => new TextDecoder().decode(bytes))).toEqual(["a", "b"]);
   });
 
-  it("[T51] stores a file that an earlier response held only once, and one that is new", async () => {
+  it("stores a file that an earlier response held only once, and one that is new", async () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     const first = await decode(inline(PLEASURE.base64), FILE);
@@ -214,7 +214,7 @@ describe("createResponseDecoder", () => {
     expect(uploads).toHaveLength(3);
   });
 
-  it("[T51] stores nothing for JSON that is not of the declaration", async () => {
+  it("stores nothing for JSON that is not of the declaration", async () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     await expect(decode({ base: { integer: "x" } }, INTEGER)).rejects.toThrow(DATA_ERROR);
@@ -224,14 +224,14 @@ describe("createResponseDecoder", () => {
     expect(uploads).toEqual([]);
   });
 
-  it("[T51] refuses a file whose data is not base64, before it stores anything", async () => {
+  it("refuses a file whose data is not base64, before it stores anything", async () => {
     const { files, uploads } = memoryFiles();
     const decode = createResponseDecoder(files);
     await expect(decode(inline("not base64!"), FILE)).rejects.toThrow("The data of a file must be base64.");
     expect(uploads).toEqual([]);
   });
 
-  it("[T51] refuses a host that stores a file and gives no reference", async () => {
+  it("refuses a host that stores a file and gives no reference", async () => {
     const files: PciFiles = { read: async () => new Uint8Array(), upload: async () => json("{}") as never };
     await expect(createResponseDecoder(files)(inline(PLEASURE.base64), FILE)).rejects.toThrow(
       "The reference of an uploaded file must be a string",
@@ -240,7 +240,7 @@ describe("createResponseDecoder", () => {
 });
 
 describe("pciModules", () => {
-  it("[T49] locates the module of the module attribute and its dependencies under the asset prefix (BPIG §3.7.12.4)", () => {
+  it("locates the module of the module attribute and its dependencies under the asset prefix (BPIG §3.7.12.4)", () => {
     const primary = resolution({ exampleLikertScale: "modules/likert", handlebars: "modules/lib/handlebars.min" }, 15);
     expect(pciModules(interactionOf('module="exampleLikertScale"'), { primary }, assets)).toEqual({
       baseUrl: `${GATE}modules/`,
@@ -253,7 +253,7 @@ describe("pciModules", () => {
     });
   });
 
-  it("[T49] lists the primary location before the fallback, and leaves a location with a protocol as it is", () => {
+  it("lists the primary location before the fallback, and leaves a location with a protocol as it is", () => {
     const modules = pciModules(
       interactionOf('module="m"'),
       {
@@ -265,7 +265,7 @@ describe("pciModules", () => {
     expect(modules.paths).toEqual(new Map([["m", ["https://cdn.example/js/m", `${GATE}modules/lib/m`]]]));
   });
 
-  it("[T49] takes the base URL from the first package location of the first module, the fallback when the primary is a URL", () => {
+  it("takes the base URL from the first package location of the first module, the fallback when the primary is a URL", () => {
     const modules = pciModules(
       interactionOf('module="m"'),
       { primary: resolution({ m: "https://cdn.example/js/m" }), fallback: resolution({ m: "deep/dir/m" }) },
@@ -274,7 +274,7 @@ describe("pciModules", () => {
     expect(modules.baseUrl).toBe(`${GATE}deep/dir/`);
   });
 
-  it("[T49] takes the base URL from the configuration file when every location has a protocol", () => {
+  it("takes the base URL from the configuration file when every location has a protocol", () => {
     const interaction = interactionOf(
       'module="m"',
       '<qti-interaction-modules primary-configuration="lib/config.js"/><qti-interaction-markup/>',
@@ -287,7 +287,7 @@ describe("pciModules", () => {
     ).toBe(`${GATE}modules/`);
   });
 
-  it("[T49] loads the modules of qti-interaction-modules, in document order, when there is no module attribute", () => {
+  it("loads the modules of qti-interaction-modules, in document order, when there is no module attribute", () => {
     const interaction = interactionOf(
       "",
       '<qti-interaction-modules><qti-interaction-module id="eve" primary-path="modules/lib/eve.js"/><qti-interaction-module id="shading" primary-path="modules/shadingXX.js" fallback-path="modules/shading.js"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -304,7 +304,7 @@ describe("pciModules", () => {
     expect(modules.baseUrl).toBe(`${GATE}modules/lib/`);
   });
 
-  it("[T49] takes a location with the .js extension for the file that RequireJS would find without it", () => {
+  it("takes a location with the .js extension for the file that RequireJS would find without it", () => {
     const interaction = interactionOf(
       "",
       '<qti-interaction-modules><qti-interaction-module id="eve" primary-path="modules/lib/eve.js"/><qti-interaction-module id="shading" primary-path="https://cdn.example/shading.min.js" fallback-path="modules/shading.js?v=2"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -317,12 +317,12 @@ describe("pciModules", () => {
     );
   });
 
-  it("[T49] waits 7 seconds when no primary configuration says otherwise, and keeps 0, which waits for ever", () => {
+  it("waits 7 seconds when no primary configuration says otherwise, and keeps 0, which waits for ever", () => {
     expect(pciModules(interactionOf('module="m"'), { fallback: resolution({ m: "m" }) }, assets).waitSeconds).toBe(7);
     expect(pciModules(interactionOf('module="m"'), { primary: resolution({ m: "m" }, 0) }, assets).waitSeconds).toBe(0);
   });
 
-  it("[T49] refuses an interaction that names no module, and a module that has no location", () => {
+  it("refuses an interaction that names no module, and a module that has no location", () => {
     expect(() => pciModules(interactionOf(""), { primary: resolution({ m: "m" }) }, assets)).toThrow(
       "The interaction names no module to load",
     );
@@ -331,7 +331,7 @@ describe("pciModules", () => {
     );
   });
 
-  it("[T49] refuses arguments of other types", () => {
+  it("refuses arguments of other types", () => {
     const configuration: PciModuleConfiguration = { primary: resolution({ m: "m" }) };
     expect(() => pciModules(json("null") as never, configuration, assets)).toThrow(DATA_ERROR);
     expect(() => pciModules(interactionOf('module="m"'), json("null") as never, assets)).toThrow(DATA_ERROR);
@@ -359,7 +359,7 @@ const MINIMAL: PciFrameOptions = {
 const check = (changes: Readonly<Record<string, unknown>>): void => checkPciFrameOptions({ ...MINIMAL, ...changes });
 
 describe("checkPciFrameOptions", () => {
-  it("[T49] accepts the smallest options, and the options with every optional one", () => {
+  it("accepts the smallest options, and the options with every optional one", () => {
     expect(() => checkPciFrameOptions(MINIMAL)).not.toThrow();
     expect(() =>
       check({
@@ -372,7 +372,7 @@ describe("checkPciFrameOptions", () => {
     ).not.toThrow();
   });
 
-  it("[T49] rejects options that are not an object, and an option that is not known", () => {
+  it("rejects options that are not an object, and an option that is not known", () => {
     for (const text of ["null", "[]", '"x"']) {
       expect(() => checkPciFrameOptions(json(text)), text).toThrow(/^The options must be an object, found /);
     }
@@ -382,7 +382,7 @@ describe("checkPciFrameOptions", () => {
     expect(() => check({ modules: {} })).toThrow(/found "modules"\.$/);
   });
 
-  it("[T49] rejects a static URL that is not an absolute http URL ending in a slash", () => {
+  it("rejects a static URL that is not an absolute http URL ending in a slash", () => {
     expect(() => check({ staticUrl: "https://assets.example/static" })).toThrow(
       new DataError('The option staticUrl must end in "/", found "https://assets.example/static".'),
     );
@@ -395,7 +395,7 @@ describe("checkPciFrameOptions", () => {
     expect(() => check({ staticUrl: json("5") })).toThrow("The option staticUrl must be a string, found 5.");
   });
 
-  it("[T49] rejects an origin that is more than a scheme, a host and a port", () => {
+  it("rejects an origin that is more than a scheme, a host and a port", () => {
     for (const origin of [
       "https://cdn.example/",
       "https://cdn.example/path",
@@ -410,7 +410,7 @@ describe("checkPciFrameOptions", () => {
     expect(() => check({ origins: json("null") })).toThrow("The option origins must be an array, found null.");
   });
 
-  it("[T49] rejects an interaction that is not a portable custom interaction", () => {
+  it("rejects an interaction that is not a portable custom interaction", () => {
     expect(() => check({ interaction: json("null") })).toThrow("The option interaction must be an object, found null.");
     expect(() => check({ interaction: json('{"kind":"choice-interaction"}') })).toThrow(
       'The option interaction must be a qti-portable-custom-interaction, found the kind "choice-interaction".',
@@ -424,7 +424,7 @@ describe("checkPciFrameOptions", () => {
     expect(() => check({ assets: json("null") })).toThrow("The option assets must be a function, found null.");
   });
 
-  it("[T50] rejects the variables, the state and the status of the wrong type", () => {
+  it("rejects the variables, the state and the status of the wrong type", () => {
     expect(() => check({ response: json("null") })).toThrow(
       "A variable must be an object with a value and a declaration",
     );
@@ -444,7 +444,7 @@ describe("checkPciFrameOptions", () => {
     );
   });
 
-  it("[T49] rejects a prompt, a language, markup, stylesheets, messages, files and a listener of the wrong type", () => {
+  it("rejects a prompt, a language, markup, stylesheets, messages, files and a listener of the wrong type", () => {
     expect(() => check({ prompt: json("5") })).toThrow("The option prompt must be a string, found 5.");
     expect(() => check({ prompt: undefined })).toThrow("The option prompt must be a string, found undefined.");
     expect(() => check({ language: "" })).toThrow("The option language must be a non-empty string");
@@ -463,7 +463,7 @@ describe("checkPciFrameOptions", () => {
 });
 
 describe("describeFrame", () => {
-  it("[T50] gives the interaction its identifiers, class, properties and modules, from the interaction itself", async () => {
+  it("gives the interaction its identifiers, class, properties and modules, from the interaction itself", async () => {
     const interaction = interactionOf(
       'module="tap" class="hmh-tap-border-rounded qti-orientation-horizontal" data-toggle="true" data-tap-message="Tap to reveal"',
     );
@@ -486,7 +486,7 @@ describe("describeFrame", () => {
     });
   });
 
-  it("[T50] writes the response, the template variables and the context variables as JSON", async () => {
+  it("writes the response, the template variables and the context variables as JSON", async () => {
     const { prepare } = describeFrame({
       ...MINIMAL,
       response: { value: single("integer", 2), declaration: INTEGER },
@@ -514,7 +514,7 @@ describe("describeFrame", () => {
     });
   });
 
-  it("[T51] reads the bytes of the files that go to the interaction", async () => {
+  it("reads the bytes of the files that go to the interaction", async () => {
     const { files } = memoryFiles(new Map([["stored-1", PLEASURE.bytes]]));
     const value: Value = single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" });
     const { prepare } = describeFrame({ ...MINIMAL, response: { value, declaration: FILE }, files });
@@ -523,7 +523,7 @@ describe("describeFrame", () => {
     });
   });
 
-  it("[T50] puts player.css from the static URL before the stylesheets of the item", async () => {
+  it("puts player.css from the static URL before the stylesheets of the item", async () => {
     const { prepare } = describeFrame({ ...MINIMAL, stylesheets: [`${GATE}styles/item.css`] });
     expect((await prepare()).stylesheets).toEqual([
       "https://assets.example/static/player.css",
@@ -531,20 +531,20 @@ describe("describeFrame", () => {
     ]);
   });
 
-  it("[SC 4.1.2] names the frame from the prompt, with its white space collapsed, else by the message", () => {
+  it("names the frame from the prompt, with its white space collapsed, else by the message", () => {
     expect(describeFrame({ ...MINIMAL, prompt: "  Which\n  is   larger? " }).title).toBe("Which is larger?");
     expect(describeFrame({ ...MINIMAL, prompt: null }).title).toBe("Interactive question");
     expect(describeFrame({ ...MINIMAL, prompt: " \n\t " }).title).toBe("Interactive question");
     expect(describeFrame({ ...MINIMAL, prompt: "", messages: ID_MESSAGES }).title).toBe("Soal interaktif");
   });
 
-  it("[T49] refuses an interaction whose modules cannot load", () => {
+  it("refuses an interaction whose modules cannot load", () => {
     expect(() => describeFrame({ ...MINIMAL, interaction: interactionOf("") })).toThrow("names no module to load");
   });
 });
 
 describe("isRequestedStatus", () => {
-  it("[T52] accepts the statuses that BPIG §3.7.12.7.2 lists for ondone and no other", () => {
+  it("accepts the statuses that BPIG §3.7.12.7.2 lists for ondone and no other", () => {
     for (const status of ["interacting", "closed", "solution", "review"]) expect(isRequestedStatus(status)).toBe(true);
     for (const status of ["suspended", "", "Closed", json("null"), json("1")])
       expect(isRequestedStatus(status)).toBe(false);
@@ -555,32 +555,32 @@ describe("buildFrameCsp", () => {
   const origin = "https://assets.example";
   const policy = directives(buildFrameCsp(origin, []));
 
-  it("[T53] allows nothing by default, and scripts only from the origin of the frame", () => {
+  it("allows nothing by default, and scripts only from the origin of the frame", () => {
     expect(policy.get("default-src")).toEqual(["'none'"]);
     expect(policy.get("script-src")).toEqual([origin]);
   });
 
-  it("[T53] allows inline styles in the frame, and inline images, media and fonts, which reach no network", () => {
+  it("allows inline styles in the frame, and inline images, media and fonts, which reach no network", () => {
     expect(policy.get("style-src")).toEqual([origin, "'unsafe-inline'"]);
     expect(policy.get("img-src")).toEqual([origin, "data:"]);
     expect(policy.get("media-src")).toEqual([origin, "data:"]);
     expect(policy.get("font-src")).toEqual([origin, "data:"]);
   });
 
-  it("[T53] forbids connections, frames, forms and a base element", () => {
+  it("forbids connections, frames, forms and a base element", () => {
     for (const name of ["connect-src", "frame-src", "form-action", "base-uri"]) {
       expect(policy.get(name), name).toEqual(["'none'"]);
     }
   });
 
-  it("[T53] allows no inline script and no evaluation of strings", () => {
+  it("allows no inline script and no evaluation of strings", () => {
     const sources = [...policy.entries()].filter(([name]) => name !== "style-src").flatMap(([, list]) => list);
     expect(sources).not.toContain("'unsafe-inline'");
     expect(sources).not.toContain("'unsafe-eval'");
     expect(policy.get("script-src")).not.toContain("'unsafe-inline'");
   });
 
-  it("[T49] adds the allowed origins to the scripts, styles, images, media and fonts", () => {
+  it("adds the allowed origins to the scripts, styles, images, media and fonts", () => {
     const wider = directives(buildFrameCsp(origin, ["https://cdn.example", "https://fonts.example"]));
     for (const name of ["script-src", "style-src", "img-src", "media-src", "font-src"]) {
       expect(wider.get(name), name).toEqual(
@@ -592,11 +592,11 @@ describe("buildFrameCsp", () => {
 });
 
 describe("toJson", () => {
-  it("[T52] turns undefined, which getResponse gives for no response, into null", () => {
+  it("turns undefined, which getResponse gives for no response, into null", () => {
     expect(toJson(undefined)).toBeNull();
   });
 
-  it("[T52] keeps JSON, and loses what JSON loses", () => {
+  it("keeps JSON, and loses what JSON loses", () => {
     expect(toJson({ base: { integer: 3 } })).toEqual({ base: { integer: 3 } });
     expect(toJson({ a: undefined, b: () => 1, c: new Date(0) })).toEqual({ c: "1970-01-01T00:00:00.000Z" });
     expect(toJson(new Map([[1, 2]]))).toEqual({});
@@ -619,7 +619,7 @@ describe("toJson", () => {
 describe("readFrameMessage", () => {
   const read = (text: string): PciFrameMessage => readFrameMessage(json(text));
 
-  it("[T52] reads each message that the frame sends", () => {
+  it("reads each message that the frame sends", () => {
     expect(read('{"type":"loaded"}')).toEqual({ type: "loaded" });
     expect(read('{"type":"ready","state":"{}"}')).toEqual({ type: "ready", state: "{}" });
     expect(read('{"type":"changed","response":{"base":{"integer":1}},"state":"s","valid":false}')).toEqual({
@@ -648,7 +648,7 @@ describe("readFrameMessage", () => {
     expect(read('{"type":"failed","reason":"register"}')).toEqual({ type: "failed", reason: "register" });
   });
 
-  it("[T52] takes a change with no validity, and a response of undefined, as a structured clone delivers them", () => {
+  it("takes a change with no validity, and a response of undefined, as a structured clone delivers them", () => {
     expect(readFrameMessage({ type: "changed", response: undefined, state: "s", valid: undefined })).toEqual({
       type: "changed",
       response: null,
@@ -662,7 +662,7 @@ describe("readFrameMessage", () => {
     });
   });
 
-  it("[T53] rejects what is not an object, and an object of another type", () => {
+  it("rejects what is not an object, and an object of another type", () => {
     for (const text of ["null", "[]", '"loaded"', "5", "true"]) {
       expect(() => read(text), text).toThrow(/^A message from the frame must be an object, found /);
     }
@@ -672,7 +672,7 @@ describe("readFrameMessage", () => {
     expect(() => read("{}")).toThrow("found undefined.");
   });
 
-  it("[T53] rejects a state that is not a string", () => {
+  it("rejects a state that is not a string", () => {
     expect(() => read('{"type":"ready","state":5}')).toThrow(
       new DataError("The state of an interaction must be a string, found 5."),
     );
@@ -681,7 +681,7 @@ describe("readFrameMessage", () => {
     expect(() => read('{"type":"completed","flushed":{"response":null}}')).toThrow("The state of an interaction");
   });
 
-  it("[T53] rejects a height that is not a non-negative integer", () => {
+  it("rejects a height that is not a non-negative integer", () => {
     for (const text of ['"9"', "-1", "1.5", "null", "[]"]) {
       expect(() => read(`{"type":"height","height":${text}}`), text).toThrow(/^The height of the frame must be/);
     }
@@ -689,7 +689,7 @@ describe("readFrameMessage", () => {
     expect(() => readFrameMessage({ type: "height", height: Number.NaN })).toThrow(DataError);
   });
 
-  it("[T52] rejects a status that ondone does not know, a validity that is not a boolean, and a failure that is not listed", () => {
+  it("rejects a status that ondone does not know, a validity that is not a boolean, and a failure that is not listed", () => {
     expect(() => read('{"type":"done","response":null,"state":"s","status":"suspended"}')).toThrow(
       /^The status that an interaction asks for must be "interacting", "closed", "solution" or "review", found "suspended"\./,
     );
@@ -706,7 +706,7 @@ describe("readFrameMessage", () => {
     );
   });
 
-  it("[T53] rejects a response that has a cycle", () => {
+  it("rejects a response that has a cycle", () => {
     const response: Record<string, unknown> = {};
     response.self = response;
     expect(() => readFrameMessage({ type: "done", response, state: "s", status: "closed" })).toThrow(DataError);
@@ -714,7 +714,7 @@ describe("readFrameMessage", () => {
 });
 
 describe("properties", () => {
-  it("[T53] gives a message of a known type or throws a DataError, for any value", () => {
+  it("gives a message of a known type or throws a DataError, for any value", () => {
     fc.assert(
       fc.property(fc.anything(), (value) => {
         try {
@@ -728,7 +728,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T53] reads every height message that has a non-negative safe integer", () => {
+  it("reads every height message that has a non-negative safe integer", () => {
     fc.assert(
       fc.property(fc.nat(), (height) => {
         expect(readFrameMessage({ type: "height", height })).toEqual({ type: "height", height });
@@ -736,7 +736,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T52] gives a response that is JSON, whatever the frame sent", () => {
+  it("gives a response that is JSON, whatever the frame sent", () => {
     fc.assert(
       fc.property(fc.jsonValue(), (response) => {
         const message = readFrameMessage({ type: "changed", response, state: "s", valid: true });
@@ -745,7 +745,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T51] gives back the value that a response was written from, files included", async () => {
+  it("gives back the value that a response was written from, files included", async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.uint8Array({ maxLength: 64 }),

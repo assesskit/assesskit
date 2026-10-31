@@ -121,13 +121,13 @@ async function requests(origin: string): Promise<string[]> {
 }
 
 describe("the page that posts the id_token", () => {
-  it("[T120] posts the form to the redirect URI of the tool by itself, under its policy", async () => {
+  it("posts the form to the redirect URI of the tool by itself, under its policy", async () => {
     const path = `/launch/${crypto.randomUUID()}`;
     load(await answer(path, "state-1"));
     await waitFor(async () => expect(await requests(other)).toContain(path));
   });
 
-  it("[T120] writes a hostile state as text in the markup, whatever the engine's parser", async () => {
+  it("writes a hostile state as text in the markup, whatever the engine's parser", async () => {
     const hostile = `"><img src="${stranger}/leak" onerror="alert(1)"><script>alert(2)</script><form action="${stranger}/x">`;
     const path = `/launch/${crypto.randomUUID()}`;
     const page = await answer(path, hostile);
@@ -142,7 +142,7 @@ describe("the page that posts the id_token", () => {
     expect(await requests(stranger)).toEqual([]);
   });
 
-  it("[T120] writes a redirect URI with a query as text in the markup", async () => {
+  it("writes a redirect URI with a query as text in the markup", async () => {
     const path = `/launch/${crypto.randomUUID()}?a=1&b="2"`;
     const page = await answer(path, "state-2");
     const document2 = new DOMParser().parseFromString(page.body, "text/html");

@@ -282,7 +282,7 @@ async function totalOf(ctx: Rig): Promise<unknown> {
 }
 
 describe("an exam with an essay and a link to a tool", () => {
-  it("[T106] launches the tool of an LTI item through the platform's handshake, with its storage in the frame the player names", async () => {
+  it("launches the tool of an LTI item through the platform's handshake, with its storage in the frame the player names", async () => {
     const ctx = await rig();
     await ctx.host.start(CANDIDATE, { seed: 7 });
     const reply = await ctx.send({ type: "move", to: DRAW });
@@ -293,7 +293,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(Object.keys(reply.assets)).toEqual([]);
   });
 
-  it("[T106] keeps interim progress, and supplies a final score to the requests that the item makes when the candidate leaves it", async () => {
+  it("keeps interim progress, and supplies a final score to the requests that the item makes when the candidate leaves it", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     expect(
@@ -319,7 +319,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(ctx.logged.flatMap(({ events }) => events.map(({ type }) => type))).toContain("scores-applied");
   });
 
-  it("[T106] ignores a score whose time is not later than the kept one, and keeps a later one", async () => {
+  it("ignores a score whose time is not later than the kept one, and keeps a later one", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     await tool.post(drawing(ctx, 30, { scoreGiven: 6 }));
@@ -330,7 +330,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect([...ctx.scores.kept.values()].map(({ scoreGiven }) => scoreGiven)).toEqual([7]);
   });
 
-  it("[T106] does not supply a score that is not final", async () => {
+  it("does not supply a score that is not final", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
@@ -342,7 +342,7 @@ describe("an exam with an essay and a link to a tool", () => {
     expect(await requestsOf(ctx)).toEqual(["item:essay:1:SCORE", "item:draw:1:SCORE", "item:draw:1:MAXSCORE"]);
   });
 
-  it("[T106] replaces the values of the requests when a later final score arrives", async () => {
+  it("replaces the values of the requests when a later final score arrives", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
@@ -357,7 +357,7 @@ describe("an exam with an essay and a link to a tool", () => {
 });
 
 describe("the results of the exam go back to the learning platform", () => {
-  it("[T113][T105] publishes PendingManual, then Pending with the score so far, then FullyGraded, as the requests are resolved", async () => {
+  it("publishes PendingManual, then Pending with the score so far, then FullyGraded, as the requests are resolved", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
@@ -405,7 +405,7 @@ describe("the results of the exam go back to the learning platform", () => {
     expect(new Set(stamps).size).toBe(3);
   });
 
-  it("[T105] sends a negative SCORE as 0, with the raw score in the comment, and publishes a regrade with a later time", async () => {
+  it("sends a negative SCORE as 0, with the raw score in the comment, and publishes a regrade with a later time", async () => {
     const ctx = await rig();
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
@@ -428,7 +428,7 @@ describe("the results of the exam go back to the learning platform", () => {
     });
   });
 
-  it("[T105] reads the scoreMaximum from the line item when the results have no MAXSCORE", async () => {
+  it("reads the scoreMaximum from the line item when the results have no MAXSCORE", async () => {
     const ctx = await rig(ltiExamFiles());
     const tool = await openDrawing(ctx);
     await ctx.send({ type: "submit", item: DRAW });
@@ -441,7 +441,7 @@ describe("the results of the exam go back to the learning platform", () => {
     expect(ctx.lms.calls).toEqual([`GET ${LINE_ITEM_URL}`, `POST ${LINE_ITEM_URL}/scores`]);
   });
 
-  it("[T105] refuses to publish a copy of the results that the session host returned", async () => {
+  it("refuses to publish a copy of the results that the session host returned", async () => {
     const ctx = await rig();
     await openDrawing(ctx);
     await ctx.host.proctor(CANDIDATE.session, { type: "end-test" });

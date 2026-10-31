@@ -341,7 +341,7 @@ describe("deepLinkResponse", () => {
     return deepLinkingOf(await ltiLaunch(post, ctx.options));
   }
 
-  it("[T104] signs a response that places a test, which the platform accepts", async () => {
+  it("signs a response that places a test, which the platform accepts", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx);
     const jwt = await deepLinkResponse(
@@ -380,7 +380,7 @@ describe("deepLinkResponse", () => {
     expect(readToken(jwt).header).toEqual({ alg: "RS256", typ: "JWT", kid: "tool-1" });
   });
 
-  it("[T104] places no item with an empty list, and leaves out the data when the request had none", async () => {
+  it("places no item with an empty list, and leaves out the data when the request had none", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx, {
       "https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings": {
@@ -394,7 +394,7 @@ describe("deepLinkResponse", () => {
     expect("https://purl.imsglobal.org/spec/lti-dl/claim/data" in claims).toBe(false);
   });
 
-  it("[T104] gives each response its own nonce and writes only the properties that the item has", async () => {
+  it("gives each response its own nonce and writes only the properties that the item has", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx);
     const first = readToken(await deepLinkResponse(launch, [{ url: TARGET_LINK_URI }], ctx.options)).payload;
@@ -405,7 +405,7 @@ describe("deepLinkResponse", () => {
     ]);
   });
 
-  it("[T104] places several items only when the platform accepts several", async () => {
+  it("places several items only when the platform accepts several", async () => {
     const ctx = setup();
     const several = await deepLinkingRequest(ctx);
     const jwt = await deepLinkResponse(several, [{ title: "a" }, { title: "b" }], ctx.options);
@@ -426,7 +426,7 @@ describe("deepLinkResponse", () => {
     }
   });
 
-  it("[T104] refuses items of a type that the platform does not accept", async () => {
+  it("refuses items of a type that the platform does not accept", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx, {
       "https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings": {
@@ -441,7 +441,7 @@ describe("deepLinkResponse", () => {
     await expect(deepLinkResponse(launch, [], ctx.options)).resolves.toEqual(expect.any(String));
   });
 
-  it("[T104] refuses a launch that is not a Deep Linking request, or whose registration changed", async () => {
+  it("refuses a launch that is not a Deep Linking request, or whose registration changed", async () => {
     const ctx = setup();
     const resourceLink = launchOf(await ltiLaunch((await cookieLogin(ctx)).request, ctx.options));
     await expect(deepLinkResponse(JSON.parse(JSON.stringify(resourceLink)), [], ctx.options)).rejects.toThrow(
@@ -457,7 +457,7 @@ describe("deepLinkResponse", () => {
     ).rejects.toMatchObject({ name: "LtiError", reason: "platform-unknown" });
   });
 
-  it("[T104] throws DataError for an item that is malformed", async () => {
+  it("throws DataError for an item that is malformed", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx);
     const properties = '"title", "text", "url", "custom" and "lineItem"';
@@ -500,7 +500,7 @@ describe("deepLinkResponse", () => {
     }
   });
 
-  it("[T104] throws DataError for arguments of other types", async () => {
+  it("throws DataError for arguments of other types", async () => {
     const ctx = setup();
     const launch = await deepLinkingRequest(ctx);
     await expect(deepLinkResponse(JSON.parse("null"), [], ctx.options)).rejects.toThrow(
@@ -531,7 +531,7 @@ describe("createJwksCache", () => {
     cache.keySet(JWKS_URL)({ alg: "RS256", kid }, { payload: "", signature: "" });
   const NO_KEY = { code: "ERR_JWKS_NO_MATCHING_KEY" };
 
-  it("[T103] fetches a key set once and serves its keys from the cache", async () => {
+  it("fetches a key set once and serves its keys from the cache", async () => {
     const { platform } = setup();
     const cache = createJwksCache({ fetch: platform.fetch });
     const first = await key(cache, "platform-1");
@@ -540,7 +540,7 @@ describe("createJwksCache", () => {
     expect(platform.requests).toEqual([`GET ${JWKS_URL}`]);
   });
 
-  it("[T103] follows a rotation: a kid that the cached set lacks fetches the set again after the refresh time", async () => {
+  it("follows a rotation: a kid that the cached set lacks fetches the set again after the refresh time", async () => {
     const { platform, clock } = setup();
     const cache = createJwksCache({ fetch: platform.fetch });
     await key(cache, "platform-1");
@@ -553,7 +553,7 @@ describe("createJwksCache", () => {
     expect(platform.requests).toHaveLength(2);
   });
 
-  it("[T103] does not fetch on every request that names an invented kid", async () => {
+  it("does not fetch on every request that names an invented kid", async () => {
     const { platform, clock } = setup();
     const cache = createJwksCache({ fetch: platform.fetch });
     for (let i = 0; i < 50; i += 1) await expect(key(cache, `invented-${i}`)).rejects.toMatchObject(NO_KEY);
@@ -678,7 +678,7 @@ describe("createJwksCache", () => {
 
 describe("ltiLaunch", () => {
   describe("on the cookie path", () => {
-    it("[T103] returns the launch of a resource link, with the claims that the platform sent", async () => {
+    it("returns the launch of a resource link, with the claims that the platform sent", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx);
       expect(launchOf(await ltiLaunch(post, ctx.options))).toEqual({
@@ -709,7 +709,7 @@ describe("ltiLaunch", () => {
       });
     });
 
-    it("[T103] returns the settings of a Deep Linking request", async () => {
+    it("returns the settings of a Deep Linking request", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx, { message: "deep-linking" });
       const launch = deepLinkingOf(await ltiLaunch(post, ctx.options));
@@ -722,7 +722,7 @@ describe("ltiLaunch", () => {
       expect(launch.roles).toEqual(["http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"]);
     });
 
-    it("[T103] accepts an anonymous launch, a blank line item, an audience string and an azp that is absent", async () => {
+    it("accepts an anonymous launch, a blank line item, an audience string and an azp that is absent", async () => {
       const ctx = setup();
       const claims = {
         sub: undefined,
@@ -739,7 +739,7 @@ describe("ltiLaunch", () => {
       expect(launch.messageType === "LtiResourceLinkRequest" && launch.ags?.lineitem).toBeUndefined();
     });
 
-    it("[T103] keeps an identifier such as __proto__ as data in the custom properties", async () => {
+    it("keeps an identifier such as __proto__ as data in the custom properties", async () => {
       const ctx = setup();
       const claims = {
         "https://purl.imsglobal.org/spec/lti/claim/custom": JSON.parse('{"__proto__":"x","constructor":"y"}'),
@@ -750,7 +750,7 @@ describe("ltiLaunch", () => {
       expect(launch.custom.get("constructor")).toBe("y");
     });
 
-    it("[T103] completes a login once: the same post fails the second time", async () => {
+    it("completes a login once: the same post fails the second time", async () => {
       const ctx = setup();
       const { request: post, auth } = await cookieLogin(ctx);
       launchOf(await ltiLaunch(post, ctx.options));
@@ -758,14 +758,14 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ name: "LtiError", reason: "state-unknown" });
     });
 
-    it("[T103] lets one of two launches that race with one login complete", async () => {
+    it("lets one of two launches that race with one login complete", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx);
       ctx.store.lose = true;
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ name: "LtiError", reason: "state-reused" });
     });
 
-    it("[T103] refuses a token that answers another login", async () => {
+    it("refuses a token that answers another login", async () => {
       const ctx = setup();
       const first = await cookieLogin(ctx);
       const second = await cookieLogin(ctx);
@@ -774,7 +774,7 @@ describe("ltiLaunch", () => {
       expect(ctx.store.records.has(second.auth.state)).toBe(true);
     });
 
-    it("[T103] refuses a launch whose browser did not log in: the state cookie is missing or differs", async () => {
+    it("refuses a launch whose browser did not log in: the state cookie is missing or differs", async () => {
       const ctx = setup();
       const first = await cookieLogin(ctx);
       const second = await cookieLogin(ctx);
@@ -795,7 +795,7 @@ describe("ltiLaunch", () => {
       expect(launchOf(await ltiLaunch(accepted, ctx.options)).messageType).toBe("LtiResourceLinkRequest");
     });
 
-    it("[T103] refuses a state that no login of the tool has, without asking the store for a malformed one", async () => {
+    it("refuses a state that no login of the tool has, without asking the store for a malformed one", async () => {
       const ctx = setup();
       const { auth } = await cookieLogin(ctx);
       const gets = ctx.store.gets;
@@ -808,7 +808,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(unknown, ctx.options)).rejects.toMatchObject({ reason: "state-unknown" });
     });
 
-    it("[T103] refuses a login after ten minutes", async () => {
+    it("refuses a login after ten minutes", async () => {
       const ctx = setup();
       const finish = async (seconds: number): Promise<LtiLaunch | HttpResponse> => {
         const response = await ltiLogin(ctx.platform.initiation(), ctx.options);
@@ -820,7 +820,7 @@ describe("ltiLaunch", () => {
       await expect(finish(600)).rejects.toMatchObject({ name: "LtiError", reason: "state-expired" });
     });
 
-    it("[T103] refuses a token that is not signed with RS256", async () => {
+    it("refuses a token that is not signed with RS256", async () => {
       const ctx = setup();
       const { auth, cookie } = await cookieLogin(ctx);
       const header = (alg: string): string => base64url(JSON.stringify({ alg, typ: "JWT", kid: "platform-1" }));
@@ -844,7 +844,7 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] refuses another spelling of a signature that has the same bytes", async () => {
+    it("refuses another spelling of a signature that has the same bytes", async () => {
       const ctx = setup();
       const { auth, cookie } = await cookieLogin(ctx);
       const [header = "", payload = "", signature = ""] = auth.idToken.split(".");
@@ -856,7 +856,7 @@ describe("ltiLaunch", () => {
       expect(launchOf(await ltiLaunch(auth.post({ cookie }), ctx.options)).messageType).toBe("LtiResourceLinkRequest");
     });
 
-    it("[T103] refuses a token whose signature is not the platform's", async () => {
+    it("refuses a token whose signature is not the platform's", async () => {
       const ctx = setup();
       const forged = await cookieLogin(ctx, { signer: attackerKey });
       await expect(ltiLaunch(forged.request, ctx.options)).rejects.toMatchObject({ reason: "signature-invalid" });
@@ -870,7 +870,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ reason: "signature-invalid" });
     });
 
-    it("[T103] refuses a token whose key the platform's key set does not hold", async () => {
+    it("refuses a token whose key the platform's key set does not hold", async () => {
       const ctx = setup();
       await expect(
         ltiLaunch((await cookieLogin(ctx, { signer: rotatedKey })).request, ctx.options),
@@ -879,7 +879,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(noKid.request, ctx.options)).rejects.toMatchObject({ reason: "key-unknown" });
     });
 
-    it("[T103] refuses a token signed with a key that cannot verify with RS256, as a key the set does not hold", async () => {
+    it("refuses a token signed with a key that cannot verify with RS256, as a key the set does not hold", async () => {
       const ctx = setup();
       const weak = await generateKeyPair("weak", 1024);
       const cases: readonly [string, KeyPair, Record<string, unknown>][] = [
@@ -899,7 +899,7 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] throws DataError when what the platform serves as its key set is not a key set", async () => {
+    it("throws DataError when what the platform serves as its key set is not a key set", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx);
       for (const body of ["<html>", "[]", '{"keys":{}}', '{"key":[]}']) {
@@ -909,7 +909,7 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] accepts a token signed with a key that the platform added by rotation", async () => {
+    it("accepts a token signed with a key that the platform added by rotation", async () => {
       const ctx = setup();
       launchOf(await ltiLaunch((await cookieLogin(ctx)).request, ctx.options));
       ctx.platform.published = [rotatedKey, platformKey];
@@ -920,13 +920,13 @@ describe("ltiLaunch", () => {
       expect(ctx.platform.requests).toHaveLength(2);
     });
 
-    it("[T103] refuses a token with a critical header, which names extensions the tool does not support", async () => {
+    it("refuses a token with a critical header, which names extensions the tool does not support", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx, { header: { crit: ["exp"] } });
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ reason: "token-malformed" });
     });
 
-    it("[T103] refuses a token that is not a JWT", async () => {
+    it("refuses a token that is not a JWT", async () => {
       const ctx = setup();
       const { auth, cookie } = await cookieLogin(ctx);
       const [header = "", payload = "", signature = ""] = auth.idToken.split(".");
@@ -950,13 +950,13 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] refuses a token of another issuer", async () => {
+    it("refuses a token of another issuer", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx, { claims: { iss: "https://evil.example" } });
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ reason: "issuer-mismatch" });
     });
 
-    it("[T103] refuses a token whose audience is not the tool alone", async () => {
+    it("refuses a token whose audience is not the tool alone", async () => {
       const ctx = setup();
       const audiences: readonly unknown[] = [
         "another-client",
@@ -976,7 +976,7 @@ describe("ltiLaunch", () => {
       expect(launchOf(await ltiLaunch(sole.request, ctx.options)).clientId).toBe(CLIENT_ID);
     });
 
-    it("[T103] refuses a token whose authorized party is not the tool", async () => {
+    it("refuses a token whose authorized party is not the tool", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx, { claims: { azp: "another-client" } });
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ reason: "authorized-party-mismatch" });
@@ -984,7 +984,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(invalid.request, ctx.options)).rejects.toMatchObject({ reason: "claim-invalid" });
     });
 
-    it("[T103] refuses a token at its expiry, allowing a minute of clock skew", async () => {
+    it("refuses a token at its expiry, allowing a minute of clock skew", async () => {
       const ctx = setup();
       const inSkew = await cookieLogin(ctx, { claims: { exp: SECONDS - 59 } });
       expect(launchOf(await ltiLaunch(inSkew.request, ctx.options)).messageType).toBe("LtiResourceLinkRequest");
@@ -992,7 +992,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(expired.request, ctx.options)).rejects.toMatchObject({ reason: "token-expired" });
     });
 
-    it("[T103] refuses a token issued in the future, allowing a minute of clock skew", async () => {
+    it("refuses a token issued in the future, allowing a minute of clock skew", async () => {
       const ctx = setup();
       const inSkew = await cookieLogin(ctx, { claims: { iat: SECONDS + 60 } });
       expect(launchOf(await ltiLaunch(inSkew.request, ctx.options)).messageType).toBe("LtiResourceLinkRequest");
@@ -1000,7 +1000,7 @@ describe("ltiLaunch", () => {
       await expect(ltiLaunch(future.request, ctx.options)).rejects.toMatchObject({ reason: "issued-in-future" });
     });
 
-    it("[T103] refuses a token without a valid exp, iat, nonce or sub", async () => {
+    it("refuses a token without a valid exp, iat, nonce or sub", async () => {
       const ctx = setup();
       const cases: readonly [string, Record<string, unknown>, string][] = [
         ["exp", { exp: undefined }, "claim-missing"],
@@ -1018,13 +1018,13 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] refuses a token whose nonce is not the login's", async () => {
+    it("refuses a token whose nonce is not the login's", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx, { claims: { nonce: "another-nonce" } });
       await expect(ltiLaunch(post, ctx.options)).rejects.toMatchObject({ reason: "nonce-mismatch" });
     });
 
-    it("[T103] refuses a message that is not a launch of this tool", async () => {
+    it("refuses a message that is not a launch of this tool", async () => {
       const ctx = setup();
       const claim = "https://purl.imsglobal.org/spec/lti/claim/";
       const cases: readonly [string, Record<string, unknown>, string][] = [
@@ -1058,7 +1058,7 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] refuses a Deep Linking request without valid settings", async () => {
+    it("refuses a Deep Linking request without valid settings", async () => {
       const ctx = setup();
       const settings = "https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings";
       const cases: readonly [string, unknown, string][] = [
@@ -1082,14 +1082,14 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T103] refuses a launch of a platform that the tool no longer has", async () => {
+    it("refuses a launch of a platform that the tool no longer has", async () => {
       const ctx = setup();
       const { request: post } = await cookieLogin(ctx);
       const options: Options = { ...ctx.options, registration: async () => undefined };
       await expect(ltiLaunch(post, options)).rejects.toMatchObject({ reason: "platform-unknown" });
     });
 
-    it("[T107] refuses an LTI 1.1 launch, which is an OAuth 1.0a form without an id_token", async () => {
+    it("refuses an LTI 1.1 launch, which is an OAuth 1.0a form without an id_token", async () => {
       const ctx = setup();
       const legacy = formPost({
         oauth_consumer_key: "key",
@@ -1215,7 +1215,7 @@ describe("ltiLaunch", () => {
   });
 
   describe("on the client-side storage path", () => {
-    it("[T121] answers the post of the platform with a page that fetches the values from the platform's storage", async () => {
+    it("answers the post of the platform with a page that fetches the values from the platform's storage", async () => {
       const ctx = setup();
       const { auth, config, response } = await storageLogin(ctx);
       const page = await ltiLaunch(auth.post(), ctx.options);
@@ -1241,7 +1241,7 @@ describe("ltiLaunch", () => {
       expect(response.headers["set-cookie"]).toBeUndefined();
     });
 
-    it("[T121] sends the verification page with a CSP that names its script and nothing else", async () => {
+    it("sends the verification page with a CSP that names its script and nothing else", async () => {
       const ctx = setup();
       const { auth } = await storageLogin(ctx);
       const page = (await ltiLaunch(auth.post(), ctx.options)) as HttpResponse;
@@ -1256,7 +1256,7 @@ describe("ltiLaunch", () => {
       expect(view.scripts).toBe(1);
     });
 
-    it("[T121] writes the token and the state into the page as text, whatever they hold", async () => {
+    it("writes the token and the state into the page as text, whatever they hold", async () => {
       const ctx = setup();
       const { auth } = await storageLogin(ctx);
       const hostile = `"><script>alert('x')</script>&amp;`;
@@ -1266,7 +1266,7 @@ describe("ltiLaunch", () => {
       expect(view.inputs.get("id_token")).toBe(hostile);
     });
 
-    it("[T121] completes the launch when the platform's storage returns the values of the login", async () => {
+    it("completes the launch when the platform's storage returns the values of the login", async () => {
       const ctx = setup();
       const { auth, storage } = await storageLogin(ctx);
       const launch = launchOf(await ltiLaunch(verificationPost(auth, storage), ctx.options));
@@ -1277,7 +1277,7 @@ describe("ltiLaunch", () => {
       expect(ctx.store.records.size).toBe(0);
     });
 
-    it("[T121] completes the launch without any cookie", async () => {
+    it("completes the launch without any cookie", async () => {
       const ctx = setup();
       const { auth, storage } = await storageLogin(ctx);
       const post = verificationPost(auth, storage);
@@ -1285,7 +1285,7 @@ describe("ltiLaunch", () => {
       expect(launchOf(await ltiLaunch(post, ctx.options)).messageType).toBe("LtiResourceLinkRequest");
     });
 
-    it("[T121] completes a login once", async () => {
+    it("completes a login once", async () => {
       const ctx = setup();
       const { auth, storage } = await storageLogin(ctx);
       launchOf(await ltiLaunch(verificationPost(auth, storage), ctx.options));
@@ -1294,7 +1294,7 @@ describe("ltiLaunch", () => {
       });
     });
 
-    it("[T121] refuses a post of the verification that does not come from the tool's own origin", async () => {
+    it("refuses a post of the verification that does not come from the tool's own origin", async () => {
       const ctx = setup();
       const { auth, storage } = await storageLogin(ctx);
       const foreign: readonly Record<string, string>[] = [
@@ -1315,7 +1315,7 @@ describe("ltiLaunch", () => {
       }
     });
 
-    it("[T121] refuses values from the platform's storage that are not the login's", async () => {
+    it("refuses values from the platform's storage that are not the login's", async () => {
       const ctx = setup();
       const { auth, storage } = await storageLogin(ctx);
       const fields = { id_token: auth.idToken, state: auth.state };
@@ -1342,7 +1342,7 @@ describe("ltiLaunch", () => {
       );
     });
 
-    it("[T121] checks the token on this path as on the cookie path", async () => {
+    it("checks the token on this path as on the cookie path", async () => {
       const ctx = setup();
       const forged = await storageLogin(ctx, { signer: attackerKey });
       await expect(ltiLaunch(verificationPost(forged.auth, forged.storage), ctx.options)).rejects.toMatchObject({
@@ -1356,7 +1356,7 @@ describe("ltiLaunch", () => {
       );
     });
 
-    it("[T121] does not let the values of the storage stand in for the cookie of a login that used a cookie", async () => {
+    it("does not let the values of the storage stand in for the cookie of a login that used a cookie", async () => {
       const ctx = setup();
       const { auth } = await cookieLogin(ctx);
       const post = formPost(
@@ -1369,7 +1369,7 @@ describe("ltiLaunch", () => {
 });
 
 describe("ltiLogin", () => {
-  it("[T103] answers the initiation with the authentication request and a state cookie", async () => {
+  it("answers the initiation with the authentication request and a state cookie", async () => {
     const ctx = setup();
     const response = await ltiLogin(ctx.platform.initiation(), ctx.options);
     expect(response.status).toBe(302);
@@ -1404,7 +1404,7 @@ describe("ltiLogin", () => {
     });
   });
 
-  it("[T103] returns lti_message_hint unaltered and accepts the initiation as a POST", async () => {
+  it("returns lti_message_hint unaltered and accepts the initiation as a POST", async () => {
     const ctx = setup();
     const hint = "a b&c=d/é?";
     for (const method of ["GET", "POST"] as const) {
@@ -1413,7 +1413,7 @@ describe("ltiLogin", () => {
     }
   });
 
-  it("[T103] leaves out lti_message_hint when the platform sends none", async () => {
+  it("leaves out lti_message_hint when the platform sends none", async () => {
     const ctx = setup();
     const initiation = request({
       url: `${LOGIN_URL}?iss=${encodeURIComponent(ISSUER)}&login_hint=1&target_link_uri=${encodeURIComponent(TARGET_LINK_URI)}`,
@@ -1422,14 +1422,14 @@ describe("ltiLogin", () => {
     expect(new URL(response.headers.location ?? "").searchParams.has("lti_message_hint")).toBe(false);
   });
 
-  it("[T103] looks up the registration by the issuer, and the client when the platform names one", async () => {
+  it("looks up the registration by the issuer, and the client when the platform names one", async () => {
     const ctx = setup();
     await ltiLogin(ctx.platform.initiation(), ctx.options);
     await ltiLogin(ctx.platform.initiation({ clientId: true }), ctx.options);
     expect(ctx.lookups).toEqual([`${ISSUER} undefined`, `${ISSUER} ${CLIENT_ID}`]);
   });
 
-  it("[T103] gives each login its own state and nonce", async () => {
+  it("gives each login its own state and nonce", async () => {
     const ctx = setup();
     const locations = await Promise.all(
       Array.from({ length: 20 }, async () => (await ltiLogin(ctx.platform.initiation(), ctx.options)).headers.location),
@@ -1440,7 +1440,7 @@ describe("ltiLogin", () => {
     expect(ctx.store.records.size).toBe(20);
   });
 
-  it("[T103] keeps a query that the authentication endpoint already has", async () => {
+  it("keeps a query that the authentication endpoint already has", async () => {
     const ctx = setup({ authenticationUrl: `${AUTHENTICATION_URL}?tenant=7` });
     const response = await ltiLogin(ctx.platform.initiation(), ctx.options);
     const location = new URL(response.headers.location ?? "");
@@ -1448,7 +1448,7 @@ describe("ltiLogin", () => {
     expect(location.searchParams.get("scope")).toBe("openid");
   });
 
-  it("[T121] answers an initiation with lti_storage_target with a page that stores state and nonce in the platform", async () => {
+  it("answers an initiation with lti_storage_target with a page that stores state and nonce in the platform", async () => {
     const ctx = setup();
     const response = await ltiLogin(ctx.platform.initiation({ storageTarget: "_parent" }), ctx.options);
     expect(response.status).toBe(200);
@@ -1473,7 +1473,7 @@ describe("ltiLogin", () => {
     });
   });
 
-  it("[T121] sends the storage page with a CSP that names its script and nothing else", async () => {
+  it("sends the storage page with a CSP that names its script and nothing else", async () => {
     const ctx = setup();
     const response = await ltiLogin(ctx.platform.initiation({ storageTarget: "frame" }), ctx.options);
     const view = readPage(response);
@@ -1486,7 +1486,7 @@ describe("ltiLogin", () => {
     expect(view.scripts).toBe(1);
   });
 
-  it("[T121] writes the name of the target frame into the page as text, whatever it holds", async () => {
+  it("writes the name of the target frame into the page as text, whatever it holds", async () => {
     const ctx = setup();
     const hostile = `"><script>alert(1)</script>'&`;
     const response = await ltiLogin(ctx.platform.initiation({ storageTarget: hostile }), ctx.options);

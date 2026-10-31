@@ -10,7 +10,7 @@ lint, and the rest are checked in review.
 | No backtracking regexp | `new RegExp` and `RegExp(` fail lint everywhere in `src/`. Patterns that authors write run on the runtime's linear-time automaton, never on a backtracking engine.                                                                                       |
 | No code execution      | No `eval` (lint) and no code loading. Extension points are functions the caller registers.                                                                                                                                                               |
 | Untrusted input        | Every input is untrusted: documents, packages, actions, and what resolvers return. Entry points validate deeply, and the JSON they read is read with valibot schemas; inner functions validate shallowly, so a call does not cost the size of the model. |
-| Cited rules            | Every semantic rule cites the specification section that defines it, and every inventory row has a test ([evidence](evidence.md)).                                                                                                                       |
+| Cited rules            | Every semantic rule cites the specification section that defines it, and what the specifications declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                    |
 
 ## Layers
 

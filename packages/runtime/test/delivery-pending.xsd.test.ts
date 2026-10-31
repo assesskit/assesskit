@@ -44,7 +44,7 @@ const issuesOf = (report: AssessmentResult, path = "report.xml"): Promise<readon
   validateXmlFiles(schemas, [{ path, content: writeResults(report) }]);
 
 describe("results validated against the Results Reporting schema", () => {
-  it("[X][E24] validates the report of a finished session, provisional while an essay waits for its score and final after", async () => {
+  it("validates the report of a finished session, provisional while an essay waits for its score and final after", async () => {
     const engine = reportedTest();
     const { state } = reportedSession(engine);
     expect(await issuesOf(engine.results(state))).toEqual([]);
@@ -59,7 +59,7 @@ describe("results validated against the Results Reporting schema", () => {
     expect(await issuesOf(engine.results(begun(engine).state))).toEqual([]);
   });
 
-  it("[X][E24][E25] validates the report of a session with a link to a tool", async () => {
+  it("validates the report of a session with a link to a tool", async () => {
     const engine = engineOf(
       `${outcome("TOTAL", "float")}${part("P", section("S", refs("L1", "q")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
       { items: { L1: linkResolution("L1") } },
@@ -68,7 +68,7 @@ describe("results validated against the Results Reporting schema", () => {
     expect(await issuesOf(engine.results(submitted.state))).toEqual([]);
   });
 
-  it("[X][C10][B67] validates the report that Submit Results carries, and the report with the outcomes the CAT engine added", async () => {
+  it("validates the report that Submit Results carries, and the report with the outcomes the CAT engine added", async () => {
     const engine = engineOf(
       `${outcome("TOTAL", "float")}${outcome("LEVEL", "float", 'external-scored="externalMachine"')}${part("P", section("A", ADAPTIVE + refs("i1", "i2", "i3")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
       { cat: CAT_A },

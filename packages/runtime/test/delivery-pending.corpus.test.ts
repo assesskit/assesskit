@@ -70,7 +70,7 @@ async function itemsOf(directory: string, path: string): Promise<ReadonlyMap<str
 }
 
 describe("the pending work of the examples", () => {
-  it("[E24][R][C] reports a finished session of englishBasicLevelV2, an item result for each item, and reads the report back", async () => {
+  it("reports a finished session of englishBasicLevelV2, an item result for each item, and reads the report back", async () => {
     const { engine } = await deliveryOf("englishBasicLevelV2", "Test_258641331.xml");
     const items = await itemsOf("englishBasicLevelV2", "Test_258641331.xml");
     const state = answerAll(engine, items, false);
@@ -86,7 +86,7 @@ describe("the pending work of the examples", () => {
     expect(readResults(writeResults(results))).toEqual(results);
   });
 
-  it("[E24][R][C] reports interactionMixSaxonyV3 submitted one by one, with the datestamp of each submission", async () => {
+  it("reports interactionMixSaxonyV3 submitted one by one, with the datestamp of each submission", async () => {
     const { engine } = await deliveryOf("interactionMixSaxonyV3", "InteractionMixSachsen_1901710679.xml");
     const items = await itemsOf("interactionMixSaxonyV3", "InteractionMixSachsen_1901710679.xml");
     const state = answerAll(engine, items, true);
@@ -97,7 +97,7 @@ describe("the pending work of the examples", () => {
     expect(readResults(writeResults(results))).toEqual(results);
   });
 
-  it("[E25][E13][E15][C] asks the tool of each link of testWithLti for SCORE and MAXSCORE, and sums the scores it supplies", async () => {
+  it("asks the tool of each link of testWithLti for SCORE and MAXSCORE, and sums the scores it supplies", async () => {
     const { engine } = await deliveryOf("testWithLti", "assessment.xml");
     const started = engine.start({ seed: 1, at: 0 });
     if (!started.ok) throw new Error(started.refusal.message);
@@ -138,7 +138,7 @@ describe("the pending work of the examples", () => {
     expect(readResults(writeResults(results))).toEqual(results);
   });
 
-  it("[B61][E13][E14][E15][C] asks for the score of the essay of essay.xml, with the exact text, and the scorer sees the rubric", () => {
+  it("asks for the score of the essay of essay.xml, with the exact text, and the scorer sees the rubric", () => {
     const example = exampleItems().find(({ path }) => path === "packaging/items/essay.xml");
     if (example === undefined) throw new Error("The examples have no essay.xml.");
     const engine = createEngine({ kind: "item", item: example.item, base: example.path });
@@ -164,7 +164,7 @@ describe("the pending work of the examples", () => {
     ]);
   });
 
-  it("[E24][R][C] reports every example item that is delivered alone, and the report reads back", () => {
+  it("reports every example item that is delivered alone, and the report reads back", () => {
     let reported = 0;
     for (const { path, item } of exampleItems()) {
       const issues = validateAsi({ kind: "item", item }, { customOperators: new Map() });

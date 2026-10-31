@@ -25,7 +25,7 @@ const categories = (lom: XmlElement | undefined): string[] =>
 describe("the metadata of the 1EdTech examples", () => {
   const choice = manifest("metaData/imsmanifest.xml").resources[0]?.metadata;
 
-  it("[Q1][Q3][Q5][Q9][Q10][Q12][Q13][Q14] has the QTI metadata that the metaData manifest spells", () => {
+  it("has the QTI metadata that the metaData manifest spells", () => {
     expect(choice?.qti).toEqual({
       timeDependent: false,
       interactionTypes: ["choiceInteraction"],
@@ -38,18 +38,18 @@ describe("the metadata of the 1EdTech examples", () => {
     });
   });
 
-  it("[Q18] has the identifier and the title of the general category that the metaData manifest spells", () => {
+  it("has the identifier and the title of the general category that the metaData manifest spells", () => {
     expect(choice?.lom && lomGeneral(choice.lom)).toEqual({
       identifiers: ["qti_v2_item_01"],
       titles: [{ language: "en", text: "Metadata Example Item #1" }],
     });
   });
 
-  it("[Q19][Q20][Q21] has the life cycle, meta-metadata and technical categories that the metaData manifest spells", () => {
+  it("has the life cycle, meta-metadata and technical categories that the metaData manifest spells", () => {
     expect(categories(choice?.lom)).toEqual(["general", "lifeCycle", "metaMetadata", "technical"]);
   });
 
-  it("[Q6][Q7][Q8] has the context of a portable custom interaction in the pci manifest", () => {
+  it("has the context of a portable custom interaction in the pci manifest", () => {
     const contexts = manifest("pci/src/imsmanifest.xml")
       .resources.map((resource) => resource.metadata?.qti?.portableCustomInteractionContext)
       .filter((context) => context !== undefined);
@@ -64,7 +64,7 @@ describe("the metadata of the 1EdTech examples", () => {
     });
   });
 
-  it("[Q27][Q28][Q29][Q30] has the curriculum standards that the CASE manifest spells", () => {
+  it("has the curriculum standards that the CASE manifest spells", () => {
     const standards = manifest("CASE/imsmanifest.xml").resources.flatMap(
       (resource) => resource.metadata?.curriculumStandards?.standards ?? [],
     );
@@ -77,7 +77,7 @@ describe("the metadata of the 1EdTech examples", () => {
     });
   });
 
-  it("[K22][Q1][Q18][Q19][Q22][Q26][Q27][Q30] has external metadata files with the QTI metadata, the LOM and the standards that they spell", () => {
+  it("has external metadata files with the QTI metadata, the LOM and the standards that they spell", () => {
     const external = readResourceMetadata(
       parseXml(bytes("externalMetadata/testitems/metadata_747eee11-848c-597a-8c9c-a71c5399798d.xml"), {
         path: "metadata.xml",
@@ -98,7 +98,7 @@ describe("the metadata of the 1EdTech examples", () => {
     expect(categories(external.lom)).toEqual(["educational", "lifeCycle", "classification"]);
   });
 
-  it("[K6][K22] reads the metadata of every resource of every manifest and every external metadata file", () => {
+  it("reads the metadata of every resource of every manifest and every external metadata file", () => {
     let withQti = 0;
     let spelled = 0;
     for (const path of readdirSync(packaging, { recursive: true, encoding: "utf8" }).filter((entry) =>
@@ -183,7 +183,7 @@ describe("the metadata that the example items show", () => {
     return found.sort();
   }
 
-  it("[Q2][Q3][Q4][Q5][Q9][Q10][Q11] agree with the metadata of the manifests in 31 items, except where an author's metadata differs from the item", () => {
+  it("agree with the metadata of the manifests in 31 items, except where an author's metadata differs from the item", () => {
     // Each line is an item whose manifest says otherwise than the item shows: the manifest says nonadaptive for items without
     // feedback (CASE, metaData), extendedText for items with a text entry (ccPackage), no solution for items that declare
     // correct responses (hotspot-maximum, the pci fractions), and a solution for an item that declares correct responses for
@@ -205,7 +205,7 @@ describe("the metadata that the example items show", () => {
     );
   });
 
-  it("[Q3][Q5][Q9][Q10] derive the metadata that the metaData manifest spells for its choice item, except the feedback it does not have", () => {
+  it("derive the metadata that the metaData manifest spells for its choice item, except the feedback it does not have", () => {
     const pkg = readPackage(bytes("metaData/metaData.zip"));
     const document = pkg.document("choice.xml");
     if (document.kind !== "item") throw new Error("Not an item.");

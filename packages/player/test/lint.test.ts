@@ -9,7 +9,7 @@ const ROOT = resolve(import.meta.dirname, "../../..");
 const SRC = "packages/player/src";
 const RESTRICTED_IMPORT = "lint/style/noRestrictedImports";
 
-/** The units of the layering, and the units each one may import: the table of docs/architecture.md. */
+/** The units of the layering, and the units each one may import: the table of docs/player/architecture.md. */
 const LAYERS: Readonly<Record<string, readonly string[]>> = {
   messages: [],
   protocol: ["messages"],
@@ -273,7 +273,7 @@ describe("layering", () => {
     expect(whatFor(measurekit.inCatMeasurekit)).not.toContain(RESTRICTED_IMPORT);
   });
 
-  it("[T67] lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
+  it("lets only server/ and lti/ import protocol/official.ts, which brands a report as official", () => {
     for (const path of [official.inPlayer, official.inClient, official.inScoring]) {
       expect(whatFor(path), path).toContain(RESTRICTED_IMPORT);
     }

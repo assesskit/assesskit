@@ -150,7 +150,7 @@ const answer = (identifier: string): CandidateAction => ({
 });
 
 describe("mountDelivery", () => {
-  it("[T64] shows the rubric of the test, the item with its stimuli and the heading of the item, and keeps the rubric on every item", async () => {
+  it("shows the rubric of the test, the item with its stimuli and the heading of the item, and keeps the rubric on every item", async () => {
     const s = await shell();
     await shown(s);
     expect(heading(s.ui).textContent).toBe("Item q1");
@@ -164,7 +164,7 @@ describe("mountDelivery", () => {
     );
   });
 
-  it("[T54] lists the items of the part with their state, marks the current one and moves to the one the candidate chooses", async () => {
+  it("lists the items of the part with their state, marks the current one and moves to the one the candidate chooses", async () => {
     const s = await shell();
     await shown(s);
     const nav = s.ui.querySelector("nav");
@@ -181,7 +181,7 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector("nav [aria-current]")?.textContent).toContain("Item q2");
   });
 
-  it("[T54] moves forward only in a linear part: no way back, and the items behind are out of reach", async () => {
+  it("moves forward only in a linear part: no way back, and the items behind are out of reach", async () => {
     const s = await shell({ files: examFiles({ part: 'navigation-mode="linear" submission-mode="individual"' }) });
     await shown(s);
     expect(s.ui.querySelector("nav")).toBeNull();
@@ -196,7 +196,7 @@ describe("mountDelivery", () => {
     expect(buttons(s.ui)).not.toContain("Previous");
   });
 
-  it("[SC 2.4.3] moves the focus to the heading of the item when the item changes, and not when the player starts", async () => {
+  it("moves the focus to the heading of the item when the item changes, and not when the player starts", async () => {
     const s = await shell();
     await shown(s);
     expect(s.ui.activeElement).toBeNull();
@@ -205,7 +205,7 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
 
-  it("[SC 2.4.3] keeps the focus on the control that has it when a new view arrives, and moves it to the heading when that control is gone", async () => {
+  it("keeps the focus on the control that has it when a new view arrives, and moves it to the heading when that control is gone", async () => {
     const s = await shell();
     await shown(s);
     const submit = buttonNamed(s.ui, "Submit answer");
@@ -218,7 +218,7 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
 
-  it("[T55] draws a button for each action of the view, and none for the pause that an exam does not allow", async () => {
+  it("draws a button for each action of the view, and none for the pause that an exam does not allow", async () => {
     const s = await shell();
     await shown(s);
     expect(buttons(s.ui)).toEqual([
@@ -233,7 +233,7 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector(".ak-actions")?.getAttribute("aria-label")).toBe("Actions");
   });
 
-  it("[T55][T70] lets the candidate pause and resume in practice, where the engine runs on the device", async () => {
+  it("lets the candidate pause and resume in practice, where the engine runs on the device", async () => {
     const s = await shell({ practice: true });
     await shown(s);
     expect(buttons(s.ui)).toContain("Pause the test");
@@ -247,7 +247,7 @@ describe("mountDelivery", () => {
     expect(s.ui.querySelector(".ak-notice")).toBeNull();
   });
 
-  it("[T55] says in words why the engine refused, in the status region and without moving the focus", async () => {
+  it("says in words why the engine refused, in the status region and without moving the focus", async () => {
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);
     const submit = buttonNamed(s.ui, "Submit answer");
@@ -261,7 +261,7 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement?.textContent).not.toBe("");
   });
 
-  it("[T97][T55] writes the interface in the language of the candidate, the refusals included", async () => {
+  it("writes the interface in the language of the candidate, the refusals included", async () => {
     const s = await shell({ language: "id", files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);
     expect(s.ui.querySelector(".ak-player")?.getAttribute("lang")).toBe("id");
@@ -278,7 +278,7 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(statusOf(s.ui)).toBe("Waktu untuk soal ini sudah habis."));
   });
 
-  it("[SC 3.3.4][T55] asks before the end of the test, starts on the answer that goes back, and sends nothing when the candidate goes back", async () => {
+  it("asks before the end of the test, starts on the answer that goes back, and sends nothing when the candidate goes back", async () => {
     const s = await shell();
     await shown(s);
     const version = s.store.records.get("exam-1")?.version;
@@ -299,7 +299,7 @@ describe("mountDelivery", () => {
     expect(s.store.records.get("exam-1")?.version).toBe(version);
   });
 
-  it("[SC 3.3.4][T55] ends the test when the candidate confirms, and tells that it ended", async () => {
+  it("ends the test when the candidate confirms, and tells that it ended", async () => {
     const s = await shell();
     await shown(s);
     buttonNamed(s.ui, "End the test").click();
@@ -310,7 +310,7 @@ describe("mountDelivery", () => {
     expect(s.ui.activeElement).toBe(heading(s.ui));
   });
 
-  it("[SC 3.3.4] asks before a submit in a linear part, and not in a nonlinear one", async () => {
+  it("asks before a submit in a linear part, and not in a nonlinear one", async () => {
     const linear = await shell({ files: examFiles({ part: 'navigation-mode="linear" submission-mode="individual"' }) });
     await shown(linear);
     buttonNamed(linear.ui, "Submit answer").click();
@@ -327,7 +327,7 @@ describe("mountDelivery", () => {
     expect(dialogOf(nonlinear.ui)).toBeNull();
   });
 
-  it("[T56] warns how many questions are not submitted when a part ends, and that a simultaneous part submits them together", async () => {
+  it("warns how many questions are not submitted when a part ends, and that a simultaneous part submits them together", async () => {
     const s = await shell({ files: examFiles({ part: 'navigation-mode="nonlinear" submission-mode="simultaneous"' }) });
     await shown(s);
     buttonNamed(s.ui, "End this part").click();
@@ -340,7 +340,7 @@ describe("mountDelivery", () => {
     ]);
   });
 
-  it("[T57] counts the time left down, announces it five minutes and one minute before the limit and when it is over, and learns of the time-out", async () => {
+  it("counts the time left down, announces it five minutes and one minute before the limit and when it is over, and learns of the time-out", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await vi.advanceTimersByTimeAsync(0);
@@ -367,14 +367,14 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
   });
 
-  it("[SC 2.2.1] tells the candidate who reloads inside the last minutes how much time is left", async () => {
+  it("tells the candidate who reloads inside the last minutes how much time is left", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="200"/>' }) });
     await vi.advanceTimersByTimeAsync(60);
     expect(timerStatusOf(s.ui)).toBe("Time left: 3 minutes 20 seconds");
   });
 
-  it("[SC 2.2.1] lets the candidate hide the timers, and still announces the warnings", async () => {
+  it("lets the candidate hide the timers, and still announces the warnings", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await vi.advanceTimersByTimeAsync(0);
@@ -389,7 +389,7 @@ describe("mountDelivery", () => {
     expect(timerStatusOf(s.ui)).toBe("Time left: 4 minutes 59 seconds");
   });
 
-  it("[T57] shows the time before the candidate may leave, and that a limit has passed and still takes answers", async () => {
+  it("shows the time before the candidate may leave, and that a limit has passed and still takes answers", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
     const part = 'navigation-mode="linear" submission-mode="individual"';
     const minimum = await shell({ files: examFiles({ part, limits: '<qti-time-limits min-time="30"/>' }) });
@@ -408,7 +408,7 @@ describe("mountDelivery", () => {
     expect(buttons(late.ui)).toContain("Submit answer");
   });
 
-  it("[T66] shows the time-out that the host applied when the candidate acts after it", async () => {
+  it("shows the time-out that the host applied when the candidate acts after it", async () => {
     const s = await shell({ files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);
     s.clock.advance(601 * SECOND);
@@ -417,7 +417,7 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(s.ui.querySelector(".ak-nav-item")?.textContent).toContain("(Submitted)"));
   });
 
-  it("[T58] offers the review and the solution of a closed item", async () => {
+  it("offers the review and the solution of a closed item", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
     await shown(s);
@@ -430,7 +430,7 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(s.ui.querySelector(".ak-nav-item")?.textContent).toContain("(Solution shown)"));
   });
 
-  it("[T59] draws a comment box where the item allows a comment, and sends the comment", async () => {
+  it("draws a comment box where the item allows a comment, and sends the comment", async () => {
     const withoutComment = await shell();
     await shown(withoutComment);
     expect(withoutComment.ui.querySelector<HTMLElement>(".ak-comment")?.hidden).toBe(true);
@@ -449,7 +449,7 @@ describe("mountDelivery", () => {
     expect(form?.hidden).toBe(true);
   });
 
-  it("[T60] marks an item that depends on time", async () => {
+  it("marks an item that depends on time", async () => {
     const files = { ...examFiles() };
     files["items/q2/item.xml"] = String(files["items/q2/item.xml"]).replace(
       'time-dependent="false"',
@@ -466,14 +466,14 @@ describe("mountDelivery", () => {
     );
   });
 
-  it("[T62] tells how many attempts the candidate has used and has left", async () => {
+  it("tells how many attempts the candidate has used and has left", async () => {
     const control = '<qti-item-session-control max-attempts="2" show-feedback="true"/>';
     const s = await shell({ files: examFiles({ control }) });
     await shown(s);
     expect(s.ui.querySelector(".ak-attempts")?.textContent).toBe("Attempts used: 1. Attempts left: 2");
   });
 
-  it("[T61] shows a break that the proctor made, and the candidate can do nothing until the proctor ends it", async () => {
+  it("shows a break that the proctor made, and the candidate can do nothing until the proctor ends it", async () => {
     const s = await shell();
     await shown(s);
     expect((await s.host.proctor(ALICE.session, { type: "suspend" })).ok).toBe(true);
@@ -494,7 +494,7 @@ describe("mountDelivery", () => {
     reloaded.close();
   });
 
-  it("[T69] mounts a session that the store restored, where the candidate left it", async () => {
+  it("mounts a session that the store restored, where the candidate left it", async () => {
     const s = await shell();
     await shown(s);
     await s.client.dispatch({ type: "move", to: "next" });
@@ -526,7 +526,7 @@ describe("mountDelivery", () => {
     client.close();
   });
 
-  it("[SC 4.1.3] announces the result of an action in a status region and not in the focus", async () => {
+  it("announces the result of an action in a status region and not in the focus", async () => {
     const s = await shell({ files: examFiles({ control: '<qti-item-session-control allow-comment="true"/>' }) });
     await shown(s);
     const field = s.ui.querySelector("textarea") as HTMLTextAreaElement;
@@ -542,7 +542,7 @@ describe("mountDelivery", () => {
     }
   });
 
-  it("[SC 4.1.3] says that the answers could not be sent, and that they were rejected", async () => {
+  it("says that the answers could not be sent, and that they were rejected", async () => {
     const failing = await shell({
       wrap: (client) =>
         ({ ...client, dispatch: async () => Promise.reject(new TypeError("Failed to fetch")) }) as never,
@@ -648,7 +648,7 @@ function pciFiles(): Readonly<Record<string, string | Uint8Array>> {
 }
 
 describe("a portable custom interaction in the player", () => {
-  it("[T67] stores the response and the state of the interaction with the session, so that it restores on another device", async () => {
+  it("stores the response and the state of the interaction with the session, so that it restores on another device", async () => {
     const s = await shell({
       files: pciFiles(),
       wrap: (client) =>
@@ -687,7 +687,7 @@ const choices = (ui: ShadowRoot): HTMLInputElement[] => [
 ];
 
 describe("the interactions in the player", () => {
-  it("[T67][T55] sends the response that the candidate gives, and tells that the answers are saved", async () => {
+  it("sends the response that the candidate gives, and tells that the answers are saved", async () => {
     const s = await shell();
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
@@ -696,7 +696,7 @@ describe("the interactions in the player", () => {
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
   });
 
-  it("[T67] keeps what the candidate chose when a view that answers an earlier request arrives", async () => {
+  it("keeps what the candidate chose when a view that answers an earlier request arrives", async () => {
     const s = await shell();
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
@@ -710,7 +710,7 @@ describe("the interactions in the player", () => {
     expect(choices(s.ui).map((input) => input.checked)).toEqual([false, true]);
   });
 
-  it("[T67] sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
+  it("sends the held response before the submit, so that the engine submits what the candidate chose", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
@@ -720,7 +720,7 @@ describe("the interactions in the player", () => {
     expect(s.client.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
   });
 
-  it("[T58] disables the interactions of a closed item, and shows the answer in the review and the correct one in the solution", async () => {
+  it("disables the interactions of a closed item, and shows the answer in the review and the correct one in the solution", async () => {
     const control = '<qti-item-session-control allow-review="true" show-solution="true"/>';
     const s = await shell({ files: examFiles({ control }) });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
@@ -742,7 +742,7 @@ describe("the interactions in the player", () => {
 });
 
 describe("accessibility of the chrome", () => {
-  it("[T55][SC 4.1.2] has no violation of WCAG 2.2 A and AA when it runs, asks, pauses and ends", async () => {
+  it("has no violation of WCAG 2.2 A and AA when it runs, asks, pauses and ends", async () => {
     const s = await shell({ practice: true, files: examFiles({ limits: '<qti-time-limits max-time="600"/>' }) });
     await shown(s);
     expect(await axeViolations(s.page)).toEqual([]);
@@ -763,7 +763,7 @@ describe("accessibility of the chrome", () => {
     expect(await axeViolations(s.page)).toEqual([]);
   });
 
-  it("[T55][SC 2.1.1] is operated with the keyboard alone: the map comes before the actions, and Enter and Space press a button", async () => {
+  it("is operated with the keyboard alone: the map comes before the actions, and Enter and Space press a button", async () => {
     const s = await shell();
     await shown(s);
     // The order of the page is the order of the Tab key in every engine that puts buttons in it; Safari's setting leaves them out.
@@ -783,7 +783,7 @@ describe("accessibility of the chrome", () => {
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
   });
 
-  it("[SC 2.4.3] gives the focus to the answer that goes back, and back to the control that asked", async () => {
+  it("gives the focus to the answer that goes back, and back to the control that asked", async () => {
     const s = await shell();
     await shown(s);
     const end = buttonNamed(s.ui, "End this part");
@@ -835,7 +835,7 @@ function recording(): { readonly sent: CandidateAction[]; readonly wrap: (client
 }
 
 describe("the supports in the player", () => {
-  it("[T75] draws a toggle button for each support that is an option, and none for a support that is on from the start or prohibited", async () => {
+  it("draws a toggle button for each support that is an option, and none for a support that is on from the start or prohibited", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     const region = s.ui.querySelector(".ak-supports");
@@ -846,14 +846,14 @@ describe("the supports in the player", () => {
     ]);
   });
 
-  it("[T75] has no panel for a candidate whose profile gives no option", async () => {
+  it("has no panel for a candidate whose profile gives no option", async () => {
     const s = await shell();
     await shown(s);
     expect(s.ui.querySelector(".ak-supports")?.hasAttribute("hidden")).toBe(true);
     expect(panelButtons(s.ui).filter((button) => button.offsetParent !== null)).toEqual([]);
   });
 
-  it("[T75][T79] sends the support action through the session, applies the support to the next view and takes it off when pressed again", async () => {
+  it("sends the support action through the session, applies the support to the next view and takes it off when pressed again", async () => {
     const { sent, wrap } = recording();
     const s = await shell({ profile: PROFILE, wrap });
     await shown(s);
@@ -869,7 +869,7 @@ describe("the supports in the player", () => {
     expect(buttonNamed(s.ui, "High contrast").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("[T75][SC 2.4.3] keeps the focus on the button that turned a support, and says nothing in the status region", async () => {
+  it("keeps the focus on the button that turned a support, and says nothing in the status region", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     const button = buttonNamed(s.ui, "High contrast");
@@ -880,7 +880,7 @@ describe("the supports in the player", () => {
     expect(statusOf(s.ui)).toBe("");
   });
 
-  it("[T84] shows the alternative text of an image after the support is turned on, without drawing the content again", async () => {
+  it("shows the alternative text of an image after the support is turned on, without drawing the content again", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     const body = contentOf(s.ui).querySelector(".ak-body");
@@ -892,7 +892,7 @@ describe("the supports in the player", () => {
     await waitFor(() => expect(contentOf(s.ui).querySelector(".ak-body")?.textContent).not.toContain("A map"));
   });
 
-  it("[T84] leaves what the supports added alone while the answers are saved, and applies them again to the next item", async () => {
+  it("leaves what the supports added alone while the answers are saved, and applies them again to the next item", async () => {
     const s = await shell({ profile: PROFILE });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     buttonNamed(s.ui, "Alternative text").click();
@@ -908,14 +908,14 @@ describe("the supports in the player", () => {
     expect(buttonNamed(s.ui, "Alternative text").getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("[T79] applies a support that is on from the start, and draws no control for it", async () => {
+  it("applies a support that is on from the start, and draws no control for it", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     expect(contentHostOf(s.ui).hasAttribute("data-ak-single-column")).toBe(true);
     expect(panelButtons(s.ui).map((button) => button.textContent)).not.toContain("Single column");
   });
 
-  it("[T75] lists the supports that are on from the start with their state, next to the buttons of the options", async () => {
+  it("lists the supports that are on from the start with their state, next to the buttons of the options", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     const lines = (): (string | null)[] =>
@@ -928,20 +928,20 @@ describe("the supports in the player", () => {
     expect(panelButtons(s.ui).map((button) => button.textContent)).toEqual(["High contrast", "Alternative text"]);
   });
 
-  it("[T75][T79] applies the supports to the content when the host draws the chrome, and draws no panel", async () => {
+  it("applies the supports to the content when the host draws the chrome, and draws no panel", async () => {
     const s = await shell({ profile: PROFILE, chrome: false });
     await shown(s);
     expect(contentHostOf(s.ui).hasAttribute("data-ak-single-column")).toBe(true);
     expect(s.ui.querySelector(".ak-supports")).toBeNull();
   });
 
-  it("[T75][T97] names the supports in the language of the interface", async () => {
+  it("names the supports in the language of the interface", async () => {
     const s = await shell({ profile: PROFILE, language: "id" });
     await waitFor(() => expect(panelButtons(s.ui)).toHaveLength(2));
     expect(s.ui.querySelector(".ak-supports")?.getAttribute("aria-label")).toBe(ID_MESSAGES.supportsLabel);
   });
 
-  it("[T85] reads the content with the voice of the host when the profile asks for it", async () => {
+  it("reads the content with the voice of the host when the profile asks for it", async () => {
     const requests: SpeechRequest[] = [];
     const voice = {
       speak: async (request: SpeechRequest): Promise<void> => void requests.push(request),
@@ -956,7 +956,7 @@ describe("the supports in the player", () => {
     expect(requests[0]?.lang).toBe("en");
   });
 
-  it("[T79][T87] changes the look inside the frame of a portable custom interaction when a support is turned on and off", async () => {
+  it("changes the look inside the frame of a portable custom interaction when a support is turned on and off", async () => {
     const s = await shell({
       files: pciFiles(),
       profile: PROFILE,
@@ -974,7 +974,7 @@ describe("the supports in the player", () => {
     await waitFor(async () => expect(await look()).toBeUndefined(), { timeout: 15_000 });
   });
 
-  it("[T74] says which version of the question was delivered", async () => {
+  it("says which version of the question was delivered", async () => {
     const s = await shell();
     await shown(s);
     const current = s.client.view.current;
@@ -988,7 +988,7 @@ describe("the supports in the player", () => {
     await waitFor(() => expect(notice().hidden).toBe(true));
   });
 
-  it("[T75][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the panel and the controls of reading aloud", async () => {
+  it("has no violation of WCAG 2.2 A and AA with the panel and the controls of reading aloud", async () => {
     const s = await shell({ profile: PROFILE });
     await shown(s);
     await waitFor(() => expect(s.ui.querySelector(".ak-read-aloud")?.hasAttribute("hidden")).toBe(false));
@@ -1107,7 +1107,7 @@ describe("a drawing that is still being stored", () => {
     },
   );
 
-  it("[SC 3.3.4] sends the drawing before the end of the test, once the candidate has confirmed", async () => {
+  it("sends the drawing before the end of the test, once the candidate has confirmed", async () => {
     const { sent, wrap } = recording();
     const storage = slowUpload();
     const s = await shell({ files: drawingFiles(), wrap, ...storage.files });
@@ -1207,7 +1207,7 @@ const toolNames = (ui: ShadowRoot): (string | null)[] => toolbar(ui).map((button
 const stageOf = (ui: ShadowRoot): HTMLElement => contentOf(ui).querySelector(".ak-root-stage") as HTMLElement;
 
 describe("the tools in the player", () => {
-  it("[T63] draws a button for each tool that the item asks for, and a tool opens over the item", async () => {
+  it("draws a button for each tool that the item asks for, and a tool opens over the item", async () => {
     const s = await shell({ files: toolFiles() });
     await waitFor(() => expect(toolNames(s.ui)).toEqual(["Ruler", "Protractor", "Basic calculator"]));
     expect(s.ui.querySelector(".ak-tools")?.getAttribute("aria-label")).toBe("Tools");
@@ -1223,7 +1223,7 @@ describe("the tools in the player", () => {
     await waitFor(() => expect(layer?.querySelector(".ak-placed")).toBeNull());
   });
 
-  it("[T63] works a calculator from the panel in the chrome", async () => {
+  it("works a calculator from the panel in the chrome", async () => {
     const s = await shell({ files: toolFiles() });
     await waitFor(() => expect(toolNames(s.ui)).toContain("Basic calculator"));
     buttonNamed(s.ui, "Basic calculator").click();
@@ -1236,7 +1236,7 @@ describe("the tools in the player", () => {
     expect(s.ui.querySelector(".ak-display")?.textContent).toBe("5");
   });
 
-  it("[T63] keeps a tool that the next item shares, and takes the others away with an item that asks for none", async () => {
+  it("keeps a tool that the next item shares, and takes the others away with an item that asks for none", async () => {
     const s = await shell({ files: toolFiles() });
     await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     buttonNamed(s.ui, "Ruler").click();
@@ -1251,7 +1251,7 @@ describe("the tools in the player", () => {
     expect(buttonNamed(s.ui, "Ruler").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("[T86] turns the line reader on from its button through the session, and the band lies over the text of the item", async () => {
+  it("turns the line reader on from its button through the session, and the band lies over the text of the item", async () => {
     const { sent, wrap } = recording();
     const s = await shell({ profile: TOOLS_PROFILE, wrap });
     await waitFor(() => expect(toolNames(s.ui)).toContain("Line reader"));
@@ -1264,7 +1264,7 @@ describe("the tools in the player", () => {
     expect(sent).toContainEqual({ type: "support", name: "line-reader", active: false });
   });
 
-  it("[T92] masks the choices of the item shown and of the next item while masking is on", async () => {
+  it("masks the choices of the item shown and of the next item while masking is on", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     buttonNamed(s.ui, "Answer masking").click();
@@ -1280,7 +1280,7 @@ describe("the tools in the player", () => {
     expect(contentOf(s.ui).querySelectorAll(".ak-mask")).toHaveLength(1);
   });
 
-  it("[T63] builds a tool that the host provides in its panel, and takes it down when it closes", async () => {
+  it("builds a tool that the host provides in its panel, and takes it down when it closes", async () => {
     const built: string[] = [];
     const tools: ToolSlots = {
       dictionary: (host, { language }) => {
@@ -1297,21 +1297,21 @@ describe("the tools in the player", () => {
     await waitFor(() => expect(built).toEqual(["built", "down"]));
   });
 
-  it("[T63] says that a tool of the host is not available when the host gives no function for it", async () => {
+  it("says that a tool of the host is not available when the host gives no function for it", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
     await waitFor(() => expect(toolNames(s.ui)).toContain("Dictionary"));
     buttonNamed(s.ui, "Dictionary").click();
     await waitFor(() => expect(s.ui.querySelector(".ak-tray")?.textContent).toContain("This tool is not available."));
   });
 
-  it("[T63] draws no tools when the host draws the chrome", async () => {
+  it("draws no tools when the host draws the chrome", async () => {
     const s = await shell({ files: toolFiles(), chrome: false });
     await shown(s);
     expect(s.ui.querySelector(".ak-tools")).toBeNull();
     expect(stageOf(s.ui).querySelector(".ak-tool-layer")).toBeNull();
   });
 
-  it("[T63][SC 4.1.2] has no violation of WCAG 2.2 A and AA with the toolbar, a panel and a ruler open", async () => {
+  it("has no violation of WCAG 2.2 A and AA with the toolbar, a panel and a ruler open", async () => {
     const s = await shell({ files: toolFiles() });
     await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     buttonNamed(s.ui, "Ruler").click();
@@ -1320,7 +1320,7 @@ describe("the tools in the player", () => {
     expect(await axeViolations(s.page)).toEqual([]);
   });
 
-  it("[T63] gives the content root only the styles of what lies over the item, so that the toolbar styles do not restyle the interactions", async () => {
+  it("gives the content root only the styles of what lies over the item, so that the toolbar styles do not restyle the interactions", async () => {
     const s = await shell({ files: toolFiles() });
     await waitFor(() => expect(toolNames(s.ui)).toHaveLength(3));
     // The shell mounts the tools before the first item is drawn, and drawing it keeps the sheet.
@@ -1338,7 +1338,7 @@ describe("the tools in the player", () => {
 });
 
 describe("magnification in the player", () => {
-  it("[T88] enlarges media sized in pixels when magnification is turned on, without drawing the item again or losing the answer", async () => {
+  it("enlarges media sized in pixels when magnification is turned on, without drawing the item again or losing the answer", async () => {
     const s = await shell({ profile: TOOLS_PROFILE });
     await waitFor(() => expect(choices(s.ui)).toHaveLength(2));
     choices(s.ui)[1]?.click();
@@ -1357,7 +1357,7 @@ describe("magnification in the player", () => {
     expect(contentOf(s.ui).querySelector(".ak-body")).toBe(body);
   });
 
-  it("[T88] draws the next item at the magnification of the moment", async () => {
+  it("draws the next item at the magnification of the moment", async () => {
     const files = { ...examFiles() };
     files["items/q2/item.xml"] = String(files["items/q2/item.xml"]).replace(
       "<p>Question</p>",
@@ -1386,7 +1386,7 @@ describe("pronunciation lexicons in the player", () => {
     });
   };
 
-  it("[T85] reads with the lexicons that the item depends on, and with none for an item that depends on none", async () => {
+  it("reads with the lexicons that the item depends on, and with none for an item that depends on none", async () => {
     const requests: SpeechRequest[] = [];
     const s = await shell({ profile: PROFILE, files: lexiconFiles(), voice: voiceOf(requests) });
     await shown(s);
@@ -1402,7 +1402,7 @@ describe("pronunciation lexicons in the player", () => {
     await reads(s, requests, "World Wide Web Consortium");
   });
 
-  it("[T85] puts the alias of the lexicon in the SSML for a voice that takes it", async () => {
+  it("puts the alias of the lexicon in the SSML for a voice that takes it", async () => {
     const requests: SpeechRequest[] = [];
     const s = await shell({ profile: PROFILE, files: lexiconFiles(), voice: voiceOf(requests) });
     await shown(s);
@@ -1410,7 +1410,7 @@ describe("pronunciation lexicons in the player", () => {
     expect(requests.at(-1)?.ssml).toContain('<sub alias="World Wide Web Consortium">W3C</sub>');
   });
 
-  it("[T85] reads on without a lexicon that is not a PLS document", async () => {
+  it("reads on without a lexicon that is not a PLS document", async () => {
     const requests: SpeechRequest[] = [];
     const s = await shell({ profile: PROFILE, files: lexiconFiles("<p>Not a lexicon.</p>"), voice: voiceOf(requests) });
     await shown(s);
@@ -1421,7 +1421,7 @@ describe("pronunciation lexicons in the player", () => {
     expect(requests.at(-1)?.text).not.toContain("World Wide Web Consortium");
   });
 
-  it("[T85] reads on without a lexicon that the package does not have", async () => {
+  it("reads on without a lexicon that the package does not have", async () => {
     const requests: SpeechRequest[] = [];
     const files = { ...lexiconFiles() };
     delete files["items/q1/words.pls"];

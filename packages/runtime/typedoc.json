@@ -10,7 +10,7 @@
   },
   "readme": "README.md",
   "excludePrivate": true,
-  "projectDocuments": ["docs/*.md"],
+  "projectDocuments": ["../../docs/runtime/*.md"],
   "treatWarningsAsErrors": true,
   "intentionallyNotExported": [
     "Accepted",

@@ -75,7 +75,7 @@ function mount(launch: LtiFrame) {
 const token = (): string => crypto.randomUUID();
 
 describe("the storage that a tool uses for its login", () => {
-  it("[T122] keeps and returns the values of a tool, answers from the origin of the platform, and reports each error with the code of the specification", async () => {
+  it("keeps and returns the values of a tool, answers from the origin of the platform, and reports each error with the code of the specification", async () => {
     const id = token();
     mount(frameFor(toolUrl(tool, "storage", id)));
     await expectReports(tool, id, [
@@ -92,13 +92,13 @@ describe("the storage that a tool uses for its login", () => {
     expect(await reported(tool, id)).not.toContain("wrong-origin");
   });
 
-  it("[T122] keeps at most 500 keys for an origin, the least a platform must offer", async () => {
+  it("keeps at most 500 keys for an origin, the least a platform must offer", async () => {
     const id = token();
     mount(frameFor(toolUrl(tool, "keys", id)));
     await expectReports(tool, id, ["key-501-error-storage_exhaustion", "done"]);
   });
 
-  it("[T122] keeps the values by the origin of the message: another tool in the same frame does not see them", async () => {
+  it("keeps the values by the origin of the message: another tool in the same frame does not see them", async () => {
     const first = token();
     const { toolFrame } = mount(frameFor(toolUrl(tool, "write", first)));
     await expectReports(tool, first, ["write-ok-mine", "done"]);
@@ -110,7 +110,7 @@ describe("the storage that a tool uses for its login", () => {
     await expectReports(tool, third, ["read-ok-mine", "done"]);
   });
 
-  it("[T122] answers only the frame of the tool: a message from the player's page gets no answer", async () => {
+  it("answers only the frame of the tool: a message from the player's page gets no answer", async () => {
     const id = token();
     const { storageFrame } = mount(frameFor(toolUrl(tool, "storage", id)));
     await expectReports(tool, id, ["done"]);
@@ -126,7 +126,7 @@ describe("the storage that a tool uses for its login", () => {
     expect(answers).toEqual([]);
   });
 
-  it("[T122] answers the capabilities request of the tool itself, and names the frame of the storage for the two storage messages", async () => {
+  it("answers the capabilities request of the tool itself, and names the frame of the storage for the two storage messages", async () => {
     const id = token();
     mount(frameFor(toolUrl(tool, "capabilities", id)));
     await expectReports(tool, id, [
@@ -136,7 +136,7 @@ describe("the storage that a tool uses for its login", () => {
 });
 
 describe("the frames of a tool", () => {
-  it("[T106] puts the tool in a sandboxed frame with the title of the link and the allow list of the registration, and the storage in a hidden frame", () => {
+  it("puts the tool in a sandboxed frame with the title of the link and the allow list of the registration, and the storage in a hidden frame", () => {
     const { toolFrame, storageFrame } = mount(frameFor(toolUrl(tool, "sandbox", token()), "microphone; camera 'self'"));
     expect(toolFrame.getAttribute("sandbox")).toBe("allow-scripts allow-forms allow-same-origin");
     expect(toolFrame.getAttribute("allow")).toBe("microphone; camera 'self'");
@@ -148,18 +148,18 @@ describe("the frames of a tool", () => {
     expect(storageFrame.getAttribute("referrerpolicy")).toBe("no-referrer");
   });
 
-  it("[T106] sets no allow list when the registration has none", () => {
+  it("sets no allow list when the registration has none", () => {
     const { toolFrame } = mount(frameFor(toolUrl(tool, "sandbox", token())));
     expect(toolFrame.hasAttribute("allow")).toBe(false);
   });
 
-  it("[T106] keeps the origin of the tool in its sandbox, so that the tool has its own storage", async () => {
+  it("keeps the origin of the tool in its sandbox, so that the tool has its own storage", async () => {
     const id = token();
     mount(frameFor(toolUrl(tool, "sandbox", id)));
     await expectReports(tool, id, ["origin-kept", "done"]);
   });
 
-  it("[T106] starts the tool when the storage page has loaded, so that the first message of its login finds the page listening", async () => {
+  it("starts the tool when the storage page has loaded, so that the first message of its login finds the page listening", async () => {
     const id = token();
     mount({ url: toolUrl(tool, "storage", id), storageUrl: storagePageUrl(500) });
     await expectReports(tool, id, ["put-ok-v1", "done"]);
@@ -168,7 +168,7 @@ describe("the frames of a tool", () => {
     expect(storage?.at).toBeLessThanOrEqual(started?.at ?? 0);
   });
 
-  it("[T106] refuses a tool or a storage page on the origin of the player or of the assets, and a frame that is not one", () => {
+  it("refuses a tool or a storage page on the origin of the player or of the assets, and a frame that is not one", () => {
     const parent = document.createElement("div");
     parents.push(parent);
     const options = { title: "Tool", storageTitle: "Storage", refused };
@@ -198,7 +198,7 @@ describe("the frames of a tool", () => {
     expect(parent.children).toHaveLength(0);
   });
 
-  it("[T106] removes both frames when destroyed", () => {
+  it("removes both frames when destroyed", () => {
     const { parent, mounted } = mount(frameFor(toolUrl(tool, "sandbox", token())));
     expect(parent.querySelectorAll("iframe")).toHaveLength(2);
     mounted.destroy();
@@ -244,7 +244,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
   const frames = (host: HTMLElement): string[] =>
     [...host.querySelectorAll(":scope > iframe")].map((each) => (each as HTMLIFrameElement).name);
 
-  it("[T106] shows the tool of the open item in its frame, once, and takes it away when the candidate leaves the item", async () => {
+  it("shows the tool of the open item in its frame, once, and takes it away when the candidate leaves the item", async () => {
     const calls: ItemKey[] = [];
     const { client, host } = await player(async (item) => {
       calls.push(item);
@@ -267,7 +267,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     expect(calls).toEqual([DRAW, DRAW]);
   });
 
-  it("[T106] launches the tool with the storage of the platform and keeps the player free of axe violations", async () => {
+  it("launches the tool with the storage of the platform and keeps the player free of axe violations", async () => {
     const id = token();
     const { client, host } = await player(async () => frameFor(toolUrl(tool, "storage", id)));
     await client.dispatch({ type: "move", to: DRAW });
@@ -276,7 +276,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     expect(host.querySelector("iframe[name='lti-tool']")?.getAttribute("title")).toBe("Drawing tool");
   });
 
-  it("[T106] says that the tool is not available when the host gave no hook, and when the hook fails or answers what is not a frame", async () => {
+  it("says that the tool is not available when the host gave no hook, and when the hook fails or answers what is not a frame", async () => {
     const errors: unknown[] = [];
     const onError = (event: ErrorEvent): void => {
       event.preventDefault();
@@ -309,7 +309,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     }
   });
 
-  it("[T106] shows a note in place of the tool once the item is closed", async () => {
+  it("shows a note in place of the tool once the item is closed", async () => {
     const { client, slot, host } = await player(async () => frameFor(toolUrl(tool, "sandbox", token())));
     await client.dispatch({ type: "move", to: DRAW });
     await waitFor(() => expect(frames(host)).toEqual(["lti-storage", "lti-tool"]));
@@ -318,7 +318,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
     expect(frames(host)).toEqual([]);
   });
 
-  it("[T106] ignores a tool that arrives after the candidate has left the item", async () => {
+  it("ignores a tool that arrives after the candidate has left the item", async () => {
     let release: (frame: LtiFrame) => void = () => undefined;
     const slow = new Promise<LtiFrame>((resolve) => {
       release = resolve;

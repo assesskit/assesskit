@@ -40,7 +40,7 @@ export class ChoiceInteractionElement extends SelectionElement {
 
   protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {
     super.configure(descriptor, messages);
-    // CSS cannot count the choices, and a stack of several columns reads down each column (docs/styling.md).
+    // CSS cannot count the choices, and a stack of several columns reads down each column (docs/player/styling.md).
     const columns = Number(STACKING.exec(this.className)?.[1] ?? 1);
     this.style.setProperty("--ak-rows", String(Math.ceil(this.choices.length / columns)));
   }

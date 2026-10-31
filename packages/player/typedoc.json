@@ -22,6 +22,6 @@
   "readme": "README.md",
   "excludePrivate": true,
   "excludeProtected": true,
-  "projectDocuments": ["docs/*.md"],
+  "projectDocuments": ["../../docs/player/*.md"],
   "treatWarningsAsErrors": true
 }

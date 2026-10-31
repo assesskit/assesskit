@@ -23,9 +23,9 @@ jobs:
       - id: filter
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          # The runtime, the harness (conformance/, differential/, scripts/, validation/ and the files of the root that configure
+          # The runtime, the harness (differential/, scripts/, validation/ and the files of the root that configure
           # it) and this workflow.
-          RUNTIME_PATHS: ^(packages/runtime/|conformance/|differential/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
+          RUNTIME_PATHS: ^(packages/runtime/|differential/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
         run: |
           changed="$RUNNER_TEMP/changed.txt"
           if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Eq "$RUNTIME_PATHS" "$changed"; then
@@ -48,7 +48,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm knip
-      - run: pnpm conformance
       - run: pnpm check:packages
       - run: pnpm compat
       - run: pnpm docs:api
@@ -76,7 +75,7 @@ jobs:
       - run: pnpm test
 
   # The benchmarks of the runtime on generated inputs. The job fails when the fastest sample of a benchmark is above its budget
-  # (packages/runtime/docs/architecture.md#performance).
+  # (docs/runtime/architecture.md#performance).
   bench:
     needs: changes
     if: needs.changes.outputs.runtime == 'true'
@@ -110,7 +109,7 @@ jobs:
       - run: pnpm test:corpus --project '!runtime*'
 
   # The built code of the player in the oldest browsers of its baseline, in the container images of the Playwright
-  # releases that ship them (docs/baseline.md).
+  # releases that ship them (docs/player/baseline.md).
   engines:
     runs-on: ubuntu-latest
     steps:
@@ -125,7 +124,7 @@ jobs:
       - run: pnpm compat:engines
 
   # Tests of the runtime that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
-  # that conformance/corpus.lock.json pins. The tests of the player that read them run in the browsers job.
+  # that scripts/corpus.lock.json pins. The tests of the player that read them run in the browsers job.
   corpus:
     needs: changes
     if: needs.changes.outputs.runtime == 'true'
@@ -142,7 +141,7 @@ jobs:
       - run: pnpm test:corpus --project '!player*'
 
   # The comparison of the runtime with the Longsight qti3-core on items and item sessions, on the generated items and on the
-  # 1EdTech examples (packages/runtime/docs/evidence.md#differential-tests).
+  # 1EdTech examples (docs/runtime/evidence.md#differential-tests).
   differential:
     needs: changes
     if: needs.changes.outputs.runtime == 'true'

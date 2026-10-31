@@ -65,7 +65,7 @@ const item = (fields: Partial<ItemResult> = {}): ItemResult => ({
 });
 
 describe("readResults", () => {
-  it("[R1][R2][R3] reads the context with its candidate and sessions (RR §2.4.2, §2.6.3)", () => {
+  it("reads the context with its candidate and sessions (RR §2.4.2, §2.6.3)", () => {
     const result = readResults(
       report(
         "",
@@ -84,11 +84,11 @@ describe("readResults", () => {
     });
   });
 
-  it("[R1][R2] reads a context that knows nothing, which the schema still requires", () => {
+  it("reads a context that knows nothing, which the schema still requires", () => {
     expect(readResults(report())).toEqual({ context: { sessionIdentifiers: [] }, itemResults: [] });
   });
 
-  it("[R4] reads a test result with its variables and supports (RR §2.4.9)", () => {
+  it("reads a test result with its variables and supports (RR §2.4.9)", () => {
     const result = readResults(
       report(
         `<testResult identifier="SAMPLE" datestamp="${DATESTAMP}"><responseVariable identifier="duration" cardinality="single" baseType="duration"><candidateResponse><value>100</value></candidateResponse></responseVariable><outcomeVariable identifier="SCORE" cardinality="single" baseType="float"><value>0</value></outcomeVariable><support name="spoken" assignment="assigned"/></testResult>`,
@@ -112,7 +112,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R5] reads an item result with its attributes, in the order of the document (RR §2.4.5)", () => {
+  it("reads an item result with its attributes, in the order of the document (RR §2.4.5)", () => {
     const result = readResults(
       report(
         `<itemResult identifier="Q01" sequenceIndex="1" datestamp="${DATESTAMP}" sessionStatus="final"/><itemResult identifier="Q01" sequenceIndex="1" datestamp="2020-08-25T18:19:21" sessionStatus="pendingSubmission"/>`,
@@ -138,7 +138,7 @@ describe("readResults", () => {
     ]);
   });
 
-  it("[R5] keeps the four kinds of variable in the order of the document, because the schema lets them mix", () => {
+  it("keeps the four kinds of variable in the order of the document, because the schema lets them mix", () => {
     const { variables } = itemResult(
       '<outcomeVariable identifier="a" cardinality="single" baseType="integer"/><templateVariable identifier="b" cardinality="single" baseType="integer"/><responseVariable identifier="c" cardinality="single" baseType="integer"><candidateResponse/></responseVariable><contextVariable identifier="d" cardinality="single" baseType="integer"/>',
     );
@@ -150,7 +150,7 @@ describe("readResults", () => {
     ]);
   });
 
-  it("[R6] reads a response variable with its choice order and statuses (RR §2.4.8)", () => {
+  it("reads a response variable with its choice order and statuses (RR §2.4.8)", () => {
     // The response variable of 1EdTech's results/report.xml.
     const [variable] = itemResult(
       '<responseVariable identifier="RESPONSE" cardinality="single" baseType="identifier" choiceSequence="D B C A" scoreStatus="scored" answeredStatus="answered"><correctResponse><value>A</value></correctResponse><candidateResponse><value>A</value></candidateResponse></responseVariable>',
@@ -169,7 +169,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R7] reads the interpretation of a correct response and its several values (RR §2.4.4)", () => {
+  it("reads the interpretation of a correct response and its several values (RR §2.4.4)", () => {
     const [variable] = itemResult(
       '<responseVariable identifier="R" cardinality="multiple" baseType="identifier"><correctResponse interpretation="the odd ones"><value>A</value><value>C</value></correctResponse><candidateResponse/></responseVariable>',
     ).variables;
@@ -179,7 +179,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R8] reads the candidate response as NULL when it has no value, and as every cardinality otherwise (RR §2.4.1)", () => {
+  it("reads the candidate response as NULL when it has no value, and as every cardinality otherwise (RR §2.4.1)", () => {
     const candidate = (cardinality: string, baseType: string, values: string): unknown => {
       const [variable] = itemResult(
         `<responseVariable identifier="R" cardinality="${cardinality}" baseType="${baseType}"><candidateResponse>${values}</candidateResponse></responseVariable>`,
@@ -199,7 +199,7 @@ describe("readResults", () => {
     );
   });
 
-  it("[R8][R13] reads the fields of a record by their identifiers and base types (RR §2.6.6)", () => {
+  it("reads the fields of a record by their identifiers and base types (RR §2.6.6)", () => {
     const [variable] = itemResult(
       '<responseVariable identifier="R" cardinality="record"><candidateResponse><value fieldIdentifier="x" baseType="integer">3</value><value fieldIdentifier="note" baseType="string">hi there</value></candidateResponse></responseVariable>',
     ).variables;
@@ -212,7 +212,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R9] reads the attributes of an outcome variable that the declaration gives it (RR §2.4.7)", () => {
+  it("reads the attributes of an outcome variable that the declaration gives it (RR §2.4.7)", () => {
     const [variable] = itemResult(
       '<outcomeVariable identifier="SCORE" cardinality="single" baseType="float" view="candidate scorer" interpretation="the score" longInterpretation="http://example.com/score" normalMaximum="10" normalMinimum="0" masteryValue="6.5" external-scored="human" variable-identifier-ref="RESPONSE"><value>7</value></outcomeVariable>',
     ).variables;
@@ -233,7 +233,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R10] keeps the elements of outcomeInformation as they are, and tells an empty one from a missing one (RR §2.4.6)", () => {
+  it("keeps the elements of outcomeInformation as they are, and tells an empty one from a missing one (RR §2.4.6)", () => {
     const outcome = (inner: string): unknown =>
       itemResult(`<outcomeVariable identifier="O" cardinality="single" baseType="float">${inner}</outcomeVariable>`)
         .variables[0];
@@ -254,7 +254,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R11][R12] reads template and context variables with their values (RR §2.4.3)", () => {
+  it("reads template and context variables with their values (RR §2.4.3)", () => {
     const { variables } = itemResult(
       '<templateVariable identifier="T" cardinality="single" baseType="integer"><value>4</value></templateVariable><contextVariable identifier="C" cardinality="ordered" baseType="string"><value>a</value><value>b</value></contextVariable>',
     );
@@ -270,7 +270,7 @@ describe("readResults", () => {
     ]);
   });
 
-  it("[R13] reads the lexical form of every base type (INFO §8.13)", () => {
+  it("reads the lexical form of every base type (INFO §8.13)", () => {
     const valueRead = (baseType: string, text: string): unknown => {
       const variable = itemResult(
         `<outcomeVariable identifier="O" cardinality="single" baseType="${baseType}"><value>${text}</value></outcomeVariable>`,
@@ -290,7 +290,7 @@ describe("readResults", () => {
     expect(valueRead("duration", "100")).toEqual(single("duration", 100));
   });
 
-  it("[R13][G10] reads a file value as a reference with the content type of unknown bytes (D7)", () => {
+  it("reads a file value as a reference with the content type of unknown bytes (D7)", () => {
     const variable = itemResult(
       '<outcomeVariable identifier="O" cardinality="single" baseType="file"><value> uploads/essay.pdf </value></outcomeVariable>',
     ).variables[0];
@@ -299,7 +299,7 @@ describe("readResults", () => {
     });
   });
 
-  it("[R13] reads a duration as the ISO 8601 form that 1EdTech's own example writes (G14)", () => {
+  it("reads a duration as the ISO 8601 form that 1EdTech's own example writes (G14)", () => {
     const duration = (text: string): unknown =>
       itemResult(
         `<outcomeVariable identifier="O" cardinality="single" baseType="duration"><value>${text}</value></outcomeVariable>`,
@@ -308,14 +308,14 @@ describe("readResults", () => {
     expect(duration("PT9.590316S")).toMatchObject({ value: single("duration", 9.590316) });
   });
 
-  it("[R13] reads the empty string as NULL for a single value and keeps leading and trailing white space of a string", () => {
+  it("reads the empty string as NULL for a single value and keeps leading and trailing white space of a string", () => {
     const [variable] = itemResult(
       '<outcomeVariable identifier="O" cardinality="single" baseType="string"><value></value></outcomeVariable>',
     ).variables;
     expect(variable).toMatchObject({ value: null });
   });
 
-  it("[R14] reads the comment of the candidate, which comes after the variables and before the supports (RR §2.4.5)", () => {
+  it("reads the comment of the candidate, which comes after the variables and before the supports (RR §2.4.5)", () => {
     const result = itemResult(
       '<outcomeVariable identifier="O" cardinality="single" baseType="float"/><candidateComment>The question was unclear.</candidateComment><support name="spoken" assignment="assigned"/>',
     );
@@ -323,7 +323,7 @@ describe("readResults", () => {
     expect(result.supports).toEqual([{ name: "spoken", assignment: "assigned" }]);
   });
 
-  it("[R15] reads the supports used with their setting and language (RR §2.6.4)", () => {
+  it("reads the supports used with their setting and language (RR §2.6.4)", () => {
     const { supports } = itemResult(
       '<support name="item-translation" assignment="inherit" value="ko" xml:lang="ko"/><support name="magnification" assignment="universal"/>',
     );
@@ -333,17 +333,17 @@ describe("readResults", () => {
     ]);
   });
 
-  it("[R1] reads text, bytes and a parsed element", () => {
+  it("reads text, bytes and a parsed element", () => {
     const text = report();
     expect(readResults(new TextEncoder().encode(text))).toEqual(readResults(text));
   });
 
-  it("[R1] ignores xsi:schemaLocation, which tells a schema processor where the schema is", () => {
+  it("ignores xsi:schemaLocation, which tells a schema processor where the schema is", () => {
     const text = `<assessmentResult xmlns="${RESULTS_NAMESPACE}" xmlns:xsi="${XSI_NAMESPACE}" xsi:schemaLocation="${SCHEMA_LOCATION}"><context/></assessmentResult>`;
     expect(readResults(text)).toEqual({ context: { sessionIdentifiers: [] }, itemResults: [] });
   });
 
-  it("[R6] keeps the elements of other namespaces after the candidate response, where the schema allows them", () => {
+  it("keeps the elements of other namespaces after the candidate response, where the schema allows them", () => {
     const [variable] = itemResult(
       '<responseVariable identifier="R" cardinality="single" baseType="string"><candidateResponse/><x:trace xmlns:x="urn:x"/></responseVariable>',
     ).variables;
@@ -374,7 +374,7 @@ describe("vocabularies", () => {
       `<itemResult identifier="Q" datestamp="${DATESTAMP}" sessionStatus="${status}"><responseVariable identifier="R" cardinality="single" baseType="integer" scoreStatus="${score}" answeredStatus="${answered}"><candidateResponse/></responseVariable><support name="s" assignment="${assignment}"/></itemResult>`,
     );
 
-  it("[R16] accepts the five terms of SessionStatusEnum and no other (RR §2.7.7)", () => {
+  it("accepts the five terms of SessionStatusEnum and no other (RR §2.7.7)", () => {
     for (const status of SessionStatuses)
       expect(readResults(termsDocument({ status })).itemResults[0]?.sessionStatus).toBe(status);
     for (const status of ["Final", "pending", "", "completed"]) {
@@ -384,7 +384,7 @@ describe("vocabularies", () => {
     }
   });
 
-  it("[R17] accepts the four terms of AnsweredStatusEnum and no other (RR §2.7.1)", () => {
+  it("accepts the four terms of AnsweredStatusEnum and no other (RR §2.7.1)", () => {
     for (const answered of AnsweredStatuses) {
       const variable = readResults(termsDocument({ answered })).itemResults[0]?.variables[0];
       expect(variable).toMatchObject({ answeredStatus: answered });
@@ -394,7 +394,7 @@ describe("vocabularies", () => {
     );
   });
 
-  it("[R18] accepts the two terms of ScoreStatusEnum and no other (RR §2.7.6)", () => {
+  it("accepts the two terms of ScoreStatusEnum and no other (RR §2.7.6)", () => {
     for (const score of ScoreStatuses) {
       const variable = readResults(termsDocument({ score })).itemResults[0]?.variables[0];
       expect(variable).toMatchObject({ scoreStatus: score });
@@ -404,7 +404,7 @@ describe("vocabularies", () => {
     );
   });
 
-  it("[R19] accepts the four terms of AssignmentEnum and no other (RR §2.7.2)", () => {
+  it("accepts the four terms of AssignmentEnum and no other (RR §2.7.2)", () => {
     for (const assignment of Assignments) {
       expect(readResults(termsDocument({ assignment })).itemResults[0]?.supports[0]).toEqual({ name: "s", assignment });
     }
@@ -413,7 +413,7 @@ describe("vocabularies", () => {
     );
   });
 
-  it("[R16][R17][R18][R19] writes the terms of the vocabularies and refuses any other", () => {
+  it("writes the terms of the vocabularies and refuses any other", () => {
     for (const sessionStatus of SessionStatuses)
       expect(written([item({ sessionStatus: json(JSON.stringify(sessionStatus)) })])).toContain(
         `sessionStatus="${sessionStatus}"`,
@@ -450,7 +450,7 @@ describe("vocabularies", () => {
     expect(() => withStatuses("answered", "scored", "required")).toThrow(DataError);
   });
 
-  it("[R9] accepts the six views and the two ways of external scoring, and no other (RR XSD)", () => {
+  it("accepts the six views and the two ways of external scoring, and no other (RR XSD)", () => {
     const outcome = (attributes: string): unknown =>
       readResults(withVariable(`<outcomeVariable identifier="O" cardinality="single" baseType="float" ${attributes}/>`))
         .itemResults[0]?.variables[0];
@@ -464,13 +464,13 @@ describe("vocabularies", () => {
 });
 
 describe("writeResults", () => {
-  it("[R1] always writes the context, empty when nothing is known, because the schema requires it", () => {
+  it("always writes the context, empty when nothing is known, because the schema requires it", () => {
     expect(writeResults({ context: { sessionIdentifiers: [] }, itemResults: [] })).toBe(
       `${DECLARATION}<assessmentResult xsi:schemaLocation="${SCHEMA_LOCATION}" xmlns="${RESULTS_NAMESPACE}" xmlns:xsi="${XSI_NAMESPACE}"><context/></assessmentResult>`,
     );
   });
 
-  it("[R1][R2][R3][R4][R5] writes the example of RR in the order and with the attributes of the schema", () => {
+  it("writes the example of RR in the order and with the attributes of the schema", () => {
     const text = writeResults({
       context: {
         sourcedId: "johnsmith1",
@@ -484,7 +484,7 @@ describe("writeResults", () => {
     );
   });
 
-  it("[R6][R7][R8][R13] writes a response variable with its choice order, correct response and candidate response", () => {
+  it("writes a response variable with its choice order, correct response and candidate response", () => {
     const text = written([
       item({
         variables: [
@@ -511,7 +511,7 @@ describe("writeResults", () => {
     );
   });
 
-  it("[R8][R13] writes a NULL as a variable without value elements, and a record with the base type of each field", () => {
+  it("writes a NULL as a variable without value elements, and a record with the base type of each field", () => {
     const text = written([
       item({
         variables: [
@@ -544,7 +544,7 @@ describe("writeResults", () => {
     );
   });
 
-  it("[R9][R10] writes an outcome variable with the attributes of its declaration, and outcomeInformation", () => {
+  it("writes an outcome variable with the attributes of its declaration, and outcomeInformation", () => {
     const text = written([
       item({
         variables: [
@@ -572,7 +572,7 @@ describe("writeResults", () => {
     );
   });
 
-  it("[R11][R12] writes template and context variables", () => {
+  it("writes template and context variables", () => {
     const text = written([
       item({
         variables: [
@@ -592,7 +592,7 @@ describe("writeResults", () => {
     );
   });
 
-  it("[R13][G10] writes a file value as its reference alone, without its content type or name", () => {
+  it("writes a file value as its reference alone, without its content type or name", () => {
     const file = single("file", { reference: "uploads/essay.pdf", mimeType: "application/pdf", fileName: "essay.pdf" });
     const text = written([
       item({ variables: [{ kind: "outcome", identifier: "F", cardinality: "single", baseType: "file", value: file }] }),
@@ -602,7 +602,7 @@ describe("writeResults", () => {
     expect(text).not.toContain("application/pdf");
   });
 
-  it("[R13] writes a duration as seconds and numbers so that they read back exactly", () => {
+  it("writes a duration as seconds and numbers so that they read back exactly", () => {
     const text = written([
       item({
         variables: [
@@ -629,7 +629,7 @@ describe("writeResults", () => {
     expect(text).toContain("<value>-0</value>");
   });
 
-  it("[R13][G36] writes the newlines of an essay as they are, which a schema-aware consumer reads as spaces", () => {
+  it("writes the newlines of an essay as they are, which a schema-aware consumer reads as spaces", () => {
     const essay = nonNull(single("string", "line one\nline two"));
     const text = written([
       item({
@@ -640,13 +640,13 @@ describe("writeResults", () => {
     expect(readResults(text).itemResults[0]?.variables[0]).toMatchObject({ value: essay });
   });
 
-  it("[R15] writes the supports used", () => {
+  it("writes the supports used", () => {
     expect(
       written([item({ supports: [{ name: "item-translation", assignment: "inherit", value: "ko", language: "ko" }] })]),
     ).toContain('<support name="item-translation" assignment="inherit" value="ko" xml:lang="ko"/>');
   });
 
-  it("[R6] writes elements of other namespaces after the candidate response", () => {
+  it("writes elements of other namespaces after the candidate response", () => {
     const [extension] = (
       readResults(
         withVariable(
@@ -674,7 +674,7 @@ describe("writeResults", () => {
 });
 
 describe("errors", () => {
-  it("[R1][N] refuses a root that is not assessmentResult of the RR namespace, naming the namespace and the position", () => {
+  it("refuses a root that is not assessmentResult of the RR namespace, naming the namespace and the position", () => {
     expect(issueOf(() => readResults('<usageData xmlns="urn:x"/>'))).toEqual({
       severity: "error",
       code: "assesskit/results/not-results",
@@ -685,21 +685,21 @@ describe("errors", () => {
     expect(() => readResults(`<result xmlns="${RESULTS_NAMESPACE}"/>`)).toThrow("found result.");
   });
 
-  it("[R1][N] refuses the example of RR that is not well-formed (full-example.xml)", () => {
+  it("refuses the example of RR that is not well-formed (full-example.xml)", () => {
     expect(issueOf(() => readResults('<assessmentResult xmlns="x">\n<context>\n</assessmentResult>'))).toMatchObject({
       code: "assesskit/xml/not-well-formed",
       location: { line: 3 },
     });
   });
 
-  it("[R1][N] refuses a document without a context, which the schema requires", () => {
+  it("refuses a document without a context, which the schema requires", () => {
     expect(issueOf(() => readResults(`<assessmentResult xmlns="${RESULTS_NAMESPACE}"/>`))).toMatchObject({
       code: "assesskit/results/missing-element",
       message: "The element assessmentResult needs the element context, found no more elements.",
     });
   });
 
-  it("[R5][N] refuses a missing or malformed attribute with the element and the rule", () => {
+  it("refuses a missing or malformed attribute with the element and the rule", () => {
     expect(issueOf(() => readResults(report('<itemResult identifier="Q" sessionStatus="final"/>')))).toMatchObject({
       code: "assesskit/results/missing-attribute",
       message: "The element itemResult needs the attribute datestamp.",
@@ -718,7 +718,7 @@ describe("errors", () => {
     ).toThrow("The attribute sequenceIndex of the element itemResult is invalid.");
   });
 
-  it("[R5][N] refuses an integer beyond the safe integers (D3)", () => {
+  it("refuses an integer beyond the safe integers (D3)", () => {
     expect(() =>
       readResults(
         report(
@@ -728,7 +728,7 @@ describe("errors", () => {
     ).toThrow("expected an integer from -9007199254740991 to 9007199254740991");
   });
 
-  it("[R1][N] refuses an attribute, an element or text that the schema does not allow at that place", () => {
+  it("refuses an attribute, an element or text that the schema does not allow at that place", () => {
     expect(() =>
       readResults(report(`<itemResult identifier="Q" datestamp="${DATESTAMP}" sessionStatus="final" extra="1"/>`)),
     ).toThrow("The element itemResult has the attribute extra, which the schema does not define for it.");
@@ -747,13 +747,13 @@ describe("errors", () => {
     );
   });
 
-  it("[R6][N] refuses a response variable without a candidate response, which the schema requires", () => {
+  it("refuses a response variable without a candidate response, which the schema requires", () => {
     expect(() =>
       readResults(withVariable('<responseVariable identifier="R" cardinality="single" baseType="string"/>')),
     ).toThrow("The element responseVariable needs the element candidateResponse, found no more elements.");
   });
 
-  it("[R7][N] refuses a correct response without a value", () => {
+  it("refuses a correct response without a value", () => {
     expect(() =>
       readResults(
         withVariable(
@@ -763,7 +763,7 @@ describe("errors", () => {
     ).toThrow("The element correctResponse needs a value.");
   });
 
-  it("[R6][N] refuses a variable without a base type unless it is a record (RR §2.4.3)", () => {
+  it("refuses a variable without a base type unless it is a record (RR §2.4.3)", () => {
     expect(
       issueOf(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="single"/>'))),
     ).toMatchObject({
@@ -773,7 +773,7 @@ describe("errors", () => {
     expect(() => readResults(withVariable('<outcomeVariable identifier="O" cardinality="record"/>'))).not.toThrow();
   });
 
-  it("[R13][N] refuses a value that is not of its base type, several values for a single variable, and a repeated field", () => {
+  it("refuses a value that is not of its base type, several values for a single variable, and a repeated field", () => {
     const outcome = (cardinality: string, baseType: string, values: string): string =>
       withVariable(
         `<outcomeVariable identifier="O" cardinality="${cardinality}"${baseType === "" ? "" : ` baseType="${baseType}"`}>${values}</outcomeVariable>`,
@@ -807,7 +807,7 @@ describe("errors", () => {
     expect(() => readResults(outcome("single", "duration", "<value>P1Y</value>"))).toThrow("years or months");
   });
 
-  it("[R13][N] refuses an element inside a value", () => {
+  it("refuses an element inside a value", () => {
     expect(() =>
       readResults(
         withVariable(
@@ -817,7 +817,7 @@ describe("errors", () => {
     ).toThrow("The element value has the element b, but it contains text only.");
   });
 
-  it("[R1][N] refuses input that is not text, bytes or an element, and a model that is not a result", () => {
+  it("refuses input that is not text, bytes or an element, and a model that is not a result", () => {
     expect(() => readResults(json("null"))).toThrow(DataError);
     expect(() => readResults(json("5"))).toThrow(
       "The results to read must be a string, a Uint8Array or an XmlElement, found 5.",
@@ -832,7 +832,7 @@ describe("errors", () => {
     );
   });
 
-  it("[R1][R5][N] refuses a model with a field of the wrong type or outside its vocabulary", () => {
+  it("refuses a model with a field of the wrong type or outside its vocabulary", () => {
     const base = { context: { sessionIdentifiers: [] }, itemResults: [] } satisfies AssessmentResult;
     expect(() => writeResults({ ...base, context: { sourcedId: json("5"), sessionIdentifiers: [] } })).toThrow(
       DataError,
@@ -851,7 +851,7 @@ describe("errors", () => {
     expect(() => written([item({ candidateComment: json("5") })])).toThrow(DataError);
   });
 
-  it("[R6][R13][N] refuses a value that is not of the type its variable declares, and a type without a base type", () => {
+  it("refuses a value that is not of the type its variable declares, and a type without a base type", () => {
     const variable = (cardinality: string, baseType: string | undefined, value: unknown): ItemResult =>
       item({ variables: json(JSON.stringify([{ kind: "template", identifier: "T", cardinality, baseType, value }])) });
     expect(() => written([variable("single", "float", single("integer", 1))])).toThrow(
@@ -869,7 +869,7 @@ describe("errors", () => {
     );
   });
 
-  it("[R7][N] refuses a correct response that is NULL", () => {
+  it("refuses a correct response that is NULL", () => {
     const response = json<ItemResult["variables"]>(
       '[{"kind":"response","identifier":"R","cardinality":"single","baseType":"string","candidateResponse":null,"correctResponse":{"value":null},"extensions":[]}]',
     );
@@ -878,7 +878,7 @@ describe("errors", () => {
     );
   });
 
-  it("[R6][N] refuses extensions that are not elements of another namespace", () => {
+  it("refuses extensions that are not elements of another namespace", () => {
     const response = (extensions: string): ItemResult["variables"] =>
       json(
         `[{"kind":"response","identifier":"R","cardinality":"single","baseType":"string","candidateResponse":null,"extensions":${extensions}}]`,
@@ -891,7 +891,7 @@ describe("errors", () => {
     expect(() => written([item({ variables: response("5") })])).toThrow(DataError);
   });
 
-  it("[R13][N] refuses text that XML 1.0 cannot carry", () => {
+  it("refuses text that XML 1.0 cannot carry", () => {
     const text = nonNull(single("string", "bell\u0007"));
     expect(() =>
       written([
@@ -904,7 +904,7 @@ describe("errors", () => {
 });
 
 describe("properties", () => {
-  it("[R1][R2][R3][R4][R5][R6][R7][R8][R9][R10][R11][R12][R13][R14][R15] reads back the document that it writes", () => {
+  it("reads back the document that it writes", () => {
     fc.assert(
       fc.property(assessmentResult({ extensions: true }), (model) => {
         expect(withoutPositions(readResults(writeResults(model)))).toEqual(model);
@@ -913,11 +913,11 @@ describe("properties", () => {
     );
   });
 
-  it("[R1][N][B94] reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
+  it("reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
     fuzzReader(assessmentResult({ extensions: true }).map(writeResults), readResults);
   });
 
-  it("[R1] writes the same text for a model that it has read as for the model it was read from", () => {
+  it("writes the same text for a model that it has read as for the model it was read from", () => {
     fc.assert(
       fc.property(assessmentResult({ extensions: true }), (model) => {
         const text = writeResults(model);

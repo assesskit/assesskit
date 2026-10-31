@@ -52,7 +52,7 @@ function expectSupport(elements: string, expected: SupportSetting): void {
 const MODES = "<replace-access-mode-auditory/><replace-access-mode-textual/>";
 
 describe("support names", () => {
-  it("[P1][P44] lists the 40 supports of the QTI profile, each once", () => {
+  it("lists the 40 supports of the QTI profile, each once", () => {
     // The elements of AccessForAllPNPDType in the PNP schema, apart from the three sets and the wildcard.
     const fromSchema = [
       "hazard-avoidance",
@@ -99,7 +99,7 @@ describe("support names", () => {
     expect([...SUPPORT_NAMES].sort()).toEqual([...fromSchema].sort());
   });
 
-  it("[P41][P42][P43] lets a set list every support but hazard-avoidance and environment", () => {
+  it("lets a set list every support but hazard-avoidance and environment", () => {
     expect(SUPPORT_NAMES.filter(isSetSupportName)).toHaveLength(38);
     expect(isSetSupportName("hazard-avoidance")).toBe(false);
     expect(isSetSupportName("environment")).toBe(false);
@@ -120,7 +120,7 @@ describe("support names", () => {
 });
 
 describe("supports", () => {
-  it("[P1] hazard-avoidance: one element for each hazard, from the vocabulary or an extension (BPIG §5.2.5)", () => {
+  it("hazard-avoidance: one element for each hazard, from the vocabulary or an extension (BPIG §5.2.5)", () => {
     expectSupport(
       "<hazard-avoidance>flashing</hazard-avoidance><hazard-avoidance>olfactory-hazard</hazard-avoidance><hazard-avoidance>ext:vendor.glare</hazard-avoidance>",
       { name: "hazard-avoidance", hazards: ["flashing", "olfactory-hazard", "ext:vendor.glare"] },
@@ -133,7 +133,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P2] input-requirements: full keyboard or mouse control, or an extension", () => {
+  it("input-requirements: full keyboard or mouse control, or an extension", () => {
     expectSupport("<input-requirements>full-keyboard-control</input-requirements>", {
       name: "input-requirements",
       requirement: "full-keyboard-control",
@@ -148,7 +148,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P3] language-of-interface: one element for each language, with the modes it replaces", () => {
+  it("language-of-interface: one element for each language, with the modes it replaces", () => {
     expectSupport(
       `<language-of-interface xml:lang="es"/><language-of-interface xml:lang="en">${MODES}</language-of-interface>`,
       {
@@ -161,7 +161,7 @@ describe("supports", () => {
     );
   });
 
-  it("[P4][P5][P7][P8][P11][P17][P19][P20][P21][P23][P25][P26][P27][P28][P29] the supports that only replace content name the access modes (PNP XSD)", () => {
+  it("the supports that only replace content name the access modes (PNP XSD)", () => {
     const names = [
       "linguistic-guidance",
       "keyword-emphasis",
@@ -185,7 +185,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P4] the ten access modes are replace-access-mode- and a mode (PNP XSD ReplacesAccessModeDType)", () => {
+  it("the ten access modes are replace-access-mode- and a mode (PNP XSD ReplacesAccessModeDType)", () => {
     const modes = [
       "auditory",
       "color",
@@ -204,7 +204,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P6] keyword-translation: the language of the translation of keywords (BPIG §5.2.6.2)", () => {
+  it("keyword-translation: the language of the translation of keywords (BPIG §5.2.6.2)", () => {
     expectSupport('<keyword-translation xml:lang="es"/>', {
       name: "keyword-translation",
       language: "es",
@@ -212,7 +212,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P9] item-translation: the language of the translated item (BPIG §5.2.6.1)", () => {
+  it("item-translation: the language of the translated item (BPIG §5.2.6.1)", () => {
     expectSupport('<item-translation xml:lang="ko"/>', {
       name: "item-translation",
       language: "ko",
@@ -220,7 +220,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P10] sign-language: the sign language, such as American Sign Language, ase (BPIG §5.2.6.4)", () => {
+  it("sign-language: the sign language, such as American Sign Language, ase (BPIG §5.2.6.4)", () => {
     expectSupport(`<sign-language xml:lang="ase">${MODES}</sign-language>`, {
       name: "sign-language",
       language: "ase",
@@ -228,7 +228,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P12] additional-testing-time: unlimited, a multiplier or fixed minutes (BPIG §5.2.4)", () => {
+  it("additional-testing-time: unlimited, a multiplier or fixed minutes (BPIG §5.2.4)", () => {
     expectSupport("<additional-testing-time><unlimited/></additional-testing-time>", {
       name: "additional-testing-time",
       replaceAccessModes: [],
@@ -246,7 +246,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P13] line-reader: the color of the highlight (BPIG §5.5)", () => {
+  it("line-reader: the color of the highlight (BPIG §5.5)", () => {
     expectSupport('<line-reader highlight-color="#336699"/>', {
       name: "line-reader",
       replaceAccessModes: [],
@@ -260,7 +260,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P14] invert-display-polarity: the foreground and the background color", () => {
+  it("invert-display-polarity: the foreground and the background color", () => {
     expectSupport('<invert-display-polarity foreground="#FFFFFF" background="#000"/>', {
       name: "invert-display-polarity",
       replaceAccessModes: [],
@@ -269,7 +269,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P15] magnification: the zoom of all content, or of text and of non-text (BPIG §5.2.9.6)", () => {
+  it("magnification: the zoom of all content, or of text and of non-text (BPIG §5.2.9.6)", () => {
     expectSupport('<magnification><text zoom-amount="1.5"/><non-text zoom-amount="2"/></magnification>', {
       name: "magnification",
       replaceAccessModes: [],
@@ -288,7 +288,7 @@ describe("supports", () => {
     });
   });
 
-  it("[P16] spoken: the reading type, the restrictions and the voice (BPIG §5.2.1)", () => {
+  it("spoken: the reading type, the restrictions and the voice (BPIG §5.2.1)", () => {
     expectSupport("<spoken><reading-type>screen-reader</reading-type></spoken>", {
       name: "spoken",
       replaceAccessModes: [],
@@ -311,7 +311,7 @@ describe("supports", () => {
     );
   });
 
-  it("[P16] spoken: accepts every term of reading-type, restriction-type, link-indication and typing-echo", () => {
+  it("spoken: accepts every term of reading-type, restriction-type, link-indication and typing-echo", () => {
     const read = (child: string): unknown => profileOf(`<spoken>${child}</spoken>`).supports.get("spoken");
     for (const term of ["screen-reader", "computer-read-aloud"])
       expect(read(`<reading-type>${term}</reading-type>`)).toMatchObject({ readingType: term });
@@ -332,7 +332,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P18] braille: the delivery, grade and kind of braille and of its mathematics (BPIG §5.2.2)", () => {
+  it("braille: the delivery, grade and kind of braille and of its mathematics (BPIG §5.2.2)", () => {
     expectSupport(
       `<braille xml:lang="en-US">${MODES}<delivery-mode>embossed</delivery-mode><grade>2</grade><braille-type>ueb</braille-type><math-type>nemeth</math-type></braille>`,
       {
@@ -368,7 +368,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P22] long-description: whether it is hidden from sighted candidates, true unless said", () => {
+  it("long-description: whether it is hidden from sighted candidates, true unless said", () => {
     expectSupport('<long-description hide-visually="false"/>', {
       name: "long-description",
       replaceAccessModes: [],
@@ -382,7 +382,7 @@ describe("supports", () => {
     expectSupport("<long-description/>", { name: "long-description", replaceAccessModes: [] });
   });
 
-  it("[P24] environment: the description, medical needs, software, hardware and breaks (BPIG §5.2.11)", () => {
+  it("environment: the description, medical needs, software, hardware and breaks (BPIG §5.2.11)", () => {
     // BPIG's example lists the parameters in another order than the schema's sequence; the order of a choice is free.
     const profile = profileOf(
       "<environment><breaks>true</breaks><description>Candidate requires a room with low-levels of lighting.</description><medical>Candidate will bring an EPI pen for their bee sting allergy.</medical></environment>",
@@ -406,7 +406,7 @@ describe("supports", () => {
     );
   });
 
-  it("[P30] text-appearance: colors, size, face, spacing and wrapping (BPIG §5.2.9.7)", () => {
+  it("text-appearance: colors, size, face, spacing and wrapping (BPIG §5.2.9.7)", () => {
     expectSupport(
       `<text-appearance>${MODES}<background-color>#FFFF00</background-color><font-color>#000</font-color><font-size>18</font-size><font-face><font-name>Helvetica</font-name><font-name>Arial</font-name><generic-font-face>sans serif</generic-font-face></font-face><line-spacing>1.5</line-spacing><line-height>2</line-height><letter-spacing>0.1</letter-spacing><uniform-font-sizing/><word-spacing>0.2</word-spacing><word-wrapping/></text-appearance>`,
       {
@@ -435,7 +435,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P31] calculator-on-screen: the kind of calculator, from the vocabulary or an extension", () => {
+  it("calculator-on-screen: the kind of calculator, from the vocabulary or an extension", () => {
     expectSupport('<calculator-on-screen calculator-type="scientific"/>', {
       name: "calculator-on-screen",
       calculatorType: "scientific",
@@ -455,7 +455,7 @@ describe("supports", () => {
     }
   });
 
-  it("[P32][P33][P34][P35][P36][P37][P38][P39][P40] the on-screen tools have no parameter", () => {
+  it("the on-screen tools have no parameter", () => {
     for (const name of [
       "dictionary-on-screen",
       "glossary-on-screen",
@@ -471,14 +471,14 @@ describe("supports", () => {
     }
   });
 
-  it("[P44] keeps the supports in the order of the document", () => {
+  it("keeps the supports in the order of the document", () => {
     const profile = profileOf('<spoken/><captions/><item-translation xml:lang="es"/>');
     expect([...profile.supports.keys()]).toEqual(["spoken", "captions", "item-translation"]);
   });
 });
 
 describe("sets", () => {
-  it("[P42][B69] activate-as-option-set: the supports to offer as options, by name alone (BPIG §5.3.1)", () => {
+  it("activate-as-option-set: the supports to offer as options, by name alone (BPIG §5.3.1)", () => {
     const profile = profileOf(
       '<sign-language xml:lang="ase"/><activate-as-option-set><sign-language/></activate-as-option-set>',
     );
@@ -489,7 +489,7 @@ describe("sets", () => {
     );
   });
 
-  it("[P41][B69] activate-at-initialization-set: the supports to have on from the start (BPIG §5.3.2)", () => {
+  it("activate-at-initialization-set: the supports to have on from the start (BPIG §5.3.2)", () => {
     const profile = profileOf(
       "<spoken><reading-type>computer-read-aloud</reading-type></spoken><additional-testing-time><unlimited/></additional-testing-time><activate-at-initialization-set><spoken/></activate-at-initialization-set>",
     );
@@ -497,7 +497,7 @@ describe("sets", () => {
     expect([...profile.supports.keys()]).toEqual(["spoken", "additional-testing-time"]);
   });
 
-  it("[P43][B69] prohibit-set: the supports that the candidate must not have (BPIG §5.3.3)", () => {
+  it("prohibit-set: the supports that the candidate must not have (BPIG §5.3.3)", () => {
     const profile = profileOf(
       "<additional-testing-time><unlimited/></additional-testing-time><prohibit-set><magnification/><answer-masking/><text-appearance/></prohibit-set>",
     );
@@ -509,7 +509,7 @@ describe("sets", () => {
     );
   });
 
-  it("[P41][P42][P43] writes the three sets in the order of the schema and leaves out an empty one", () => {
+  it("writes the three sets in the order of the schema and leaves out an empty one", () => {
     const profile = profileOf(
       "<prohibit-set><captions/></prohibit-set><activate-as-option-set><spoken/></activate-as-option-set><activate-at-initialization-set><braille/></activate-at-initialization-set>",
     );
@@ -522,7 +522,7 @@ describe("sets", () => {
     expect(writePnp(profileOf("<prohibit-set/>"))).toBe(written(""));
   });
 
-  it("[P41][P42][P43] lists the supports of a set in the order of the document, and the same support in several sets", () => {
+  it("lists the supports of a set in the order of the document, and the same support in several sets", () => {
     const profile = profileOf(
       "<activate-as-option-set><tactile/><spoken/></activate-as-option-set><prohibit-set><spoken/></prohibit-set>",
     );
@@ -532,12 +532,12 @@ describe("sets", () => {
 });
 
 describe("resolveSupports", () => {
-  it("[B69] resolves a support that a profile assigns, and is in no set, as assigned", () => {
+  it("resolves a support that a profile assigns, and is in no set, as assigned", () => {
     const states = resolveSupports(profileOf('<item-translation xml:lang="ko"/>'));
     expect([...states]).toEqual([["item-translation", "assigned"]]);
   });
 
-  it("[B69] resolves the sets: initialization is active, option is option, prohibit is prohibited (BPIG §5.3)", () => {
+  it("resolves the sets: initialization is active, option is option, prohibit is prohibited (BPIG §5.3)", () => {
     const states = resolveSupports(
       profileOf(
         "<spoken/><activate-at-initialization-set><spoken/><captions/></activate-at-initialization-set><activate-as-option-set><tactile/></activate-as-option-set><prohibit-set><magnification/></prohibit-set>",
@@ -551,12 +551,12 @@ describe("resolveSupports", () => {
     ]);
   });
 
-  it("[B69][N] resolves a prohibited support as prohibited even if the profile assigns it: a prohibited support is not assigned", () => {
+  it("resolves a prohibited support as prohibited even if the profile assigns it: a prohibited support is not assigned", () => {
     const states = resolveSupports(profileOf("<magnification/><prohibit-set><magnification/></prohibit-set>"));
     expect(states.get("magnification")).toBe("prohibited");
   });
 
-  it("[B69] lets prohibit win over initialization, and initialization over option", () => {
+  it("lets prohibit win over initialization, and initialization over option", () => {
     const states = resolveSupports(
       profileOf(
         "<activate-as-option-set><spoken/><captions/><tactile/></activate-as-option-set><activate-at-initialization-set><spoken/><captions/></activate-at-initialization-set><prohibit-set><spoken/></prohibit-set>",
@@ -565,7 +565,7 @@ describe("resolveSupports", () => {
     expect(Object.fromEntries(states)).toEqual({ spoken: "prohibited", captions: "active", tactile: "option" });
   });
 
-  it("[B69] names a custom support by ext: and the local name of its element, and assigns it", () => {
+  it("names a custom support by ext: and the local name of its element, and assigns it", () => {
     const profile = profileOf(
       '<spoken/><kxz:kxztesting-illustrated-glossary-on-screen xmlns:kxz="http://www.kxztesting.com/2019/pnp-extensions"/>',
     );
@@ -575,13 +575,13 @@ describe("resolveSupports", () => {
     ]);
   });
 
-  it("[B69] leaves out a support that the profile does not mention", () => {
+  it("leaves out a support that the profile does not mention", () => {
     expect(resolveSupports(profileOf("")).size).toBe(0);
   });
 });
 
 describe("extensions", () => {
-  it("[P44] keeps the custom supports of other namespaces as elements (BPIG §5.4)", () => {
+  it("keeps the custom supports of other namespaces as elements (BPIG §5.4)", () => {
     const profile = profileOf(
       '<kxz:kxztesting-illustrated-glossary-on-screen xmlns:kxz="http://www.kxztesting.com/2019/pnp-extensions"/>',
     );
@@ -609,7 +609,7 @@ describe("extensions", () => {
 });
 
 describe("namespaces", () => {
-  it("[S13][L15] reads the two namespaces that 1EdTech's own documents use, and writes the schema's (D6)", () => {
+  it("reads the two namespaces that 1EdTech's own documents use, and writes the schema's (D6)", () => {
     expect(PNP_ALTERNATE_NAMESPACES).toEqual([
       "http://www.imsglobal.org/xsd/qtiv3p0/imsafa3p0pnp_v1p0",
       "http://www.imsglobal.org/xsd/qt/qtiv3p0/imsafa3p0pnp_v1p0",
@@ -625,7 +625,7 @@ describe("namespaces", () => {
     }
   });
 
-  it("[S13][L15] reads a bulk file in either of the other namespaces", () => {
+  it("reads a bulk file in either of the other namespaces", () => {
     for (const namespace of PNP_ALTERNATE_NAMESPACES) {
       const records = readPnp(
         `<access-for-all-pnp-records xmlns="${namespace}"><access-for-all-pnp-record><person-sourced-id source-system="S">1</person-sourced-id><access-for-all-pnp><captions/></access-for-all-pnp></access-for-all-pnp-record></access-for-all-pnp-records>`,
@@ -634,7 +634,7 @@ describe("namespaces", () => {
     }
   });
 
-  it("[S13][N] refuses the namespace of QTI 2.x documents and a document in no namespace", () => {
+  it("refuses the namespace of QTI 2.x documents and a document in no namespace", () => {
     expect(
       issueOf(() => readPnp('<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd/imsafa3p0pnp_v1p0"/>')),
     ).toMatchObject({
@@ -647,7 +647,7 @@ describe("namespaces", () => {
 describe("bulk files", () => {
   const Bulk = `<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}"><access-for-all-pnp-record><person-sourced-id source-system="IMSGlobalExamples">111</person-sourced-id><access-for-all-pnp><keyword-translation xml:lang="es"/><line-reader highlight-color="#336699"/></access-for-all-pnp></access-for-all-pnp-record><access-for-all-pnp-record><person-sourced-id source-system="IMSGlobalExamples">1000001</person-sourced-id><appointment-id>g8alg12345</appointment-id><appointment-id>g8ela12345</appointment-id><access-for-all-pnp><answer-masking/></access-for-all-pnp></access-for-all-pnp-record></access-for-all-pnp-records>`;
 
-  it("[P45][P46][P47][P48] reads the bulk file of BPIG §5.5: a candidate and their appointments for each profile", () => {
+  it("reads the bulk file of BPIG §5.5: a candidate and their appointments for each profile", () => {
     const records = readPnp(Bulk) as readonly PnpRecord[];
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({
@@ -661,18 +661,18 @@ describe("bulk files", () => {
     });
   });
 
-  it("[P45][P46][P47][P48] writes the records back in the same document", () => {
+  it("writes the records back in the same document", () => {
     expect(writePnp(readPnp(Bulk) as readonly PnpRecord[])).toBe(
       `${DECLARATION}${Bulk.replace(`<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}">`, `<access-for-all-pnp-records xsi:schemaLocation="${SCHEMA_LOCATION}" xmlns="${PNP_NAMESPACE}" xmlns:xsi="${XSI_NAMESPACE}">`)}`,
     );
   });
 
-  it("[P44][P45] tells a single profile from a bulk file by the root element", () => {
+  it("tells a single profile from a bulk file by the root element", () => {
     expect(Array.isArray(readPnp(profileDocument("")))).toBe(false);
     expect(Array.isArray(readPnp(Bulk))).toBe(true);
   });
 
-  it("[P45][N] refuses a bulk file without records and a record without a candidate or a profile", () => {
+  it("refuses a bulk file without records and a record without a candidate or a profile", () => {
     const records = (inner: string): string =>
       `<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}">${inner}</access-for-all-pnp-records>`;
     expect(issueOf(() => readPnp(records("")))).toMatchObject({
@@ -702,7 +702,7 @@ describe("bulk files", () => {
 });
 
 describe("errors", () => {
-  it("[P44][N] refuses a root that is neither of the two, naming the namespace", () => {
+  it("refuses a root that is neither of the two, naming the namespace", () => {
     expect(issueOf(() => readPnp(`<profile xmlns="${PNP_NAMESPACE}"/>`))).toEqual({
       severity: "error",
       code: "assesskit/pnp/not-pnp",
@@ -712,7 +712,7 @@ describe("errors", () => {
     });
   });
 
-  it("[P44][N] refuses an element that is no support and no set, and an element in no namespace", () => {
+  it("refuses an element that is no support and no set, and an element in no namespace", () => {
     expect(() => profileOf("<color-theme>yellow</color-theme>")).toThrow(
       "The element color-theme is neither a predefined support nor a set.",
     );
@@ -721,7 +721,7 @@ describe("errors", () => {
     ).toThrow("The element spoken in no namespace is not an extension: an extension is in a namespace of its own.");
   });
 
-  it("[P44][N] refuses a support or a set that occurs twice, and a parameter that occurs twice", () => {
+  it("refuses a support or a set that occurs twice, and a parameter that occurs twice", () => {
     expect(issueOf(() => profileOf("<spoken/><spoken/>"))).toMatchObject({
       code: "assesskit/pnp/repeated-element",
       message: "The support spoken occurs more than once; the schema allows it once.",
@@ -741,13 +741,13 @@ describe("errors", () => {
     );
   });
 
-  it("[P12][N] refuses additional-testing-time without any of its three ways", () => {
+  it("refuses additional-testing-time without any of its three ways", () => {
     expect(() => profileOf("<additional-testing-time/>")).toThrow(
       "The element additional-testing-time needs time-multiplier, fixed-minutes or unlimited.",
     );
   });
 
-  it("[P3][P6][P9][P10][N] refuses a language support without xml:lang or with a malformed tag", () => {
+  it("refuses a language support without xml:lang or with a malformed tag", () => {
     expect(() => profileOf('<item-translation lang="ko"/>')).toThrow(
       "The element item-translation needs the attribute xml:lang.",
     );
@@ -755,7 +755,7 @@ describe("errors", () => {
     expect(() => profileOf("<language-of-interface/>")).toThrow("needs the attribute xml:lang");
   });
 
-  it("[N] refuses a value outside the vocabulary or the type of its parameter", () => {
+  it("refuses a value outside the vocabulary or the type of its parameter", () => {
     expect(() => profileOf("<hazard-avoidance>loud</hazard-avoidance>")).toThrow(
       'A hazard must be one of "flashing", "sound", "olfactory-hazard", "motion-simulation", or ext: and letters, found "loud".',
     );
@@ -788,7 +788,7 @@ describe("errors", () => {
     );
   });
 
-  it("[N] refuses a parameter that the support does not have, an element of another namespace in a support, and text in an empty one", () => {
+  it("refuses a parameter that the support does not have, an element of another namespace in a support, and text in an empty one", () => {
     expect(() => profileOf("<spoken><grade>2</grade></spoken>")).toThrow(
       "The element grade is not a parameter of the support spoken.",
     );
@@ -804,7 +804,7 @@ describe("errors", () => {
     );
   });
 
-  it("[P41][P42][P43][N] refuses in a set what a set cannot list: hazard-avoidance, environment, a parameter, an unknown name, a repeat and a custom support", () => {
+  it("refuses in a set what a set cannot list: hazard-avoidance, environment, a parameter, an unknown name, a repeat and a custom support", () => {
     expect(issueOf(() => profileOf("<prohibit-set><hazard-avoidance/></prohibit-set>"))).toMatchObject({
       code: "assesskit/pnp/unexpected-element",
       message:
@@ -825,14 +825,14 @@ describe("errors", () => {
     );
   });
 
-  it("[P44][N] refuses input that is not text, bytes or an element", () => {
+  it("refuses input that is not text, bytes or an element", () => {
     expect(() => readPnp(json("null"))).toThrow(
       "The PNP to read must be a string, a Uint8Array or an XmlElement, found null.",
     );
     expect(() => readPnp(parseXml("<a/>"))).toThrow("found a in no namespace.");
   });
 
-  it("[P44][N] refuses a profile that is not one", () => {
+  it("refuses a profile that is not one", () => {
     const profile = profileOf("");
     expect(() => writePnp(json("null"))).toThrow("A profile must be an object, found null.");
     expect(() => writePnp({ ...profile, supports: json("{}") })).toThrow(
@@ -859,7 +859,7 @@ describe("errors", () => {
     expect(() => resolveSupports(json("null"))).toThrow(DataError);
   });
 
-  it("[P44][N] refuses settings whose name differs from their key, and settings that are not an object", () => {
+  it("refuses settings whose name differs from their key, and settings that are not an object", () => {
     const profile = profileOf("");
     const mismatched = new Map<never, never>(json('[["spoken",{"name":"captions","replaceAccessModes":[]}]]'));
     expect(() => writePnp({ ...profile, supports: mismatched })).toThrow(
@@ -870,7 +870,7 @@ describe("errors", () => {
     );
   });
 
-  it("[P1][P3][P4][N] refuses settings with a list that is empty or has a term outside its vocabulary", () => {
+  it("refuses settings with a list that is empty or has a term outside its vocabulary", () => {
     const write = (setting: unknown): string => {
       const name = (setting as { name: never }).name;
       return writePnp({ ...profileOf(""), supports: new Map([[name, setting as never]]) });
@@ -895,7 +895,7 @@ describe("errors", () => {
     );
   });
 
-  it("[P12][P15][P16][P18][P30][N] refuses settings with a parameter of the wrong type or value", () => {
+  it("refuses settings with a parameter of the wrong type or value", () => {
     const write = (setting: unknown): string => {
       const name = (setting as { name: never }).name;
       return writePnp({ ...profileOf(""), supports: new Map([[name, setting as never]]) });
@@ -959,7 +959,7 @@ describe("errors", () => {
     );
   });
 
-  it("[P45][P46][P47][P48][N] refuses records that are not records, and an empty bulk file", () => {
+  it("refuses records that are not records, and an empty bulk file", () => {
     const profile = profileOf("");
     expect(() => writePnp([])).toThrow("A bulk PNP file needs at least one record.");
     expect(() => writePnp(json("[5]"))).toThrow("A PNP record must be an object, found 5.");
@@ -976,7 +976,7 @@ describe("errors", () => {
 });
 
 describe("properties", () => {
-  it("[P1][P2][P3][P4][P5][P6][P7][P8][P9][P10][P11][P12][P13][P14][P15][P16][P17][P18][P19][P20][P21][P22][P23][P24][P25][P26][P27][P28][P29][P30][P31][P32][P33][P34][P35][P36][P37][P38][P39][P40][P41][P42][P43][P44] reads back the profile that it writes", () => {
+  it("reads back the profile that it writes", () => {
     fc.assert(
       fc.property(personalNeedsProfile({ extensions: true }), (model) => {
         expect(withoutPositions(readPnp(writePnp(model)))).toEqual(model);
@@ -985,7 +985,7 @@ describe("properties", () => {
     );
   });
 
-  it("[P45][P46][P47][P48] reads back the records that it writes", () => {
+  it("reads back the records that it writes", () => {
     fc.assert(
       fc.property(pnpRecords, (model) => {
         expect(withoutPositions(readPnp(writePnp(model)))).toEqual(model);
@@ -994,11 +994,11 @@ describe("properties", () => {
     );
   });
 
-  it("[P44][N][B94] reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
+  it("reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
     fuzzReader(personalNeedsProfile({ extensions: true }).map(writePnp), readPnp);
   });
 
-  it("[P44] writes the same text for a profile that it has read as for the profile it was read from", () => {
+  it("writes the same text for a profile that it has read as for the profile it was read from", () => {
     fc.assert(
       fc.property(personalNeedsProfile({ extensions: true }), (model) => {
         const text = writePnp(model);
@@ -1008,7 +1008,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B69] resolves every support a profile mentions exactly once, and a prohibited one as prohibited", () => {
+  it("resolves every support a profile mentions exactly once, and a prohibited one as prohibited", () => {
     fc.assert(
       fc.property(personalNeedsProfile({ extensions: true }), (model) => {
         const states = resolveSupports(model);

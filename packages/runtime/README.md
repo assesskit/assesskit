@@ -144,7 +144,7 @@ q1 final, q2 final
 <outcomeVariable identifier="TOTAL" cardinality="single" baseType="float"><value>1</value></outcomeVariable>
 ```
 
-[Delivery](docs/delivery.md) describes the actions and refusals of the engine, time limits, the server and device modes
+[Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md) describes the actions and refusals of the engine, time limits, the server and device modes
 and the pending work of scoring and adaptive sections.
 
 ## CLI
@@ -172,7 +172,7 @@ packaging/simple/simple.zip: valid (0 errors, 0 warnings)
 The exit code is 0 when the content has no issue with severity error, 1 when it has one, and 2 when the command line is
 wrong, the path cannot be read or is refused, or the schemas are missing. `--format json` prints
 `{ tool, version, target, valid, summary: { errors, warnings }, issues }`. `assesskit schemas fetch` is the only code in the runtime that
-uses the network. [CLI](docs/cli.md) has the checks, the output and the cache directory of each platform.
+uses the network. [CLI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cli.md) has the checks, the output and the cache directory of each platform.
 
 ## API
 
@@ -214,43 +214,42 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 | Node.js (`node`, `cli`)                     | 22 and later; CI runs 22 and 24                                                |
 | Other runtimes (every other subpath)        | any that supports ECMAScript 2023                                              |
 
-The versions of the specifications are those that [Conformance](docs/conformance.md) cites. The runtime does not read QTI 2.x
-content.
+The runtime does not read QTI 2.x content.
 
-## Conformance
+## What is supported
 
-The runtime is not certified by 1EdTech. [Conformance](docs/conformance.md) lists every construct of the QTI 3.0 specifications,
-and of the companion specifications they reference, with the evidence for it and the tests that provide it. The claim is
+The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,
+and what it does not. The claim is
 scoped: items differentially tested; test sessions specification-tested. Items are compared with the Longsight
 `qti3-core` engine. No independent implementation of a QTI 3 test session was found to compare with, so the rules of test
 sessions rest on tests whose expected values are statements and worked examples of the specifications, on properties
-checked with random input, and on the 1EdTech examples. [Spec gaps](docs/spec-gaps.md) lists where the specifications
+checked with random input, and on the 1EdTech examples. [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md) lists where the specifications
 contradict themselves or are silent, and what the runtime does.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md): principles, layers, errors and determinism.
-- [Conventions](docs/conventions.md): the runtime convention that names the responses an externally scored outcome of a test covers.
-- [Spec gaps](docs/spec-gaps.md): where the specifications contradict themselves or are silent, and what the runtime does.
-- [ASI](docs/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
-- [Processing](docs/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
-- [Validate](docs/validate.md): the rule sets of BIND §5, the static types of processing, test structure, covers, packages, results and profiles, with every issue code and the decisions.
-- [Delivery](docs/delivery.md): the engine: its modes, static gate, actions and refusals, navigation and submission, outcome processing, time limits and deadlines, suspension, supports, variants, events and states; the candidate view and the JSON forms of views and actions; the pending work of scoring requests, adaptive sections with a CAT engine and the results report; the plan of a test session; and item sessions.
-- [Values](docs/values.md): the model, lexical forms, the JSON forms and the regular expressions.
-- [XML](docs/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
-- [Results](docs/results.md): the model of a Results Reporting document, its values and its rules.
-- [Usage data](docs/usage.md): item statistics, their values and mappings.
-- [Interactions](docs/interactions.md): the descriptors of the 22 interactions, their bindings, the rules of validity, shuffling and numeric text.
-- [PCI](docs/pci.md): the JSON of variables with file callbacks, module resolution, properties and checks of a portable custom interaction.
-- [Content](docs/content.md): visibility, printed variables and their number formats, rubric views, catalogs and cards, and hazards.
-- [PNP](docs/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
-- [Metadata](docs/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
-- [Package](docs/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
-- [CAT](docs/cat.md): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
-- [Node.js](docs/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
-- [CLI](docs/cli.md): `assesskit validate` and `assesskit schemas fetch`, their checks, output, exit codes and defaults.
-- [Evidence](docs/evidence.md): how every construct is tested, and how to refresh the corpus and the fixtures.
-- [Conformance](docs/conformance.md): the inventory, the certification features and the accepted differences.
+- [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/runtime/architecture.md): principles, layers, errors and determinism.
+- [Conventions](https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md): the runtime convention that names the responses an externally scored outcome of a test covers.
+- [Spec gaps](https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md): where the specifications contradict themselves or are silent, and what the runtime does.
+- [ASI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/asi.md): the model of assessment documents and their content, the reader and the writer, the covers of external scores, and the element table.
+- [Processing](https://github.com/assesskit/assesskit/blob/main/docs/runtime/processing.md): the variables, template, response and outcome processing, the expressions, the standard templates and the decisions where the specifications are silent.
+- [Validate](https://github.com/assesskit/assesskit/blob/main/docs/runtime/validate.md): the rule sets of BIND §5, the static types of processing, test structure, covers, packages, results and profiles, with every issue code and the decisions.
+- [Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md): the engine: its modes, static gate, actions and refusals, navigation and submission, outcome processing, time limits and deadlines, suspension, supports, variants, events and states; the candidate view and the JSON forms of views and actions; the pending work of scoring requests, adaptive sections with a CAT engine and the results report; the plan of a test session; and item sessions.
+- [Values](https://github.com/assesskit/assesskit/blob/main/docs/runtime/values.md): the model, lexical forms, the JSON forms and the regular expressions.
+- [XML](https://github.com/assesskit/assesskit/blob/main/docs/runtime/xml.md): the tree, the encodings, the limits, the writer, XInclude and the readers of models.
+- [Results](https://github.com/assesskit/assesskit/blob/main/docs/runtime/results.md): the model of a Results Reporting document, its values and its rules.
+- [Usage data](https://github.com/assesskit/assesskit/blob/main/docs/runtime/usage.md): item statistics, their values and mappings.
+- [Interactions](https://github.com/assesskit/assesskit/blob/main/docs/runtime/interactions.md): the descriptors of the 22 interactions, their bindings, the rules of validity, shuffling and numeric text.
+- [PCI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/pci.md): the JSON of variables with file callbacks, module resolution, properties and checks of a portable custom interaction.
+- [Content](https://github.com/assesskit/assesskit/blob/main/docs/runtime/content.md): visibility, printed variables and their number formats, rubric views, catalogs and cards, and hazards.
+- [PNP](https://github.com/assesskit/assesskit/blob/main/docs/runtime/pnp.md): the supports, the sets, custom supports and the resolution of a profile.
+- [Metadata](https://github.com/assesskit/assesskit/blob/main/docs/runtime/metadata.md): QTI metadata, LOM, curriculum standards and the accessibility description.
+- [Package](https://github.com/assesskit/assesskit/blob/main/docs/runtime/package.md): the manifest, ZIP archives and their checks, paths, documents, resolvers, dependencies and LTI links.
+- [CAT](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cat.md): the port to a CAT engine, section data, item stages, the pool check and the metadata JSON.
+- [Node.js](https://github.com/assesskit/assesskit/blob/main/docs/runtime/node.md): getting the schemas, choosing the schema of a document, issues, the engine, and package files.
+- [CLI](https://github.com/assesskit/assesskit/blob/main/docs/runtime/cli.md): `assesskit validate` and `assesskit schemas fetch`, their checks, output, exit codes and defaults.
+- [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md): what the runtime supports and what it does not, and the scope of the claim.
+- [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/runtime/evidence.md): how the runtime is tested, and how to refresh the corpus and the fixtures.
 
 [SECURITY](../../SECURITY.md) lists the threat model, every default limit and how to report a vulnerability.
 [CONTRIBUTING](../../CONTRIBUTING.md) describes how to contribute.

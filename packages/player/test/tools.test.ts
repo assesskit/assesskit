@@ -84,7 +84,7 @@ const shows = (keys: string): string => {
 };
 
 describe("numbers", () => {
-  it("[T93] leaves the noise of binary fractions off the display", () => {
+  it("leaves the noise of binary fractions off the display", () => {
     expect(formatNumber(0.1 + 0.2)).toBe("0.3");
     expect(formatNumber(1 / 3)).toBe("0.333333333333");
     expect(formatNumber(-0)).toBe("0");
@@ -93,7 +93,7 @@ describe("numbers", () => {
 });
 
 describe("calculator-engine", () => {
-  it("[T93] types numbers: digits, one decimal point, a leading zero kept once", () => {
+  it("types numbers: digits, one decimal point, a leading zero kept once", () => {
     expect(shows("123")).toBe("123");
     expect(shows("007")).toBe("7");
     expect(shows(".5")).toBe("0.5");
@@ -101,53 +101,53 @@ describe("calculator-engine", () => {
     expect(shows("1.50")).toBe("1.50");
   });
 
-  it("[T93] stops typing at 12 digits, the width of the display", () => {
+  it("stops typing at 12 digits, the width of the display", () => {
     expect(shows("1234567890123")).toBe("123456789012");
     expect(shows("0.123456789012345")).toBe("0.12345678901");
   });
 
-  it("[T93] adds, subtracts, multiplies and divides: the four operations of the basic calculator (BPIG §3.7.8.1)", () => {
+  it("adds, subtracts, multiplies and divides: the four operations of the basic calculator (BPIG §3.7.8.1)", () => {
     expect(shows("2+3=")).toBe("5");
     expect(shows("9-12=")).toBe("-3");
     expect(shows("6*7=")).toBe("42");
     expect(shows("1/4=")).toBe("0.25");
   });
 
-  it("[T93] rounds to 12 significant digits, so that 0.1 + 0.2 is 0.3", () => {
+  it("rounds to 12 significant digits, so that 0.1 + 0.2 is 0.3", () => {
     expect(shows("0.1+0.2=")).toBe("0.3");
     expect(shows("1/3=")).toBe("0.333333333333");
   });
 
-  it("[T93] runs operations as they are entered, from left to right, like a desktop calculator", () => {
+  it("runs operations as they are entered, from left to right, like a desktop calculator", () => {
     expect(shows("2+3*4=")).toBe("20");
     expect(shows("2+3*")).toBe("5");
   });
 
-  it("[T93] replaces the operation when two are pressed in a row", () => {
+  it("replaces the operation when two are pressed in a row", () => {
     expect(shows("5+*3=")).toBe("15");
   });
 
-  it("[T93] continues from a result, and starts a new number with a digit", () => {
+  it("continues from a result, and starts a new number with a digit", () => {
     expect(shows("2+3=*4=")).toBe("20");
     expect(shows("2+3=7")).toBe("7");
     expect(shows("2+3=7+1=")).toBe("8");
   });
 
-  it("[T93] shows an error for a division by zero, and only clear takes it away", () => {
+  it("shows an error for a division by zero, and only clear takes it away", () => {
     expect(shows("7/0=")).toBe("error");
     expect(shows("7/0=5")).toBe("error");
     expect(shows("7/0=C5")).toBe("5");
     expect(shows("0/0=")).toBe("error");
   });
 
-  it("[T93] clears the calculation and keeps the memory", () => {
+  it("clears the calculation and keeps the memory", () => {
     const cleared = type("5m3+C");
     expect(cleared.display).toBe("0");
     expect(cleared.operator).toBeNull();
     expect(cleared.memory).toBe(5);
   });
 
-  it("[T93] changes the sign of the number being typed, of a result, and of a number to come", () => {
+  it("changes the sign of the number being typed, of a result, and of a number to come", () => {
     expect(shows("5~")).toBe("-5");
     expect(shows("5~~")).toBe("5");
     expect(shows("5~7")).toBe("-57");
@@ -156,14 +156,14 @@ describe("calculator-engine", () => {
     expect(shows("5+~=")).toBe("0");
   });
 
-  it("[T93] takes the square root, and fails for a negative number", () => {
+  it("takes the square root, and fails for a negative number", () => {
     expect(shows("9r")).toBe("3");
     expect(shows("2r")).toBe("1.41421356237");
     expect(shows("4~r")).toBe("error");
     expect(shows("9+16r=")).toBe("13");
   });
 
-  it("[T93] takes percents: of the left operand after + and -, and a hundredth otherwise", () => {
+  it("takes percents: of the left operand after + and -, and a hundredth otherwise", () => {
     expect(shows("200+10%=")).toBe("220");
     expect(shows("200-10%=")).toBe("180");
     expect(shows("200*10%=")).toBe("20");
@@ -171,7 +171,7 @@ describe("calculator-engine", () => {
     expect(shows("50%")).toBe("0.5");
   });
 
-  it("[T93] keeps a memory: add, subtract, recall and clear", () => {
+  it("keeps a memory: add, subtract, recall and clear", () => {
     expect(type("5m").memory).toBe(5);
     expect(type("5m3n").memory).toBe(2);
     expect(shows("5m3R")).toBe("5");
@@ -180,16 +180,16 @@ describe("calculator-engine", () => {
     expect(shows("5m3+R=")).toBe("8");
   });
 
-  it("[T93] starts a new number after the memory takes the one on the display", () => {
+  it("starts a new number after the memory takes the one on the display", () => {
     expect(shows("5m7")).toBe("7");
     expect(shows("5m7+1=")).toBe("8");
   });
 
-  it("[T93] keeps the memory through an error", () => {
+  it("keeps the memory through an error", () => {
     expect(type("5m1/0=").memory).toBe(5);
   });
 
-  it("[T93] has the keys of the basic calculator in the standard one, which adds the others (BPIG §3.7.8.1)", () => {
+  it("has the keys of the basic calculator in the standard one, which adds the others (BPIG §3.7.8.1)", () => {
     expect([...BASIC_KEYS].sort()).toEqual(
       [..."0123456789", "decimal", "add", "subtract", "multiply", "divide", "equals", "clear"].sort(),
     );
@@ -198,7 +198,7 @@ describe("calculator-engine", () => {
     );
   });
 
-  it("[SC 2.1.4] maps characters to keys, so that typing needs the focus in the calculator", () => {
+  it("maps characters to keys, so that typing needs the focus in the calculator", () => {
     expect(KEYBOARD_KEYS.get("7")).toBe("7");
     expect(KEYBOARD_KEYS.get("+")).toBe("add");
     expect(KEYBOARD_KEYS.get("Enter")).toBe("equals");
@@ -210,7 +210,7 @@ describe("calculator-engine", () => {
 describe("calculator-engine properties", () => {
   const anyKey = fc.constantFrom<CalculatorKey>(...BASIC_KEYS, ...STANDARD_ONLY_KEYS);
 
-  it("[T93] never throws, and its display is a finite number or an error", () => {
+  it("never throws, and its display is a finite number or an error", () => {
     fc.assert(
       fc.property(fc.array(anyKey, { maxLength: 40 }), (keys) => {
         const state = keys.reduce(press, INITIAL_STATE);
@@ -221,7 +221,7 @@ describe("calculator-engine properties", () => {
     );
   });
 
-  it("[T93] shows the digits typed", () => {
+  it("shows the digits typed", () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 999_999_999_999 }), (value) => {
         expect(shows(String(value))).toBe(String(value));
@@ -229,7 +229,7 @@ describe("calculator-engine properties", () => {
     );
   });
 
-  it("[T93] gives the result of the operation that JavaScript gives, for whole numbers", () => {
+  it("gives the result of the operation that JavaScript gives, for whole numbers", () => {
     const operations: readonly (readonly [string, (a: number, b: number) => number])[] = [
       ["+", (a, b) => a + b],
       ["-", (a, b) => a - b],
@@ -247,7 +247,7 @@ describe("calculator-engine properties", () => {
     );
   });
 
-  it("[T93] returns to the initial state, memory aside, on clear", () => {
+  it("returns to the initial state, memory aside, on clear", () => {
     fc.assert(
       fc.property(fc.array(anyKey, { maxLength: 40 }), (keys) => {
         const state = press(keys.reduce(press, INITIAL_STATE), "clear");
@@ -311,7 +311,7 @@ describe("check-input", () => {
     ],
   };
 
-  it("[T63] accepts the companion materials of BPIG §3.7.8 as the runtime reads them, and the supports of the profile", () => {
+  it("accepts the companion materials of BPIG §3.7.8 as the runtime reads them, and the supports of the profile", () => {
     expect(() => checkToolsInput(valid)).not.toThrow();
     expect(() => checkToolsInput(json(valid))).not.toThrow();
     expect(() => checkToolsInput({ companion: null, supports: [] })).not.toThrow();
@@ -473,7 +473,7 @@ describe("check-input", () => {
     );
   });
 
-  it("[T75] accepts any support of the view and ignores the ones that put no tool on the screen", () => {
+  it("accepts any support of the view and ignores the ones that put no tool on the screen", () => {
     const supports = [supportView("spoken", { state: "active", active: true }), support({ name: "line-reader" })];
     expect(() => checkToolsInput({ companion: null, supports })).not.toThrow();
     expect(resolveTools({ companion: null, supports }).tools.map(({ spec }) => spec.kind)).toEqual(["line-reader"]);
@@ -527,7 +527,7 @@ describe("check-input", () => {
 });
 
 describe("resolve", () => {
-  it("[T63] puts the companion materials in force: rules, protractors, calculators, digital materials, then physical ones apart", () => {
+  it("puts the companion materials in force: rules, protractors, calculators, digital materials, then physical ones apart", () => {
     const set = resolveTools({
       companion: companion({
         calculators: [calculatorXml("standard", "Standard")],
@@ -549,7 +549,7 @@ describe("resolve", () => {
     expect(set.physical).toEqual(["Supply scissors."]);
   });
 
-  it("[T63] reads the rule of BPIG §3.7.8.2 and the protractor of BPIG §3.7.8.3 as numbers in their units", () => {
+  it("reads the rule of BPIG §3.7.8.2 and the protractor of BPIG §3.7.8.3 as numbers in their units", () => {
     const [rule, protractor] = resolveTools({
       companion: companion({ rules: [RULE_XML], protractors: [PROTRACTOR_XML] }),
       supports: [],
@@ -558,7 +558,7 @@ describe("resolve", () => {
     expect(protractor?.spec).toEqual({ kind: "protractor", protractor: PROTRACTOR_SPEC });
   });
 
-  it("[T63] reads a rule in US units and a protractor in radians, and leaves out a minor increment that the item does not give", () => {
+  it("reads a rule in US units and a protractor in radians, and leaves out a minor increment that the item does not give", () => {
     const [rule, protractor] = resolveTools({
       companion: companion({
         rules: [ruleXml("Yardstick", 2, ["1", "Inch"], undefined, "us")],
@@ -576,7 +576,7 @@ describe("resolve", () => {
     });
   });
 
-  it("[T63] keeps the digital material as the runtime reads it", () => {
+  it("keeps the digital material as the runtime reads it", () => {
     const [tool] = resolveTools({
       companion: companion({
         digital: [
@@ -600,18 +600,18 @@ describe("resolve", () => {
     });
   });
 
-  it("[T63] gives the same tool the same key, and two tools different keys", () => {
+  it("gives the same tool the same key, and two tools different keys", () => {
     const keyOf = (rule: string) =>
       resolveTools({ companion: companion({ rules: [rule] }), supports: [] }).tools[0]?.key;
     expect(keyOf(ruleXml("Another description", 10, ["1.0", "Meter"], ["0.5", "Meter"]))).toBe(keyOf(RULE_XML));
     expect(keyOf(ruleXml("Longer", 20, ["1", "Meter"], ["0.5", "Meter"]))).not.toBe(keyOf(RULE_XML));
   });
 
-  it("[T63] keeps one of two equal rules", () => {
+  it("keeps one of two equal rules", () => {
     expect(resolveTools({ companion: companion({ rules: [RULE_XML, RULE_XML] }), supports: [] }).tools).toHaveLength(1);
   });
 
-  it("[T63] builds in the basic and standard calculators and leaves the others to the host (the player design D1)", () => {
+  it("builds in the basic and standard calculators and leaves the others to the host (the player design D1)", () => {
     const kinds = (types: readonly string[]) =>
       resolveTools({
         companion: companion({ calculators: types.map((type) => calculatorXml(type, type)) }),
@@ -627,7 +627,7 @@ describe("resolve", () => {
     ]);
   });
 
-  it("[T86] puts the line reader on the screen with the color of the profile, or none", () => {
+  it("puts the line reader on the screen with the color of the profile, or none", () => {
     const [colored, plain] = [
       resolveTools({
         companion: null,
@@ -641,7 +641,7 @@ describe("resolve", () => {
     expect(plain.tools[0]?.support).toMatchObject({ name: "line-reader", active: true });
   });
 
-  it("[T92] puts answer masking on the screen", () => {
+  it("puts answer masking on the screen", () => {
     const set = resolveTools({ companion: null, supports: [support({ name: "answer-masking", active: true })] });
     expect(set.tools).toEqual([
       {
@@ -654,7 +654,7 @@ describe("resolve", () => {
     ]);
   });
 
-  it("[T93] puts the calculator of the profile on the screen when the item has none, whatever the test says ([CERT] A-12)", () => {
+  it("puts the calculator of the profile on the screen when the item has none, whatever the test says ([CERT] A-12)", () => {
     const set = resolveTools({
       companion: companion(),
       supports: [
@@ -666,7 +666,7 @@ describe("resolve", () => {
     expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
-  it("[T93] gives a profile that names no calculator type a basic calculator, and one that names an extension term none", () => {
+  it("gives a profile that names no calculator type a basic calculator, and one that names an extension term none", () => {
     const basic = resolveTools({ companion: null, supports: [support({ name: "calculator-on-screen" })] });
     expect(basic.tools[0]?.spec).toEqual({ kind: "calculator", type: "basic" });
     const extension = resolveTools({
@@ -676,7 +676,7 @@ describe("resolve", () => {
     expect(extension.tools).toEqual([]);
   });
 
-  it("[T93] makes one tool of the calculator that the item and the profile both name, and keeps the item's description", () => {
+  it("makes one tool of the calculator that the item and the profile both name, and keeps the item's description", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("standard", "Standard calculator")] }),
       supports: [support({ name: "calculator-on-screen", calculatorType: "standard", active: true })],
@@ -686,7 +686,7 @@ describe("resolve", () => {
     expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
-  it("[T93] keeps the calculator of the item and adds the one of the profile when their types differ", () => {
+  it("keeps the calculator of the item and adds the one of the profile when their types differ", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("basic", "Basic")] }),
       supports: [support({ name: "calculator-on-screen", calculatorType: "standard" })],
@@ -698,7 +698,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ support }) => support?.name ?? null)).toEqual([null, "calculator-on-screen"]);
   });
 
-  it("[T93] removes every calculator, the item's included, when the profile prohibits calculator-on-screen", () => {
+  it("removes every calculator, the item's included, when the profile prohibits calculator-on-screen", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("basic", "Basic")], rules: [RULE_XML] }),
       supports: [support({ name: "calculator-on-screen", state: "prohibited" })],
@@ -706,7 +706,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["rule"]);
   });
 
-  it("[T93] keeps the file of a calculator with the calculator, as the runtime reads it (INFO §5.24.3)", () => {
+  it("keeps the file of a calculator with the calculator, as the runtime reads it (INFO §5.24.3)", () => {
     const set = resolveTools({
       companion: companion({
         calculators: [
@@ -730,7 +730,7 @@ describe("resolve", () => {
     expect(set.tools[1]?.file).toBeNull();
   });
 
-  it("[T93] keeps the file of the item's calculator when the profile names the same calculator", () => {
+  it("keeps the file of the item's calculator when the profile names the same calculator", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("standard", "Standard", { href: "tools/standard.pdf" })] }),
       supports: [support({ name: "calculator-on-screen", calculatorType: "standard", active: true })],
@@ -740,12 +740,12 @@ describe("resolve", () => {
     expect(set.tools[0]?.support).toMatchObject({ name: "calculator-on-screen", active: true });
   });
 
-  it("[T93] has no file for the calculator of a profile", () => {
+  it("has no file for the calculator of a profile", () => {
     const set = resolveTools({ companion: null, supports: [support({ name: "calculator-on-screen" })] });
     expect(set.tools[0]?.file).toBeNull();
   });
 
-  it("[T93] removes the calculator with its file when the profile prohibits calculator-on-screen", () => {
+  it("removes the calculator with its file when the profile prohibits calculator-on-screen", () => {
     const set = resolveTools({
       companion: companion({ calculators: [calculatorXml("basic", "Basic", { href: "tools/basic.html" })] }),
       supports: [support({ name: "calculator-on-screen", state: "prohibited" })],
@@ -753,7 +753,7 @@ describe("resolve", () => {
     expect(set.tools).toEqual([]);
   });
 
-  it("[T94] gives each on-screen tool of the profile a slot of the host", () => {
+  it("gives each on-screen tool of the profile a slot of the host", () => {
     const slots = new Map([
       ["dictionary-on-screen", "dictionary"],
       ["thesaurus-on-screen", "thesaurus"],
@@ -768,7 +768,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => (spec.kind === "slot" ? spec.tool : spec.kind))).toEqual([...slots.values()]);
   });
 
-  it("[T94] leaves out a prohibited support, whichever tool it is", () => {
+  it("leaves out a prohibited support, whichever tool it is", () => {
     const set = resolveTools({
       companion: null,
       supports: [
@@ -781,11 +781,11 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => spec)).toEqual([{ kind: "slot", tool: "thesaurus" }]);
   });
 
-  it("[T63] has no tools, and no physical materials, for an item without companion materials and a profile without supports", () => {
+  it("has no tools, and no physical materials, for an item without companion materials and a profile without supports", () => {
     expect(resolveTools({ companion: null, supports: [] })).toEqual({ tools: [], physical: [] });
   });
 
-  it("[T63] orders the item's materials before the candidate's supports", () => {
+  it("orders the item's materials before the candidate's supports", () => {
     const set = resolveTools({
       companion: companion({ rules: [RULE_XML] }),
       supports: [support({ name: "line-reader" }), support({ name: "answer-masking" })],
@@ -795,7 +795,7 @@ describe("resolve", () => {
 });
 
 describe("scale", () => {
-  it("[T63] converts the units of INFO §8.27, §8.28, §8.39 and §8.40", () => {
+  it("converts the units of INFO §8.27, §8.28, §8.39 and §8.40", () => {
     expect(millimeters("Millimeter")).toBe(1);
     expect(millimeters("Centimeter")).toBe(10);
     expect(millimeters("Meter")).toBe(1000);
@@ -810,13 +810,13 @@ describe("scale", () => {
     expect(degrees("Radian")).toBeCloseTo(57.29577951308232, 12);
   });
 
-  it("[T63] names every unit with a symbol", () => {
+  it("names every unit with a symbol", () => {
     expect(unitSymbol("Centimeter")).toBe("cm");
     expect(unitSymbol("Degree")).toBe("°");
     expect(unitSymbol("Radian")).toBe("rad");
   });
 
-  it("[T63] lays out the rule of BPIG §3.7.8.2: ten meters, a tick every half meter and a number every meter", () => {
+  it("lays out the rule of BPIG §3.7.8.2: ten meters, a tick every half meter and a number every meter", () => {
     const scale = ruleScale(RULE_SPEC, 600);
     expect(scale.lengthPx).toBeCloseTo(600, 9);
     expect(scale.unit).toBe("Meter");
@@ -828,7 +828,7 @@ describe("scale", () => {
     expect(scale.unitMm).toBe(1000);
   });
 
-  it("[T63] draws a rule at the size of CSS units when it fits: ten centimeters are 377.95 CSS pixels", () => {
+  it("draws a rule at the size of CSS units when it fits: ten centimeters are 377.95 CSS pixels", () => {
     const scale = ruleScale(
       {
         minimumLength: 10,
@@ -844,13 +844,13 @@ describe("scale", () => {
     expect(scale.ticks.filter(({ major }) => !major)).toHaveLength(90);
   });
 
-  it("[T63] shrinks a rule that does not fit, keeping its proportions", () => {
+  it("shrinks a rule that does not fit, keeping its proportions", () => {
     const scale = ruleScale({ minimumLength: 10, majorIncrement: { value: 1, unit: "Centimeter" } }, 200);
     expect(scale.lengthPx).toBe(200);
     expect(scale.pxPerMm).toBeCloseTo(2, 12);
   });
 
-  it("[T63] draws a rule in US units", () => {
+  it("draws a rule in US units", () => {
     const scale = ruleScale(
       { minimumLength: 12, minorIncrement: { value: 0.25, unit: "Inch" }, majorIncrement: { value: 1, unit: "Inch" } },
       2000,
@@ -860,7 +860,7 @@ describe("scale", () => {
     expect(scale.ticks.filter(({ major }) => !major)).toHaveLength(36);
   });
 
-  it("[T63] has only major ticks when the item gives no minor increment, and none closer than the least distance", () => {
+  it("has only major ticks when the item gives no minor increment, and none closer than the least distance", () => {
     const only = ruleScale({ minimumLength: 10, majorIncrement: { value: 1, unit: "Centimeter" } }, 1000);
     expect(only.ticks.every(({ major }) => major)).toBe(true);
     const crowded = ruleScale(
@@ -874,7 +874,7 @@ describe("scale", () => {
     expect(crowded.ticks.every(({ major }) => major)).toBe(true);
   });
 
-  it("[T63] numbers every few major ticks when they are too close for a number each", () => {
+  it("numbers every few major ticks when they are too close for a number each", () => {
     const scale = ruleScale({ minimumLength: 100, majorIncrement: { value: 1, unit: "Centimeter" } }, 500);
     const labelled = scale.ticks.filter(({ labelled: isLabelled }) => isLabelled);
     const spacing = (labelled[1]?.at ?? 0) - (labelled[0]?.at ?? 0);
@@ -882,7 +882,7 @@ describe("scale", () => {
     expect(labelled[0]?.at).toBe(0);
   });
 
-  it("[T63] lays out the protractor of BPIG §3.7.8.3: a tick every degree and a number every five", () => {
+  it("lays out the protractor of BPIG §3.7.8.3: a tick every degree and a number every five", () => {
     const { ticks, unit, unitDegrees } = protractorScale(PROTRACTOR_SPEC, 200);
     expect(unit).toBe("Degree");
     expect(unitDegrees).toBe(1);
@@ -892,19 +892,19 @@ describe("scale", () => {
     expect(ticks.filter(({ major }) => !major)).toHaveLength(181 - 37);
   });
 
-  it("[T63] leaves out the degree ticks of a small protractor, where they are closer than the least distance", () => {
+  it("leaves out the degree ticks of a small protractor, where they are closer than the least distance", () => {
     const { ticks } = protractorScale(PROTRACTOR_SPEC, 96);
     expect(ticks.every(({ major }) => major)).toBe(true);
   });
 
-  it("[T63] lays out a protractor in radians: a major tick every half radian", () => {
+  it("lays out a protractor in radians: a major tick every half radian", () => {
     const { ticks, unit } = protractorScale({ majorIncrement: { value: 0.5, unit: "Radian" } }, 200);
     expect(unit).toBe("Radian");
     expect(ticks.map(({ at }) => at)).toHaveLength(7);
     expect(ticks[6]?.at).toBeCloseTo(3 * (180 / Math.PI), 9);
   });
 
-  it("[T63] lays out a protractor in minutes and seconds without drawing every tick", () => {
+  it("lays out a protractor in minutes and seconds without drawing every tick", () => {
     const { ticks } = protractorScale(
       { minorIncrement: { value: 1, unit: "Second" }, majorIncrement: { value: 1, unit: "Minute" } },
       200,
@@ -919,7 +919,7 @@ describe("properties", () => {
   const step = fc.record({ value: fc.double({ min: 1e-6, max: 1e6, noNaN: true }), unit });
   const rule = fc.record({ minimumLength: fc.integer({ min: 1, max: 1_000_000_000 }), majorIncrement: step });
 
-  it("[T63] bounds the ticks of a rule by its length in pixels, whatever the increments are", () => {
+  it("bounds the ticks of a rule by its length in pixels, whatever the increments are", () => {
     fc.assert(
       fc.property(
         rule,
@@ -942,7 +942,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T63] draws a major tick at the origin of a scale", () => {
+  it("draws a major tick at the origin of a scale", () => {
     fc.assert(
       fc.property(rule, (base) => {
         expect(ruleScale(base, 600).ticks[0]).toEqual({ at: 0, major: true, labelled: true });
@@ -950,7 +950,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T63] bounds the ticks of a protractor by the length of its arc", () => {
+  it("bounds the ticks of a protractor by the length of its arc", () => {
     const angle = fc.record({
       value: fc.double({ min: 1e-6, max: 1e6, noNaN: true }),
       unit: fc.constantFrom(...ANGLE_UNITS),
@@ -970,7 +970,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T63] resolves to tools with distinct keys, and the same tools the second time", () => {
+  it("resolves to tools with distinct keys, and the same tools the second time", () => {
     const names = fc.constantFrom(
       "line-reader",
       "answer-masking",

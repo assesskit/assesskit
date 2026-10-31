@@ -66,14 +66,14 @@ function el(root: ParentNode, selector: string): Element {
 describe("createMathTypesetter", () => {
   const typesetter = createMathTypesetter(MATHJAX);
 
-  it("[T9] requests no MathJax for content without MathML", async () => {
+  it("requests no MathJax for content without MathML", async () => {
     const content = mount("<p>No mathematics here, only <em>words</em>.</p>");
     await typesetter.typeset(content.root);
     expect(Reflect.get(window, "MathJax")).toBeUndefined();
     expect(await hits()).toEqual([]);
   });
 
-  it("[T9] loads MathJax by its URL for the first expression, and typesets it inside a shadow root", async () => {
+  it("loads MathJax by its URL for the first expression, and typesets it inside a shadow root", async () => {
     const content = mount(FRACTION);
     await typesetter.typeset(content.root);
     expect(await hits()).toContain("/mathjax/mml-chtml.js");
@@ -83,7 +83,7 @@ describe("createMathTypesetter", () => {
     expect(container.querySelector("mjx-frac")).not.toBeNull();
   });
 
-  it("[T9] stacks the numerator over the denominator in the shadow root, with the styles that it adopts there", async () => {
+  it("stacks the numerator over the denominator in the shadow root, with the styles that it adopts there", async () => {
     const content = mount(FRACTION);
     await typesetter.typeset(content.root);
     const top = (selector: string): number => el(content.root, selector).getBoundingClientRect().top;
@@ -93,7 +93,7 @@ describe("createMathTypesetter", () => {
     expect(Math.abs(top("mjx-den") - top("mjx-num"))).toBeLessThan(4);
   });
 
-  it("[T9] replaces the adopted styles at every typesetting, so that later expressions have theirs", async () => {
+  it("replaces the adopted styles at every typesetting, so that later expressions have theirs", async () => {
     const content = mount(FRACTION);
     await typesetter.typeset(content.root);
     const later = document.createElement("p");
@@ -108,7 +108,7 @@ describe("createMathTypesetter", () => {
     expect(content.root.adoptedStyleSheets).toHaveLength(2);
   });
 
-  it("[T9] typesets an element in the light DOM without adopting a sheet", async () => {
+  it("typesets an element in the light DOM without adopting a sheet", async () => {
     const light = document.createElement("div");
     light.innerHTML = `<math ${MATHML}><mi>z</mi></math>`;
     document.body.append(light);
@@ -119,14 +119,14 @@ describe("createMathTypesetter", () => {
     light.remove();
   });
 
-  it("[T9] loads MathJax once for any number of roots", async () => {
+  it("loads MathJax once for any number of roots", async () => {
     await Promise.all(
       [1, 2, 3].map((n) => typesetter.typeset(mount(`<p><math ${MATHML}><mn>${n}</mn></math></p>`).root)),
     );
     expect((await hits()).filter((path) => path === "/mathjax/mml-chtml.js")).toHaveLength(1);
   });
 
-  it("[T9] gets the fonts and the speech data from the host, never from a CDN", async () => {
+  it("gets the fonts and the speech data from the host, never from a CDN", async () => {
     await typesetter.typeset(mount(FRACTION).root);
     const fonts = declaredFonts();
     expect(fonts).not.toEqual([]);
@@ -136,7 +136,7 @@ describe("createMathTypesetter", () => {
     expect(speech.some((path) => path.startsWith("/mathjax/sre/mathmaps/"))).toBe(true);
   });
 
-  it("[T9] leaves an expression with elementary math as MathML, and typesets the others in the same root", async () => {
+  it("leaves an expression with elementary math as MathML, and typesets the others in the same root", async () => {
     const content = mount(
       `<p id="a"><math ${MATHML}><mn>1</mn></math></p>` +
         `<p id="stack"><math ${MATHML}><mstack><mn>12</mn><msrow><mo>+</mo><mn>34</mn></msrow><msline/></mstack></math></p>` +
@@ -153,7 +153,7 @@ describe("createMathTypesetter", () => {
     expect(content.find("#stack").textContent).toContain("12");
   });
 
-  it("[T9] gives Nemeth braille for the expressions of the Nemeth Code that MathJax's Speech Rule Engine knows", async () => {
+  it("gives Nemeth braille for the expressions of the Nemeth Code that MathJax's Speech Rule Engine knows", async () => {
     const content = mount(
       `<p id="sum"><math ${MATHML}><mi>x</mi><mo>+</mo><mn>1</mn></math></p>` +
         `<p id="square"><math ${MATHML}><msup><mi>x</mi><mn>2</mn></msup></math></p>` +
@@ -172,7 +172,7 @@ describe("createMathTypesetter", () => {
     expect(el(content.root, "#square mjx-speech").getAttribute("aria-label")).toMatch(/squared/u);
   });
 
-  it("[T9][T85] gives the speech request the speech that MathJax made, and nothing under skip-math-equations", async () => {
+  it("gives the speech request the speech that MathJax made, and nothing under skip-math-equations", async () => {
     const content = mountContent(`<p>Compute <math ${MATHML}><msup><mi>x</mi><mn>2</mn></msup></math> now.</p>`);
     await typesetter.typeset(content.root);
     const options = {
@@ -188,7 +188,7 @@ describe("createMathTypesetter", () => {
     expect(buildSpeechRequest(wholeRoot(content), skipping)?.text).toBe("Compute now.");
   });
 
-  it("[T9] leaves no axe violation in a root with typeset mathematics", async () => {
+  it("leaves no axe violation in a root with typeset mathematics", async () => {
     const content = mount(`${FRACTION}<p><math ${MATHML}><msqrt><mi>x</mi></msqrt></math></p>`);
     await typesetter.typeset(content.root);
     const result = await axe.run(content.host, {
@@ -198,7 +198,7 @@ describe("createMathTypesetter", () => {
     expect(result.violations.map(({ id }) => id)).toEqual([]);
   });
 
-  it("[T9] refuses a URL that is not an http or https URL, and a root that is not a root", async () => {
+  it("refuses a URL that is not an http or https URL, and a root that is not a root", async () => {
     for (const url of [
       "mml-chtml.js",
       "javascript:alert(1)",
@@ -213,7 +213,7 @@ describe("createMathTypesetter", () => {
     await expect(typesetter.typeset(JSON.parse('"p"'))).rejects.toThrow(DataError);
   });
 
-  it("[T9] has no braille for UEB math in MathJax 4.1.3: under its UEB code the label is not braille", async () => {
+  it("has no braille for UEB math in MathJax 4.1.3: under its UEB code the label is not braille", async () => {
     selectBrailleCode("ueb");
     const content = mount(`<p id="sum"><math ${MATHML}><mi>x</mi><mo>+</mo><mn>1</mn></math></p>`);
     await typesetter.typeset(content.root);

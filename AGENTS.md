@@ -1,13 +1,13 @@
 # AGENTS.md
 
 Conventions for people and coding agents working in this repository. Read this before changing anything. Most
-rules are enforced by `pnpm lint` (Biome and cspell), `pnpm typecheck`, `pnpm knip`, `pnpm conformance`,
+rules are enforced by `pnpm lint` (Biome and cspell), `pnpm typecheck`, `pnpm knip`,
 `pnpm compat` and `pnpm docs:api`; the rest are checked in review.
 
 assesskit is a toolkit for QTI 3.0 in JavaScript and TypeScript, in one repository: `@assesskit/runtime` is the QTI 3.0 runtime, and
 `@assesskit/player` is the player built on it.
-[packages/runtime/docs/architecture.md](packages/runtime/docs/architecture.md) and
-[packages/player/docs/architecture.md](packages/player/docs/architecture.md) state the design principles; follow them.
+[docs/runtime/architecture.md](docs/runtime/architecture.md) and
+[docs/player/architecture.md](docs/player/architecture.md) state the design principles; follow them.
 
 ## Terms
 
@@ -36,8 +36,6 @@ Use these words with these meanings in code, comments and docs.
 | refusal                   | The engine's answer to a well-formed action that the rules do not allow; the state stays unchanged.                                |
 | pending work              | A request the engine makes to its host and waits for, such as an external score.                                                   |
 | cover                     | The runtime convention that names the items an externally scored outcome of a test covers.                                         |
-| inventory row             | One construct of the specifications in `conformance/runtime-inventory.json`, such as `A79`.                                        |
-| unit                      | A step of the build plan; a row has the unit that completes its evidence.                                                          |
 
 ## Layout
 
@@ -54,8 +52,6 @@ packages/runtime/         the QTI 3.0 runtime
   src/random.ts           Random, SeededRandom, createRandom, restoreRandom
   src/<module>/           one folder per module, with an index.ts
   test/<module>.test.ts   one file per source folder; fixtures/ holds oracle output
-  docs/                   guides, one per module, and architecture, conventions, spec-gaps, evidence and the generated
-                          conformance matrix; TypeDoc publishes them with the API reference
 packages/player/          the player
   src/index.ts            re-exports the errors and the messages
   src/errors.ts           AccessError, LtiError, ServiceError; they extend the runtime's AssesskitError, and the player throws the
@@ -72,11 +68,12 @@ packages/player/          the player
   test/<folder>.test.ts   one file per source folder; lint.test.ts runs Biome on the layering and the GritQL rules;
                           *.browser.test.ts render in Chromium, Firefox and WebKit; fixtures/ holds the servers and
                           commands of the browser tests
-  docs/                   guides
+docs/runtime/             guides of the runtime, one per module, and architecture, conventions, spec-gaps, evidence and
+                          supported; TypeDoc publishes them with the API reference
+docs/player/              guides of the player, with architecture, evidence and supported
 differential/             the runtime against Longsight qti3-core
 compat/                   the browser baseline: the lint of the built code, the banned features, the pinned engines
-conformance/              the inventories and their tooling
-scripts/                  corpus and schema downloads, Unicode and element table generators
+scripts/                  corpus and schema downloads, the pinned corpus, Unicode and element table generators
 validation/               Python scripts that write fixtures
 biome/                    Biome GritQL plugins
 ```
@@ -91,13 +88,12 @@ pnpm test               # Vitest, offline
 pnpm test:browser       # the browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first
 pnpm test:corpus        # tests that read the corpus; run `pnpm corpus` first
 pnpm test:differential  # the runtime against Longsight `qti3-core` on items and item sessions; run `pnpm corpus` first
-pnpm test:xsd           # tests that validate against the official XSDs; run `pnpm schemas` and `pnpm corpus` first
+pnpm test:xsd           # tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first
 pnpm bench              # the benchmarks of the runtime against their budgets
 pnpm schemas            # downloads the XSDs into .cache/schemas; `pnpm schemas:pin` writes new hashes
 pnpm unicode            # regenerates the Unicode tables of `values` from the pinned files
 pnpm asi-table          # regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first
 pnpm knip               # unused files, exports and dependencies
-pnpm conformance        # every row of a merged unit has a test; docs/conformance.md is current
 pnpm compat             # the built JavaScript and the CSS of the player stay inside the browser baseline; run `pnpm build` first
 pnpm compat:engines     # the smoke test in the pinned old browsers, in Docker; run `pnpm build` first
 pnpm build              # tsc -b after deleting dist/, so that no stale output ships
@@ -105,11 +101,11 @@ pnpm check:packages     # builds, then publint and Are the Types Wrong on the pa
 pnpm docs:api           # TypeDoc into docs/api; fails on undocumented exports
 ```
 
-Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `conformance/`,
-`compat/` and `scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
+Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `compat/` and
+`scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
 also needs Docker. `pnpm test:browser` runs all three engines, and the Firefox of Playwright does not start on some macOS
 versions (it did not on macOS 27): run the suite in the Linux container of
-[evidence.md](packages/player/docs/evidence.md#tests-in-a-browser) there.
+[evidence.md](docs/player/evidence.md#tests-in-a-browser) there.
 
 ## Releases
 
@@ -123,7 +119,7 @@ behavior only, without "now", "no longer", "renamed" or "previously".
 ## Boundary between the runtime and the player
 
 The runtime owns everything QTI defines that is not presentation or platform; the player owns presentation and the platform
-([architecture.md](packages/runtime/docs/architecture.md#boundary-with-the-player) lists who owns what).
+([architecture.md](docs/runtime/architecture.md#boundary-with-the-player) lists who owns what).
 
 - Semantics belong to the runtime: validity, visibility, the choice of a variant, processing, the rules of a session, time limits,
   the flow of scoring and the view without answer keys. The player asks the runtime and never evaluates an expression, decides what is
@@ -132,14 +128,14 @@ The runtime owns everything QTI defines that is not presentation or platform; th
   interface, URLs, clocks and timers, storage, and the network (LTI, CAT adapters, Caliper). The runtime never renders, reads a
   clock, builds a URL or fetches, apart from `assesskit schemas fetch`. The policy about which actions a client may send is
   the player's.
-- A rule that the player needs and the runtime lacks is a change in the runtime, with its inventory row and test, and not a workaround in
+- A rule that the player needs and the runtime lacks is a change in the runtime, with its test, and not a workaround in
   the player.
 - The packages meet in JSON: views, actions and state, with values as `WireValue`. They have their own versions.
 
 ## Dependencies
 
 - A module imports only the modules in its row of the table in
-  [architecture.md](packages/runtime/docs/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
+  [architecture.md](docs/runtime/architecture.md#layers); every module may import `errors.ts`, `checks.ts` and
   `random.ts`. Biome enforces the rows, and imports never form cycles.
 - The runtime core uses no platform API: no `node:*`, `fetch`, timers, DOM or `process`. Only `node/` and `cli/` may.
 - `scripts/schemas.ts` imports `packages/runtime/src/cli/fetch-schemas.ts` by relative path, so that `pnpm schemas` and
@@ -148,7 +144,7 @@ The runtime owns everything QTI defines that is not presentation or platform; th
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
 - A player folder imports only the folders in its row of the table in
-  [architecture.md](packages/player/docs/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
+  [architecture.md](docs/player/architecture.md#layers); `errors.ts`, `checks.ts` and `messages/` are below all
   of them. Biome enforces the rows. Only `cat/measurekit/` imports measurekit, and `fetch` appears only as an option parameter.
 - The player's shared folders use no DOM or Node, its browser folders no Node, and its server folders no DOM. Time comes from
   a clock that the caller passes: `Date.now` appears only in `client/clock.ts` and `server/clock.ts`.
@@ -234,7 +230,7 @@ would be dead in some browsers and untested in the others.
 
 A new banned feature is a row of `compat/banned-features.ts` with the code that the lint must report and a probe for the
 pinned engines, a pattern in the `.grit` files with the message of that row, and a row of this table; the tests in
-`compat/test/` and `packages/player/test/lint.test.ts` fail until the three agree. [baseline.md](packages/player/docs/baseline.md)
+`compat/test/` and `packages/player/test/lint.test.ts` fail until the three agree. [baseline.md](docs/player/baseline.md)
 describes how the baseline is tested.
 
 ## Comments and docs
@@ -247,16 +243,18 @@ describes how the baseline is tested.
   show their imports. Values shown in samples come from running them. No marketing language, emojis or filler. The Example
   of `packages/runtime/README.md` is the file `packages/runtime/test/readme-example.ts`, and `readme.test.ts` fails when the README
   shows other code or other output.
-- Each document has one purpose: `README.md` for users, `docs/` for guides, `CONTRIBUTING.md` for the contribution
+- Each document has one purpose: `README.md` for users, `docs/<package>/` for guides, `CONTRIBUTING.md` for the contribution
   process, `AGENTS.md` for conventions, `SECURITY.md` for deployment security, `validation/README.md` for running the
   fixture scripts.
 
 ## Evidence and tests
 
-- Every test names its inventory row in brackets in its title: `it("[A79] equal: relative tolerance includes both bounds
-  by default")`. A row needs a test once its unit is merged; see [evidence.md](packages/runtime/docs/evidence.md).
-- The player's tests name the rows of `conformance/player-inventory.json` the same way (`[T97]`) and its WCAG 2.2 criteria as
-  `[SC 3.2.4]`. A test is checked against the inventory of its own package, so `[T1]` in the player is not the runtime's `T1`.
+- A test title is a plain sentence about behavior, such as `it("shares the places at a tied boundary equally")`. It carries no
+  identifier of a row, a unit or a success criterion; where a WCAG success criterion is the point of a test, the title says it in
+  words ("meets the 24-pixel target size").
+- Completeness comes from the specifications, not from a list that the repository keeps: tests derive the elements,
+  attributes, expressions and interactions to cover from the schemas, the element table and the runtime's own descriptors, and
+  fail when something is missing ([evidence.md](docs/runtime/evidence.md#completeness)).
 - Expected values come from an oracle, never from the code under test: the specification's own statements and worked
   examples, an independent implementation, or a script in `validation/`. Typed by hand only for edge cases small enough to
   derive exactly.
@@ -279,26 +277,23 @@ describes how the baseline is tested.
   meet, and for media they wait for the events of the recording and move the timers by hand, never for a time.
 - Benchmarks are in files named `*.bench.ts` and run with `pnpm bench`. They build their inputs with the arbitraries and the
   builders of the tests, and a fastest sample above its budget in `test/budgets.ts` fails them
-  ([architecture.md](packages/runtime/docs/architecture.md#performance)).
-- Tests that validate against the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
+  ([architecture.md](docs/runtime/architecture.md#performance)).
+- Tests that validate against or read the official XSDs are in files named `*.xsd.test.ts` and run with `pnpm test:xsd`. Every
   writer test passes its output to `validateXmlFiles` of `node` with a `SchemaSet` that the file loads once.
-- Test names describe behavior: `it("shares the places at a tied boundary equally")`.
 
 ## Where things go
 
-- A construct: its row in `conformance/runtime-inventory.json` already exists; its tests name it, and its unit joins `merged`
-  when the unit completes. The same holds for a duty of the player and a WCAG criterion in
-  `conformance/player-inventory.json`.
+- A construct of the specifications: its test, and a line of `supported.md` of the package when what is supported changes.
 - A runtime module: a folder in `src/` with `index.ts`, a subpath in `package.json` `exports`, `export *` in `src/index.ts`
   unless it is `node` or `cli`, a test file, a guide in `docs/`, import rules in `biome.json` and the table in
-  [architecture.md](packages/runtime/docs/architecture.md#layers), and a row in the API table of `packages/runtime/README.md`.
+  [architecture.md](docs/runtime/architecture.md#layers), and a row in the API table of `packages/runtime/README.md`.
   `node` and `cli`, which the root does not re-export, also get an entry point in `packages/runtime/typedoc.json`.
-- A player folder: its row in the table of [architecture.md](packages/player/docs/architecture.md#layers), its Biome
+- A player folder: its row in the table of [architecture.md](docs/player/architecture.md#layers), its Biome
   overrides and its entry in `lint.test.ts` when it is not one of the folders there, a subpath in `package.json`
   `exports` and `typedoc.json` when the host imports it, a test file and a guide in `docs/`.
 - Checks shared by modules: of one value in `checks.ts`; otherwise with the data they check.
-- A place where the specifications contradict themselves or are silent: its row `G<n>` in `conformance/runtime-inventory.json`,
-  the resolution in [spec-gaps.md](packages/runtime/docs/spec-gaps.md), a test, and a mention in the guide of the module.
-- Something the runtime defines because QTI does not: [conventions.md](packages/runtime/docs/conventions.md), built from QTI's own
+- A place where the specifications contradict themselves or are silent: the resolution in
+  [spec-gaps.md](docs/runtime/spec-gaps.md), a test, and a mention in the guide of the module.
+- Something the runtime defines because QTI does not: [conventions.md](docs/runtime/conventions.md), built from QTI's own
   elements so that documents stay valid.
-- A difference from Longsight `qti3-core` that the specification settles: `conformance/accepted-differences.json`.
+- A difference from Longsight `qti3-core` that the specification settles: `differential/accepted-differences.json`.

@@ -120,7 +120,7 @@ const bodyOf = (call: Call | undefined): unknown => JSON.parse(call?.request.bod
 describe("restCatPort", () => {
   const sectionData: SectionData = { sectionConfiguration: "e30=", qtiUsagedata: "PD94", qtiMetadata: "bWV0YQ==" };
 
-  it("[T101] asks the token endpoint for a bearer token with the client credentials of RFC 6749 §4.4", async () => {
+  it("asks the token endpoint for a bearer token with the client credentials of RFC 6749 §4.4", async () => {
     const service = fakeService(() => ({
       status: 200,
       body: { sectionData: {}, items: {}, section: { sectionConfiguration: "e30=" } },
@@ -142,7 +142,7 @@ describe("restCatPort", () => {
     expect(get?.request.headers).toEqual({ Authorization: "Bearer tok1", Accept: "application/json" });
   });
 
-  it("[T101] creates a section: POST /sections with the configuration and usage data of SectionDType, and returns the identifier", async () => {
+  it("creates a section: POST /sections with the configuration and usage data of SectionDType, and returns the identifier", async () => {
     const service = fakeService(() => ({ status: 201, body: { sectionIdentifier: "sec1" } }));
     const port = restCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     expect(await port.createSection(PREFIX, sectionData)).toEqual({ sectionIdentifier: "sec1" });
@@ -154,14 +154,14 @@ describe("restCatPort", () => {
     expect(bodyOf(call)).toEqual({ sectionConfiguration: "e30=", qtiUsagedata: "PD94" });
   });
 
-  it("[T101] sends a section without usage data as the configuration alone, never a shape the binding lacks", async () => {
+  it("sends a section without usage data as the configuration alone, never a shape the binding lacks", async () => {
     const service = fakeService(() => ({ status: 201, body: { sectionIdentifier: "sec1" } }));
     const port = restCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     await port.createSection(PREFIX, { sectionConfiguration: "e30=", qtiMetadata: "bWV0YQ==" });
     expect(bodyOf(engineCalls(service.calls)[0])).toEqual({ sectionConfiguration: "e30=" });
   });
 
-  it("[T101] gets a section: GET /sections/{id}, with the binding's section and items as section data and pool", async () => {
+  it("gets a section: GET /sections/{id}, with the binding's section and items as section data and pool", async () => {
     const service = fakeService(() => ({
       status: 200,
       body: {
@@ -180,7 +180,7 @@ describe("restCatPort", () => {
     expect(call?.request.body).toBeUndefined();
   });
 
-  it("[T101] creates a session: POST /sections/{id}/sessions without the PNP unless sharePnp, prior data as key and value", async () => {
+  it("creates a session: POST /sections/{id}/sessions without the PNP unless sharePnp, prior data as key and value", async () => {
     const reply: Reply = {
       status: 201,
       body: {
@@ -226,7 +226,7 @@ describe("restCatPort", () => {
     }
   });
 
-  it("[T101] reads a Create Session answer without a stage as the end of the session, and needs the identifier", async () => {
+  it("reads a Create Session answer without a stage as the end of the session, and needs the identifier", async () => {
     const answer = (body: unknown): Promise<unknown> =>
       restCatPort({
         fetch: fakeService(() => ({ status: 201, body })).fetch,
@@ -251,7 +251,7 @@ describe("restCatPort", () => {
     );
   });
 
-  it("[T101] submits results: POST .../results with the assessment result of the binding and the sessionState", async () => {
+  it("submits results: POST .../results with the assessment result of the binding and the sessionState", async () => {
     const service = fakeService(() => ({
       status: 201,
       body: {
@@ -298,7 +298,7 @@ describe("restCatPort", () => {
     });
   });
 
-  it("[T101] reads an answer without next items and without a state as the end of the session", async () => {
+  it("reads an answer without next items and without a state as the end of the session", async () => {
     const service = fakeService(() => ({ status: 201, body: {} }));
     const port = restCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     const answered = await port.submitResults(PREFIX, "sec1", "s1", { assessmentResult: RESULT });
@@ -307,7 +307,7 @@ describe("restCatPort", () => {
     expect(bodyOf(engineCalls(service.calls)[0])).toEqual({ assessmentResult: RESULT_JSON });
   });
 
-  it("[T101] ends a session and a section: DELETE, with an answer without a body", async () => {
+  it("ends a session and a section: DELETE, with an answer without a body", async () => {
     const service = fakeService(() => ({ status: 204 }));
     const port = restCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     await expect(port.endSession(PREFIX, "sec1", "s1")).resolves.toBeUndefined();
@@ -318,7 +318,7 @@ describe("restCatPort", () => {
     ]);
   });
 
-  it("[T101] keeps the token for the requests that follow, and asks again after a 401, then repeats the request once", async () => {
+  it("keeps the token for the requests that follow, and asks again after a 401, then repeats the request once", async () => {
     let issued = 0;
     let expired = false;
     const calls: Call[] = [];
@@ -355,7 +355,7 @@ describe("restCatPort", () => {
     ).toEqual(["Bearer tok1", "Bearer tok2"]);
   });
 
-  it("[T101] fails with a ServiceError that carries the status and the body of the answer", async () => {
+  it("fails with a ServiceError that carries the status and the body of the answer", async () => {
     const status = { imsx_codeMajor: "failure", imsx_severity: "error", imsx_description: "Unknown Object" };
     const port = restCatPort({
       fetch: fakeService(() => ({ status: 404, body: status })).fetch,
@@ -370,7 +370,7 @@ describe("restCatPort", () => {
     );
   });
 
-  it("[T101] fails with a ServiceError for a 401 after the new token, for a body that is not JSON and for a bad token answer", async () => {
+  it("fails with a ServiceError for a 401 after the new token, for a body that is not JSON and for a bad token answer", async () => {
     const denied = restCatPort({
       fetch: fakeService(() => ({ status: 401, body: {} })).fetch,
       endpoint: PREFIX,
@@ -406,7 +406,7 @@ describe("restCatPort", () => {
     expect(await badToken({ status: 200, body: "[]" })).toBeInstanceOf(DataError);
   });
 
-  it("[T101] asks for a token again after a failed token request, and passes on the error of fetch", async () => {
+  it("asks for a token again after a failed token request, and passes on the error of fetch", async () => {
     let attempts = 0;
     const port = restCatPort({
       endpoint: PREFIX,
@@ -429,7 +429,7 @@ describe("restCatPort", () => {
     expect(attempts).toBe(2);
   });
 
-  it("[T101] aborts a request that takes longer than timeoutMs", async () => {
+  it("aborts a request that takes longer than timeoutMs", async () => {
     const port = restCatPort({
       endpoint: PREFIX,
       credentials: CREDENTIALS,
@@ -442,7 +442,7 @@ describe("restCatPort", () => {
     await expect(port.endSection(PREFIX, "sec1")).rejects.toMatchObject({ name: "TimeoutError" });
   });
 
-  it("[T101] sends nothing to another engine than the endpoint, and nothing over http", async () => {
+  it("sends nothing to another engine than the endpoint, and nothing over http", async () => {
     const service = fakeService();
     const port = restCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     const message = `The prefix "https://evil.example/ims/cat/v1p0" is not the engine "${PREFIX}" that this port serves; the port sends nothing to another engine.`;
@@ -473,11 +473,11 @@ describe("restCatPort", () => {
     ).toThrow(/^The options object is invalid at credentials\.tokenUrl: expected an absolute https URL/);
   });
 
-  it("[T101] takes the global fetch as it is", () => {
+  it("takes the global fetch as it is", () => {
     expect(() => restCatPort({ fetch, endpoint: PREFIX, credentials: CREDENTIALS })).not.toThrow();
   });
 
-  it("[T101] checks its options and its requests", async () => {
+  it("checks its options and its requests", async () => {
     const service = fakeService();
     const options = { fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS };
     const port = restCatPort(options);
@@ -539,7 +539,7 @@ describe("restCatPort", () => {
     expect(service.calls).toEqual([]);
   });
 
-  it("[T101] accepts the qtiMetadata object of Get Section, the binding's QTI metadata record, and does not return it as section data", async () => {
+  it("accepts the qtiMetadata object of Get Section, the binding's QTI metadata record, and does not return it as section data", async () => {
     const answer = (section: unknown): Promise<unknown> =>
       restCatPort({
         fetch: fakeService(() => ({ status: 200, body: { items: { itemIdentifiers: ["i1"] }, section } })).fetch,
@@ -563,11 +563,11 @@ describe("restCatPort", () => {
     );
   });
 
-  it("[T101] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
     fuzzJson((options) => restCatPort(options as RestCatPortOptions));
   });
 
-  it("[T101] reads or refuses arbitrary JSON as section data with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON as section data with a DataError, and nothing else", () => {
     fuzzJson(readSectionData, [sectionData, { sectionConfiguration: "e30=" }]);
   });
 });
@@ -599,7 +599,7 @@ function recordingEngine(pool: (sectionIdentifier: string) => readonly string[] 
 }
 
 describe("deployCatSections", () => {
-  it("[T102] creates the section of an adaptive selection from the files it references, and checks the pool", async () => {
+  it("creates the section of an adaptive selection from the files it references, and checks the pool", async () => {
     const engine = recordingEngine();
     const picked: AdaptiveSelection[] = [];
     const deployedSections = await deployCatSections(DEPLOYABLE, (selection) => {
@@ -616,7 +616,7 @@ describe("deployCatSections", () => {
     expect(picked[0]?.adaptiveEngineRef.href).toBe(PREFIX);
   });
 
-  it("[T102] reads the files against the document that holds the section: a section in a document of its own", async () => {
+  it("reads the files against the document that holds the section: a section in a document of its own", async () => {
     const pkg = packageOf({
       "test.xml": testXml('<qti-assessment-section-ref identifier="cat" href="sections/section-cat.xml"/>'),
       "sections/section-cat.xml": `<qti-assessment-section xmlns="${ASI}" identifier="cat" title="Adaptive" visible="true">${selectionXml(
@@ -633,14 +633,14 @@ describe("deployCatSections", () => {
     );
   });
 
-  it("[T102] sends an empty settings file for a selection without qti-adaptive-settings-ref, and no usage data", async () => {
+  it("sends an empty settings file for a selection without qti-adaptive-settings-ref, and no usage data", async () => {
     const pkg = packageOf({ "test.xml": testXml(adaptiveSection(selectionXml("", ""), IDS)) });
     const engine = recordingEngine();
     await deployCatSections(pkg, () => engine.port);
     expect(engine.calls[0]).toBe(`create ${PREFIX} ${JSON.stringify({ sectionConfiguration: "" })}`);
   });
 
-  it("[T102] deploys each adaptive section of each test, in document order, and nothing for a package without one", async () => {
+  it("deploys each adaptive section of each test, in document order, and nothing for a package without one", async () => {
     const second = `<qti-assessment-section identifier="cat2" title="Second" visible="true">${selectionXml(SETTINGS_REF, USAGE_REF)}${itemRefs(["x1", "x2"])}</qti-assessment-section>`;
     // Create Section is the first request of the engine, Get Section the second: the second section is engine-3.
     const engine = recordingEngine((section) => (section === "engine-3" ? ["x1", "x2"] : IDS));
@@ -663,7 +663,7 @@ describe("deployCatSections", () => {
     expect(none.calls).toEqual([]);
   });
 
-  it("[T102] fails when the pool of the engine and the item references disagree, and names the section at the engine", async () => {
+  it("fails when the pool of the engine and the item references disagree, and names the section at the engine", async () => {
     const engine = recordingEngine(() => [...IDS.slice(1), "stranger"]);
     const message = await rejection(deployCatSections(DEPLOYABLE, () => engine.port));
     expect(message).toMatch(
@@ -674,7 +674,7 @@ describe("deployCatSections", () => {
     expect(engine.calls).toHaveLength(2);
   });
 
-  it("[T102] fails when a referenced file is not in the package, or two tests name a section alike", async () => {
+  it("fails when a referenced file is not in the package, or two tests name a section alike", async () => {
     const missing = packageOf({
       "test.xml": testXml(adaptiveSection(selectionXml(SETTINGS_REF, USAGE_REF), IDS)),
       "cat/settings.json": "{}",
@@ -703,7 +703,7 @@ describe("deployCatSections", () => {
     );
   });
 
-  it("[T102] checks its arguments", async () => {
+  it("checks its arguments", async () => {
     await expect(deployCatSections(json("null"), () => recordingEngine().port)).rejects.toThrow(
       new DataError("The package must be an object, found null."),
     );
@@ -721,7 +721,7 @@ describe("without measurekit", () => {
     "@measurekit/psychometrics/irt",
   ];
 
-  it("[T101] imports the REST port and the deployment without loading a module of measurekit, which only cat/measurekit needs", async () => {
+  it("imports the REST port and the deployment without loading a module of measurekit, which only cat/measurekit needs", async () => {
     const loaded: string[] = [];
     vi.resetModules();
     for (const module of MEASUREKIT_MODULES) {
@@ -742,7 +742,7 @@ describe("without measurekit", () => {
     }
   });
 
-  it("[T101] lists measurekit as an optional peer dependency and not as a dependency", () => {
+  it("lists measurekit as an optional peer dependency and not as a dependency", () => {
     const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
     expect(manifest.dependencies).not.toHaveProperty("@measurekit/psychometrics");
     expect(manifest.peerDependencies).toHaveProperty("@measurekit/psychometrics");

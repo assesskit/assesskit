@@ -110,7 +110,7 @@ An upload interaction can record the candidate's voice, and a WAV recording load
 
 ## The player: the session host and the asset gate
 
-In an exam the engine, the seeds and the answer keys stay on the server ([server.md](packages/player/docs/server.md)). The
+In an exam the engine, the seeds and the answer keys stay on the server ([server.md](docs/player/server.md)). The
 browser code imports only the wire functions of the runtime's `delivery`, and a test fails if the bundle of the player and the remote
 session holds any file of the engine. Practice runs the engine on the device, so its keys are visible there.
 
@@ -121,7 +121,7 @@ session holds any file of the engine. Practice runs the engine on the device, so
   Keep the proctor's and the scheduler's endpoints away from candidates.
 - The stores must make `create` and `save` atomic across processes, so that a version conflict is a conflict and a session is
   started once.
-- Serve package files only through the asset gate ([asset-gate.md](packages/player/docs/asset-gate.md)), from an origin
+- Serve package files only through the asset gate ([asset-gate.md](docs/player/asset-gate.md)), from an origin
   without cookies. A token is in the path and names a session, a prefix and an expiry (an hour by default). The gate sends
   `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`; do not strip them. Keep the HMAC key out of the
   browser and rotate it to end every token.
@@ -133,7 +133,7 @@ session holds any file of the engine. Practice runs the engine on the device, so
 ## The player: the LTI tool role
 
 A learning platform launches the player through the browser of the candidate, so the launch is untrusted until `ltiLaunch` has
-checked it ([lti.md](packages/player/docs/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
+checked it ([lti.md](docs/player/lti.md)). The checks bind a launch to the browser that logged in, to the platform's
 key, to the tool's client and deployment, and to one use.
 
 - Serve the login URL and the launch URL over HTTPS, and limit the size of a request body: the handlers read what the host
@@ -169,7 +169,7 @@ the player, and only `cat/measurekit/` imports it.
 ## The player: Caliper
 
 `sendCaliper` sends events about a candidate and a bearer token to a Caliper endpoint that the host configures
-([caliper.md](packages/player/docs/caliper.md)).
+([caliper.md](docs/player/caliper.md)).
 
 - The endpoint must be `https`. A redirect is an error, so it cannot carry the token to another address. Every call is
   aborted after `timeoutMs`.
@@ -186,7 +186,7 @@ the player, and only `cat/measurekit/` imports it.
 ## The player: external scoring
 
 A `Submission` of `toSubmission` carries what a rater needs to score a response, which includes the correct responses of the
-items and the rubric for the scorer ([scoring.md](packages/player/docs/scoring.md)).
+items and the rubric for the scorer ([scoring.md](docs/player/scoring.md)).
 
 - Give a submission only to authorized raters, through an endpoint that checks the rater: never in a candidate's view, in the
   candidate's session or to the candidate's browser. It is not a view of the candidate.
@@ -203,7 +203,7 @@ items and the rubric for the scorer ([scoring.md](packages/player/docs/scoring.m
 
 The content of an item comes from a package and is untrusted. The renderer builds it with `createElementNS` from the runtime's typed
 nodes and never with `innerHTML`, and keeps only the attributes listed in
-[content](packages/player/docs/content.md#attributes): no event handler, no `style`, no attribute of another namespace.
+[content](docs/player/content.md#attributes): no event handler, no `style`, no attribute of another namespace.
 An element of any namespace but MathML, SSML and CML is left out with what it holds, so a script, an SVG or a frame in
 the content is not built, even from a view that a reader of the runtime would have refused. A reference goes through one policy:
 a path in the package is resolved and given to `assets`, an origin must be listed in `origins`, and `javascript:`, `vbscript:`,
@@ -225,7 +225,7 @@ sheets, not `<style>` elements or attributes.
 MathJax is code that the host chooses and serves: the player loads the script from the URL it is given and bundles none. Serve
 MathJax and its fonts from the asset origin, from the files of the pinned version of the npm package `mathjax`, and put
 that origin in the `script-src`, `font-src` and `connect-src` of the page and `blob:` in its `worker-src`
-([math](packages/player/docs/math.md#serving-mathjax)). The player sets MathJax's fonts to the host, so that it reaches no CDN. A
+([math](docs/player/math.md#serving-mathjax)). The player sets MathJax's fonts to the host, so that it reaches no CDN. A
 page loads MathJax from one URL.
 
 A speech request is made from the content of the page and goes to the voice of the host. The `ssml` holds only the SSML
@@ -235,7 +235,7 @@ in the request, so that a voice fetches no lexicon.
 
 ## The player: the LTI platform role
 
-The player launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](packages/player/docs/lti-platform.md)).
+The player launches the tools of LTI items from pages and endpoints of its own ([lti-platform.md](docs/player/lti-platform.md)).
 A tool is code of another party, and its frame has `allow-same-origin`: it is the same origin as any page of the platform
 on the player's origin, so the platform's handlers must never share that origin.
 

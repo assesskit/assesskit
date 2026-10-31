@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe("recording", () => {
-  it("[T43] records in the first accepted audio type that the recorder of the browser supports, whatever its parameters", () => {
+  it("records in the first accepted audio type that the recorder of the browser supports, whatever its parameters", () => {
     recorderOf("audio/ogg", "audio/webm");
     expect(chooseRecording(["audio/mpeg", "Audio/OGG; codecs=opus", "audio/webm"])).toEqual({
       kind: "recorder",
@@ -59,31 +59,31 @@ describe("recording", () => {
     });
   });
 
-  it("[T43] records WAV through the worklet when the browser records none of the accepted types and a WAV type is accepted", () => {
+  it("records WAV through the worklet when the browser records none of the accepted types and a WAV type is accepted", () => {
     recorderOf();
     expect(chooseRecording(["audio/webm", "audio/wave"])).toEqual({ kind: "wav", mimeType: "audio/wave" });
     expect(chooseRecording(["audio/x-wav"])).toEqual({ kind: "wav", mimeType: "audio/x-wav" });
   });
 
-  it("[T43] records nothing for a type that only an encoder would give, or when any file is accepted", () => {
+  it("records nothing for a type that only an encoder would give, or when any file is accepted", () => {
     recorderOf();
     expect(chooseRecording(["audio/mpeg"])).toBeUndefined();
     expect(chooseRecording(["image/png"])).toBeUndefined();
     expect(chooseRecording(undefined)).toBeUndefined();
   });
 
-  it("[T43] does not take a WAV type for a type of the recorder of the browser", () => {
+  it("does not take a WAV type for a type of the recorder of the browser", () => {
     recorderOf("audio/wav", "audio/wave", "audio/x-wav");
     expect(chooseRecording(["audio/wav"])).toEqual({ kind: "wav", mimeType: "audio/wav" });
   });
 
-  it("[T43] records WAV or nothing in a browser that has no recorder", () => {
+  it("records WAV or nothing in a browser that has no recorder", () => {
     vi.stubGlobal("MediaRecorder", undefined);
     expect(chooseRecording(["audio/webm", "audio/wav"])).toEqual({ kind: "wav", mimeType: "audio/wav" });
     expect(chooseRecording(["audio/webm"])).toBeUndefined();
   });
 
-  it("[T43] records with the recorder of the browser into a blob of the type", async (context) => {
+  it("records with the recorder of the browser into a blob of the type", async (context) => {
     if (typeof MediaRecorder === "undefined" || !(await audioContextRuns())) context.skip();
     const type = ["audio/webm", "audio/ogg", "audio/mp4"].find((candidate) => MediaRecorder.isTypeSupported(candidate));
     expect(type).toBeDefined();
@@ -94,7 +94,7 @@ describe("recording", () => {
     expect(blob.size).toBeGreaterThan(0);
   });
 
-  it("[T43] records 16-bit mono PCM through the worklet into a WAV file", async (context) => {
+  it("records 16-bit mono PCM through the worklet into a WAV file", async (context) => {
     if (!(await audioContextRuns())) context.skip();
     const stream = await tone();
     const recording = await startRecording(stream, { kind: "wav", mimeType: "audio/wav" }, WORKLET);

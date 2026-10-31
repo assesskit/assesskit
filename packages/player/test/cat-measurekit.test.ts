@@ -108,7 +108,7 @@ function measurekitItems(length: number, answers: (item: string, position: numbe
 }
 
 describe("usage", () => {
-  it("[T99] reads A-Param, B-Param, C-Param and D-Param of a 4PL item, in the order of the usage data", () => {
+  it("reads A-Param, B-Param, C-Param and D-Param of a 4PL item, in the order of the usage data", () => {
     const items = readItems(
       bytes(
         usageXml([
@@ -123,7 +123,7 @@ describe("usage", () => {
     ]);
   });
 
-  it("[T99] leaves other statistics alone: p-values, parameters of a part, of another object and categorized ones", () => {
+  it("leaves other statistics alone: p-values, parameters of a part, of another object and categorized ones", () => {
     const xml = `<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0">
       <ordinaryStatistic name="P-value" context="http://example.org/c"><targetObject identifier="x"/><value>0.6</value></ordinaryStatistic>
       <ordinaryStatistic name="B-Param" context="http://example.org/c"><targetObject identifier="x"/><value>0.5</value></ordinaryStatistic>
@@ -134,7 +134,7 @@ describe("usage", () => {
     expect(readItems(bytes(xml))).toEqual([{ id: "x", a: 1, b: 0.5, c: 0, d: 1 }]);
   });
 
-  it("[T99] rejects a parameter that is given twice, that is not a number, or that has no B-Param", () => {
+  it("rejects a parameter that is given twice, that is not a number, or that has no B-Param", () => {
     const statistic = (name: string, value: string, baseType = ""): string =>
       `<ordinaryStatistic name="${name}" context="http://example.org/c"><targetObject identifier="x"/><value ${baseType}>${value}</value></ordinaryStatistic>`;
     const usage = (...statistics: string[]): Uint8Array =>
@@ -173,7 +173,7 @@ describe("pool", () => {
     return out[1] ?? Number.NaN;
   };
 
-  it("[T99] multiplies a by 1.702 so that a bank on the normal-ogive metric is on measurekit's scale", () => {
+  it("multiplies a by 1.702 so that a bank on the normal-ogive metric is on measurekit's scale", () => {
     const [item] = poolOf([{ id: "x", a: 1.2, b: 0.3, c: 0.2, d: 1 }], [], 1.702);
     if (item === undefined) throw new Error("The pool has no item.");
     for (const [theta, ogive, logistic] of Ogive) {
@@ -182,7 +182,7 @@ describe("pool", () => {
     }
   });
 
-  it("[T99] takes a as it is with the default constant 1, measurekit's scale D = 1", () => {
+  it("takes a as it is with the default constant 1, measurekit's scale D = 1", () => {
     expect(DEFAULT_SCALING_CONSTANT).toBe(1);
     const [item] = poolOf([{ id: "x", a: 1.2, b: 0.3, c: 0.2, d: 1 }], [], DEFAULT_SCALING_CONSTANT);
     expect(item?.parameters).toEqual({ a: 1.2, b: 0.3, c: 0.2, d: 1 });
@@ -191,7 +191,7 @@ describe("pool", () => {
     expect(item && probability(item, 2)).toBeCloseTo(0.9079466143635602, 12);
   });
 
-  it("[T99] lets a host item replace the item of the usage data in its place and adds the others at the end", () => {
+  it("lets a host item replace the item of the usage data in its place and adds the others at the end", () => {
     const host: TestItem<LogisticParameters>[] = [
       { id: "y", model: twoParameterLogistic, parameters: { a: 2, b: 2, c: 0, d: 1 } },
       { id: "z", model: twoParameterLogistic, parameters: { a: 1, b: 3, c: 0, d: 1 } },
@@ -210,13 +210,13 @@ describe("pool", () => {
 });
 
 describe("session-state", () => {
-  it("[T99] gives every step of every session its own seed", () => {
+  it("gives every step of every session its own seed", () => {
     expect(stepSeed(0, 0)).toBe(0);
     expect(stepSeed(1, 0)).toBe(2 ** 21);
     expect(stepSeed(2 ** 32 - 1, 2 ** 21 - 1)).toBe(Number.MAX_SAFE_INTEGER);
   });
 
-  it("[T99] rejects a seed or a step out of range", () => {
+  it("rejects a seed or a step out of range", () => {
     for (const seed of [-1, 1.5, 2 ** 32, Number.NaN]) {
       expect(() => checkSessionSeed(seed), String(seed)).toThrow(
         /^A session seed must be an integer from 0 to 4294967295/,
@@ -228,12 +228,12 @@ describe("session-state", () => {
     expect(() => stepSeed(1, -1)).toThrow(DataError);
   });
 
-  it("[T99] parses the sessionState and reads the progress of a state", () => {
+  it("parses the sessionState and reads the progress of a state", () => {
     expect(parseSessionState('{"seed":3}')).toEqual({ seed: 3 });
     expect(readProgress({ items: ["a", "b"], next: "c" })).toEqual({ administered: 2, next: "c" });
   });
 
-  it("[T99] rejects a sessionState that is not the JSON text of an object and a state that has ended", () => {
+  it("rejects a sessionState that is not the JSON text of an object and a state that has ended", () => {
     for (const state of [undefined, 5, "{", "[]", "null"]) {
       expect(() => parseSessionState(state), String(state)).toThrow(DataError);
     }
@@ -248,12 +248,12 @@ describe("session-state", () => {
 describe("response", () => {
   const item: TestItem = { id: "q", model: generalizedPartialCredit, parameters: { a: 1, b: [-1, 0.5] } };
 
-  it("[T99] takes the SCORE of the item as its category", () => {
+  it("takes the SCORE of the item as its category", () => {
     expect(scoreCategory("q", new Map<string, Value | null>([["SCORE", single("float", 2)]]))).toBe(2);
     expect(responseTo(item, resultsOf(new Map([["q", 2]])), scoreCategory)).toBe(2);
   });
 
-  it("[T99] uses the last result of the item, and a category function of the host", () => {
+  it("uses the last result of the item, and a category function of the host", () => {
     const result: AssessmentResult = {
       context: { sessionIdentifiers: [] },
       itemResults: [...resultsOf(new Map([["q", 0]])).itemResults, ...resultsOf(new Map([["q", 1]])).itemResults],
@@ -262,7 +262,7 @@ describe("response", () => {
     expect(responseTo(item, result, (id, outcomes) => (outcomes.has("SCORE") && id === "q" ? 2 : 0))).toBe(2);
   });
 
-  it("[T99] takes an item submitted without a response, with the status initial and no SCORE, as category 0", () => {
+  it("takes an item submitted without a response, with the status initial and no SCORE, as category 0", () => {
     const blank: AssessmentResult = {
       context: { sessionIdentifiers: [] },
       itemResults: [
@@ -285,7 +285,7 @@ describe("response", () => {
     expect(() => responseTo(item, resultsOf(new Map([["q", 1]])), () => 0)).not.toThrow();
   });
 
-  it("[T99] rejects a score that is no number, a category that is no category of the model, and a missing result", () => {
+  it("rejects a score that is no number, a category that is no category of the model, and a missing result", () => {
     const withScore = (value: Value | null): AssessmentResult => ({
       context: { sessionIdentifiers: [] },
       itemResults: [
@@ -320,7 +320,7 @@ describe("response", () => {
 
 describe("section", () => {
   // Oracle: Python 3, SHA-256 of json.dumps([sectionConfiguration, qtiUsagedata, qtiMetadata], separators=(",", ":")).
-  it("[T99] names a section by the SHA-256 of its section data", async () => {
+  it("names a section by the SHA-256 of its section data", async () => {
     expect(await sectionIdentifier({ sectionConfiguration: "e30=" })).toBe(
       "28060e29a1c5b94c4039614a24665958cd666923375e398890cc81eaa689d696",
     );
@@ -332,7 +332,7 @@ describe("section", () => {
     );
   });
 
-  it("[T99] reads the settings and the usage data of an adaptive section", async () => {
+  it("reads the settings and the usage data of an adaptive section", async () => {
     const data = sectionDataOf(
       { length: 4, contentTargets: { algebra: 0.6, geometry: 0.4 }, enemies: [["q1", "q2"]] },
       BANK.slice(0, 2),
@@ -355,7 +355,7 @@ describe("section", () => {
     });
   });
 
-  it("[T99] defaults the content targets and the enemies to none, and keeps the area __proto__ as data", async () => {
+  it("defaults the content targets and the enemies to none, and keeps the area __proto__ as data", async () => {
     const { section } = await readAdaptiveSection(sectionDataOf({ length: 2 }, BANK));
     expect(section.contentTargets).toEqual([]);
     expect(section.enemies).toEqual([]);
@@ -364,7 +364,7 @@ describe("section", () => {
     expect(odd.contentTargets).toEqual([["__proto__", 1]]);
   });
 
-  it("[T99] rejects section data and settings of the wrong form", async () => {
+  it("rejects section data and settings of the wrong form", async () => {
     const rejects = async (data: unknown, message: RegExp): Promise<void> => {
       await expect(readAdaptiveSection(data), JSON.stringify(data)).rejects.toThrow(message);
     };
@@ -412,7 +412,7 @@ describe("section", () => {
     );
   });
 
-  it("[T100] reads the stages and modules of a panel, and checks that the usage data has the items", async () => {
+  it("reads the stages and modules of a panel, and checks that the usage data has the items", async () => {
     const settings = {
       stages: [{ modules: [{ id: "m1", items: ["q1", "q2"] }] }, { modules: [{ id: "m2", items: ["q3"] }] }],
     };
@@ -429,7 +429,7 @@ describe("section", () => {
     }
   });
 
-  it("[T99] rejects files that are not base64, not the canonical base64 of RFC 4648 §3.5, not UTF-8 or not JSON", async () => {
+  it("rejects files that are not base64, not the canonical base64 of RFC 4648 §3.5, not UTF-8 or not JSON", async () => {
     const withSettings = (sectionConfiguration: string): unknown => ({ sectionConfiguration });
     expect(await rejection(readAdaptiveSection(withSettings("not base64!")))).toBe(
       "The sectionConfiguration of the section data must be base64 text (RFC 4648), found text that is not.",
@@ -460,7 +460,7 @@ describe("measurekitCatPort", () => {
   const data = sectionDataOf(settings, BANK);
   const seeds = (): number => 12345;
 
-  it("[T99] presents the items that measurekit's adaptive test selects, one item to a stage", async () => {
+  it("presents the items that measurekit's adaptive test selects, one item to a stage", async () => {
     const sections = memoryStore();
     const port = measurekitCatPort({ sections, seeds });
     const section = await deployed(port, data);
@@ -470,7 +470,7 @@ describe("measurekitCatPort", () => {
     expect(run.stages.every((stage) => stage.length === 1)).toBe(true);
   });
 
-  it("[T99] answers Create Session with a one-item stage, the session seed as identifier and the state in sessionState", async () => {
+  it("answers Create Session with a one-item stage, the session seed as identifier and the state in sessionState", async () => {
     const port = measurekitCatPort({ sections: memoryStore(), seeds });
     const section = await deployed(port, data);
     const created = await port.createSession(PREFIX, section, {});
@@ -483,7 +483,7 @@ describe("measurekitCatPort", () => {
     expect(state.state.items).toEqual([]);
   });
 
-  it("[T99] ends the session with the empty stage after the length of the test", async () => {
+  it("ends the session with the empty stage after the length of the test", async () => {
     const port = measurekitCatPort({ sections: memoryStore(), seeds });
     const section = await deployed(port, sectionDataOf({ length: 1 }, BANK));
     const created = await port.createSession(PREFIX, section, {});
@@ -497,7 +497,7 @@ describe("measurekitCatPort", () => {
     expect(JSON.parse(answered.sessionState ?? "null").state.next).toBeNull();
   });
 
-  it("[T99] keeps no session: another port over the same store continues a session, and a repeated request gives the same answer", async () => {
+  it("keeps no session: another port over the same store continues a session, and a repeated request gives the same answer", async () => {
     const sections = memoryStore();
     const first = measurekitCatPort({ sections, seeds });
     const second = measurekitCatPort({ sections, seeds: () => 999 });
@@ -514,7 +514,7 @@ describe("measurekitCatPort", () => {
     expect(await second.submitResults(PREFIX, section, created.sessionIdentifier, request)).toEqual(byFirst);
   });
 
-  it("[T99] stores a section once under the SHA-256 of its data, as JSON, and creates it again without change", async () => {
+  it("stores a section once under the SHA-256 of its data, as JSON, and creates it again without change", async () => {
     const sections = memoryStore();
     const port = measurekitCatPort({ sections, seeds });
     const section = await deployed(port, data);
@@ -526,7 +526,7 @@ describe("measurekitCatPort", () => {
     expect(JSON.parse(stored ?? "null")).toMatchObject({ kind: "adaptive", length: 4, data });
   });
 
-  it("[T99] returns the section data and the pool from Get Section, so that CAT 1.0's checks on the pool can run", async () => {
+  it("returns the section data and the pool from Get Section, so that CAT 1.0's checks on the pool can run", async () => {
     const port = measurekitCatPort({ sections: memoryStore(), seeds });
     const section = await deployed(port, data);
     expect(await port.getSection(PREFIX, section)).toEqual({
@@ -535,7 +535,7 @@ describe("measurekitCatPort", () => {
     });
   });
 
-  it("[T99] ends a session and a section without change, because the port holds no session and sections are shared", async () => {
+  it("ends a session and a section without change, because the port holds no session and sections are shared", async () => {
     const sections = memoryStore();
     const port = measurekitCatPort({ sections, seeds });
     const section = await deployed(port, data);
@@ -545,7 +545,7 @@ describe("measurekitCatPort", () => {
     expect((await port.getSection(PREFIX, section)).sectionData).toEqual(data);
   });
 
-  it("[T99] multiplies the discrimination with scalingConstant, which changes which item is the most informative", async () => {
+  it("multiplies the discrimination with scalingConstant, which changes which item is the most informative", async () => {
     // Oracle: Python, information a² P (1 - P) at theta 0 of A (a = 2, b = 1) and B (a = 1, b = 0.2).
     // With D = 1 A has 0.420 and B 0.248; with every a times 1.702 A has 0.361 and B 0.704.
     const bank: readonly Bank[] = [
@@ -566,7 +566,7 @@ describe("measurekitCatPort", () => {
     expect(await first(1.702)).toBe("B");
   });
 
-  it("[T99] adds the host's items, such as a partial credit item, and maps its SCORE to a category", async () => {
+  it("adds the host's items, such as a partial credit item, and maps its SCORE to a category", async () => {
     const polytomous: TestItem = { id: "p1", model: generalizedPartialCredit, parameters: { a: 1.3, b: [-0.5, 0.8] } };
     const port = measurekitCatPort({
       sections: memoryStore(),
@@ -580,14 +580,14 @@ describe("measurekitCatPort", () => {
     expect(run.items).toHaveLength(7);
   });
 
-  it("[T99] maps the outcomes to a category with the host's function", async () => {
+  it("maps the outcomes to a category with the host's function", async () => {
     const port = measurekitCatPort({ sections: memoryStore(), seeds, category: () => 0 });
     const section = await deployed(port, data);
     const run = await drive(port, section, () => 5);
     expect(run.items).toEqual(measurekitItems(4, () => 0));
   });
 
-  it("[T99] draws exposure control and content balancing from createRandom seeded per step", async () => {
+  it("draws exposure control and content balancing from createRandom seeded per step", async () => {
     const pool = BANK.map(
       (item, index): PoolItem => ({
         id: item.id,
@@ -619,7 +619,7 @@ describe("measurekitCatPort", () => {
     expect(run.items).toEqual(state.items);
   });
 
-  it("[T99] calls seeds once for each session and rejects a seed out of range", async () => {
+  it("calls seeds once for each session and rejects a seed out of range", async () => {
     let calls = 0;
     const port = measurekitCatPort({
       sections: memoryStore(),
@@ -640,7 +640,7 @@ describe("measurekitCatPort", () => {
     );
   });
 
-  it("[T99] refuses requests it cannot answer: unknown or wrong sections, a missing or altered sessionState, a missing result", async () => {
+  it("refuses requests it cannot answer: unknown or wrong sections, a missing or altered sessionState, a missing result", async () => {
     const sections = memoryStore();
     const port = measurekitCatPort({ sections, seeds });
     const section = await deployed(port, data);
@@ -687,7 +687,7 @@ describe("measurekitCatPort", () => {
     );
   });
 
-  it("[T99] fails at createSection, not in the first session, for sections that cannot run", async () => {
+  it("fails at createSection, not in the first session, for sections that cannot run", async () => {
     const port = measurekitCatPort({ sections: memoryStore(), seeds });
     expect(await rejection(port.createSection(PREFIX, sectionDataOf({ length: 2 })))).toBe(
       "A section needs items: the usage data and the option pool give none.",
@@ -707,7 +707,7 @@ describe("measurekitCatPort", () => {
     );
   });
 
-  it("[T99] checks its options", () => {
+  it("checks its options", () => {
     const sections = memoryStore();
     expect(() => measurekitCatPort(json("null"))).toThrow(
       new DataError("The options object is invalid: expected an object, found null."),
@@ -734,7 +734,7 @@ describe("measurekitCatPort", () => {
     );
   });
 
-  it("[T99] reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
     fuzzJson((options) => measurekitCatPort(options as never));
     fuzzJson((options) => measurekitPanelPort(options as never));
   });
@@ -798,7 +798,7 @@ const modulesOf = (run: { readonly stages: readonly (readonly string[])[] }): st
   );
 
 describe("measurekitPanelPort", () => {
-  it("[T100] routes a candidate by the estimate of theta, as measurekit's multistage test does", async () => {
+  it("routes a candidate by the estimate of theta, as measurekit's multistage test does", async () => {
     const port = measurekitPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
     const section = await deployed(port, PANEL_DATA);
     for (const answers of [() => 1, () => 0, (item: string) => (item.startsWith("r") ? 1 : 0)]) {
@@ -809,7 +809,7 @@ describe("measurekitPanelPort", () => {
     expect(modulesOf(await drive(port, section, () => 0))).toEqual(["routing", "easy"]);
   });
 
-  it("[T100] presents a module as one stage with all its items, in order, and keeps no session", async () => {
+  it("presents a module as one stage with all its items, in order, and keeps no session", async () => {
     const sections = memoryStore();
     const port = measurekitPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) });
     const section = await deployed(port, PANEL_DATA);
@@ -826,7 +826,7 @@ describe("measurekitPanelPort", () => {
     expect(await other.submitResults(PREFIX, section, section, request)).toEqual(answered);
   });
 
-  it("[T100] ends the session with the empty stage after the last stage", async () => {
+  it("ends the session with the empty stage after the last stage", async () => {
     const port = measurekitPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
     const section = await deployed(port, PANEL_DATA);
     const run = await drive(port, section, () => 1);
@@ -835,7 +835,7 @@ describe("measurekitPanelPort", () => {
     expect(last.modules).toEqual(["routing", "hard"]);
   });
 
-  it("[T100] returns the section data and every item of the panel from Get Section", async () => {
+  it("returns the section data and every item of the panel from Get Section", async () => {
     const port = measurekitPanelPort({ sections: memoryStore(), panels: () => ({ cuts: PANEL_CUTS }) });
     const section = await deployed(port, PANEL_DATA);
     expect(await port.getSection(PREFIX, section)).toEqual({
@@ -846,7 +846,7 @@ describe("measurekitPanelPort", () => {
     await expect(port.endSection(PREFIX, section)).resolves.toBeUndefined();
   });
 
-  it("[T100] multiplies the discrimination with scalingConstant", async () => {
+  it("multiplies the discrimination with scalingConstant", async () => {
     const port = measurekitPanelPort({
       sections: memoryStore(),
       panels: () => ({ cuts: PANEL_CUTS }),
@@ -857,7 +857,7 @@ describe("measurekitPanelPort", () => {
     expect(modulesOf(await drive(port, section, answers))).toEqual(measurekitModules(1.702, answers));
   });
 
-  it("[T100] fails at createSection for a panel that cannot run: wrong cut points, an item twice", async () => {
+  it("fails at createSection for a panel that cannot run: wrong cut points, an item twice", async () => {
     const wrongCuts = measurekitPanelPort({
       sections: memoryStore(),
       panels: () => ({ cuts: new Map([["routing", [0]]]) }),
@@ -880,7 +880,7 @@ describe("measurekitPanelPort", () => {
     await expect(port.createSection(PREFIX, repeated)).rejects.toThrow();
   });
 
-  it("[T100] refuses requests it cannot answer and checks its options", async () => {
+  it("refuses requests it cannot answer and checks its options", async () => {
     const sections = memoryStore();
     const port = measurekitPanelPort({ sections, panels: () => ({ cuts: PANEL_CUTS }) });
     const section = await deployed(port, PANEL_DATA);
@@ -915,7 +915,7 @@ describe("measurekitPanelPort", () => {
 });
 
 describe("deployCatSections over measurekit", () => {
-  it("[T102] gives the engine a section that a delivery can run: over measurekit, the identifier is the SHA-256 of the data", async () => {
+  it("gives the engine a section that a delivery can run: over measurekit, the identifier is the SHA-256 of the data", async () => {
     const sections = memoryStore();
     const port = measurekitCatPort({ sections, seeds: () => 7 });
     const deployedSections = await deployCatSections(DEPLOYABLE, () => port);
@@ -927,7 +927,7 @@ describe("deployCatSections over measurekit", () => {
     expect(run.items).toHaveLength(3);
   });
 
-  it("[T102] fails over measurekit for a selection without settings, because measurekit needs the length of the test", async () => {
+  it("fails over measurekit for a selection without settings, because measurekit needs the length of the test", async () => {
     const pkg = packageOf({ "test.xml": testXml(adaptiveSection(selectionXml("", ""), IDS)) });
     await expect(
       deployCatSections(pkg, () => measurekitCatPort({ sections: memoryStore(), seeds: () => 1 })),
@@ -1093,7 +1093,7 @@ describe("an adaptive section through the runtime's engine", () => {
     return { engine, catSections, sections, ports: [first, second] as const, log };
   }
 
-  it("[T99] deploys the section, and presents the items that measurekit selects, the ports of two processes taking turns", async () => {
+  it("deploys the section, and presents the items that measurekit selects, the ports of two processes taking turns", async () => {
     const { engine, catSections, sections, ports, log } = await twoProcesses(examPackage(BANK, settings));
     expect(catSections).toEqual(
       new Map([["cat", { prefix: PREFIX, sectionIdentifier: await sectionIdentifier(sectionDataOf(settings, BANK)) }]]),
@@ -1118,7 +1118,7 @@ describe("an adaptive section through the runtime's engine", () => {
     ]);
   });
 
-  it("[T99] reports the items in the order they were presented, scored by response processing, and sums them", async () => {
+  it("reports the items in the order they were presented, scored by response processing, and sums them", async () => {
     const { engine, ports } = await twoProcesses(examPackage(BANK, settings));
     const { state, refs } = await sit(engine, ports, alternatingChoice);
     const { scores, total } = scoresOf(engine, state);
@@ -1127,7 +1127,7 @@ describe("an adaptive section through the runtime's engine", () => {
     expect(total).toBe(2);
   });
 
-  it("[T99] keeps the session of the candidate in the state of the engine, and the port keeps none", async () => {
+  it("keeps the session of the candidate in the state of the engine, and the port keeps none", async () => {
     const { engine, ports, sections } = await twoProcesses(examPackage(BANK, settings));
     const { state } = await sit(engine, ports, alternatingChoice);
     const [session] = state.cat;
@@ -1136,7 +1136,7 @@ describe("an adaptive section through the runtime's engine", () => {
     expect([...sections.kept.keys()]).toHaveLength(1);
   });
 
-  it("[T99] takes an item that the candidate skipped as category 0, as the report without a SCORE says", async () => {
+  it("takes an item that the candidate skipped as category 0, as the report without a SCORE says", async () => {
     const { engine, ports } = await twoProcesses(examPackage(BANK, settings));
     const answers = (_ref: string, position: number): string | null => (position === 1 ? null : "B");
     const { state, refs } = await sit(engine, ports, answers);
@@ -1144,7 +1144,7 @@ describe("an adaptive section through the runtime's engine", () => {
     expect(scoresOf(engine, state).total).toBe(3);
   });
 
-  it("[T99] ends the session at the engine when the candidate leaves before the CAT engine ended it", async () => {
+  it("ends the session at the engine when the candidate leaves before the CAT engine ended it", async () => {
     const { engine, ports, log } = await twoProcesses(examPackage(BANK, settings));
     const { state, refs } = await sit(engine, ports, () => "B", 2);
     expect(refs).toEqual(measurekitItems(EXAM_LENGTH, () => 1).slice(0, 2));
@@ -1154,7 +1154,7 @@ describe("an adaptive section through the runtime's engine", () => {
     expect(scoresOf(engine, state).scores.size).toBe(2);
   });
 
-  it("[T99] presents a module of a panel as a stage of its length, and routes by the estimate", async () => {
+  it("presents a module of a panel as a stage of its length, and routes by the estimate", async () => {
     const sections = memoryStore();
     const log: string[] = [];
     const panel = (name: string) =>
@@ -1189,7 +1189,7 @@ describe("properties", () => {
     )
     .map((items): Bank[] => items.map((item, index) => ({ id: `q${index + 1}`, ...item })));
 
-  it("[T99] presents the stages of measurekit's simulateAdaptiveTest at the same responses", async () => {
+  it("presents the stages of measurekit's simulateAdaptiveTest at the same responses", async () => {
     await fc.assert(
       fc.asyncProperty(
         bank,
@@ -1221,7 +1221,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T99] gives the same stages for the same seed and responses, in any process", async () => {
+  it("gives the same stages for the same seed and responses, in any process", async () => {
     await fc.assert(
       fc.asyncProperty(
         bank,
@@ -1245,7 +1245,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T99] gives no two steps of any two sessions the same seed", () => {
+  it("gives no two steps of any two sessions the same seed", () => {
     fc.assert(
       fc.property(
         fc.tuple(fc.integer({ min: 0, max: 2 ** 32 - 1 }), fc.integer({ min: 0, max: 2 ** 21 - 1 })),
@@ -1259,7 +1259,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T99] writes usage data and reads back the parameters of the bank", () => {
+  it("writes usage data and reads back the parameters of the bank", () => {
     fc.assert(
       fc.property(bank, (items) => {
         expect(readItems(bytes(usageXml(items)))).toEqual(
@@ -1269,7 +1269,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T99] gives the identifier of a section that depends on its data only", async () => {
+  it("gives the identifier of a section that depends on its data only", async () => {
     await fc.assert(
       fc.asyncProperty(fc.string(), fc.option(fc.string(), { nil: undefined }), async (configuration, usage) => {
         const data: SectionData = {

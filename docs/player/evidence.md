@@ -1,35 +1,18 @@
 # Evidence
 
-`conformance/player-inventory.json` lists every duty of the player and every success criterion of WCAG 2.2 at levels A and
-AA, with the evidence that proves it and the build unit that completes it.
+How the player is tested. The claim that these tests support is stated in [Supported](supported.md).
 
-## Rows
+## Completeness
 
-A row has an identifier `T1` to `T122`, the duty, the runtime rows it implements (`runtime`: identifiers or ranges such as
-`J4–J6`, which must exist in `runtime-inventory.json`), the folders that implement it, its evidence and its unit. A duty that
-the host owns or that is not supported has an `owner` in place of folders, evidence and unit.
+What must be covered is derived from the specifications and from the runtime, not from a list that the repository keeps.
 
-| Code | Evidence                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------- |
-| R    | Rendering test in Vitest browser mode on Chromium, Firefox and WebKit (`pnpm test:browser`) |
-| A    | axe-core at WCAG 2.2 A and AA, a keyboard-only script, and the manual checks of the matrix  |
-| E    | Playwright end-to-end flow on three engines                                                 |
-| X    | A 1EdTech sample renders, accepts input and logs no error                                   |
-| U    | Unit test, in Node or the browser                                                           |
-| F    | Fake service that records HTTP, compared with the cited payloads                            |
-| P    | Property of the behavior, checked by fast-check                                             |
-| L    | Live check by a person                                                                      |
-
-## Criteria
-
-A criterion has its number (`1.4.3`), name, level, the player's part, the evidence the design names and its unit. A criterion
-has one of three kinds:
-
-| Kind           | Fields              | Gate                                                    |
-| -------------- | ------------------- | ------------------------------------------------------- |
-| Tested         | `unit`              | A test names it as `[SC 1.4.3]` once the unit is merged |
-| Manual         | `unit` and `manual` | The named manual check by a person; no test is required |
-| Not applicable | `notApplicable`     | The reason; no unit and no test                         |
+| Source                                                                      | Test                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The HTML elements of the ASI schema                                         | `html-elements.xsd.test.ts` (`pnpm test:xsd`): the elements that the content renderer draws as HTML are those that the schema declares without `qti-`                    |
+| The interaction types of the QTI metadata vocabulary                        | `elements.browser.test.ts`: `createInteractionRenderers` has a renderer for each but the portable custom interaction, which its own host draws                           |
+| The descriptors of the runtime for the interactions of the 1EdTech examples | `elements.browser.corpus.test.ts`: every item of the examples that has an interaction is drawn as its descriptors say, answered, and checked with axe                    |
+| The items, stimuli and packages of the 1EdTech examples                     | `content.corpus.browser.test.ts`, `graphic.browser.corpus.test.ts`, `player.browser.corpus.test.ts` and `server.corpus.test.ts`                                          |
+| WCAG 2.2 at levels A and AA                                                 | axe-core with the rules of both levels, scripted keyboard use, and the checks of the success criteria that a rule cannot decide; a test says in its title what it checks |
 
 ## Tests in a browser
 
@@ -185,22 +168,3 @@ request the state lacks. A property test takes a candidate's text from the engin
 score, a second score that replaces it and the submission read again. The display has `submission.browser.test.ts`: the
 content roots and their references, the values by cardinality and base type, the files by media type, the themes, and axe at
 WCAG 2.2 A and AA with the contrast of the nested content in every theme.
-
-## Tests name their rows and criteria
-
-A title names what it evidences in brackets, as a string literal: `it("[T97] chooses the catalog of the language")` or
-`it("[SC 3.2.4] gives each function one key")`. A title may name several, such as `[T97][SC 3.2.4]`. Skipped and todo tests
-do not count. The player's tests are the files `*.test.ts` in `packages/player/test/`, and those named `*.browser.test.ts`
-run in the browsers with `pnpm test:browser`, after `pnpm exec playwright install`. An identifier is checked against the
-inventory of its own package, so `[T1]` in the player is not the runtime's `T1`.
-
-## The coverage gate
-
-`pnpm conformance` fails when
-
-- a row of a merged unit has no test;
-- a criterion of a merged unit that is neither manual nor inapplicable has no test;
-- a test names a row or a criterion that the inventory does not have.
-
-A unit adds itself to `merged` in the commit that completes it, which makes its rows and criteria need tests from then on.
-Rows and criteria of units that are not merged need no test yet.

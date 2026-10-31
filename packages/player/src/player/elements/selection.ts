@@ -21,7 +21,7 @@ export interface SelectableChoice {
  * The element of an interaction whose response is the identifiers of the choices that the candidate selects: a choice
  * interaction (INFO §5.30) or a hot text interaction (INFO §5.66). Each choice has a radio button where the candidate
  * may select at most one, else a checkbox, and a label that is the face of the choice; the control is first, as the
- * stylesheet expects ([styling](../../../docs/styling.md)).
+ * stylesheet expects ([styling](../../../../../docs/player/styling.md)).
  */
 export abstract class SelectionElement extends InteractionElement {
   /** The choices, in the order of the node. */

@@ -73,7 +73,7 @@ const CONTENT_ERRORS = new Map([
 ]);
 
 describe("standard templates", () => {
-  it("[B45][A55][C] equal the published files that the examples carry", () => {
+  it("equal the published files that the examples carry", () => {
     const copies = new Map([
       ["match_correct", "packaging/maxfiles/rptemplates/match_correct.xml"],
       ["map_response", "packaging/maxfiles/rptemplates/map_response.xml"],
@@ -85,7 +85,7 @@ describe("standard templates", () => {
       expect(STANDARD_TEMPLATES.get(`${TEMPLATE_BASE}${name}.xml`), name).toEqual(processingAt(path));
   });
 
-  it("[B45][C] has map_response_point as published: map_response with qti-map-response-point and SCORE 0 for NULL", () => {
+  it("has map_response_point as published: map_response with qti-map-response-point and SCORE 0 for NULL", () => {
     // The published map_response_point.xml, which the examples do not carry, differs from map_response.xml only there.
     const published = JSON.parse(
       JSON.stringify(processingAt("packaging/maxfiles/rptemplates/map_response.xml"))
@@ -95,7 +95,7 @@ describe("standard templates", () => {
     expect(STANDARD_TEMPLATES.get(`${TEMPLATE_BASE}map_response_point.xml`)).toEqual(published);
   });
 
-  it("[B45][G43][C] names a standard template in every response processing template URI of the examples", () => {
+  it("names a standard template in every response processing template URI of the examples", () => {
     const uris = [...items.values()]
       .flatMap(({ responseProcessing }) => responseProcessing?.template ?? [])
       .filter((uri) => uri !== "");
@@ -105,12 +105,12 @@ describe("standard templates", () => {
 });
 
 describe("the items of the examples", () => {
-  it("[C] are read: 251 items, and the 2 that the ASI schema rejects are refused", () => {
+  it("are read: 251 items, and the 2 that the ASI schema rejects are refused", () => {
     expect(items.size).toBe(251);
     expect(refused).toEqual(["packaging/items/data-attributes.xml", "packaging/pci/src/fractions_deps_2.xml"]);
   });
 
-  it("[B11][C] run template and response processing, with no responses and with the correct responses", () => {
+  it("run template and response processing, with no responses and with the correct responses", () => {
     const failures = new Map<string, string>();
     for (const [path, item] of items) {
       try {
@@ -125,7 +125,7 @@ describe("the items of the examples", () => {
     for (const [path, text] of CONTENT_ERRORS) expect(failures.get(path), path).toContain(text);
   });
 
-  it("[B45][C] score 1 for the correct responses and 0 for none with match_correct and CC2_match (INFO §2.5.1)", () => {
+  it("score 1 for the correct responses and 0 for none with match_correct and CC2_match (INFO §2.5.1)", () => {
     const matching = [...items].filter(
       ([path, { responseProcessing }]) =>
         !CONTENT_ERRORS.has(path) &&

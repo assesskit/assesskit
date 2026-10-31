@@ -1,4 +1,4 @@
-import type { AcceptedDifference } from "../../conformance/accepted.ts";
+import type { AcceptedDifference } from "./accepted.ts";
 import type { Implementation, ItemCase, Observed, Play, Run, SessionCase, TurnObservation } from "./model.ts";
 
 /** Where two implementations disagree about an item. */

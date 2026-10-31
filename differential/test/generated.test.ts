@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
+import { loadAcceptedDifferences } from "../src/accepted.ts";
 import { compare, compareSessions, type ItemCase, longsight, runtime, type Turn } from "../src/index.ts";
 import { sessionItem } from "./items.ts";
 
@@ -44,7 +44,7 @@ function agree(cases: fc.Arbitrary<ItemCase>): void {
 }
 
 describe("runtime against the oracle on generated items", () => {
-  it("[B82][D] agree on integer and float arithmetic", () => {
+  it("agree on integer and float arithmetic", () => {
     const binary = fc.constantFrom("sum", "product", "subtract", "min", "max");
     agree(
       fc.tuple(binary, integer, integer, fc.boolean()).map(([operator, a, b, floats]) => {
@@ -80,7 +80,7 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B72][B73][D] agree on rounding to integers, decimal places and significant figures", () => {
+  it("agree on rounding to integers, decimal places and significant figures", () => {
     agree(
       fc
         .tuple(fc.constantFrom("round", "truncate"), decimal)
@@ -118,7 +118,7 @@ describe("runtime against the oracle on generated items", () => {
     fc.boolean(),
   );
 
-  it("[B75][D] agree on equality within absolute and relative tolerances", () => {
+  it("agree on equality within absolute and relative tolerances", () => {
     const relativeSafe = fc
       .tuple(decimal, decimal, tolerances)
       .filter(([x, , [mode]]) => mode === "absolute" || x >= 0);
@@ -127,14 +127,14 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B75][G4][D] differ only for a negative x in relative mode, where the oracle's range is empty and the runtime's lies between its ends", () => {
+  it("differ only for a negative x in relative mode, where the oracle's range is empty and the runtime's lies between its ends", () => {
     const report = compare([equalCase(-10, -10.5, "relative", 10, true, true)], longsight, runtime, []);
     expect(report.differences).toEqual([
       { item: "equal", kind: "outcome", variable: "OUT", reference: false, subject: true },
     ]);
   });
 
-  it("[B83][D] agree on three-valued logic", () => {
+  it("agree on three-valued logic", () => {
     const operand = fc.constantFrom(bv("boolean", true), bv("boolean", false), "<qti-null/>");
     agree(
       fc
@@ -149,7 +149,7 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B84][D] agree on membership, containment and deletion", () => {
+  it("agree on membership, containment and deletion", () => {
     const values = fc.array(fc.constantFrom("A", "B", "C"), { minLength: 1, maxLength: 5 });
     const container = (cardinality: string, items: readonly string[]) =>
       `<qti-${cardinality}>${items.map((item) => bv("identifier", item)).join("")}</qti-${cardinality}>`;
@@ -177,7 +177,7 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B76][D] agree on mapping responses with defaults and bounds", () => {
+  it("agree on mapping responses with defaults and bounds", () => {
     const entry = fc.tuple(fc.constantFrom("A", "B", "C", "D"), fc.integer({ min: -4, max: 4 }));
     agree(
       fc
@@ -203,7 +203,7 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B12][G15][D] agree on template values drawn from the same generator", () => {
+  it("agree on template values drawn from the same generator", () => {
     agree(
       fc
         .tuple(
@@ -227,7 +227,7 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[E10][B3][B8][B9][B10][D] agree turn by turn on sessions of adaptive and non-adaptive items, hints included", () => {
+  it("agree turn by turn on sessions of adaptive and non-adaptive items, hints included", () => {
     const turns = fc.array(
       fc
         .record({ choice: fc.constantFrom("A", "B", "C"), hint: fc.boolean() })
@@ -252,10 +252,8 @@ describe("runtime against the oracle on generated items", () => {
     );
   });
 
-  it("[B3][D] counts every attempt of a non-adaptive item that completed, which the oracle stops counting", () => {
-    const accepted = loadAcceptedDifferences(
-      resolve(import.meta.dirname, "../../conformance/accepted-differences.json"),
-    );
+  it("counts every attempt of a non-adaptive item that completed, which the oracle stops counting", () => {
+    const accepted = loadAcceptedDifferences(resolve(import.meta.dirname, "../accepted-differences.json"));
     const turns: Turn[] = [{ responses: { RESPONSE: "B" } }, { responses: { RESPONSE: "A" } }];
     const testCase = {
       name: "a non-adaptive item that completes (turns)",

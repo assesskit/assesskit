@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const ROOT = resolve(import.meta.dirname, "../../..");
 const RESTRICTED_IMPORT = "lint/style/noRestrictedImports";
 
-/** The imports each module may make besides errors.ts, checks.ts and random.ts: the table of docs/architecture.md. */
+/** The imports each module may make besides errors.ts, checks.ts and random.ts: the table of docs/runtime/architecture.md. */
 const LAYERS: Readonly<Record<string, readonly string[]>> = {
   xml: [],
   values: [],

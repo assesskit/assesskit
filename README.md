@@ -8,8 +8,9 @@ delivers them to candidates. This repository holds two packages:
 | [`@assesskit/runtime`](packages/runtime/README.md) | A QTI 3.0 runtime: reads, writes, validates and executes everything in QTI 3.0 that is not presentation or platform, with a headless delivery engine that serves exams on a server and practice on a device.                                                                                                                          |
 | [`@assesskit/player`](packages/player/README.md)   | A player and integrations for QTI 3.0 assessments: rendering, the host of portable custom interactions, accessibility applied in the interface and the server-side integrations. It uses the runtime only through its published subpaths. Under development and not yet published; its README says what the current version contains. |
 
-assesskit is not certified by 1EdTech. [Conformance](packages/runtime/docs/conformance.md) states how every construct of the
-specifications is evidenced, and the claim is scoped: items differentially tested; test sessions specification-tested.
+assesskit is not certified by 1EdTech. What each package supports, and what it does not, is in
+[Supported](docs/runtime/supported.md) for the runtime and [Supported](docs/player/supported.md) for the player. The claim is
+scoped: items differentially tested; test sessions specification-tested.
 
 ## How the two packages split
 
@@ -31,8 +32,8 @@ is visible or valid, chooses a variant, or holds an answer key outside the runti
 
 The two meet in JSON: views, actions and state, with values in a self-describing form, so nothing needs a declaration to be
 decoded. On a server, the player hosts the runtime's engine: clients hold only views and send actions, and the answer keys and the seed
-never leave. For practice, the engine runs in the browser. [Architecture](packages/runtime/docs/architecture.md#boundary-with-the-player)
-has the full list of who owns what, and [Delivery](packages/runtime/docs/delivery.md#modes) the two modes.
+never leave. For practice, the engine runs in the browser. [Architecture](docs/runtime/architecture.md#boundary-with-the-player)
+has the full list of who owns what, and [Delivery](docs/runtime/delivery.md#modes) the two modes.
 
 To read, validate, process or run QTI content in your own code or pipeline, use the runtime. To deliver tests to candidates in a
 browser, use the player, which depends on the runtime.
@@ -48,7 +49,6 @@ pnpm typecheck          # every package, and the tooling at the root
 pnpm test               # Vitest; runs offline
 pnpm test:browser       # the tests of the player that need a browser; run pnpm exec playwright install first
 pnpm knip               # unused files, exports and dependencies
-pnpm conformance        # every row of a merged unit has a test; the matrix is current
 pnpm build              # the built packages
 pnpm check:packages     # publint and Are the Types Wrong on the packed packages
 pnpm compat             # the built code of the player stays inside its browser baseline; run pnpm build first
@@ -69,12 +69,13 @@ pnpm bench              # the benchmarks of the runtime against their budgets
 ## Layout
 
 ```
-packages/runtime/    the QTI 3.0 runtime; docs/ holds its guides
-packages/player/     the player; docs/ holds its guides
+packages/runtime/    the QTI 3.0 runtime
+packages/player/     the player
+docs/runtime/        guides of the runtime
+docs/player/         guides of the player
 differential/     private package: the runtime against Longsight qti3-core
 compat/           private packages: the browser baseline of the player, its lint and the pinned old browsers
-conformance/      the inventories of the runtime and the player, the certification features, the corpus pins, the coverage check
-scripts/          corpus and schema downloads, Unicode table generator
+scripts/          corpus and schema downloads, the pinned corpus, Unicode table generator
 validation/       Python scripts that write the printf and rounding fixtures
 biome/            GritQL lint rules
 ```

@@ -34,7 +34,7 @@ const choose = (attributes: string, cardinality = "multiple"): InteractionDescri
 };
 
 describe("values", () => {
-  it("[T26] takes the cardinality of the declaration, else the first that the interaction accepts", () => {
+  it("takes the cardinality of the declaration, else the first that the interaction accepts", () => {
     expect(cardinalityOf(choose('max-choices="1"', "single"))).toBe("single");
     expect(cardinalityOf(choose('max-choices="1"', "multiple"))).toBe("multiple");
     const { declaration, ...undeclared } = choose('max-choices="1"');
@@ -42,7 +42,7 @@ describe("values", () => {
     expect(cardinalityOf(undeclared)).toBe("single");
   });
 
-  it("[T26] gives a single value for one identifier of a single variable, a container otherwise, and NULL for none", () => {
+  it("gives a single value for one identifier of a single variable, a container otherwise, and NULL for none", () => {
     const one = choose('max-choices="1"', "single");
     expect(responseOf(one, "identifier", ["A"])).toEqual(single("identifier", "A"));
     expect(responseOf(one, "identifier", [])).toBeNull();
@@ -51,7 +51,7 @@ describe("values", () => {
     expect(responseOf(many, "identifier", ["A", "B"], true)).toEqual(container("ordered", "identifier", ["A", "B"]));
   });
 
-  it("[T26] reads the strings and the pairs of a value, and none from NULL, a record or other types", () => {
+  it("reads the strings and the pairs of a value, and none from NULL, a record or other types", () => {
     expect(stringsOf(container("multiple", "identifier", ["A", "B"]))).toEqual(["A", "B"]);
     expect(stringsOf(single("integer", 3))).toEqual([]);
     expect(stringsOf(null)).toEqual([]);
@@ -74,7 +74,7 @@ describe("hints", () => {
     ["pattern-mask", EN_MESSAGES.hintPatternMask],
   ];
 
-  it("[T47][SC 3.3.3] has a text for every rule that a response can break, so that no hint is empty", () => {
+  it("has a text for every rule that a response can break, so that no hint is empty", () => {
     const descriptor = choose('max-choices="3" min-choices="2"');
     const every: readonly ResponseViolation[] = [
       ...Reasons.map(([reason]) => reason),
@@ -93,7 +93,7 @@ describe("hints", () => {
     }
   });
 
-  it("[T47][SC 3.3.3] says how to fix a response in words that name the limit", () => {
+  it("says how to fix a response in words that name the limit", () => {
     const descriptor = choose('max-choices="3" min-choices="2"');
     expect(violationText("min-choices", descriptor, EN_MESSAGES)).toBe("Select at least 2.");
     expect(violationText("max-choices", descriptor, EN_MESSAGES)).toBe("Select at most 3.");
@@ -101,7 +101,7 @@ describe("hints", () => {
     for (const [reason, text] of Reasons) expect(violationText(reason, descriptor, EN_MESSAGES), reason).toBe(text);
   });
 
-  it("[T47] prefers the text of the item for the rules that it has a text for", () => {
+  it("prefers the text of the item for the rules that it has a text for", () => {
     const descriptor = choose('max-choices="3" min-choices="2"');
     const custom = { min: "Too few", max: "Too many", pattern: "Wrong form" };
     expect(violationText("min-choices", descriptor, EN_MESSAGES, custom)).toBe("Too few");
@@ -110,7 +110,7 @@ describe("hints", () => {
     expect(violationText("required", descriptor, EN_MESSAGES, custom)).toBe(EN_MESSAGES.hintRequired);
   });
 
-  it("[T47] counts the choices that an order puts in places, all of them unless min-choices says otherwise (INFO §5.97.2)", () => {
+  it("counts the choices that an order puts in places, all of them unless min-choices says otherwise (INFO §5.97.2)", () => {
     const [order] = descriptorsOf(
       `<qti-response-declaration identifier="R" cardinality="ordered" base-type="identifier"/>`,
       `<qti-order-interaction response-identifier="R"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice><qti-simple-choice identifier="C">c</qti-simple-choice></qti-order-interaction>`,
@@ -120,7 +120,7 @@ describe("hints", () => {
     expect(violationText("max-choices", order, EN_MESSAGES)).toBe("Place at most 3.");
   });
 
-  it("[SC 3.3.2] tells the limits that the candidate cannot guess, and none for a limit of one", () => {
+  it("tells the limits that the candidate cannot guess, and none for a limit of one", () => {
     expect(instructionText(choose('max-choices="3" min-choices="2"'), EN_MESSAGES)).toBe(
       "Select at least 2. Select at most 3.",
     );
@@ -128,7 +128,7 @@ describe("hints", () => {
     expect(instructionText(choose('max-choices="0"'), EN_MESSAGES)).toBe("");
   });
 
-  it("[SC 3.3.2] tells the associations and the texts that an interaction asks for", () => {
+  it("tells the associations and the texts that an interaction asks for", () => {
     const [associate] = descriptorsOf(
       `<qti-response-declaration identifier="R" cardinality="multiple" base-type="pair"/>`,
       `<qti-associate-interaction response-identifier="R" min-associations="2" max-associations="4"><qti-simple-associable-choice identifier="A" match-max="1">a</qti-simple-associable-choice></qti-associate-interaction>`,
@@ -156,7 +156,7 @@ describe("Board", () => {
     { id: "r", capacity: Number.POSITIVE_INFINITY },
   ];
 
-  it("[T27][T28][T29][T30] puts a choice from the pool in a place, and counts the uses that are left", () => {
+  it("puts a choice from the pool in a place, and counts the uses that are left", () => {
     const board = new Board(sources, places);
     expect(board.put("A", "p")).toBe(true);
     expect(board.occupants("p")).toEqual(["A"]);
@@ -168,7 +168,7 @@ describe("Board", () => {
     expect(board.remaining("C")).toBe(Number.POSITIVE_INFINITY);
   });
 
-  it("[T27][T30] moves a choice from one place to another, and replaces the first choice of a place that is full", () => {
+  it("moves a choice from one place to another, and replaces the first choice of a place that is full", () => {
     const board = new Board(sources, places);
     board.put("A", "p");
     expect(board.put("A", "q", "p")).toBe(true);
@@ -180,7 +180,7 @@ describe("Board", () => {
     expect(board.remaining("C")).toBe(Number.POSITIVE_INFINITY);
   });
 
-  it("[T27] takes a choice out of a place, and refuses what is not there", () => {
+  it("takes a choice out of a place, and refuses what is not there", () => {
     const board = new Board(sources, places);
     board.put("A", "p");
     expect(board.take("A", "p")).toBe(true);
@@ -188,7 +188,7 @@ describe("Board", () => {
     expect(board.remaining("A")).toBe(1);
   });
 
-  it("[T27] leaves out an unknown place, an unknown choice and a move to the place that holds the choice", () => {
+  it("leaves out an unknown place, an unknown choice and a move to the place that holds the choice", () => {
     const board = new Board(sources, places);
     board.put("A", "p");
     expect(board.put("A", "nowhere")).toBe(false);
@@ -198,7 +198,7 @@ describe("Board", () => {
     expect(board.assignments()).toEqual([["p", "A"]]);
   });
 
-  it("[T27] lists the choices by place in the order of the places", () => {
+  it("lists the choices by place in the order of the places", () => {
     const board = new Board(sources, places);
     board.put("C", "r");
     board.put("B", "q");
@@ -210,7 +210,7 @@ describe("Board", () => {
     ]);
   });
 
-  it("[T27] loads assignments and leaves out those past what a place or a choice allows", () => {
+  it("loads assignments and leaves out those past what a place or a choice allows", () => {
     const board = new Board(sources, places);
     board.load([
       ["p", "A"],
@@ -228,7 +228,7 @@ describe("Board", () => {
     expect(board.assignments()).toEqual([]);
   });
 
-  it("[T27][T28][T29][T30] never holds more in a place than it takes, nor uses a choice more than its limit, after any moves", () => {
+  it("never holds more in a place than it takes, nor uses a choice more than its limit, after any moves", () => {
     const moves = fc.array(
       fc.record({
         kind: fc.constantFrom("put", "move", "take"),
@@ -265,14 +265,14 @@ describe("readInteractionOptions", () => {
     ...extra,
   });
 
-  it("[T43] resolves the worklet below the static URL and defaults the recording to on", () => {
+  it("resolves the worklet below the static URL and defaults the recording to on", () => {
     const settings = readInteractionOptions(valid());
     expect(settings.workletUrl).toBe("https://static.example/player/recorder-worklet.js");
     expect(settings.record).toBe(true);
     expect(settings.customInteraction).toBeUndefined();
   });
 
-  it("[T43] gives back the file value that the host stores, and checks it", async () => {
+  it("gives back the file value that the host stores, and checks it", async () => {
     const settings = readInteractionOptions(valid());
     expect(await settings.files.upload(new Blob(["x"]), "image/png", "a.png")).toEqual({
       reference: "r",
@@ -288,7 +288,7 @@ describe("readInteractionOptions", () => {
     );
   });
 
-  it("[T46] checks what the hook of a custom interaction returns", () => {
+  it("checks what the hook of a custom interaction returns", () => {
     const settings = readInteractionOptions(valid({ customInteraction: () => 5 }));
     const mount = settings.customInteraction;
     if (mount === undefined) throw new Error("The settings have no hook.");
@@ -321,7 +321,7 @@ describe("readInteractionOptions", () => {
     expect(() => readInteractionOptions(valid({ colour: 1 }))).toThrow(DataError);
   });
 
-  it("[T43] requires a static URL that is absolute, http or https, and ends in a slash", () => {
+  it("requires a static URL that is absolute, http or https, and ends in a slash", () => {
     for (const staticUrl of ["", "static/", "ftp://static.example/", "https://static.example/player", 5, null]) {
       expect(() => readInteractionOptions(valid({ staticUrl })), String(staticUrl)).toThrow(DataError);
     }
@@ -340,7 +340,7 @@ describe("readMediaSettings", () => {
     return readMediaSettings(node);
   }
 
-  it("[T119] reads the pause attributes in the spelling with data- and the spelling without it", () => {
+  it("reads the pause attributes in the spelling with data- and the spelling without it", () => {
     const withData = settingsOf(
       'data-qti-media-player-pause-delay="2" data-qti-media-player-pause-duration="1.5" data-qti-media-player-pause-count="3"',
     );
@@ -356,7 +356,7 @@ describe("readMediaSettings", () => {
     expect(without).toEqual(withData);
   });
 
-  it("[T119] ignores a value that is not a number above zero, and rounds a count down", () => {
+  it("ignores a value that is not a number above zero, and rounds a count down", () => {
     const settings = settingsOf(
       'data-qti-media-player-pause-delay="0" qti-media-player-pause-duration="-2" data-qti-media-player-pause-count="2.9"',
     );
@@ -365,7 +365,7 @@ describe("readMediaSettings", () => {
     expect(settingsOf('data-qti-media-player-pause-delay="soon"')).not.toHaveProperty("pauseDelay");
   });
 
-  it("[T42] reads the controls: all for none given or default, those that are named, and none for none", () => {
+  it("reads the controls: all for none given or default, those that are named, and none for none", () => {
     const all = new Set(["rewind", "captions", "audioDescription"]);
     expect(settingsOf("").controls).toEqual(all);
     expect(settingsOf('data-qti-media-player-controls="default"').controls).toEqual(all);

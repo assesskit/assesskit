@@ -23,7 +23,7 @@ describe("the catalogs", () => {
     }
   });
 
-  it("[SC 3.2.4] gives each function one key: no two messages of a catalog have the same text", () => {
+  it("names each function the same way everywhere: no two messages of a catalog have the same text", () => {
     for (const catalog of [EN_MESSAGES, ID_MESSAGES]) {
       const texts = Object.values(catalog).map((text) => text.toLowerCase());
       expect(new Set(texts).size).toBe(texts.length);
@@ -32,20 +32,20 @@ describe("the catalogs", () => {
 });
 
 describe("selectMessages", () => {
-  it("[T97] chooses the catalog of the language of the interface", () => {
+  it("chooses the catalog of the language of the interface", () => {
     expect(select("en")).toEqual(EN_MESSAGES);
     expect(select("id")).toEqual(ID_MESSAGES);
     expect(select("id").interactiveQuestion).toBe("Soal interaktif");
   });
 
-  it("[T97] chooses by the language of a tag with a region or a script, and ignores case", () => {
+  it("chooses by the language of a tag with a region or a script, and ignores case", () => {
     expect(select("id-ID")).toEqual(ID_MESSAGES);
     expect(select("ID")).toEqual(ID_MESSAGES);
     expect(select("en-GB")).toEqual(EN_MESSAGES);
     expect(select("id-Latn-ID")).toEqual(ID_MESSAGES);
   });
 
-  it("[T97] gives English for a language without a catalog, and for the empty tag", () => {
+  it("gives English for a language without a catalog, and for the empty tag", () => {
     expect(select("jv")).toEqual(EN_MESSAGES);
     expect(select("")).toEqual(EN_MESSAGES);
   });

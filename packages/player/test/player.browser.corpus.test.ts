@@ -67,7 +67,7 @@ async function errorsExcept(...paths: string[]): Promise<readonly string[]> {
 }
 
 describe("the PCI examples of 1EdTech", () => {
-  it("[T49] runs the pci-simple example: it renders, takes a tap, and logs no error", async () => {
+  it("runs the pci-simple example: it renders, takes a tap, and logs no error", async () => {
     const loaded = await loadInteraction("pci-simple", "measuring_ph.xml", 0);
     const result = await mountExample(loaded, { cardinality: "single", baseType: "integer" });
     expect(await hits(asset)).toContain("/c/pci-simple/modules/tap.js");
@@ -81,7 +81,7 @@ describe("the PCI examples of 1EdTech", () => {
     expect(await errorsExcept()).toEqual([]);
   });
 
-  it("[T49] runs the second fractions interaction, whose first path is wrong on purpose: the fallback loads, and it logs no other error", async () => {
+  it("runs the second fractions interaction, whose first path is wrong on purpose: the fallback loads, and it logs no other error", async () => {
     const loaded = await loadInteraction("pci", "fractions1.xml", 1);
     const result = await mountExample(loaded, { cardinality: "single", baseType: "identifier" });
     const paths = await hits(asset);

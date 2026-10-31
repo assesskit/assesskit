@@ -44,7 +44,7 @@ describe("the items of the 1EdTech examples", () => {
     issues: validateAsi({ kind: "item", item }, { path }),
   }));
 
-  it("[V3][V6][V52][L1][L3][L4][L5][L6][L10][T23][T24][B51][G18][G40][C] are validated with the findings below, which are all defects of the examples", () => {
+  it("are validated with the findings below, which are all defects of the examples", () => {
     expect(found).toHaveLength(251);
     expect(tally(found.flatMap(({ issues }) => issues))).toEqual([
       "error assesskit/validate/assignment-type 3",
@@ -62,7 +62,7 @@ describe("the items of the 1EdTech examples", () => {
     ]);
   });
 
-  it("[L3][L4][L1][C] have the errors in these items: an integer outcome that match_correct gives a float, qti-member with its operands the wrong way round, a misspelled completionStatus, correct responses that are no identifiers, a data attribute misnamed alt, and includes that nobody resolved", () => {
+  it("have the errors in these items: an integer outcome that match_correct gives a float, qti-member with its operands the wrong way round, a misspelled completionStatus, correct responses that are no identifiers, a data attribute misnamed alt, and includes that nobody resolved", () => {
     expect(errorFiles(found)).toEqual({
       "assesskit/validate/assignment-type": [
         "packaging/items/choice_ruby.xml",
@@ -83,7 +83,7 @@ describe("the items of the 1EdTech examples", () => {
     });
   });
 
-  it("[V52][C] find the extension attribute alt of an object only in the items of the shared vocabulary", () => {
+  it("find the extension attribute alt of an object only in the items of the shared vocabulary", () => {
     const files = errorFiles(found)["assesskit/validate/extension-attribute"] ?? [];
     expect(files.length).toBeGreaterThan(0);
     expect(files.every((path) => path.startsWith("items/shared-vocabulary/"))).toBe(true);
@@ -120,7 +120,7 @@ describe("the tests of the 1EdTech examples", () => {
       return document?.kind === "test" ? [{ file, test: document.test }] : [];
     });
 
-  it("[L2][L7][L9][B21][B27][B29][B97][C] are valid: the structure, the branch rules and the variables of the 16 tests have no finding", () => {
+  it("are valid: the structure, the branch rules and the variables of the 16 tests have no finding", () => {
     expect(tests).toHaveLength(16);
     for (const { file, test } of tests) expect(validateTest(test, file, resolvers), file).toEqual([]);
   });
@@ -134,7 +134,7 @@ describe("the packages of the 1EdTech examples", () => {
     )
     .sort();
 
-  it("[K7][K29][B89][B92][J9][C] are validated, 24 archives, with the findings below", async () => {
+  it("are validated, 24 archives, with the findings below", async () => {
     expect(zips).toHaveLength(24);
     const found: Record<string, string[]> = {};
     for (const zip of zips) {
@@ -205,7 +205,7 @@ describe("the packages of the 1EdTech examples", () => {
 describe("the results reports of the 1EdTech examples", () => {
   const report = (name: string) => readResults(readFileSync(join(EXAMPLES, "results", name), "utf8"));
 
-  it("[RR §2.4.5][C] have item results without a sequenceIndex in the conformance example, and none in the report", () => {
+  it("have item results without a sequenceIndex in the conformance example, and none in the report", () => {
     const issues = validateResults(report("conformance-use-case-1.xml"));
     expect(issues.length).toBeGreaterThan(0);
     expect(new Set(issues.map(({ code }) => code))).toEqual(new Set(["assesskit/validate/sequence-index"]));

@@ -28,7 +28,7 @@ async function writtenIssues(xml: string) {
 }
 
 describe("the vocabularies of the interactions", () => {
-  it("[W23] OrientationEnum: writes horizontal and vertical on a choice interaction that the schema accepts, and the schema refuses another term", async () => {
+  it("OrientationEnum: writes horizontal and vertical on a choice interaction that the schema accepts, and the schema refuses another term", async () => {
     const choice = (term: string): string =>
       itemOf(
         `<qti-choice-interaction response-identifier="R" orientation="${term}"><qti-simple-choice identifier="A">A</qti-simple-choice></qti-choice-interaction>`,
@@ -37,14 +37,14 @@ describe("the vocabularies of the interactions", () => {
     expect(await issuesOf(choice("diagonal"))).not.toEqual([]);
   });
 
-  it("[W37] TextFormatEnum: writes plain, preformatted and xhtml on an extended text interaction that the schema accepts, and the schema refuses another term", async () => {
+  it("TextFormatEnum: writes plain, preformatted and xhtml on an extended text interaction that the schema accepts, and the schema refuses another term", async () => {
     const extended = (term: string): string =>
       itemOf(`<qti-extended-text-interaction response-identifier="R" format="${term}"/>`);
     for (const term of ["plain", "preformatted", "xhtml"]) expect(await writtenIssues(extended(term))).toEqual([]);
     expect(await issuesOf(extended("html"))).not.toEqual([]);
   });
 
-  it("[W45] MimeTypeList: writes the types of an upload interaction that the schema accepts, and the schema refuses a list with a token that is no type", async () => {
+  it("MimeTypeList: writes the types of an upload interaction that the schema accepts, and the schema refuses a list with a token that is no type", async () => {
     const upload = (types: string): string =>
       itemOf(`<qti-upload-interaction response-identifier="R" type="${types}"/>`);
     for (const types of ["image/png", "image/png text/plain application/pdf", "application/vnd.ms-excel"]) {

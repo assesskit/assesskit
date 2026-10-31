@@ -11,7 +11,7 @@ ones marked lint, and the rest are checked in review.
 | Deterministic          | `Math.random` fails lint. `Date.now`, `new Date()` and `performance.now()` fail lint except in `client/clock.ts` and `server/clock.ts`; time comes from a clock that the caller passes.             |
 | No hidden network      | `fetch` appears only as an option parameter (lint), so that a caller can replace it. Only `cat/measurekit/` imports measurekit (lint).                                                              |
 | Untrusted input        | Every input is untrusted: envelopes, tokens, payloads and messages. Entry points validate their input, with valibot schemas for JSON, and throw `DataError`; inner functions validate shallowly.    |
-| Cited rules            | Every inventory row and WCAG criterion has a test ([evidence](evidence.md)).                                                                                                                        |
+| Cited rules            | What the specifications and the runtime declare has a test that derives it from them ([evidence](evidence.md#completeness)).                                                                        |
 
 ## Layers
 

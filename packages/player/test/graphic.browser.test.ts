@@ -72,7 +72,7 @@ const HOTSPOT = (attributes: string, extra = ""): string => `
   </qti-hotspot-interaction>`;
 
 describe("hotspot", () => {
-  it("[T35] places every shape over the image at its coordinates in the units of the image", async () => {
+  it("places every shape over the image at its coordinates in the units of the image", async () => {
     const shown = await show(
       HOTSPOT(
         'max-choices="1"',
@@ -94,7 +94,7 @@ describe("hotspot", () => {
     expect(shown.findAll('qti-hotspot-choice[data-shape="poly"] polygon')).toHaveLength(2);
   });
 
-  it("[T35] keeps the boxes on the shapes when the image is drawn at another scale", async () => {
+  it("keeps the boxes on the shapes when the image is drawn at another scale", async () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     shown.host.style.setProperty("width", "100px");
     await settle();
@@ -106,7 +106,7 @@ describe("hotspot", () => {
     near(b.width, 60 * scale);
   });
 
-  it("[T35] selects one hotspot by its face and gives a single identifier", async () => {
+  it("selects one hotspot by its face and gives a single identifier", async () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     await userEvent.click(face(shown, "B"));
     expect(shown.values).toEqual([single("identifier", "B")]);
@@ -117,7 +117,7 @@ describe("hotspot", () => {
     expect(control(shown, "B").checked).toBe(false);
   });
 
-  it("[T35] clears the choice when the selected hotspot is chosen again", async () => {
+  it("clears the choice when the selected hotspot is chosen again", async () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     await userEvent.click(face(shown, "B"));
     await userEvent.click(face(shown, "B"));
@@ -127,7 +127,7 @@ describe("hotspot", () => {
     expect(shown.values.at(-1)).toEqual(single("identifier", "B"));
   });
 
-  it("[T35] selects several hotspots, and says what to change when there are more than the maximum", async () => {
+  it("selects several hotspots, and says what to change when there are more than the maximum", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     await userEvent.click(face(shown, "A"));
     await userEvent.click(face(shown, "B"));
@@ -142,7 +142,7 @@ describe("hotspot", () => {
     expect(hinted(shown)).toBe("");
   });
 
-  it("[T35] shows the response it is given and ignores the candidate while it is disabled", async () => {
+  it("shows the response it is given and ignores the candidate while it is disabled", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     shown.setValue("RESPONSE", container("multiple", "identifier", ["A", "C"]));
     expect(shown.findAll<HTMLInputElement>("input.ak-control").map((input) => input.checked)).toEqual([
@@ -157,7 +157,7 @@ describe("hotspot", () => {
     expect(shown.values).toEqual([]);
   });
 
-  it("[T35] names a hotspot by its label, else by its number, in the language of the messages", async () => {
+  it("names a hotspot by its label, else by its number, in the language of the messages", async () => {
     const shown = await show(HOTSPOT('max-choices="1"'), declare("single", "identifier"));
     expect(control(shown, "A").labels?.[0]?.textContent).toBe("London");
     expect(control(shown, "C").getAttribute("aria-label")).toBe(`${EN_MESSAGES.choiceLabel} 3`);
@@ -166,7 +166,7 @@ describe("hotspot", () => {
     expect(control(shown, "A").labels?.[0]?.textContent).toBe("London");
   });
 
-  it("[T35] is operated by the keyboard alone", async () => {
+  it("is operated by the keyboard alone", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     control(shown, "A").focus();
     await userEvent.keyboard(" ");
@@ -174,7 +174,7 @@ describe("hotspot", () => {
     expect(shown.values.at(-1)).toEqual(container("multiple", "identifier", ["A", "C"]));
   });
 
-  it("[T35][SC 2.5.8] gives a hotspot drawn smaller than a target a target of 24 pixels", async () => {
+  it("gives a hotspot drawn smaller than a target a target of 24 pixels", async () => {
     const shown = await show(
       `<qti-hotspot-interaction response-identifier="RESPONSE" max-choices="1">${image()}<qti-hotspot-choice shape="circle" coords="40,50,8" identifier="S" id="S" hotspot-label="Small"/><qti-hotspot-choice shape="rect" coords="100,20,160,80" identifier="L" id="L" hotspot-label="Large"/></qti-hotspot-interaction>`,
       declare("single", "identifier"),
@@ -186,7 +186,7 @@ describe("hotspot", () => {
     expect(Number.parseFloat(hit.height)).toBeGreaterThanOrEqual(24);
   });
 
-  it("[T35] has no violation of WCAG 2.2 A and AA in any state", async () => {
+  it("has no violation of WCAG 2.2 A and AA in any state", async () => {
     const shown = await show(HOTSPOT('max-choices="2"'), declare("multiple", "identifier"));
     expect(await axeViolations(shown.host)).toEqual([]);
     shown.setValue("RESPONSE", container("multiple", "identifier", ["A", "B"]));
@@ -202,7 +202,7 @@ const SELECT_POINT = (attributes: string, extra = ""): string =>
   `<qti-select-point-interaction response-identifier="RESPONSE" ${attributes}><qti-prompt>Mark it.</qti-prompt>${image()}${extra}</qti-select-point-interaction>`;
 
 describe("select point", () => {
-  it("[T36] marks the point under a click, in the units of the image", async () => {
+  it("marks the point under a click, in the units of the image", async () => {
     const shown = await show(SELECT_POINT('max-choices="1"'), declare("single", "point"));
     await clickImage(shown, 120, 40);
     expect(shown.values).toEqual([single("point", [120, 40])]);
@@ -212,7 +212,7 @@ describe("select point", () => {
     expect(announced(shown)).toBe(EN_MESSAGES.graphicPointMarked);
   });
 
-  it("[T36] measures the point in the units of the image when the image is drawn smaller", async () => {
+  it("measures the point in the units of the image when the image is drawn smaller", async () => {
     const shown = await show(SELECT_POINT('max-choices="1"'), declare("single", "point"));
     shown.host.style.setProperty("width", "100px");
     await settle();
@@ -222,7 +222,7 @@ describe("select point", () => {
     near(y, 40, 3);
   });
 
-  it("[T36] moves the only point with a maximum of one, and adds points with more, saying what to change beyond the maximum", async () => {
+  it("moves the only point with a maximum of one, and adds points with more, saying what to change beyond the maximum", async () => {
     const one = await show(SELECT_POINT('max-choices="1"'), declare("single", "point"));
     await clickImage(one, 20, 20);
     await clickImage(one, 60, 60);
@@ -237,7 +237,7 @@ describe("select point", () => {
     expect(hinted(two)).toBe("Select at most 2.");
   });
 
-  it("[T36] takes a point away when its marker is chosen, and gives the focus back to the image", async () => {
+  it("takes a point away when its marker is chosen, and gives the focus back to the image", async () => {
     const shown = await show(SELECT_POINT('max-choices="3"'), declare("multiple", "point"));
     await clickImage(shown, 20, 20);
     await clickImage(shown, 60, 60);
@@ -249,7 +249,7 @@ describe("select point", () => {
     expect(announced(shown)).toBe(EN_MESSAGES.graphicRemoved);
   });
 
-  it("[T36][SC 2.5.8] marks points with the keyboard: a crosshair moves with the arrow keys and Enter marks it", async () => {
+  it("marks points with the keyboard: a crosshair moves with the arrow keys and Enter marks it", async () => {
     const shown = await show(SELECT_POINT('max-choices="3"'), declare("multiple", "point"));
     shown.find(".ak-surface").focus();
     expect(shown.find(".ak-crosshair").hidden).toBe(false);
@@ -268,7 +268,7 @@ describe("select point", () => {
     expect(shown.find(".ak-crosshair").hidden).toBe(true);
   });
 
-  it("[T36] never shows the areas that the response may be scored against", async () => {
+  it("never shows the areas that the response may be scored against", async () => {
     const scored =
       '<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="point"><qti-area-mapping default-value="0"><qti-area-map-entry shape="circle" coords="100,50,30" mapped-value="1"/></qti-area-mapping></qti-response-declaration>';
     const shown = await show(SELECT_POINT('max-choices="1"'), scored);
@@ -277,7 +277,7 @@ describe("select point", () => {
     expect(shown.findAll("[data-shape], svg")).toEqual([]);
   });
 
-  it("[T36] has no violation of WCAG 2.2 A and AA with and without points", async () => {
+  it("has no violation of WCAG 2.2 A and AA with and without points", async () => {
     const shown = await show(SELECT_POINT('max-choices="3"'), declare("multiple", "point"));
     expect(await axeViolations(shown.host)).toEqual([]);
     await clickImage(shown, 60, 60);
@@ -299,7 +299,7 @@ const ORDER = (attributes = ""): string => `
 const badge = (shown: Graphic, identifier: string): HTMLElement => within(area(shown, identifier), ".ak-badge");
 
 describe("graphic order", () => {
-  it("[T37] orders the hotspots as the candidate selects them and numbers them", async () => {
+  it("orders the hotspots as the candidate selects them and numbers them", async () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     await userEvent.click(face(shown, "B"));
     await userEvent.click(face(shown, "C"));
@@ -313,7 +313,7 @@ describe("graphic order", () => {
     ]);
   });
 
-  it("[T37][SC 1.4.1] says the position in text, which is also in the name of the control for a screen reader", async () => {
+  it("says the position in text, which is also in the name of the control for a screen reader", async () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     await userEvent.click(face(shown, "B"));
     expect(badge(shown, "B").textContent).toBe("Position 1");
@@ -321,7 +321,7 @@ describe("graphic order", () => {
     expect(badge(shown, "A").hidden).toBe(true);
   });
 
-  it("[T37] numbers the rest again when a hotspot leaves the order", async () => {
+  it("numbers the rest again when a hotspot leaves the order", async () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     for (const identifier of ["A", "B", "C"]) await userEvent.click(face(shown, identifier));
     await userEvent.click(face(shown, "A"));
@@ -330,14 +330,14 @@ describe("graphic order", () => {
     expect(badge(shown, "A").hidden).toBe(true);
   });
 
-  it("[T37] says what to change when there are more hotspots than the maximum", async () => {
+  it("says what to change when there are more hotspots than the maximum", async () => {
     const shown = await show(ORDER('min-choices="1" max-choices="2"'), declare("ordered", "identifier"));
     for (const identifier of ["A", "B", "C"]) await userEvent.click(face(shown, identifier));
     expect(shown.values.at(-1)).toEqual(container("ordered", "identifier", ["A", "B", "C"]));
     expect(hinted(shown)).toBe("Place at most 2.");
   });
 
-  it("[T37] is operated by the keyboard alone and has no violation of WCAG 2.2 A and AA", async () => {
+  it("is operated by the keyboard alone and has no violation of WCAG 2.2 A and AA", async () => {
     const shown = await show(ORDER(), declare("ordered", "identifier"));
     control(shown, "C").focus();
     await userEvent.keyboard(" ");
@@ -367,7 +367,7 @@ const unavailable = (shown: Graphic): string[] =>
   ["A", "B", "C"].filter((identifier) => control(shown, identifier).getAttribute("aria-disabled") === "true");
 
 describe("graphic associate", () => {
-  it("[T38] joins two hotspots by choosing one and then the other, with no gesture along a path", async () => {
+  it("joins two hotspots by choosing one and then the other, with no gesture along a path", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     await choose(shown, "A");
     expect(pressed(shown, "A")).toBe("true");
@@ -378,7 +378,7 @@ describe("graphic associate", () => {
     expect(announced(shown)).toBe(EN_MESSAGES.graphicJoined);
   });
 
-  it("[T38] draws a line between the centers of the two hotspots and lists the pair with a button that removes it", async () => {
+  it("draws a line between the centers of the two hotspots and lists the pair with a button that removes it", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     await choose(shown, "A");
     await choose(shown, "C");
@@ -393,7 +393,7 @@ describe("graphic associate", () => {
     expect(shown.find(".ak-associations").hidden).toBe(true);
   });
 
-  it("[T38] lets the first hotspot go when it is chosen again", async () => {
+  it("lets the first hotspot go when it is chosen again", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     await choose(shown, "A");
     await choose(shown, "A");
@@ -401,7 +401,7 @@ describe("graphic associate", () => {
     expect(shown.values).toEqual([]);
   });
 
-  it("[T38] offers no hotspot beyond its match-max or the maximum of the question (INFO §5.7.9, §5.59.2)", async () => {
+  it("offers no hotspot beyond its match-max or the maximum of the question (INFO §5.7.9, §5.59.2)", async () => {
     const shown = await show(ASSOCIATE('max-associations="3"'), declare("multiple", "pair"));
     expect(unavailable(shown)).toEqual([]);
     await choose(shown, "A");
@@ -425,14 +425,14 @@ describe("graphic associate", () => {
     expect(pressed(shown, "B")).toBe("false");
   });
 
-  it("[T38] gives a single pair when the item declares a single value", async () => {
+  it("gives a single pair when the item declares a single value", async () => {
     const shown = await show(ASSOCIATE('max-associations="1"'), declare("single", "pair"));
     await choose(shown, "B");
     await choose(shown, "C");
     expect(shown.values).toEqual([single("pair", ["B", "C"])]);
   });
 
-  it("[T38] shows the pairs it is given and is operated by the keyboard alone", async () => {
+  it("shows the pairs it is given and is operated by the keyboard alone", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     shown.setValue("RESPONSE", container("multiple", "pair", [["A", "B"]]));
     expect(shown.findAll(".ak-links line")).toHaveLength(2);
@@ -447,7 +447,7 @@ describe("graphic associate", () => {
     );
   });
 
-  it("[T38] has no violation of WCAG 2.2 A and AA with pairs and while one is pending", async () => {
+  it("has no violation of WCAG 2.2 A and AA with pairs and while one is pending", async () => {
     const shown = await show(ASSOCIATE(), declare("multiple", "pair"));
     await choose(shown, "A");
     expect(await axeViolations(shown.host)).toEqual([]);
@@ -483,7 +483,7 @@ async function put(shown: Graphic, choice: string, gap: string): Promise<void> {
 }
 
 describe("graphic gap match", () => {
-  it("[T39] places a choice in a gap by choosing the choice and then the gap", async () => {
+  it("places a choice in a gap by choosing the choice and then the gap", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     const interaction = shown.interaction();
     await userEvent.click(token(shown, "X"));
@@ -496,7 +496,7 @@ describe("graphic gap match", () => {
     expect(within(area(shown, "H1"), ".ak-chip-button").textContent).toBe("ex");
   });
 
-  it("[T39] takes a choice out of the list when it has been used as many times as its match-max, and back when it is taken out of a gap", async () => {
+  it("takes a choice out of the list when it has been used as many times as its match-max, and back when it is taken out of a gap", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await put(shown, "X", "H1");
     expect(area(shown, "X").hidden).toBe(true);
@@ -517,7 +517,7 @@ describe("graphic gap match", () => {
     expect(drop(shown, "H2")).toBeDefined();
   });
 
-  it("[T39] says what to do when a gap is chosen with no choice in hand, and offers no room in a gap that is full", async () => {
+  it("says what to do when a gap is chosen with no choice in hand, and offers no room in a gap that is full", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.click(drop(shown, "H1"));
     expect(announced(shown)).toBe(EN_MESSAGES.boardNothingSelected);
@@ -526,7 +526,7 @@ describe("graphic gap match", () => {
     expect(shown.values).toHaveLength(1);
   });
 
-  it("[T39] shows a gap image in the gap, and names it by its object-label", async () => {
+  it("shows a gap image in the gap, and names it by its object-label", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     expect(token(shown, "Z").getAttribute("aria-label")).toBe("Zed");
     await put(shown, "Z", "H2");
@@ -534,7 +534,7 @@ describe("graphic gap match", () => {
     near(within(area(shown, "H2"), "img").getBoundingClientRect().width, 20);
   });
 
-  it("[T39][SC 2.5.7] drags a choice onto a gap, and a placed choice to another gap", async () => {
+  it("drags a choice onto a gap, and a placed choice to another gap", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.dragAndDrop(token(shown, "X"), drop(shown, "H1"));
     expect(shown.values).toEqual([container("multiple", "directedPair", [["X", "H1"]])]);
@@ -543,13 +543,13 @@ describe("graphic gap match", () => {
     expect(within(area(shown, "H2"), ".ak-chip-button").textContent).toBe("ex");
   });
 
-  it("[T39][SC 2.5.7] does not place a choice that is dropped off a gap", async () => {
+  it("does not place a choice that is dropped off a gap", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.dragAndDrop(token(shown, "X"), shown.find("qti-prompt"));
     expect(shown.values).toEqual([]);
   });
 
-  it("[T39] lets go of the held choice with Escape", async () => {
+  it("lets go of the held choice with Escape", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     await userEvent.click(token(shown, "X"));
     await userEvent.keyboard("{Escape}");
@@ -557,7 +557,7 @@ describe("graphic gap match", () => {
     expect(shown.interaction().hasAttribute("data-ak-placing")).toBe(false);
   });
 
-  it("[T39][SC 2.5.7] places a choice with the keyboard alone: the choices first, then the gaps", async () => {
+  it("places a choice with the keyboard alone: the choices first, then the gaps", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     token(shown, "Y").focus();
     await userEvent.keyboard(" ");
@@ -569,7 +569,7 @@ describe("graphic gap match", () => {
     expect(shown.values.at(-1)).toBeNull();
   });
 
-  it("[T39] shows the pairs it is given", async () => {
+  it("shows the pairs it is given", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     shown.setValue("RESPONSE", container("multiple", "directedPair", [["Z", "H1"]]));
     expect(within(area(shown, "H1"), ".ak-chip-button img")).toBeDefined();
@@ -577,7 +577,7 @@ describe("graphic gap match", () => {
     expect(shown.values).toEqual([]);
   });
 
-  it("[T39] has no violation of WCAG 2.2 A and AA with a choice held and placed", async () => {
+  it("has no violation of WCAG 2.2 A and AA with a choice held and placed", async () => {
     const shown = await show(GAP_MATCH(), declare("multiple", "directedPair"));
     expect(await axeViolations(shown.host)).toEqual([]);
     await userEvent.click(token(shown, "X"));
@@ -604,7 +604,7 @@ const POSITION = (attributes = 'max-choices="2"', stages = 1): string =>
 const hand = (shown: Graphic): HTMLButtonElement => shown.find<HTMLButtonElement>("button.ak-pick");
 
 describe("position object", () => {
-  it("[T40] places the object where the candidate clicks after choosing it, and records the point of its center", async () => {
+  it("places the object where the candidate clicks after choosing it, and records the point of its center", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.click(hand(shown));
     expect(hand(shown).getAttribute("aria-pressed")).toBe("true");
@@ -617,7 +617,7 @@ describe("position object", () => {
     expect(announced(shown)).toBe(EN_MESSAGES.graphicPlaced);
   });
 
-  it("[T40] puts the center-point of the object on the point (INFO §5.107.1)", async () => {
+  it("puts the center-point of the object on the point (INFO §5.107.1)", async () => {
     const shown = await show(POSITION('max-choices="1" center-point="0 0"'), declare("single", "point", "R0"));
     await userEvent.click(hand(shown));
     await clickImage(shown, 120, 40);
@@ -626,7 +626,7 @@ describe("position object", () => {
     expect(inLayer(shown, shown.find(".ak-object"))).toMatchObject({ x: 120, y: 40 });
   });
 
-  it("[T40] moves the only object with a maximum of one, and says what to change beyond the maximum with more", async () => {
+  it("moves the only object with a maximum of one, and says what to change beyond the maximum with more", async () => {
     const one = await show(POSITION('max-choices="1"'), declare("single", "point", "R0"));
     for (const x of [20, 60]) {
       await userEvent.click(hand(one));
@@ -643,7 +643,7 @@ describe("position object", () => {
     expect(hinted(two)).toBe("Select at most 2.");
   });
 
-  it("[T40][SC 2.5.7] drags the object from the tray onto the image, and a placed object to another place", async () => {
+  it("drags the object from the tray onto the image, and a placed object to another place", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.dragAndDrop(hand(shown), shown.find("qti-position-object-stage > img"), {
       targetPosition: { x: 100, y: 50 },
@@ -657,7 +657,7 @@ describe("position object", () => {
     expect(shown.values).toHaveLength(2);
   });
 
-  it("[T40][SC 2.5.7] leaves the object where it was when it is dropped off the image", async () => {
+  it("leaves the object where it was when it is dropped off the image", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.dragAndDrop(hand(shown), shown.find(".ak-usage"));
     expect(shown.values).toEqual([]);
@@ -665,7 +665,7 @@ describe("position object", () => {
     expect(hand(shown).classList.contains("ak-dragging")).toBe(false);
   });
 
-  it("[T40] takes a placed object away when it is chosen", async () => {
+  it("takes a placed object away when it is chosen", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.click(hand(shown));
     await clickImage(shown, 100, 50);
@@ -676,7 +676,7 @@ describe("position object", () => {
     expect(shown.root.activeElement).toBe(hand(shown));
   });
 
-  it("[T40][SC 2.5.7] places the object with the keyboard alone: the crosshair takes the focus and Enter places it", async () => {
+  it("places the object with the keyboard alone: the crosshair takes the focus and Enter places it", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     hand(shown).focus();
     await userEvent.keyboard("{Enter}");
@@ -687,7 +687,7 @@ describe("position object", () => {
     expect(shown.root.activeElement).toBe(hand(shown));
   });
 
-  it("[T40] gives the object up with Escape", async () => {
+  it("gives the object up with Escape", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     hand(shown).focus();
     await userEvent.keyboard("{Enter}{Escape}");
@@ -696,7 +696,7 @@ describe("position object", () => {
     expect(shown.values).toEqual([]);
   });
 
-  it("[T40] gives each interaction on a shared stage a response of its own", async () => {
+  it("gives each interaction on a shared stage a response of its own", async () => {
     const shown = await show(
       `<qti-position-object-stage>${image()}
         <qti-position-object-interaction response-identifier="R0" max-choices="1"><object type="image/png" width="16" height="16" data="${picture(16, 16, "#c62828")}">Red pin</object></qti-position-object-interaction>
@@ -710,7 +710,7 @@ describe("position object", () => {
     expect(shown.findAll("qti-position-object-stage").length).toBe(1);
   });
 
-  it("[T40][SC 2.5.8] gives an object drawn smaller than a target a target of 24 pixels", async () => {
+  it("gives an object drawn smaller than a target a target of 24 pixels", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.click(hand(shown));
     await clickImage(shown, 100, 50);
@@ -720,7 +720,7 @@ describe("position object", () => {
     expect(Number.parseFloat(getComputedStyle(object, "::after").width)).toBeGreaterThanOrEqual(24);
   });
 
-  it("[T40] has no violation of WCAG 2.2 A and AA while placing and with objects placed", async () => {
+  it("has no violation of WCAG 2.2 A and AA while placing and with objects placed", async () => {
     const shown = await show(POSITION(), declare("multiple", "point", "R0"));
     expect(await axeViolations(shown.host)).toEqual([]);
     await userEvent.click(hand(shown));
@@ -765,7 +765,7 @@ async function stored(shown: Graphic): Promise<void> {
 const RED = "#c62828";
 
 describe("drawing", () => {
-  it("[T44] draws with the pen where the pointer goes and stores the picture, with the drawing on it, in the type of the image", async () => {
+  it("draws with the pen where the pointer goes and stores the picture, with the drawing on it, in the type of the image", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     await drag(shown, [20, 20], [120, 20]);
     await stored(shown);
@@ -784,7 +784,7 @@ describe("drawing", () => {
     expect(await colorAt(upload?.bytes as Blob, 70, 60)).toEqual([255, 255, 255, 255]);
   });
 
-  it("[T44] stores a picture in the media type of the image that the engine can encode", async () => {
+  it("stores a picture in the media type of the image that the engine can encode", async () => {
     const shown = await show(DRAWING("image/jpeg"), declare("single", "file"));
     await drag(shown, [20, 20], [120, 20]);
     await stored(shown);
@@ -792,7 +792,7 @@ describe("drawing", () => {
     expect(shown.values.at(-1)).toMatchObject({ value: { mimeType: "image/jpeg" } });
   });
 
-  it("[T44][SC 2.5.1] draws a line, a rectangle and an ellipse with two clicks each, with no gesture along a path", async () => {
+  it("draws a line, a rectangle and an ellipse with two clicks each, with no gesture along a path", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     await userEvent.click(tool(shown, "line"));
     await clickImage(shown, 10, 90);
@@ -818,7 +818,7 @@ describe("drawing", () => {
     expect(shown.uploads).toHaveLength(3);
   });
 
-  it("[T44][SC 2.5.1] colors a region with one click of the fill and stops at the line of the image", async () => {
+  it("colors a region with one click of the fill and stops at the line of the image", async () => {
     const shown = await show(DRAWING("image/png", outlined(200, 100)), declare("single", "file"));
     await userEvent.click(tool(shown, "fill"));
     await userEvent.click(swatch(shown, RED));
@@ -833,7 +833,7 @@ describe("drawing", () => {
     expect(await colorAt(upload?.bytes as Blob, 170, 50)).toEqual([255, 255, 255, 255]);
   });
 
-  it("[T44] erases what was drawn", async () => {
+  it("erases what was drawn", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     await drag(shown, [20, 50], [120, 50]);
     await userEvent.click(tool(shown, "eraser"));
@@ -843,7 +843,7 @@ describe("drawing", () => {
     expect(drawn(shown, 75, 50)[3]).toBe(0);
   });
 
-  it("[T44][SC 2.1.1] draws with the keyboard: a shape tool, then the crosshair for each point", async () => {
+  it("draws with the keyboard: a shape tool, then the crosshair for each point", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     expect(shown.find(".ak-surface").tabIndex).toBe(-1);
     tool(shown, "rectangle").focus();
@@ -859,7 +859,7 @@ describe("drawing", () => {
     expect(shown.uploads).toHaveLength(1);
   });
 
-  it("[T44][SC 2.1.1] colors a region with the keyboard", async () => {
+  it("colors a region with the keyboard", async () => {
     const shown = await show(DRAWING("image/png", outlined(200, 100)), declare("single", "file"));
     tool(shown, "fill").focus();
     await userEvent.keyboard(" ");
@@ -870,7 +870,7 @@ describe("drawing", () => {
     expect(drawn(shown, 100, 50)).toEqual([0, 0, 0, 255]);
   });
 
-  it("[T44] takes back the last action, and clears the drawing to the image of the question", async () => {
+  it("takes back the last action, and clears the drawing to the image of the question", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     await userEvent.click(tool(shown, "line"));
     for (const y of [20, 60]) {
@@ -893,7 +893,7 @@ describe("drawing", () => {
     expect(shown.values.at(-1)).toMatchObject({ baseType: "file" });
   });
 
-  it("[T44] stores one picture for a quick series of actions", async () => {
+  it("stores one picture for a quick series of actions", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     await userEvent.click(tool(shown, "line"));
     for (const y of [10, 30, 50]) {
@@ -906,7 +906,7 @@ describe("drawing", () => {
     expect(await colorAt(shown.uploads.at(-1)?.bytes as Blob, 100, 50)).toEqual([0, 0, 0, 255]);
   });
 
-  it("[T44] shows a stored drawing that the player gives as the picture to draw on, and draws on it", async () => {
+  it("shows a stored drawing that the player gives as the picture to draw on, and draws on it", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     const earlier = picture(200, 100, "#2e7d32");
     shown.setValue("RESPONSE", single("file", { reference: earlier, mimeType: "image/png" }));
@@ -923,7 +923,7 @@ describe("drawing", () => {
     expect(shown.find("img").getAttribute("src")).not.toBe(earlier);
   });
 
-  it("[T44][SC 3.3.1] says so when the picture to draw on cannot be loaded, and draws again on the picture of the question", async () => {
+  it("says so when the picture to draw on cannot be loaded, and draws again on the picture of the question", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     // Bytes that are no image: the browser loads the file and cannot decode it.
     const broken = `data:image/png;base64,${btoa("not an image")}`;
@@ -939,7 +939,7 @@ describe("drawing", () => {
     expect(drawn(shown, 70, 20)[3]).toBeGreaterThan(200);
   });
 
-  it("[T44] says so when the drawing cannot be stored, and keeps the response it had", async () => {
+  it("says so when the drawing cannot be stored, and keeps the response it had", async () => {
     const shown = await show(DRAWING(), declare("single", "file"), () => Promise.reject(new Error("offline")));
     await drag(shown, [20, 20], [120, 20]);
     await stored(shown);
@@ -948,7 +948,7 @@ describe("drawing", () => {
     expect(drawn(shown, 70, 20)[3]).toBeGreaterThan(200);
   });
 
-  it("[T44] draws nothing while it is disabled, and says how to draw", async () => {
+  it("draws nothing while it is disabled, and says how to draw", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     shown.interaction().disabled = true;
     expect(shown.findAll<HTMLButtonElement>(".ak-toolbar button").every((button) => button.disabled)).toBe(true);
@@ -959,7 +959,7 @@ describe("drawing", () => {
     expect(shown.find(".ak-usage").textContent).toBe(EN_MESSAGES.drawHint);
   });
 
-  it("[T44][SC 2.5.8] gives every control of the toolbar a target of 24 pixels", async () => {
+  it("gives every control of the toolbar a target of 24 pixels", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     for (const button of shown.findAll(".ak-toolbar button")) {
       const box = button.getBoundingClientRect();
@@ -970,7 +970,7 @@ describe("drawing", () => {
     }
   });
 
-  it("[T44] has no violation of WCAG 2.2 A and AA with each kind of tool chosen", async () => {
+  it("has no violation of WCAG 2.2 A and AA with each kind of tool chosen", async () => {
     const shown = await show(DRAWING(), declare("single", "file"));
     expect(await axeViolations(shown.host)).toEqual([]);
     await userEvent.click(tool(shown, "ellipse"));
@@ -1046,7 +1046,7 @@ describe("the pointer criteria of WCAG 2.2", () => {
   ];
 
   for (const { name, body, declarations, answer } of Kinds) {
-    it(`[SC 2.5.1] answers a ${name} interaction with single clicks: no path or multipoint gesture is needed`, async () => {
+    it(`answers a ${name} interaction with single clicks: no path or multipoint gesture is needed`, async () => {
       const shown = await show(body, declarations);
       await answer(shown);
       expect(shown.values.length).toBeGreaterThan(0);
@@ -1054,7 +1054,7 @@ describe("the pointer criteria of WCAG 2.2", () => {
     });
   }
 
-  it("[SC 2.5.7] gives the same response by select-then-place as by dragging, for the position object and the graphic gap match", async () => {
+  it("gives the same response by select-then-place as by dragging, for the position object and the graphic gap match", async () => {
     const dragged = await show(POSITION(), declare("multiple", "point", "R0"));
     await userEvent.dragAndDrop(hand(dragged), dragged.find("qti-position-object-stage > img"), {
       targetPosition: { x: 100, y: 50 },
@@ -1075,7 +1075,7 @@ describe("the pointer criteria of WCAG 2.2", () => {
     expect(gapPlaced.responses).toEqual(gapDragged.responses);
   });
 
-  it("[SC 2.5.8] gives every control that the candidate operates a target of 24 CSS pixels, or one that the stylesheet enlarges", async () => {
+  it("gives every control that the candidate operates a target of 24 CSS pixels, or one that the stylesheet enlarges", async () => {
     const kinds: readonly [string, string, string, (shown: Graphic) => Promise<void>][] = [
       [
         "select point",
@@ -1121,7 +1121,7 @@ describe("the pointer criteria of WCAG 2.2", () => {
 });
 
 describe("coordinates", () => {
-  it("[T35] refuses coordinates that do not fit the shape when it renders the item", async () => {
+  it("refuses coordinates that do not fit the shape when it renders the item", async () => {
     const bad = `<qti-hotspot-interaction response-identifier="RESPONSE" max-choices="1">${image()}<qti-hotspot-choice shape="circle" coords="1,2" identifier="A" id="A"/></qti-hotspot-interaction>`;
     await expect(show(bad, declare("single", "identifier"))).rejects.toThrow("A circle cannot have the 2 coordinates");
   });

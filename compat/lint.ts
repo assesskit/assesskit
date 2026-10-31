@@ -3,7 +3,7 @@ import { ESLint } from "eslint";
 import compat from "eslint-plugin-compat";
 import stylelint from "stylelint";
 
-/** The baseline of docs/baseline.md as browserslist queries. */
+/** The baseline of docs/player/baseline.md as browserslist queries. */
 const BROWSERS = ["chrome >= 111", "firefox >= 115", "safari >= 16.4"];
 
 /**

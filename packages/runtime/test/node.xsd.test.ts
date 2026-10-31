@@ -42,7 +42,7 @@ describe("loadSchemaSet", () => {
     expect(schemas.directory).toBe(schemaDirectory);
   });
 
-  it("[X] closes a set once, after which it validates nothing", async () => {
+  it("closes a set once, after which it validates nothing", async () => {
     const own = await loadSchemaSet(schemaDirectory);
     own.close();
     own.close();
@@ -51,7 +51,7 @@ describe("loadSchemaSet", () => {
 });
 
 describe("validateXmlFiles", () => {
-  it("[X][C] accepts the 1EdTech example items and test of the design's evidence under the ASI schema", async () => {
+  it("accepts the 1EdTech example items and test of the design's evidence under the ASI schema", async () => {
     const files = [
       "packaging/items/choice.xml",
       "packaging/items/adaptive_template.xml",
@@ -62,7 +62,7 @@ describe("validateXmlFiles", () => {
     expect(await validateXmlFiles(schemas, files)).toEqual([]);
   });
 
-  it("[X][C] accepts the same examples against the 3.0.1 schema when they name it", async () => {
+  it("accepts the same examples against the 3.0.1 schema when they name it", async () => {
     const files = ["packaging/items/choice.xml", "tests/rtest01.xml"].map((path) => {
       const text = readFileSync(join(examples, path), "utf8").replaceAll(ASI_300, ASI_301);
       return { path, content: text };
@@ -70,7 +70,7 @@ describe("validateXmlFiles", () => {
     expect(await validateXmlFiles(schemas, files)).toEqual([]);
   });
 
-  it("[X][N] rejects choice.xml without time-dependent, naming the schema, the attribute and the line", async () => {
+  it("rejects choice.xml without time-dependent, naming the schema, the attribute and the line", async () => {
     const text = readFileSync(join(examples, "packaging/items/choice.xml"), "utf8").replace(
       ' time-dependent="false"',
       "",
@@ -86,7 +86,7 @@ describe("validateXmlFiles", () => {
     ]);
   });
 
-  it("[X][C] accepts results and usage data, and reports the example that is not well-formed", async () => {
+  it("accepts results and usage data, and reports the example that is not well-formed", async () => {
     const valid = ["results/report.xml", "results/conformance-use-case-1.xml", "usageData/example.xml"].map(example);
     expect(await validateXmlFiles(schemas, valid)).toEqual([]);
     const issues = await validateXmlFiles(schemas, [example("results/full-example.xml")]);
@@ -97,18 +97,18 @@ describe("validateXmlFiles", () => {
     });
   });
 
-  it("[X][C] accepts a content package manifest", async () => {
+  it("accepts a content package manifest", async () => {
     expect(await validateXmlFiles(schemas, [example("packaging/simple/imsmanifest.xml")])).toEqual([]);
   });
 
-  it("[X][M14][M15] accepts xi:include with an xi:fallback where the schema allows it, and rejects a bad include", async () => {
+  it("accepts xi:include with an xi:fallback where the schema allows it, and rejects a bad include", async () => {
     const include = '<xi:include href="fragments/choice.xml"><xi:fallback><p>Missing.</p></xi:fallback></xi:include>';
     expect(await validateXmlFiles(schemas, [item(`<p>Before.</p>${include}`)])).toEqual([]);
     const issues = await validateXmlFiles(schemas, [item('<xi:include href="a.xml" parse="binary"/>')]);
     expect(issues.map(({ code }) => code)).toContain("assesskit/node/xsd-invalid");
   });
 
-  it("[X][N] rejects an element the schema does not know, with the position of the document", async () => {
+  it("rejects an element the schema does not know, with the position of the document", async () => {
     const issues = await validateXmlFiles(schemas, [item("<qti-nothing/>")]);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
@@ -160,7 +160,7 @@ describe("validateXmlFiles", () => {
     ]);
   });
 
-  it("[B94] parses with the runtime first: a DOCTYPE, an oversize document or one that is not well-formed never reaches libxml2", async () => {
+  it("parses with the runtime first: a DOCTYPE, an oversize document or one that is not well-formed never reaches libxml2", async () => {
     const xxe = '<!DOCTYPE a [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><a>&xxe;</a>';
     const deep = "<a>".repeat(300);
     const issues = await validateXmlFiles(schemas, [
@@ -219,7 +219,7 @@ describe("validateXmlFiles", () => {
     }
   });
 
-  it("[X] compiles each primary schema with the schemas it imports", async () => {
+  it("compiles each primary schema with the schemas it imports", async () => {
     for (const [namespace, file] of PRIMARY_SCHEMAS) {
       const issues = await validateXmlFiles(schemas, [{ path: "root.xml", content: `<root xmlns="${namespace}"/>` }]);
       expect(new Set(issues.map(({ source }) => source)), file).toEqual(new Set([file]));
@@ -230,7 +230,7 @@ describe("validateXmlFiles", () => {
     }
   });
 
-  it("[X] has a primary schema for each namespace of the table, which declares that namespace as its target", () => {
+  it("has a primary schema for each namespace of the table, which declares that namespace as its target", () => {
     for (const [namespace, file] of PRIMARY_SCHEMAS) {
       const bytes = readFileSync(join(schemaDirectory, file));
       const text = bytes[0] === 0xff ? bytes.toString("utf16le") : bytes.toString("utf8");

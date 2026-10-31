@@ -104,19 +104,19 @@ async function run(args: readonly string[], options: Parameters<typeof runCli>[1
 }
 
 describe("sha256", () => {
-  it("[L14] hashes the vectors of FIPS 180-4", () => {
+  it("hashes the vectors of FIPS 180-4", () => {
     expect(sha256(new TextEncoder().encode("abc"))).toBe(ABC);
     expect(sha256(new Uint8Array())).toBe(EMPTY);
   });
 });
 
 describe("download", () => {
-  it("[L14] returns the bytes of a successful answer", async () => {
+  it("returns the bytes of a successful answer", async () => {
     routes.set("/x", { status: 200, body: "abc" });
     expect(new TextDecoder().decode(await download(`${base}/x`))).toBe("abc");
   });
 
-  it("[L14] rejects an answer that is not a success, naming the address and the status", async () => {
+  it("rejects an answer that is not a success, naming the address and the status", async () => {
     await expect(download(`${base}/missing`)).rejects.toThrow(`Downloading ${base}/missing failed: HTTP 404.`);
   });
 });
@@ -162,7 +162,7 @@ describe("mapConcurrently", () => {
 });
 
 describe("fetchSchemas", () => {
-  it("[L14] downloads the files into the directory, creating it, and lists them in the order of the list", async () => {
+  it("downloads the files into the directory, creating it, and lists them in the order of the list", async () => {
     const { all } = fixtureSchemas();
     const target = join(freshDirectory("fetch"), "nested", "schemas");
     const result = await fetchSchemas(target, all);
@@ -171,7 +171,7 @@ describe("fetchSchemas", () => {
     expect(readFileSync(join(target, "b.xsd"), "utf8")).toBe("beta");
   });
 
-  it("[L14] requests only the files that are not in the directory with their pinned hashes", async () => {
+  it("requests only the files that are not in the directory with their pinned hashes", async () => {
     const { all } = fixtureSchemas();
     const target = freshDirectory("current");
     await fetchSchemas(target, all);
@@ -187,7 +187,7 @@ describe("fetchSchemas", () => {
     expect(readFileSync(changed, "utf8")).toBe("beta");
   });
 
-  it("[L14] writes no file whose bytes have another hash than the pinned one, and still writes the others", async () => {
+  it("writes no file whose bytes have another hash than the pinned one, and still writes the others", async () => {
     const { b, all } = fixtureSchemas();
     routes.set("/b.xsd", { status: 200, body: "tampered" });
     const target = freshDirectory("tampered");
@@ -200,7 +200,7 @@ describe("fetchSchemas", () => {
     expect(readdirSync(target).sort()).toEqual(["a.xsd", "c.xsd"]);
   });
 
-  it("[L14] reports a status that is not a success and a server that cannot be reached, in the order of the list", async () => {
+  it("reports a status that is not a success and a server that cannot be reached, in the order of the list", async () => {
     const { a, b, c } = fixtureSchemas();
     routes.set("/a.xsd", { status: 500, body: "" });
     const closed = createServer();
@@ -216,7 +216,7 @@ describe("fetchSchemas", () => {
     expect(result.failures[1]?.reason).toMatch(/^fetch failed: .*ECONNREFUSED/);
   });
 
-  it("[L14] downloads at most four files at once", async () => {
+  it("downloads at most four files at once", async () => {
     const schemas = Array.from({ length: 10 }, (_, index) => {
       routes.set(`/s${index}.xsd`, { status: 200, body: "abc" });
       return { url: `${base}/s${index}.xsd`, file: `s${index}.xsd`, sha256: ABC };
@@ -295,7 +295,7 @@ describe("report", () => {
   };
   const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place.", source: "S" };
 
-  it("[L13] counts the issues of each severity, and is valid when none is an error", () => {
+  it("counts the issues of each severity, and is valid when none is an error", () => {
     expect(buildReport("t", "1.2.3", [warning, bare])).toEqual({
       tool: "assesskit",
       version: "1.2.3",
@@ -311,13 +311,13 @@ describe("report", () => {
     expect(buildReport("t", "1.2.3", [])).toMatchObject({ valid: true, summary: { errors: 0, warnings: 0 } });
   });
 
-  it("[L13] exits with 0 for a valid report and 1 for a report with an error", () => {
+  it("exits with 0 for a valid report and 1 for a report with an error", () => {
     expect(EXIT_CODES).toEqual({ valid: 0, invalid: 1, failed: 2 });
     expect(exitCodeOf(buildReport("t", "v", [warning]))).toBe(0);
     expect(exitCodeOf(buildReport("t", "v", [error]))).toBe(1);
   });
 
-  it("[L13] writes a line for each issue and the verdict as text", () => {
+  it("writes a line for each issue and the verdict as text", () => {
     expect(formatText(buildReport("pkg", "v", [error, warning, bare]))).toBe(
       [
         "items/a.xml:12:5: error: Element 'x': Not expected. [assesskit/node/xsd-invalid, imsqti_asiv3p0p1_v1p0.xsd]",
@@ -330,7 +330,7 @@ describe("report", () => {
     expect(formatText(buildReport("pkg", "v", []))).toBe("pkg: valid (0 errors, 0 warnings)\n");
   });
 
-  it("[L13] writes the report as JSON with the fields of the design in its order", () => {
+  it("writes the report as JSON with the fields of the design in its order", () => {
     const text = formatJson(buildReport("pkg", "1.2.3", [error]));
     expect(text.endsWith("}\n")).toBe(true);
     const parsed = JSON.parse(text);
@@ -347,13 +347,13 @@ describe("report", () => {
 });
 
 describe("runCli", () => {
-  it("[L13] prints the usage to the standard output for --help and -h", async () => {
+  it("prints the usage to the standard output for --help and -h", async () => {
     for (const flag of ["--help", "-h"]) {
       expect(await run([flag])).toEqual({ code: 0, stdout: USAGE, stderr: "" });
     }
   });
 
-  it("[L13] exits with 2 and prints the usage to the standard error for a command line that is wrong", async () => {
+  it("exits with 2 and prints the usage to the standard error for a command line that is wrong", async () => {
     const cases: [string[], string][] = [
       [[], "A command is required."],
       [["launch"], 'The command "launch" is unknown.'],
@@ -373,7 +373,7 @@ describe("runCli", () => {
     }
   });
 
-  it("[L13] exits with 2 for an option that the command does not have or that lacks its value", async () => {
+  it("exits with 2 for an option that the command does not have or that lacks its value", async () => {
     const cases: [string[], string][] = [
       [["validate", "a.xml", "--bogus"], "Unknown option '--bogus'"],
       [["validate", "a.xml", "--dir", "d"], "Unknown option '--dir'"],
@@ -389,14 +389,14 @@ describe("runCli", () => {
     }
   });
 
-  it("[L12] takes a path that starts with a dash after --", async () => {
+  it("takes a path that starts with a dash after --", async () => {
     const { code, stderr } = await run(["validate", "--", "--weird.xml"]);
     expect(code).toBe(2);
     expect(stderr).toContain("does not hold the pinned schemas");
     expect(stderr).not.toContain("Usage:");
   });
 
-  it("[L13] exits with 2 when the directory of the schemas lacks them, and says how to download them", async () => {
+  it("exits with 2 when the directory of the schemas lacks them, and says how to download them", async () => {
     const own = freshDirectory("empty");
     const byDefault = await run(["validate", "a.xml"], { schemaDirectory: own });
     expect(byDefault).toEqual({
@@ -410,7 +410,7 @@ describe("runCli", () => {
     );
   });
 
-  it("[L14] exits with 2 and lists every schema that cannot be downloaded", async () => {
+  it("exits with 2 and lists every schema that cannot be downloaded", async () => {
     const target = freshDirectory("offline");
     const { code, stdout, stderr } = await run(["schemas", "fetch", "--dir", target], {
       fetch: async () => new Response("", { status: 503 }),
@@ -425,7 +425,7 @@ describe("runCli", () => {
     expect(readdirSync(target)).toEqual([]);
   });
 
-  it("[L14] exits with 2 and writes no file for a download with another hash than the pinned one", async () => {
+  it("exits with 2 and writes no file for a download with another hash than the pinned one", async () => {
     const target = freshDirectory("changed");
     const { code, stderr } = await run(["schemas", "fetch", "--dir", target], {
       fetch: async () => new Response("not a schema"),
@@ -437,7 +437,7 @@ describe("runCli", () => {
     expect(readdirSync(target)).toEqual([]);
   });
 
-  it("[L14] downloads into the default directory of the options when --dir is not given", async () => {
+  it("downloads into the default directory of the options when --dir is not given", async () => {
     const target = join(freshDirectory("default"), "schemas");
     const { code, stderr } = await run(["schemas", "fetch"], {
       schemaDirectory: target,

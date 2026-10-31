@@ -49,7 +49,7 @@ const WRITING = covers(
 );
 
 describe("toSubmission", () => {
-  it("[T110] turns the request of an item outcome into one outcome, with its covers, body and keys", () => {
+  it("turns the request of an item outcome into one outcome, with its covers, body and keys", () => {
     const { view } = essayView();
     const submission = toSubmission(view);
     expect(submission).toMatchObject({
@@ -83,13 +83,13 @@ describe("toSubmission", () => {
     expect(submission.variableIdentifierRef).toBeUndefined();
   });
 
-  it("[T110] carries the body as the candidate saw it, followed by the rubric blocks that only the scorer sees", () => {
+  it("carries the body as the candidate saw it, followed by the rubric blocks that only the scorer sees", () => {
     const text = JSON.stringify(toSubmission(essayView().view).items[0]?.body);
     expect(text.indexOf("Write about e.")).toBeGreaterThan(-1);
     expect(text.indexOf("Give 0 to 10 points for e.")).toBeGreaterThan(text.indexOf("Write about e."));
   });
 
-  it("[T110] lists each cover of a test outcome in order with its label, and an item that was not presented empty", () => {
+  it("lists each cover of a test outcome in order with its label, and an item that was not presented empty", () => {
     const engine = writingEngine({ w1: essay("w1", "none"), w2: essay("w2", "none") }, WRITING);
     const first = play(engine, begin(engine), write("w1", "First task", 1_000), act("submit", "w1", 2_000));
     const ended = play(engine, first, { type: "end-test", at: 3_000 });
@@ -114,7 +114,7 @@ describe("toSubmission", () => {
     expect(JSON.stringify(submission.rubric)).toContain("Rate the content once, across both tasks.");
   });
 
-  it("[T110] gives the correct responses and the template values of an item as wire values", () => {
+  it("gives the correct responses and the template values of an item as wire values", () => {
     const engine = itemEngine(pick("p"));
     const state = play(engine, begin(engine), answer("p", single("identifier", "A"), 1_000), act("submit", "p", 2_000));
     const [item] = toSubmission(firstScorerView(engine, state)).items;
@@ -123,7 +123,7 @@ describe("toSubmission", () => {
     expect(JSON.stringify(item?.body)).toContain("Choose the letter for");
   });
 
-  it("[T110] carries the value supplied before, with its time and scorer", () => {
+  it("carries the value supplied before, with its time and scorer", () => {
     const engine = itemEngine(essay("e"));
     const { state } = essayView();
     const [request] = engine.pending(state).scoring;
@@ -139,7 +139,7 @@ describe("toSubmission", () => {
     });
   });
 
-  it("[T110] carries the variable reference and the flag of a link to a tool", () => {
+  it("carries the variable reference and the flag of a link to a tool", () => {
     const { view } = essayView();
     const linked: ScorerView = {
       ...view,
@@ -148,7 +148,7 @@ describe("toSubmission", () => {
     expect(toSubmission(linked)).toMatchObject({ variableIdentifierRef: "http://example.org/ref", lti: true });
   });
 
-  it("[T110] keeps a file as a reference that the host resolves, and NULL as null", () => {
+  it("keeps a file as a reference that the host resolves, and NULL as null", () => {
     const { view } = essayView();
     const file = single("file", { reference: "uploads/a1", mimeType: "audio/wav", fileName: "speech.wav" });
     const [cover] = view.request.covers;
@@ -166,14 +166,14 @@ describe("toSubmission", () => {
     expect(toSubmission(empty).parts[0]?.value).toBeNull();
   });
 
-  it("[T110] is JSON as it is: parsing its text gives it back, and the check accepts it", () => {
+  it("is JSON as it is: parsing its text gives it back, and the check accepts it", () => {
     const submission = toSubmission(essayView("Line one\nLine two").view);
     const parsed: unknown = json(JSON.stringify(submission));
     expect(parsed).toEqual(submission);
     expect(() => checkSubmission(parsed)).not.toThrow();
   });
 
-  it("[T110] rejects what is not a scorer view of the engine", () => {
+  it("rejects what is not a scorer view of the engine", () => {
     expect(() => toSubmission(json("null") as ScorerView)).toThrow(
       new DataError("The scorer view must be an object, found null."),
     );
@@ -211,7 +211,7 @@ function essayRequest(): ScoringRequest {
 describe("toSupplyScores", () => {
   const request = essayRequest();
 
-  it("[T111] builds the action with one value, the id of the request and the scorer", () => {
+  it("builds the action with one value, the id of the request and the scorer", () => {
     const value = single("float", 7.5);
     expect(toSupplyScores(request, value, "human")).toEqual({
       type: "supply-scores",
@@ -222,16 +222,16 @@ describe("toSupplyScores", () => {
     expect(toSupplyScores(request, value, "externalMachine").scorer).toBe("externalMachine");
   });
 
-  it("[T111] takes a number as a single value of the base type of the outcome", () => {
+  it("takes a number as a single value of the base type of the outcome", () => {
     expect(toSupplyScores(request, 7.5, "human").value).toEqual(single("float", 7.5));
     expect(toSupplyScores(request, 0, "human").value).toEqual(single("float", 0));
   });
 
-  it("[T111] promotes an integer value to the float outcome, as the engine does", () => {
+  it("promotes an integer value to the float outcome, as the engine does", () => {
     expect(toSupplyScores(request, single("integer", 7), "human").value).toEqual(single("float", 7));
   });
 
-  it("[T111] takes a string, a boolean and an identifier for the outcomes of those base types", () => {
+  it("takes a string, a boolean and an identifier for the outcomes of those base types", () => {
     const declared = (baseType: "string" | "boolean" | "identifier" | "integer"): ScoringRequest => ({
       ...request,
       declaration: { cardinality: "single", baseType },
@@ -242,13 +242,13 @@ describe("toSupplyScores", () => {
     expect(toSupplyScores(declared("integer"), 3, "human").value).toEqual(single("integer", 3));
   });
 
-  it("[T111] accepts NULL, and the empty string, which is NULL", () => {
+  it("accepts NULL, and the empty string, which is NULL", () => {
     expect(toSupplyScores(request, null, "human").value).toBeNull();
     const text: ScoringRequest = { ...request, declaration: { cardinality: "single", baseType: "string" } };
     expect(toSupplyScores(text, "", "human").value).toBeNull();
   });
 
-  it("[T111] checks a value against the declaration before the engine does", () => {
+  it("checks a value against the declaration before the engine does", () => {
     expect(() => toSupplyScores(request, single("string", "good"), "human")).toThrow(
       new DataError("The outcome SCORE is a single float, found a single string."),
     );
@@ -264,7 +264,7 @@ describe("toSupplyScores", () => {
     );
   });
 
-  it("[T111] refuses a number, a string or a boolean for an outcome that is not single, or not of that base type", () => {
+  it("refuses a number, a string or a boolean for an outcome that is not single, or not of that base type", () => {
     const many: ScoringRequest = { ...request, declaration: { cardinality: "multiple", baseType: "float" } };
     expect(() => toSupplyScores(many, 1, "human")).toThrow(
       /^The outcome SCORE is a multiple float, which a number does not fit: give a value that the values of the runtime build\.$/,
@@ -278,13 +278,13 @@ describe("toSupplyScores", () => {
     );
   });
 
-  it("[T111] accepts a value for a multiple outcome that has the cardinality and the base type", () => {
+  it("accepts a value for a multiple outcome that has the cardinality and the base type", () => {
     const many: ScoringRequest = { ...request, declaration: { cardinality: "multiple", baseType: "identifier" } };
     const value = container("multiple", "identifier", ["a", "b"]);
     expect(toSupplyScores(many, value, "human").value).toEqual(value);
   });
 
-  it("[T111] rejects a request, a scorer or a score of another type", () => {
+  it("rejects a request, a scorer or a score of another type", () => {
     expect(() => toSupplyScores(json("null") as ScoringRequest, 1, "human")).toThrow(
       new DataError("The request must be an object, found null."),
     );
@@ -301,7 +301,7 @@ describe("toSupplyScores", () => {
     expect(() => toSupplyScores(request, json("[1]") as unknown as number, "human")).toThrow(DataError);
   });
 
-  it("[T111] is accepted by the engine after the test ended, and supplying again replaces the score", () => {
+  it("is accepted by the engine after the test ended, and supplying again replaces the score", () => {
     const engine = writingEngine({ w1: essay("w1", "none"), w2: essay("w2", "none") }, WRITING);
     const first = play(engine, begin(engine), write("w1", "First task", 1_000), act("submit", "w1", 2_000));
     const ended = play(engine, first, { type: "end-test", at: 3_000 });
@@ -326,7 +326,7 @@ describe("toSupplyScores", () => {
     expect(request?.supplied).toEqual({ value: single("float", 5.5), at: 5_000, scorer: "externalMachine" });
   });
 
-  it("[T111] is refused by the engine when the request does not exist", () => {
+  it("is refused by the engine when the request does not exist", () => {
     const engine = itemEngine(essay("e"));
     const { state } = essayView();
     const stray: ScoringRequest = { ...essayRequest(), id: "item:other:1:SCORE" };
@@ -338,7 +338,7 @@ describe("toSupplyScores", () => {
 describe("properties", () => {
   const EssayRequest = essayRequest();
 
-  it("[T110][T111] takes a submission from the engine to a score and back: values decode as the candidate gave them, and the last score stands", () => {
+  it("takes a submission from the engine to a score and back: values decode as the candidate gave them, and the last score stands", () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, unit: "binary" }),
@@ -387,7 +387,7 @@ describe("properties", () => {
     }),
   );
 
-  it("[T110] writes any value of a response so that it decodes to the value", () => {
+  it("writes any value of a response so that it decodes to the value", () => {
     const { view } = essayView();
     const [cover] = view.request.covers;
     fc.assert(
@@ -415,7 +415,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T111] gives a number to an outcome of the base type float as that float, and the key of the request", () => {
+  it("gives a number to an outcome of the base type float as that float, and the key of the request", () => {
     fc.assert(
       fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), (score) => {
         const action = toSupplyScores(EssayRequest, score, "human");

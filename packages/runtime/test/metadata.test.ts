@@ -75,7 +75,7 @@ const qti = (xml: string, path?: string): QtiMetadata =>
   readQtiMetadata(parseXml(`<qtiMetadata ${QMD}>${xml}</qtiMetadata>`), path);
 
 describe("readQtiMetadata", () => {
-  it("[Q1][Q3][Q5][Q9][Q10][Q12][Q13][Q14] reads the QTI metadata of the 1EdTech metaData example from its text", () => {
+  it("reads the QTI metadata of the 1EdTech metaData example from its text", () => {
     const metadata = qti(`
       <timeDependent>false</timeDependent>
       <interactionType>choiceInteraction</interactionType>
@@ -96,7 +96,7 @@ describe("readQtiMetadata", () => {
     });
   });
 
-  it("[Q2][Q4][Q11] reads itemTemplate, composite and several scoring modes", () => {
+  it("reads itemTemplate, composite and several scoring modes", () => {
     const metadata = qti(
       "<itemTemplate>1</itemTemplate><composite> true </composite><scoringMode>human</scoringMode><scoringMode>responseprocessing</scoringMode>",
     );
@@ -107,7 +107,7 @@ describe("readQtiMetadata", () => {
     });
   });
 
-  it("[Q6][Q7][Q8] reads the context of a portable custom interaction", () => {
+  it("reads the context of a portable custom interaction", () => {
     const metadata = qti(
       "<portableCustomInteractionContext><customTypeIdentifier>urn:x</customTypeIdentifier><interactionKind>sound</interactionKind></portableCustomInteractionContext>",
     );
@@ -117,7 +117,7 @@ describe("readQtiMetadata", () => {
     });
   });
 
-  it("[Q15] accepts each of the 22 interaction types and no other", () => {
+  it("accepts each of the 22 interaction types and no other", () => {
     expect(INTERACTION_TYPES).toHaveLength(22);
     for (const type of INTERACTION_TYPES)
       expect(qti(`<interactionType>${type}</interactionType>`).interactionTypes).toEqual([type]);
@@ -127,19 +127,19 @@ describe("readQtiMetadata", () => {
     );
   });
 
-  it("[Q16] accepts the three feedback types and no other", () => {
+  it("accepts the three feedback types and no other", () => {
     expect(FEEDBACK_TYPES).toEqual(["adaptive", "nonadaptive", "none"]);
     for (const type of FEEDBACK_TYPES) expect(qti(`<feedbackType>${type}</feedbackType>`).feedbackType).toBe(type);
     expect(issueCode(() => qti("<feedbackType>other</feedbackType>"))).toBe("assesskit/metadata/invalid-text");
   });
 
-  it("[Q17] accepts the three scoring modes and no other", () => {
+  it("accepts the three scoring modes and no other", () => {
     expect(SCORING_MODES).toEqual(["human", "externalmachine", "responseprocessing"]);
     for (const mode of SCORING_MODES) expect(qti(`<scoringMode>${mode}</scoringMode>`).scoringModes).toEqual([mode]);
     expect(issueCode(() => qti("<scoringMode>externalMachine</scoringMode>"))).toBe("assesskit/metadata/invalid-text");
   });
 
-  it("[Q12] takes a tool string of 256 characters and rejects one of 257", () => {
+  it("takes a tool string of 256 characters and rejects one of 257", () => {
     expect(qti(`<toolName>${"a".repeat(256)}</toolName>`).toolName).toHaveLength(256);
     expect(issueCode(() => qti(`<toolVersion>${"a".repeat(257)}</toolVersion>`))).toBe(
       "assesskit/metadata/invalid-text",
@@ -197,7 +197,7 @@ const INVALID_QTI_METADATA: readonly string[] = (() => {
 })();
 
 describe("checkQtiMetadata", () => {
-  it("[Q1] accepts any QTI metadata that the reader can return", () => {
+  it("accepts any QTI metadata that the reader can return", () => {
     fc.assert(
       fc.property(qtiMetadata, (metadata) => {
         expect(() => checkQtiMetadata(metadata)).not.toThrow();
@@ -205,7 +205,7 @@ describe("checkQtiMetadata", () => {
     );
   });
 
-  it("[Q1] throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
+  it("throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
     for (const metadata of INVALID_QTI_METADATA) {
       expect(() => checkQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
     }
@@ -213,7 +213,7 @@ describe("checkQtiMetadata", () => {
 });
 
 describe("writeQtiMetadata", () => {
-  it("[Q1][Q12] writes the children in the order of the schema, whatever the order of the fields", () => {
+  it("writes the children in the order of the schema, whatever the order of the fields", () => {
     const element = writeQtiMetadata({
       toolVendor: "v",
       feedbackType: "none",
@@ -234,7 +234,7 @@ describe("writeQtiMetadata", () => {
     expect(element).toMatchObject({ namespace: QTI_METADATA_NAMESPACE, name: "qtiMetadata" });
   });
 
-  it("[Q1][Q2][Q3][Q4][Q5][Q6][Q7][Q8][Q9][Q10][Q11][Q12][Q13][Q14] reads back what it writes, through XML text", () => {
+  it("reads back what it writes, through XML text", () => {
     fc.assert(
       fc.property(qtiMetadata, (metadata) => {
         expect(readQtiMetadata(parseXml(serializeXml(writeQtiMetadata(metadata))))).toEqual(metadata);
@@ -257,7 +257,7 @@ const csm = (xml: string): ReturnType<typeof readCurriculumStandardsSet> =>
   );
 
 describe("readCurriculumStandardsSet", () => {
-  it("[Q27][Q28][Q29][Q30] reads the labels, CASE item URIs and GUIDs of the externalMetadata example", () => {
+  it("reads the labels, CASE item URIs and GUIDs of the externalMetadata example", () => {
     const set = readCurriculumStandardsSet(
       parseXml(`<curriculumStandardsMetadataSet ${CSM} resourceLabel="Math" resourcePartId="p1">
         <curriculumStandardsMetadata providerId="TEKS">
@@ -297,7 +297,7 @@ describe("readCurriculumStandardsSet", () => {
     });
   });
 
-  it("[Q27][Q28][Q29][Q30] leaves out the optional parts that the document leaves out", () => {
+  it("leaves out the optional parts that the document leaves out", () => {
     const set = csm(
       "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><GUID>g</GUID></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
     );
@@ -321,7 +321,7 @@ describe("readCurriculumStandardsSet", () => {
 });
 
 describe("writeCurriculumStandardsSet", () => {
-  it("[Q27][Q28][Q29][Q30] reads back what it writes, through XML text", () => {
+  it("reads back what it writes, through XML text", () => {
     fc.assert(
       fc.property(curriculumStandardsSet, (set) => {
         expect(readCurriculumStandardsSet(parseXml(serializeXml(writeCurriculumStandardsSet(set))), undefined)).toEqual(
@@ -353,7 +353,7 @@ const drd = (xml: string, path?: string): AccessForAllResource =>
   readAccessForAllResource(parseXml(`<accessForAllResource ${DRD}>${xml}</accessForAllResource>`), path);
 
 describe("readAccessForAllResource", () => {
-  it("[Q31][Q32] reads the elements in the order of the schema", () => {
+  it("reads the elements in the order of the schema", () => {
     const resource = drd(`
       <accessMode>auditory</accessMode>
       <atInteroperable>true</atInteroperable>
@@ -374,7 +374,7 @@ describe("readAccessForAllResource", () => {
     });
   });
 
-  it("[Q32] accepts every term of the DRD vocabularies and an extension term, and rejects any other", () => {
+  it("accepts every term of the DRD vocabularies and an extension term, and rejects any other", () => {
     const vocabularies: readonly (readonly [string, readonly string[]])[] = [
       ["accessMode", ACCESS_MODES],
       ["accessModeAdapted", ACCESS_MODES],
@@ -402,13 +402,13 @@ describe("readAccessForAllResource", () => {
     expect(DRD_HAZARDS).toEqual(["flashing", "sound", "olfactoryHazard", "motionSimulation"]);
   });
 
-  it("[Q31] rejects an element out of the order of the schema", () => {
+  it("rejects an element out of the order of the schema", () => {
     expect(issueCode(() => drd("<hazard>sound</hazard><accessMode>auditory</accessMode>"))).toBe(
       "assesskit/metadata/unexpected-element",
     );
   });
 
-  it("[Q31] keeps elements of other namespaces after the DRD elements as extensions", () => {
+  it("keeps elements of other namespaces after the DRD elements as extensions", () => {
     const resource = drd('<hazard>sound</hazard><note xmlns="urn:x">hello</note>');
     expect(resource.extensions.map((extension) => extension.name)).toEqual(["note"]);
   });
@@ -423,7 +423,7 @@ describe("readAccessForAllResource", () => {
 });
 
 describe("writeAccessForAllResource", () => {
-  it("[Q31][Q32] writes the elements in the order of the DRD schema", () => {
+  it("writes the elements in the order of the DRD schema", () => {
     const element = writeAccessForAllResource({
       ...drd(""),
       hazard: ["sound"],
@@ -439,7 +439,7 @@ describe("writeAccessForAllResource", () => {
     ]);
   });
 
-  it("[Q31][Q32] reads back what it writes, through XML text", () => {
+  it("reads back what it writes, through XML text", () => {
     fc.assert(
       fc.property(accessForAllResource, (resource) => {
         const read = readAccessForAllResource(parseXml(serializeXml(writeAccessForAllResource(resource))), undefined);
@@ -484,7 +484,7 @@ const lomXml = `<lom:lom xmlns:lom="${LOM_NAMESPACE}">
 </lom:lom>`;
 
 describe("lomGeneral", () => {
-  it("[Q18] reads the entries of the identifiers and the strings of the title, with their languages", () => {
+  it("reads the entries of the identifiers and the strings of the title, with their languages", () => {
     expect(lomGeneral(parseXml(lomXml))).toEqual({
       identifiers: ["qti_v2_item_01"],
       titles: [
@@ -495,7 +495,7 @@ describe("lomGeneral", () => {
     });
   });
 
-  it("[Q18] returns empty lists for a lom without a general category", () => {
+  it("returns empty lists for a lom without a general category", () => {
     expect(lomGeneral(parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`))).toEqual({ identifiers: [], titles: [] });
   });
 });
@@ -509,14 +509,14 @@ describe("readResourceMetadata", () => {
     <csmd:curriculumStandardsMetadataSet><csmd:curriculumStandardsMetadata><csmd:setOfGUIDs><csmd:labelledGUID><csmd:GUID>g</csmd:GUID></csmd:labelledGUID></csmd:setOfGUIDs></csmd:curriculumStandardsMetadata></csmd:curriculumStandardsMetadataSet>
     <lom:lom><lom:general><lom:title><lom:string>t</lom:string></lom:title></lom:general></lom:lom>`;
 
-  it("[Q1][Q18][Q27] reads the QTI metadata, the curriculum standards and the LOM of a metadata element", () => {
+  it("reads the QTI metadata, the curriculum standards and the LOM of a metadata element", () => {
     const metadata = readResourceMetadata(resourceMetadata(full));
     expect(metadata.qti).toMatchObject({ composite: false });
     expect(metadata.curriculumStandards?.standards).toHaveLength(1);
     expect(metadata.lom?.name).toBe("lom");
   });
 
-  it("[Q19][Q20][Q21][Q22][Q23][Q24][Q25][Q26] keeps each LOM category as XML", () => {
+  it("keeps each LOM category as XML", () => {
     const categories = [
       "lifeCycle",
       "metaMetadata",
@@ -535,7 +535,7 @@ describe("readResourceMetadata", () => {
     expect(kept).toEqual(categories);
   });
 
-  it("[K22] reads an external metadata file: the root lom holds the QTI metadata and the curriculum standards", () => {
+  it("reads an external metadata file: the root lom holds the QTI metadata and the curriculum standards", () => {
     const external = parseXml(
       `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}"><educational/><qmd:qtiMetadata><qmd:composite>false</qmd:composite></qmd:qtiMetadata></lom>`,
     );
@@ -550,7 +550,7 @@ describe("readResourceMetadata", () => {
     expect(readResourceMetadata(resourceMetadata(""))).toEqual({});
   });
 
-  it("[K6] rejects an element that the metadata of a resource does not have, a part twice and parts out of order", () => {
+  it("rejects an element that the metadata of a resource does not have, a part twice and parts out of order", () => {
     const code = (inner: string): string | undefined => issueCode(() => readResourceMetadata(resourceMetadata(inner)));
     expect(code("<other/>")).toBe("assesskit/metadata/unexpected-element");
     expect(code("<lom:lom/><lom:lom/>")).toBe("assesskit/metadata/unexpected-element");
@@ -562,7 +562,7 @@ describe("readResourceMetadata", () => {
     expect(code("text")).toBe("assesskit/metadata/unexpected-text");
   });
 
-  it("[K22] rejects an external metadata file that has the QTI metadata or the curriculum standards twice", () => {
+  it("rejects an external metadata file that has the QTI metadata or the curriculum standards twice", () => {
     const external = (inner: string): XmlElement =>
       parseXml(
         `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}">${inner}</lom>`,
@@ -589,7 +589,7 @@ describe("readResourceMetadata", () => {
 });
 
 describe("writeResourceMetadata", () => {
-  it("[K6] writes a metadata element of the content package namespace in the order of the CP schema", () => {
+  it("writes a metadata element of the content package namespace in the order of the CP schema", () => {
     const element = writeResourceMetadata({
       lom: parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`),
       curriculumStandards: { standards: [{ guidSets: [{ labelledGuids: [{ guid: "g" }] }] }] },
@@ -603,7 +603,7 @@ describe("writeResourceMetadata", () => {
     ]);
   });
 
-  it("[K6][Q1][Q27] reads back what it writes", () => {
+  it("reads back what it writes", () => {
     fc.assert(
       fc.property(
         fc.record({
@@ -735,7 +735,7 @@ const INTERACTION_OF_TYPE: readonly (readonly [string, string])[] = [
 ];
 
 describe("deriveQtiMetadata", () => {
-  it("[Q1][Q3][Q5][Q9][Q10][Q11] derives the metadata of a choice item with a correct response, feedback and response processing", () => {
+  it("derives the metadata of a choice item with a correct response, feedback and response processing", () => {
     expect(
       derive({
         declarations: response("RESPONSE", true),
@@ -756,7 +756,7 @@ describe("deriveQtiMetadata", () => {
     });
   });
 
-  it("[Q3] takes timeDependent from the attribute of the item", () => {
+  it("takes timeDependent from the attribute of the item", () => {
     const read = (value: string): boolean | undefined => {
       const document = readAsi(
         `<qti-assessment-item xmlns="${ASI}" identifier="i" title="t" time-dependent="${value}"/>`,
@@ -767,14 +767,14 @@ describe("deriveQtiMetadata", () => {
     expect(read("false")).toBe(false);
   });
 
-  it("[Q15][Q5] derives each of the 22 interaction types from its element", () => {
+  it("derives each of the 22 interaction types from its element", () => {
     expect(INTERACTION_OF_TYPE.map(([type]) => type).sort()).toEqual([...INTERACTION_TYPES].sort());
     for (const [type, markup] of INTERACTION_OF_TYPE) {
       expect(derive({ body: markup }).interactionTypes, type).toEqual([type]);
     }
   });
 
-  it("[Q4][Q5] finds interactions nested in the markup of the body, and lists each type once in document order", () => {
+  it("finds interactions nested in the markup of the body, and lists each type once in document order", () => {
     const metadata = derive({
       body: `<div>${textEntry("A")}<table><tr><td>${choice}</td></tr></table>${textEntry("B")}</div>`,
     });
@@ -782,7 +782,7 @@ describe("deriveQtiMetadata", () => {
     expect(metadata.composite).toBe(true);
   });
 
-  it("[Q4] is not composite with one interaction or none, and ignores elements of other namespaces that look like interactions", () => {
+  it("is not composite with one interaction or none, and ignores elements of other namespaces that look like interactions", () => {
     expect(derive({ body: choice }).composite).toBe(false);
     expect(derive({ body: "<p>No interaction.</p>" })).toMatchObject({ composite: false, interactionTypes: [] });
     expect(
@@ -792,7 +792,7 @@ describe("deriveQtiMetadata", () => {
     ).toMatchObject({ composite: false, interactionTypes: ["customInteraction"] });
   });
 
-  it("[Q9] is none without feedback, and nonadaptive or adaptive with feedback, by the attribute adaptive", () => {
+  it("is none without feedback, and nonadaptive or adaptive with feedback, by the attribute adaptive", () => {
     const feedback =
       '<qti-feedback-inline outcome-identifier="FEEDBACK" identifier="x" show-hide="show">Right</qti-feedback-inline>';
     const modal =
@@ -806,14 +806,14 @@ describe("deriveQtiMetadata", () => {
     expect(derive({ attributes: 'adaptive="false"', modalFeedback: modal }).feedbackType).toBe("nonadaptive");
   });
 
-  it("[Q10] has a solution when every declared response has a correct response, and none without a declared response or with a missing one", () => {
+  it("has a solution when every declared response has a correct response, and none without a declared response or with a missing one", () => {
     expect(derive({ declarations: response("A", true) + response("B", true) }).solutionAvailable).toBe(true);
     expect(derive({ declarations: response("A", true) + response("B") }).solutionAvailable).toBe(false);
     expect(derive({ declarations: response("A") }).solutionAvailable).toBe(false);
     expect(derive().solutionAvailable).toBe(false);
   });
 
-  it("[Q2][Q10] has a solution that template processing sets, and is an item template when it has template processing", () => {
+  it("has a solution that template processing sets, and is an item template when it has template processing", () => {
     const declarations = `${response("A")}<qti-template-declaration identifier="N" cardinality="single" base-type="identifier"/>`;
     const template = (rule: string): string => `<qti-template-processing>${rule}</qti-template-processing>`;
     const setCorrect =
@@ -836,7 +836,7 @@ describe("deriveQtiMetadata", () => {
     expect(derive({ declarations })).toMatchObject({ itemTemplate: false, solutionAvailable: false });
   });
 
-  it("[Q11][Q17] has the scoring modes of the response processing and of the outcomes scored outside, in the order of the vocabulary", () => {
+  it("has the scoring modes of the response processing and of the outcomes scored outside, in the order of the vocabulary", () => {
     const outcome = (scored: string): string =>
       `<qti-outcome-declaration identifier="O${scored}" cardinality="single" base-type="float" external-scored="${scored}"/>`;
     expect(derive().scoringModes).toEqual([]);
@@ -849,7 +849,7 @@ describe("deriveQtiMetadata", () => {
     ).toEqual(["human", "externalmachine", "responseprocessing"]);
   });
 
-  it("[Q6][Q7][Q8] gives the type identifier of the first portable custom interaction, and no interaction kind", () => {
+  it("gives the type identifier of the first portable custom interaction, and no interaction kind", () => {
     const pci = (identifier: string): string =>
       `<qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="${identifier}" module="m"><qti-interaction-markup/></qti-portable-custom-interaction>`;
     expect(derive({ body: pci("urn:pci:shading") + pci("urn:pci:other") }).portableCustomInteractionContext).toEqual({
@@ -858,7 +858,7 @@ describe("deriveQtiMetadata", () => {
     expect(derive({ body: choice }).portableCustomInteractionContext).toBeUndefined();
   });
 
-  it("[Q12][Q13][Q14] takes the tool name and version of the item, when they fit 256 characters, and has no vendor", () => {
+  it("takes the tool name and version of the item, when they fit 256 characters, and has no vendor", () => {
     expect(derive({ attributes: 'tool-name="Authoring" tool-version="2.1"' })).toMatchObject({
       toolName: "Authoring",
       toolVersion: "2.1",
@@ -871,7 +871,7 @@ describe("deriveQtiMetadata", () => {
     expect(derive()).not.toHaveProperty("toolVendor");
   });
 
-  it("[Q1][Q2][Q3][Q4][Q5][Q6][Q9][Q10][Q11][Q12][Q13] derives metadata that writeQtiMetadata writes and readQtiMetadata reads back", () => {
+  it("derives metadata that writeQtiMetadata writes and readQtiMetadata reads back", () => {
     const metadata = derive({
       attributes: 'tool-name="T"',
       declarations: response("R", true),

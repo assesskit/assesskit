@@ -66,7 +66,7 @@ async function openRoot() {
 }
 
 describe("catalogs", () => {
-  it("[T17][T25] keeps data-catalog-idref on the element and draws no card until the candidate asks for one", async () => {
+  it("keeps data-catalog-idref on the element and draws no card until the candidate asks for one", async () => {
     const { root } = await openRoot();
     const element = root.root.querySelector("p");
     expect(element?.getAttribute("data-catalog-idref")).toBe("photosynthesis");
@@ -74,7 +74,7 @@ describe("catalogs", () => {
     expect(root.root.textContent).toBe("Photosynthesis happens in leaves.");
   });
 
-  it("[T17][T25] renders the HTML content of the card for a support, as content", async () => {
+  it("renders the HTML content of the card for a support, as content", async () => {
     const { root } = await openRoot();
     const card =
       root.root.querySelector("p") && root.root.host.isConnected
@@ -87,7 +87,7 @@ describe("catalogs", () => {
     expect(holder.querySelector("em")?.textContent).toBe("process");
   });
 
-  it("[T17][T4] draws a card at the scale of the media that the root has now", async () => {
+  it("draws a card at the scale of the media that the root has now", async () => {
     const { root } = await openRoot();
     const widths = (): (string | null | undefined)[] =>
       ["glossary-on-screen"].map(() => {
@@ -101,7 +101,7 @@ describe("catalogs", () => {
     expect(widths()).toEqual(["200"]);
   });
 
-  it("[T17][T25] chooses the entry by language as the runtime does: the language itself, its primary language, then the default", async () => {
+  it("chooses the entry by language as the runtime does: the language itself, its primary language, then the default", async () => {
     const { root } = await openRoot();
     const text = (language: string | undefined): string | undefined => {
       const card = root.card("photosynthesis", "glossary-on-screen", language);
@@ -116,7 +116,7 @@ describe("catalogs", () => {
     expect(text(undefined)).toBe("The process by which plants make food.");
   });
 
-  it("[T14][SC 3.1.2] marks the language of a card that has one, so that a screen reader speaks it in that language", async () => {
+  it("marks the language of a card that has one, so that a screen reader speaks it in that language", async () => {
     const { root } = await openRoot();
     const holder = document.createElement("div");
     const card = root.card("photosynthesis", "glossary-on-screen", "fr");
@@ -124,7 +124,7 @@ describe("catalogs", () => {
     expect(holder.querySelector("qti-html-content")?.getAttribute("lang")).toBe("fr");
   });
 
-  it("[T25] embeds the files of a card by their media type through assets: a video of sign language, an image of braille", async () => {
+  it("embeds the files of a card by their media type through assets: a video of sign language, an image of braille", async () => {
     const { root } = await openRoot();
     const holder = document.createElement("div");
     const sign = root.card("photosynthesis", "sign-language");
@@ -137,7 +137,7 @@ describe("catalogs", () => {
     expect(holder.querySelector("img")?.getAttribute("src")).toBe(`${ITEM_DIRECTORY}images/braille.png`);
   });
 
-  it("[T25] applies the rules of the renderer to a card: a link to an origin that is not named has no href", async () => {
+  it("applies the rules of the renderer to a card: a link to an origin that is not named has no href", async () => {
     const { root } = await openRoot();
     const holder = document.createElement("div");
     const card = root.card("photosynthesis", "long-description");
@@ -146,7 +146,7 @@ describe("catalogs", () => {
     expect(holder.textContent).toBe("A long description with a link.");
   });
 
-  it("[T17] gives nothing for a catalog that does not exist, a support that the catalog has no card for, or a language with no entry", async () => {
+  it("gives nothing for a catalog that does not exist, a support that the catalog has no card for, or a language with no entry", async () => {
     const { root } = await openRoot();
     expect(root.card("unknown", "glossary-on-screen")).toBeUndefined();
     expect(root.card("photosynthesis", "tactile")).toBeUndefined();
@@ -154,7 +154,7 @@ describe("catalogs", () => {
     expect(root.card("empty-support", "spoken")).toBeInstanceOf(DocumentFragment);
   });
 
-  it("[T17] has no cards before the content is shown, and none after the root is destroyed and shown new content", async () => {
+  it("has no cards before the content is shown, and none after the root is destroyed and shown new content", async () => {
     const host = document.createElement("div");
     document.body.append(host);
     hosts.push(host);
@@ -169,7 +169,7 @@ describe("catalogs", () => {
     expect(root.card("photosynthesis", "glossary-on-screen")).toBeUndefined();
   });
 
-  it("[T25][SC 1.1.1][SC 1.3.1] passes axe with the cards in the page", async () => {
+  it("passes axe with the cards in the page", async () => {
     const { host, root } = await openRoot();
     for (const support of ["glossary-on-screen", "braille", "long-description"] as const) {
       const card = root.card("photosynthesis", support);

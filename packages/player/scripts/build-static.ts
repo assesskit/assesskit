@@ -6,7 +6,7 @@ import { build } from "esbuild";
 const FRAME_SOURCE = resolve(import.meta.dirname, "../src/player/pci/frame");
 const WORKLET_SOURCE = resolve(import.meta.dirname, "../src/player/recording/worklet/recorder-worklet.ts");
 
-/** The browsers of docs/baseline.md as esbuild targets. */
+/** The browsers of docs/player/baseline.md as esbuild targets. */
 const TARGETS = ["chrome111", "firefox115", "safari16.4"];
 
 /**

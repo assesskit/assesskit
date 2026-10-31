@@ -553,7 +553,7 @@ function awaiting<T>(resolver: (href: string, base: string) => T): (href: string
 }
 
 describe("createEngine", () => {
-  it("[E26] refuses content that the static checks find an error in, and lists the errors", () => {
+  it("refuses content that the static checks find an error in, and lists the errors", () => {
     const adaptive = counterItem({ adaptive: true });
     const simultaneous = testPart("P", section("S", refs("a")), "nonlinear", "simultaneous");
     expect(() => engineOf(simultaneous, { "a.xml": adaptive })).toThrow(
@@ -573,7 +573,7 @@ describe("createEngine", () => {
     );
   });
 
-  it("[E26] refuses a resolver that returns a promise, whichever resolver it is", () => {
+  it("refuses a resolver that returns a promise, whichever resolver it is", () => {
     const refused = (name: string): string =>
       `The resolver ${name} must return its value synchronously, found a promise.`;
     const stimulus = readAsi(
@@ -605,7 +605,7 @@ describe("createEngine", () => {
     expect(() => alone(awaiting(resolvers.stimuli))).toThrow(refused("stimuli"));
   });
 
-  it("[E12] delivers an item alone as one item of a nonlinear part, with its feedback and review shown", () => {
+  it("delivers an item alone as one item of a nonlinear part, with its feedback and review shown", () => {
     const engine = createEngine({ kind: "item", item: counterItem(), base: "item.xml" });
     const { state, events } = begun(engine);
     expect(described(events)).toEqual(["section-entered item-section@0", "presented item@0"]);
@@ -669,7 +669,7 @@ describe("createEngine", () => {
 describe("Engine.start", () => {
   const simple = testPart("P", section("S", refs("a", "b")), "linear");
 
-  it("[E1][E9] plans the session and presents its first item; a test with no item to present ends at once", () => {
+  it("plans the session and presents its first item; a test with no item to present ends at once", () => {
     const engine = engineOf(simple);
     const { state, events } = begun(engine, { at: 5 });
     expect(described(events)).toEqual(["section-entered S@5", "presented a@5"]);
@@ -683,7 +683,7 @@ describe("Engine.start", () => {
     expect(ended.state.current).toBeUndefined();
   });
 
-  it("[E3] plans from the seed as planTest does, and stores the generator after the draws of the start", () => {
+  it("plans from the seed as planTest does, and stores the generator after the draws of the start", () => {
     const shuffled = testPart(
       "P",
       section("S", `<qti-ordering shuffle="true"/>${refs("a", "b", "c", "d")}`),
@@ -705,7 +705,7 @@ describe("Engine.start", () => {
     expect(orders.size).toBeGreaterThan(1);
   });
 
-  it("[B50][T21] gives the context values to the test and to the items that declare them, and the defaults otherwise", () => {
+  it("gives the context values to the test and to the items that declare them, and the defaults otherwise", () => {
     const city =
       '<qti-context-declaration identifier="CITY" cardinality="single" base-type="string"><qti-default-value><qti-value>Bandung</qti-value></qti-default-value></qti-context-declaration>';
     const reader = itemOf(
@@ -734,7 +734,7 @@ describe("Engine.start", () => {
     );
   });
 
-  it("[E28] takes the supports of the profile, on from the start when active, and the universal ones as options", () => {
+  it("takes the supports of the profile, on from the start when active, and the universal ones as options", () => {
     const engine = engineOf(simple);
     const pnp = pnpOf(
       "<line-reader/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><spell-checker-on-screen/></prohibit-set>",
@@ -772,7 +772,7 @@ describe("Engine.apply", () => {
   const linearAbc = `${TOTAL}${testPart("P", section("S", refs("a", "b", "c")), "linear")}${outcomeProcessing(SUM_SCORES)}`;
   const nonlinearAb = `${TOTAL}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
 
-  it("[E9][W22][B26][B88] moves forward only in a linear part, submitting and closing the item it leaves", () => {
+  it("moves forward only in a linear part, submitting and closing the item it leaves", () => {
     const engine = engineOf(linearAbc);
     const { state } = begun(engine);
     const left = played(engine, state, answer("a", "B", 10), moveTo("next", 20));
@@ -811,7 +811,7 @@ describe("Engine.apply", () => {
     });
   });
 
-  it("[E9][W22][B26][B88] moves freely in a nonlinear part, suspending the item it leaves with its attempt open", () => {
+  it("moves freely in a nonlinear part, suspending the item it leaves with its attempt open", () => {
     const engine = engineOf(nonlinearAb);
     const away = played(engine, begun(engine).state, answer("a", "B", 10), moveTo(key("b"), 20));
     expect(described(away.events)).toEqual(["responses-set a@10", "moved b@20", "presented b@20"]);
@@ -830,7 +830,7 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, back.state, answer("b", "A", 50)).code).toBe("not-current");
   });
 
-  it("[E9][B28][B29] applies pre-conditions and branch rules as the candidate moves, after outcome processing", () => {
+  it("applies pre-conditions and branch rules as the candidate moves, after outcome processing", () => {
     const content = `${OUTCOMES}${testPart(
       "P",
       section("S", itemRef("a", branch("c", answered("B"))) + refs("b") + itemRef("c", pre(GO)) + refs("d")),
@@ -844,7 +844,7 @@ describe("Engine.apply", () => {
     expect(wrong.state.current).toEqual(key("b"));
   });
 
-  it("[W32][B27][B37] submits the items of a simultaneous part together at its end, then runs outcome processing once", () => {
+  it("submits the items of a simultaneous part together at its end, then runs outcome processing once", () => {
     const engine = engineOf(
       `${TOTAL}${testPart("P", section("S", refs("a", "b")), "nonlinear", "simultaneous")}${outcomeProcessing(SUM_SCORES)}`,
     );
@@ -876,7 +876,7 @@ describe("Engine.apply", () => {
     expect(testOutcome(ended.state, "TOTAL")).toEqual(float(1));
   });
 
-  it("[B27] submits the items of an adaptive section one by one in a part that submits simultaneously (CAT §2.4)", () => {
+  it("submits the items of an adaptive section one by one in a part that submits simultaneously (CAT §2.4)", () => {
     const adaptive =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
     const engine = engineOf(
@@ -907,7 +907,7 @@ describe("Engine.apply", () => {
     expect(refusalOf(engine, atB.state, on("submit", "b", 2)).code).toBe("wrong-submission-mode");
   });
 
-  it("[W32][B37] runs outcome processing after each submission in an individual part, from the outcomes' defaults", () => {
+  it("runs outcome processing after each submission in an individual part, from the outcomes' defaults", () => {
     const count = setOutcome(
       "COUNT",
       `<qti-sum>${variable("COUNT")}<qti-base-value base-type="integer">1</qti-base-value></qti-sum>`,
@@ -923,7 +923,7 @@ describe("Engine.apply", () => {
     expect(described(second.events).filter((event) => event.startsWith("outcome"))).toEqual(["outcome-processed T@3"]);
   });
 
-  it("[B38][G9][B96] reads ITEM.VAR from the instance submitted last, ITEM.n.VAR from the instance n, and never a draft", () => {
+  it("reads ITEM.VAR from the instance submitted last, ITEM.n.VAR from the instance n, and never a draft", () => {
     const read = outcomeProcessing(
       setOutcome("ANSWER", variable("q.RESPONSE")),
       setOutcome("FIRST", variable("q.1.RESPONSE")),
@@ -952,7 +952,7 @@ describe("Engine.apply", () => {
     expect(values(first.state)).toEqual([identifier("A"), identifier("A"), identifier("C")]);
   });
 
-  it("[B39][B40] weighs and renames the item variables through the item reference", () => {
+  it("weighs and renames the item variables through the item reference", () => {
     const ref = itemRef(
       "a",
       '<qti-variable-mapping source-identifier="SCORE" target-identifier="POINTS"/><qti-weight identifier="W" value="2"/>',
@@ -980,7 +980,7 @@ describe("Engine.apply", () => {
     ]);
   });
 
-  it("[B41] evaluates the template defaults of an item reference when the item is first presented", () => {
+  it("evaluates the template defaults of an item reference when the item is first presented", () => {
     const ref = itemRef(
       "b",
       `<qti-template-default template-identifier="T">${variable("LEVEL")}</qti-template-default>`,
@@ -1001,7 +1001,7 @@ describe("Engine.apply", () => {
     expect(templates(played(engine, wrong.state, moveTo("next", 3)).state, "c")).toEqual([integer(7), integer(8)]);
   });
 
-  it("[T22][G23] keeps the durations of the test, its parts and sections, without suspended time", () => {
+  it("keeps the durations of the test, its parts and sections, without suspended time", () => {
     const durations = ["TD", "PD", "S1D", "S2D"];
     const engine = engineOf(
       `${durations.map((name) => outcomeDeclaration(name, "duration")).join("")}${testPart(
@@ -1025,7 +1025,7 @@ describe("Engine.apply", () => {
     expect(response(sessionOf(ended.state, "b"), "duration")).toEqual(single("duration", 3));
   });
 
-  it("[B88] ends an attempt only on an action of the candidate or the end of the test part", () => {
+  it("ends an attempt only on an action of the candidate or the end of the test part", () => {
     const engine = engineOf(nonlinearAb);
     const away = played(engine, begun(engine).state, answer("a", "B", 10), moveTo(key("b"), 20));
     expect(away.events.some((event) => event.type === "attempt-ended")).toBe(false);
@@ -1042,7 +1042,7 @@ describe("Engine.apply", () => {
     expect(testOutcome(ended.state, "TOTAL")).toEqual(float(1));
   });
 
-  it("[E4] refuses with a code, a message and a source, and returns no state", () => {
+  it("refuses with a code, a message and a source, and returns no state", () => {
     const engine = engineOf(nonlinearAb);
     const { state } = begun(engine);
     const before = serializeState(state);
@@ -1066,7 +1066,7 @@ describe("Engine.apply", () => {
     expect(serializeState(state)).toBe(before);
   });
 
-  it("[E5][G27] refuses an action stamped before the latest step, and accepts one at the same time", () => {
+  it("refuses an action stamped before the latest step, and accepts one at the same time", () => {
     const engine = engineOf(nonlinearAb);
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5));
     expect(refusalOf(engine, state, answer("a", "C", 4))).toEqual({
@@ -1081,7 +1081,7 @@ describe("Engine.apply", () => {
   const timedEngine = (parts: string, testLimits = ""): Engine =>
     engineOf(`${TOTAL}${testLimits}${parts}${outcomeProcessing(SUM_SCORES)}`);
 
-  it("[E7][G22] closes an item at its maximum time with the drafts received before it, and moves on (D9)", () => {
+  it("closes an item at its maximum time with the drafts received before it, and moves on (D9)", () => {
     const engine = timedEngine(
       testPart("P", section("S", itemRef("a", limits('max-time="10"')) + refs("b")), "linear"),
     );
@@ -1108,7 +1108,7 @@ describe("Engine.apply", () => {
     expect(played(engine, state, { type: "time", at: 9_999 }).events).toEqual([]);
   });
 
-  it("[E7][G22] closes a section, a test part and the test at their maximum times, and goes on after them", () => {
+  it("closes a section, a test part and the test at their maximum times, and goes on after them", () => {
     const sectionOut = timedEngine(
       testPart("P", section("S1", limits('max-time="10"') + refs("a", "b")) + section("S2", refs("c")), "linear"),
     );
@@ -1147,7 +1147,7 @@ describe("Engine.apply", () => {
     expect(refusalOf(testOut, ended.state, answer("a", "B", 12_000)).code).toBe("ended");
   });
 
-  it("[E7] leaves a scope open after a maximum time that allows late submission, and marks later submissions (D9)", () => {
+  it("leaves a scope open after a maximum time that allows late submission, and marks later submissions (D9)", () => {
     const engine = timedEngine(
       testPart(
         "P",
@@ -1167,7 +1167,7 @@ describe("Engine.apply", () => {
     expect(testOutcome(late.state, "TOTAL")).toEqual(float(1));
   });
 
-  it("[B35] refuses to leave an item, a section, a part or the test before its minimum time", () => {
+  it("refuses to leave an item, a section, a part or the test before its minimum time", () => {
     const engine = timedEngine(
       testPart(
         "P",
@@ -1199,7 +1199,7 @@ describe("Engine.apply", () => {
     expect(played(free, begun(free).state, moveTo("next", 1_000)).state.current).toEqual(key("b"));
   });
 
-  it("[E8][G23] suspends the whole session: its item, its time and every action but resume", () => {
+  it("suspends the whole session: its item, its time and every action but resume", () => {
     const engine = engineOf(nonlinearAb);
     const paused = played(engine, begun(engine).state, answer("a", "B", 1_000), { type: "suspend", at: 2_000 });
     expect(described(paused.events)).toEqual(["responses-set a@1000", "suspended@2000"]);
@@ -1222,7 +1222,7 @@ describe("Engine.apply", () => {
     expect(response(sessionOf(submitted.state, "a"), "duration")).toEqual(single("duration", 3));
   });
 
-  it("[E28] turns a support that is an option on and off, and records the supports on while an item is presented", () => {
+  it("turns a support that is an option on and off, and records the supports on while an item is presented", () => {
     const engine = engineOf(nonlinearAb);
     const pnp = pnpOf(
       "<line-reader/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><spell-checker-on-screen/></prohibit-set>",
@@ -1262,7 +1262,7 @@ describe("Engine.apply", () => {
     );
   });
 
-  it("[B100] presents the variant that avoids the candidate's hazards and is in the candidate's language", () => {
+  it("presents the variant that avoids the candidate's hazards and is in the candidate's language", () => {
     const variants = withVariants(
       ["flashing"],
       [
@@ -1298,7 +1298,7 @@ describe("Engine.apply", () => {
     ]);
   });
 
-  it("[E26] turns a failure of outcome processing, of a rule or of a template default into data", () => {
+  it("turns a failure of outcome processing, of a rule or of a template default into data", () => {
     const small = { limits: { maxContainerSize: 1 } };
     const summed = engineOf(nonlinearAb, {}, small);
     const failed = played(summed, begun(summed).state, answer("a", "B", 1), on("submit", "a", 2));
@@ -1340,7 +1340,7 @@ describe("Engine.apply", () => {
     expect(sessionOf(state, "a").variables.templates.get("T")).toEqual(integer(7));
   });
 
-  it("[E23] reports every type of event of a test session, with its time and its item or scope", () => {
+  it("reports every type of event of a test session, with its time and its item or scope", () => {
     const seen = new Set<string>();
     const note = (events: readonly DeliveryEvent[]): void => {
       for (const event of events) {
@@ -1450,7 +1450,7 @@ describe("Engine.apply", () => {
 });
 
 describe("Engine.deadlines", () => {
-  it("[E6] gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
+  it("gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(
       "P",
       section("S", itemRef("a", '<qti-time-limits max-time="20"/>') + refs("b")),
@@ -1566,7 +1566,7 @@ function leakyEngine(head = CONTROL): Engine {
 }
 
 describe("Engine.view", () => {
-  it("[E19] names the test and the test part, and maps a nonlinear part with every item and the reach of a move", () => {
+  it("names the test and the test part, and maps a nonlinear part with every item and the reach of a move", () => {
     const engine = engineOf(
       testPart(
         "P",
@@ -1601,7 +1601,7 @@ describe("Engine.view", () => {
     ]);
   });
 
-  it("[E19][B26] maps a linear part with the items presented so far, none of them reachable", () => {
+  it("maps a linear part with the items presented so far, none of them reachable", () => {
     const engine = engineOf(testPart("P", section("S", refs("a", "b", "c")), "linear"));
     const { state } = begun(engine);
     const entries = (view: CandidateView): string[] =>
@@ -1613,7 +1613,7 @@ describe("Engine.view", () => {
     expect(entries(engine.view(next.state, 2))).toEqual(["a closed false false", "b interacting true false"]);
   });
 
-  it("[E19] shows the item after resolution: printed variables, feedback, template content, hidden choices and the order of the choices", () => {
+  it("shows the item after resolution: printed variables, feedback, template content, hidden choices and the order of the choices", () => {
     const engine = leakyEngine();
     const { state } = begun(engine, { seed: 3 });
     const item = engine.view(state, 0).current;
@@ -1658,7 +1658,7 @@ describe("Engine.view", () => {
     expect([item.numAttempts, item.attemptsLeft, item.modalFeedback, item.status]).toEqual([1, 1, [], "interacting"]);
   });
 
-  it("[E19][E20] shows the feedback and the modal feedback only once the outcomes select them, and the submitted responses", () => {
+  it("shows the feedback and the modal feedback only once the outcomes select them, and the submitted responses", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     const wrong = played(engine, state, answer("a", "A", 1), on("submit", "a", 2));
@@ -1673,7 +1673,7 @@ describe("Engine.view", () => {
     expect(leaksIn(engine.view(right.state, 2))).toEqual([]);
   });
 
-  it("[E19] shows the drafts while the attempt is open, and the stored states of portable custom interactions", () => {
+  it("shows the drafts while the attempt is open, and the stored states of portable custom interactions", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
@@ -1701,7 +1701,7 @@ describe("Engine.view", () => {
     expect(after?.pci.get("RESPONSE")?.state).toBe('{"strokes":[1,2]}');
   });
 
-  it("[E19][F-m25] gives the rubric of the test, the test part and the sections top down for the candidate, and the test feedback", () => {
+  it("gives the rubric of the test, the test part and the sections top down for the candidate, and the test feedback", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     const view = engine.view(state, 0);
@@ -1729,7 +1729,7 @@ describe("Engine.view", () => {
     expect(leaksIn(last)).toEqual([]);
   });
 
-  it("[E19][E21] shows the correct responses in the solution state and nowhere else, and only when the control shows the solution", () => {
+  it("shows the correct responses in the solution state and nowhere else, and only when the control shows the solution", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     const closed = played(engine, state, answer("a", "A", 1), on("submit", "a", 2));
@@ -1755,7 +1755,7 @@ describe("Engine.view", () => {
     );
   });
 
-  it("[E19][E7] shows the timers, and a maximum time that passed as applied, as a time action would apply it", () => {
+  it("shows the timers, and a maximum time that passed as applied, as a time action would apply it", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(
       "P",
       section("S", itemRef("a", '<qti-time-limits max-time="20"/>') + refs("b")),
@@ -1787,7 +1787,7 @@ describe("Engine.view", () => {
     expect([ended.status, ended.current, ended.actions]).toEqual(["ended", undefined, []]);
   });
 
-  it("[E19][E7] marks a scope late when its maximum time passed and late submission is allowed", () => {
+  it("marks a scope late when its maximum time passed and late submission is allowed", () => {
     const engine = engineOf(
       testPart(
         "P",
@@ -1805,7 +1805,7 @@ describe("Engine.view", () => {
     expect(late.actions).toContain("submit");
   });
 
-  it("[E19][E8] shows a suspended session with no content and the action resume only", () => {
+  it("shows a suspended session with no content and the action resume only", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     const paused = played(engine, state, { type: "suspend", at: 5 });
@@ -1825,7 +1825,7 @@ describe("Engine.view", () => {
     );
   });
 
-  it("[E19] lists the actions the state allows, which Engine.apply refuses when they are left out", () => {
+  it("lists the actions the state allows, which Engine.apply refuses when they are left out", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     expect(engine.view(state, 0).actions).toEqual([
@@ -1858,7 +1858,7 @@ describe("Engine.view", () => {
     ]);
   });
 
-  it("[E19][R2] lists the supports with their state and settings, and the settings of a prohibited one stay out", () => {
+  it("lists the supports with their state and settings, and the settings of a prohibited one stay out", () => {
     const engine = leakyEngine();
     const pnp = pnpOf(
       '<line-reader/><magnification><all-content zoom-amount="2"/></magnification><braille/><activate-as-option-set><dictionary-on-screen/></activate-as-option-set><activate-at-initialization-set><line-reader/></activate-at-initialization-set><prohibit-set><braille/></prohibit-set>',
@@ -1885,7 +1885,7 @@ describe("Engine.view", () => {
     expect(engine.view(state, 0).actions).toContain("support");
   });
 
-  it("[E19][R4][R5] shows the variant presented, the hazards with the flag of those avoided, and the link to a tool", () => {
+  it("shows the variant presented, the hazards with the flag of those avoided, and the link to a tool", () => {
     const resolved = withVariants(["flashing", "sound"], [{ resource: "v", drd: drd([], ["en"]) }]);
     const link: LtiLink = {
       title: "Lab",
@@ -1936,7 +1936,7 @@ describe("Engine.view", () => {
     expect([tool?.title, tool?.body, tool?.interactions, tool?.responses]).toEqual(["Lab", [], [], new Map()]);
   });
 
-  it("[E19][B62] shows the stimuli of the item, and the stylesheets of both as package paths", () => {
+  it("shows the stimuli of the item, and the stylesheets of both as package paths", () => {
     const stimulus = readAsi(
       `<qti-assessment-stimulus xmlns="${ASI_NAMESPACE}" identifier="passage" title="Passage"><qti-stylesheet href="s.css" type="text/css"/><qti-stimulus-body><p>Read <img src="pic.png" alt="a picture"/></p></qti-stimulus-body></qti-assessment-stimulus>`,
     );
@@ -1971,7 +1971,7 @@ describe("Engine.view", () => {
     expect(textOf(view?.stimuli[0]?.body)).toContain("pic.png");
   });
 
-  it("[E19][E12] delivers a standalone item, with the resolver of its stimuli when the host gives one", () => {
+  it("delivers a standalone item, with the resolver of its stimuli when the host gives one", () => {
     const engine = createEngine({ kind: "item", item: leakyItem(), base: "item.xml" });
     const { state } = begun(engine);
     const view = engine.view(state, 0);
@@ -1983,7 +1983,7 @@ describe("Engine.view", () => {
     expect(leaksIn(view)).toEqual([]);
   });
 
-  it("[E20] holds the view to the properties of its form: nothing of the item model but what the view names", () => {
+  it("holds the view to the properties of its form: nothing of the item model but what the view names", () => {
     const engine = leakyEngine();
     const { state } = begun(engine);
     const view = engine.view(state, 0);
@@ -2018,7 +2018,7 @@ describe("Engine.view", () => {
     }
   });
 
-  it("[E20] gives the same view from a state read back from its JSON form, also on another device", () => {
+  it("gives the same view from a state read back from its JSON form, also on another device", () => {
     const engine = leakyEngine();
     const { state } = begun(engine, { seed: 9 });
     const set = played(engine, state, {
@@ -2043,7 +2043,7 @@ describe("Engine.view", () => {
 describe("applyItemAction", () => {
   const DefaultA = "<qti-default-value><qti-value>A</qti-value></qti-default-value>";
 
-  it("[B96][B3] keeps the drafts apart from the submitted responses until the attempt ends", () => {
+  it("keeps the drafts apart from the submitted responses until the attempt ends", () => {
     const context = contextOf(counterItem({ defaults: DefaultA }));
     const session = presented(context);
     expect(attempts(session)).toEqual(integer(1));
@@ -2057,7 +2057,7 @@ describe("applyItemAction", () => {
     expect(attempts(submitted)).toEqual(integer(1));
   });
 
-  it("[B8][B31] closes a non-adaptive item after one attempt when no control sets max-attempts", () => {
+  it("closes a non-adaptive item after one attempt when no control sets max-attempts", () => {
     const context = contextOf(counterItem());
     const step = accepted(
       act(acts(presented(context), context, respond("RESPONSE", identifier("A"))), context, SUBMIT),
@@ -2076,7 +2076,7 @@ describe("applyItemAction", () => {
     expect(refused(act(step.session, context, NEXT)).code).toBe("attempts-exhausted");
   });
 
-  it("[B8][B31] resets the outcomes of a non-adaptive item before each response processing and keeps the last", () => {
+  it("resets the outcomes of a non-adaptive item before each response processing and keeps the last", () => {
     const context = contextOf(counterItem(), { maxAttempts: 2 });
     const first = acts(presented(context), context, respond("RESPONSE", identifier("B")), SUBMIT);
     expect([first.status, first.attempting]).toEqual(["interacting", false]);
@@ -2087,14 +2087,14 @@ describe("applyItemAction", () => {
     expect(second.status).toBe("closed");
   });
 
-  it("[B31] allows any number of attempts when max-attempts is 0", () => {
+  it("allows any number of attempts when max-attempts is 0", () => {
     const context = contextOf(counterItem(), { maxAttempts: 0 });
     const session = acts(presented(context), context, SUBMIT, SUBMIT, SUBMIT, SUBMIT, SUBMIT);
     expect([session.status, session.countedAttempts]).toEqual(["interacting", 5]);
     expect(attempts(session)).toEqual(integer(5));
   });
 
-  it("[B9][E10] keeps the outcomes of an adaptive item between attempts, ignores max-attempts and closes it at completion", () => {
+  it("keeps the outcomes of an adaptive item between attempts, ignores max-attempts and closes it at completion", () => {
     const context = contextOf(counterItem({ adaptive: true }), { maxAttempts: 1 });
     const wrong = acts(
       presented(context),
@@ -2119,7 +2119,7 @@ describe("applyItemAction", () => {
     expect(refused(act(right, context, NEXT)).code).toBe("attempts-exhausted");
   });
 
-  it("[B3] starts the next attempt with next-attempt, or with the next action on the item, and once only", () => {
+  it("starts the next attempt with next-attempt, or with the next action on the item, and once only", () => {
     const context = contextOf(counterItem(), { maxAttempts: 0 });
     const ended = acts(presented(context), context, SUBMIT);
     expect([ended.attempting, attempts(ended)]).toEqual([false, integer(1)]);
@@ -2131,7 +2131,7 @@ describe("applyItemAction", () => {
     expect(answered.drafts.get("RESPONSE")).toEqual(identifier("B"));
   });
 
-  it("[B10][G16] sets the variable of an end attempt interaction to true when it ends the attempt and false otherwise, ignoring its default", () => {
+  it("sets the variable of an end attempt interaction to true when it ends the attempt and false otherwise, ignoring its default", () => {
     const context = contextOf(counterItem(), { maxAttempts: 0 });
     const session = presented(context);
     expect(response(session, "HINT")).toBeNull();
@@ -2145,7 +2145,7 @@ describe("applyItemAction", () => {
     expect([response(submitted, "HINT"), outcome(submitted, "FEEDBACK")]).toEqual([bool(false), identifier("none")]);
   });
 
-  it("[B10][G16] leaves an attempt that an end attempt interaction with count-attempt false ends out of max-attempts, while numAttempts counts it (D8)", () => {
+  it("leaves an attempt that an end attempt interaction with count-attempt false ends out of max-attempts, while numAttempts counts it (D8)", () => {
     const free = contextOf(counterItem({ countAttempt: false }));
     const hinted = acts(presented(free), free, HINT);
     expect([hinted.status, hinted.countedAttempts, attempts(hinted)]).toEqual(["interacting", 0, integer(1)]);
@@ -2157,14 +2157,14 @@ describe("applyItemAction", () => {
     }
   });
 
-  it("[B10] refuses an end attempt that names no end attempt interaction", () => {
+  it("refuses an end attempt that names no end attempt interaction", () => {
     const context = contextOf(counterItem());
     expect(
       refused(act(presented(context), context, { type: "end-attempt", item: KEY, interaction: "RESPONSE" })),
     ).toMatchObject({ code: "invalid-response", source: "INFO §2.4.5" });
   });
 
-  it("[B32] refuses a submission of only NULL or default responses, and a skip, when skipping is not allowed", () => {
+  it("refuses a submission of only NULL or default responses, and a skip, when skipping is not allowed", () => {
     const context = contextOf(counterItem({ defaults: DefaultA }), { allowSkipping: false });
     const session = presented(context);
     expect(refused(act(session, context, SUBMIT))).toMatchObject({
@@ -2178,7 +2178,7 @@ describe("applyItemAction", () => {
     expect(acts(session, context, HINT).status).toBe("closed");
   });
 
-  it("[B32] never blocks an item without response variables, and submits NULL responses for a skip", () => {
+  it("never blocks an item without response variables, and submits NULL responses for a skip", () => {
     const reading = itemOf('time-dependent="false"', "<qti-item-body><p>Read this.</p></qti-item-body>");
     const strict = contextOf(reading, { allowSkipping: false });
     expect(acts(presented(strict), strict, SUBMIT).status).toBe("closed");
@@ -2189,7 +2189,7 @@ describe("applyItemAction", () => {
     expect([response(step.session, "RESPONSE"), outcome(step.session, "SCORE")]).toEqual([null, float(0)]);
   });
 
-  it("[B33] refuses a submission with an invalid response of a visible interaction under validate-responses, but not a skip", () => {
+  it("refuses a submission with an invalid response of a visible interaction under validate-responses, but not a skip", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
@@ -2214,7 +2214,7 @@ describe("applyItemAction", () => {
     expect(acts(session, contextOf(item), SUBMIT).status).toBe("closed");
   });
 
-  it("[B34] lets review, the solution and comments follow the item session control", () => {
+  it("lets review, the solution and comments follow the item session control", () => {
     const item = counterItem();
     const review: ItemAction = { type: "review", item: KEY };
     const solution: ItemAction = { type: "solution", item: KEY };
@@ -2242,7 +2242,7 @@ describe("applyItemAction", () => {
     expect(acts(acts(reviewed, open2, solution), open2, review).status).toBe("review");
   });
 
-  it("[B1][E4] refuses actions on an item not presented or suspended, of another instance, or earlier than the latest change", () => {
+  it("refuses actions on an item not presented or suspended, of another instance, or earlier than the latest change", () => {
     const context = contextOf(counterItem());
     const started = accepted(startItemSession(KEY, 0, context)).session;
     expect(refused(act(started, context, SUBMIT))).toMatchObject({ code: "not-current", source: "INFO §2.2.1" });
@@ -2261,7 +2261,7 @@ describe("applyItemAction", () => {
     });
   });
 
-  it("[E4] refuses a variable the candidate does not set, a value of another type, and an integer beyond the safe integers (D3)", () => {
+  it("refuses a variable the candidate does not set, a value of another type, and an integer beyond the safe integers (D3)", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="N" cardinality="single" base-type="integer"/>
@@ -2295,7 +2295,7 @@ describe("applyItemAction", () => {
     expect(acts(session, context, respond("X", integer(2))).drafts.get("X")).toEqual(float(2));
   });
 
-  it("[E29] stores the latest state of each portable custom interaction, and refuses a state for another interaction", () => {
+  it("stores the latest state of each portable custom interaction, and refuses a state for another interaction", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="R" cardinality="single" base-type="string"/>
@@ -2353,7 +2353,7 @@ describe("applyItemAction", () => {
 });
 
 describe("itemFeedback", () => {
-  it("[B31][B16] shows the feedback between attempts, and the body as at the start of the attempt while a non-adaptive attempt is open", () => {
+  it("shows the feedback between attempts, and the body as at the start of the attempt while a non-adaptive attempt is open", () => {
     const item = counterItem();
     const context = contextOf(item, { maxAttempts: 2 });
     const hinted = acts(presented(context), context, HINT);
@@ -2367,7 +2367,7 @@ describe("itemFeedback", () => {
     ]);
   });
 
-  it("[B9] keeps the feedback of earlier attempts while an attempt of an adaptive item is open", () => {
+  it("keeps the feedback of earlier attempts while an attempt of an adaptive item is open", () => {
     const item = counterItem({ adaptive: true });
     const context = contextOf(item);
     const next = acts(presented(context), context, HINT, NEXT);
@@ -2375,7 +2375,7 @@ describe("itemFeedback", () => {
     expect([during.outcomes.get("FEEDBACK"), during.modal]).toEqual([identifier("hint"), false]);
   });
 
-  it("[B95] shows the final outcomes of an adaptive item in review without show-feedback, which decides once it closed", () => {
+  it("shows the final outcomes of an adaptive item in review without show-feedback, which decides once it closed", () => {
     const adaptive = counterItem({ adaptive: true });
     const context = contextOf(adaptive, { showSolution: true });
     const closed = acts(presented(context), context, HINT, respond("RESPONSE", identifier("B")), SUBMIT);
@@ -2398,7 +2398,7 @@ describe("itemFeedback", () => {
     expect(hidden.outcomes.get("FEEDBACK")).toEqual(identifier("none"));
   });
 
-  it("[B16] reviews a non-adaptive item with its feedback only when show-feedback is true", () => {
+  it("reviews a non-adaptive item with its feedback only when show-feedback is true", () => {
     const item = counterItem();
     const context = contextOf(item);
     const reviewed = acts(presented(context), context, HINT, { type: "review", item: KEY });
@@ -2418,7 +2418,7 @@ describe("itemFeedback", () => {
 });
 
 describe("itemResponses", () => {
-  it("[B58] shows the correct responses in the solution state, NULL where none is declared, and keeps the candidate's", () => {
+  it("shows the correct responses in the solution state, NULL where none is declared, and keeps the candidate's", () => {
     const context = contextOf(counterItem(), { showSolution: true });
     const answered = acts(presented(context), context, respond("RESPONSE", identifier("A")));
     expect(itemResponses(answered)).toBe(answered.drafts);
@@ -2446,7 +2446,7 @@ describe("itemResponses", () => {
 });
 
 describe("startItemSession", () => {
-  it("[B6][B7][T18][T19][T20] starts with NULL responses, no attempt, no time, completionStatus not_attempted and the initial outcomes", () => {
+  it("starts with NULL responses, no attempt, no time, completionStatus not_attempted and the initial outcomes", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
     );
@@ -2493,7 +2493,7 @@ describe("startItemSession", () => {
     <qti-response-processing><qti-set-outcome-value identifier="ECHO"><qti-variable identifier="N"/></qti-set-outcome-value></qti-response-processing>`,
   );
 
-  it("[B11][B59] runs template processing once at the start, so that each instance records the values of its own clone", () => {
+  it("runs template processing once at the start, so that each instance records the values of its own clone", () => {
     const oracle = createRandom(5);
     // qti-random-integer draws an index over the admissible values: 1 + floor(uniform × 1000000) (§2.5).
     const draws = [oracle.uniform(), oracle.uniform()].map((uniform) => 1 + Math.floor(uniform * 1_000_000));
@@ -2509,7 +2509,7 @@ describe("startItemSession", () => {
     ]);
   });
 
-  it("[T21] sets the context values before template processing, so that template and response processing read QTI_CONTEXT", () => {
+  it("sets the context values before template processing, so that template and response processing read QTI_CONTEXT", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-outcome-declaration identifier="WHO" cardinality="single" base-type="string"/>
@@ -2526,7 +2526,7 @@ describe("startItemSession", () => {
     expect(outcome(done, "WHO")).toEqual(single("string", "c-7"));
   });
 
-  it("[E26] keeps the template defaults and reports processing-failed when template processing fails", () => {
+  it("keeps the template defaults and reports processing-failed when template processing fails", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-template-declaration identifier="T" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
@@ -2564,7 +2564,7 @@ describe("startItemSession", () => {
 });
 
 describe("presentItem", () => {
-  it("[B1][B3][B5][B6][B55] starts the first attempt at the first presentation, with the defaults and completionStatus unknown", () => {
+  it("starts the first attempt at the first presentation, with the defaults and completionStatus unknown", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
     );
@@ -2588,7 +2588,7 @@ describe("presentItem", () => {
     expect(outcome(session, "completionStatus")).toEqual(identifier("unknown"));
   });
 
-  it("[B57][B54] draws the order of the choices at the first presentation; an order interaction with a default keeps its order", () => {
+  it("draws the order of the choices at the first presentation; an order interaction with a default keeps its order", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
@@ -2615,7 +2615,7 @@ describe("presentItem", () => {
     expect([resumed.choiceOrders, random.left()]).toEqual([session.choiceOrders, 0]);
   });
 
-  it("[B1] resumes a suspended session without a new attempt, and leaves a presented or closed session as it is", () => {
+  it("resumes a suspended session without a new attempt, and leaves a presented or closed session as it is", () => {
     const context = contextOf(counterItem());
     const session = presented(context);
     const step = accepted(presentItem(accepted(suspendItem(session, 4)).session, 9, context));
@@ -2641,7 +2641,7 @@ describe("presentItem", () => {
 });
 
 describe("suspendItem", () => {
-  it("[B4][T19][G20] counts the time of the candidate sessions only, truncated to the millisecond", () => {
+  it("counts the time of the candidate sessions only, truncated to the millisecond", () => {
     const item = itemOf(
       'time-dependent="true"',
       `<qti-outcome-declaration identifier="ELAPSED" cardinality="single" base-type="duration"/>
@@ -2660,7 +2660,7 @@ describe("suspendItem", () => {
     ]);
   });
 
-  it("[B1] leaves a session that is not interacting as it is, and refuses a time earlier than its latest change", () => {
+  it("leaves a session that is not interacting as it is, and refuses a time earlier than its latest change", () => {
     const context = contextOf(counterItem());
     const started = accepted(startItemSession(KEY, 0, context)).session;
     expect(accepted(suspendItem(started, 1)).session).toBe(started);
@@ -2671,7 +2671,7 @@ describe("suspendItem", () => {
 });
 
 describe("closeItem", () => {
-  it("[B6][B1] closes a session that was never presented without an attempt, so its responses stay NULL", () => {
+  it("closes a session that was never presented without an attempt, so its responses stay NULL", () => {
     const context = contextOf(
       counterItem({ defaults: "<qti-default-value><qti-value>A</qti-value></qti-default-value>" }),
     );
@@ -2685,7 +2685,7 @@ describe("closeItem", () => {
     expect(resultStatus(step.session, context.item)).toBe("initial");
   });
 
-  it("[B1] ends an open attempt with the drafts when it closes, whatever attempts are left", () => {
+  it("ends an open attempt with the drafts when it closes, whatever attempts are left", () => {
     const context = contextOf(counterItem(), { maxAttempts: 0 });
     const answered = acts(presented(context), context, respond("RESPONSE", identifier("B")));
     for (const session of [answered, accepted(suspendItem(answered, 5)).session]) {
@@ -2702,7 +2702,7 @@ describe("closeItem", () => {
     }
   });
 
-  it("[B1] closes a session between attempts without processing again", () => {
+  it("closes a session between attempts without processing again", () => {
     const context = contextOf(counterItem(), { maxAttempts: 0 });
     const ended = acts(presented(context), context, SUBMIT);
     const step = accepted(closeItem(ended, 8, context));
@@ -2723,7 +2723,7 @@ describe("closeItem", () => {
 });
 
 describe("itemSessionToJson", () => {
-  it("[E29][B59] writes a session as JSON that reads back equal", () => {
+  it("writes a session as JSON that reads back equal", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="R" cardinality="multiple" base-type="pair"/>
@@ -2771,31 +2771,31 @@ describe("itemSessionToJson", () => {
     );
   });
 
-  it("[E2] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
     const written: unknown = JSON.parse(JSON.stringify(itemSessionToJson(presented(contextOf(counterItem())))));
     fuzzJson(itemSessionFromJson, [written]);
   });
 });
 
 describe("nextItem", () => {
-  it("[B26] gives the next item of the plan in a nonlinear part, ignoring pre-conditions and branch rules", () => {
+  it("gives the next item of the plan in a nonlinear part, ignoring pre-conditions and branch rules", () => {
     const structure = nonlinear(section("S", itemRef("a", branch("c", GO)) + itemRef("b", pre(NOT_GO)) + itemRef("c")));
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a", "b", "c"]);
   });
 
-  it("[B26] goes on in the next part after the last item of a part, and ends after the last part", () => {
+  it("goes on in the next part after the last item of a part, and ends after the last part", () => {
     const structure = structureOf(
       part("P1", section("S1", refs("a", "b"))) + part("P2", section("S2", refs("c")), "linear"),
     );
     expect(walk(structure, plan(structure))).toEqual(["a", "b", "c"]);
   });
 
-  it("[B26] ends the test when the plan has no item", () => {
+  it("ends the test when the plan has no item", () => {
     const structure = nonlinear(section("S", ""));
     expect(nextItem(structure, plan(structure), undefined, rules())).toBeUndefined();
   });
 
-  it("[B28] skips an item whose pre-condition is false, and presents one whose is true (RTEST-13)", () => {
+  it("skips an item whose pre-condition is false, and presents one whose is true (RTEST-13)", () => {
     // INFO §2.8.3: item160 follows a response Y to item034 and item063 a response N.
     const structure = linear(
       section(
@@ -2807,19 +2807,19 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), rules({ ANSWER: identifier("N") }))).toEqual(["item034", "item063"]);
   });
 
-  it("[B28] skips an item whose pre-condition is NULL, as it is when no response was given", () => {
+  it("skips an item whose pre-condition is NULL, as it is when no response was given", () => {
     const structure = linear(section("A", itemRef("first") + itemRef("second", pre(answered("Y")))));
     expect(walk(structure, plan(structure))).toEqual(["first"]);
   });
 
-  it("[B28] evaluates the pre-conditions of a node in order and stops at the first that is false", () => {
+  it("evaluates the pre-conditions of a node in order and stops at the first that is false", () => {
     const undeclared = '<qti-variable identifier="NOT_DECLARED"/>';
     const structure = linear(section("A", itemRef("first") + itemRef("second", pre(NOT_GO) + pre(undeclared))));
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["first"]);
     expect(() => walk(structure, plan(structure), GO_FALSE)).toThrow(ProcessingError);
   });
 
-  it("[B28] skips a section and a test part with everything in them when their pre-condition is false", () => {
+  it("skips a section and a test part with everything in them when their pre-condition is false", () => {
     // RTEST-COMPLETE: the section SA has a pre-condition.
     const structure = structureOf(
       part(
@@ -2836,7 +2836,7 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), GO_FALSE)).toEqual(["a1", "b1", "b2", "c1", "d1", "e1"]);
   });
 
-  it("[B28] passes over a node that has no item to present, also at the start of the test", () => {
+  it("passes over a node that has no item to present, also at the start of the test", () => {
     const structure = structureOf(
       part("P1", section("A", itemRef("a", pre(NOT_GO))), "linear") + part("P2", section("B", itemRef("b")), "linear"),
     );
@@ -2844,12 +2844,12 @@ describe("nextItem", () => {
     expect(nextItem(structure, testPlan, undefined, GO_TRUE)).toEqual({ ref: "b", instance: 1 });
   });
 
-  it("[B28] ignores the pre-conditions of a nonlinear part and of what it holds", () => {
+  it("ignores the pre-conditions of a nonlinear part and of what it holds", () => {
     const structure = structureOf(part("P", section("S", itemRef("a", pre(NOT_GO))), "nonlinear", pre(NOT_GO)));
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a"]);
   });
 
-  it("[B29] jumps over items to the target of the first branch rule that is true (RTEST-13)", () => {
+  it("jumps over items to the target of the first branch rule that is true (RTEST-13)", () => {
     // INFO §2.8.3.2: item347 skips item653 for the response N, and exits the section unless the response is Y.
     const rulesOfFirst =
       branch("item656", answered("N")) + branch("EXIT_SECTION", `<qti-not>${answered("Y")}</qti-not>`);
@@ -2868,7 +2868,7 @@ describe("nextItem", () => {
     expect(walk(structure, testPlan, rules({ ANSWER: identifier("X") }))).toEqual(["item347", "last"]);
   });
 
-  it("[B29] lets the first true branch rule decide, and treats a NULL one as false", () => {
+  it("lets the first true branch rule decide, and treats a NULL one as false", () => {
     const structure = linear(
       section("S", itemRef("a", branch("c", answered("Y")) + branch("d", answered("Y"))) + refs("b", "c", "d")),
     );
@@ -2876,7 +2876,7 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure))).toEqual(["a", "b", "c", "d"]);
   });
 
-  it("[B29] evaluates the branch rules of a section and of a test part when they are completed", () => {
+  it("evaluates the branch rules of a section and of a test part when they are completed", () => {
     const sections = structureOf(
       part(
         "P",
@@ -2895,7 +2895,7 @@ describe("nextItem", () => {
     expect(walk(parts, plan(parts), GO_FALSE)).toEqual(["a", "b", "c"]);
   });
 
-  it("[B29] completes a section that was entered but has nothing to present, so that its branch rules follow", () => {
+  it("completes a section that was entered but has nothing to present, so that its branch rules follow", () => {
     const adaptive =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
     const walks = (middle: string): [string[], string[]] => {
@@ -2919,7 +2919,7 @@ describe("nextItem", () => {
     ]);
   });
 
-  it("[B29] does not evaluate the branch rules of a node that was skipped", () => {
+  it("does not evaluate the branch rules of a node that was skipped", () => {
     const structure = linear(
       section("A", itemRef("a")),
       section("B", pre(NOT_GO) + branch("EXIT_TEST", GO) + itemRef("b")),
@@ -2928,7 +2928,7 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a", "c"]);
   });
 
-  it("[B29] ends the test at EXIT_TEST, and completes the test part at EXIT_TESTPART", () => {
+  it("ends the test at EXIT_TEST, and completes the test part at EXIT_TESTPART", () => {
     const exit = (target: string, head = ""): TestStructure =>
       structureOf(
         part(
@@ -2947,7 +2947,7 @@ describe("nextItem", () => {
     expect(walk(withRule, plan(withRule), GO_TRUE)).toEqual(["a", "e"]);
   });
 
-  it("[B29] lets EXIT_SECTION complete the section, so that the branch rules of the section follow", () => {
+  it("lets EXIT_SECTION complete the section, so that the branch rules of the section follow", () => {
     const structure = linear(
       section("S1", branch("S3", GO) + itemRef("a", branch("EXIT_SECTION", GO)) + itemRef("b")),
       section("S2", itemRef("c")),
@@ -2956,7 +2956,7 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a", "d"]);
   });
 
-  it("[B29] goes on after a section or part that has EXIT_SECTION or EXIT_TESTPART, which have nothing to leave", () => {
+  it("goes on after a section or part that has EXIT_SECTION or EXIT_TESTPART, which have nothing to leave", () => {
     const structure = structureOf(
       part(
         "P1",
@@ -2968,7 +2968,7 @@ describe("nextItem", () => {
     expect(walk(structure, plan(structure), GO_TRUE)).toEqual(["a", "b", "c"]);
   });
 
-  it("[B29] enters a target section or item with the pre-conditions of what it enters", () => {
+  it("enters a target section or item with the pre-conditions of what it enters", () => {
     const structure = linear(
       section("S1", itemRef("a", branch("c", GO)) + itemRef("b")),
       section("S2", pre(NOT_GO) + itemRef("c") + itemRef("d")),
@@ -2983,7 +2983,7 @@ describe("nextItem", () => {
     expect(walk(target, plan(target), GO_TRUE)).toEqual(["a", "d"]);
   });
 
-  it("[B29] does not evaluate a rule whose target is behind, inside the node, in another part, or not in the plan", () => {
+  it("does not evaluate a rule whose target is behind, inside the node, in another part, or not in the plan", () => {
     const undeclared = '<qti-variable identifier="NOT_DECLARED"/>';
     const toNowhere = branch("a", undeclared) + branch("other", undeclared) + branch("y", undeclared);
     const structure = structureOf(
@@ -3004,7 +3004,7 @@ describe("nextItem", () => {
     expect(walk(structure, planWith(structure, scripted(0.99)))).toEqual(["a", "b", "x", "inside", "last", "other"]);
   });
 
-  it("[B29] enters the sections of a target that the walk is not in, and none that it is in", () => {
+  it("enters the sections of a target that the walk is not in, and none that it is in", () => {
     let evaluations = 0;
     const counting: TestScope = {
       ...NO_SESSIONS,
@@ -3022,7 +3022,7 @@ describe("nextItem", () => {
     expect(evaluations).toBe(1);
   });
 
-  it("[B29] leads a rule to the first occurrence ahead of a target that selection repeated", () => {
+  it("leads a rule to the first occurrence ahead of a target that selection repeated", () => {
     const structure = linear(
       section("S1", itemRef("a", branch("t", GO)) + itemRef("m")),
       section("S2", `<qti-selection select="2" with-replacement="true"/>${refs("t")}`),
@@ -3030,19 +3030,19 @@ describe("nextItem", () => {
     expect(walk(structure, planWith(structure, scripted(0, 0)), GO_TRUE)).toEqual(["a", "t", "t#2"]);
   });
 
-  it("[B28][B29] raises a ProcessingError for an expression that is not a single boolean", () => {
+  it("raises a ProcessingError for an expression that is not a single boolean", () => {
     const integer = '<qti-base-value base-type="integer">1</qti-base-value>';
     const structure = linear(section("S", itemRef("a", pre(integer))));
     expect(() => walk(structure, plan(structure))).toThrow("must give a single boolean, found single integer");
   });
 
-  it("[E11] follows the instances of an item reference that selection with replacement repeated", () => {
+  it("follows the instances of an item reference that selection with replacement repeated", () => {
     const structure = nonlinear(section("S", `<qti-selection select="3" with-replacement="true"/>${refs("a")}`));
     const testPlan = planWith(structure, scripted(0, 0, 0));
     expect(walk(structure, testPlan)).toEqual(["a", "a#2", "a#3"]);
   });
 
-  it("[B26] gives an item before another only in a nonlinear part (previousItem)", () => {
+  it("gives an item before another only in a nonlinear part (previousItem)", () => {
     const structure = structureOf(
       part("P1", section("S1", refs("a", "b"))) + part("P2", section("S2", refs("c", "d")), "linear"),
     );
@@ -3053,7 +3053,7 @@ describe("nextItem", () => {
     expect(previousItem(structure, testPlan, key("d"))).toBeUndefined();
   });
 
-  it("[B26] refuses an item instance that is not in the plan, and arguments of other types", () => {
+  it("refuses an item instance that is not in the plan, and arguments of other types", () => {
     const structure = nonlinear(section("S", refs("a")));
     const testPlan = plan(structure);
     expect(() => nextItem(structure, testPlan, { ref: "b", instance: 1 }, rules())).toThrow(
@@ -3079,7 +3079,7 @@ describe("nextItem", () => {
     }
   });
 
-  it("[B26] refuses a plan that names what the structure does not have", () => {
+  it("refuses a plan that names what the structure does not have", () => {
     const structure = linear(section("S", refs("a")));
     const other = linear(section("T", refs("b")));
     expect(() => nextItem(structure, plan(other), undefined, rules())).toThrow(
@@ -3089,7 +3089,7 @@ describe("nextItem", () => {
 });
 
 describe("planTest", () => {
-  it("[B23] keeps the test parts and the sections of a part in document order, with their items", () => {
+  it("keeps the test parts and the sections of a part in document order, with their items", () => {
     const structure = structureOf(
       part("P1", section("S", refs("a", "b")) + section("T", refs("c"))) +
         part("P2", section("U", refs("d")), "linear"),
@@ -3097,7 +3097,7 @@ describe("planTest", () => {
     expect(outlineOf(plan(structure, 7))).toBe("P1{S[a b] T[c]} P2{U[d]}");
   });
 
-  it("[B23] keeps the order of the children without ordering and with shuffle false, and draws nothing", () => {
+  it("keeps the order of the children without ordering and with shuffle false, and draws nothing", () => {
     const withoutOrdering = nonlinear(section("S", refs("a", "b", "c")));
     const withoutShuffle = nonlinear(section("S", `<qti-ordering shuffle="false"/>${refs("a", "b", "c")}`));
     for (const structure of [withoutOrdering, withoutShuffle]) {
@@ -3106,7 +3106,7 @@ describe("planTest", () => {
     }
   });
 
-  it("[B23] shuffles by Fisher–Yates from the last index, with floor(uniform × n) as the draw", () => {
+  it("shuffles by Fisher–Yates from the last index, with floor(uniform × n) as the draw", () => {
     // [x, y, z]: i = 2 draws floor(0.5 × 3) = 1 and swaps the places 2 and 1, giving [x, z, y];
     // i = 1 draws floor(0.5 × 2) = 1 and swaps the place 1 with itself.
     const structure = nonlinear(section("S", `<qti-ordering shuffle="true"/>${refs("x", "y", "z")}`));
@@ -3115,7 +3115,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B23] keeps fixed children in their places and shuffles the others among theirs", () => {
+  it("keeps fixed children in their places and shuffles the others among theirs", () => {
     // [a, b (fixed), c, d]: the movable places are 0, 2 and 3. i = 2 swaps the movable places 3 and 2 (draw 1), giving
     // [a, b, d, c]; i = 1 draws 1 and swaps a place with itself.
     const structure = nonlinear(
@@ -3129,7 +3129,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B23] orders after selection, so that fixed places are those of the selected children", () => {
+  it("orders after selection, so that fixed places are those of the selected children", () => {
     // Selection of 3 of [a (fixed), b, c, d] draws three numbers that leave a, b, c; then the movable places 1 and 2
     // swap for the draw 0 (floor(0 × 2)).
     const structure = nonlinear(
@@ -3145,7 +3145,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B24] keeps an invisible section together in a shuffled parent when it is kept together (RTEST-24)", () => {
+  it("keeps an invisible section together in a shuffled parent when it is kept together (RTEST-24)", () => {
     const sectionB = section(
       "sectionB",
       '<qti-ordering shuffle="true"/>' +
@@ -3174,7 +3174,7 @@ describe("planTest", () => {
     expect(seen.size).toBeGreaterThan(60);
   });
 
-  it("[B24] mixes the children of an invisible section that is not kept together into its shuffled parent (RTEST-12)", () => {
+  it("mixes the children of an invisible section that is not kept together into its shuffled parent (RTEST-12)", () => {
     const sectionB = section(
       "sectionB",
       '<qti-selection select="2"/><qti-ordering shuffle="true"/>' +
@@ -3210,7 +3210,7 @@ describe("planTest", () => {
     ).toBe(true);
   });
 
-  it("[B24] keeps a visible section, and a fixed section, together whatever keep-together says", () => {
+  it("keeps a visible section, and a fixed section, together whatever keep-together says", () => {
     const content = (attributes: string): TestStructure =>
       nonlinear(
         section("W", `<qti-ordering shuffle="true"/>${refs("x", "y")}${section("S", refs("m", "n"), attributes)}`),
@@ -3225,7 +3225,7 @@ describe("planTest", () => {
     }
   });
 
-  it("[B24] does not mix when the parent does not shuffle", () => {
+  it("does not mix when the parent does not shuffle", () => {
     const structure = nonlinear(
       section("W", refs("x") + section("S", refs("m", "n"), 'visible="false" keep-together="false"') + refs("y")),
     );
@@ -3233,7 +3233,7 @@ describe("planTest", () => {
     expect(outlineOf(plan(structure))).toBe("P{W[x S[m n] y]}");
   });
 
-  it("[B24] mixes sections that lie in sections that are mixed in, at any depth", () => {
+  it("mixes sections that lie in sections that are mixed in, at any depth", () => {
     const mixed = 'visible="false" keep-together="false"';
     const structure = nonlinear(
       section(
@@ -3246,7 +3246,7 @@ describe("planTest", () => {
     for (let seed = 1; seed <= 30; seed++) expect(outlineOf(plan(structure, seed))).toMatch(/^P\{W\[[pqr ]+\]\}$/);
   });
 
-  it("[B24] lets a section that is mixed in select and order its own children first", () => {
+  it("lets a section that is mixed in select and order its own children first", () => {
     // S keeps one of m and n (draw 0.99 leaves m); W then shuffles [x, m, y]: i = 2 draws 0 and swaps the places 2 and 0
     // (y, m, x); i = 1 draws 1 and swaps a place with itself.
     const structure = nonlinear(
@@ -3263,7 +3263,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B22][E11] numbers the instances of a reference in the order of presentation, after ordering", () => {
+  it("numbers the instances of a reference in the order of presentation, after ordering", () => {
     // Selection of 4 with replacement from [a, b] draws a, a, b, a (a three times), then ordering draws 0, 0.99, 0.99:
     // the place 3 swaps with the place 0, giving [b, a, a, a].
     const structure = nonlinear(
@@ -3283,7 +3283,7 @@ describe("planTest", () => {
     ]);
   });
 
-  it("[B22][E11] plans a section once for each selection, each with its own draws", () => {
+  it("plans a section once for each selection, each with its own draws", () => {
     // W selects 2 times with replacement from [S]: two draws over one child. S keeps one of x and y: the first
     // occurrence draws 0.99 (x), the second 0 (y).
     const structure = nonlinear(
@@ -3298,7 +3298,7 @@ describe("planTest", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B66] gives an adaptive section no items and takes no draw, though its pool is in the structure", () => {
+  it("gives an adaptive section no items and takes no draw, though its pool is in the structure", () => {
     const adaptive =
       '<qti-adaptive-selection><qti-adaptive-engine-ref identifier="e" href="http://example.org/engine"/></qti-adaptive-selection>';
     const structure = nonlinear(section("A", adaptive + refs("a", "b")), section("B", refs("c")));
@@ -3307,7 +3307,7 @@ describe("planTest", () => {
     expect(structure.itemRef("a")?.model.href).toBe("a.xml");
   });
 
-  it("[B22] refuses a plan beyond maxPlanNodes before drawing, so that a selection cannot exhaust memory", () => {
+  it("refuses a plan beyond maxPlanNodes before drawing, so that a selection cannot exhaust memory", () => {
     const huge = nonlinear(section("S", `<qti-selection select="1000000" with-replacement="true"/>${refs("a")}`));
     const random = scripted();
     expect(() => planWith(huge, random)).toThrow(SecurityError);
@@ -3320,7 +3320,7 @@ describe("planTest", () => {
     expect(() => planTest(small, { random: createRandom(1), limits: { maxPlanNodes: 3 } })).toThrow(SecurityError);
   });
 
-  it("[B27] lists the items of a test part together, as a part with simultaneous submission submits them", () => {
+  it("lists the items of a test part together, as a part with simultaneous submission submits them", () => {
     const structure = structureOf(
       part("P1", section("S1", refs("a", "b")) + section("S2", refs("c"))) +
         part("P2", section("S3", refs("d")), "linear"),
@@ -3332,7 +3332,7 @@ describe("planTest", () => {
     expect(() => planItems(testPlan, "P3")).toThrow('The plan has no test part "P3".');
   });
 
-  it("[B22] refuses options and arguments of other types", () => {
+  it("refuses options and arguments of other types", () => {
     const structure = nonlinear(section("S", refs("a")));
     const random = createRandom(1);
     expect(() => planTest(json("null"), { random })).toThrow(DataError);
@@ -3356,7 +3356,7 @@ describe("planTest", () => {
     expect(() => planItems(plan(structure), json("1"))).toThrow("The test part must be a string, found 1.");
   });
 
-  it("[B23] refuses a random source that returns anything but a number in [0, 1)", () => {
+  it("refuses a random source that returns anything but a number in [0, 1)", () => {
     const structure = nonlinear(section("S", `<qti-ordering shuffle="true"/>${refs("a", "b")}`));
     for (const draw of [1, -0.1, Number.NaN, "0.5"]) {
       const random = { uniform: () => json<number>(JSON.stringify(draw)) };
@@ -3369,7 +3369,7 @@ describe("planTest", () => {
 });
 
 describe("resultStatus", () => {
-  it("[B2] reports initial before the first attempt, pendingSubmission during one, and final after response processing", () => {
+  it("reports initial before the first attempt, pendingSubmission during one, and final after response processing", () => {
     const item = counterItem();
     const context = contextOf(item, { maxAttempts: 2 });
     const started = accepted(startItemSession(KEY, 0, context)).session;
@@ -3382,7 +3382,7 @@ describe("resultStatus", () => {
     expect(resultStatus(accepted(suspendItem(session, 2)).session, item)).toBe("pendingSubmission");
   });
 
-  it("[B2] reports pendingExternalScoring after response processing of an item with an externally scored outcome", () => {
+  it("reports pendingExternalScoring after response processing of an item with an externally scored outcome", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
@@ -3413,7 +3413,7 @@ describe("resultStatus", () => {
     );
   }
 
-  it("[B2][E26] reports pendingResponseProcessing when response processing fails, with the outcomes it started from", () => {
+  it("reports pendingResponseProcessing when response processing fails, with the outcomes it started from", () => {
     const item = failingItem(false);
     const context: ItemSessionContext = { ...contextOf(item, { maxAttempts: 0 }), limits: { maxContainerSize: 2 } };
     const step = accepted(
@@ -3432,7 +3432,7 @@ describe("resultStatus", () => {
     expect([outcome(recovered, "STAGE"), resultStatus(recovered, item)]).toEqual([integer(1), "final"]);
   });
 
-  it("[E26] keeps the outcomes of the earlier attempt of an adaptive item when its response processing fails", () => {
+  it("keeps the outcomes of the earlier attempt of an adaptive item when its response processing fails", () => {
     const item = failingItem(true);
     const context: ItemSessionContext = { ...contextOf(item), limits: { maxContainerSize: 2 } };
     const first = acts(presented(context), context, respond("RESPONSE", identifier("Y")), SUBMIT);
@@ -3455,17 +3455,17 @@ describe("selection", () => {
   const abcd = (selection: string, ordering = ""): TestStructure =>
     nonlinear(section("S", selection + ordering + refs("a", "b", "c", "d")));
 
-  it("[B21] selects every child in document order when the section has no selection, and draws nothing", () => {
+  it("selects every child in document order when the section has no selection, and draws nothing", () => {
     const random = scripted();
     expect(outlineOf(planWith(abcd(""), random))).toBe("P{S[a b c d]}");
   });
 
-  it("[B21] draws nothing when the selection takes every child", () => {
+  it("draws nothing when the selection takes every child", () => {
     const random = scripted();
     expect(outlineOf(planWith(abcd('<qti-selection select="4"/>'), random))).toBe("P{S[a b c d]}");
   });
 
-  it("[B21][G8] takes the first places of a shuffle of the children that are not required, in document order", () => {
+  it("takes the first places of a shuffle of the children that are not required, in document order", () => {
     // Fisher–Yates over the places [0, 1, 2, 3] with the draws 0, 0, 0: i = 3 swaps 3 and 0, i = 2 swaps 2 and 0,
     // i = 1 swaps 1 and 0, giving [1, 2, 3, 0]; the first two places are b and c. With 0.99 each swap is with itself:
     // [0, 1, 2, 3], so a and b.
@@ -3474,7 +3474,7 @@ describe("selection", () => {
     expect(outlineOf(planWith(select, scripted(0.99, 0.99, 0.99)))).toBe("P{S[a b]}");
   });
 
-  it("[B21] includes every required child, and counts a section as one child (RTEST-12)", () => {
+  it("includes every required child, and counts a section as one child (RTEST-12)", () => {
     // INFO §4.2.2: section B selects 2 children, the section B1 is required, so B1 and one of the other three items.
     const structure = nonlinear(
       section(
@@ -3498,7 +3498,7 @@ describe("selection", () => {
     expect([...chosen].sort()).toEqual(["item065", "item365", "item434"]);
   });
 
-  it("[B21] selects a required item reference always, and keeps document order (RTEST-12 section A)", () => {
+  it("selects a required item reference always, and keeps document order (RTEST-12 section A)", () => {
     const structure = nonlinear(
       section(
         "sectionA",
@@ -3516,7 +3516,7 @@ describe("selection", () => {
     expect([...chosen].sort()).toEqual(["item063", "item160"]);
   });
 
-  it("[B21][G8] draws the subset uniformly among the children that are not required", () => {
+  it("draws the subset uniformly among the children that are not required", () => {
     const one = abcd('<qti-selection select="1"/>');
     const picks = tally(4000, (seed) => itemsOf(plan(one, seed)).join(), ["a", "b", "c", "d"]);
     expect(chiSquare(picks)).toBeLessThan(CHI_SQUARE_CRITICAL[3]);
@@ -3530,7 +3530,7 @@ describe("selection", () => {
     expect(chiSquare(others)).toBeLessThan(CHI_SQUARE_CRITICAL[2]);
   });
 
-  it("[B21] refuses a selection of fewer children than are required, or more than exist, or less than 0", () => {
+  it("refuses a selection of fewer children than are required, or more than exist, or less than 0", () => {
     const required = nonlinear(
       section(
         "S",
@@ -3556,7 +3556,7 @@ describe("selection", () => {
     expect(() => plan(nonlinear(section("S", '<qti-selection select="1"/>')))).toThrow(DataError);
   });
 
-  it("[B22] selects every required child once, then draws the others over all children, with replacement", () => {
+  it("selects every required child once, then draws the others over all children, with replacement", () => {
     // [a (required), b, c] with 4 selections: a once, then three draws of floor(u × 3): 0 is a, 0.5 is b, 0.99 is c.
     const structure = nonlinear(
       section(
@@ -3569,12 +3569,12 @@ describe("selection", () => {
     expect(random.left()).toBe(0);
   });
 
-  it("[B22] lets select exceed the number of children when the selection is with replacement", () => {
+  it("lets select exceed the number of children when the selection is with replacement", () => {
     const structure = nonlinear(section("S", `<qti-selection select="5" with-replacement="true"/>${refs("a", "b")}`));
     expect(outlineOf(planWith(structure, scripted(0, 0, 0, 0, 0)))).toBe("P{S[a a#2 a#3 a#4 a#5]}");
   });
 
-  it("[B22][G8] draws the remaining selections uniformly over all children, the required ones included", () => {
+  it("draws the remaining selections uniformly over all children, the required ones included", () => {
     const free = nonlinear(section("S", `<qti-selection select="1" with-replacement="true"/>${refs("a", "b", "c")}`));
     const single = tally(3000, (seed) => itemsOf(plan(free, seed)).join(), ["a", "b", "c"]);
     expect(chiSquare(single)).toBeLessThan(CHI_SQUARE_CRITICAL[2]);
@@ -3592,7 +3592,7 @@ describe("selection", () => {
     expect(chiSquare(second)).toBeLessThan(CHI_SQUARE_CRITICAL[2]);
   });
 
-  it("[B21][B22] plans identically for equal seeds, and from a restored generator state", () => {
+  it("plans identically for equal seeds, and from a restored generator state", () => {
     const structure = nonlinear(
       section("S", `<qti-selection select="3"/><qti-ordering shuffle="true"/>${refs("a", "b", "c", "d", "e")}`),
     );
@@ -3628,7 +3628,7 @@ describe("sessionControl", () => {
     ),
   );
 
-  it("[B30] lets the test part, then each section from the outermost, then the item reference override attribute by attribute", () => {
+  it("lets the test part, then each section from the outermost, then the item reference override attribute by attribute", () => {
     expect(item(nested, "a")).toEqual({
       maxAttempts: 0,
       showFeedback: true,
@@ -3649,7 +3649,7 @@ describe("sessionControl", () => {
     });
   });
 
-  it("[B30] follows the item session control of RTEST-13", () => {
+  it("follows the item session control of RTEST-13", () => {
     const structure = structureOf(
       part(
         "RTEST-13-A",
@@ -3665,7 +3665,7 @@ describe("sessionControl", () => {
     expect(item(structure, "item347")).toMatchObject({ ...common, maxAttempts: 2 });
   });
 
-  it("[B30] gives the defaults when no level sets an attribute, and no maximum number of attempts", () => {
+  it("gives the defaults when no level sets an attribute, and no maximum number of attempts", () => {
     const structure = nonlinear(section("S", refs("a")));
     const effective = item(structure, "a");
     expect(effective).toEqual({
@@ -3679,7 +3679,7 @@ describe("sessionControl", () => {
     expect("maxAttempts" in effective).toBe(false);
   });
 
-  it("[B30] passes on the control of a section that ordering mixes into its parent", () => {
+  it("passes on the control of a section that ordering mixes into its parent", () => {
     const structure = nonlinear(
       section(
         "W",
@@ -3691,13 +3691,13 @@ describe("sessionControl", () => {
     expect(item(structure, "m").allowComment).toBe(true);
   });
 
-  it("[B30] refuses what is not an item reference of a structure", () => {
+  it("refuses what is not an item reference of a structure", () => {
     expect(() => sessionControl(json("null"))).toThrow("The item reference must be an object from resolveStructure");
     expect(() => sessionControl(json(JSON.stringify({ kind: "section" })))).toThrow(
       'The item reference must be a node of kind "item-ref", found the kind "section".',
     );
   });
-  it("[E12] gives an item delivered alone its feedback and review, and applies the control given to it", () => {
+  it("gives an item delivered alone its feedback and review, and applies the control given to it", () => {
     expect(standaloneSessionControl()).toEqual(controlWith({ showFeedback: true }));
     const given = structureOf(
       part(
@@ -3715,7 +3715,7 @@ describe("sessionControl", () => {
     expect(acts(closed, context, { type: "review", item: KEY }).status).toBe("review");
   });
 
-  it("[E12] refuses a control that is not an item session control", () => {
+  it("refuses a control that is not an item session control", () => {
     expect(() => standaloneSessionControl(json("null"))).toThrow(DataError);
     expect(() => standaloneSessionControl(json('{"kind": "assessment-item"}'))).toThrow(
       'The item session control must be the model of a qti-item-session-control, found the kind "assessment-item".',
@@ -3747,11 +3747,11 @@ describe("viewToJson", () => {
     engine.view(played(engine, closed.state, { type: "end-test", at: 3 }).state, 3),
   ];
 
-  it("[E30] reads back, from the JSON text, the view in every state of a session", () => {
+  it("reads back, from the JSON text, the view in every state of a session", () => {
     for (const view of views()) expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
   });
 
-  it("[E30][R1] writes values as wire values and maps as arrays of entries, NULL as null", () => {
+  it("writes values as wire values and maps as arrays of entries, NULL as null", () => {
     const current = engine.view(closed.state, 2).current;
     const written = JSON.parse(JSON.stringify(viewToJson(engine.view(closed.state, 2)))).current;
     expect(written.responses).toEqual([
@@ -3762,7 +3762,7 @@ describe("viewToJson", () => {
     expect(current?.responses.get("TEXT")).toBeNull();
   });
 
-  it("[E30] keeps an ordered container apart from a multiple one, and the identifier __proto__ as data", () => {
+  it("keeps an ordered container apart from a multiple one, and the identifier __proto__ as data", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="__proto__" cardinality="ordered" base-type="identifier"/>
@@ -3789,7 +3789,7 @@ describe("viewToJson", () => {
     expect(read.current?.responses.get("MANY")).toEqual(container("multiple", "identifier", ["B", "A"]));
   });
 
-  it("[E30] reads back any value of a response, of any cardinality and base type", () => {
+  it("reads back any value of a response, of any cardinality and base type", () => {
     const view = engine.view(state, 0);
     const current = view.current ?? fail("No item.");
     fc.assert(
@@ -3803,7 +3803,7 @@ describe("viewToJson", () => {
     );
   });
 
-  it("[E20] writes the properties of a view and no other, and refuses a view that has another", () => {
+  it("writes the properties of a view and no other, and refuses a view that has another", () => {
     const view = engine.view(state, 0);
     expect(() => viewToJson(Object.assign({}, view, { correct: "LEAK-X" }))).toThrow(
       /^The view is invalid: unexpected property "correct"\.$/,
@@ -3820,7 +3820,7 @@ describe("viewToJson", () => {
     ).toThrow(/^The view is invalid at timers\[0\]: unexpected property "key"\.$/);
   });
 
-  it("[E30] refuses JSON that is not the form of a view", () => {
+  it("refuses JSON that is not the form of a view", () => {
     const good = JSON.parse(JSON.stringify(viewToJson(engine.view(state, 0))));
     const change = (edit: (view: Record<string, unknown>) => void): unknown => {
       const copy = JSON.parse(JSON.stringify(good));
@@ -3862,7 +3862,7 @@ describe("viewToJson", () => {
     );
   });
 
-  it("[E30] refuses content that JSON cannot carry or that nests too deep", () => {
+  it("refuses content that JSON cannot carry or that nests too deep", () => {
     const view = engine.view(state, 0);
     const node = (value: unknown): CandidateView => ({ ...view, rubric: json(JSON.stringify([{ kind: "p", value }])) });
     expect(() => viewToJson({ ...view, rubric: [{ kind: "p", value: Number.NaN } as never] })).toThrow(
@@ -3885,7 +3885,7 @@ describe("viewToJson", () => {
     expect(() => viewToJson(json('{"status":"in-progress"}'))).toThrow(/^The navigation of the view must be an array/);
   });
 
-  it("[E30] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
     fuzzJson(viewFromJson, views().map(viewToJson));
   });
 });
@@ -3925,11 +3925,11 @@ describe("parseCandidateAction", () => {
     { type: "resume" },
   ];
 
-  it("[E22][E30] reads back, from the JSON text, each action of the candidate that actionToJson wrote", () => {
+  it("reads back, from the JSON text, each action of the candidate that actionToJson wrote", () => {
     for (const action of actions) expect(parseCandidateAction(throughText(actionToJson(action)))).toEqual(action);
   });
 
-  it("[E30] writes an action as plain data: values as wire values, maps as entries, and no time", () => {
+  it("writes an action as plain data: values as wire values, maps as entries, and no time", () => {
     const [set] = actions;
     if (set === undefined) return fail("No action.");
     expect(actionToJson(set)).toEqual({
@@ -3947,7 +3947,7 @@ describe("parseCandidateAction", () => {
     });
   });
 
-  it("[E22] refuses the actions of the host, and any action with a time", () => {
+  it("refuses the actions of the host, and any action with a time", () => {
     for (const type of ["time", "supply-scores", "cat-response"]) {
       expect(() => parseCandidateAction({ type, at: 1 })).toThrow(
         `The type "${type}" is an action of the host, and a candidate does not send it; the type of an action of a candidate is "set-responses",`,
@@ -3961,7 +3961,7 @@ describe("parseCandidateAction", () => {
     );
   });
 
-  it("[E22] refuses input that is not an action, naming what is wrong", () => {
+  it("refuses input that is not an action, naming what is wrong", () => {
     const refuses = (input: string, message: string | RegExp): void => {
       expect(() => parseCandidateAction(json(input))).toThrow(message);
     };
@@ -4019,7 +4019,7 @@ describe("parseCandidateAction", () => {
     );
   });
 
-  it("[E22] refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
+  it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
     const comment = (text: string): unknown => actionToJson({ type: "comment", item, text });
     expect(DEFAULT_ACTION_LIMITS).toEqual({ maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 });
     expect(parseCandidateAction(comment("x".repeat(100)), { maxActionSize: 200 })).toMatchObject({ type: "comment" });
@@ -4053,7 +4053,7 @@ describe("parseCandidateAction", () => {
     expect(parseCandidateAction(many)).toMatchObject({ type: "set-responses" });
   });
 
-  it("[E22] counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
+  it("counts the size of nested input without recursion, so deep input is refused and never overflows the stack", () => {
     let deep: unknown = [];
     for (let level = 0; level < 200_000; level++) deep = [deep];
     expect(() => parseCandidateAction(deep)).toThrow(/^The action is invalid at type: /);
@@ -4075,7 +4075,7 @@ describe("parseCandidateAction", () => {
     );
   });
 
-  it("[E22] stamps an action of a client on the server: the time is the server's, never earlier than the session's", () => {
+  it("stamps an action of a client on the server: the time is the server's, never earlier than the session's", () => {
     const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
     const received = parseCandidateAction(throughText(actionToJson({ type: "submit", item: key("a") })));
@@ -4085,7 +4085,7 @@ describe("parseCandidateAction", () => {
     expect(step.ok && step.state.items[0]?.session.status).toBe("closed");
   });
 
-  it("[E22] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
     fuzzJson(parseCandidateAction, actions.map(actionToJson));
   });
 });
@@ -4114,7 +4114,7 @@ describe("actionToJson", () => {
 describe("stamp", () => {
   const engine = engineOf(testPart("P", section("S", refs("a", "b")), "nonlinear"));
 
-  it("[E5][G27] stamps an action with the time now, never before the latest step, so the engine never refuses its time", () => {
+  it("stamps an action with the time now, never before the latest step, so the engine never refuses its time", () => {
     const { state } = played(engine, begun(engine).state, answer("a", "B", 5_000));
     const submit = { type: "submit", item: key("a") } as const;
     expect(stamp(state, submit, 3_000)).toEqual({ ...submit, at: 5_000 });
@@ -4123,7 +4123,7 @@ describe("stamp", () => {
     expect(refusalOf(engine, state, { ...submit, at: 3_000 }).code).toBe("clock-regression");
   });
 
-  it("[E22][E5] replaces a time the action carries, and refuses what is not an action of the engine", () => {
+  it("replaces a time the action carries, and refuses what is not an action of the engine", () => {
     const { state } = begun(engine);
     const submit = Object.assign({ type: "submit", item: key("a") } as const, { at: 1 });
     expect(stamp(state, submit, 9)).toEqual({ type: "submit", item: key("a"), at: 9 });
@@ -4187,7 +4187,7 @@ describe("serializeState", () => {
     ).state;
   }
 
-  it("[E2][E28] keeps the settings of the supports, and refuses settings that do not fit their support", () => {
+  it("keeps the settings of the supports, and refuses settings that do not fit their support", () => {
     const engine = engineOf(testPart("P", section("S", refs("a")), "nonlinear"));
     const pnp = pnpOf(
       '<magnification><all-content zoom-amount="2"/></magnification><spoken><reading-type>computer-read-aloud</reading-type><speech-rate>150</speech-rate></spoken><activate-as-option-set><spoken/></activate-as-option-set>',
@@ -4209,7 +4209,7 @@ describe("serializeState", () => {
     );
   });
 
-  it("[E2][E29] writes a state as JSON that reads back equal, with its variants, PCI states, supports and clocks", () => {
+  it("writes a state as JSON that reads back equal, with its variants, PCI states, supports and clocks", () => {
     const state = rich();
     const text = serializeState(state);
     const read = deserializeState(text);
@@ -4222,7 +4222,7 @@ describe("serializeState", () => {
     expect(engine.apply(read, resume)).toEqual(engine.apply(state, resume));
   });
 
-  it("[E2] refuses text that is not a state, or a state of another version of the format", () => {
+  it("refuses text that is not a state, or a state of another version of the format", () => {
     const written = JSON.parse(serializeState(rich()));
     const text = (changes: Record<string, unknown>): string => JSON.stringify({ ...written, ...changes });
     expect(() => deserializeState("{")).toThrow(
@@ -4256,7 +4256,7 @@ describe("serializeState", () => {
     );
   });
 
-  it("[E2] reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
     const written: unknown = JSON.parse(serializeState(rich()));
     fuzzJson((json) => deserializeState(JSON.stringify(json)), [written]);
   });
@@ -4274,7 +4274,7 @@ describe("resolveStructure", () => {
     `<qti-assessment-section-ref identifier="S1" href="../sections/s1.xml"/>${section("T", refs("t1"))}`,
   );
 
-  it("[B25] replaces a section reference by the section it names, and resolves what it holds against its document", () => {
+  it("replaces a section reference by the section it names, and resolves what it holds against its document", () => {
     const calls: [string, string][] = [];
     const structure = structureOf(Referencing, Documents, "tests/t.xml", calls);
     // INFO §7.5, BIND §8.2: the href is relative to the document that holds the reference.
@@ -4290,7 +4290,7 @@ describe("resolveStructure", () => {
     expect(outlineOf(plan(structure))).toBe("P{S1[a S2[c] b] T[t1]}");
   });
 
-  it("[B25] takes the required mark and the selection from the section that the reference names", () => {
+  it("takes the required mark and the selection from the section that the reference names", () => {
     const required = section("S1", refs("a", "b"), 'visible="true" required="true"');
     const structure = structureOf(
       part(
@@ -4307,7 +4307,7 @@ describe("resolveStructure", () => {
     for (let seed = 1; seed <= 20; seed++) expect(outlineOf(plan(structure, seed))).toBe("P{W[S1[a b]]}");
   });
 
-  it("[B25] refuses a section resolver that returns a promise", () => {
+  it("refuses a section resolver that returns a promise", () => {
     const sections = new Map([["s1.xml", sectionOf(section("S1", refs("a")))]]);
     const resolvers = {
       sections: awaiting((href: string) => sections.get(href) ?? fail(`The test has no document ${href}.`)),
@@ -4318,14 +4318,14 @@ describe("resolveStructure", () => {
     );
   });
 
-  it("[B25] refuses a reference whose identifier is not that of the section it names", () => {
+  it("refuses a reference whose identifier is not that of the section it names", () => {
     const wrong = structureOf.bind(null, part("P", '<qti-assessment-section-ref identifier="X" href="s1.xml"/>'));
     expect(() => wrong({ "s1.xml": section("S1", refs("a")) })).toThrow(
       'The section reference "X" names "s1.xml", whose section has the identifier "S1"; the two must be equal.',
     );
   });
 
-  it("[B25] refuses identifiers that two test parts, sections or item references share", () => {
+  it("refuses identifiers that two test parts, sections or item references share", () => {
     expect(() => nonlinear(section("S", refs("a", "a")))).toThrow(
       'The identifier "a" names an item reference and an item reference; the identifiers of test parts, sections and item references must be unique in a test.',
     );
@@ -4342,14 +4342,14 @@ describe("resolveStructure", () => {
     );
   });
 
-  it("[B25] refuses an xi:include that is left in a section", () => {
+  it("refuses an xi:include that is left in a section", () => {
     const include = '<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="more.xml"/>';
     expect(() => nonlinear(section("S", include))).toThrow(
       'The section "S" holds an xi:include, which must be resolved before the test is planned.',
     );
   });
 
-  it("[B25] refuses a reference outside the package, and a resolver that returns no section", () => {
+  it("refuses a reference outside the package, and a resolver that returns no section", () => {
     const reference = part("P", '<qti-assessment-section-ref identifier="S1" href="/s1.xml"/>');
     expect(() => structureOf(reference, { "/s1.xml": section("S1", refs("a")) })).toThrow(
       'The reference "/s1.xml" in "test.xml" is outside the package.',
@@ -4364,7 +4364,7 @@ describe("resolveStructure", () => {
     );
   });
 
-  it("[B25] finds a part, a section and an item reference by identifier, and nothing for an identifier it does not have", () => {
+  it("finds a part, a section and an item reference by identifier, and nothing for an identifier it does not have", () => {
     const structure = nonlinear(section("S", refs("a")));
     expect(structure.part("P")?.model.navigationMode).toBe("nonlinear");
     expect(structure.section("S")?.model.title).toBe("S");
@@ -4377,7 +4377,7 @@ describe("resolveStructure", () => {
     ]).toEqual([undefined, undefined, undefined, undefined]);
   });
 
-  it("[B30] lists the nodes that enclose a node from the outermost, and finds its test part", () => {
+  it("lists the nodes that enclose a node from the outermost, and finds its test part", () => {
     const structure = structureOf(part("P", section("outer", section("inner", refs("a")))));
     const item = structure.itemRef("a") ?? fail("No a.");
     expect(ancestry(item).map((node) => (node.kind === "test" ? "test" : node.model.identifier))).toEqual([
@@ -4392,7 +4392,7 @@ describe("resolveStructure", () => {
     expect(partOf(top)).toBe(structure.part("P"));
   });
 
-  it("[B25] refuses arguments of other types", () => {
+  it("refuses arguments of other types", () => {
     const test = testOf(part("P", section("S", refs("a"))));
     expect(() => resolveStructure(json("null"), "test.xml", NO_SECTIONS)).toThrow(DataError);
     expect(() => resolveStructure(json('{"kind":"assessment-item"}'), "test.xml", NO_SECTIONS)).toThrow(
@@ -4434,7 +4434,7 @@ describe("timeLimits", () => {
     };
   }
 
-  it("[B35] gives the limits that each scope declares, in seconds, without inheriting them", () => {
+  it("gives the limits that each scope declares, in seconds, without inheriting them", () => {
     expect(everywhere(timed("linear"))).toEqual({
       test: { minTime: 600, maxTime: 3600, allowLateSubmission: false },
       part: { maxTime: 3600, allowLateSubmission: false },
@@ -4444,7 +4444,7 @@ describe("timeLimits", () => {
     });
   });
 
-  it("[B35] applies the minimum time of an item and a section only in a linear part, and that of a part and the test always", () => {
+  it("applies the minimum time of an item and a section only in a linear part, and that of a part and the test always", () => {
     expect(everywhere(timed("nonlinear"))).toEqual({
       test: { minTime: 600, maxTime: 3600, allowLateSubmission: false },
       part: { maxTime: 3600, allowLateSubmission: false },
@@ -4456,7 +4456,7 @@ describe("timeLimits", () => {
     expect(timeLimits(minimum.part("P") ?? fail("No part."))).toEqual({ minTime: 90, allowLateSubmission: false });
   });
 
-  it("[B36][G41] multiplies every maximum time by the multiplier and leaves the minimum times", () => {
+  it("multiplies every maximum time by the multiplier and leaves the minimum times", () => {
     const extra: TestingTime = { kind: "time-multiplier", multiplier: 1.5 };
     expect(everywhere(timed("linear"), extra)).toEqual({
       test: { minTime: 600, maxTime: 5400, allowLateSubmission: false },
@@ -4467,7 +4467,7 @@ describe("timeLimits", () => {
     });
   });
 
-  it("[B36][G41] adds the fixed minutes to the outermost maximum time only", () => {
+  it("adds the fixed minutes to the outermost maximum time only", () => {
     // The test has a maximum, so the part, the section and the item keep theirs: 3600 s + 30 min.
     const extra: TestingTime = { kind: "fixed-minutes", minutes: 30 };
     expect(everywhere(timed("linear"), extra)).toEqual({
@@ -4486,7 +4486,7 @@ describe("timeLimits", () => {
     });
   });
 
-  it("[B36][G41] adds the fixed minutes to each outermost maximum when the paths differ", () => {
+  it("adds the fixed minutes to each outermost maximum when the paths differ", () => {
     const structure = structureOf(
       part("P1", section("S1", limits('max-time="100"') + itemRef("a", limits('max-time="50"'))), "linear") +
         part("P2", section("S2", itemRef("b", limits('max-time="70"')) + refs("c")), "linear"),
@@ -4505,7 +4505,7 @@ describe("timeLimits", () => {
     ]);
   });
 
-  it("[B36][G41] removes every maximum time when the time is unlimited, and nothing else", () => {
+  it("removes every maximum time when the time is unlimited, and nothing else", () => {
     expect(everywhere(timed("linear"), { kind: "unlimited" })).toEqual({
       test: { minTime: 600, allowLateSubmission: false },
       part: { allowLateSubmission: false },
@@ -4515,7 +4515,7 @@ describe("timeLimits", () => {
     });
   });
 
-  it("[B36] leaves a scope without a maximum time without one, whatever the extra time", () => {
+  it("leaves a scope without a maximum time without one, whatever the extra time", () => {
     const structure = nonlinear(section("S", refs("a")));
     const item = structure.itemRef("a") ?? fail("No a.");
     for (const extra of [
@@ -4527,7 +4527,7 @@ describe("timeLimits", () => {
     }
   });
 
-  it("[B24][B36] gives a section that ordering mixes into its parent no limits and counts it no enclosing scope", () => {
+  it("gives a section that ordering mixes into its parent no limits and counts it no enclosing scope", () => {
     const structure = nonlinear(
       section(
         "W",
@@ -4545,7 +4545,7 @@ describe("timeLimits", () => {
     expect(timeLimits(item, { kind: "fixed-minutes", minutes: 1 }).maxTime).toBe(110);
   });
 
-  it("[B36] reads the extra time of a profile: a multiplier, fixed minutes or unlimited time", () => {
+  it("reads the extra time of a profile: a multiplier, fixed minutes or unlimited time", () => {
     const profile = (children: string): PersonalNeedsProfile => {
       const read = readPnp(`<access-for-all-pnp xmlns="${PNP_NAMESPACE}">${children}</access-for-all-pnp>`);
       return "supports" in read ? read : fail("The document is a bulk file.");
@@ -4580,7 +4580,7 @@ describe("timeLimits", () => {
     expect(additionalTestingTime(profile(""))).toBeUndefined();
   });
 
-  it("[B36] refuses a node and extra time of other types, and a multiplier that is not positive", () => {
+  it("refuses a node and extra time of other types, and a multiplier that is not positive", () => {
     const item = nonlinear(section("S", refs("a"))).itemRef("a") ?? fail("No a.");
     expect(() => timeLimits(json("null"))).toThrow("The node must be an object from resolveStructure, found null.");
     expect(() => timeLimits(item, json("null"))).toThrow("The extra testing time must be an object, found null.");
@@ -4725,7 +4725,7 @@ describe("properties", () => {
 
   const refsOf = (testPlan: TestPlan): string[] => planItems(testPlan).map((key) => key.ref);
 
-  it("[B21][B22] selects the number asked for, every required child, and repeats a child only with replacement", () => {
+  it("selects the number asked for, every required child, and repeats a child only with replacement", () => {
     fc.assert(
       fc.property(flat, (value) => {
         const { structure, select } = flatStructure(value, false);
@@ -4744,7 +4744,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B23] permutes the selected children and keeps the fixed ones in their places", () => {
+  it("permutes the selected children and keeps the fixed ones in their places", () => {
     fc.assert(
       fc.property(flat, (value) => {
         const before = refsOf(plan(flatStructure(value, false).structure, value.seed));
@@ -4758,7 +4758,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B23] shuffles every permutation of three children with equal probability", () => {
+  it("shuffles every permutation of three children with equal probability", () => {
     const structure = nonlinear(section("S", `<qti-ordering shuffle="true"/>${refs("a", "b", "c")}`));
     const orders = tally(3600, (seed) => itemsOf(plan(structure, seed)).join(""), [
       "abc",
@@ -4771,7 +4771,7 @@ describe("properties", () => {
     expect(chiSquare(orders)).toBeLessThan(CHI_SQUARE_CRITICAL[5]);
   });
 
-  it("[B21][B22][B23][B24][E11] numbers the instances in order of presentation, and plans no section that is mixed in", () => {
+  it("numbers the instances in order of presentation, and plans no section that is mixed in", () => {
     fc.assert(
       fc.property(sections, seeds, (shape, seed) => {
         const structure = nonlinear(render(name(shape)));
@@ -4791,7 +4791,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B21][B22] keeps the required items of the section among its children, shuffled or not", () => {
+  it("keeps the required items of the section among its children, shuffled or not", () => {
     fc.assert(
       fc.property(sections, seeds, (shape, seed) => {
         const root = name(shape);
@@ -4803,7 +4803,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E3] plans the same for the same seed, and replays exactly from a restored generator state", () => {
+  it("plans the same for the same seed, and replays exactly from a restored generator state", () => {
     fc.assert(
       fc.property(sections, seeds, (shape, seed) => {
         const structure = nonlinear(render(name(shape)));
@@ -4895,7 +4895,7 @@ describe("properties", () => {
     return { structure: linear(...xml), expected };
   }
 
-  it("[B28][B29] follows pre-conditions and branch rules exactly as the rules of a linear part say", () => {
+  it("follows pre-conditions and branch rules exactly as the rules of a linear part say", () => {
     fc.assert(
       fc.property(navigation, (shape) => {
         const { structure, expected } = navigate(shape);
@@ -4905,7 +4905,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B26][B29] never moves backward in a linear part, and always ends", () => {
+  it("never moves backward in a linear part, and always ends", () => {
     fc.assert(
       fc.property(navigation, (shape) => {
         const { structure } = navigate(shape);
@@ -4934,7 +4934,7 @@ describe("properties", () => {
     { nil: undefined },
   );
 
-  it("[B35][B36][G41] applies extra time to the maximum times only, by the arithmetic of G41", () => {
+  it("applies extra time to the maximum times only, by the arithmetic of G41", () => {
     fc.assert(
       fc.property(
         fc.tuple(scopeLimits, scopeLimits, scopeLimits, scopeLimits),
@@ -4987,7 +4987,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B30] lets the nearest level that sets an attribute decide, and the default when none does", () => {
+  it("lets the nearest level that sets an attribute decide, and the default when none does", () => {
     const level = fc.record({
       showFeedback: fc.option(fc.boolean(), { nil: undefined }),
       allowReview: fc.option(fc.boolean(), { nil: undefined }),
@@ -5116,7 +5116,7 @@ describe("properties", () => {
     return outcomes.get("ANSWER") ?? null;
   }
 
-  it("[B1][B3][B4][B8][B9][B10][B31][B96][E2] keeps the rules of attempts, outcomes, time and drafts over any sequence of actions", () => {
+  it("keeps the rules of attempts, outcomes, time and drafts over any sequence of actions", () => {
     fc.assert(
       fc.property(
         fc.boolean(),
@@ -5176,7 +5176,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B3][E3] replays a session exactly from the same seed and actions", () => {
+  it("replays a session exactly from the same seed and actions", () => {
     fc.assert(
       fc.property(fc.boolean(), sessionControls, sessionMoves, seeds, (adaptive, attributes, moves, seed) => {
         const item = counterItem({ adaptive });
@@ -5186,7 +5186,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E29] keeps any PCI state through the JSON form of the session", () => {
+  it("keeps any PCI state through the JSON form of the session", () => {
     const item = itemOf(
       'time-dependent="false"',
       `<qti-response-declaration identifier="__proto__" cardinality="single" base-type="string"/>
@@ -5352,7 +5352,7 @@ describe("properties", () => {
     state.plan.parts.find((entry) => planItems(state.plan, entry.identifier).some((each) => shown(each) === shown(at)))
       ?.identifier;
 
-  it("[E1][E2][E4][E5][E7][E8][E26][B26] keeps the rules of a test session over any actions and time, and never throws", () => {
+  it("keeps the rules of a test session over any actions and time, and never throws", () => {
     fc.assert(
       fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
         const engine = flowEngine(flow);
@@ -5398,7 +5398,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E3] replays a session exactly from the seed and the accepted actions, also through its JSON form", () => {
+  it("replays a session exactly from the seed and the accepted actions, also through its JSON form", () => {
     fc.assert(
       fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
         const engine = flowEngine(flow);
@@ -5423,7 +5423,7 @@ describe("properties", () => {
     );
   });
 
-  it("[B100] presents a variant free of the avoided hazards when there is one, in the language asked for, for the whole session", () => {
+  it("presents a variant free of the avoided hazards when there is one, in the language asked for, for the whole session", () => {
     const hazardSets = fc.subarray(["flashing", "sound"] as const);
     fc.assert(
       fc.property(
@@ -5526,7 +5526,7 @@ describe("properties", () => {
   // The 100 runs of this property take half a second, and five times that on a busy host. Four tests of 25 runs each,
   // with a seed of their own, check as many flows and keep each test far from the limit of a test.
   it.for([1, 2, 3, 4])(
-    "[E19][E30] shows at every step a view that reads back equal from its JSON text and from a state read back (runs %i of 4)",
+    "shows at every step a view that reads back equal from its JSON text and from a state read back (runs %i of 4)",
     () => {
       fc.assert(
         fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
@@ -5548,7 +5548,7 @@ describe("properties", () => {
     },
   );
 
-  it("[E22][E30] gives the same step to an action that reaches the engine through the JSON text of a server as to one applied on the device", () => {
+  it("gives the same step to an action that reaches the engine through the JSON text of a server as to one applied on the device", () => {
     fc.assert(
       fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
         const engine = flowEngine(flow);
@@ -5563,7 +5563,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E19] lists the actions the state allows: the engine refuses each type left out, and meets no refusal of the state in a type listed", () => {
+  it("lists the actions the state allows: the engine refuses each type left out, and meets no refusal of the state in a type listed", () => {
     fc.assert(
       fc.property(flows, engineMoves, seeds, (flow, moves, seed) => {
         const engine = flowEngine(flow);
@@ -5646,7 +5646,7 @@ describe("properties", () => {
     }
   }
 
-  it("[E20][E21] never lets a correct response, mapping, processing, outcome, template value or hidden content into the view", () => {
+  it("never lets a correct response, mapping, processing, outcome, template value or hidden content into the view", () => {
     const engine = leakyEngine();
     fc.assert(
       fc.property(leakyMoves, seeds, (moves, seed) => {
@@ -5670,7 +5670,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E30] reads back the responses of any action, of any cardinality and base type, from the JSON text", () => {
+  it("reads back the responses of any action, of any cardinality and base type, from the JSON text", () => {
     fc.assert(
       fc.property(
         fc.uniqueArray(fc.tuple(identifierArbitrary, anyValue), { selector: ([name]) => name }),

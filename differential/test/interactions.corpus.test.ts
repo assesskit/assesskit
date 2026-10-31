@@ -52,7 +52,7 @@ function summaries(): Map<string, { readonly oracle: Summary[]; readonly subject
 describe("runtime against the oracle on the interactions of the corpus items", () => {
   const found = summaries();
 
-  it("[B52][B57][D] list the same interactions in the same order, with the same response variables", () => {
+  it("list the same interactions in the same order, with the same response variables", () => {
     expect(found.size).toBeGreaterThan(200);
     for (const [path, { oracle, subject }] of found) {
       expect(
@@ -62,7 +62,7 @@ describe("runtime against the oracle on the interactions of the corpus items", (
     }
   });
 
-  it("[B57][D] shuffle the same interactions", () => {
+  it("shuffle the same interactions", () => {
     for (const [path, { oracle, subject }] of found) {
       expect(
         subject.map((entry) => entry.shuffle),
@@ -71,7 +71,7 @@ describe("runtime against the oracle on the interactions of the corpus items", (
     }
   });
 
-  it("[B52][D] list the same choices, in the same order, for every interaction but those that differ in what they call a choice", () => {
+  it("list the same choices, in the same order, for every interaction but those that differ in what they call a choice", () => {
     const differing: string[] = [];
     for (const [path, { oracle, subject }] of found) {
       oracle.forEach((entry, place) => {

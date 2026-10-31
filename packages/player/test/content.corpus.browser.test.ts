@@ -128,12 +128,12 @@ describe("the examples of 1EdTech", () => {
     origins: [],
   });
 
-  it("[T1][T3][T20] finds the items and the stimuli of the examples", () => {
+  it("finds the items and the stimuli of the examples", () => {
     expect(examples.filter(({ item }) => item !== undefined)).toHaveLength(251);
     expect(examples.filter(({ stimulus }) => stimulus !== undefined)).toHaveLength(1);
   });
 
-  it("[T1][T3][T20] renders the body of every item and stimulus without an error, with every interaction as a placeholder", async () => {
+  it("renders the body of every item and stimulus without an error, with every interaction as a placeholder", async () => {
     for (const { path, item, stimulus } of examples) {
       const nodes = item?.body?.children ?? stimulus ?? [];
       const stylesheets = referenced(path, item);
@@ -162,7 +162,7 @@ describe("the examples of 1EdTech", () => {
     }
   }, 120_000);
 
-  it("[T3] draws every HTML element of every body as many times as the XML has it", async () => {
+  it("draws every HTML element of every body as many times as the XML has it", async () => {
     for (const { path, xml, item, stimulus } of examples) {
       await root.show({ body: { nodes: item?.body?.children ?? stimulus ?? [], base: path } });
       const expected = count(bodyOf(xml));
@@ -175,7 +175,7 @@ describe("the examples of 1EdTech", () => {
     }
   }, 120_000);
 
-  it("[T4][T6][T7] points every image, link and media of the examples at the package, and none at another origin", async () => {
+  it("points every image, link and media of the examples at the package, and none at another origin", async () => {
     for (const { path, item, stimulus } of examples) {
       await root.show({ body: { nodes: item?.body?.children ?? stimulus ?? [], base: path } });
       for (const element of root.root.querySelectorAll("[src], [href], [poster], [srcset]")) {
@@ -191,7 +191,7 @@ describe("the examples of 1EdTech", () => {
     }
   }, 120_000);
 
-  it("[T12][X] sanitizes and adopts every stylesheet that the examples reference, and keeps its rules", async () => {
+  it("sanitizes and adopts every stylesheet that the examples reference, and keeps its rules", async () => {
     let adopted = 0;
     for (const { path, item } of examples) {
       const hrefs = referenced(path, item);
@@ -204,7 +204,7 @@ describe("the examples of 1EdTech", () => {
     expect(adopted).toBeGreaterThan(0);
   }, 120_000);
 
-  it("[T21][X] shows every modal feedback of the examples in a dialog and lets it close", async () => {
+  it("shows every modal feedback of the examples in a dialog and lets it close", async () => {
     let shown = 0;
     for (const { path, item } of examples) {
       if (item === undefined || item.modalFeedback.length === 0) continue;

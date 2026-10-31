@@ -216,7 +216,7 @@ describe("encodePciValue and decodePciValue", () => {
     },
   ];
 
-  it.each(Examples)("[J1][J2][J3] reads and writes the example %j of BPIG Appendix C", (example) => {
+  it.each(Examples)("reads and writes the example %j of BPIG Appendix C", (example) => {
     const declaration = {
       cardinality: example.cardinality,
       ...(example.baseType === undefined ? {} : { baseType: example.baseType }),
@@ -225,7 +225,7 @@ describe("encodePciValue and decodePciValue", () => {
     expect(encodePciValue(example.value, declaration, HOST)).toEqual(example.json);
   });
 
-  it("[J1] reads intOrIdentifier as an integer for a number and as an identifier for a string (G38)", () => {
+  it("reads intOrIdentifier as an integer for a number and as an identifier for a string (G38)", () => {
     expect(
       decodePciValue({ base: { intOrIdentifier: 123456 } }, { cardinality: "single", baseType: "integer" }, HOST),
     ).toEqual(single("integer", 123456));
@@ -251,7 +251,7 @@ describe("encodePciValue and decodePciValue", () => {
     );
   });
 
-  it("[J1] writes a duration as PT<seconds>S and reads it back, and refuses years and months (G14)", () => {
+  it("writes a duration as PT<seconds>S and reads it back, and refuses years and months (G14)", () => {
     const declaration = { cardinality: "single", baseType: "duration" } as const;
     expect(encodePciValue(single("duration", 90.5), declaration, HOST)).toEqual({ base: { duration: "PT90.5S" } });
     expect(decodePciValue({ base: { duration: "PT1H30M" } }, declaration, HOST)).toEqual(single("duration", 5400));
@@ -261,7 +261,7 @@ describe("encodePciValue and decodePciValue", () => {
     ).toThrow(DataError);
   });
 
-  it("[J3] leaves out a field of a record that is NULL (G37)", () => {
+  it("leaves out a field of a record that is NULL (G37)", () => {
     expect(
       decodePciValue(
         {
@@ -278,7 +278,7 @@ describe("encodePciValue and decodePciValue", () => {
   });
 
   describe("files", () => {
-    it("[J1] stores the file of the JSON through the host and keeps its reference, as in the example of Appendix C.1", () => {
+    it("stores the file of the JSON through the host and keeps its reference, as in the example of Appendix C.1", () => {
       const calls: unknown[][] = [];
       const files: PciFileStore = {
         store: (...call) => {
@@ -297,7 +297,7 @@ describe("encodePciValue and decodePciValue", () => {
       );
     });
 
-    it("[J1] loads the bytes of a file value from the host and writes them inline, with the name only when there is one", () => {
+    it("loads the bytes of a file value from the host and writes them inline, with the name only when there is one", () => {
       const loaded: string[] = [];
       const files: PciFileLoader = {
         load: (reference) => {
@@ -319,7 +319,7 @@ describe("encodePciValue and decodePciValue", () => {
       expect(loaded).toEqual(["file-1", "file-2"]);
     });
 
-    it("[J2][J3] handles the files of a list and of the fields of a record, once each", () => {
+    it("handles the files of a list and of the fields of a record, once each", () => {
       const list = container("multiple", "file", [
         { reference: "stored:AA==", mimeType: "image/png" },
         { reference: "stored:Ag==", mimeType: "image/png", fileName: "b.png" },
@@ -348,7 +348,7 @@ describe("encodePciValue and decodePciValue", () => {
       expect(decodePciValue(recordJson, { cardinality: "record" }, HOST)).toEqual(fields);
     });
 
-    it("[J1] does not call the host for a value without a file", () => {
+    it("does not call the host for a value without a file", () => {
       const never = {
         load: () => {
           throw new Error("The host is not to be called.");
@@ -361,7 +361,7 @@ describe("encodePciValue and decodePciValue", () => {
       expect(decodePciValue(encodePciValue(str("a"), declaration, never), declaration, never)).toEqual(str("a"));
     });
 
-    it("[J1] refuses a file that is not {data, mime, name} with strings, and a host that answers with anything but a string", () => {
+    it("refuses a file that is not {data, mime, name} with strings, and a host that answers with anything but a string", () => {
       const declaration = { cardinality: "single", baseType: "file" } as const;
       const decode = (file: string): Value | null =>
         decodePciValue(json(`{"base": {"file": ${file}}}`), declaration, HOST);
@@ -387,7 +387,7 @@ describe("encodePciValue and decodePciValue", () => {
     });
   });
 
-  it("[J1] refuses JSON that is not the JSON of a value of the declaration, as fromJsonValue does", () => {
+  it("refuses JSON that is not the JSON of a value of the declaration, as fromJsonValue does", () => {
     const declaration = { cardinality: "single", baseType: "integer" } as const;
     for (const text of [
       "null",
@@ -402,7 +402,7 @@ describe("encodePciValue and decodePciValue", () => {
     }
   });
 
-  it("[J1] refuses arguments of the wrong type", () => {
+  it("refuses arguments of the wrong type", () => {
     const declaration = { cardinality: "single", baseType: "string" } as const;
     expect(() => encodePciValue(str("a"), declaration, json("null"))).toThrow(
       "The files must be an object with a function load, found null.",
@@ -415,7 +415,7 @@ describe("encodePciValue and decodePciValue", () => {
     expect(() => encodePciValue(json('{"cardinality": "x"}'), declaration, HOST)).toThrow(DataError);
   });
 
-  it("[J1][J2][J3][P] reads back what it writes, for every cardinality and base type, files included", () => {
+  it("reads back what it writes, for every cardinality and base type, files included", () => {
     const declared = fc.oneof(
       fc
         .tuple(fc.constantFrom<"single" | "multiple" | "ordered">("single", "multiple", "ordered"), baseType)
@@ -436,7 +436,7 @@ describe("encodePciValue and decodePciValue", () => {
     );
   });
 
-  it("[J1] reads or refuses arbitrary JSON from a module with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON from a module with a DataError, and nothing else", () => {
     const files = { store: () => "reference" };
     const declarations: readonly [ValueDeclaration, unknown][] = [
       [{ cardinality: "single", baseType: "integer" }, { base: { integer: 1 } }],
@@ -449,7 +449,7 @@ describe("encodePciValue and decodePciValue", () => {
 });
 
 describe("parseModuleResolution", () => {
-  it("[J4] reads the example of Appendix D: waitSeconds and the paths in the order of the file", () => {
+  it("reads the example of Appendix D: waitSeconds and the paths in the order of the file", () => {
     const parsed = parseModuleResolution(
       '{ "waitSeconds": 15, "paths": { "graph": "https://example.com/js/modules/graph1.01/graph", "foo": "https://foobar.com/foo/bar1.2/foo" } }',
     );
@@ -460,14 +460,14 @@ describe("parseModuleResolution", () => {
     ]);
   });
 
-  it("[J4] waits 7 seconds when the file does not say, and 0 stays 0, which is no timeout", () => {
+  it("waits 7 seconds when the file does not say, and 0 stays 0, which is no timeout", () => {
     expect(DEFAULT_WAIT_SECONDS).toBe(7);
     expect(parseModuleResolution('{"paths": {"a": "modules/a"}}').waitSeconds).toBe(7);
     expect(parseModuleResolution('{"waitSeconds": 0, "paths": {}}').waitSeconds).toBe(0);
     expect(parseModuleResolution("{}")).toEqual({ waitSeconds: 7, paths: new Map() });
   });
 
-  it("[J4] ignores properties besides waitSeconds and paths, and keeps a module id such as __proto__ as data", () => {
+  it("ignores properties besides waitSeconds and paths, and keeps a module id such as __proto__ as data", () => {
     const parsed = parseModuleResolution('{"baseUrl": "x", "paths": {"__proto__": "modules/p", "a": "modules/a"}}');
     expect([...parsed.paths]).toEqual([
       ["__proto__", "modules/p"],
@@ -475,7 +475,7 @@ describe("parseModuleResolution", () => {
     ]);
   });
 
-  it("[J4] refuses text that is not the file: not JSON, not an object, a bad waitSeconds, a path that is not a string", () => {
+  it("refuses text that is not the file: not JSON, not an object, a bad waitSeconds, a path that is not a string", () => {
     expect(() => parseModuleResolution("{")).toThrow("The module resolution file must be JSON: ");
     expect(() => parseModuleResolution("[]")).toThrow(
       "The module resolution file is invalid: expected an object, found an array.",
@@ -493,7 +493,7 @@ describe("parseModuleResolution", () => {
     expect(() => parseModuleResolution(json("1"))).toThrow(DataError);
   });
 
-  it("[J4] reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON text with a DataError, and nothing else", () => {
     fuzzJson(
       (json) => parseModuleResolution(JSON.stringify(json)),
       [{ waitSeconds: 15, paths: { graph: "https://example.com/js/graph", foo: "foo" } }, {}],
@@ -502,7 +502,7 @@ describe("parseModuleResolution", () => {
 });
 
 describe("isPackageRelative", () => {
-  it("[J4] takes a location with a protocol for a URL and any other for a path in the package", () => {
+  it("takes a location with a protocol for a URL and any other for a path in the package", () => {
     for (const location of ["modules/likert", "./likert", "../likert", "likert", "modules/lib/x.min"]) {
       expect(isPackageRelative(location)).toBe(true);
     }
@@ -520,7 +520,7 @@ describe("isPackageRelative", () => {
 });
 
 describe("moduleConfigurationPaths", () => {
-  it("[J5] reads modules/module_resolution.js and modules/fallback_module_resolution.js by default", () => {
+  it("reads modules/module_resolution.js and modules/fallback_module_resolution.js by default", () => {
     expect(moduleConfigurationPaths(interactionOf('module="m"'))).toEqual({
       primary: "modules/module_resolution.js",
       fallback: "modules/fallback_module_resolution.js",
@@ -535,7 +535,7 @@ describe("moduleConfigurationPaths", () => {
     ).toEqual({ primary: "modules/module_resolution.js", fallback: "modules/fallback_module_resolution.js" });
   });
 
-  it("[J5] takes the files that qti-interaction-modules names", () => {
+  it("takes the files that qti-interaction-modules names", () => {
     const interaction = interactionOf(
       "",
       '<qti-interaction-modules primary-configuration="modules/maths_config.js" secondary-configuration="modules/maths_fallback.js"><qti-interaction-module id="m"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -552,7 +552,7 @@ describe("moduleConfigurationPaths", () => {
 });
 
 describe("resolvePciModules", () => {
-  it("[J6] locates the module of the module attribute and its dependencies in the primary configuration (BPIG §3.7.12.4)", () => {
+  it("locates the module of the module attribute and its dependencies in the primary configuration (BPIG §3.7.12.4)", () => {
     const modules = resolvePciModules(interactionOf('module="exampleLikertScale"'), {
       primary: resolution({ exampleLikertScale: "modules/likert", handlebars: "modules/lib/handlebars.min" }),
     });
@@ -562,7 +562,7 @@ describe("resolvePciModules", () => {
     ]);
   });
 
-  it("[J6] lets a qti-interaction-module replace the location of a module, as the graphing example of BPIG §3.7.12.4 does", () => {
+  it("lets a qti-interaction-module replace the location of a module, as the graphing example of BPIG §3.7.12.4 does", () => {
     const interaction = interactionOf(
       'module="exampleGraphing"',
       '<qti-interaction-modules primary-configuration="modules/maths_config.js"><qti-interaction-module id="handlebars" primary-path="modules/lib/handlebarsV2.min"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -582,7 +582,7 @@ describe("resolvePciModules", () => {
     ]);
   });
 
-  it("[J6] gives the primary and the fallback location of a module and says whether the first one is in the package", () => {
+  it("gives the primary and the fallback location of a module and says whether the first one is in the package", () => {
     const modules = resolvePciModules(interactionOf('module="graph"'), {
       primary: resolution({ graph: "https://cdn.example.com/graph", local: "modules/local" }),
       fallback: resolution({ graph: "modules/graph", local: "modules/local-fallback", only: "modules/only" }),
@@ -594,7 +594,7 @@ describe("resolvePciModules", () => {
     ]);
   });
 
-  it("[J6] lists a module that only the interaction names, without a location", () => {
+  it("lists a module that only the interaction names, without a location", () => {
     const interaction = interactionOf(
       "",
       '<qti-interaction-modules><qti-interaction-module id="lonely"/></qti-interaction-modules><qti-interaction-markup/>',
@@ -602,7 +602,7 @@ describe("resolvePciModules", () => {
     expect(resolvePciModules(interaction, {})).toEqual([{ id: "lonely", packageRelative: false }]);
   });
 
-  it("[J6] puts each module once and keeps the id __proto__ as data", () => {
+  it("puts each module once and keeps the id __proto__ as data", () => {
     const modules = resolvePciModules(interactionOf('module="__proto__"'), {
       primary: { waitSeconds: 7, paths: new Map([["__proto__", "modules/p"]]) },
       fallback: { waitSeconds: 7, paths: new Map([["__proto__", "modules/q"]]) },
@@ -622,7 +622,7 @@ describe("resolvePciModules", () => {
 });
 
 describe("pciProperties", () => {
-  it("[J8] passes the data- attributes named as element.dataset names them: data-max-choices-message is maxChoicesMessage", () => {
+  it("passes the data- attributes named as element.dataset names them: data-max-choices-message is maxChoicesMessage", () => {
     const interaction = interactionOf(
       'data-label-min="Very Poorly" data-max-choices-message="Too Many" data-toggle="true" data-selected_color="blue" data-n1="x" data-x-1="y" data-a--b="z" class="horizontal"',
     );
@@ -637,7 +637,7 @@ describe("pciProperties", () => {
     ]);
   });
 
-  it("[J8] leaves out the attributes that QTI defines and those that are not data attributes", () => {
+  it("leaves out the attributes that QTI defines and those that are not data attributes", () => {
     const interaction = interactionOf(
       'data-catalog-idref="c1" data-qti-suppress-tts="all" xml:lang="en" data-custom="1"',
     );
@@ -651,7 +651,7 @@ describe("pciProperties", () => {
 });
 
 describe("the variables a PCI is bound to", () => {
-  it("[J8] passes the template and context variables that the PCI names, and the markup, as the value of the variable in the JSON of Appendix C", () => {
+  it("passes the template and context variables that the PCI names, and the markup, as the value of the variable in the JSON of Appendix C", () => {
     const document = readAsi(
       `<qti-assessment-item ${NS} identifier="item" title="Item" time-dependent="false"><qti-context-declaration identifier="CTX" cardinality="single" base-type="string"/><qti-template-declaration identifier="N" cardinality="multiple" base-type="integer"/><qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="urn:fdc:example.com:pci:v" module="m"><qti-interaction-markup><p>Graph <qti-printed-variable identifier="N"/></p></qti-interaction-markup><qti-template-variable template-identifier="N"/><qti-context-variable identifier="CTX"/></qti-portable-custom-interaction></qti-item-body></qti-assessment-item>`,
     );
@@ -676,7 +676,7 @@ describe("checkPortableInteraction", () => {
     checkPortableInteraction(interaction, configuration).map(({ code }) => code);
   const configured: PciModuleConfiguration = { primary: resolution({ m: "modules/m" }) };
 
-  it("[J6][N] reports an interaction with neither a module attribute nor qti-interaction-modules", () => {
+  it("reports an interaction with neither a module attribute nor qti-interaction-modules", () => {
     const [issue] = checkPortableInteraction(interactionOf(""), configured);
     expect(issue).toEqual({
       severity: "error",
@@ -688,7 +688,7 @@ describe("checkPortableInteraction", () => {
     });
   });
 
-  it("[J6][N] reports a module that no configuration locates, and accepts one that the interaction locates itself", () => {
+  it("reports a module that no configuration locates, and accepts one that the interaction locates itself", () => {
     expect(codes(interactionOf('module="unknown"'), configured)).toEqual(["assesskit/pci/module-not-configured"]);
     expect(codes(interactionOf('module="m"'), configured)).toEqual([]);
     expect(codes(interactionOf('module="m"'), { fallback: resolution({ m: "modules/m" }) })).toEqual([]);
@@ -700,7 +700,7 @@ describe("checkPortableInteraction", () => {
     expect(checkPortableInteraction(own, {})[0]?.message).toContain('"y"');
   });
 
-  it("[J7][N] warns about a custom-interaction-type-identifier that is not a Federated Content URN, and not about one that is", () => {
+  it("warns about a custom-interaction-type-identifier that is not a Federated Content URN, and not about one that is", () => {
     const interaction = (type: string): PortableCustomInteraction => {
       const document = readAsi(
         `<qti-assessment-item ${NS} identifier="item" title="Item" time-dependent="false"><qti-item-body><qti-portable-custom-interaction response-identifier="R" custom-interaction-type-identifier="${type}" module="m"><qti-interaction-markup/></qti-portable-custom-interaction></qti-item-body></qti-assessment-item>`,

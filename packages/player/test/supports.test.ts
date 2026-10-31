@@ -37,7 +37,7 @@ const THEME_SUPPORTS: readonly [SupportName, SupportSetting | undefined][] = [
 ];
 
 describe("check", () => {
-  it("[T75] accepts the supports of a view as the runtime gives them, and after the JSON of the wire", () => {
+  it("accepts the supports of a view as the runtime gives them, and after the JSON of the wire", () => {
     const supports = [
       onSupport("spoken", {
         name: "spoken",
@@ -85,7 +85,7 @@ describe("check", () => {
     );
   });
 
-  it("[T89] checks the settings that the player reads: colors, numbers, terms and flags", () => {
+  it("checks the settings that the player reads: colors, numbers, terms and flags", () => {
     const rejects = (settings: unknown, where: string, detail: string): void => {
       const { name } = settings as { name: string };
       expect(() =>
@@ -152,8 +152,8 @@ describe("check", () => {
 });
 
 describe("appearance", () => {
-  it("[T79][T87] sets the themes of the styling guide by the attribute, and nothing else", () => {
-    // The table of docs/styling.md: high contrast is `data-ak-contrast="high"`, inverted polarity is `data-ak-polarity="inverted"`.
+  it("sets the themes of the styling guide by the attribute, and nothing else", () => {
+    // The table of docs/player/styling.md: high contrast is `data-ak-contrast="high"`, inverted polarity is `data-ak-polarity="inverted"`.
     expect(lookOf(onSupport("high-contrast"))).toEqual({
       attributes: { "data-ak-contrast": "high" },
       properties: {},
@@ -168,7 +168,7 @@ describe("appearance", () => {
     });
   });
 
-  it("[T87] gives the colors of an inverted display to the properties", () => {
+  it("gives the colors of an inverted display to the properties", () => {
     const settings: SupportSetting = {
       name: "invert-display-polarity",
       replaceAccessModes: [],
@@ -181,7 +181,7 @@ describe("appearance", () => {
     });
   });
 
-  it("[T89] sets the text appearance: colors, size as a multiple of 12 points, face, spacing and flags", () => {
+  it("sets the text appearance: colors, size as a multiple of 12 points, face, spacing and flags", () => {
     const settings: SupportSetting = {
       name: "text-appearance",
       replaceAccessModes: [],
@@ -212,7 +212,7 @@ describe("appearance", () => {
     });
   });
 
-  it("[T89] spells each generic font face as CSS does, and keeps a control character out of a name", () => {
+  it("spells each generic font face as CSS does, and keeps a control character out of a name", () => {
     const face = (
       genericFontFace: "serif" | "sans serif" | "monospaced" | "cursive" | "fantasy",
       fontNames: string[] = [],
@@ -234,7 +234,7 @@ describe("appearance", () => {
     expect(face("serif", ["A\nB;}"])).toBe('"A B;}", serif');
   });
 
-  it("[T89] lets the colors of the text appearance win over those of inverted polarity", () => {
+  it("lets the colors of the text appearance win over those of inverted polarity", () => {
     const polarity: SupportSetting = {
       name: "invert-display-polarity",
       replaceAccessModes: [],
@@ -250,7 +250,7 @@ describe("appearance", () => {
     });
   });
 
-  it("[T88] zooms the text by the amount of the magnification, and non-text content by its own", () => {
+  it("zooms the text by the amount of the magnification, and non-text content by its own", () => {
     const zoom = (settings: SupportSetting): ReturnType<typeof lookOf> => lookOf(onSupport("magnification", settings));
     const base = { name: "magnification", replaceAccessModes: [] } as const;
     expect(zoom({ ...base, allContent: { zoomAmount: 3 } }).properties).toEqual({ "--ak-text-zoom": "3" });
@@ -266,7 +266,7 @@ describe("appearance", () => {
     expect(mediaScaleOf([onSupport("magnification", { ...base, text: { zoomAmount: 2 } })])).toBe(1);
   });
 
-  it("[T88] zooms to 200 percent when the magnification names no amount", () => {
+  it("zooms to 200 percent when the magnification names no amount", () => {
     expect(lookOf(onSupport("magnification")).properties).toEqual({ "--ak-text-zoom": "2" });
     expect(
       lookOf(onSupport("magnification", { name: "magnification", replaceAccessModes: [], allContent: {} })).properties,
@@ -276,7 +276,7 @@ describe("appearance", () => {
     expect(mediaScaleOf([onSupport("magnification")])).toBe(2);
   });
 
-  it("[T88][T89] treats a size or a zoom of 0 or less as none, since it would show nothing", () => {
+  it("treats a size or a zoom of 0 or less as none, since it would show nothing", () => {
     const base = { name: "magnification", replaceAccessModes: [] } as const;
     expect(lookOf(onSupport("magnification", { ...base, allContent: { zoomAmount: 0 } })).properties).toEqual({
       "--ak-text-zoom": "2",
@@ -286,12 +286,12 @@ describe("appearance", () => {
     expect(lookOf(onSupport("text-appearance", size)).properties).toEqual({});
   });
 
-  it("[T90][T91] sets the single column and the keyword emphasis", () => {
+  it("sets the single column and the keyword emphasis", () => {
     expect(lookOf(onSupport("layout-single-column")).attributes).toEqual({ "data-ak-single-column": "" });
     expect(lookOf(onSupport("keyword-emphasis")).attributes).toEqual({ "data-ak-keyword-emphasis": "" });
   });
 
-  it("[T75] applies a support that is on, whatever its state, and no support that is off", () => {
+  it("applies a support that is on, whatever its state, and no support that is off", () => {
     for (const state of ["active", "option", "assigned"] as const) {
       expect(lookOf(supportView("high-contrast", { state, active: true })).attributes).toEqual({
         "data-ak-contrast": "high",
@@ -308,7 +308,7 @@ describe("appearance", () => {
     expect(mediaScaleOf([supportView("magnification", { state: "option", active: false })])).toBe(1);
   });
 
-  it("[T75] ignores the supports that change nothing of the look", () => {
+  it("ignores the supports that change nothing of the look", () => {
     const others = SUPPORT_NAMES.filter(
       (name) =>
         ![
@@ -324,7 +324,7 @@ describe("appearance", () => {
     expect(mediaScaleOf(others)).toBe(1);
   });
 
-  it("[T75] rejects supports that are not a list of the runtime's views", () => {
+  it("rejects supports that are not a list of the runtime's views", () => {
     expect(() => presentationOf(json({}))).toThrow(
       new DataError("The list of supports is invalid: expected an array, found an object."),
     );
@@ -366,7 +366,7 @@ describe("presentation", () => {
 });
 
 describe("names", () => {
-  it("[T75] names every predefined support except the ones that a tool of the toolbar turns on and off", () => {
+  it("names every predefined support except the ones that a tool of the toolbar turns on and off", () => {
     const unnamed = SUPPORT_NAMES.filter((name) => supportLabel(name, EN_MESSAGES) === undefined);
     expect([...unnamed].sort()).toEqual([...TOOL_SUPPORT_NAMES].sort());
   });
@@ -381,7 +381,7 @@ describe("names", () => {
 });
 
 describe("cards", () => {
-  it("[T76][T77][T78][T79][T80][T81][T82][T83][T84] shows each support that has a card the way the design asks for", () => {
+  it("shows each support that has a card the way the design asks for", () => {
     const kinds = new Map(
       SUPPORT_NAMES.flatMap((name) => (cardKindOf(name) === undefined ? [] : [[name, cardKindOf(name)] as const])),
     );
@@ -432,7 +432,7 @@ describe("the support action and the runtime's engine", () => {
   const names = (supports: readonly SupportView[], filter: (support: SupportView) => boolean): SupportName[] =>
     supports.filter(filter).map(({ name }) => name);
 
-  it("[T75] gives the supports with their state, the settings of the profile and none for a prohibited one", () => {
+  it("gives the supports with their state, the settings of the profile and none for a prohibited one", () => {
     const { supports } = engine.view(state, 1);
     expect(supports.find(({ name }) => name === "spoken")).toMatchObject({
       state: "active",
@@ -456,7 +456,7 @@ describe("the support action and the runtime's engine", () => {
     ]);
   });
 
-  it("[T75] turns an option on and off with the support action, and the next view says so", () => {
+  it("turns an option on and off with the support action, and the next view says so", () => {
     const on = engine.apply(state, stamp(state, { type: "support", name: "high-contrast", active: true }, 10));
     if (!on.ok) throw new Error(on.refusal.message);
     expect(engine.view(on.state, 11).supports.find(({ name }) => name === "high-contrast")?.active).toBe(true);
@@ -468,7 +468,7 @@ describe("the support action and the runtime's engine", () => {
     expect(engine.view(off.state, 13).supports.find(({ name }) => name === "high-contrast")?.active).toBe(false);
   });
 
-  it("[T75] refuses the action for a prohibited support and one that is on from the start, and leaves the state as it was", () => {
+  it("refuses the action for a prohibited support and one that is on from the start, and leaves the state as it was", () => {
     for (const name of ["magnification", "spoken", "hazard-avoidance"] as const) {
       const step = engine.apply(state, stamp(state, { type: "support", name, active: false }, 10));
       expect(step.ok).toBe(false);
@@ -476,7 +476,7 @@ describe("the support action and the runtime's engine", () => {
     }
   });
 
-  it("[T75] gives a panel of buttons for the options only: the supports that the engine lets the candidate turn", () => {
+  it("gives a panel of buttons for the options only: the supports that the engine lets the candidate turn", () => {
     const options = engine.view(state, 1).supports.filter(({ state: each }) => each === "option");
     for (const { name } of options) {
       const step = engine.apply(state, stamp(state, { type: "support", name, active: true }, 10));
@@ -492,7 +492,7 @@ describe("properties", () => {
     active: fc.boolean(),
   });
 
-  it("[T75] builds the same valid presentation twice for any supports, and sets nothing for a list of supports that are off", () => {
+  it("builds the same valid presentation twice for any supports, and sets nothing for a list of supports that are off", () => {
     fc.assert(
       fc.property(fc.array(supportArbitrary, { maxLength: 12 }), (supports) => {
         const first = presentationOf(supports);
@@ -505,7 +505,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T75] gives the theme supports no property when no setting names a color", () => {
+  it("gives the theme supports no property when no setting names a color", () => {
     for (const [name, settings] of THEME_SUPPORTS) {
       expect(lookOf(onSupport(name, settings)).properties).toEqual({});
     }

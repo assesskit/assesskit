@@ -166,7 +166,7 @@ const outcomeOf = (session: ItemSession, identifier: string): Value | null =>
   session.variables.outcomes.get(identifier) ?? null;
 
 describe("the adaptive items of the examples", () => {
-  it("[E26][B3][C] turns the failing rules of feedback_adaptive.xml into data, attempt after attempt", () => {
+  it("turns the failing rules of feedback_adaptive.xml into data, attempt after attempt", () => {
     // Its qti-member has the container first, where INFO §2.11.3.29 wants the single value, and for the correct response
     // it sets the multiple FEEDBACK to a single value (INFO §5.130.2), so that every run fails.
     const item = itemAt("packaging/items/feedback_adaptive.xml");
@@ -199,7 +199,7 @@ describe("the adaptive items of the examples", () => {
     ]);
   });
 
-  it("[E10][B10][C] gives the hint of hint.xml through its end attempt interaction, and scores the next attempt", () => {
+  it("gives the hint of hint.xml through its end attempt interaction, and scores the next attempt", () => {
     const item = itemAt("packaging/items/hint.xml");
     const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(1) };
     const hinted = accepted(turn(sessionOf(context), context, {}, "HINTREQUEST"));
@@ -223,7 +223,7 @@ describe("the adaptive items of the examples", () => {
     ]);
   });
 
-  it("[E10][B5][B9][C] plays the Monty Hall game of adaptive.xml to completion: the switch wins and the strategy is asked", () => {
+  it("plays the Monty Hall game of adaptive.xml to completion: the switch wins and the strategy is asked", () => {
     const item = itemAt("packaging/items/adaptive.xml");
     const context: ItemSessionContext = { item, control: standaloneSessionControl(), random: createRandom(3) };
     const first = accepted(turn(sessionOf(context), context, { DOOR: "DoorA" }));
@@ -262,7 +262,7 @@ describe("the adaptive items of the examples", () => {
 });
 
 describe("the tests of the examples", () => {
-  it("[B21][B22][B23][B24][E11][C] plan under many seeds into item instances of their own item references", () => {
+  it("plan under many seeds into item instances of their own item references", () => {
     expect(tests.size).toBeGreaterThan(20);
     for (const path of tests.keys()) {
       const structure = structureAt(path);
@@ -280,7 +280,7 @@ describe("the tests of the examples", () => {
     }
   });
 
-  it("[B21][C] selects 2 of 3 items with item034 required, and one of two with the block required (RTEST-12)", () => {
+  it("selects 2 of 3 items with item034 required, and one of two with the block required (RTEST-12)", () => {
     const structure = structureAt("tests/rtest12.xml");
     const sectionA = new Set<string>();
     const sectionB = new Set<string>();
@@ -305,7 +305,7 @@ describe("the tests of the examples", () => {
     expect([...sectionB].sort()).toEqual(["item065", "item365", "item434"]);
   });
 
-  it("[B23][B24][C] keeps item034 first and the block B1 together in its order (RTEST-24)", () => {
+  it("keeps item034 first and the block B1 together in its order (RTEST-24)", () => {
     const structure = structureAt("tests/rtest24.xml");
     for (let seed = 1; seed <= 100; seed++) {
       const plan = planTest(structure, { random: createRandom(seed) });
@@ -318,7 +318,7 @@ describe("the tests of the examples", () => {
     }
   });
 
-  it("[B28][C] presents item160 after the response Y and item063 after N (RTEST-13)", () => {
+  it("presents item160 after the response Y and item063 after N (RTEST-13)", () => {
     const structure = structureAt("tests/rtest13.xml");
     expect(walk(structure, { item034: "Y", item347: "Y" })).toEqual([
       "item034",
@@ -336,20 +336,20 @@ describe("the tests of the examples", () => {
     ]);
   });
 
-  it("[B29][C] branches to item656, or leaves section B, by the response to item347 (RTEST-13)", () => {
+  it("branches to item656, or leaves section B, by the response to item347 (RTEST-13)", () => {
     const structure = structureAt("tests/rtest13.xml");
     expect(walk(structure, { item034: "Y", item347: "N" })).toEqual(["item034", "item160", "item347", "item656"]);
     // Neither N nor Y: the second rule exits section B, which is the last section.
     expect(walk(structure, { item034: "Y", item347: "X" })).toEqual(["item034", "item160", "item347"]);
   });
 
-  it("[B28][C] presents section SA only for the response A to the switch item (RTEST-COMPLETE)", () => {
+  it("presents section SA only for the response A to the switch item (RTEST-COMPLETE)", () => {
     const structure = structureAt("tests/complete.xml");
     expect(walk(structure, { switch: "A" })).toEqual(["switch", "A1"]);
     expect(walk(structure, { switch: "B" })).toEqual(["switch"]);
   });
 
-  it("[B30][C] gives the item session control of the test part to its items (RTEST-COMPLETE)", () => {
+  it("gives the item session control of the test part to its items (RTEST-COMPLETE)", () => {
     const structure = structureAt("tests/complete.xml");
     const item = structure.itemRef("A1");
     if (item === undefined) throw new Error("No A1.");
@@ -364,7 +364,7 @@ describe("the tests of the examples", () => {
     });
   });
 
-  it("[B35][B36][G41][C] gives the limits of the test and its part, and adds the extra time of a candidate (RTEST-COMPLETE)", () => {
+  it("gives the limits of the test and its part, and adds the extra time of a candidate (RTEST-COMPLETE)", () => {
     const structure = structureAt("tests/complete.xml");
     const part = structure.part("RTEST-COMPLETE-PTI");
     if (part === undefined) throw new Error("No part.");
@@ -420,14 +420,14 @@ describe("the engine on the examples", () => {
     return state;
   }
 
-  it("[E26][C] refuses the example tests that the static checks find errors in", async () => {
+  it("refuses the example tests that the static checks find errors in", async () => {
     await expect(deliveryOf("basicFeedbackTest", "assessment.xml")).rejects.toThrow(
       /assesskit\/validate\/adaptive-simultaneous in assessment\.xml/,
     );
     await expect(deliveryOf("BBQsTest", "assessment.xml")).rejects.toThrow(/assesskit\/validate\/custom-operator/);
   });
 
-  it("[E9][E19][E30][W22][W32][B37][C] scores the correct answers of englishBasicLevelV2, submitted together, at its MAXSCORE", async () => {
+  it("scores the correct answers of englishBasicLevelV2, submitted together, at its MAXSCORE", async () => {
     const { engine, items } = await deliveryOf("englishBasicLevelV2", "Test_258641331.xml");
     const state = answerAll(engine, items, false);
     expect(state.status).toBe("ended");
@@ -435,7 +435,7 @@ describe("the engine on the examples", () => {
     expect(state.outcomes.get("MAXSCORE")).toEqual(single("float", 24));
   });
 
-  it("[E9][W22][W32][B37][C] scores the correct answers of interactionMixSaxonyV3, submitted one by one", async () => {
+  it("scores the correct answers of interactionMixSaxonyV3, submitted one by one", async () => {
     const { engine, items } = await deliveryOf("interactionMixSaxonyV3", "InteractionMixSachsen_1901710679.xml");
     const state = answerAll(engine, items, true);
     expect(state.status).toBe("ended");
@@ -445,7 +445,7 @@ describe("the engine on the examples", () => {
     expect(state.outcomes.get("SCORE")).toEqual(single("float", 15));
   });
 
-  it("[E9][E25][C] delivers the links to tools of testWithLti as items with the outcomes SCORE and MAXSCORE", async () => {
+  it("delivers the links to tools of testWithLti as items with the outcomes SCORE and MAXSCORE", async () => {
     const { engine } = await deliveryOf("testWithLti", "assessment.xml");
     const started = engine.start({ seed: 1, at: 0 });
     if (!started.ok) throw new Error(started.refusal.message);
@@ -457,7 +457,7 @@ describe("the engine on the examples", () => {
     expect(ended.state.outcomes.get("TEST_total")).toEqual(single("float", 0));
   });
 
-  it("[E12][E26][C] delivers alone every example item that the static checks accept, and plays it without throwing", () => {
+  it("delivers alone every example item that the static checks accept, and plays it without throwing", () => {
     let delivered = 0;
     for (const { path, item } of exampleItems()) {
       const issues = validateAsi({ kind: "item", item }, { customOperators: new Map() });
@@ -504,12 +504,12 @@ describe("the engine on the examples", () => {
     return names;
   };
 
-  it("[E19][E20][E30][C] has more than 40 example items that the static checks accept, to show as views", () => {
+  it("has more than 40 example items that the static checks accept, to show as views", () => {
     expect(accepted.length).toBeGreaterThan(40);
   });
 
   it.for(accepted)(
-    "[E19][E20][E30][C] shows the example item $path as a view that holds no key and reads back from its JSON text",
+    "shows the example item $path as a view that holds no key and reads back from its JSON text",
     ({ path, item }) => {
       const engine = createEngine({ kind: "item", item, base: path });
       const started = engine.start({ seed: 1, at: 0 });

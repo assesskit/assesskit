@@ -58,7 +58,7 @@ const dialogOf = (root: ShadowRoot): HTMLDialogElement => {
 };
 
 describe("modal feedback", () => {
-  it("[T21] opens as a modal dialog named Feedback, with the title and the content of each feedback", async () => {
+  it("opens as a modal dialog named Feedback, with the title and the content of each feedback", async () => {
     const { root } = await open();
     const closed = root.showFeedback(feedbackOf(RIGHT, NEXT));
     const dialog = dialogOf(root.root);
@@ -76,7 +76,7 @@ describe("modal feedback", () => {
     await closed;
   });
 
-  it("[T21] starts at the heading, so that a screen reader reads the dialog from its name", async () => {
+  it("starts at the heading, so that a screen reader reads the dialog from its name", async () => {
     const { root, opener } = await open();
     opener.focus();
     const closed = root.showFeedback(feedbackOf(RIGHT));
@@ -86,7 +86,7 @@ describe("modal feedback", () => {
     await closed;
   });
 
-  it("[T21] closes with the Close button from the keyboard", async () => {
+  it("closes with the Close button from the keyboard", async () => {
     const { root, opener } = await open();
     opener.focus();
     const closed = root.showFeedback(feedbackOf(RIGHT));
@@ -97,7 +97,7 @@ describe("modal feedback", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("[T21] closes with Escape and with the Close button, removes the dialog and gives the focus back to where it was", async () => {
+  it("closes with Escape and with the Close button, removes the dialog and gives the focus back to where it was", async () => {
     const { root, opener } = await open();
     opener.focus();
     let closed = root.showFeedback(feedbackOf(RIGHT));
@@ -115,7 +115,7 @@ describe("modal feedback", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("[T21] makes the item behind it inert while it is open", async () => {
+  it("makes the item behind it inert while it is open", async () => {
     const { root, opener } = await open();
     const closed = root.showFeedback(feedbackOf(RIGHT));
     const behind = root.root.querySelector<HTMLElement>(".ak-content a");
@@ -127,7 +127,7 @@ describe("modal feedback", () => {
     await closed;
   });
 
-  it("[T21][U] is not clipped by the containment of the content root: the dialog is in the top layer, over the whole viewport", async () => {
+  it("is not clipped by the containment of the content root: the dialog is in the top layer, over the whole viewport", async () => {
     const { host, root } = await open("width: 120px; height: 40px; overflow: hidden;");
     await page.viewport(900, 700);
     const closed = root.showFeedback(feedbackOf(RIGHT, NEXT));
@@ -146,7 +146,7 @@ describe("modal feedback", () => {
     await closed;
   });
 
-  it("[T21][SC 4.1.2] passes axe with the dialog open", async () => {
+  it("passes axe with the dialog open", async () => {
     const { host, root } = await open();
     const closed = root.showFeedback(feedbackOf(RIGHT, NEXT));
     expect(await axeViolations(host)).toEqual([]);
@@ -154,7 +154,7 @@ describe("modal feedback", () => {
     await closed;
   });
 
-  it("[T21] uses the language of the interface for its heading and its button", async () => {
+  it("uses the language of the interface for its heading and its button", async () => {
     const { root } = await open();
     const closed = root.showFeedback([]);
     expect(dialogOf(root.root).querySelector("h2")?.textContent).toBe("Feedback");

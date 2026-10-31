@@ -77,7 +77,7 @@ async function resize(width: number, height = 800): Promise<void> {
 }
 
 describe("createContentRoot", () => {
-  it("[T1] shows the rubric, the stimuli and the body in an open shadow root, in the order the candidate meets them", async () => {
+  it("shows the rubric, the stimuli and the body in an open shadow root, in the order the candidate meets them", async () => {
     const { host, root } = createRoot();
     await root.show({
       rubric: { nodes: itemBody("<p>Read both texts.</p>") },
@@ -99,7 +99,7 @@ describe("createContentRoot", () => {
     expect(el(content, ".ak-main").hasAttribute("data-ak-stimuli")).toBe(true);
   });
 
-  it("[T1] sets a stimulus beside the item on a wide viewport and above it on a narrow one", async () => {
+  it("sets a stimulus beside the item on a wide viewport and above it on a narrow one", async () => {
     const { root } = createRoot();
     await root.show({
       stimuli: [{ nodes: itemBody("<p>A passage that the item shares.</p>") }],
@@ -119,7 +119,7 @@ describe("createContentRoot", () => {
     await resize(1280);
   });
 
-  it("[T12] folds the columns of a layout row for the viewport of the moment when the host mounts the root again after a resize, with a sheet built from the same text", async () => {
+  it("folds the columns of a layout row for the viewport of the moment when the host mounts the root again after a resize, with a sheet built from the same text", async () => {
     const columns = itemBody(
       "<div class='qti-layout-row'><div class='qti-layout-col6' id='a'>a</div><div class='qti-layout-col6' id='b'>b</div></div>",
     );
@@ -150,7 +150,7 @@ describe("createContentRoot", () => {
     }
   });
 
-  it("[T1] keeps the stimulus above the item when the candidate asks for a single column", async () => {
+  it("keeps the stimulus above the item when the candidate asks for a single column", async () => {
     const { host, root } = createRoot();
     host.setAttribute("data-ak-single-column", "");
     await root.show({
@@ -162,7 +162,7 @@ describe("createContentRoot", () => {
     expect(el(root.root, ".ak-body").getBoundingClientRect().top).toBeGreaterThanOrEqual(stimulus.bottom);
   });
 
-  it("[T1] replaces what it showed with the next content, and destroy leaves the root empty", async () => {
+  it("replaces what it showed with the next content, and destroy leaves the root empty", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody("<p>First.</p>") } });
     await root.show({ body: { nodes: itemBody("<p>Second.</p>") } });
@@ -173,7 +173,7 @@ describe("createContentRoot", () => {
     expect(root.root.adoptedStyleSheets).toHaveLength(0);
   });
 
-  it("[T1] renders each part against the document it comes from", async () => {
+  it("renders each part against the document it comes from", async () => {
     const { root } = createRoot();
     await root.show({
       stimuli: [{ nodes: itemBody('<p><img src="images/dot.png" alt="s"/></p>'), base: "stimuli/s1/stimulus.xml" }],
@@ -183,7 +183,7 @@ describe("createContentRoot", () => {
     expect(el(root.root, ".ak-body img").getAttribute("src")).toBe(`${ITEM_DIRECTORY}images/dot.png`);
   });
 
-  it("[T12] contains layout and paint and isolates its stacking, so that a fixed element of the item stays in the root", async () => {
+  it("contains layout and paint and isolates its stacking, so that a fixed element of the item stays in the root", async () => {
     const sheet = "p.fixed { position: fixed; top: 0; left: 0; width: 100%; height: 30px; z-index: 2147483647; }";
     const { host, root } = createRoot(
       { fetch: fakeFetch({ "items/q1/style/fixed.css": sheet }).fetcher },
@@ -202,7 +202,7 @@ describe("createContentRoot", () => {
     expect(fixed.right).toBeLessThanOrEqual(box.right + 1);
   });
 
-  it("[T12] adopts player.css first and the stylesheets of the item after it, and the item's rules apply in the root only", async () => {
+  it("adopts player.css first and the stylesheets of the item after it, and the item's rules apply in the root only", async () => {
     const page_ = document.createElement("p");
     page_.textContent = "Page";
     document.body.append(page_);
@@ -223,7 +223,7 @@ describe("createContentRoot", () => {
     expect(computed(page_, "letter-spacing")).not.toBe("3px");
   });
 
-  it("[T12] resolves a relative url() of the stylesheet against the stylesheet, and the browser loads the image", async () => {
+  it("resolves a relative url() of the stylesheet against the stylesheet, and the browser loads the image", async () => {
     const { root } = createRoot();
     await root.show({
       body: { nodes: itemBody('<p class="picture">Picture</p>') },
@@ -234,7 +234,7 @@ describe("createContentRoot", () => {
     expect(await hits(asset)).toContain(`/content/${TOKEN}/items/q1/images/dot.png`);
   });
 
-  it("[T12] fetches a stylesheet without credentials or referrer, and once for any number of shows", async () => {
+  it("fetches a stylesheet without credentials or referrer, and once for any number of shows", async () => {
     const { fetcher, requests } = fakeFetch({ "items/q1/style/a.css": ".x { color: rgb(1, 2, 3); }" });
     const { root } = createRoot({ fetch: fetcher });
     const content = { body: { nodes: itemBody('<p class="x">x</p>') }, stylesheets: ["items/q1/style/a.css"] };
@@ -249,7 +249,7 @@ describe("createContentRoot", () => {
     expect(computed(el(root.root, ".x"), "color")).toBe("rgb(1, 2, 3)");
   });
 
-  it("[T12] shows the content and adopts the stylesheets that loaded when one cannot be fetched, and rejects with AssesskitError", async () => {
+  it("shows the content and adopts the stylesheets that loaded when one cannot be fetched, and rejects with AssesskitError", async () => {
     const { fetcher, requests } = fakeFetch({
       "items/q1/style/ok.css": ".x { color: rgb(1, 2, 3); }",
       "items/q1/style/gone.css": 404,
@@ -270,7 +270,7 @@ describe("createContentRoot", () => {
     expect(requests.filter(({ url }) => url.endsWith("gone.css"))).toHaveLength(2);
   });
 
-  it("[T12] follows a link to an id of the root by moving the focus there, and leaves the address of the page alone", async () => {
+  it("follows a link to an id of the root by moving the focus there, and leaves the address of the page alone", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody('<p><a href="#note">note</a></p><p id="note">The note.</p>') } });
     const before = location.href;
@@ -279,7 +279,7 @@ describe("createContentRoot", () => {
     expect(location.href).toBe(before);
   });
 
-  it("[T9] typesets the MathML of the root when it has a typesetter, with the styles that MathJax needs in the root", async () => {
+  it("typesets the MathML of the root when it has a typesetter, with the styles that MathJax needs in the root", async () => {
     const { root } = createRoot({ typesetter: createMathTypesetter(MATHJAX) });
     await root.show({
       body: {
@@ -294,7 +294,7 @@ describe("createContentRoot", () => {
     expect(el(root.root, "mjx-container mjx-mi mjx-c").getBoundingClientRect().width).toBeGreaterThan(0);
   });
 
-  it("[T9] leaves the MathML to the browser when it has no typesetter", async () => {
+  it("leaves the MathML to the browser when it has no typesetter", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody("<p><m:math><m:mi>y</m:mi></m:math></p>") } });
     expect(el(root.root, "math > mi").textContent).toBe("y");
@@ -309,7 +309,7 @@ describe("hazards", () => {
     <object data="pages/note.html" type="text/html">Page alternative</object>
     <img src="images/anim.gif" alt="An animation"/><img src="images/dot.png" alt="A still"/></p>`;
 
-  it("[T95] withholds the media, the animation and the sound of an item when a hazard that the candidate avoids remains, and says which", async () => {
+  it("withholds the media, the animation and the sound of an item when a hazard that the candidate avoids remains, and says which", async () => {
     const { root } = createRoot();
     await root.show({
       body: { nodes: itemBody(Media) },
@@ -337,14 +337,14 @@ describe("hazards", () => {
     expect(notice.compareDocumentPosition(el(root.root, ".ak-main")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("[T95] names a hazard in the language of the interface", async () => {
+  it("names a hazard in the language of the interface", async () => {
     const { root } = createRoot({ messages: { ...EN_MESSAGES, hazardSound: "Loud noise", hazardNotice: "A notice." } });
     await root.show({ body: { nodes: itemBody("<p>x</p>") }, hazards: [{ hazard: "sound", avoided: true }] });
     expect(el(root.root, ".ak-hazards p").textContent).toBe("A notice.");
     expect(el(root.root, ".ak-hazards li").textContent).toBe("Loud noise");
   });
 
-  it("[T95] draws the media and no notice when the hazards of the content are not avoided or there are none", async () => {
+  it("draws the media and no notice when the hazards of the content are not avoided or there are none", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody(Media) }, hazards: [{ hazard: "flashing", avoided: false }] });
     expect(root.root.querySelector(".ak-hazards")).toBeNull();
@@ -360,7 +360,7 @@ describe("hazards", () => {
     expect(root.root.querySelector(".ak-hazards")).toBeNull();
   });
 
-  it("[T95] gives a notice for a hazard that has nothing to withhold, such as a smell", async () => {
+  it("gives a notice for a hazard that has nothing to withhold, such as a smell", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody(Media) }, hazards: [{ hazard: "olfactory-hazard", avoided: true }] });
     expect([...root.root.querySelectorAll(".ak-hazards li")].map((item) => item.textContent)).toEqual(["Smell"]);
@@ -371,7 +371,7 @@ describe("feedback and rubric in a root", () => {
   const TestFeedback = (title: string) =>
     `<qti-test-feedback outcome-identifier="FB" identifier="done" show-hide="show" access="atEnd"${title}><qti-content-body><p>You finished the test.</p></qti-content-body></qti-test-feedback>`;
 
-  it("[T24] shows the test feedback that the view gives after the item, in a region of its own with its title", async () => {
+  it("shows the test feedback that the view gives after the item, in a region of its own with its title", async () => {
     const { root } = createRoot();
     const read = readAsi(
       `<qti-assessment-test xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="t" title="t">
@@ -394,7 +394,7 @@ describe("feedback and rubric in a root", () => {
     expect(getComputedStyle(el(region, "qti-test-feedback")).display).toBe("block");
   });
 
-  it("[T23] shows the rubric of the test before the item, for the view of the renderer", async () => {
+  it("shows the rubric of the test before the item, for the view of the renderer", async () => {
     const { root } = createRoot();
     const rubric = (view: string) =>
       `<qti-rubric-block view="${view}" use="instructions"><qti-content-body><p>For ${view}.</p></qti-content-body></qti-rubric-block>`;
@@ -404,7 +404,7 @@ describe("feedback and rubric in a root", () => {
     ]);
   });
 
-  it("[SC 1.1.1][SC 1.3.1] passes axe for a root with a rubric, a stimulus, an item with an image, a table, a hazard notice and feedback", async () => {
+  it("passes axe for a root with a rubric, a stimulus, an item with an image, a table, a hazard notice and feedback", async () => {
     const { host, root } = createRoot();
     await root.show({
       rubric: {
@@ -433,7 +433,7 @@ describe("themes", () => {
     { "data-ak-contrast": "high", "data-ak-polarity": "inverted" },
   ];
 
-  it("[SC 1.4.3] keeps the contrast of the hazard notice, the rubric and the test feedback in every theme", async () => {
+  it("keeps the contrast of the hazard notice, the rubric and the test feedback in every theme", async () => {
     const { host, root } = createRoot();
     await root.show({
       rubric: {
@@ -451,7 +451,7 @@ describe("themes", () => {
     }
   });
 
-  it("[SC 1.4.3] keeps the contrast of the dialog in every theme", async () => {
+  it("keeps the contrast of the dialog in every theme", async () => {
     const { host, root } = createRoot();
     await root.show({ body: { nodes: itemBody("<p>The question.</p>") } });
     const document_ = readAsi(
@@ -532,14 +532,14 @@ describe("hostile stylesheets", () => {
   ];
   const policy = { url: `${ITEM_DIRECTORY}style/hostile.css`, origins: new Set<string>() };
 
-  it("[T12][U] ignores an @import when it builds the sheet from text, in every engine", () => {
+  it("ignores an @import when it builds the sheet from text, in every engine", () => {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync('@import url("https://example.invalid/x.css"); @import "y.css"; p { color: rgb(1, 2, 3); }');
     expect([...sheet.cssRules].some((rule) => rule instanceof CSSImportRule)).toBe(false);
     expect([...sheet.cssRules].map((rule) => rule.constructor.name)).toEqual(["CSSStyleRule"]);
   });
 
-  it("[T12][U] writes a relative url() as the absolute URL against the stylesheet, which Chromium does not do for baseURL", () => {
+  it("writes a relative url() as the absolute URL against the stylesheet, which Chromium does not do for baseURL", () => {
     const sheet = sanitizeStylesheet(
       ".x { background-image: url(../images/dot.png); } @media (min-width: 1px) { .y { border-image-source: url(f.png); } }",
       policy,
@@ -554,7 +554,7 @@ describe("hostile stylesheets", () => {
     );
   });
 
-  it("[T12] removes imports, rules for the host, and every url() and loader that leaves the origin of the sheet", () => {
+  it("removes imports, rules for the host, and every url() and loader that leaves the origin of the sheet", () => {
     const sheet = sanitizeStylesheet(Hostile, policy);
     const text = [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
     for (const forbidden of [
@@ -582,7 +582,7 @@ describe("hostile stylesheets", () => {
     expect(text).not.toContain("var(--nothing");
   });
 
-  it("[T12] keeps the root's frame as it is under a stylesheet that restyles the host, and the browser asks no other origin", async () => {
+  it("keeps the root's frame as it is under a stylesheet that restyles the host, and the browser asks no other origin", async () => {
     const { host, root } = createRoot({ fetch: fakeFetch({ "items/q1/style/hostile.css": Hostile }).fetcher });
     const before = { contain: computed(host, "contain"), position: computed(host, "position") };
     await root.show({
@@ -612,7 +612,7 @@ describe("the stage and the media scale", () => {
   const sizes = (root: ParentNode, selector: string): (string | null)[][] =>
     [...root.querySelectorAll(selector)].map((each) => [each.getAttribute("width"), each.getAttribute("height")]);
 
-  it("[T1] fills the width of the host, which the rules of the stage of a graphic interaction would shrink to its content", async () => {
+  it("fills the width of the host, which the rules of the stage of a graphic interaction would shrink to its content", async () => {
     const { host, root } = createRoot({}, "width: 480px;");
     await root.show({ body: { nodes: itemBody("<p>Text.</p>") } });
     expect(computed(root.stage, "display")).toBe("block");
@@ -620,7 +620,7 @@ describe("the stage and the media scale", () => {
     expect(root.stage.getBoundingClientRect().width).toBe(host.getBoundingClientRect().width - padding);
   });
 
-  it("[T1] holds the content in a positioned element that stays when the content is replaced", async () => {
+  it("holds the content in a positioned element that stays when the content is replaced", async () => {
     const { root } = createRoot();
     expect(root.stage.parentNode).toBe(root.root);
     expect(computed(root.stage, "position")).toBe("relative");
@@ -632,7 +632,7 @@ describe("the stage and the media scale", () => {
     expect(root.root.querySelector(".ak-content")?.parentNode).toBe(root.stage);
   });
 
-  it("[T4] scales the pixel sizes of media from the size the author gave, and leaves percentages alone", async () => {
+  it("scales the pixel sizes of media from the size the author gave, and leaves percentages alone", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody(Pictures) } });
     expect(sizes(root.root, "#images img")).toEqual([
@@ -654,7 +654,7 @@ describe("the stage and the media scale", () => {
     expect(sizes(root.root, "#video video")).toEqual([["300", "150"]]);
   });
 
-  it("[T4] does not draw the content again when the scale changes", async () => {
+  it("does not draw the content again when the scale changes", async () => {
     const { root } = createRoot();
     await root.show({ body: { nodes: itemBody(Pictures) } });
     const content = el(root.root, ".ak-content");
@@ -666,7 +666,7 @@ describe("the stage and the media scale", () => {
     expect(el(root.root, "img")).toBe(image);
   });
 
-  it("[T4] draws the content that comes after a change at the scale of the moment", async () => {
+  it("draws the content that comes after a change at the scale of the moment", async () => {
     const { root } = createRoot();
     root.setMediaScale(2);
     await root.show({ body: { nodes: itemBody(Pictures) } });
@@ -676,7 +676,7 @@ describe("the stage and the media scale", () => {
     expect(sizes(root.root, "#images img")[0]).toEqual(["180", "120"]);
   });
 
-  it("[T4] starts at the scale of the option", async () => {
+  it("starts at the scale of the option", async () => {
     const { root } = createRoot({ mediaScale: 1.5 });
     await root.show({ body: { nodes: itemBody(Pictures) } });
     expect(sizes(root.root, "#images img")[0]).toEqual(["180", "120"]);
@@ -684,7 +684,7 @@ describe("the stage and the media scale", () => {
     expect(sizes(root.root, "#images img")[0]).toEqual(["120", "80"]);
   });
 
-  it("[T4] rejects a scale that is not a positive number", () => {
+  it("rejects a scale that is not a positive number", () => {
     const { root } = createRoot();
     const scale = (value: string): void => root.setMediaScale(JSON.parse(value));
     expect(() => scale('"2"')).toThrow(new DataError('The media scale must be a positive number, found "2".'));
@@ -702,7 +702,7 @@ describe("options", () => {
     stylesheet: stylesheet(PLAYER_CSS),
   });
 
-  it("[T1] throws DataError for a host and options of other types", () => {
+  it("throws DataError for a host and options of other types", () => {
     const host = document.createElement("div");
     expect(() => create(JSON.parse("null"), valid())).toThrow("The host must be an element, found null.");
     expect(() => create(host, JSON.parse("null"))).toThrow("The options must be an object, found null.");
@@ -719,7 +719,7 @@ describe("options", () => {
     expect(() => create(host, { ...valid(), assets: JSON.parse("1") })).toThrow(DataError);
   });
 
-  it("[T1] throws DataError for a host that already has a shadow root", () => {
+  it("throws DataError for a host that already has a shadow root", () => {
     const host = document.createElement("div");
     host.attachShadow({ mode: "open" });
     expect(() => create(host, valid())).toThrow(
@@ -727,7 +727,7 @@ describe("options", () => {
     );
   });
 
-  it("[T1] throws DataError for content of other types", async () => {
+  it("throws DataError for content of other types", async () => {
     const { root } = createRoot();
     const show = (content: unknown) => root.show(content as never);
     await expect(show(JSON.parse("null"))).rejects.toThrow("The content must be an object, found null.");

@@ -189,7 +189,7 @@ async function login(
 }
 
 describe("the page that stores state and nonce", () => {
-  it("[T121] stores both in the platform's parent frame and then redirects to the authentication request", async () => {
+  it("stores both in the platform's parent frame and then redirects to the authentication request", async () => {
     const storage = new PlatformStorage(window);
     const { page, state, nonce } = await login("_parent");
     const frame = await load(page);
@@ -203,7 +203,7 @@ describe("the page that stores state and nonce", () => {
     expect(request.get("response_mode")).toBe("form_post");
   });
 
-  it("[T121] stores both in a frame of the platform that has the given name", async () => {
+  it("stores both in a frame of the platform that has the given name", async () => {
     const storage = new PlatformStorage(await storageFrame("lti-storage"));
     const { page, state, nonce } = await login("lti-storage");
     const frame = await load(page);
@@ -213,7 +213,7 @@ describe("the page that stores state and nonce", () => {
     expect(storage.get(`nonce_${nonce}`)).toBe(nonce);
   });
 
-  it("[T121] ignores an answer that is not to its message", async () => {
+  it("ignores an answer that is not to its message", async () => {
     const storage = new PlatformStorage(window, { noise: true });
     const { page } = await login("_parent");
     const frame = await load(page);
@@ -221,7 +221,7 @@ describe("the page that stores state and nonce", () => {
     await waitFor(() => expect(frame.contentWindow?.location.href).toContain(AUTHENTICATION_DOCUMENT));
   });
 
-  it("[T121] tells the user and stays when the platform answers with an error", async () => {
+  it("tells the user and stays when the platform answers with an error", async () => {
     const storage = new PlatformStorage(window, { fail: true });
     const { page } = await login("_parent");
     const frame = await load(page);
@@ -230,7 +230,7 @@ describe("the page that stores state and nonce", () => {
     expect(frame.contentWindow?.location.href).toBe("about:srcdoc");
   });
 
-  it("[T121] tells the user at once when the platform has no frame of the given name", async () => {
+  it("tells the user at once when the platform has no frame of the given name", async () => {
     const { page } = await login("no-such-frame");
     const frame = await load(page);
     expect(frame.contentDocument?.getElementById("failure")?.hidden).toBe(false);
@@ -269,7 +269,7 @@ describe("the verification page", () => {
     return { submitted: () => form };
   }
 
-  it("[T121] fetches state and nonce from the platform and posts them with the token", async () => {
+  it("fetches state and nonce from the platform and posts them with the token", async () => {
     const storage = new PlatformStorage(window);
     const { page, state, nonce } = await verification("_parent");
     storage.put(`state_${state}`, state);
@@ -287,7 +287,7 @@ describe("the verification page", () => {
     expect(frame.contentDocument?.querySelector("form")?.getAttribute("action")).toBe(registration.redirectUri);
   });
 
-  it("[T121] posts nothing and tells the user when the platform does not hold the values", async () => {
+  it("posts nothing and tells the user when the platform does not hold the values", async () => {
     const storage = new PlatformStorage(window);
     const { page } = await verification("_parent");
     const frame = await load(page);
@@ -297,7 +297,7 @@ describe("the verification page", () => {
     expect(submitted()).toBeUndefined();
   });
 
-  it("[T121] posts nothing when the platform has no frame of the given name", async () => {
+  it("posts nothing when the platform has no frame of the given name", async () => {
     const { page } = await verification("no-such-frame");
     const frame = await load(page);
     const { submitted } = submission(frame);

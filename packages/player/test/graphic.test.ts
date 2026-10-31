@@ -23,7 +23,7 @@ const IMAGE = '<object type="image/png" data="a.png" width="200" height="100"/>'
 const SIZE = { width: 200, height: 100 };
 
 describe("geometry", () => {
-  it("[T35] gives the box of each shape as INFO §7.9 states its coordinates", () => {
+  it("gives the box of each shape as INFO §7.9 states its coordinates", () => {
     // INFO §7.9: rect is left-x, top-y, right-x, bottom-y; circle is center-x, center-y, radius; ellipse is center-x,
     // center-y, h-radius, v-radius; poly is x1, y1, ... xN, yN; default is the whole image.
     expect(parseArea("rect", "10,20,30,50", SIZE).box).toEqual({ x: 10, y: 20, width: 20, height: 30 });
@@ -39,18 +39,18 @@ describe("geometry", () => {
     ]);
   });
 
-  it("[T35] reads a percentage against the width for x, the height for y, and the smaller side for a radius", () => {
+  it("reads a percentage against the width for x, the height for y, and the smaller side for a radius", () => {
     expect(parseArea("rect", "10%,20%,50%,100%", SIZE).box).toEqual({ x: 20, y: 20, width: 80, height: 80 });
     // INFO §7.9: the radius is the smaller of the two values: 10% of 100, not of 200.
     expect(parseArea("circle", "50%,50%,10%", SIZE).box).toEqual({ x: 90, y: 40, width: 20, height: 20 });
     expect(parseArea("ellipse", "50%,50%,10%,10%", SIZE).box).toEqual({ x: 80, y: 40, width: 40, height: 20 });
   });
 
-  it("[T35] takes a rectangle whose corners are swapped as the same box", () => {
+  it("takes a rectangle whose corners are swapped as the same box", () => {
     expect(parseArea("rect", "30,50,10,20", SIZE).box).toEqual(parseArea("rect", "10,20,30,50", SIZE).box);
   });
 
-  it("[T35] refuses coordinates that do not fit the shape", () => {
+  it("refuses coordinates that do not fit the shape", () => {
     expect(() => parseArea("circle", "1,2", SIZE)).toThrow(DataError);
     expect(() => parseArea("rect", "1,2,3", SIZE)).toThrow("cannot have the 3 coordinates");
     expect(() => parseArea("poly", "1,2,3,4,5", SIZE)).toThrow(DataError);
@@ -59,7 +59,7 @@ describe("geometry", () => {
     expect(() => parseArea("rect", "1,2,3,-4", SIZE)).toThrow(DataError);
   });
 
-  it("[T36] turns a position on the screen into a point of the image at any scale", () => {
+  it("turns a position on the screen into a point of the image at any scale", () => {
     // The image is drawn at half size at (10, 20): the screen position (60, 45) is half way across and down.
     const drawn = { x: 10, y: 20, width: 100, height: 50 };
     expect(pointAt(drawn, SIZE, 60, 45)).toEqual([100, 50]);
@@ -69,7 +69,7 @@ describe("geometry", () => {
   });
 
   describe("properties", () => {
-    it("[T36] gives a point of the image with whole numbers for any position", () => {
+    it("gives a point of the image with whole numbers for any position", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -90,7 +90,7 @@ describe("geometry", () => {
       );
     });
 
-    it("[T35] holds every corner of a polygon in its box", () => {
+    it("holds every corner of a polygon in its box", () => {
       fc.assert(
         fc.property(
           fc.array(fc.tuple(fc.integer({ min: 0, max: 200 }), fc.integer({ min: 0, max: 100 })), {
@@ -116,7 +116,7 @@ describe("values", () => {
       `<qti-select-point-interaction response-identifier="R" ${attributes}>${IMAGE}</qti-select-point-interaction>`,
     );
 
-  it("[T36] reads the points of a value in their order, and none from NULL or other values", () => {
+  it("reads the points of a value in their order, and none from NULL or other values", () => {
     expect(
       pointsOf(
         container("multiple", "point", [
@@ -134,7 +134,7 @@ describe("values", () => {
     expect(pointsOf(container("multiple", "pair", [["A", "B"]]))).toEqual([]);
   });
 
-  it("[T36] gives a single point for one point of a single variable, a container otherwise, and NULL for none", () => {
+  it("gives a single point for one point of a single variable, a container otherwise, and NULL for none", () => {
     expect(responseOf(selectPoint("single", 'max-choices="1"'), "point", [[1, 2]])).toEqual(single("point", [1, 2]));
     expect(responseOf(selectPoint("multiple", 'max-choices="3"'), "point", [[1, 2]])).toEqual(
       container("multiple", "point", [[1, 2]]),
@@ -187,7 +187,7 @@ const cellsOf = (runs: ReturnType<typeof fillRuns>): string[] =>
   runs.flatMap(({ x0, x1, y }) => Array.from({ length: x1 - x0 + 1 }, (_, i) => `${x0 + i},${y}`));
 
 describe("drawing operations", () => {
-  it("[T44] fills the region that joins the start and stops at a line", () => {
+  it("fills the region that joins the start and stops at a line", () => {
     const pixels = grid(["..#..", "..#..", "..#..", "..#.."]);
     expect(new Set(cellsOf(fillRuns(pixels, [0, 0])))).toEqual(
       new Set(["0,0", "1,0", "0,1", "1,1", "0,2", "1,2", "0,3", "1,3"]),
@@ -196,26 +196,26 @@ describe("drawing operations", () => {
     expect(cellsOf(fillRuns(pixels, [2, 1])).sort()).toEqual(["2,0", "2,1", "2,2", "2,3"]);
   });
 
-  it("[T44] fills nothing for a start outside the picture", () => {
+  it("fills nothing for a start outside the picture", () => {
     const pixels = grid(["..", ".."]);
     expect(fillRuns(pixels, [-1, 0])).toEqual([]);
     expect(fillRuns(pixels, [0, 2])).toEqual([]);
     expect(fillRuns(pixels, [2, 0])).toEqual([]);
   });
 
-  it("[T44] does not cross a diagonal line of the other color", () => {
+  it("does not cross a diagonal line of the other color", () => {
     const pixels = grid(["#..", ".#.", "..#"]);
     // Cells that only touch at a corner are not joined (four neighbors).
     expect(cellsOf(fillRuns(pixels, [1, 0])).sort()).toEqual(["1,0", "2,0", "2,1"].sort());
   });
 
-  it("[T44] covers a soft edge: a gray close to the start color is filled, and one far from it is a line", () => {
+  it("covers a soft edge: a gray close to the start color is filled, and one far from it is a line", () => {
     const soft = { width: 3, height: 1, data: [255, 255, 255, 255, 235, 235, 235, 255, 40, 40, 40, 255] };
     expect(cellsOf(fillRuns(soft, [0, 0])).sort()).toEqual(["0,0", "1,0"]);
   });
 
   describe("properties", () => {
-    it("[T44] covers exactly the cells that a plain search of the neighbors reaches, each once", () => {
+    it("covers exactly the cells that a plain search of the neighbors reaches, each once", () => {
       const cell = fc.constantFrom(".", "#");
       fc.assert(
         fc.property(

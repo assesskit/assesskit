@@ -9,7 +9,7 @@ function samplesOf(bytes: Uint8Array): number[] {
 }
 
 describe("encodeWav", () => {
-  it("[T43] writes the header of a WAV file of 16-bit mono PCM, as the Waveform Audio File Format gives it", () => {
+  it("writes the header of a WAV file of 16-bit mono PCM, as the Waveform Audio File Format gives it", () => {
     const bytes = encodeWav([new Float32Array([0, 0.5]), new Float32Array([-0.5])], 8000);
     // The bytes of the header of a RIFF WAVE file with 3 frames at 8000 Hz: 36 + 6 bytes of RIFF, PCM format 1, one
     // channel, 8000 frames and 16000 bytes a second, a block of 2 bytes of 16 bits, and 6 bytes of data.
@@ -29,16 +29,16 @@ describe("encodeWav", () => {
     expect(bytes).toHaveLength(50);
   });
 
-  it("[T43] scales a sample to a signed 16-bit integer and clips what is outside −1 to 1", () => {
+  it("scales a sample to a signed 16-bit integer and clips what is outside −1 to 1", () => {
     const bytes = encodeWav([new Float32Array([0, 1, -1, 0.5, 2, -3])], 44100);
     expect(samplesOf(bytes)).toEqual([0, 32767, -32768, 16383, 32767, -32768]);
   });
 
-  it("[T43] writes no samples for no blocks", () => {
+  it("writes no samples for no blocks", () => {
     expect(encodeWav([], 48000)).toHaveLength(44);
   });
 
-  it("[T43] keeps every sample in order across blocks", () => {
+  it("keeps every sample in order across blocks", () => {
     fc.assert(
       fc.property(
         fc.array(fc.array(fc.float({ min: -1, max: 1, noNaN: true }), { maxLength: 20 }), { maxLength: 6 }),

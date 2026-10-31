@@ -9,7 +9,7 @@ import { checkTest } from "./test.js";
 /**
  * Validates an assessment document beyond its schema: the rule sets of BIND §5, the information-model constraints that a
  * schema cannot state, and the static types of its processing, so that what would fail when it runs is reported before it
- * does. The checks are listed in the guide `docs/validate.md`. An item is checked with its declarations; a stimulus, section
+ * does. The checks are listed in the guide `docs/runtime/validate.md`. An item is checked with its declarations; a stimulus, section
  * or processing document by what its elements say alone; a test by its own document, without resolving the items it
  * names (see `validateTest`). An `xi:include` left in the document is an error: resolve includes first.
  *

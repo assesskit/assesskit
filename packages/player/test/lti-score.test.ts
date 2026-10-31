@@ -104,7 +104,7 @@ const waiting = (...modes: readonly ("human" | "externalMachine")[]): PendingWor
 });
 
 describe("publishScore", () => {
-  it("[T105] posts a final score as LTI AGS 2.0 example 3.4.3.1 does: scoreGiven with scoreMaximum, Completed and FullyGraded", async () => {
+  it("posts a final score as LTI AGS 2.0 example 3.4.3.1 does: scoreGiven with scoreMaximum, Completed and FullyGraded", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 83, MAXSCORE: 100 }), launch, nothing, options);
     expect(lms.accepted).toEqual([
@@ -121,7 +121,7 @@ describe("publishScore", () => {
     expect(lms.platform.grants.map(({ scope }) => scope)).toEqual([`${AGS}score`]);
   });
 
-  it("[T105] posts a score that waits for a person as example 3.4.8.1 does, without a score, though the report has one", async () => {
+  it("posts a score that waits for a person as example 3.4.8.1 does, without a score, though the report has one", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 12, MAXSCORE: 100 }), launch, waiting("human", "externalMachine"), options);
     expect(lms.accepted).toEqual([
@@ -129,7 +129,7 @@ describe("publishScore", () => {
     ]);
   });
 
-  it("[T105] posts the score so far as Pending while only scoring services are left", async () => {
+  it("posts the score so far as Pending while only scoring services are left", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 12, MAXSCORE: 100 }), launch, waiting("externalMachine"), options);
     expect(lms.accepted).toEqual([
@@ -144,7 +144,7 @@ describe("publishScore", () => {
     ]);
   });
 
-  it("[T105] sends a negative SCORE as 0 with the report's value in the comment, and a zero as it is", async () => {
+  it("sends a negative SCORE as 0 with the report's value in the comment, and a zero as it is", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: -2.5, MAXSCORE: 10 }), launch, nothing, options);
     await publishScore(report({ SCORE: 0, MAXSCORE: 10 }, "2023-11-14T22:13:21.000Z"), launch, nothing, options);
@@ -155,7 +155,7 @@ describe("publishScore", () => {
     expect(lms.accepted[1]).not.toHaveProperty("comment");
   });
 
-  it("[T105] takes the time of the report as the timestamp, which grows as the session changes", async () => {
+  it("takes the time of the report as the timestamp, which grows as the session changes", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 1, MAXSCORE: 10 }, "2023-11-14T22:13:20.001Z"), launch, nothing, options);
     await publishScore(report({ SCORE: 2, MAXSCORE: 10 }, "2023-11-14T22:14:00.000Z"), launch, nothing, options);
@@ -165,7 +165,7 @@ describe("publishScore", () => {
     ]);
   });
 
-  it("[T105] reads the scoreMaximum of the line item when the report has no MAXSCORE, and asks for the scope to read it", async () => {
+  it("reads the scoreMaximum of the line item when the report has no MAXSCORE, and asks for the scope to read it", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({ SCORE: 7 }), launch, nothing, options);
     expect(lms.calls).toEqual([`GET ${LINE_ITEM_URL}`, `POST ${LINE_ITEM_URL}/scores`]);
@@ -173,7 +173,7 @@ describe("publishScore", () => {
     expect(lms.platform.grants.map(({ scope }) => scope)).toEqual([`${AGS}score ${AGS}lineitem`]);
   });
 
-  it("[T105] prefers the read-only line item scope when the launch offers it", async () => {
+  it("prefers the read-only line item scope when the launch offers it", async () => {
     const { lms, launch, options } = await setup();
     const offered = {
       ...launch,
@@ -188,7 +188,7 @@ describe("publishScore", () => {
     expect(lms.platform.grants.map(({ scope }) => scope)).toEqual([`${AGS}score ${AGS}lineitem.readonly`]);
   });
 
-  it("[T105] needs no line item when there is no score to give", async () => {
+  it("needs no line item when there is no score to give", async () => {
     const { lms, launch, options } = await setup();
     await publishScore(report({}), launch, nothing, options);
     await publishScore(
@@ -202,7 +202,7 @@ describe("publishScore", () => {
     expect(lms.accepted.every((score) => !("scoreGiven" in score))).toBe(true);
   });
 
-  it("[T105] keeps the query of the line item URL on the URL of its scores", async () => {
+  it("keeps the query of the line item URL on the URL of its scores", async () => {
     const { launch, options, lms } = await setup();
     const line = `${LINE_ITEM_URL}?type_id=3`;
     const urls: string[] = [];
@@ -222,7 +222,7 @@ describe("publishScore", () => {
     expect(urls).toEqual([`${LINE_ITEM_URL}/scores?type_id=3`]);
   });
 
-  it("[T105] scores the one item that a session delivered alone, and refuses a report with several items and no test", async () => {
+  it("scores the one item that a session delivered alone, and refuses a report with several items and no test", async () => {
     const { lms, launch, options } = await setup();
     const itemResult = (identifier: string) => ({
       identifier,
@@ -243,7 +243,7 @@ describe("publishScore", () => {
     );
   });
 
-  it("[T105] refuses a report that the session host did not return, and one that is a copy of it", async () => {
+  it("refuses a report that the session host did not return, and one that is a copy of it", async () => {
     const { lms, launch, options } = await setup();
     const official = report({ SCORE: 1, MAXSCORE: 2 });
     const refusal = "A score is published from the results report that SessionHost.results returned";
@@ -253,7 +253,7 @@ describe("publishScore", () => {
     expect(lms.received).toEqual([]);
   });
 
-  it("[T105] refuses a Deep Linking request, a launch without grade services, without the score scope and without a user", async () => {
+  it("refuses a Deep Linking request, a launch without grade services, without the score scope and without a user", async () => {
     const { lms, launch, options } = await setup();
     const results = report({ SCORE: 1, MAXSCORE: 2 });
     const refuse = (change: object, reason: string) =>
@@ -276,7 +276,7 @@ describe("publishScore", () => {
     expect(lms.received).toEqual([]);
   });
 
-  it("[T105] refuses to read the line item without a scope to read it, and a line item without a scoreMaximum", async () => {
+  it("refuses to read the line item without a scope to read it, and a line item without a scoreMaximum", async () => {
     const { lms, launch, options } = await setup();
     const results = report({ SCORE: 1 });
     await expect(
@@ -289,7 +289,7 @@ describe("publishScore", () => {
     expect(lms.received).toEqual([]);
   });
 
-  it("[T105] refuses a SCORE or MAXSCORE that cannot be a score", async () => {
+  it("refuses a SCORE or MAXSCORE that cannot be a score", async () => {
     const { launch, options } = await setup();
     const text: AssessmentResult = {
       context: { sessionIdentifiers: [] },
@@ -318,7 +318,7 @@ describe("publishScore", () => {
     );
   });
 
-  it("[T105] fails with the status of a score service that does not accept the score", async () => {
+  it("fails with the status of a score service that does not accept the score", async () => {
     const { lms, launch, options } = await setup();
     lms.scoreStatus = 503;
     await expect(publishScore(report({ SCORE: 1, MAXSCORE: 2 }), launch, nothing, options)).rejects.toMatchObject({
@@ -332,7 +332,7 @@ describe("publishScore", () => {
     });
   });
 
-  it("[T105] throws DataError for arguments of other types", async () => {
+  it("throws DataError for arguments of other types", async () => {
     const { launch, options } = await setup();
     const results = report({ SCORE: 1, MAXSCORE: 2 });
     await expect(publishScore(results, launch, nothing, JSON.parse("null"))).rejects.toThrow(
@@ -364,7 +364,7 @@ describe("publishScore", () => {
     );
   });
 
-  it("[T105] sends the score with the media type of the score service and the token of the platform", async () => {
+  it("sends the score with the media type of the score service and the token of the platform", async () => {
     const { launch, options, lms } = await setup();
     const seen: Record<string, string>[] = [];
     const fetch: AccessTokenOptions["fetch"] = async (url, init) => {
@@ -377,7 +377,7 @@ describe("publishScore", () => {
 });
 
 describe("gradingProgressOf", () => {
-  it("[T105] is PendingManual while any request waits for a person, Pending while only services are left, and FullyGraded after", () => {
+  it("is PendingManual while any request waits for a person, Pending while only services are left, and FullyGraded after", () => {
     expect(gradingProgressOf(waiting("externalMachine", "human"))).toBe("PendingManual");
     expect(gradingProgressOf(waiting("externalMachine", "externalMachine"))).toBe("Pending");
     expect(gradingProgressOf(nothing)).toBe("FullyGraded");
@@ -388,7 +388,7 @@ describe("properties", () => {
   const modes = fc.array(fc.constantFrom("human" as const, "externalMachine" as const), { maxLength: 4 });
   const number = fc.double({ noNaN: true, noDefaultInfinity: true, min: -1e9, max: 1e9 });
 
-  it("[T105] gives scoreGiven from 0 together with a scoreMaximum above 0 for any SCORE, and none while a person scores", () => {
+  it("gives scoreGiven from 0 together with a scoreMaximum above 0 for any SCORE, and none while a person scores", () => {
     fc.assert(
       fc.property(
         number,
@@ -411,7 +411,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T105] posts any finite SCORE as a score that the platform accepts", async () => {
+  it("posts any finite SCORE as a score that the platform accepts", async () => {
     const { lms, launch, options } = await setup();
     await fc.assert(
       fc.asyncProperty(number, fc.integer({ min: 0, max: 1_000_000 }), async (raw, offset) => {

@@ -50,12 +50,12 @@ describe("body", () => {
     <section><header><h2>Head</h2></header><article><p>Article</p></article><aside><p>Aside</p></aside><nav><p>Nav</p></nav><footer><p>Foot</p></footer><address>Address</address></section>
   </div>`;
 
-  it("[T1] renders the nodes of the body in order, with the text between them", () => {
+  it("renders the nodes of the body in order, with the text between them", () => {
     const content = renderBody("<p>One <em>two</em>, <strong>three</strong>.</p>\n<p>Four</p>", ASSETS);
     expect(content.root.innerHTML).toBe("<p>One <em>two</em>, <strong>three</strong>.</p><p>Four</p>");
   });
 
-  it("[T3] renders every HTML element as the element of the same name, in the order of the document", () => {
+  it("renders every HTML element as the element of the same name, in the order of the document", () => {
     const content = renderBody(Body, ASSETS);
     const expected = namesOf(
       parseXml(`<root xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0">${Body}</root>`),
@@ -63,7 +63,7 @@ describe("body", () => {
     expect([...content.root.querySelectorAll("*")].map((element) => element.localName)).toEqual(expected);
   });
 
-  it("[T3][SC 1.3.1] keeps the headers and scopes of a table, the summary of details and the caption of a figure", async () => {
+  it("keeps the headers and scopes of a table, the summary of details and the caption of a figure", async () => {
     const content = renderBody(Body, ASSETS);
     expect(content.findAll("th[scope=col]").map((cell) => cell.id)).toEqual(["a", "b"]);
     expect(el(content.root, "th[scope=row]").textContent).toBe("r1");
@@ -79,12 +79,12 @@ describe("body", () => {
     expect(await axeViolations(content.host)).toEqual([]);
   });
 
-  it("[T3] leaves the open attribute off a closed details, as HTML reads the attribute by its presence", () => {
+  it("leaves the open attribute off a closed details, as HTML reads the attribute by its presence", () => {
     const content = renderBody('<div><details open="false"><summary>S</summary><p>P</p></details></div>', ASSETS);
     expect(el(content.root, "details").hasAttribute("open")).toBe(false);
   });
 
-  it("[T2] draws a prompt and the label of an inline choice as the elements of QTI beside the other content", () => {
+  it("draws a prompt and the label of an inline choice as the elements of QTI beside the other content", () => {
     const content = renderBody(
       `<p><qti-inline-choice-interaction response-identifier="R">
          <qti-label>Pick one</qti-label>
@@ -102,7 +102,7 @@ describe("body", () => {
     expect(el(content.root, "qti-simple-choice").textContent).toBe("X");
   });
 
-  it("[T1] draws an interaction without a renderer as a placeholder that holds its content, with its attributes of class and id", () => {
+  it("draws an interaction without a renderer as a placeholder that holds its content, with its attributes of class and id", () => {
     const content = renderBody(
       `<qti-choice-interaction id="c1" class="qti-labels-upper-alpha" response-identifier="C" max-choices="1" shuffle="true">
          <qti-simple-choice identifier="x">X</qti-simple-choice>
@@ -118,7 +118,7 @@ describe("body", () => {
     expect(interaction.hasAttribute("response-identifier")).toBe(false);
   });
 
-  it("[T1] gives an interaction to the renderer registered for its kind, with the renderer of the body to render its content", () => {
+  it("gives an interaction to the renderer registered for its kind, with the renderer of the body to render its content", () => {
     const calls: string[] = [];
     const renderer = testRenderer(ASSETS, {
       interactions: new Map([
@@ -153,7 +153,7 @@ describe("body", () => {
 });
 
 describe("images", () => {
-  it("[T4] loads the image through assets, from the path against the document of the item", async () => {
+  it("loads the image through assets, from the path against the document of the item", async () => {
     const content = renderBody('<p><img src="images/dot.png" alt="A dot"/></p>', ASSETS);
     const image = el(content.root, "img") as HTMLImageElement;
     expect(image.getAttribute("src")).toBe(`${ITEM_DIRECTORY}images/dot.png`);
@@ -162,7 +162,7 @@ describe("images", () => {
     expect(image.alt).toBe("A dot");
   });
 
-  it("[T4][SC 1.1.1] keeps the alt text, the long description link and the size, and passes axe", async () => {
+  it("keeps the alt text, the long description link and the size, and passes axe", async () => {
     const content = renderBody(
       '<p><img src="images/dot.png" alt="A dot" longdesc="descriptions/dot.html" width="120" height="80"/><img src="images/dot.png" alt=""/></p>',
       ASSETS,
@@ -175,7 +175,7 @@ describe("images", () => {
     expect(await axeViolations(content.host)).toEqual([]);
   });
 
-  it("[T4] multiplies the pixel size of an image by the magnification of non-text content, and not a percentage", () => {
+  it("multiplies the pixel size of an image by the magnification of non-text content, and not a percentage", () => {
     const content = renderBody(
       '<p><img src="images/dot.png" alt="a" width="120" height="80"/><img src="images/dot.png" alt="b" width="50%"/></p>',
       ASSETS,
@@ -189,7 +189,7 @@ describe("images", () => {
     expect(second?.hasAttribute("data-ak-width")).toBe(false);
   });
 
-  it("[T4] resolves the sources of a picture, with their srcset and sizes", () => {
+  it("resolves the sources of a picture, with their srcset and sizes", () => {
     const content = renderBody(
       `<p><picture>
          <source srcset="images/dot.png 1x, images/dot@2x.png 2x" sizes="(max-width: 600px) 480px, 800px" media="(min-width: 400px)" type="image/png"/>
@@ -206,7 +206,7 @@ describe("images", () => {
     expect(source.getAttribute("type")).toBe("image/png");
   });
 
-  it("[T4] starts the references below an element with xml:base at that base, as XML Base reads it, and nowhere else", () => {
+  it("starts the references below an element with xml:base at that base, as XML Base reads it, and nowhere else", () => {
     const content = renderBody(
       `<div xml:base="shared/"><p><img src="a.png" alt="a"/></p><div xml:base="../other/"><p><img src="b.png" alt="b"/></p></div></div>
        <div xml:base="../../../outside/"><p><img src="c.png" alt="c"/></p></div>
@@ -221,7 +221,7 @@ describe("images", () => {
     ]);
   });
 
-  it("[T4] refuses an image from an origin that the options do not name, and the browser never asks the origin", async () => {
+  it("refuses an image from an origin that the options do not name, and the browser never asks the origin", async () => {
     const leak = `${stranger}/${TOKEN}/leak.png`;
     const content = renderBody(
       `<p><img src="${leak}" alt="outside"/><img src="//${new URL(stranger).host}/${TOKEN}/leak2.png" alt="outside"/></p>`,
@@ -232,14 +232,14 @@ describe("images", () => {
     expect(await hits(stranger)).toEqual([]);
   });
 
-  it("[T4] loads an image from an origin that the options name", async () => {
+  it("loads an image from an origin that the options name", async () => {
     const content = renderBody(`<p><img src="${other}/cdn/${TOKEN}/x.png" alt="named"/></p>`, ASSETS, {
       origins: [other],
     });
     expect(el(content.root, "img").getAttribute("src")).toBe(`${other}/cdn/${TOKEN}/x.png`);
   });
 
-  it("[T4] keeps the data URL of a raster image and refuses one of an SVG", () => {
+  it("keeps the data URL of a raster image and refuses one of an SVG", () => {
     const png =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQizoBAAHaAUGizqgqAAAAAElFTkSuQmCC";
     const content = renderBody(
@@ -264,7 +264,7 @@ describe("audio and video", () => {
       <track kind="chapters" src="media/v-c.vtt" srclang="en" label="Chapters"/>
     </video>`;
 
-  it("[T5] gives the player the controls of the browser whatever the item says, and never starts it", () => {
+  it("gives the player the controls of the browser whatever the item says, and never starts it", () => {
     const content = renderBody(Media, ASSETS);
     const audio = el(content.root, "audio");
     const video = el(content.root, "video");
@@ -282,7 +282,7 @@ describe("audio and video", () => {
     expect(video.getAttribute("poster")).toBe(`${ITEM_DIRECTORY}images/dot.png`);
   });
 
-  it("[T5] renders the sources and the tracks of a video: captions, descriptions, subtitles and chapters", () => {
+  it("renders the sources and the tracks of a video: captions, descriptions, subtitles and chapters", () => {
     const content = renderBody(Media, ASSETS);
     expect(content.findAll("audio > source, video > source").map((source) => source.getAttribute("src"))).toEqual([
       `${ITEM_DIRECTORY}media/a.ogg`,
@@ -304,7 +304,7 @@ describe("audio and video", () => {
     expect(tracks.map((track) => track.hasAttribute("default"))).toEqual([true, false, false, false]);
   });
 
-  it("[T5] passes axe with the captions track that WCAG 1.2.2 asks for", async () => {
+  it("passes axe with the captions track that WCAG 1.2.2 asks for", async () => {
     const content = renderBody(Media, ASSETS);
     expect(await axeViolations(content.host)).toEqual([]);
   });
@@ -313,7 +313,7 @@ describe("audio and video", () => {
 describe("objects", () => {
   const object = (attributes: string, inside = ""): string => `<p><object ${attributes}>${inside}</object></p>`;
 
-  it("[T6] draws an object of an image type as an image whose alt is its fallback content", async () => {
+  it("draws an object of an image type as an image whose alt is its fallback content", async () => {
     const content = renderBody(
       object('data="images/dot.png" type="image/png" class="qti-width-6" width="40"', "A dot <em>in</em> the page"),
       ASSETS,
@@ -330,7 +330,7 @@ describe("objects", () => {
     await image.decode();
   });
 
-  it("[T6] prefers the alt that an author gives the object beside the schema, and leaves out its data and type", () => {
+  it("prefers the alt that an author gives the object beside the schema, and leaves out its data and type", () => {
     const content = renderBody(
       object('data="images/dot.png" type="image/png" alt="Short alternative"', "Long fallback"),
       ASSETS,
@@ -341,7 +341,7 @@ describe("objects", () => {
     expect(image.hasAttribute("type")).toBe(false);
   });
 
-  it("[T6] draws an object of an audio or video type as the element that plays it, with controls", () => {
+  it("draws an object of an audio or video type as the element that plays it, with controls", () => {
     const content = renderBody(
       `${object('data="media/a.mp3" type="audio/mpeg"', "Audio fallback")}${object('data="media/v.mp4" type="video/mp4" width="300" height="200"', "Video fallback")}`,
       ASSETS,
@@ -355,7 +355,7 @@ describe("objects", () => {
     expect([video.getAttribute("width"), video.getAttribute("height")]).toEqual(["300", "200"]);
   });
 
-  it("[T6] puts a page in a frame with an empty sandbox, so that it runs no script and is not of the origin of the player", async () => {
+  it("puts a page in a frame with an empty sandbox, so that it runs no script and is not of the origin of the player", async () => {
     const content = renderBody(
       object('data="pages/note.html" type="text/html" width="400" height="100"', "A note"),
       ASSETS,
@@ -374,7 +374,7 @@ describe("objects", () => {
     expect(frame.contentDocument).toBeNull();
   });
 
-  it("[T6] offers a file of any other type as a link that opens in a tab of its own, with the fallback as its text", () => {
+  it("offers a file of any other type as a link that opens in a tab of its own, with the fallback as its text", () => {
     const content = renderBody(
       `${object('data="files/data.pdf" type="application/pdf"', "The data sheet")}${object('data="files/other.bin" type="application/octet-stream"')}`,
       ASSETS,
@@ -386,7 +386,7 @@ describe("objects", () => {
     expect(second?.textContent).toBe("Open the file");
   });
 
-  it("[T6] does not draw the parameters, which are for plug-ins, and keeps the fallback where the file is refused", () => {
+  it("does not draw the parameters, which are for plug-ins, and keeps the fallback where the file is refused", () => {
     const content = renderBody(
       object(
         `data="${stranger}/${TOKEN}/movie.swf" type="application/x-shockwave-flash"`,
@@ -399,7 +399,7 @@ describe("objects", () => {
     expect(el(content.root, "p").textContent).toBe("Your browser cannot show the movie.");
   });
 
-  it("[T6] shows the value that param-variable put in a parameter as the runtime resolved it", () => {
+  it("shows the value that param-variable put in a parameter as the runtime resolved it", () => {
     const document = readAsi(
       `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="p" title="p" adaptive="false" time-dependent="false">
          <qti-template-declaration identifier="SRC" cardinality="single" base-type="string" param-variable="true"/>
@@ -427,7 +427,7 @@ describe("objects", () => {
 });
 
 describe("links", () => {
-  it("[T7] links a file of the package to its URL and opens it in a tab of its own, without an opener or a referrer", () => {
+  it("links a file of the package to its URL and opens it in a tab of its own, without an opener or a referrer", () => {
     const content = renderBody('<p><a href="files/data.pdf">Data</a></p>', ASSETS);
     const link = el(content.root, "a");
     expect(link.getAttribute("href")).toBe(`${ITEM_DIRECTORY}files/data.pdf`);
@@ -435,7 +435,7 @@ describe("links", () => {
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
   });
 
-  it("[T7] links an external page only when its origin is named, and then with the same rel", () => {
+  it("links an external page only when its origin is named, and then with the same rel", () => {
     const content = renderBody(
       `<p><a href="${other}/page">named</a><a href="https://elsewhere.invalid/page">not named</a></p>`,
       ASSETS,
@@ -448,14 +448,14 @@ describe("links", () => {
     expect(notNamed?.textContent).toBe("not named");
   });
 
-  it("[T7] keeps a link to an id of the item as it is, for the content root to follow", () => {
+  it("keeps a link to an id of the item as it is, for the content root to follow", () => {
     const content = renderBody('<p><a href="#note">note</a></p><p id="note">The note.</p>', ASSETS);
     const link = el(content.root, "a");
     expect(link.getAttribute("href")).toBe("#note");
     expect(link.hasAttribute("target")).toBe(false);
   });
 
-  it("[T7] refuses a link with a scheme that runs script", () => {
+  it("refuses a link with a scheme that runs script", () => {
     const content = renderBody(
       '<p><a href="javascript:alert(1)">a</a><a href="  JaVaScRiPt:alert(1)">b</a><a href="vbscript:x">c</a><a href="data:text/html,x">d</a></p>',
       ASSETS,
@@ -465,7 +465,7 @@ describe("links", () => {
 });
 
 describe("ruby and direction", () => {
-  it("[T8] draws the annotation of a ruby above its base and keeps the parentheses for a browser without ruby", () => {
+  it("draws the annotation of a ruby above its base and keeps the parentheses for a browser without ruby", () => {
     const content = renderBody("<p>日本語は<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>で書く。</p>", ASSETS);
     const ruby = el(content.root, "ruby");
     expect(ruby.textContent).toBe("漢字(かんじ)");
@@ -477,13 +477,13 @@ describe("ruby and direction", () => {
     expect(getComputedStyle(el(content.root, "rp")).display).toBe("none");
   });
 
-  it("[T8] keeps rb and rtc, the elements of complex ruby", () => {
+  it("keeps rb and rtc, the elements of complex ruby", () => {
     const content = renderBody("<p><ruby><rb>漢</rb><rb>字</rb><rtc><rt>かん</rt><rt>じ</rt></rtc></ruby></p>", ASSETS);
     expect(content.findAll("rb, rtc, rt").map((element) => element.localName)).toEqual(["rb", "rb", "rtc", "rt", "rt"]);
     expect(el(content.root, "ruby").textContent).toBe("漢字かんじ");
   });
 
-  it("[T8] keeps the direction of text: dir on any element, bdo, bdi, and the auto direction", () => {
+  it("keeps the direction of text: dir on any element, bdo, bdi, and the auto direction", () => {
     const content = renderBody(
       '<p dir="rtl">abc</p><p><bdo dir="rtl">abc</bdo> and <bdi dir="auto">def</bdi></p><p dir="auto">hello</p>',
       ASSETS,
@@ -502,7 +502,7 @@ describe("language", () => {
   const Body =
     '<p xml:lang="fr">French <span lang="de">German</span> <span xml:lang="id" lang="en">Indonesian</span> <span xml:lang="">x</span></p>';
 
-  it("[T14][SC 3.1.2] sets lang from xml:lang and from lang, and xml:lang wins where an element has both", () => {
+  it("sets lang from xml:lang and from lang, and xml:lang wins where an element has both", () => {
     const content = renderBody(Body, ASSETS);
     expect(el(content.root, "p").getAttribute("lang")).toBe("fr");
     expect(el(content.root, "span[lang=de]").textContent).toBe("German");
@@ -510,7 +510,7 @@ describe("language", () => {
     expect(el(content.root, "span[lang='']").textContent).toBe("x");
   });
 
-  it("[T14][SC 3.1.2] lets the browser apply the language of a part: it matches :lang() and passes axe", async () => {
+  it("lets the browser apply the language of a part: it matches :lang() and passes axe", async () => {
     const content = renderBody(Body, ASSETS);
     expect(el(content.root, "span[lang=de]").matches(":lang(de)")).toBe(true);
     expect(el(content.root, "span[lang=de]").matches(":lang(fr)")).toBe(false);
@@ -520,7 +520,7 @@ describe("language", () => {
 });
 
 describe("attributes", () => {
-  it("[T15] passes role and the ARIA attributes, lists included, and the values that are booleans", async () => {
+  it("passes role and the ARIA attributes, lists included, and the values that are booleans", async () => {
     const content = renderBody(
       `<div role="group" aria-label="Group" aria-labelledby="t" aria-describedby="d1 d2" aria-hidden="false" aria-live="polite" aria-atomic="true">
          <h2 id="t" aria-level="3">Title</h2><p id="d1">One</p><p id="d2">Two</p>
@@ -539,7 +539,7 @@ describe("attributes", () => {
     expect(await axeViolations(content.host)).toEqual([]);
   });
 
-  it("[T15] turns data-qti-aria-* into the ARIA attribute it stands for, without replacing one the element has", () => {
+  it("turns data-qti-aria-* into the ARIA attribute it stands for, without replacing one the element has", () => {
     const content = renderBody(
       '<p id="p" data-qti-aria-details="long" data-qti-aria-label="Backup" aria-label="Own">Text</p><div id="long" data-qti-a11y-content-role="long-description">Long description</div>',
       ASSETS,
@@ -551,7 +551,7 @@ describe("attributes", () => {
     expect(el(content.root, "#long").getAttribute("data-qti-a11y-content-role")).toBe("long-description");
   });
 
-  it("[T18] keeps data-* attributes of any spelling, and the three attributes of QTI that speech and cards read", () => {
+  it("keeps data-* attributes of any spelling, and the three attributes of QTI that speech and cards read", () => {
     const content = renderBody(
       '<p data-selected_color="red" data-tap-message="tap" data-x.y-z="1" data-qti-suppress-tts="all" data-ssml=\'{"sub":{"alias":"x"}}\' data-catalog-idref="glossary">T</p>',
       ASSETS,
@@ -565,7 +565,7 @@ describe("attributes", () => {
     expect(paragraph.getAttribute("data-catalog-idref")).toBe("glossary");
   });
 
-  it("[T18] keeps the class, the id and the title-less abbreviations, and drops the label that results report", () => {
+  it("keeps the class, the id and the title-less abbreviations, and drops the label that results report", () => {
     const content = renderBody('<p id="a" class="qti-italic qti-bordered" label="for results">T</p>', ASSETS);
     const paragraph = el(content.root, "p");
     expect(paragraph.id).toBe("a");
@@ -628,7 +628,7 @@ describe("hostile markup", () => {
     await new Promise((done) => setTimeout(done, 300));
   }
 
-  it("[T1][T3][T18] builds no event handler, inline style, script or frame from markup, and the browser asks no other origin", async () => {
+  it("builds no event handler, inline style, script or frame from markup, and the browser asks no other origin", async () => {
     const { alerts } = await withAlerts(async () => {
       const content = renderBody(Hostile, ASSETS);
       expect(content.root.querySelector("script, svg, embed, link, style, meta, base, iframe")).toBeNull();
@@ -650,7 +650,7 @@ describe("hostile markup", () => {
     expect(await hits(stranger)).toEqual([]);
   });
 
-  it("[T1][T3][T7] refuses the references of markup: javascript: in every spelling, other origins, in every attribute that loads", () => {
+  it("refuses the references of markup: javascript: in every spelling, other origins, in every attribute that loads", () => {
     const content = renderBody(Hostile, ASSETS);
     for (const link of content.findAll("a")) expect(link.hasAttribute("href"), link.textContent ?? "").toBe(false);
     expect(el(content.root, "img[alt=tracker]").hasAttribute("src")).toBe(false);
@@ -660,7 +660,7 @@ describe("hostile markup", () => {
     expect(el(content.root, "blockquote").hasAttribute("cite")).toBe(false);
   });
 
-  it("[T1][T3] draws the allowed content around the hostile and keeps the text that an object leaves as its fallback", () => {
+  it("draws the allowed content around the hostile and keeps the text that an object leaves as its fallback", () => {
     const content = renderBody(Hostile, ASSETS);
     expect(el(content.root, "p").textContent).toBe("Text");
     expect(el(content.root, "p").getAttribute("data-ok")).toBe("1");
@@ -670,7 +670,7 @@ describe("hostile markup", () => {
     expect(el(content.root, "picture > img").getAttribute("src")).toBe(`${ITEM_DIRECTORY}images/dot.png`);
   });
 
-  it("[T1] draws MathML in the MathML namespace, with its text and without the handlers, links and script of hostile markup", () => {
+  it("draws MathML in the MathML namespace, with its text and without the handlers, links and script of hostile markup", () => {
     const content = renderBody(Hostile, ASSETS);
     const math = el(content.root, "math");
     expect(math.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
@@ -683,7 +683,7 @@ describe("hostile markup", () => {
     expect(math.querySelector("script")).toBeNull();
   });
 
-  it("[T1][T3][T18] holds against nodes that no reader would give: foreign elements, properties and attributes of a forged view", async () => {
+  it("holds against nodes that no reader would give: foreign elements, properties and attributes of a forged view", async () => {
     const { alerts } = await withAlerts(async () => {
       const content = renderBody("", ASSETS);
       content.root.append(...testRenderer(ASSETS).nodes(Injected));
@@ -702,7 +702,7 @@ describe("hostile markup", () => {
     expect(alerts).toEqual([]);
   });
 
-  it("[T1] gives a node of an unknown kind the name of a QTI element, so that it is never a script or a style", () => {
+  it("gives a node of an unknown kind the name of a QTI element, so that it is never a script or a style", () => {
     const content = renderBody("", ASSETS);
     content.root.append(...testRenderer(ASSETS).nodes(Injected));
     expect(content.findAll("qti-script, qti-style").map((element) => element.localName)).toEqual([
@@ -711,7 +711,7 @@ describe("hostile markup", () => {
     ]);
   });
 
-  it("[T1] throws DataError for a malformed node instead of building an element from it", () => {
+  it("throws DataError for a malformed node instead of building an element from it", () => {
     const renderer = testRenderer(ASSETS);
     const malformed = [
       '{"kind":"p><script>alert(1)</script><p"}',
@@ -730,7 +730,7 @@ describe("hostile markup", () => {
     );
   });
 
-  it("[T1] drops an attribute name that is not valid, instead of letting the DOM throw", () => {
+  it("drops an attribute name that is not valid, instead of letting the DOM throw", () => {
     const node = JSON.parse(
       '{"kind":"p","children":[],"extensions":[{"namespace":"","name":"data-a b","value":"1"},{"namespace":"","name":"data-\\"x","value":"2"},{"namespace":"","name":"data-ok","value":"3"},{"namespace":"urn:x","name":"data-ns","value":"4"}]}',
     );
@@ -738,7 +738,7 @@ describe("hostile markup", () => {
     expect((paragraph as Element).getAttributeNames()).toEqual(["data-ok"]);
   });
 
-  it("[T1] checks that assets returns a string", () => {
+  it("checks that assets returns a string", () => {
     const renderer = testRenderer(ASSETS, { assets: () => JSON.parse("1") });
     expect(() => renderer.nodes(itemBody('<p><img src="a.png" alt="a"/></p>'))).toThrow(
       "The URL that the option assets returned must be a string, found 1.",
@@ -747,7 +747,7 @@ describe("hostile markup", () => {
 });
 
 describe("foreign content", () => {
-  it("[T1] draws MathML and SSML in their namespaces, which the typesetter and the speech model look for", () => {
+  it("draws MathML and SSML in their namespaces, which the typesetter and the speech model look for", () => {
     const content = renderBody(
       '<p>Half is <m:math><m:mfrac><m:mn>1</m:mn><m:mn>2</m:mn></m:mfrac></m:math> and <ssml:sub alias="messenger RNA">mRNA</ssml:sub>.</p>',
       ASSETS,
@@ -762,7 +762,7 @@ describe("foreign content", () => {
     expect(sub?.textContent).toBe("mRNA");
   });
 
-  it("[T1] keeps xml:lang on SSML and MathML elements, where the speech model reads it, and leaves out an xi:include", () => {
+  it("keeps xml:lang on SSML and MathML elements, where the speech model reads it, and leaves out an xi:include", () => {
     const content = renderBody(
       '<p><ssml:voice xml:lang="fr">bonjour</ssml:voice><m:math xml:lang="en"><m:mi>x</m:mi></m:math><xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="other.xml"/></p>',
       ASSETS,
@@ -774,7 +774,7 @@ describe("foreign content", () => {
     expect(el(content.root, "p").children).toHaveLength(2);
   });
 
-  it("[T1] resolves the src of SSML audio against the package", () => {
+  it("resolves the src of SSML audio against the package", () => {
     const content = renderBody('<p><ssml:audio src="media/chime.wav">chime</ssml:audio></p>', ASSETS);
     expect(el(content.root, "p").firstElementChild?.getAttribute("src")).toBe(`${ITEM_DIRECTORY}media/chime.wav`);
   });
@@ -797,14 +797,14 @@ describe("printed variables", () => {
     ]),
   };
 
-  it("[T19] prints the text as the runtime formats it: the format, the integer default, a uri and the name of a file", () => {
+  it("prints the text as the runtime formats it: the format, the integer default, a uri and the name of a file", () => {
     const content = renderBody(Body, ASSETS, {}, Declarations);
     expect(content.root.textContent).toBe("Score  of , see : .");
     const printed = renderBody(Body, ASSETS, { variables }, Declarations);
     expect(printed.root.textContent).toBe("Score 0.7 of 4, see files/guide.pdf: answer.txt.");
   });
 
-  it("[T19] shows a uri as a link to the file in the package and a file as a link where the host gives its URL", () => {
+  it("shows a uri as a link to the file in the package and a file as a link where the host gives its URL", () => {
     const content = renderBody(
       Body,
       ASSETS,
@@ -818,7 +818,7 @@ describe("printed variables", () => {
     expect(upload?.textContent).toBe("answer.txt");
   });
 
-  it("[T19] shows a uri that the policy refuses as text, not as a link", () => {
+  it("shows a uri that the policy refuses as text, not as a link", () => {
     const hostile = {
       ...variables,
       templates: new Map([["LINK", single("uri", "javascript:alert(1)")]]),
@@ -828,7 +828,7 @@ describe("printed variables", () => {
     expect(content.root.textContent).toContain("see javascript:alert(1):");
   });
 
-  it("[T19] draws the text that the runtime's resolveContent put in place of a printed variable", () => {
+  it("draws the text that the runtime's resolveContent put in place of a printed variable", () => {
     const document = readAsi(
       `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="r" title="r" adaptive="false" time-dependent="false">${Declarations}<qti-item-body>${Body}</qti-item-body></qti-assessment-item>`,
     );
@@ -871,7 +871,7 @@ describe("feedback, template content and rubric", () => {
     return content;
   }
 
-  it("[T20] draws the feedback blocks and inline feedback that the view resolved, and none that it removed", () => {
+  it("draws the feedback blocks and inline feedback that the view resolved, and none that it removed", () => {
     const content = render("right", "a");
     const blocks = content.findAll("qti-feedback-block");
     expect(blocks.map((block) => block.textContent?.trim())).toEqual(["Well done."]);
@@ -884,7 +884,7 @@ describe("feedback, template content and rubric", () => {
     expect(other.findAll("qti-feedback-block").map((block) => block.textContent?.trim())).toEqual(["Try again."]);
   });
 
-  it("[T22] draws the template blocks and inline template content that the view resolved", () => {
+  it("draws the template blocks and inline template content that the view resolved", () => {
     const content = render("right", "b");
     expect(content.findAll("qti-template-block").map((block) => block.textContent?.trim())).toEqual(["Variant B."]);
     expect(content.findAll("qti-template-inline").map((inline) => inline.textContent)).toEqual(["beta"]);
@@ -894,7 +894,7 @@ describe("feedback, template content and rubric", () => {
   const Rubric = (view: string, use: string): string =>
     `<qti-rubric-block view="${view}" use="${use}" class="qti-bordered"><qti-content-body><p>Read the passage.</p></qti-content-body></qti-rubric-block>`;
 
-  it("[T23] draws a rubric block for the candidate with its use, and leaves out a block for another view", () => {
+  it("draws a rubric block for the candidate with its use, and leaves out a block for another view", () => {
     const content = renderBody(
       `${Rubric("candidate", "instructions")}${Rubric("scorer", "scoring")}${Rubric("candidate tutor", "navigation")}`,
       ASSETS,
@@ -906,14 +906,14 @@ describe("feedback, template content and rubric", () => {
     expect(getComputedStyle(el(content.root, "qti-rubric-block")).display).toBe("block");
   });
 
-  it("[T23] draws the rubric of the view that the renderer is for: a scorer sees the scoring rubric", () => {
+  it("draws the rubric of the view that the renderer is for: a scorer sees the scoring rubric", () => {
     const content = renderBody(`${Rubric("candidate", "instructions")}${Rubric("scorer", "scoring")}`, ASSETS, {
       view: "scorer",
     });
     expect(content.findAll("qti-rubric-block").map((block) => block.getAttribute("data-use"))).toEqual(["scoring"]);
   });
 
-  it("[T23] ignores an extension use: the block is drawn without data-use", () => {
+  it("ignores an extension use: the block is drawn without data-use", () => {
     const content = renderBody(Rubric("candidate", "ext:glossary"), ASSETS);
     const block = el(content.root, "qti-rubric-block");
     expect(block.hasAttribute("data-use")).toBe(false);

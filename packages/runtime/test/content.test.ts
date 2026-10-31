@@ -105,7 +105,7 @@ function textOf(nodes: readonly ModelNode[]): string {
 }
 
 describe("isShown", () => {
-  it("[B15][W30] shows content with show when the variable matches or contains the identifier, and hides it otherwise", () => {
+  it("shows content with show when the variable matches or contains the identifier, and hides it otherwise", () => {
     expect(isShown("show", "A", id("A"))).toBe(true);
     expect(isShown("show", "A", id("B"))).toBe(false);
     expect(isShown("show", "A", ids("multiple", ["B", "A"]))).toBe(true);
@@ -114,7 +114,7 @@ describe("isShown", () => {
     expect(isShown("show", "A", null)).toBe(false);
   });
 
-  it("[B15][W30] inverts the rule for hide: shown by default, hidden when the variable matches or contains the identifier", () => {
+  it("inverts the rule for hide: shown by default, hidden when the variable matches or contains the identifier", () => {
     expect(isShown("hide", "A", id("A"))).toBe(false);
     expect(isShown("hide", "A", id("B"))).toBe(true);
     expect(isShown("hide", "A", ids("multiple", ["B", "A"]))).toBe(false);
@@ -122,19 +122,19 @@ describe("isShown", () => {
     expect(isShown("hide", "A", null)).toBe(true);
   });
 
-  it("[B15] takes an absent show-hide for show, the default of the schema", () => {
+  it("takes an absent show-hide for show, the default of the schema", () => {
     expect(isShown(undefined, "A", id("A"))).toBe(true);
     expect(isShown(undefined, "A", null)).toBe(false);
   });
 
-  it("[B15] a variable of another base type or a record names nothing", () => {
+  it("a variable of another base type or a record names nothing", () => {
     expect(isShown("show", "A", text("A"))).toBe(false);
     expect(isShown("hide", "A", text("A"))).toBe(true);
     expect(isShown("show", "A", record([["A", id("A")]]))).toBe(false);
     expect(isShown("show", "1", int(1))).toBe(false);
   });
 
-  it("[B14][B15][P] hide shows exactly what show hides", () => {
+  it("hide shows exactly what show hides", () => {
     const value = fc.oneof(
       fc.constant(null),
       fc.constantFrom("A", "B", "C").map(id),
@@ -161,18 +161,18 @@ describe("visibleModalFeedback", () => {
   const shown = (feedback: Value | null): string[] =>
     visibleModalFeedback(item, new Map([["FEEDBACK", feedback]])).map((modal) => textOf(modal.contentBody.children));
 
-  it("[B17] shows the modal feedback that the outcome selects, in document order", () => {
+  it("shows the modal feedback that the outcome selects, in document order", () => {
     expect(shown(id("right"))).toEqual(["Right", "Not wrong"]);
     expect(shown(id("wrong"))).toEqual(["Wrong"]);
     expect(shown(ids("multiple", ["right", "wrong"]))).toEqual(["Right", "Wrong"]);
   });
 
-  it("[B17] treats a missing or NULL outcome as naming nothing", () => {
+  it("treats a missing or NULL outcome as naming nothing", () => {
     expect(shown(null)).toEqual(["Not wrong"]);
     expect(visibleModalFeedback(item, new Map()).map((modal) => modal.identifier)).toEqual(["wrong"]);
   });
 
-  it("[B16] shows the feedback of the outcomes it is given: the defaults give the item as at the start of the attempt, the final outcomes the feedback", () => {
+  it("shows the feedback of the outcomes it is given: the defaults give the item as at the start of the attempt, the final outcomes the feedback", () => {
     const defaults = new Map<string, Value | null>([["FEEDBACK", null]]);
     const final = new Map<string, Value | null>([["FEEDBACK", id("right")]]);
     expect(visibleModalFeedback(item, defaults).map((modal) => modal.identifier)).toEqual(["wrong"]);
@@ -198,14 +198,14 @@ describe("visibleTestFeedback", () => {
       textOf(entry.contentBody?.children ?? []),
     );
 
-  it("[B18][W36] shows the feedback of the access asked for: during after outcome processing, atEnd at the end of the part or test", () => {
+  it("shows the feedback of the access asked for: during after outcome processing, atEnd at the end of the part or test", () => {
     expect(shown("during", id("yes"))).toEqual(["So far so good"]);
     expect(shown("atEnd", id("yes"))).toEqual(["Passed"]);
     expect(shown("atEnd", id("no"))).toEqual(["Failed"]);
     expect(shown("atEnd", null)).toEqual([]);
   });
 
-  it("[B18] refuses an access that is neither during nor atEnd, and other arguments of the wrong type", () => {
+  it("refuses an access that is neither during nor atEnd, and other arguments of the wrong type", () => {
     expect(() => visibleTestFeedback(feedback, new Map(), json('"always"'))).toThrow(
       'The access must be "during" or "atEnd", found "always".',
     );
@@ -213,7 +213,7 @@ describe("visibleTestFeedback", () => {
     expect(() => visibleTestFeedback(feedback, json("[]"), "during")).toThrow(DataError);
   });
 
-  it("[W36] TestFeedbackAccessEnum: reads during and atEnd and refuses any other term", () => {
+  it("TestFeedbackAccessEnum: reads during and atEnd and refuses any other term", () => {
     const read = (access: string): AssessmentTest =>
       testOf(
         `<qti-test-part identifier="p" navigation-mode="linear" submission-mode="individual"><qti-assessment-section identifier="s" title="S" visible="true"><qti-assessment-item-ref identifier="i" href="i.xml"/></qti-assessment-section><qti-test-feedback access="${access}" outcome-identifier="O" show-hide="show" identifier="x"/></qti-test-part>`,
@@ -262,18 +262,18 @@ describe("formatPrintedVariable", () => {
     ["%R", float(0.0000987654321), "0.0000987654"],
   ];
 
-  it.each(AppendixE)("[B20] %s of %j is %j, as BPIG Appendix E has it", (format, value, expected) => {
+  it.each(AppendixE)("%s of %j is %j, as BPIG Appendix E has it", (format, value, expected) => {
     expect(formatted(format, value)).toBe(expected);
   });
 
-  it("[B20][P] formats the 1000 floats of the Python fixture as the C conversions e E f g G do, rounding from the exact binary value", () => {
+  it("formats the 1000 floats of the Python fixture as the C conversions e E f g G do, rounding from the exact binary value", () => {
     expect(printf.floats).toHaveLength(1000);
     for (const { format, value, expected } of printf.floats) {
       expect(formatted(format, float(value)), `${format} of ${value}`).toBe(expected);
     }
   });
 
-  it("[B20][P] formats the 675 integers of the Python fixture as the conversions d i o x X do", () => {
+  it("formats the 675 integers of the Python fixture as the conversions d i o x X do", () => {
     expect(printf.integers).toHaveLength(675);
     for (const { format, value, expected } of printf.integers) {
       // The specification has no %d: %i is the decimal conversion.
@@ -281,7 +281,7 @@ describe("formatPrintedVariable", () => {
     }
   });
 
-  it("[B20] r and R round to the significant figures of g and G but leave the fixed form only when the figures are fewer than the digits left of the point", () => {
+  it("r and R round to the significant figures of g and G but leave the fixed form only when the figures are fewer than the digits left of the point", () => {
     expect(formatted("%.3r", float(123456))).toBe("1.23e+05");
     expect(formatted("%.3R", float(123456))).toBe("1.23E+05");
     expect(formatted("%.3r", float(123.456))).toBe("123");
@@ -293,7 +293,7 @@ describe("formatPrintedVariable", () => {
     expect(formatted("%#r", float(2))).toBe("2.00000");
   });
 
-  it("[B20] writes NaN and the infinities as C does, in capitals for E, G and R, and never pads them with zeros", () => {
+  it("writes NaN and the infinities as C does, in capitals for E, G and R, and never pads them with zeros", () => {
     expect(formatted("%f", float(Number.NaN))).toBe("nan");
     expect(formatted("%E", float(Number.POSITIVE_INFINITY))).toBe("INF");
     expect(formatted("%+g", float(Number.POSITIVE_INFINITY))).toBe("+inf");
@@ -301,21 +301,21 @@ describe("formatPrintedVariable", () => {
     expect(formatted("%-6R", float(Number.NaN))).toBe("NAN   ");
   });
 
-  it("[B20] writes negative zero with its sign and keeps zero padding after the sign and the 0x prefix", () => {
+  it("writes negative zero with its sign and keeps zero padding after the sign and the 0x prefix", () => {
     expect(formatted("%.1f", float(-0))).toBe("-0.0");
     expect(formatted("%08.2f", float(-1.5))).toBe("-0001.50");
     expect(formatted("%#08x", int(255))).toBe("0x0000ff");
     expect(formatted("%+05i", int(7))).toBe("+0007");
   });
 
-  it("[B20] truncates a float for an integer conversion and writes a negative number for o, x and X with a minus sign", () => {
+  it("truncates a float for an integer conversion and writes a negative number for o, x and X with a minus sign", () => {
     expect(formatted("%i", float(-3.9))).toBe("-3");
     expect(formatted("%i", float(-0.5))).toBe("0");
     expect(formatted("%x", int(-255))).toBe("-ff");
     expect(formatted("%o", float(8.9))).toBe("10");
   });
 
-  it("[B20] writes an integer by %i and a float or a duration by %G when the printed variable has no format (INFO §7.29.2)", () => {
+  it("writes an integer by %i and a float or a duration by %G when the printed variable has no format (INFO §7.29.2)", () => {
     expect(print("", int(-42))).toBe("-42");
     expect(print("", float(0.1))).toBe("0.1");
     expect(print("", float(1234567))).toBe("1.23457E+06");
@@ -323,7 +323,7 @@ describe("formatPrintedVariable", () => {
     expect(print("", single("duration", 90))).toBe("90");
   });
 
-  it("[B20] writes the other base types as text: boolean, point, pair, directed pair, identifier, string, uri and the name of a file", () => {
+  it("writes the other base types as text: boolean, point, pair, directed pair, identifier, string, uri and the name of a file", () => {
     expect(print("", single("boolean", true))).toBe("true");
     expect(print("", single("point", [118, 184]))).toBe("118 184");
     expect(print("", single("pair", ["W", "G1"]))).toBe("W G1");
@@ -337,11 +337,11 @@ describe("formatPrintedVariable", () => {
     expect(print("", single("file", { reference: "f1", mimeType: "text/plain" }))).toBe("");
   });
 
-  it("[B20] writes NULL as the empty string", () => {
+  it("writes NULL as the empty string", () => {
     expect(print('format="%.2f"', null)).toBe("");
   });
 
-  it("[B20] writes an integer in the base of the attribute with %i, or of the variable that the attribute names", () => {
+  it("writes an integer in the base of the attribute with %i, or of the variable that the attribute names", () => {
     expect(print('format="%i" base="16"', int(255))).toBe("ff");
     expect(print('format="%.8i" base="2"', int(5))).toBe("00000101");
     expect(print('format="%i" base="36"', int(35))).toBe("z");
@@ -349,7 +349,7 @@ describe("formatPrintedVariable", () => {
     expect(print('format="%i" base="BASE"', int(255), variables({ BASE: int(2) }, { BASE: int(8) }))).toBe("11111111");
   });
 
-  it("[B20] uses base 10 when the base is not usable: out of range 2 to 36, not an integer, a variable that is missing", () => {
+  it("uses base 10 when the base is not usable: out of range 2 to 36, not an integer, a variable that is missing", () => {
     expect(print('format="%i" base="1"', int(255))).toBe("255");
     expect(print('format="%i" base="37"', int(255))).toBe("255");
     expect(print('format="%i" base="NONE"', int(255))).toBe("255");
@@ -357,14 +357,14 @@ describe("formatPrintedVariable", () => {
     expect(print('format="%x" base="2"', int(255))).toBe("ff");
   });
 
-  it("[B20] writes the values of a container with the delimiter, ; by default", () => {
+  it("writes the values of a container with the delimiter, ; by default", () => {
     const multiple = ids("multiple", ["A", "B", "C"]);
     expect(print("", multiple)).toBe("A;B;C");
     expect(print('delimiter=", "', multiple)).toBe("A, B, C");
     expect(print('format="%.1f"', container("ordered", "float", [1, 2.25]))).toBe("1.0;2.2");
   });
 
-  it("[B20] writes only the value at index of an ordered container, counting from 1, and nothing when there is none", () => {
+  it("writes only the value at index of an ordered container, counting from 1, and nothing when there is none", () => {
     const ordered = ids("ordered", ["A", "B", "C"]);
     expect(print('index="2"', ordered)).toBe("B");
     expect(print('index="0"', ordered)).toBe("");
@@ -373,7 +373,7 @@ describe("formatPrintedVariable", () => {
     expect(print('index="2"', ids("multiple", ["A", "B", "C"]))).toBe("A;B;C");
   });
 
-  it("[B20] writes a record as its fields with the mapping indicator, = by default, or the one field that field names", () => {
+  it("writes a record as its fields with the mapping indicator, = by default, or the one field that field names", () => {
     const fields = record([
       ["name", text("Ada")],
       ["score", float(0.5)],
@@ -384,7 +384,7 @@ describe("formatPrintedVariable", () => {
     expect(print('field="missing"', fields)).toBe("");
   });
 
-  it("[B20] writes the exponent of a number in power form: 1.5e+03 becomes 1.5 × 10³, e-05 becomes × 10⁻⁵", () => {
+  it("writes the exponent of a number in power form: 1.5e+03 becomes 1.5 × 10³, e-05 becomes × 10⁻⁵", () => {
     expect(print('format="%.1e" power-form="true"', float(1500))).toBe("1.5 × 10³");
     expect(print('format="%.2E" power-form="true"', float(0.0000123))).toBe("1.23 × 10⁻⁵");
     expect(print('format="%.1e" power-form="true"', float(1e100))).toBe("1.0 × 10¹⁰⁰");
@@ -393,7 +393,7 @@ describe("formatPrintedVariable", () => {
     expect(print('power-form="true"', text("e+03"))).toBe("e+03");
   });
 
-  it("[B20] ignores a format that is not one conversion specifier, and one asking for more than 1100 places", () => {
+  it("ignores a format that is not one conversion specifier, and one asking for more than 1100 places", () => {
     for (const format of [
       "abc",
       "%d",
@@ -415,7 +415,7 @@ describe("formatPrintedVariable", () => {
     }
   });
 
-  it("[B20][P] reads back what %.17g writes: every finite double", () => {
+  it("reads back what %.17g writes: every finite double", () => {
     fc.assert(
       fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), (value) => {
         expect(Number(formatted("%.17g", float(value)))).toBe(value);
@@ -424,7 +424,7 @@ describe("formatPrintedVariable", () => {
     );
   });
 
-  it("[B20][P] pads to the width, to the left unless the minus flag is set, and never cuts a number", () => {
+  it("pads to the width, to the left unless the minus flag is set, and never cuts a number", () => {
     fc.assert(
       fc.property(fc.integer({ min: -100_000, max: 100_000 }), fc.integer({ min: 0, max: 12 }), (value, width) => {
         const natural = formatted("%i", int(value));
@@ -500,7 +500,7 @@ describe("resolveContent", () => {
       : [];
   };
 
-  it("[B20][B15] prints the variables as text and keeps the feedback and template content that the outcomes and the templates show", () => {
+  it("prints the variables as text and keeps the feedback and template content that the outcomes and the templates show", () => {
     const resolved = resolve(rightOutcomes, drawnTemplates);
     expect(textOf(resolved.slice(0, 1))).toBe("Score 0.6, n = 7, response .");
     expect(kinds(resolved)).toEqual([
@@ -518,7 +518,7 @@ describe("resolveContent", () => {
     expect(textOf(resolved.filter((node) => node.kind === "template-block"))).toBe("Block A, n = 7");
   });
 
-  it("[B15] removes the feedback and template content that is hidden: an outcome that names nothing, a template variable that is NULL", () => {
+  it("removes the feedback and template content that is hidden: an outcome that names nothing, a template variable that is NULL", () => {
     const resolved = resolve({ SCORE: float(0), FEEDBACK: id("wrong") }, { N: int(1), SHOWN: null });
     expect(textOf(resolved.filter((node) => node.kind === "feedback-block"))).toBe("Not right");
     expect(resolved.filter((node) => node.kind === "template-block")).toEqual([]);
@@ -527,7 +527,7 @@ describe("resolveContent", () => {
     expect(textOf(resolve(rightOutcomes, drawnTemplates).filter((node) => node.kind === "p"))).toContain("Inline yesB");
   });
 
-  it("[B14] removes the choices that a template variable hides and keeps the order of the others", () => {
+  it("removes the choices that a template variable hides and keeps the order of the others", () => {
     expect(choicesOf(resolve(rightOutcomes, { ...drawnTemplates, SHOWN: ids("multiple", ["A"]) }))).toEqual([
       "A",
       "B",
@@ -537,7 +537,7 @@ describe("resolveContent", () => {
     expect(choicesOf(resolve(rightOutcomes, { ...drawnTemplates, SHOWN: null }))).toEqual(["B", "C"]);
   });
 
-  it("[B14][P] keeps a choice with show when the template variable names it and one with hide when it does not, and a choice without a template variable always", () => {
+  it("keeps a choice with show when the template variable names it and one with hide when it does not, and a choice without a template variable always", () => {
     fc.assert(
       fc.property(fc.subarray(["A", "B", "C", "D"]), (named) => {
         const shown = choicesOf(
@@ -548,7 +548,7 @@ describe("resolveContent", () => {
     );
   });
 
-  it("[B19] keeps the rubric blocks whose view lists the view, with their printed variables resolved", () => {
+  it("keeps the rubric blocks whose view lists the view, with their printed variables resolved", () => {
     const rubric = (view: View): string[] =>
       resolve(rightOutcomes, drawnTemplates, view)
         .filter((node) => node.kind === "rubric-block")
@@ -558,7 +558,7 @@ describe("resolveContent", () => {
     expect(rubric("tutor")).toEqual([]);
   });
 
-  it("[B13] substitutes the value of a template variable with param-variable for the parameter that names it", () => {
+  it("substitutes the value of a template variable with param-variable for the parameter that names it", () => {
     const resolved = resolve(rightOutcomes, drawnTemplates);
     const div = resolved.find((node) => node.kind === "div");
     const object = div?.kind === "div" ? div.children[0] : undefined;
@@ -575,7 +575,7 @@ describe("resolveContent", () => {
     expect(authored.flatMap((child) => (child.kind === "param" ? [child.value] : []))).toEqual(["W", "N", "literal"]);
   });
 
-  it("[B13][M1] replaces the mi and ci of MathML that name a template variable with math-variable by mn and cn with its value", () => {
+  it("replaces the mi and ci of MathML that name a template variable with math-variable by mn and cn with its value", () => {
     const names = (nodes: readonly BodyNode[]): string[] => {
       const paragraph = nodes[nodes.length - 1];
       const math = paragraph?.kind === "p" ? paragraph.children[0] : undefined;
@@ -591,7 +591,7 @@ describe("resolveContent", () => {
     ]);
   });
 
-  it("[B20] prints nothing for a response variable, whose value the candidate knows from the interaction (INFO §7.30.6)", () => {
+  it("prints nothing for a response variable, whose value the candidate knows from the interaction (INFO §7.30.6)", () => {
     const resolved = resolveContent(body, variables(rightOutcomes, drawnTemplates), sample, { view: "candidate" });
     expect(textOf(resolved.slice(0, 1))).toContain("response .");
   });
@@ -631,14 +631,14 @@ describe("rubricBlocksFor and testRubricBlocks", () => {
   const sections = [outer, inner].flatMap((section) => (section?.kind === "assessment-section" ? [section] : []));
   const labels = (blocks: ReturnType<typeof testRubricBlocks>): string[] => blocks.map((entry) => textOf([entry]));
 
-  it("[B19] keeps the rubric blocks of a list whose view lists the view", () => {
+  it("keeps the rubric blocks of a list whose view lists the view", () => {
     const blocks = rubricTest.rubricBlocks;
     expect(labels(rubricBlocksFor(blocks, "candidate"))).toEqual(["test candidate"]);
     expect(labels(rubricBlocksFor(blocks, "scorer"))).toEqual(["test scorer"]);
     expect(rubricBlocksFor(blocks, "proctor")).toEqual([]);
   });
 
-  it("[B19] puts the rubric in the order test, test part, then the sections from the top down, each level in its own order", () => {
+  it("puts the rubric in the order test, test part, then the sections from the top down, each level in its own order", () => {
     expect(labels(testRubricBlocks({ test: rubricTest, part, sections }, "candidate"))).toEqual([
       "test candidate",
       "part candidate",
@@ -649,7 +649,7 @@ describe("rubricBlocksFor and testRubricBlocks", () => {
     expect(labels(testRubricBlocks({ test: rubricTest, part, sections }, "author"))).toEqual(["inner author"]);
   });
 
-  it("[B19] gives the rubric of the test alone, or of the test and its part, when the position has no part or no sections", () => {
+  it("gives the rubric of the test alone, or of the test and its part, when the position has no part or no sections", () => {
     expect(labels(testRubricBlocks({ test: rubricTest }, "candidate"))).toEqual(["test candidate"]);
     expect(labels(testRubricBlocks({ test: rubricTest, part }, "candidate"))).toEqual([
       "test candidate",
@@ -658,7 +658,7 @@ describe("rubricBlocksFor and testRubricBlocks", () => {
     expect(labels(testRubricBlocks({ test: rubricTest, sections: [] }, "candidate"))).toEqual(["test candidate"]);
   });
 
-  it("[W49] ViewEnum: reads author, candidate, proctor, scorer, testConstructor and tutor, alone or together, and refuses any other term", () => {
+  it("ViewEnum: reads author, candidate, proctor, scorer, testConstructor and tutor, alone or together, and refuses any other term", () => {
     expect(VIEWS).toEqual(["author", "candidate", "proctor", "scorer", "testConstructor", "tutor"]);
     const read = (view: string): readonly string[] | undefined =>
       itemOf(`<qti-item-body>${block(view, "x")}</qti-item-body>`).body?.children.flatMap((node) =>
@@ -670,7 +670,7 @@ describe("rubricBlocksFor and testRubricBlocks", () => {
       expect(() => read(view)).toThrow(ReadError);
   });
 
-  it("[W41][W55] UseEnum and UseEnumExt: reads instructions, scoring and navigation and an ext: term, and refuses any other", () => {
+  it("UseEnum and UseEnumExt: reads instructions, scoring and navigation and an ext: term, and refuses any other", () => {
     const read = (use: string): string | undefined =>
       itemOf(
         `<qti-item-body><qti-rubric-block view="author" use="${use}"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block></qti-item-body>`,
@@ -680,7 +680,7 @@ describe("rubricBlocksFor and testRubricBlocks", () => {
     for (const use of ["hint", "Instructions", "ext:", "extension"]) expect(() => read(use)).toThrow(ReadError);
   });
 
-  it("[B19][N] refuses a rubric block that contains an interaction or another rubric block (INFO §2.8.6)", () => {
+  it("refuses a rubric block that contains an interaction or another rubric block (INFO §2.8.6)", () => {
     const read = (content: string): unknown =>
       readAsi(
         `<qti-assessment-item ${NS} identifier="i" title="T" time-dependent="false"><qti-item-body><qti-rubric-block view="author" use="instructions"><qti-content-body>${content}</qti-content-body></qti-rubric-block></qti-item-body></qti-assessment-item>`,
@@ -727,7 +727,7 @@ describe("catalogs and cards", () => {
     return content === undefined ? undefined : textOf(content.htmlContent === undefined ? [] : [content.htmlContent]);
   };
 
-  it("[B68] selects the card entry of the language by xml:lang, then one with the same primary language, then the default", () => {
+  it("selects the card entry of the language by xml:lang, then one with the same primary language, then the default", () => {
     expect(htmlOf("fr")).toBe("bonjour");
     expect(htmlOf("FR-ca")).toBe("allô");
     expect(htmlOf("fr-BE")).toBe("bonjour");
@@ -736,14 +736,14 @@ describe("catalogs and cards", () => {
     expect(htmlOf()).toBe("hello");
   });
 
-  it("[B68] gives the content of a card without entries, and the file references of a card or an entry", () => {
+  it("gives the content of a card without entries, and the file references of a card or an entry", () => {
     expect(htmlOf(undefined, "spoken")).toBe("read this");
     expect(selectCard(catalog(), "sign-language")?.fileHrefs.map((href) => href.value)).toEqual(["a.mp4", "a.webm"]);
     expect(selectCard(catalog(), "sign-language")?.htmlContent).toBeUndefined();
     expect(selectCard(catalog(), "glossary-on-screen", "id")?.fileHrefs.map((href) => href.value)).toEqual(["id.mp3"]);
   });
 
-  it("[B68] gives nothing when the catalog has no card for the support, or no entry fits and none is the default", () => {
+  it("gives nothing when the catalog has no card for the support, or no entry fits and none is the default", () => {
     expect(selectCard(catalog(), "braille")).toBeUndefined();
     expect(selectCard(catalog(), "ext:custom")).toBeUndefined();
     expect(htmlOf("de", "transcript")).toBe("Text");
@@ -751,7 +751,7 @@ describe("catalogs and cards", () => {
     expect(htmlOf(undefined, "transcript")).toBeUndefined();
   });
 
-  it("[B68] finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {
+  it("finds the catalog that data-catalog-idref names, wherever the item keeps it", () => {
     const [first, plain, missing, feedback] = catalogItem.body?.children ?? [];
     const reference = (node: BodyNode | undefined): string[] =>
       node === undefined ? [] : catalogsFor(catalogItem, node).map((found) => found.id);
@@ -762,7 +762,7 @@ describe("catalogs and cards", () => {
     expect(reference(inside)).toEqual(["c2"]);
   });
 
-  it("[W33][W54] SupportEnum and SupportEnumExt: a card names one of the 15 supports, or ext: and a name, and no other term", () => {
+  it("SupportEnum and SupportEnumExt: a card names one of the 15 supports, or ext: and a name, and no other term", () => {
     const supports = [
       "additional-directions",
       "audio-description",
@@ -802,7 +802,7 @@ describe("catalogs and cards", () => {
     const check = (cards: string): string[] => checkIssues(cards).map(({ code }) => code);
     const html = "<qti-html-content>x</qti-html-content>";
 
-    it("[B68] reports nothing for a catalog that follows the rules", () => {
+    it("reports nothing for a catalog that follows the rules", () => {
       expect(checkCatalog(catalog())).toEqual([]);
       expect(
         check(
@@ -811,13 +811,13 @@ describe("catalogs and cards", () => {
       ).toEqual([]);
     });
 
-    it("[B68][N] reports two cards for one support in a catalog (INFO §5.26.1)", () => {
+    it("reports two cards for one support in a catalog (INFO §5.26.1)", () => {
       expect(
         check(`<qti-card support="spoken">${html}</qti-card><qti-card support="spoken">${html}</qti-card>`),
       ).toEqual(["assesskit/content/duplicate-card"]);
     });
 
-    it("[B68][N] reports a card or a card entry that has neither HTML content nor a file reference (BPIG §3.7.10)", () => {
+    it("reports a card or a card entry that has neither HTML content nor a file reference (BPIG §3.7.10)", () => {
       expect(check('<qti-card support="spoken"/>')).toEqual(["assesskit/content/empty-card"]);
       expect(
         check(
@@ -826,7 +826,7 @@ describe("catalogs and cards", () => {
       ).toEqual(["assesskit/content/empty-card"]);
     });
 
-    it("[B68][N] reports a card that has more than one default entry (INFO §5.27.2)", () => {
+    it("reports a card that has more than one default entry (INFO §5.27.2)", () => {
       const doubled = `<qti-card support="spoken"><qti-card-entry default="true">${html}</qti-card-entry><qti-card-entry default="true">${html}</qti-card-entry></qti-card>`;
       expect(checkIssues(doubled)).toEqual([
         {
@@ -856,7 +856,7 @@ describe("hazardExposure", () => {
   const profile = (hazards: string): PersonalNeedsProfile =>
     asProfile(readPnp(`<access-for-all-pnp xmlns="${PNP_NAMESPACE}">${hazards}</access-for-all-pnp>`));
 
-  it("[B99] maps each hazard term of the DRD to the term of the PNP: olfactoryHazard to olfactory-hazard, motionSimulation to motion-simulation", () => {
+  it("maps each hazard term of the DRD to the term of the PNP: olfactoryHazard to olfactory-hazard, motionSimulation to motion-simulation", () => {
     expect([...HAZARD_TERMS]).toEqual([
       ["flashing", "flashing"],
       ["motionSimulation", "motion-simulation"],
@@ -865,12 +865,12 @@ describe("hazardExposure", () => {
     ]);
   });
 
-  it("[B99][V] covers every term of the DRD vocabulary Hazard and every term of the PNP hazard-avoidance, once", () => {
+  it("covers every term of the DRD vocabulary Hazard and every term of the PNP hazard-avoidance, once", () => {
     expect([...HAZARD_TERMS.keys()].sort()).toEqual([...DRD_HAZARDS].sort());
     expect([...HAZARD_TERMS.values()].sort()).toEqual([...PNP_HAZARDS].sort());
   });
 
-  it("[B99] marks the hazards that the profile avoids, so that the candidate is not exposed to content that has them", () => {
+  it("marks the hazards that the profile avoids, so that the candidate is not exposed to content that has them", () => {
     const avoiding = profile(
       "<hazard-avoidance>flashing</hazard-avoidance><hazard-avoidance>olfactory-hazard</hazard-avoidance>",
     );
@@ -882,13 +882,13 @@ describe("hazardExposure", () => {
     ]);
   });
 
-  it("[B99] avoids nothing without a profile or a hazard-avoidance, lists each hazard once and none for a resource without hazards", () => {
+  it("avoids nothing without a profile or a hazard-avoidance, lists each hazard once and none for a resource without hazards", () => {
     expect(hazardExposure(["sound", "sound"])).toEqual([{ hazard: "sound", avoided: false }]);
     expect(hazardExposure(["sound"], profile("<high-contrast/>"))).toEqual([{ hazard: "sound", avoided: false }]);
     expect(hazardExposure([], profile("<hazard-avoidance>sound</hazard-avoidance>"))).toEqual([]);
   });
 
-  it("[B99] does not take an extension term of the PNP for a hazard of the resource", () => {
+  it("does not take an extension term of the PNP for a hazard of the resource", () => {
     const extended = profile("<hazard-avoidance>ext:strobe</hazard-avoidance>");
     expect(hazardExposure(["flashing"], extended)).toEqual([{ hazard: "flashing", avoided: false }]);
   });
@@ -913,7 +913,7 @@ describe("companion materials", () => {
   const withMaterials = (materials: string): AssessmentItem =>
     itemOf(`${materials}<qti-item-body><p>x</p></qti-item-body>`);
 
-  it("[B63] gives the calculators, rules, protractors, digital and physical materials of an item as data", () => {
+  it("gives the calculators, rules, protractors, digital and physical materials of an item as data", () => {
     const materials = withMaterials(Materials).companionMaterials;
     expect(
       materials?.calculators.map((calculator) => [calculator.calculatorType.value, calculator.description.value]),
@@ -932,11 +932,11 @@ describe("companion materials", () => {
     expect(materials?.physicalMaterials.map((material) => material.value)).toEqual(["Graph paper"]);
   });
 
-  it("[B63] has no companion materials for an item that declares none", () => {
+  it("has no companion materials for an item that declares none", () => {
     expect(withMaterials("").companionMaterials).toBeUndefined();
   });
 
-  it("[W15] CalculatorTypeEnum: reads basic, graphing, scientific and standard, and refuses any other term", () => {
+  it("CalculatorTypeEnum: reads basic, graphing, scientific and standard, and refuses any other term", () => {
     const read = (type: string): string | undefined =>
       withMaterials(
         `<qti-companion-materials-info><qti-calculator><qti-calculator-type>${type}</qti-calculator-type><qti-description>c</qti-description></qti-calculator></qti-companion-materials-info>`,
@@ -961,29 +961,29 @@ describe("companion materials", () => {
     return increment?.majorIncrement.unit;
   }
 
-  it("[W28] SIUnitTypeEnum: a metric ruler measures in Millimeter, Centimeter, Meter and Kilometer, and refuses any other unit", () => {
+  it("SIUnitTypeEnum: a metric ruler measures in Millimeter, Centimeter, Meter and Kilometer, and refuses any other unit", () => {
     for (const unit of ["Millimeter", "Centimeter", "Meter", "Kilometer"]) expect(unitIn("rule-si", unit)).toBe(unit);
     for (const unit of ["Inch", "meter", "Radian"]) expect(() => unitIn("rule-si", unit)).toThrow(ReadError);
   });
 
-  it("[W40] USUnitTypeEnum: a ruler in US units measures in Inch, Foot, Yard and Mile, and refuses any other unit", () => {
+  it("USUnitTypeEnum: a ruler in US units measures in Inch, Foot, Yard and Mile, and refuses any other unit", () => {
     for (const unit of ["Inch", "Foot", "Yard", "Mile"]) expect(unitIn("rule-us", unit)).toBe(unit);
     for (const unit of ["Meter", "foot", "Degree"]) expect(() => unitIn("rule-us", unit)).toThrow(ReadError);
   });
 
-  it("[W27] SIRadialUnitTypeEnum: a protractor in SI units measures in Radian, and refuses any other unit", () => {
+  it("SIRadialUnitTypeEnum: a protractor in SI units measures in Radian, and refuses any other unit", () => {
     expect(unitIn("protractor-si", "Radian")).toBe("Radian");
     for (const unit of ["Degree", "radian", "Meter"]) expect(() => unitIn("protractor-si", unit)).toThrow(ReadError);
   });
 
-  it("[W39] USRadialUnitTypeEnum: a protractor in US units measures in Degree, Minute and Second, and refuses any other unit", () => {
+  it("USRadialUnitTypeEnum: a protractor in US units measures in Degree, Minute and Second, and refuses any other unit", () => {
     for (const unit of ["Degree", "Minute", "Second"]) expect(unitIn("protractor-us", unit)).toBe(unit);
     for (const unit of ["Radian", "degree", "Hour"]) expect(() => unitIn("protractor-us", unit)).toThrow(ReadError);
   });
 });
 
 describe("the visibility vocabulary", () => {
-  it("[W30] ShowHideEnum: reads show and hide and refuses any other term", () => {
+  it("ShowHideEnum: reads show and hide and refuses any other term", () => {
     const read = (term: string): string | undefined =>
       itemOf(
         `<qti-item-body><qti-feedback-block outcome-identifier="F" identifier="x" show-hide="${term}"><qti-content-body><p>x</p></qti-content-body></qti-feedback-block></qti-item-body>`,

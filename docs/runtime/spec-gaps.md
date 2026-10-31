@@ -1,7 +1,7 @@
 # Spec gaps
 
 The specifications contradict themselves in places and say nothing in others. Each place is a gap, numbered `G1` to `G43`,
-and the runtime resolves it the same way everywhere. Every gap is a row of [Conformance](conformance.md) with the tests that fix its
+and the runtime resolves it the same way everywhere. Every gap has a test that fixes its
 resolution, and the TSDoc and the guide of the module name it. A change to a resolution is a breaking change.
 
 Citations use the IDs of [Evidence](evidence.md#citations). `D3` to `D9` are decisions that apply to several gaps; they are

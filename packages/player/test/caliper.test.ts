@@ -57,7 +57,7 @@ const SENDER = {
   sendTime: 1_700_000_000_000,
 };
 
-/** The names of the event types of the runtime, each with what the Caliper mapping gives: `[T108]`. */
+/** The names of the event types of the runtime, each with what the Caliper mapping gives. */
 const EXPECTED: Readonly<Record<DeliveryEventType, readonly [CaliperEventType, string] | null>> = {
   presented: ["AssessmentItemEvent", "Started"],
   "responses-set": null,
@@ -101,28 +101,28 @@ function eventOf(type: DeliveryEventType, at = 5 * SECOND): DeliveryEvent {
 }
 
 describe("CALIPER_NAMESPACE", () => {
-  it("[T108] is used with a library that gives the worked example of RFC 9562 Appendix A.4", () => {
+  it("is used with a library that gives the worked example of RFC 9562 Appendix A.4", () => {
     const { rfc9562 } = IDS;
     expect(v5(rfc9562.name, rfc9562.namespace)).toBe(rfc9562.uuid);
   });
 
-  it("[T108] gives the UUIDs that Python's uuid5 gives for the names of the identifiers", () => {
+  it("gives the UUIDs that Python's uuid5 gives for the names of the identifiers", () => {
     for (const { name, uuid } of IDS.names) expect(v5(name, CALIPER_NAMESPACE), name).toBe(uuid);
   });
 
-  it("[T108] keeps the player's namespace the UUID of the address of the folder in the URL namespace", () => {
+  it("keeps the player's namespace the UUID of the address of the folder in the URL namespace", () => {
     expect(v5(IDS.address, v5.URL)).toBe(CALIPER_NAMESPACE);
     expect(CALIPER_NAMESPACE).toBe(IDS.namespace);
   });
 });
 
 describe("mintUrn", () => {
-  it("[T108] writes the URN of the UUID that names the JSON text of the parts", () => {
+  it("writes the URN of the UUID that names the JSON text of the parts", () => {
     expect(mintUrn(["event", SESSION, "start", 0])).toBe(urnOf("event", SESSION, "start", 0));
     expect(mintUrn(["event", SESSION, 3, 0])).toBe(urnOf("event", SESSION, 3, 0));
   });
 
-  it("[T108] names parts that a plain join would confuse by different identifiers", () => {
+  it("names parts that a plain join would confuse by different identifiers", () => {
     const confusable = [
       urnOf("event", "a\nb", "start", 0),
       urnOf("event", "a", "\nb", 0),
@@ -132,24 +132,24 @@ describe("mintUrn", () => {
     expect(new Set(confusable).size).toBe(confusable.length);
   });
 
-  it("[T108] keeps text outside ASCII and the characters JSON escapes as they are in the name", () => {
+  it("keeps text outside ASCII and the characters JSON escapes as they are in the name", () => {
     expect(mintUrn(["event", "café ✓", "start", 0])).toBe(urnOf("event", "café ✓", "start", 0));
     expect(mintUrn(["event", 'a"b\\c', 7, 12])).toBe(urnOf("event", 'a"b\\c', 7, 12));
   });
 });
 
 describe("caliperTime", () => {
-  it("[T108] writes millisecond precision in UTC, as Caliper 1.2 §2.1 requires", () => {
+  it("writes millisecond precision in UTC, as Caliper 1.2 §2.1 requires", () => {
     expect(caliperTime(0, "The time")).toBe("1970-01-01T00:00:00.000Z");
     expect(caliperTime(1_700_000_000_123, "The time")).toBe("2023-11-14T22:13:20.123Z");
     expect(caliperTime(253_402_300_799_999, "The time")).toBe("9999-12-31T23:59:59.999Z");
   });
 
-  it("[T108] truncates a fraction of a millisecond, as a deadline may have one", () => {
+  it("truncates a fraction of a millisecond, as a deadline may have one", () => {
     expect(caliperTime(1000.9, "The time")).toBe("1970-01-01T00:00:01.000Z");
   });
 
-  it("[T108] rejects times that the form cannot write, and other types", () => {
+  it("rejects times that the form cannot write, and other types", () => {
     for (const bad of [
       -1,
       253_402_300_800_000,
@@ -168,7 +168,7 @@ describe("caliperTime", () => {
 
 describe("caliperEvents", () => {
   describe("the step of Engine.start", () => {
-    it("[T108] gives the AssessmentEvent Started, then an event for each event of the runtime", () => {
+    it("gives the AssessmentEvent Started, then an event for each event of the runtime", () => {
       const events: DeliveryEvent[] = [
         { type: "section-entered", at: SECOND, scope: "main" },
         { type: "presented", at: SECOND, item: Q1 },
@@ -228,18 +228,18 @@ describe("caliperEvents", () => {
       ]);
     });
 
-    it("[T108] gives no Started for a start step without events, which has no time to give it", () => {
+    it("gives no Started for a start step without events, which has no time to give it", () => {
       expect(caliperEvents([], contextAt("start"))).toEqual([]);
     });
 
-    it("[T108] gives Started only to the step of the start", () => {
+    it("gives Started only to the step of the start", () => {
       const produced = caliperEvents([eventOf("section-entered")], contextAt(0));
       expect(produced.map(({ type, action }) => `${type} ${action}`)).toEqual(["NavigationEvent NavigatedTo"]);
     });
   });
 
   describe("the events of a session", () => {
-    it("[T108] gives Submitted with the end of the attempt at the test", () => {
+    it("gives Submitted with the end of the attempt at the test", () => {
       const [submitted] = caliperEvents([{ type: "test-ended", at: 9 * SECOND, scope: "quiz" }], contextAt(4));
       expect(submitted).toEqual({
         "@context": CALIPER_CONTEXT,
@@ -261,7 +261,7 @@ describe("caliperEvents", () => {
       });
     });
 
-    it("[T108] gives Paused and Resumed the attempt at the test, with no change of its times", () => {
+    it("gives Paused and Resumed the attempt at the test, with no change of its times", () => {
       const produced = caliperEvents([eventOf("suspended"), eventOf("resumed")], contextAt(2));
       expect(produced.map(({ action }) => action)).toEqual(["Paused", "Resumed"]);
       for (const event of produced) {
@@ -274,7 +274,7 @@ describe("caliperEvents", () => {
       }
     });
 
-    it("[T108] gives Completed for an attempt that ended in any way but a skip, with no response", () => {
+    it("gives Completed for an attempt that ended in any way but a skip, with no response", () => {
       for (const detail of ["submit", "end-attempt", "close", undefined]) {
         const event: DeliveryEvent = { type: "attempt-ended", at: 6 * SECOND, item: Q2, ...(detail ? { detail } : {}) };
         const [completed] = caliperEvents([event], contextAt(1));
@@ -292,7 +292,7 @@ describe("caliperEvents", () => {
       }
     });
 
-    it("[T108] gives Skipped for an attempt that ended by a skip, with the attempt it ended", () => {
+    it("gives Skipped for an attempt that ended by a skip, with the attempt it ended", () => {
       const event: DeliveryEvent = { type: "attempt-ended", at: 6 * SECOND, item: Q2, detail: "skip" };
       const [skipped] = caliperEvents([event], contextAt(1));
       expect(skipped?.action).toBe("Skipped");
@@ -306,7 +306,7 @@ describe("caliperEvents", () => {
       });
     });
 
-    it("[T108] gives NavigatedTo to the item that the candidate moved to", () => {
+    it("gives NavigatedTo to the item that the candidate moved to", () => {
       const [moved] = caliperEvents([{ type: "moved", at: 7 * SECOND, item: Q2 }], contextAt(3));
       expect(moved).toMatchObject({
         type: "NavigationEvent",
@@ -316,14 +316,14 @@ describe("caliperEvents", () => {
       });
     });
 
-    it("[T108] names an item by its reference and a second instance of it by its own attempt", () => {
+    it("names an item by its reference and a second instance of it by its own attempt", () => {
       const again: DeliveryEvent = { type: "presented", at: SECOND, item: { ref: "q2", instance: 2 } };
       const [event] = caliperEvents([again], contextAt(1));
       expect(event?.object.id).toBe(urnOf("item", ASSESSMENT, "q2"));
       expect(event?.generated?.id).toBe(urnOf("attempt", SESSION, "q2", 2));
     });
 
-    it("[T108] keeps the order of the events of the runtime and drops those Caliper has no event for", () => {
+    it("keeps the order of the events of the runtime and drops those Caliper has no event for", () => {
       const events = [
         eventOf("attempt-ended"),
         eventOf("response-processed"),
@@ -346,7 +346,7 @@ describe("caliperEvents", () => {
   });
 
   describe("every type of the runtime", () => {
-    it("[T108] gives the Caliper event of the Assessment Profile for the types it has one for, and none for the others", () => {
+    it("gives the Caliper event of the Assessment Profile for the types it has one for, and none for the others", () => {
       for (const type of TYPES) {
         const produced = caliperEvents([eventOf(type)], contextAt(2));
         const expected = EXPECTED[type];
@@ -357,13 +357,13 @@ describe("caliperEvents", () => {
       }
     });
 
-    it("[T108] writes events that the published Caliper context accepts", () => {
+    it("writes events that the published Caliper context accepts", () => {
       const produced = caliperEvents([...TYPES.map((type) => eventOf(type))], contextAt("start"));
       expect(produced.length).toBeGreaterThan(6);
       for (const event of produced) expect(eventProblems(event), event.id).toEqual([]);
     });
 
-    it("[T108] writes the actions and objects that the Assessment Profile allows for each event", () => {
+    it("writes the actions and objects that the Assessment Profile allows for each event", () => {
       const allowed: Readonly<Record<string, { actions: string[]; objects: string[] }>> = {
         AssessmentEvent: {
           actions: ["Started", "Paused", "Resumed", "Restarted", "Reset", "Submitted"],
@@ -416,7 +416,7 @@ describe("caliperEvents", () => {
       Score: [...BASE, "attempt", "maxScore", "scoreGiven", "scoredBy", "comment"],
     };
 
-    it("[T108] gives each entity the properties that its type has in Appendix B of Caliper 1.2", () => {
+    it("gives each entity the properties that its type has in Appendix B of Caliper 1.2", () => {
       const events = [...TYPES.map((type) => eventOf(type)), { ...eventOf("attempt-ended"), detail: "skip" }];
       const grade = caliperGrade(
         {
@@ -445,14 +445,14 @@ describe("caliperEvents", () => {
   });
 
   describe("identifiers", () => {
-    it("[T108] gives the same identifiers when the same step is mapped again", () => {
+    it("gives the same identifiers when the same step is mapped again", () => {
       const events = [eventOf("attempt-ended"), eventOf("moved"), eventOf("presented")];
       const first = caliperEvents(events, contextAt(8));
       const again = caliperEvents(events, contextAt(8));
       expect(again).toEqual(first);
     });
 
-    it("[T108] gives different identifiers to different sessions, steps and positions", () => {
+    it("gives different identifiers to different sessions, steps and positions", () => {
       const events = [eventOf("moved"), eventOf("presented")];
       const ids = new Set<string>();
       for (const context of [contextAt(1), contextAt(2), contextAt("start"), { ...contextAt(1), session: "s-2" }]) {
@@ -461,7 +461,7 @@ describe("caliperEvents", () => {
       expect(ids.size).toBe(2 * 4 + 1);
     });
 
-    it("[T108] does not depend on the parties, which describe the events and do not identify them", () => {
+    it("does not depend on the parties, which describe the events and do not identify them", () => {
       const events = [eventOf("moved")];
       const [one] = caliperEvents(events, contextAt(1));
       const [other] = caliperEvents(events, {
@@ -558,7 +558,7 @@ describe("caliperEvents", () => {
       return steps;
     }
 
-    it("[T108] maps the events of a real session: the candidate starts, answers, skips, pauses and submits", () => {
+    it("maps the events of a real session: the candidate starts, answers, skips, pauses and submits", () => {
       const steps = run();
       const names = steps.map(({ caliper }) => caliper.map(({ type, action }) => `${type} ${action}`));
       expect(names[0]).toEqual([
@@ -575,11 +575,11 @@ describe("caliperEvents", () => {
       expect(names[7]).toEqual(["AssessmentEvent Submitted"]);
     });
 
-    it("[T108] writes events of the real session that the published Caliper context accepts", () => {
+    it("writes events of the real session that the published Caliper context accepts", () => {
       for (const { caliper } of run()) for (const event of caliper) expect(eventProblems(event), event.id).toEqual([]);
     });
 
-    it("[T108] maps every event of the real session without an error, whatever its type", () => {
+    it("maps every event of the real session without an error, whatever its type", () => {
       const seen = new Set<string>();
       for (const { step } of run()) for (const event of step.events) seen.add(event.type);
       expect([...seen].sort()).toEqual(
@@ -591,7 +591,7 @@ describe("caliperEvents", () => {
   describe("input of other types", () => {
     const valid = [eventOf("moved")];
 
-    it("[T108] rejects a context that is not an object with a session, a step and absolute IRIs", () => {
+    it("rejects a context that is not an object with a session, a step and absolute IRIs", () => {
       const bad: [string, unknown][] = [
         ["null", fromJson("null")],
         ["no session", { ...contextAt(1), session: "" }],
@@ -614,7 +614,7 @@ describe("caliperEvents", () => {
       );
     });
 
-    it("[T108] rejects events that are not an array of events of the runtime's types", () => {
+    it("rejects events that are not an array of events of the runtime's types", () => {
       expect(() => caliperEvents(fromJson('{"0":{}}'), contextAt(1))).toThrow(
         "The events must be an array, found an object.",
       );
@@ -626,7 +626,7 @@ describe("caliperEvents", () => {
       expect(() => caliperEvents(fromJson('[{"type":"constructor","at":1}]'), contextAt(1))).toThrow(DataError);
     });
 
-    it("[T108] rejects an event that lacks what its Caliper event needs", () => {
+    it("rejects an event that lacks what its Caliper event needs", () => {
       const bad: [string, string, RegExp][] = [
         ['{"type":"moved","at":1}', "no item", /The event moved must name its item as an object, found undefined\./u],
         [
@@ -665,7 +665,7 @@ describe("caliperEvents", () => {
       }
     });
 
-    it("[T108] rejects the first of several events of a step that are wrong", () => {
+    it("rejects the first of several events of a step that are wrong", () => {
       const events = fromJson<DeliveryEvent[]>(
         '[{"type":"presented","at":-1,"item":{"ref":"q1","instance":1}},{"type":"section-entered","at":1},{"type":"moved","at":1}]',
       );
@@ -674,7 +674,7 @@ describe("caliperEvents", () => {
       );
     });
 
-    it("[T108] does not read the fields of an event that has no Caliper event", () => {
+    it("does not read the fields of an event that has no Caliper event", () => {
       const events = fromJson<DeliveryEvent[]>(
         '[{"type":"responses-set","at":"never read"},{"type":"support-changed"}]',
       );
@@ -693,7 +693,7 @@ describe("caliperGrade", () => {
     scoredBy: "https://exam.example/raters/9",
   };
 
-  it("[T108] gives the GradeEvent Graded for the attempt at the test, with the score it generated", () => {
+  it("gives the GradeEvent Graded for the attempt at the test, with the score it generated", () => {
     const event = caliperGrade(grade, contextAt(7));
     const attempt = urnOf("attempt", SESSION);
     expect(event).toEqual({
@@ -718,7 +718,7 @@ describe("caliperGrade", () => {
     });
   });
 
-  it("[T108] gives the attempt at an item when the score is for an item", () => {
+  it("gives the attempt at an item when the score is for an item", () => {
     const event = caliperGrade({ ...grade, item: Q2, scorer: "externalMachine", index: 1 }, contextAt(7));
     expect(event.actor).toEqual({ id: "https://exam.example/raters/9", type: "SoftwareApplication" });
     expect(event.object).toEqual({
@@ -732,7 +732,7 @@ describe("caliperGrade", () => {
     expect(event.generated).toMatchObject({ id: urnOf("score", SESSION, 7, 1), attempt: event.object.id });
   });
 
-  it("[T108] leaves out the greatest score when the caller does not know it, and keeps a score of 0 or below", () => {
+  it("leaves out the greatest score when the caller does not know it, and keeps a score of 0 or below", () => {
     const { maxScore: _, ...unknown } = grade;
     const event = caliperGrade({ ...unknown, scoreGiven: -0.5 }, contextAt(7));
     expect(event.generated).not.toHaveProperty("maxScore");
@@ -740,13 +740,13 @@ describe("caliperGrade", () => {
     expect(caliperGrade({ ...unknown, scoreGiven: 0 }, contextAt(7)).generated?.scoreGiven).toBe(0);
   });
 
-  it("[T108] writes events that the published Caliper context accepts", () => {
+  it("writes events that the published Caliper context accepts", () => {
     for (const each of [grade, { ...grade, item: Q1, scorer: "externalMachine" as const }]) {
       expect(eventProblems(caliperGrade(each, contextAt(7)))).toEqual([]);
     }
   });
 
-  it("[T108] writes the actor, object and generated entity that the Grading Profile requires", () => {
+  it("writes the actor, object and generated entity that the Grading Profile requires", () => {
     const event = caliperGrade(grade, contextAt(7));
     expect(["Person", "SoftwareApplication"]).toContain(event.actor.type);
     expect(event.object.type).toBe("Attempt");
@@ -754,11 +754,11 @@ describe("caliperGrade", () => {
     expect(event.action).toBe("Graded");
   });
 
-  it("[T108] gives the same identifier when the same score is reported again", () => {
+  it("gives the same identifier when the same score is reported again", () => {
     expect(caliperGrade(grade, contextAt(7))).toEqual(caliperGrade(grade, contextAt(7)));
   });
 
-  it("[T108] rejects a grade that is not what the Grading Profile needs, and a context that is not one", () => {
+  it("rejects a grade that is not what the Grading Profile needs, and a context that is not one", () => {
     const bad: [string, unknown][] = [
       ["null", fromJson("null")],
       ["a negative index", { ...grade, index: -1 }],
@@ -785,7 +785,7 @@ describe("caliperGrade", () => {
 describe("sendCaliper", () => {
   const sample = (): readonly CaliperEvent[] => caliperEvents([eventOf("moved")], contextAt(3));
 
-  it("[T109] posts one envelope with the sensor, the time, the version and the events", async () => {
+  it("posts one envelope with the sensor, the time, the version and the events", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     const events = sample();
     await sendCaliper(events, { ...SENDER, fetch: endpoint.fetch });
@@ -802,7 +802,7 @@ describe("sendCaliper", () => {
     expect(Object.keys(JSON.parse(request?.init.body ?? ""))).toEqual(["sensor", "sendTime", "dataVersion", "data"]);
   });
 
-  it("[T109] sets the media type, and the bearer token that Caliper 1.2 §5.4 recommends", async () => {
+  it("sets the media type, and the bearer token that Caliper 1.2 §5.4 recommends", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch });
     expect(endpoint.requests[0]?.init.headers).toEqual({
@@ -811,7 +811,7 @@ describe("sendCaliper", () => {
     });
   });
 
-  it("[T109] sends an envelope that has the properties and the events that the published context accepts", async () => {
+  it("sends an envelope that has the properties and the events that the published context accepts", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     const events = caliperEvents(
       [eventOf("section-entered"), eventOf("presented"), eventOf("attempt-ended"), eventOf("test-ended")],
@@ -827,14 +827,14 @@ describe("sendCaliper", () => {
     expect(body.data).toHaveLength(events.length + 1);
   });
 
-  it("[T109] sends the same bytes for the same events, so that a resend duplicates nothing", async () => {
+  it("sends the same bytes for the same events, so that a resend duplicates nothing", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch });
     await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch });
     expect(endpoint.requests[1]?.init.body).toBe(endpoint.requests[0]?.init.body);
   });
 
-  it("[T109] refuses a redirect, which would send the token elsewhere, and limits the time", async () => {
+  it("refuses a redirect, which would send the token elsewhere, and limits the time", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch });
     const { init } = endpoint.requests[0] ?? {};
@@ -843,7 +843,7 @@ describe("sendCaliper", () => {
     expect(DEFAULT_CALIPER_TIMEOUT_MS).toBe(10_000);
   });
 
-  it("[T109] accepts any 2xx answer, 200 and 202 included", async () => {
+  it("accepts any 2xx answer, 200 and 202 included", async () => {
     for (const status of [200, 201, 202, 204]) {
       const endpoint = fakeEndpoint({ status });
       await expect(
@@ -853,7 +853,7 @@ describe("sendCaliper", () => {
     }
   });
 
-  it("[T109] fails with the status and the body of a refusal of Caliper 1.2 §6.1", async () => {
+  it("fails with the status and the body of a refusal of Caliper 1.2 §6.1", async () => {
     for (const status of [400, 401, 415, 422, 500]) {
       const endpoint = fakeEndpoint({ status, body: '{"title":"no"}' });
       const error = await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch }).catch((e: unknown) => e);
@@ -866,7 +866,7 @@ describe("sendCaliper", () => {
     }
   });
 
-  it("[T109] fails with status 0 when the endpoint does not answer, and keeps the reason", async () => {
+  it("fails with status 0 when the endpoint does not answer, and keeps the reason", async () => {
     const endpoint = fakeEndpoint({ fails: new Error("connect ECONNREFUSED") });
     const error = await sendCaliper(sample(), { ...SENDER, fetch: endpoint.fetch }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ServiceError);
@@ -877,7 +877,7 @@ describe("sendCaliper", () => {
     });
   });
 
-  it("[T109] aborts a call that takes longer than the time limit", async () => {
+  it("aborts a call that takes longer than the time limit", async () => {
     const hang: typeof fetch = (_url, init) =>
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () => reject(new Error("The operation was aborted due to timeout")));
@@ -886,12 +886,12 @@ describe("sendCaliper", () => {
     expect(error).toMatchObject({ status: 0, message: expect.stringContaining("did not answer") });
   });
 
-  it("[T109] accepts the global fetch as it is", () => {
+  it("accepts the global fetch as it is", () => {
     const options: Parameters<typeof sendCaliper>[1] = { ...SENDER, fetch };
     expect(options.fetch).toBe(fetch);
   });
 
-  it("[T109] rejects options and events that are not what the sensor needs, before any request", async () => {
+  it("rejects options and events that are not what the sensor needs, before any request", async () => {
     const endpoint = fakeEndpoint({ status: 200 });
     const events = sample();
     const options = { ...SENDER, fetch: endpoint.fetch };
@@ -937,7 +937,7 @@ describe("the shape check against the published context", () => {
     return eventProblems(copy);
   };
 
-  it("[T108] accepts the events of the Assessment Profile that the specification prints", () => {
+  it("accepts the events of the Assessment Profile that the specification prints", () => {
     const printed = {
       "@context": "http://purl.imsglobal.org/ctx/caliper/v1p2",
       id: "urn:uuid:04e27704-73bf-4d3c-912c-1b2da40aef8f",
@@ -973,7 +973,7 @@ describe("the shape check against the published context", () => {
     expect(eventProblems(printed)).toEqual([]);
   });
 
-  it("[T108] finds a term that the context does not define", () => {
+  it("finds a term that the context does not define", () => {
     expect(
       mutate((event) => {
         event.attemptCount = 1;
@@ -981,7 +981,7 @@ describe("the shape check against the published context", () => {
     ).toEqual(["event.attemptCount: the term attemptCount is not defined by the Caliper context"]);
   });
 
-  it("[T108] finds a value of the wrong type, a malformed time and an action that is not a term", () => {
+  it("finds a value of the wrong type, a malformed time and an action that is not a term", () => {
     expect(
       mutate((event) => {
         event.eventTime = "2016-11-15 10:14:30";
@@ -1004,7 +1004,7 @@ describe("the shape check against the published context", () => {
     ).toEqual([]);
   });
 
-  it("[T108] finds a missing context, a missing required property and an identifier that is not a UUID URN", () => {
+  it("finds a missing context, a missing required property and an identifier that is not a UUID URN", () => {
     expect(
       mutate((event) => {
         event["@context"] = "https://example.edu/context";
@@ -1022,7 +1022,7 @@ describe("the shape check against the published context", () => {
     ).toEqual(["id is not urn:uuid:<UUID>"]);
   });
 
-  it("[T108] finds an entity that has no absolute IRI or whose type is not a node type", () => {
+  it("finds an entity that has no absolute IRI or whose type is not a node type", () => {
     expect(
       mutate((event) => {
         (event.object as Record<string, unknown>).id = "item-1";
@@ -1035,7 +1035,7 @@ describe("the shape check against the published context", () => {
     ).toEqual(["event.object: type is not a node type"]);
   });
 
-  it("[T109] finds an envelope with a custom property, a missing version and no events", () => {
+  it("finds an envelope with a custom property, a missing version and no events", () => {
     const envelope = {
       sensor: "https://exam.example/sensors/1",
       sendTime: "2023-11-14T22:13:20.000Z",
@@ -1062,7 +1062,7 @@ describe("properties", () => {
   const arbitraryStep = fc.oneof(fc.constant("start" as const), fc.nat());
   const arbitrarySession = fc.string({ minLength: 1 });
 
-  it("[T108] maps any events of any type, with an event for each type that has one", () => {
+  it("maps any events of any type, with an event for each type that has one", () => {
     fc.assert(
       fc.property(
         fc.array(arbitraryEvent, { maxLength: 12 }),
@@ -1080,7 +1080,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T108] gives identifiers that are unique within a step and the same when a step is sent again", () => {
+  it("gives identifiers that are unique within a step and the same when a step is sent again", () => {
     fc.assert(
       fc.property(
         fc.array(arbitraryEvent, { maxLength: 12 }),
@@ -1098,7 +1098,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T108] gives different identifiers to the events of different steps of a session", () => {
+  it("gives different identifiers to the events of different steps of a session", () => {
     fc.assert(
       fc.property(fc.array(arbitraryEvent, { minLength: 1, maxLength: 6 }), fc.nat(), fc.nat(), (events, one, two) => {
         fc.pre(one !== two);
@@ -1110,7 +1110,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T108] gives an event of the Caliper context for any score", () => {
+  it("gives an event of the Caliper context for any score", () => {
     fc.assert(
       fc.property(
         fc.record({

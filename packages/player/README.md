@@ -23,9 +23,14 @@ Supports are applied from the `SupportView`s of the runtime's view, and `mountDe
 Content is drawn by a renderer from the runtime's typed nodes, with a policy for attributes and references that keeps script out, and a content root that shows an item with its stimuli in a shadow root, with sanitized stylesheets, cards on demand, a hazard notice and modal feedback.
 The interactions that take text, choices, files and points on an image are drawn too: choice, order, associate, match, gap match, inline choice, text entry, extended text, hot text, slider, end attempt, media, upload with recording, hotspot, select point, graphic order, graphic associate, graphic gap match, position object, drawing, and the hook for custom interactions. Each is an element that the host gives a descriptor and a value and that sends the responses back, with hints for a response that breaks a rule and a way to answer without a drag.
 
+## What is supported
+
+The player is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md)
+says what it draws and operates, how WCAG 2.2 levels A and AA are checked, and what it does not support.
+
 ## Browser baseline
 
-The browser code runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. [Baseline](docs/baseline.md) lists
+The browser code runs in Chromium 111, Firefox 115 and Safari 16.4, and later versions. [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md) lists
 what that allows, the features it bans and how the baseline is tested.
 
 ## Example
@@ -68,26 +73,27 @@ envelope.seq; // 3
 
 ## Documentation
 
-- [Architecture](docs/architecture.md): principles, layers and errors.
-- [Baseline](docs/baseline.md): the browser baseline, the banned features and how they are tested.
-- [Content](docs/content.md): the renderer, the content root, references, stylesheets, cards and feedback.
-- [Portable custom interactions](docs/pci.md): the frame, its policy, loading, events and serving the files.
-- [Mathematics](docs/math.md): MathJax by URL, shadow roots, elementary math and braille.
-- [Speech](docs/speech.md): the speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo.
-- [Delivery](docs/delivery.md): `mountDelivery`, the chrome, the confirmations, the timers, the status messages and the focus.
-- [Client](docs/client.md): the remote session with autosave, and the local session of practice.
-- [Server](docs/server.md): the session host, the client-action policy, the proctor, the scheduler and the stores.
-- [Asset gate](docs/asset-gate.md): tokens in the path, prefixes, what is never served, and the tokens of the candidate's files.
-- [Protocol](docs/protocol.md): the caller, the envelopes, the session client, the official result and the submission.
-- [Scoring](docs/scoring.md): the submission of a scoring request, the action that supplies its score, and the display for raters.
-- [LTI](docs/lti.md): the tool role of LTI 1.3, its checks and its deployment.
-- [LTI platform](docs/lti-platform.md): the platform role, its three origins, the signed hints, the token endpoint and the grade services.
-- [CAT](docs/cat.md): the CAT engines over measurekit and over REST, the section store and the deployment of a package.
-- [Caliper](docs/caliper.md): the mapping from the events of a session, the identifiers, scores, sending, and forwarding a step's events.
-- [Interactions](docs/interactions.md): the elements of the interactions, their responses, hints and keys, the board, media, upload and recording.
-- [Graphic interactions](docs/graphics.md): the interactions that work on an image: shapes and coordinates, limits, targets, and the drawing.
-- [Messages](docs/messages.md): the interface text and the choice of a catalog by language.
-- [Styling](docs/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
-- [Supports](docs/supports.md): the look of the PNP, the panel of options, cards and popups, captions, reading aloud and the variant.
-- [Tools](docs/tools.md): the tools of an item, how they are shown and operated.
-- [Evidence](docs/evidence.md): the inventory of rows and WCAG criteria, and the coverage gate.
+- [Architecture](https://github.com/assesskit/assesskit/blob/main/docs/player/architecture.md): principles, layers and errors.
+- [Baseline](https://github.com/assesskit/assesskit/blob/main/docs/player/baseline.md): the browser baseline, the banned features and how they are tested.
+- [Content](https://github.com/assesskit/assesskit/blob/main/docs/player/content.md): the renderer, the content root, references, stylesheets, cards and feedback.
+- [Portable custom interactions](https://github.com/assesskit/assesskit/blob/main/docs/player/pci.md): the frame, its policy, loading, events and serving the files.
+- [Mathematics](https://github.com/assesskit/assesskit/blob/main/docs/player/math.md): MathJax by URL, shadow roots, elementary math and braille.
+- [Speech](https://github.com/assesskit/assesskit/blob/main/docs/player/speech.md): the speech request, SSML, `data-ssml`, lexicons, restriction types, voices and the typing echo.
+- [Delivery](https://github.com/assesskit/assesskit/blob/main/docs/player/delivery.md): `mountDelivery`, the chrome, the confirmations, the timers, the status messages and the focus.
+- [Client](https://github.com/assesskit/assesskit/blob/main/docs/player/client.md): the remote session with autosave, and the local session of practice.
+- [Server](https://github.com/assesskit/assesskit/blob/main/docs/player/server.md): the session host, the client-action policy, the proctor, the scheduler and the stores.
+- [Asset gate](https://github.com/assesskit/assesskit/blob/main/docs/player/asset-gate.md): tokens in the path, prefixes, what is never served, and the tokens of the candidate's files.
+- [Protocol](https://github.com/assesskit/assesskit/blob/main/docs/player/protocol.md): the caller, the envelopes, the session client, the official result and the submission.
+- [Scoring](https://github.com/assesskit/assesskit/blob/main/docs/player/scoring.md): the submission of a scoring request, the action that supplies its score, and the display for raters.
+- [LTI](https://github.com/assesskit/assesskit/blob/main/docs/player/lti.md): the tool role of LTI 1.3, its checks and its deployment.
+- [LTI platform](https://github.com/assesskit/assesskit/blob/main/docs/player/lti-platform.md): the platform role, its three origins, the signed hints, the token endpoint and the grade services.
+- [CAT](https://github.com/assesskit/assesskit/blob/main/docs/player/cat.md): the CAT engines over measurekit and over REST, the section store and the deployment of a package.
+- [Caliper](https://github.com/assesskit/assesskit/blob/main/docs/player/caliper.md): the mapping from the events of a session, the identifiers, scores, sending, and forwarding a step's events.
+- [Interactions](https://github.com/assesskit/assesskit/blob/main/docs/player/interactions.md): the elements of the interactions, their responses, hints and keys, the board, media, upload and recording.
+- [Graphic interactions](https://github.com/assesskit/assesskit/blob/main/docs/player/graphics.md): the interactions that work on an image: shapes and coordinates, limits, targets, and the drawing.
+- [Messages](https://github.com/assesskit/assesskit/blob/main/docs/player/messages.md): the interface text and the choice of a catalog by language.
+- [Styling](https://github.com/assesskit/assesskit/blob/main/docs/player/styling.md): `player.css`, its themes, the PNP properties, the parts and the vocabulary.
+- [Supports](https://github.com/assesskit/assesskit/blob/main/docs/player/supports.md): the look of the PNP, the panel of options, cards and popups, captions, reading aloud and the variant.
+- [Tools](https://github.com/assesskit/assesskit/blob/main/docs/player/tools.md): the tools of an item, how they are shown and operated.
+- [Supported](https://github.com/assesskit/assesskit/blob/main/docs/player/supported.md): what the player supports and what it does not, the browsers and WCAG 2.2.
+- [Evidence](https://github.com/assesskit/assesskit/blob/main/docs/player/evidence.md): how the player is tested.

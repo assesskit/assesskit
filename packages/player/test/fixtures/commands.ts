@@ -111,8 +111,7 @@ const consoleErrors: BrowserCommand<[], readonly string[]> = (context) => consol
 /** Returns the XML and CSS files of the 1EdTech examples, which a browser test cannot read: the page has no file system. */
 const corpusFiles: BrowserCommand<[], readonly CorpusFile[]> = () => {
   const root = resolve(import.meta.dirname, "../../../..");
-  const lock: { readonly directory: string } = JSON.parse(readFileSync(join(root, "conformance/corpus.lock.json"), "utf8"));
-  const examples = join(root, lock.directory, "qti-examples/qtiv3-examples");
+  const examples = join(root, ".cache/corpus/qti-examples/qtiv3-examples");
   if (!existsSync(examples)) throw new Error(`The corpus is not downloaded to ${examples}: run pnpm corpus first.`);
   return readdirSync(examples, { recursive: true, encoding: "utf8" })
     .filter((path) => path.endsWith(".xml") || path.endsWith(".css"))

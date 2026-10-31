@@ -28,7 +28,7 @@ const joined = (pieces: readonly (string | Pronounced)[]): string =>
 describe("data-ssml", () => {
   const read = (value: string) => readDataSsml(value);
 
-  it("[T10] reads the five functions of DSSML §4.1.3 with the values of its examples", () => {
+  it("reads the five functions of DSSML §4.1.3 with the values of its examples", () => {
     expect(read('{"say-as":{"interpret-as":"characters"}}')?.get("say-as")).toEqual({ "interpret-as": "characters" });
     expect(read('{"phoneme":{"alphabet":"ipa","ph":"ˈrɛdɪŋ"}}')?.get("phoneme")).toEqual({
       alphabet: "ipa",
@@ -39,11 +39,11 @@ describe("data-ssml", () => {
     expect(read('{"prosody":{"rate":"slow"}}')?.get("prosody")).toEqual({ rate: "slow" });
   });
 
-  it("[T10] reads emphasis, which the example of BPIG §5.2.1.8 uses", () => {
+  it("reads emphasis, which the example of BPIG §5.2.1.8 uses", () => {
     expect(read('{"emphasis":{"level":"strong"}}')?.get("emphasis")).toEqual({ level: "strong" });
   });
 
-  it("[T10] reads the break strengths, the alphabets and the rates that DSSML §2.7 and SSML 1.1 §3.2.4 list", () => {
+  it("reads the break strengths, the alphabets and the rates that DSSML §2.7 and SSML 1.1 §3.2.4 list", () => {
     for (const strength of ["none", "x-weak", "weak", "medium", "strong", "x-strong"]) {
       expect(read(`{"break":{"strength":"${strength}"}}`), strength).toBeDefined();
     }
@@ -53,7 +53,7 @@ describe("data-ssml", () => {
     }
   });
 
-  it("[T10] gives no effect to a value that DSSML §4.2 does not define", () => {
+  it("gives no effect to a value that DSSML §4.2 does not define", () => {
     const invalid = [
       "not json",
       "[]",
@@ -78,7 +78,7 @@ describe("data-ssml", () => {
     for (const value of invalid) expect(read(value), value).toBeUndefined();
   });
 
-  it("[T10] reads the same value in every serialization of DSSML §4.1", () => {
+  it("reads the same value in every serialization of DSSML §4.1", () => {
     const serializations = [
       '<p data-ssml=\'{"sub":{"alias":"x"}}\'/>',
       '<p data-ssml="{&quot;sub&quot;:{&quot;alias&quot;:&quot;x&quot;}}"/>',
@@ -90,7 +90,7 @@ describe("data-ssml", () => {
     expect(read(values[0] ?? "")?.get("sub")).toEqual({ alias: "x" });
   });
 
-  it("[T10] wraps the content in the functions, from the outermost prosody to the innermost sub, with a break first", () => {
+  it("wraps the content in the functions, from the outermost prosody to the innermost sub, with a break first", () => {
     const data = read('{"sub":{"alias":"Froyd"},"prosody":{"rate":"slow"},"break":{"time":"2s"}}');
     expect(data).toBeDefined();
     const ssml = speakDocument(
@@ -100,7 +100,7 @@ describe("data-ssml", () => {
     expect(inner(ssml)).toBe('<break time="2s"/><prosody rate="slow"><sub alias="Froyd">Freud</sub></prosody>');
   });
 
-  it("[T10] gives a text function the text of the element, and the others its content", () => {
+  it("gives a text function the text of the element, and the others its content", () => {
     const nested = read('{"emphasis":{"level":"strong"}}');
     const content = [ssmlElement("sub", { alias: "a" }, ["b"])];
     const ssml = speakDocument(nested === undefined ? [] : applyDataSsml(nested, "b", content), "en");
@@ -109,13 +109,13 @@ describe("data-ssml", () => {
 });
 
 describe("parseLexicon", () => {
-  it("[T11] reads the lexicon of PLS 1.0 §4.1: the language, the phonemes and the default alphabet", () => {
+  it("reads the lexicon of PLS 1.0 §4.1: the language, the phonemes and the default alphabet", () => {
     const parsed = parseLexicon(lexicon("<lexeme><grapheme>tomato</grapheme><phoneme>təmei̥ɾou̥</phoneme></lexeme>"));
     expect(parsed.language).toBe("en-US");
     expect(parsed.entries.get("tomato")).toEqual({ kind: "phoneme", alphabet: "ipa", ph: "təmei̥ɾou̥" });
   });
 
-  it("[T11] reads an alias (PLS 1.0 §4.7) and the alphabet of a phoneme that differs from the default (PLS 1.0 §4.6)", () => {
+  it("reads an alias (PLS 1.0 §4.7) and the alphabet of a phoneme that differs from the default (PLS 1.0 §4.6)", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme><lexeme><grapheme>x</grapheme><phoneme alphabet="x-sampa">eks</phoneme></lexeme>',
@@ -125,7 +125,7 @@ describe("parseLexicon", () => {
     expect(parsed.entries.get("x")).toEqual({ kind: "phoneme", alphabet: "x-sampa", ph: "eks" });
   });
 
-  it("[T11] gives every grapheme of a lexeme its pronunciation (PLS 1.0 §4.5)", () => {
+  it("gives every grapheme of a lexeme its pronunciation (PLS 1.0 §4.5)", () => {
     const parsed = parseLexicon(
       lexicon(
         "<lexeme><grapheme>nihongo</grapheme><grapheme>日本語</grapheme><grapheme>にほんご</grapheme><phoneme>ɲihoŋo</phoneme></lexeme>",
@@ -137,7 +137,7 @@ describe("parseLexicon", () => {
     }
   });
 
-  it("[T11] takes the first pronunciation with prefer true, else the first (PLS 1.0 §4.9.2)", () => {
+  it("takes the first pronunciation with prefer true, else the first (PLS 1.0 §4.9.2)", () => {
     const first = parseLexicon(
       lexicon("<lexeme><grapheme>a</grapheme><phoneme>one</phoneme><phoneme>two</phoneme></lexeme>"),
     );
@@ -150,7 +150,7 @@ describe("parseLexicon", () => {
     expect(preferred.entries.get("a")).toMatchObject({ ph: "two" });
   });
 
-  it("[T11] collects the pronunciations of a grapheme in several lexemes in document order (PLS 1.0 §4.9.2)", () => {
+  it("collects the pronunciations of a grapheme in several lexemes in document order (PLS 1.0 §4.9.2)", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme><grapheme>a</grapheme><phoneme>one</phoneme></lexeme><lexeme><grapheme>a</grapheme><phoneme prefer="true">two</phoneme></lexeme>',
@@ -159,7 +159,7 @@ describe("parseLexicon", () => {
     expect(parsed.entries.get("a")).toMatchObject({ ph: "two" });
   });
 
-  it("[T11] leaves out a lexeme with a role, because the player knows no part of speech (PLS 1.0 §4.4)", () => {
+  it("leaves out a lexeme with a role, because the player knows no part of speech (PLS 1.0 §4.4)", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme role="ex:noun"><grapheme>file</grapheme><phoneme>faɪl</phoneme></lexeme><lexeme><grapheme>eu</grapheme><alias>Europe</alias></lexeme>',
@@ -169,17 +169,17 @@ describe("parseLexicon", () => {
     expect(parsed.entries.has("eu")).toBe(true);
   });
 
-  it("[T11] reduces white space in a grapheme to a space (PLS 1.0 Appendix C)", () => {
+  it("reduces white space in a grapheme to a space (PLS 1.0 Appendix C)", () => {
     const parsed = parseLexicon(lexicon("<lexeme><grapheme>New\n   York</grapheme><alias>Nyu Yok</alias></lexeme>"));
     expect(parsed.entries.get("New York")).toEqual({ kind: "alias", alias: "Nyu Yok" });
   });
 
-  it("[T11] reads bytes as well as text", () => {
+  it("reads bytes as well as text", () => {
     const bytes = new TextEncoder().encode(lexicon("<lexeme><grapheme>a</grapheme><alias>b</alias></lexeme>"));
     expect(parseLexicon(bytes).entries.get("a")).toEqual({ kind: "alias", alias: "b" });
   });
 
-  it("[T11] refuses a document that is not a PLS 1.0 lexicon with an alphabet and a language", () => {
+  it("refuses a document that is not a PLS 1.0 lexicon with an alphabet and a language", () => {
     expect(() => parseLexicon("<lexicon/>")).toThrow(DataError);
     expect(() => parseLexicon(lexicon("").replace(`${PLS}`, PLS.replace("1.0", "2.0")))).toThrow(DataError);
     expect(() => parseLexicon(lexicon("", 'xml:lang="en"'))).toThrow(/alphabet/u);
@@ -194,7 +194,7 @@ describe("pronounce", () => {
     entries: new Map(pairs.map(([grapheme, alias]) => [grapheme, { kind: "alias" as const, alias }])),
   });
 
-  it("[T11] splits a text where an entry matches, and leaves the rest as it is", () => {
+  it("splits a text where an entry matches, and leaves the rest as it is", () => {
     const pieces = pronounce("Read the W3C spec.", "en", [entries(["W3C", "World Wide Web Consortium"])]);
     expect(pieces).toEqual([
       "Read the ",
@@ -203,17 +203,17 @@ describe("pronounce", () => {
     ]);
   });
 
-  it("[T11] matches whole tokens, not the start of a word (PLS 1.0 Appendix C: do does not match done)", () => {
+  it("matches whole tokens, not the start of a word (PLS 1.0 Appendix C: do does not match done)", () => {
     expect(pronounce("It is done", "en", [entries(["do", "doo"])])).toEqual(["It is done"]);
   });
 
-  it("[T11] prefers the longest sequence of tokens (PLS 1.0 Appendix C: they'll over they)", () => {
+  it("prefers the longest sequence of tokens (PLS 1.0 Appendix C: they'll over they)", () => {
     const pieces = pronounce("they'll go", "en", [entries(["they", "x"], ["they'll", "y"])]);
     expect(pieces[0]).toMatchObject({ text: "they'll" });
     expect(pieces[0]).toMatchObject({ pronunciation: { alias: "y" } });
   });
 
-  it("[T11] matches the characters exactly: case and accents count (PLS 1.0 Appendix C)", () => {
+  it("matches the characters exactly: case and accents count (PLS 1.0 Appendix C)", () => {
     const lexicons = [entries(["Lima", "a"], ["cure", "b"], ["vitæ", "c"])];
     expect(pronounce("lima", "en", lexicons)).toEqual(["lima"]);
     expect(pronounce("curé", "en", lexicons)).toEqual(["curé"]);
@@ -221,7 +221,7 @@ describe("pronounce", () => {
     expect(pronounce("Lima", "en", lexicons)[0]).toMatchObject({ text: "Lima" });
   });
 
-  it("[T11] matches a phrase of tokens, whatever the white space between them was (PLS 1.0 Appendix C)", () => {
+  it("matches a phrase of tokens, whatever the white space between them was (PLS 1.0 Appendix C)", () => {
     const pieces = pronounce("in New York today", "en", [entries(["New York", "nyu york"])]);
     expect(pieces).toEqual([
       "in ",
@@ -230,35 +230,35 @@ describe("pronounce", () => {
     ]);
   });
 
-  it("[T11] lets an entry leave out the punctuation around a word", () => {
+  it("lets an entry leave out the punctuation around a word", () => {
     const pieces = pronounce("(W3C), then", "en", [entries(["W3C", "x"])]);
     expect(pieces).toEqual(["(", { text: "W3C", pronunciation: { kind: "alias", alias: "x" } }, "), then"]);
   });
 
-  it("[T11] matches an entry that has punctuation in it as it is written", () => {
+  it("matches an entry that has punctuation in it as it is written", () => {
     const pieces = pronounce("the U.S.A. team", "en", [entries(["U.S.A.", "usa"])]);
     expect(pieces[1]).toMatchObject({ text: "U.S.A." });
   });
 
-  it("[T11] looks in the lexicons in order and uses the first that has the words", () => {
+  it("looks in the lexicons in order and uses the first that has the words", () => {
     const pieces = pronounce("a", "en", [entries(["a", "first"]), entries(["a", "second"])]);
     expect(pieces[0]).toMatchObject({ pronunciation: { alias: "first" } });
   });
 
-  it("[T11] uses only the lexicons of the language of the text, by the primary subtag", () => {
+  it("uses only the lexicons of the language of the text, by the primary subtag", () => {
     const indonesian: Lexicon = { language: "id", entries: new Map([["a", { kind: "alias", alias: "x" }]]) };
     expect(pronounce("a", "id-ID", [indonesian])[0]).toMatchObject({ text: "a" });
     expect(pronounce("a", "en", [indonesian])).toEqual(["a"]);
   });
 
-  it("[T11] returns the text when there is no lexicon, or the text is empty", () => {
+  it("returns the text when there is no lexicon, or the text is empty", () => {
     expect(pronounce("a b", "en", [])).toEqual(["a b"]);
     expect(pronounce("", "en", [entries(["a", "b"])])).toEqual([]);
   });
 });
 
 describe("ssml", () => {
-  it("[T10] writes a speak element of SSML 1.1 (SSML 1.1 §3.1.1) with the language and the paragraphs", () => {
+  it("writes a speak element of SSML 1.1 (SSML 1.1 §3.1.1) with the language and the paragraphs", () => {
     const ssml = speakDocument([ssmlElement("p", {}, ["Hello"])], "en-US");
     expect(ssml).toMatch(/^<\?xml version="1\.0" encoding="UTF-8"\?>\s*<speak /u);
     expect(ssml).toContain('xmlns="http://www.w3.org/2001/10/synthesis"');
@@ -267,19 +267,19 @@ describe("ssml", () => {
     expect(inner(ssml)).toBe("<p>Hello</p>");
   });
 
-  it("[T10] escapes text and attribute values", () => {
+  it("escapes text and attribute values", () => {
     const ssml = speakDocument([ssmlElement("sub", { alias: 'a "b" <c>' }, ["x & y"])], "en");
     expect(inner(ssml)).toBe('<sub alias="a &quot;b&quot; &lt;c&gt;">x &amp; y</sub>');
   });
 
-  it("[T10] leaves out the characters that XML 1.0 does not allow", () => {
+  it("leaves out the characters that XML 1.0 does not allow", () => {
     expect(xmlSafe("a\u0000b\u0008c\ud800d\u{1f600}\u000e")).toBe("abcd\u{1f600}");
     expect(inner(speakDocument([ssmlElement("sub", { alias: "a\u0001b" }, ["c\u0002d"])], "en"))).toBe(
       '<sub alias="ab">cd</sub>',
     );
   });
 
-  it("[T10][T11] says the alias of a sub, a space for a break, and nothing for a mark (SSML 1.1 §3.1.10)", () => {
+  it("says the alias of a sub, a space for a break, and nothing for a mark (SSML 1.1 §3.1.10)", () => {
     const nodes = [
       ssmlElement("p", {}, [
         "Read ",
@@ -292,7 +292,7 @@ describe("ssml", () => {
     expect(plainText(nodes)).toBe("Read World Wide Web now.");
   });
 
-  it("[T10] says the fallback of an audio element, the text of a phoneme, and a line for each paragraph", () => {
+  it("says the fallback of an audio element, the text of a phoneme, and a line for each paragraph", () => {
     const nodes = [
       ssmlElement("p", {}, [ssmlElement("audio", { src: "https://a.example/x.mp3" }, ["Beep."])]),
       ssmlElement("p", {}, [ssmlElement("phoneme", { ph: "x", alphabet: "ipa" }, ["Reading"])]),
@@ -302,7 +302,7 @@ describe("ssml", () => {
 });
 
 describe("checkSpeechSettings", () => {
-  it("[T85] accepts the settings of a spoken support as the runtime reads them, and an empty object", () => {
+  it("accepts the settings of a spoken support as the runtime reads them, and an empty object", () => {
     expect(() =>
       checkSpeechSettings({
         readingType: "computer-read-aloud",
@@ -317,7 +317,7 @@ describe("checkSpeechSettings", () => {
     expect(() => checkSpeechSettings({})).not.toThrow();
   });
 
-  it("[T85] refuses a value outside the vocabulary or the range of PNP", () => {
+  it("refuses a value outside the vocabulary or the range of PNP", () => {
     const wrong = [
       { readingType: "tts" },
       { restrictionTypes: "directions-only" },
@@ -334,7 +334,7 @@ describe("checkSpeechSettings", () => {
       expect(() => checkSpeechSettings(settings), JSON.stringify(settings)).toThrow(DataError);
   });
 
-  it("[T85] refuses settings that are not an object", () => {
+  it("refuses settings that are not an object", () => {
     for (const settings of [json("null"), json("3"), json('"x"'), json("[]")]) {
       expect(() => checkSpeechSettings(settings)).toThrow(DataError);
     }
@@ -344,12 +344,12 @@ describe("checkSpeechSettings", () => {
 describe("checkSpeechRequest", () => {
   const request = { ssml: "<speak/>", text: "Hello", lang: "en" };
 
-  it("[T85] accepts a request with or without the rate, the pitch and the volume", () => {
+  it("accepts a request with or without the rate, the pitch and the volume", () => {
     expect(() => checkSpeechRequest(request)).not.toThrow();
     expect(() => checkSpeechRequest({ ...request, rate: 180, pitch: 0.5, volume: 1 })).not.toThrow();
   });
 
-  it("[T85] refuses a request that lacks a field or has a field of another type or range", () => {
+  it("refuses a request that lacks a field or has a field of another type or range", () => {
     const wrong = [
       json("null"),
       { ...request, ssml: 3 },
@@ -364,14 +364,14 @@ describe("checkSpeechRequest", () => {
 });
 
 describe("messages", () => {
-  it("[T85] has the word for a link and the word for a space in English and Indonesian", () => {
+  it("has the word for a link and the word for a space in English and Indonesian", () => {
     expect([EN_MESSAGES.speechLink, EN_MESSAGES.typingSpace]).toEqual(["link", "space"]);
     expect([ID_MESSAGES.speechLink, ID_MESSAGES.typingSpace]).toEqual(["tautan", "spasi"]);
   });
 });
 
 describe("properties", () => {
-  it("[T11] pronounce returns pieces whose text is the text it was given", () => {
+  it("pronounce returns pieces whose text is the text it was given", () => {
     const words = fc.array(fc.stringMatching(/^[a-zA-Z.'()]{1,6}$/u), { minLength: 0, maxLength: 8 });
     fc.assert(
       fc.property(words, words, (text, graphemes) => {
@@ -384,12 +384,12 @@ describe("properties", () => {
     );
   });
 
-  it("[T10] readDataSsml never throws, whatever the string is", () => {
+  it("readDataSsml never throws, whatever the string is", () => {
     fc.assert(fc.property(fc.string(), (value) => void readDataSsml(value)));
     fc.assert(fc.property(fc.json(), (value) => void readDataSsml(value)));
   });
 
-  it("[T10] xmlSafe leaves a string that XML 1.0 allows as it is, and removes what it does not", () => {
+  it("xmlSafe leaves a string that XML 1.0 allows as it is, and removes what it does not", () => {
     fc.assert(
       fc.property(fc.string(), (value) => {
         const safe = xmlSafe(value);

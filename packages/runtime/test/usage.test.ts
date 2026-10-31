@@ -42,7 +42,7 @@ function statisticOf(body: string): ItemStatistic {
 const base = { name: "AIS", context: CONTEXT, targetObjects: [{ identifier: "Item_VB123456" }] };
 
 describe("readUsageData", () => {
-  it("[U1] reads the glossary of the usage data and the statistics in the order of the document (UD §2.3.1)", () => {
+  it("reads the glossary of the usage data and the statistics in the order of the document (UD §2.3.1)", () => {
     const data = readUsageData(
       document(
         `${ordinary("", `${TARGET}<value>0.87</value>`)}<categorizedStatistic name="D-Param" context="${CONTEXT}">${TARGET}<mapping><mapEntry mapKey="d1" mappedValue="1"/></mapping></categorizedStatistic>${ordinary("", `${TARGET}<value>1</value>`)}`,
@@ -53,11 +53,11 @@ describe("readUsageData", () => {
     expect(data.statistics.map(({ kind }) => kind)).toEqual(["ordinary", "categorized", "ordinary"]);
   });
 
-  it("[U1] reads usage data without statistics", () => {
+  it("reads usage data without statistics", () => {
     expect(readUsageData(document())).toEqual({ statistics: [] });
   });
 
-  it("[U2] reads the attributes of an ordinary statistic and its value (UD §2.4.3)", () => {
+  it("reads the attributes of an ordinary statistic and its value (UD §2.4.3)", () => {
     // The first statistic of 1EdTech's usageData/example.xml.
     expect(
       statisticOf(
@@ -77,7 +77,7 @@ describe("readUsageData", () => {
     });
   });
 
-  it("[U3][U5] reads a categorized statistic with its mapping, bounds and entries (UD §2.4.1, §2.4.2, §2.6.3)", () => {
+  it("reads a categorized statistic with its mapping, bounds and entries (UD §2.4.1, §2.4.2, §2.6.3)", () => {
     // The D-Parm statistic of 1EdTech's usageData/example.xml.
     expect(
       statisticOf(
@@ -99,7 +99,7 @@ describe("readUsageData", () => {
     });
   });
 
-  it("[U5] leaves out the bounds and the default value that a mapping does not give", () => {
+  it("leaves out the bounds and the default value that a mapping does not give", () => {
     const statistic = statisticOf(
       `<categorizedStatistic name="x" context="c">${TARGET}<mapping><mapEntry mapKey="" mappedValue="-INF" caseSensitive="1"/></mapping></categorizedStatistic>`,
     );
@@ -110,7 +110,7 @@ describe("readUsageData", () => {
     expect((statistic as { mapping: object }).mapping).not.toHaveProperty("defaultValue");
   });
 
-  it("[U4] reads the target objects of a statistic: the item, a part of it and the kind of object (UD §2.6.4)", () => {
+  it("reads the target objects of a statistic: the item, a part of it and the kind of object (UD §2.6.4)", () => {
     const statistic = statisticOf(
       ordinary(
         "",
@@ -123,7 +123,7 @@ describe("readUsageData", () => {
     ]);
   });
 
-  it("[U6] reads a value without a base type as a float, and a value with one by the lexical form of that type", () => {
+  it("reads a value without a base type as a float, and a value with one by the lexical form of that type", () => {
     const value = (attributes: string, text: string): unknown =>
       (statisticOf(ordinary("", `${TARGET}<value${attributes}>${text}</value>`)) as { value: unknown }).value;
     expect(value("", " 0.647 ")).toEqual({ value: 0.647 });
@@ -139,7 +139,7 @@ describe("readUsageData", () => {
     expect(value(' baseType="boolean"', "true")).toEqual({ value: true, baseType: "boolean" });
   });
 
-  it("[U7] accepts the seven terms of ObjectTypeEnum and no other (UD §2.7.2)", () => {
+  it("accepts the seven terms of ObjectTypeEnum and no other (UD §2.7.2)", () => {
     for (const objectType of ["test", "testpart", "section", "item", "outcome", "interaction", "choice"]) {
       const statistic = statisticOf(
         ordinary("", `<targetObject identifier="x" objectType="${objectType}"/><value>1</value>`),
@@ -154,7 +154,7 @@ describe("readUsageData", () => {
     );
   });
 
-  it("[U8] lists the four terms of the Distractor Statistics vocabulary (UD §2.8.1)", () => {
+  it("lists the four terms of the Distractor Statistics vocabulary (UD §2.8.1)", () => {
     expect(DISTRACTOR_STATISTICS).toEqual([
       "AISResponse",
       "NumberChoosingResponse",
@@ -163,7 +163,7 @@ describe("readUsageData", () => {
     ]);
   });
 
-  it("[U9] lists the sixteen terms of the Item Statistics vocabulary (UD §2.8.2)", () => {
+  it("lists the sixteen terms of the Item Statistics vocabulary (UD §2.8.2)", () => {
     expect(ITEM_STATISTICS).toEqual([
       "A-Param",
       "AIS",
@@ -184,27 +184,27 @@ describe("readUsageData", () => {
     ]);
   });
 
-  it("[U8][U9] reads and writes a statistic under every term of the vocabularies, and under a name outside them", () => {
+  it("reads and writes a statistic under every term of the vocabularies, and under a name outside them", () => {
     const names = [...DISTRACTOR_STATISTICS, ...ITEM_STATISTICS, "A-Parm", "drcInfitt"];
     const statistics: ItemStatistic[] = names.map((name) => ({ kind: "ordinary", ...base, name, value: { value: 1 } }));
     const data: UsageData = { statistics };
     expect(readUsageData(writeUsageData(data))).toEqual(data);
   });
 
-  it("[U1] reads text, bytes and a parsed element", () => {
+  it("reads text, bytes and a parsed element", () => {
     const text = document();
     expect(readUsageData(new TextEncoder().encode(text))).toEqual({ statistics: [] });
   });
 });
 
 describe("writeUsageData", () => {
-  it("[U1] writes usage data without statistics", () => {
+  it("writes usage data without statistics", () => {
     expect(writeUsageData({ statistics: [] })).toBe(
       `${DECLARATION}<usageData xsi:schemaLocation="${SCHEMA_LOCATION}" xmlns="${USAGE_NAMESPACE}" xmlns:xsi="${XSI_NAMESPACE}"/>`,
     );
   });
 
-  it("[U1][U2][U4][U6] writes an ordinary statistic with the attributes in the order of the schema, a float value without a base type", () => {
+  it("writes an ordinary statistic with the attributes in the order of the schema, a float value without a base type", () => {
     const text = writeUsageData({
       glossary: "http://example.com/g",
       statistics: [
@@ -227,7 +227,7 @@ describe("writeUsageData", () => {
     );
   });
 
-  it("[U3][U5][U6] writes a categorized statistic and a value with a base type and a field", () => {
+  it("writes a categorized statistic and a value with a base type and a field", () => {
     const text = writeUsageData({
       statistics: [
         {
@@ -244,7 +244,7 @@ describe("writeUsageData", () => {
     expect(text).toContain('<value fieldIdentifier="p" baseType="point">1 2</value>');
   });
 
-  it("[U7] writes the terms of ObjectTypeEnum and refuses any other", () => {
+  it("writes the terms of ObjectTypeEnum and refuses any other", () => {
     for (const objectType of ["test", "testpart", "section", "item", "outcome", "interaction", "choice"] as const) {
       const statistic: ItemStatistic = {
         kind: "ordinary",
@@ -267,7 +267,7 @@ describe("writeUsageData", () => {
 });
 
 describe("errors", () => {
-  it("[U1][N] refuses a root that is not usageData of the UD namespace, among them the namespace of QTI 2.2 (D6)", () => {
+  it("refuses a root that is not usageData of the UD namespace, among them the namespace of QTI 2.2 (D6)", () => {
     expect(
       issueOf(() => readUsageData('<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2"/>')),
     ).toEqual({
@@ -280,7 +280,7 @@ describe("errors", () => {
     expect(() => readUsageData(`<statistics xmlns="${USAGE_NAMESPACE}"/>`)).toThrow("found statistics.");
   });
 
-  it("[U2][N] refuses a statistic without its context, name, target object or value", () => {
+  it("refuses a statistic without its context, name, target object or value", () => {
     expect(() =>
       readUsageData(document(`<ordinaryStatistic name="a">${TARGET}<value>1</value></ordinaryStatistic>`)),
     ).toThrow("The element ordinaryStatistic needs the attribute context.");
@@ -300,7 +300,7 @@ describe("errors", () => {
     ).toThrow("The element ordinaryStatistic needs the element value, found no more elements.");
   });
 
-  it("[U3][N] refuses a categorized statistic with a value instead of a mapping, and a mapping without an entry", () => {
+  it("refuses a categorized statistic with a value instead of a mapping, and a mapping without an entry", () => {
     expect(() =>
       readUsageData(
         document(`<categorizedStatistic name="a" context="c">${TARGET}<value>1</value></categorizedStatistic>`),
@@ -311,7 +311,7 @@ describe("errors", () => {
     ).toThrow("The element mapping needs a mapEntry.");
   });
 
-  it("[U2][N] refuses a name that is not an identifier, a date that is not YYYY-MM-DD and a count beyond the safe integers", () => {
+  it("refuses a name that is not an identifier, a date that is not YYYY-MM-DD and a count beyond the safe integers", () => {
     const statistic = (attributes: string): string => document(ordinary(attributes, `${TARGET}<value>1</value>`));
     expect(() =>
       readUsageData(
@@ -328,7 +328,7 @@ describe("errors", () => {
     );
   });
 
-  it("[U6][N] refuses a value that is not of its base type", () => {
+  it("refuses a value that is not of its base type", () => {
     expect(() => statisticOf(ordinary("", `${TARGET}<value>high</value>`))).toThrow(
       'The value of an ordinary statistic without a baseType is a float. The text "high" is not a float: expected a decimal number with an optional exponent, INF, -INF or NaN.',
     );
@@ -338,7 +338,7 @@ describe("errors", () => {
     });
   });
 
-  it("[U1][N] refuses attributes and elements that the schema does not define", () => {
+  it("refuses attributes and elements that the schema does not define", () => {
     expect(() => readUsageData(document("", ' unknown="1"'))).toThrow(
       "The element usageData has the attribute unknown, which the schema does not define for it.",
     );
@@ -350,7 +350,7 @@ describe("errors", () => {
     );
   });
 
-  it("[U1][N] refuses input that is not text, bytes or an element, and a model that is not usage data", () => {
+  it("refuses input that is not text, bytes or an element, and a model that is not usage data", () => {
     expect(() => readUsageData(json("null"))).toThrow(
       "The usage data to read must be a string, a Uint8Array or an XmlElement, found null.",
     );
@@ -366,7 +366,7 @@ describe("errors", () => {
     ).toThrow('The kind of a statistic must be "ordinary" or "categorized", found "other".');
   });
 
-  it("[U2][U4][U5][N] refuses a model with a field of the wrong type", () => {
+  it("refuses a model with a field of the wrong type", () => {
     const ordinaryWith = (fields: object): UsageData => ({
       statistics: [{ kind: "ordinary", ...base, value: { value: 1 }, ...fields }],
     });
@@ -403,7 +403,7 @@ describe("errors", () => {
 });
 
 describe("properties", () => {
-  it("[U1][U2][U3][U4][U5][U6] reads back the document that it writes", () => {
+  it("reads back the document that it writes", () => {
     fc.assert(
       fc.property(usageData, (model) => {
         expect(readUsageData(writeUsageData(model))).toEqual(model);
@@ -412,11 +412,11 @@ describe("properties", () => {
     );
   });
 
-  it("[U1][N][B94] reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
+  it("reads a mutated document or refuses it with a ReadError or a SecurityError, and throws nothing else", () => {
     fuzzReader(usageData.map(writeUsageData), readUsageData);
   });
 
-  it("[U1] writes the same text for a model that it has read as for the model it was read from", () => {
+  it("writes the same text for a model that it has read as for the model it was read from", () => {
     fc.assert(
       fc.property(usageData, (model) => {
         const text = writeUsageData(model);

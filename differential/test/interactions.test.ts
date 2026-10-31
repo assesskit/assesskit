@@ -70,7 +70,7 @@ const pickedFrom = (choices: readonly string[]): fc.Arbitrary<string[]> =>
   fc.uniqueArray(fc.constantFrom(...choices, "Z"), { maxLength: choices.length + 1 });
 
 describe("runtime against the oracle on the validity of responses", () => {
-  it("[B56][D] agree on min-choices, max-choices and the choices of a choice interaction", () => {
+  it("agree on min-choices, max-choices and the choices of a choice interaction", () => {
     agree(
       fc
         .record({
@@ -91,7 +91,7 @@ describe("runtime against the oracle on the validity of responses", () => {
     );
   });
 
-  it("[B56][D] agree on the choices an order interaction needs: all of them, or between min-choices and max-choices", () => {
+  it("agree on the choices an order interaction needs: all of them, or between min-choices and max-choices", () => {
     agree(
       fc
         .record({
@@ -115,7 +115,7 @@ describe("runtime against the oracle on the validity of responses", () => {
     );
   });
 
-  it("[B56][D] agree on max-associations, match-max and the choices of an associate interaction", () => {
+  it("agree on max-associations, match-max and the choices of an associate interaction", () => {
     const pairOf = fc.tuple(
       fc.constantFrom(...IDENTIFIERS.slice(0, 4), "Z"),
       fc.constantFrom(...IDENTIFIERS.slice(0, 4)),
@@ -143,7 +143,7 @@ describe("runtime against the oracle on the validity of responses", () => {
     );
   });
 
-  it("[B56][D] agree on an inline choice interaction that is required, and on the choice made", () => {
+  it("agree on an inline choice interaction that is required, and on the choice made", () => {
     agree(
       fc.tuple(fc.boolean(), fc.constantFrom(undefined, "A", "B", "Z")).map(([required, picked]): ValidityCase => {
         const xml = itemXml(
@@ -220,7 +220,7 @@ describe("runtime against the oracle on numeric text", () => {
   /** A number whose point has no digits after it and no exponent follows, such as `5.`. */
   const endsInPoint = (text: string): boolean => /^[+-]?[0-9]*\.$/.test(text);
 
-  it("[B53][D] agree on the fields of the record that a typed decimal makes", () => {
+  it("agree on the fields of the record that a typed decimal makes", () => {
     fc.assert(
       fc.property(
         decimalText.filter((text) => !endsInPoint(text)),
@@ -233,7 +233,7 @@ describe("runtime against the oracle on numeric text", () => {
     );
   });
 
-  it("[B53][D] differ for a number that ends in its point: INFO §2.4.2.2 gives an integerValue when no fractional digits were specified, and the oracle gives none", () => {
+  it("differ for a number that ends in its point: INFO §2.4.2.2 gives an integerValue when no fractional digits were specified, and the oracle gives none", () => {
     for (const [text, value] of [
       ["5.", 5],
       ["-12.", -12],
@@ -243,7 +243,7 @@ describe("runtime against the oracle on numeric text", () => {
     }
   });
 
-  it("[B53][D] differ in the sign of a zero integer: the runtime has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
+  it("differ in the sign of a zero integer: the runtime has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
     expect(Object.is(oracleFields("-0", 10).integerValue, -0)).toBe(true);
     expect(Object.is(oracleFields("1e-0", 10).exponent, -0)).toBe(true);
     const { subject } = numericFields("-0", 10);
@@ -256,7 +256,7 @@ describe("runtime against the oracle on numeric text", () => {
     }
   });
 
-  it("[B53][D] agree on integers in the bases from 2 to 36", () => {
+  it("agree on integers in the bases from 2 to 36", () => {
     fc.assert(
       fc.property(fc.integer({ min: -100_000, max: 100_000 }), fc.integer({ min: 2, max: 36 }), (value, base) => {
         const text = value.toString(base);

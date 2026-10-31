@@ -124,14 +124,14 @@ function drawn(scene: Scene): InteractionElement[] {
 }
 
 describe("the examples of 1EdTech", () => {
-  it("[T26][T27][T28][T29][T30][T31][T32][T33][T34][T41][T45][T42][T43][X] finds items for every kind that the player draws, but the custom interaction", () => {
+  it("finds items for every kind that the player draws, but the custom interaction", () => {
     const kinds = new Set<string>(examples.flatMap(({ item }) => describeInteractions(item).map(({ kind }) => kind)));
     for (const kind of DRAWN) {
       if (kind !== "custom-interaction") expect(kinds.has(kind), kind).toBe(true);
     }
   });
 
-  it("[T26][T27][T28][T29][T30][T31][T32][T33][T34][T41][T45][X] draws every interaction of every item, as the descriptors of the runtime say, and lets the candidate answer it", async () => {
+  it("draws every interaction of every item, as the descriptors of the runtime say, and lets the candidate answer it", async () => {
     await commands.watchConsole();
     let answered = 0;
     for (const { path, item } of examples) {
@@ -166,7 +166,7 @@ describe("the examples of 1EdTech", () => {
     expect(await commands.consoleErrors()).toEqual([]);
   }, 600_000);
 
-  it("[T26][T27][T28][T29][T30][T31][T32][T33][T34][T41][X] has no violation of WCAG 2.2 A and AA in any interaction of the examples that the player draws", async () => {
+  it("has no violation of WCAG 2.2 A and AA in any interaction of the examples that the player draws", async () => {
     const found: string[] = [];
     for (const { path, item } of examples) {
       const scene = mountItem(item, { base: path });

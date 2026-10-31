@@ -1,12 +1,12 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadAcceptedDifferences } from "../../conformance/accepted.ts";
 import { requireCorpus } from "../../scripts/corpus.ts";
+import { loadAcceptedDifferences } from "../src/accepted.ts";
 import { compareSessions, longsight, runtime, SESSION_TURNS, sessionCases } from "../src/index.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const examples = resolve(requireCorpus(root), "qti-examples/qtiv3-examples");
-const accepted = loadAcceptedDifferences(resolve(root, "conformance/accepted-differences.json"));
+const accepted = loadAcceptedDifferences(resolve(root, "differential/accepted-differences.json"));
 
 describe("runtime against the oracle on sessions of the corpus items", () => {
   const cases = sessionCases(examples);
@@ -20,7 +20,7 @@ describe("runtime against the oracle on sessions of the corpus items", () => {
     );
   });
 
-  it("[E10][B3][B5][B8][B9][B10][D] gives the outcomes, numAttempts and closing of the oracle after every turn", () => {
+  it("gives the outcomes, numAttempts and closing of the oracle after every turn", () => {
     expect(report.differences).toEqual([]);
     expect(report.compared).toBe(99);
     expect(report.rejected.map(({ item }) => item)).toEqual([
@@ -41,7 +41,7 @@ describe("runtime against the oracle on sessions of the corpus items", () => {
     ]);
   });
 
-  it("[D] differs only as the accepted differences say, each of which still applies", () => {
+  it("differs only as the accepted differences say, each of which still applies", () => {
     const names = new Set(cases.map(({ name }) => name));
     const applying = accepted.filter(({ item }) => names.has(item)).map(({ item }) => item);
     expect(report.accepted.map(({ item }) => item).sort()).toEqual(applying.sort());

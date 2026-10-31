@@ -61,7 +61,7 @@ const move = (envelope: number, to: unknown): { seq: number; action: unknown } =
 });
 
 describe("exam mode over HTTP", () => {
-  it("[T67] gives 403 to a request for the session of another candidate, and to a second start", async () => {
+  it("gives 403 to a request for the session of another candidate, and to a second start", async () => {
     const session = fresh();
     const alice = candidate(session, "alice");
     const bob = candidate(session, "bob");
@@ -75,7 +75,7 @@ describe("exam mode over HTTP", () => {
     expect((await candidate(`nobody-${session}`, "alice").post("handle", move(1, "next"))).status).toBe(403);
   });
 
-  it("[T67] refuses suspend from the candidate with 400, and lets the proctor suspend", async () => {
+  it("refuses suspend from the candidate with 400, and lets the proctor suspend", async () => {
     const session = fresh();
     const alice = candidate(session);
     const first = await start(alice);
@@ -93,7 +93,7 @@ describe("exam mode over HTTP", () => {
     expect((await alice.post("proctor", { type: "resume" })).ok).toBe(true);
   });
 
-  it("[T67] saves again when a competing write comes first, and fails with 409 when three retries do not suffice", async () => {
+  it("saves again when a competing write comes first, and fails with 409 when three retries do not suffice", async () => {
     const session = fresh();
     const alice = candidate(session);
     await start(alice);
@@ -108,7 +108,7 @@ describe("exam mode over HTTP", () => {
     expect(again.status).toBe(200);
   });
 
-  it("[T66] schedules the time-out, applies it when the job fires, and refuses the answer that comes after", async () => {
+  it("schedules the time-out, applies it when the job fires, and refuses the answer that comes after", async () => {
     const session = fresh();
     const alice = candidate(session, "alice", "timed");
     const before = Date.now();
@@ -133,7 +133,7 @@ describe("exam mode over HTTP", () => {
     expect(reply.refusal?.code).toBe("time-over");
   });
 
-  it("[T73] serves the files of a prefix with the headers of the gate, and refuses what is not allowed", async () => {
+  it("serves the files of a prefix with the headers of the gate, and refuses what is not allowed", async () => {
     const session = fresh();
     const alice = candidate(session);
     const first = await start(alice);
@@ -164,7 +164,7 @@ describe("exam mode over HTTP", () => {
     expect(await status(`${origin}/g/${forgery}.${mac}/items/q1/images/map.png`)).toBe(403);
   });
 
-  it("[T72] stores an upload through the host, and plays it back with a token that expires after five minutes", async () => {
+  it("stores an upload through the host, and plays it back with a token that expires after five minutes", async () => {
     const session = fresh();
     const alice = candidate(session);
     await start(alice);
@@ -210,7 +210,7 @@ async function mountExam(session: string, principal = "alice") {
 }
 
 describe("the player over the exam server", () => {
-  it("[T73] loads a module with a relative dependency and a stylesheet with a relative url() under their prefixes", async () => {
+  it("loads a module with a relative dependency and a stylesheet with a relative url() under their prefixes", async () => {
     const messages: { probe: string; color: string; image: string; state: string | null }[] = [];
     const listen = (event: MessageEvent): void => {
       if ((event.data as { probe?: string } | null)?.probe === "instance") messages.push(event.data);
@@ -229,7 +229,7 @@ describe("the player over the exam server", () => {
     }
   });
 
-  it("[T67] stores what a portable custom interaction gives, with its state, and restores it for another page", async () => {
+  it("stores what a portable custom interaction gives, with its state, and restores it for another page", async () => {
     const session = fresh();
     const { client, who } = await mountExam(session);
     await client.dispatch({ type: "move", to: { ref: "q3", instance: 1 } });
@@ -245,7 +245,7 @@ describe("the player over the exam server", () => {
     second.close();
   });
 
-  it("[T61] shows the break that the proctor made, in a candidate's page that was open before it", async () => {
+  it("shows the break that the proctor made, in a candidate's page that was open before it", async () => {
     const session = fresh();
     const { who, ui } = await mountExam(session);
     await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));

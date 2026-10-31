@@ -1,9 +1,7 @@
 # Evidence
 
-Every construct of the QTI 3.0 specifications has a row in `conformance/runtime-inventory.json`: a table letter and a number
-(`A79`), the construct, its source, the modules that implement it, the evidence that proves it and the build unit that
-completes it. A construct that the runtime leaves to another system has an owner instead. [Conformance](conformance.md) renders
-all rows with their tests.
+How the runtime is tested and where the expected values come from. The claim that these tests support is stated in
+[Supported](supported.md).
 
 ## Citations
 
@@ -31,73 +29,36 @@ The overview gives addresses for RR, UD, CERT and TERM that return 404; the tabl
 itself is not retrievable: the requirements of the runtime's `pci` module come from BPIG §3.7.12 and its Appendices C and D, which
 restate them.
 
-## Evidence codes
+## Completeness
 
-| Code | Evidence                                                                                                                     |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------- |
-| R    | Round trip: models satisfy read(write(m)) = m; documents of the corpus survive read and write unchanged up to canonical form |
-| X    | Written output validates against the official XSD                                                                            |
-| S    | Unit test whose expected value is a statement or worked example of the cited section                                         |
-| P    | Property of the semantics, checked by fast-check                                                                             |
-| D    | Differential test against Longsight `qti3-core` on items and item sessions                                                   |
-| C    | Corpus document read, validated and, where it has processing, executed                                                       |
-| N    | Negative fixture that must produce the named issue or error                                                                  |
-| V    | Exhaustive vocabulary test: every term accepted, any other term rejected                                                     |
-| U    | Unit test of data access only, where the specification has no semantics                                                      |
+What must be covered is derived from the specifications, not from a list that the repository keeps. Each test fails when the
+source has something that the runtime does not read, write, validate or run.
 
-## Tests name their rows
+| Source                                                                                                                                     | Test                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The element table of `asi`, generated from the ASI schema (it also lists the MathML and SSML elements it allows)                           | `asi.xsd.test.ts`: documents that fast-check generates and worked documents use every element and attribute, are valid, and read back                                                                             |
+| The schemas of Results Reporting, usage data, PNP, content packaging, QTI metadata, curriculum standards and the accessibility description | `results.xsd.test.ts`, `usage.xsd.test.ts`, `pnp.xsd.test.ts`, `package.xsd.test.ts`, `metadata.xsd.test.ts`: written documents use every element and attribute that the schema declares, validate, and read back |
+| The LOM schema, which the runtime keeps as XML                                                                                             | `metadata.xsd.test.ts`: a LOM with every element of the schema is kept                                                                                                                                            |
+| The expressions of the ASI schema                                                                                                          | `processing.test.ts`: `OPERATOR_SIGNATURES` has a signature for each, and each evaluates to the type its signature states                                                                                         |
+| The interactions of the ASI schema                                                                                                         | `interactions.test.ts`: each has a descriptor with its bindings                                                                                                                                                   |
+| The Schematron rule sets of the ASI schema                                                                                                 | `validate.xsd.test.ts`: each is reported by the validator under its identifier                                                                                                                                    |
+| The packages of the 1EdTech examples                                                                                                       | `examples.corpus.test.ts`: each is read, validated, and its tests run to their end; the other `*.corpus.test.ts` files read the items, results and usage data                                                     |
 
-A test or suite names the rows it evidences in brackets in its title, as a string literal:
-
-```ts
-it("[A79] equal: relative tolerance includes both bounds by default", () => {
-  // ...
-});
-```
-
-A title may name several rows, such as `[A79][B12]`. Skipped and todo tests do not count. A test file is a file named
-`*.test.ts` in the `test/` folder of a package or of `differential/`.
-
-## The coverage gate
-
-`pnpm conformance` fails when
-
-- a row of a merged unit has no test;
-- a test names an identifier that the inventory does not have;
-- `docs/conformance.md` differs from what `pnpm conformance:render` writes.
-
-The inventory lists every unit in `units` and the merged ones in `merged`. A unit adds itself to `merged` in the commit
-that completes it, which makes its rows need tests from then on. A row has one unit: the last unit that works on it.
-Rows of units that are not merged show as pending in the matrix and need no test yet.
-
-## The matrix
-
-`pnpm conformance:render` writes `docs/conformance.md` from the inventory, `conformance/cert-features.json`,
-`conformance/accepted-differences.json` and the tests. The feature file lists the features of 1EdTech's QTI 3.0
-Conformance and Certification, Appendix A, with these fields:
-
-| Field          | Meaning                                                                                                                                         |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`, `name`   | As in Appendix A.                                                                                                                               |
-| `group`        | `tests`, `sections`, `items`, `interactions`, `accessibility`, `metadata` or `packaging`.                                                       |
-| `levels`       | The levels that require the feature: `basic`, `advanced`, `elevated-accessibility`, `pnp` (CERT §3). Empty for an elective feature.             |
-| `capabilities` | Optional. The capabilities for which the runtime and the player support it: `import`, `export`, `authoring`, `delivery`, `scoring` (CERT §2.2). |
-| `owner`        | Optional. The package that supports it: `runtime`, `player` or `both`.                                                                          |
-| `rows`         | Optional. The inventory rows that implement it.                                                                                                 |
+A schema that changes fails these tests until the table is generated again (`pnpm asi-table`) and the writer covers what is new.
 
 ## Tests that read the corpus
 
 The corpus is public material that the repository does not contain: the 1EdTech examples have no license file, and
-the W3C test suite is large. `conformance/corpus.lock.json` pins each source to a commit and to the SHA-256 of every file
-below.
+the W3C test suite is large. `scripts/corpus.lock.json` pins each source to a commit and to the SHA-256 of the archive that
+GitHub serves for it.
 
 | Source         | Repository             | Files                                                                                                     |
 | -------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
 | `qti-examples` | `1EdTech/qti-examples` | `qtiv3-examples/`: items, tests, packages, the CAT and PCI examples, results, usage data                  |
 | `xsdtests`     | `w3c/xsdtests`         | `msData/regex/` and `msMeta/Regex_w3c.xml`: the regular expression tests of the W3C XML Schema test suite |
 
-`pnpm corpus` downloads the sources into `.cache/corpus/<source>/` unless the files there already match their hashes, and
-fails without writing when a download does not. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
+`pnpm corpus` downloads the sources into `.cache/corpus/<source>/` unless they were extracted from the pinned archive, and
+fails without writing when the archive has another hash. `pnpm test:corpus` runs the tests in files named `*.corpus.test.ts`,
 which `pnpm test` leaves out so that it runs offline; those of `differential/` run with `pnpm test:differential`. A corpus
 test calls `requireCorpus` of `scripts/corpus.ts`, which fails with an instruction when the corpus is missing.
 
@@ -107,7 +68,7 @@ suite's result depends on the Unicode version. Tests that the suite marks as que
 string are left out.
 
 To move a source to another commit, run `pnpm corpus:pin <source> [commit]`: it downloads the commit (the head of the
-default branch when none is given), hashes the files that the source's `include` list selects and writes the lock.
+default branch when none is given), hashes its archive and writes the lock.
 
 ## Tests that validate against the schemas
 
@@ -128,11 +89,11 @@ compares its report with the issues of the libraries it composes; its tests of `
 against a server of small files.
 
 `packages/runtime/src/asi/element-table.ts` is generated from the pinned ASI schema by `scripts/asi-table.ts` (`pnpm asi-table`).
-`asi.xsd.test.ts` generates the table again and fails when the committed file differs. The same file validates documents that
-fast-check generates from the table, and checks that they use every element of the rows A1 to A202 and H1 to H76. Worked
-items, one for each family of interactions, for feedback, catalogs, companion materials, HTML, MathML and SSML, are
-written and validated too, and so is a document for every term of every vocabulary of the content (W1 to W12, W14, W17,
-W19, W24, W25, W34, W35, W42), next to the terms that the pinned schema itself lists.
+`asi.xsd.test.ts` generates the table again and fails when the committed file differs, and compares its elements with those that
+the schema declares. The same file validates documents that fast-check generates from the table, and checks that they use every
+element and attribute of the table. Worked items, one for each family of interactions, for feedback, catalogs, companion
+materials, HTML, MathML and SSML, are written and validated too, and so is a document for every term of every vocabulary of
+the content, next to the terms that the pinned schema itself lists.
 
 ## Generators
 
@@ -146,7 +107,7 @@ which a schema with a strict wildcard rejects. The generators of `asi` (`asi.ts`
 ## Fuzzing
 
 The readers of documents and archives, the compiler of patterns and the interpreter of expressions are fuzzed with fast-check
-for the row B94 and the security controls of the module (SECURITY.md). The result of a run is one of these, and anything
+for the security controls of the module (SECURITY.md). The result of a run is one of these, and anything
 else is a defect: an uncaught exception, a result that breaks an invariant, or a run that does not end.
 
 | Target                                                                              | Input                                                                                         | Allowed result                                                               |
@@ -165,15 +126,16 @@ deterministic: `FUZZ` of `test/fuzz.ts` sets the seed and 300 runs. `FUZZ_SEED` 
 test timeout:
 
 ```bash
-FUZZ_SEED=7 FUZZ_RUNS=50000 pnpm exec vitest run --project the runtime --testTimeout=600000 -t "B94"
+FUZZ_SEED=7 FUZZ_RUNS=50000 pnpm exec vitest run --project runtime --testTimeout=600000 -t "mutated"
 ```
 
 A defect that fuzzing finds is fixed with a test that names the input that exposed it.
 
 ## Test sessions
 
-No independent implementation of a QTI 3 test session was found, so the rows of test sessions carry no D: their evidence is
-S, P and C. The properties in `delivery.test.ts` generate tests (linear and nonlinear parts, individual and simultaneous
+No independent implementation of a QTI 3 test session was found, so test sessions are not compared with another
+implementation: their evidence is tests whose expected values are statements and worked examples of the specifications,
+properties checked with random input, and the 1EdTech examples. The properties in `delivery.test.ts` generate tests (linear and nonlinear parts, individual and simultaneous
 submission, time limits with and without late submission) and sequences of actions stamped by `stamp`, and check after
 every step:
 
@@ -231,8 +193,8 @@ gives four turns to each corpus item with interactions that choose identifiers, 
 and a hint in the second turn when the item has an end attempt interaction; `generated.test.ts` plays adaptive and
 non-adaptive items with generated turns. `differential/test/generated.test.ts` compares
 items that fast-check generates for arithmetic, rounding, tolerances, logic, containers, mapping and random draws. A
-difference that the specification settles goes into `conformance/accepted-differences.json` with the item, the variable
-(empty when only one implementation accepts the item), the reason and the source; it shows in the matrix as accepted and
+difference that the specification settles goes into `differential/accepted-differences.json` with the item, the variable
+(empty when only one implementation accepts the item), the reason and the source; the report counts it as accepted and
 not as a difference.
 
 The oracle also reads interactions. `differential/test/interactions.test.ts` compares the validity of generated responses

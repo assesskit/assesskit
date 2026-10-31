@@ -11,7 +11,7 @@ const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "
 const read = (name: string): string => readFileSync(join(examples, name), "utf8");
 
 describe("results of the 1EdTech examples", () => {
-  it("[R1][R2][R3][R4][R5][R6][R7][R8][R9][C] reads report.xml: a test result, two attempts at one item and their variables", () => {
+  it("reads report.xml: a test result, two attempts at one item and their variables", () => {
     const result = readResults(read("report.xml"));
     expect(result.context).toEqual({
       sourcedId: "johnsmith1",
@@ -43,12 +43,12 @@ describe("results of the 1EdTech examples", () => {
     expect(second?.variables[1]).toMatchObject({ candidateResponse: { value: "B" } });
   });
 
-  it("[R1][C] writes report.xml back as the same document up to canonical form", () => {
+  it("writes report.xml back as the same document up to canonical form", () => {
     const text = read("report.xml");
     expect(canonical(parseXml(writeResults(readResults(text))))).toEqual(canonical(parseXml(text)));
   });
 
-  it("[R13][C] reads the durations of conformance-use-case-1.xml, which are ISO 8601 durations", () => {
+  it("reads the durations of conformance-use-case-1.xml, which are ISO 8601 durations", () => {
     const result = readResults(read("conformance-use-case-1.xml"));
     expect(result.testResult?.variables[0]).toMatchObject({
       candidateResponse: { baseType: "duration", value: 120.049722 },
@@ -59,7 +59,7 @@ describe("results of the 1EdTech examples", () => {
     ).toMatchObject([{ value: 92.131795 }, { value: 9.590316 }, { value: 8.554191 }, { value: 9.77342 }]);
   });
 
-  it("[R1][R5][R6][C] reads conformance-use-case-1.xml: four items, a multiple response and two strings", () => {
+  it("reads conformance-use-case-1.xml: four items, a multiple response and two strings", () => {
     const result = readResults(read("conformance-use-case-1.xml"));
     expect(result.itemResults).toHaveLength(4);
     const response = (index: number): unknown =>
@@ -71,14 +71,14 @@ describe("results of the 1EdTech examples", () => {
     expect(response(3)).toMatchObject({ baseType: "string", candidateResponse: { value: "My Haiku" } });
   });
 
-  it("[R1][C] reads back what it writes for conformance-use-case-1.xml, with the durations in seconds", () => {
+  it("reads back what it writes for conformance-use-case-1.xml, with the durations in seconds", () => {
     const result = readResults(read("conformance-use-case-1.xml"));
     const text = writeResults(result);
     expect(text).toContain("<value>120.049722</value>");
     expect(readResults(text)).toEqual(result);
   });
 
-  it("[R1][N] refuses full-example.xml, which is not well-formed at line 26", () => {
+  it("refuses full-example.xml, which is not well-formed at line 26", () => {
     expect(issueOf(() => readResults(read("full-example.xml")))).toMatchObject({
       code: "assesskit/xml/not-well-formed",
       source: "XML 1.0 §2.1",

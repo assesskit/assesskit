@@ -15,27 +15,26 @@ import { dirname, join, relative, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
-/** A GitHub repository whose files tests read, pinned to a commit and to the SHA-256 of every file. */
+/** A GitHub repository whose files tests read, pinned to a commit and to the SHA-256 of the archive of that commit. */
 export interface CorpusSource {
   /** The repository, such as `1EdTech/qti-examples`. */
   readonly repository: string;
   /** The commit the files come from. */
   readonly commit: string;
-  /** The directories (with a trailing slash) and files that `pin` collects. */
+  /** The SHA-256 of the `tar.gz` archive that GitHub serves for the commit. */
+  readonly sha256: string;
+  /** The directories (with a trailing slash) and files of the repository that tests read. */
   readonly include: readonly string[];
-  /** The SHA-256 of every file by its path in the repository. */
-  readonly files: Readonly<Record<string, string>>;
 }
 
-/** The pinned corpus of `conformance/corpus.lock.json`. */
-export interface CorpusLock {
-  /** Where the sources are downloaded to, relative to the repository root. */
-  readonly directory: string;
-  /** The sources by name; each is downloaded to a directory of its name. */
-  readonly sources: Readonly<Record<string, CorpusSource>>;
-}
+/** The pinned corpus of `scripts/corpus.lock.json`: the sources by name, each downloaded to a directory of its name. */
+export type CorpusLock = Readonly<Record<string, CorpusSource>>;
 
-const LOCK_PATH = "conformance/corpus.lock.json";
+const LOCK_PATH = "scripts/corpus.lock.json";
+/** Where the sources are downloaded to, relative to the repository root. */
+const CORPUS_PATH = ".cache/corpus";
+/** The file in the directory of a source that holds the SHA-256 of the archive it was extracted from. */
+const STAMP = ".archive-sha256";
 /** Files that editors and operating systems add to repositories. */
 const IGNORED = new Set([".DS_Store"]);
 
@@ -53,33 +52,22 @@ export function selectFiles(directory: string, include: readonly string[]): stri
     .sort();
 }
 
-/** Returns the SHA-256 of each selected file of a directory. */
-export function hashFiles(directory: string, include: readonly string[]): Record<string, string> {
-  return Object.fromEntries(selectFiles(directory, include).map((path) => [path, sha256(join(directory, path))]));
-}
-
-/** Returns what differs between the files of a directory and the hashes of a source: missing, changed and unexpected files. */
-export function differences(directory: string, source: CorpusSource): string[] {
-  const found = hashFiles(directory, source.include);
-  const problems: string[] = [];
-  for (const [path, hash] of Object.entries(source.files)) {
-    if (found[path] === undefined) problems.push(`${path} is missing.`);
-    else if (found[path] !== hash) problems.push(`${path} has another SHA-256 than the pinned ${hash}.`);
-  }
-  for (const path of Object.keys(found)) if (source.files[path] === undefined) problems.push(`${path} is not pinned.`);
-  return problems;
-}
-
-/** Downloads the archive of a commit to a file and extracts it without its top directory. */
-async function downloadCommit(repository: string, commit: string, directory: string): Promise<void> {
+/** Downloads the archive of a commit to `<directory>/archive.tar.gz` and returns its SHA-256. */
+async function downloadArchive(repository: string, commit: string, directory: string): Promise<string> {
   const response = await fetch(`https://codeload.github.com/${repository}/tar.gz/${commit}`);
   if (!(response.ok && response.body))
     throw new Error(`Downloading ${repository}@${commit} failed: HTTP ${response.status}.`);
   const archive = join(directory, "archive.tar.gz");
   await pipeline(Readable.fromWeb(response.body), createWriteStream(archive));
-  const extracted = join(directory, "tree");
-  mkdirSync(extracted);
-  execFileSync("tar", ["-xzf", archive, "-C", extracted, "--strip-components=1"]);
+  return sha256(archive);
+}
+
+/** Extracts the archive that `downloadArchive` wrote, without its top directory, and returns the directory. */
+function extractArchive(directory: string): string {
+  const tree = join(directory, "tree");
+  mkdirSync(tree);
+  execFileSync("tar", ["-xzf", join(directory, "archive.tar.gz"), "-C", tree, "--strip-components=1"]);
+  return tree;
 }
 
 /** Returns the commit that a branch, tag or commit of a repository points to. */
@@ -103,9 +91,9 @@ async function withScratch<T>(parent: string, run: (directory: string) => Promis
 }
 
 /**
- * Downloads a source into `<corpus>/<name>` unless the files there already match the pinned hashes.
+ * Downloads a source into `<corpus>/<name>` unless it was extracted from the pinned archive already.
  *
- * @throws `Error` when the download differs from the pinned hashes; nothing is written then.
+ * @throws `Error` when the archive differs from its pinned SHA-256; nothing is written then.
  */
 export async function fetchSource(
   corpus: string,
@@ -113,20 +101,21 @@ export async function fetchSource(
   source: CorpusSource,
 ): Promise<"downloaded" | "current"> {
   const target = join(corpus, name);
-  if (existsSync(target) && differences(target, source).length === 0) return "current";
+  const stamp = join(target, STAMP);
+  if (existsSync(stamp) && readFileSync(stamp, "utf8") === source.sha256) return "current";
   await withScratch(corpus, async (scratch) => {
-    await downloadCommit(source.repository, source.commit, scratch);
-    const tree = join(scratch, "tree");
-    const problems = differences(tree, source);
-    if (problems.length > 0)
-      throw new Error(`${name} does not match its pins:\n- ${problems.slice(0, 20).join("\n- ")}`);
+    const found = await downloadArchive(source.repository, source.commit, scratch);
+    if (found !== source.sha256)
+      throw new Error(`The archive of ${name} has the SHA-256 ${found}, and the lock pins ${source.sha256}.`);
+    const tree = extractArchive(scratch);
     rmSync(target, { recursive: true, force: true });
-    for (const path of Object.keys(source.files)) {
+    for (const path of selectFiles(tree, source.include)) {
       const destination = resolve(target, path);
       if (relative(target, destination).startsWith("..")) throw new Error(`${path} leaves the corpus directory.`);
       mkdirSync(dirname(destination), { recursive: true });
       await copyFile(join(tree, path), destination);
     }
+    writeFileSync(stamp, source.sha256);
   });
   return "downloaded";
 }
@@ -138,7 +127,7 @@ export function loadLock(root: string): CorpusLock {
 
 /** Returns the directory the corpus is downloaded to; each source is a directory of its name below it. */
 export function corpusDirectory(root: string): string {
-  return join(root, loadLock(root).directory);
+  return join(root, CORPUS_PATH);
 }
 
 /**
@@ -152,19 +141,20 @@ export function requireCorpus(root: string): string {
   return directory;
 }
 
-/** Pins a source to a commit, or to the head of its default branch, and writes the lock with the hashes of its files. */
+/** Pins a source to a commit, or to the head of its default branch, and writes the lock with the hash of its archive. */
 async function pinSource(root: string, name: string, ref: string | undefined): Promise<void> {
   const lock = loadLock(root);
-  const source = lock.sources[name];
+  const source = lock[name];
   if (!source) throw new Error(`The lock has no source ${name}; add it with its repository and include list first.`);
   const commit = await resolveCommit(source.repository, ref ?? "HEAD");
-  const files = await withScratch(join(root, lock.directory), async (scratch) => {
-    await downloadCommit(source.repository, commit, scratch);
-    return hashFiles(join(scratch, "tree"), source.include);
-  });
-  const pinned: CorpusLock = { ...lock, sources: { ...lock.sources, [name]: { ...source, commit, files } } };
-  writeFileSync(join(root, LOCK_PATH), `${JSON.stringify(pinned, null, 2)}\n`);
-  console.log(`Pinned ${name} to ${commit}: ${Object.keys(files).length} files.`);
+  const archive = await withScratch(corpusDirectory(root), (scratch) =>
+    downloadArchive(source.repository, commit, scratch),
+  );
+  writeFileSync(
+    join(root, LOCK_PATH),
+    `${JSON.stringify({ ...lock, [name]: { ...source, commit, sha256: archive } }, null, 2)}\n`,
+  );
+  console.log(`Pinned ${name} to ${commit}, archive ${archive}.`);
 }
 
 async function main(args: readonly string[]): Promise<void> {
@@ -172,8 +162,8 @@ async function main(args: readonly string[]): Promise<void> {
   const [command, ...names] = args;
   const lock = loadLock(root);
   if (command === "fetch") {
-    for (const name of names.length > 0 ? names : Object.keys(lock.sources)) {
-      const source = lock.sources[name];
+    for (const name of names.length > 0 ? names : Object.keys(lock)) {
+      const source = lock[name];
       if (!source) throw new Error(`The lock has no source ${name}.`);
       console.log(`${name}: ${await fetchSource(corpusDirectory(root), name, source)}`);
     }

@@ -70,7 +70,7 @@ describe("scoring requests", () => {
   const content = `${outcome("TOTAL", "float")}${part("P", section("S", refs("e1", "e2")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`;
   const engine = engineOf(content, { items: essays });
 
-  it("[E13][E14][B61][W18] makes the request of an item outcome when its session closes, with the declaration and the response", () => {
+  it("makes the request of an item outcome when its session closes, with the declaration and the response", () => {
     const start = begun(engine);
     expect(engine.pending(start.state).scoring).toEqual([]);
     const submitted = played(engine, start.state, write("e1", "An essay\nof two lines", 1), act("submit", "e1", 2));
@@ -110,14 +110,14 @@ describe("scoring requests", () => {
     ]);
   });
 
-  it("[E14][W18] passes the mode externalMachine and the variable-identifier-ref of the declaration", () => {
+  it("passes the mode externalMachine and the variable-identifier-ref of the declaration", () => {
     const machine = engineOf(content, { items: { e1: essay("e1", { scorer: "externalMachine", ref: "RESPONSE" }) } });
     const submitted = played(machine, begun(machine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const [request] = machine.pending(submitted.state).scoring;
     expect(request).toMatchObject({ mode: "externalMachine", variableIdentifierRef: "RESPONSE" });
   });
 
-  it("[E15][G25] supplies the value of an item outcome: outcome processing runs again, response processing does not", () => {
+  it("supplies the value of an item outcome: outcome processing runs again, response processing does not", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const runs = (state: DeliveryState): unknown => state.items[0]?.session.variables.outcomes.get("RUNS");
     expect(runs(submitted.state)).toEqual(single("integer", 1));
@@ -137,7 +137,7 @@ describe("scoring requests", () => {
     expect(supplied.state.scoring[0]?.supplied).toEqual({ value: single("float", 7), at: 3, scorer: "human" });
   });
 
-  it("[E15] replaces the value when a second one is supplied, and takes an integer for a float outcome", () => {
+  it("replaces the value when a second one is supplied, and takes an integer for a float outcome", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const supply = (value: number, at: number) =>
       ({
@@ -155,7 +155,7 @@ describe("scoring requests", () => {
     expect(second.state.scoring[0]?.supplied?.scorer).toBe("externalMachine");
   });
 
-  it("[E15] accepts a supplied value after the test ended and while the session is suspended", () => {
+  it("accepts a supplied value after the test ended and while the session is suspended", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const suspended = played(engine, submitted.state, { type: "suspend", at: 3 });
     const supplied = played(engine, suspended.state, {
@@ -179,7 +179,7 @@ describe("scoring requests", () => {
     expect(refusalOf(engine, ended.state, act("skip", "e1", 8)).code).toBe("ended");
   });
 
-  it("[E4][E15] refuses a supply for no request, or of a value that does not fit the declaration", () => {
+  it("refuses a supply for no request, or of a value that does not fit the declaration", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const supply = (request: string, value: Value | null) =>
       ({ type: "supply-scores", request, value, scorer: "human", at: 3 }) as const;
@@ -196,7 +196,7 @@ describe("scoring requests", () => {
     expect(nothing.state.scoring[0]?.supplied?.value).toBeNull();
   });
 
-  it("[E22] stamps a host action like a candidate action", () => {
+  it("stamps a host action like a candidate action", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const action = stamp(
       submitted.state,
@@ -207,7 +207,7 @@ describe("scoring requests", () => {
     expect(played(engine, submitted.state, action).state.scoring[0]?.supplied?.at).toBe(2);
   });
 
-  it("[E2] keeps requests and supplied values through serialization", () => {
+  it("keeps requests and supplied values through serialization", () => {
     const submitted = played(engine, begun(engine).state, write("e1", "Text", 1), act("submit", "e1", 2));
     const supplied = played(engine, submitted.state, {
       type: "supply-scores",
@@ -235,7 +235,7 @@ describe("host actions of other types", () => {
   const { state } = begun(engine);
   const apply = (action: string) => () => engine.apply(state, JSON.parse(action));
 
-  it("[E22][E15] refuses a supply of a request, scorer or value of another type", () => {
+  it("refuses a supply of a request, scorer or value of another type", () => {
     expect(apply('{"type":"supply-scores","request":1,"value":null,"scorer":"human","at":0}')).toThrow(
       "The request of supply-scores must be a string, found 1.",
     );
@@ -247,7 +247,7 @@ describe("host actions of other types", () => {
     ).toThrow(DataError);
   });
 
-  it("[E22][E18] refuses an answer of a CAT engine of another type", () => {
+  it("refuses an answer of a CAT engine of another type", () => {
     const answer = (response: string) =>
       apply(`{"type":"cat-response","request":"cat:A:1:1","response":${response},"at":0}`);
     expect(answer("null")).toThrow("The response of cat-response must be an object, found null.");
@@ -286,7 +286,7 @@ describe("scoring requests of the test", () => {
     items: plain,
   });
 
-  it("[E13][G26][O12] makes the request when every covered response is closed, with the labels and the submitted strings", () => {
+  it("makes the request when every covered response is closed, with the labels and the submitted strings", () => {
     const first = played(engine, begun(engine).state, write("w1", "First task", 1), act("submit", "w1", 2));
     expect(engine.pending(first.state).scoring).toEqual([]);
     const both = played(engine, first.state, next(3), write("w2", "Second task", 4), act("submit", "w2", 5));
@@ -321,7 +321,7 @@ describe("scoring requests of the test", () => {
     ]);
   });
 
-  it("[G26][O12] lists a cover that was never presented, with presented false, when the test ends", () => {
+  it("lists a cover that was never presented, with presented false, when the test ends", () => {
     const first = played(engine, begun(engine).state, write("w1", "First task", 1), act("submit", "w1", 2));
     const ended = played(engine, first.state, { type: "end-test", at: 3 });
     expect(described(ended.events).at(-1)).toBe("scoring-requested T test:CONTENT@3");
@@ -334,7 +334,7 @@ describe("scoring requests of the test", () => {
     ]);
   });
 
-  it("[E16][G24] keeps a supplied test outcome through every later run of outcome processing, and its default until then", () => {
+  it("keeps a supplied test outcome through every later run of outcome processing, and its default until then", () => {
     const start = begun(engine);
     // Until a value is supplied, the outcome has its declared default.
     expect(start.state.outcomes.get("CONTENT")).toEqual(single("float", 1.5));
@@ -365,7 +365,7 @@ describe("scoring requests of the test", () => {
     expect(later.state.outcomes.get("TOTAL")).toEqual(single("float", 10));
   });
 
-  it("[O5] makes a request with no covers, at the end of the test, for an outcome that no block names", () => {
+  it("makes a request with no covers, at the end of the test, for an outcome that no block names", () => {
     const bare = engineOf(`${outcomes}${part("P", section("S", refs("w1", "w2")))}${rule}`, { items: plain });
     const first = played(bare, begun(bare).state, write("w1", "One", 1), act("submit", "w1", 2));
     expect(bare.pending(first.state).scoring).toEqual([]);
@@ -374,7 +374,7 @@ describe("scoring requests of the test", () => {
     expect(request).toMatchObject({ id: "test:CONTENT", covers: [] });
   });
 
-  it("[O4] takes the covers from the blocks only, never from the rules that use the outcome", () => {
+  it("takes the covers from the blocks only, never from the rules that use the outcome", () => {
     // The rule reads CONTENT and the sum reads every SCORE, but the block names one response only.
     const only = engineOf(
       `${outcomes}${covers("CONTENT", [["w2", "Task 2"]])}${part("P", section("S", refs("w1", "w2")))}${rule}`,
@@ -385,7 +385,7 @@ describe("scoring requests of the test", () => {
     expect(request?.covers.map(({ item }) => item.ref)).toEqual(["w2"]);
   });
 
-  it("[O12] resolves a cover to each instance that selection with replacement made, presented or not", () => {
+  it("resolves a cover to each instance that selection with replacement made, presented or not", () => {
     const repeated = engineOf(
       `${outcomes}${covers("CONTENT", [["w1", "Task 1"]])}${part("P", section("S", `<qti-selection select="2" with-replacement="true"/>${refs("w1")}`))}${rule}`,
       { items: plain },
@@ -398,7 +398,7 @@ describe("scoring requests of the test", () => {
     ]);
   });
 
-  it("[E27] gives the scorer the rubric, the items as the candidate saw them, and the answers (R6)", () => {
+  it("gives the scorer the rubric, the items as the candidate saw them, and the answers (R6)", () => {
     const first = played(engine, begun(engine).state, write("w1", "First task", 1), act("submit", "w1", 2));
     const ended = played(engine, first.state, { type: "end-test", at: 3 });
     const view = engine.scorerView(ended.state, "test:CONTENT");
@@ -417,7 +417,7 @@ describe("scoring requests of the test", () => {
     expect(absent).toMatchObject({ body: [], responses: new Map(), correctResponses: new Map() });
   });
 
-  it("[E27] leaves the covers blocks of other outcomes out of the rubric of a request", () => {
+  it("leaves the covers blocks of other outcomes out of the rubric of a request", () => {
     const two = engineOf(
       `${outcomes}${outcome("STYLE", "float", 'external-scored="human"')}${block}${covers("STYLE", [["w1", "Style"]])}${part("P", section("S", refs("w1", "w2")))}${rule}`,
       { items: plain },
@@ -433,7 +433,7 @@ describe("items that a tool delivers", () => {
   const content = `${outcome("TOTAL", "float")}${part("P", section("S", refs("L1", "q")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`;
   const engine = engineOf(content, { items: { L1: linkResolution("L1") } });
 
-  it("[E25][G42] closes the session on submit and requests both SCORE and MAXSCORE, which the tool's grade supplies", () => {
+  it("closes the session on submit and requests both SCORE and MAXSCORE, which the tool's grade supplies", () => {
     const submitted = played(engine, begun(engine).state, act("submit", "L1", 5));
     expect(described(submitted.events).filter((event) => event.startsWith("scoring"))).toEqual([
       "scoring-requested L1 item:L1:1:SCORE@5",
@@ -477,7 +477,7 @@ describe("items that a tool delivers", () => {
     ]);
   });
 
-  it("[E27][E25] gives the scorer the item of a link to a tool, which has no response to cover", () => {
+  it("gives the scorer the item of a link to a tool, which has no response to cover", () => {
     const submitted = played(engine, begun(engine).state, act("submit", "L1", 5));
     const view = engine.scorerView(submitted.state, "item:L1:1:SCORE");
     expect(
@@ -490,13 +490,13 @@ describe("items that a tool delivers", () => {
     ).toEqual([["L1", "L1", true, 0]]);
   });
 
-  it("[E25] requests both outcomes when the candidate leaves the item", () => {
+  it("requests both outcomes when the candidate leaves the item", () => {
     const left = played(engine, begun(engine).state, next(5));
     expect(left.state.current).toEqual(key("q"));
     expect(engine.pending(left.state).scoring.map(({ id }) => id)).toEqual(["item:L1:1:SCORE", "item:L1:1:MAXSCORE"]);
   });
 
-  it("[E17][E25] reports the item as pending external scoring until both values arrive", () => {
+  it("reports the item as pending external scoring until both values arrive", () => {
     const submitted = played(engine, begun(engine).state, act("submit", "L1", 5));
     const half = played(engine, submitted.state, {
       type: "supply-scores",
@@ -533,7 +533,7 @@ describe("adaptive sections", () => {
     return staged;
   }
 
-  it("[C3][E18] waits for the first stage after Create Session, with no item presented", () => {
+  it("waits for the first stage after Create Session, with no item presented", () => {
     const start = begun(engine);
     expect(start.state.current).toBeUndefined();
     expect(start.state.status).toBe("in-progress");
@@ -554,7 +554,7 @@ describe("adaptive sections", () => {
     expect(engine.deadlines(start.state)).toEqual([]);
   });
 
-  it("[C3] carries the PNP of the candidate in base64 in the Create Session request", () => {
+  it("carries the PNP of the candidate in base64 in the Create Session request", () => {
     const pnp = pnpOf("<line-reader/>");
     const start = begun(engine, { pnp });
     const [request] = engine.pending(start.state).cat;
@@ -564,7 +564,7 @@ describe("adaptive sections", () => {
     expect(Buffer.from(expected, "base64").toString("utf8")).toBe(writePnp(pnp));
   });
 
-  it("[C8][E18] appends the first stage in order and presents its first item", () => {
+  it("appends the first stage in order and presents its first item", () => {
     const staged = answered(["i2", "i1", "i3"], 2);
     expect(described(staged.events)).toEqual([
       "cat-stage-added A i2 i1 i3@1",
@@ -581,7 +581,7 @@ describe("adaptive sections", () => {
     expect(engine.pending(staged.state).cat).toEqual([]);
   });
 
-  it("[C4][C8] sends the results when the first stageLength items are submitted, and drops the rest of the stage", () => {
+  it("sends the results when the first stageLength items are submitted, and drops the rest of the stage", () => {
     const staged = answered(["i1", "i2", "i3"], 2);
     const first = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3), next(4));
     expect(engine.pending(first.state).cat).toEqual([]);
@@ -606,7 +606,7 @@ describe("adaptive sections", () => {
     expect(onwards.state.current).toEqual(key("i4"));
   });
 
-  it("[C4] sends the state of a stateless engine back and clears it when the engine sends none", () => {
+  it("sends the state of a stateless engine back and clears it when the engine sends none", () => {
     const staged = answered(["i1"], 1);
     const submitted = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
     const withState = played(
@@ -625,7 +625,7 @@ describe("adaptive sections", () => {
     expect(waiting(engine, third.state)).not.toHaveProperty("sessionState");
   });
 
-  it("[C10] reports each presented item with its score, duration, attempts and completion, and nothing for those not presented", () => {
+  it("reports each presented item with its score, duration, attempts and completion, and nothing for those not presented", () => {
     const staged = answered(["i1", "i2", "i3"], 2);
     const done = played(
       engine,
@@ -665,7 +665,7 @@ describe("adaptive sections", () => {
     expect(assessmentResult.testResult?.datestamp).toBe(new Date(12).toISOString());
   });
 
-  it("[C10] reports an item the candidate skipped as initial, without a response or a SCORE, at the time of the skip", () => {
+  it("reports an item the candidate skipped as initial, without a response or a SCORE, at the time of the skip", () => {
     const staged = answered(["i1", "i2"], 2);
     const done = played(
       engine,
@@ -698,7 +698,7 @@ describe("adaptive sections", () => {
     ]);
   });
 
-  it("[C8][C10] instances an item that the engine calls again, and names the instances i.1, i.2 to the engine", () => {
+  it("instances an item that the engine calls again, and names the instances i.1, i.2 to the engine", () => {
     const staged = answered(["i1", "i1"], 2);
     expect(staged.state.plan.parts[0]?.children[0]?.children).toEqual([
       { kind: "item", key: key("i1", 1) },
@@ -718,7 +718,7 @@ describe("adaptive sections", () => {
     expect(request.assessmentResult.itemResults.map(({ identifier }) => identifier)).toEqual(["i1.1", "i1.2"]);
   });
 
-  it("[E19][E18] shows the part and no item while the first stage is awaited, with only the actions that can be taken", () => {
+  it("shows the part and no item while the first stage is awaited, with only the actions that can be taken", () => {
     const start = begun(engine);
     const view = engine.view(start.state, 5);
     expect(view).toMatchObject({
@@ -740,7 +740,7 @@ describe("adaptive sections", () => {
     expect(engine.view(staged.state, 2).current?.key).toEqual(key("i1"));
   });
 
-  it("[C8] ends the section when the answer has no items, and the test with it", () => {
+  it("ends the section when the answer has no items, and the test with it", () => {
     const staged = answered(["i1"], 1);
     const submitted = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
     const ended = played(engine, submitted.state, stage(engine, submitted.state, 4, null));
@@ -751,7 +751,7 @@ describe("adaptive sections", () => {
     expect(engine.pending(over.state).cat).toEqual([]);
   });
 
-  it("[E18] moves on at once to the next stage when the candidate asked to move before the engine answered", () => {
+  it("moves on at once to the next stage when the candidate asked to move before the engine answered", () => {
     const staged = answered(["i1", "i2"], 2);
     const two = played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3), next(4), pick("i2", "B", 5));
     // The move submits i2, the policy sends the results, and the candidate waits where the move was asked.
@@ -775,7 +775,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
   const idsOf = (request: ReturnType<typeof waiting>): string[] =>
     request.kind === "submit-results" ? request.assessmentResult.itemResults.map(({ identifier }) => identifier) : [];
 
-  it("[B98][C4] sends an earlier item again in a later Submit Results when a further attempt changed its result", () => {
+  it("sends an earlier item again in a later Submit Results when a further attempt changed its result", () => {
     const loose = engineOf(test("nonlinear", '<qti-item-session-control max-attempts="0"/>'), { cat: CAT_A });
     const start = begun(loose);
     const staged = played(
@@ -817,7 +817,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(request.assessmentResult.itemResults.map(({ sequenceIndex }) => sequenceIndex)).toEqual([1, 3]);
   });
 
-  it("[C5][C4] sends the results not yet reported and then ends the session when the candidate ends the test", () => {
+  it("sends the results not yet reported and then ends the session when the candidate ends the test", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
     const staged = played(
@@ -853,7 +853,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(over.state.status).toBe("ended");
   });
 
-  it("[C5] ends the session at once when every result was reported, and not at all when the engine ended it", () => {
+  it("ends the session at once when every result was reported, and not at all when the engine ended it", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
     const staged = played(
@@ -875,7 +875,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(engine.pending(over.state).cat).toEqual([]);
   });
 
-  it("[C5] ends a session whose answer arrives after the candidate left, and accepts the answer after the test ended", () => {
+  it("ends a session whose answer arrives after the candidate left, and accepts the answer after the test ended", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
     const ended = played(engine, start.state, { type: "end-test", at: 1 });
@@ -890,7 +890,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(answered.state.plan.parts[0]?.children[0]?.children).toEqual([]);
   });
 
-  it("[E4][E18] refuses what waits for the CAT engine, and a stage with an item the section does not list", () => {
+  it("refuses what waits for the CAT engine, and a stage with an item the section does not list", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
     expect(refusalOf(engine, start.state, next(1)).code).toBe("awaiting-cat");
@@ -919,7 +919,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     ).toBeUndefined();
   });
 
-  it("[E18] presents the first item when the answer comes while the session is suspended and the candidate resumes", () => {
+  it("presents the first item when the answer comes while the session is suspended and the candidate resumes", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
     const suspended = played(engine, start.state, { type: "suspend", at: 1 });
@@ -933,7 +933,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(resumed.state.current).toEqual(key("i1"));
   });
 
-  it("[B66][E18] ignores pre-conditions and branch rules on the items of an adaptive section, and branch rules that target them", () => {
+  it("ignores pre-conditions and branch rules on the items of an adaptive section, and branch rules that target them", () => {
     const never = '<qti-pre-condition><qti-base-value base-type="boolean">false</qti-base-value></qti-pre-condition>';
     const exit =
       '<qti-branch-rule target="EXIT_TEST"><qti-base-value base-type="boolean">true</qti-base-value></qti-branch-rule>';
@@ -959,7 +959,7 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     expect(second.state.current).toEqual(key("i2"));
   });
 
-  it("[B66] still applies the pre-conditions of the adaptive section itself", () => {
+  it("still applies the pre-conditions of the adaptive section itself", () => {
     const skip = '<qti-pre-condition><qti-base-value base-type="boolean">false</qti-base-value></qti-pre-condition>';
     const engine = engineOf(
       `${outcome("TOTAL", "float")}${part("P", section("A", skip + ADAPTIVE + pool) + section("S", refs("s1")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
@@ -975,7 +975,7 @@ describe("adaptive sections that end at once", () => {
   const content = `${outcome("TOTAL", "float")}${part("P", section("A", ADAPTIVE + refs("i1")) + section("S", refs("s1")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`;
   const engine = engineOf(content, { cat: CAT_A });
 
-  it("[C8][E18] goes on to the next section when the engine answers Create Session with no item", () => {
+  it("goes on to the next section when the engine answers Create Session with no item", () => {
     const start = begun(engine);
     expect(start.state.current).toBeUndefined();
     const ended = played(engine, start.state, stage(engine, start.state, 1, null));
@@ -984,7 +984,7 @@ describe("adaptive sections that end at once", () => {
     expect(engine.pending(ended.state).cat).toEqual([]);
   });
 
-  it("[E18] ends the part from where the first stage is awaited, and goes on to the next part", () => {
+  it("ends the part from where the first stage is awaited, and goes on to the next part", () => {
     const two = engineOf(
       `${outcome("TOTAL", "float")}${part("P", section("A", ADAPTIVE + refs("i1")))}${part("Q", section("S", refs("s1")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
       { cat: CAT_A },
@@ -1010,7 +1010,7 @@ describe("time limits in adaptive sections", () => {
     },
   );
 
-  it("[E7][C5] closes the open attempt at the maximum time of the section, sends the results and goes on to the next section", () => {
+  it("closes the open attempt at the maximum time of the section, sends the results and goes on to the next section", () => {
     const start = begun(engine);
     // Time does not run while the first stage is awaited, so the deadline starts with the first item.
     expect(engine.deadlines(start.state)).toEqual([]);
@@ -1086,7 +1086,7 @@ describe("outcomes that a CAT engine reports", () => {
     return played(engine, staged.state, pick("i1", "B", 2), act("submit", "i1", 3));
   };
 
-  it("[B67][C4] merges the outcomes into the declaration that takes them, keeps the others, and ignores the rest (CAT §4.3.2)", () => {
+  it("merges the outcomes into the declaration that takes them, keeps the others, and ignores the rest (CAT §4.3.2)", () => {
     const itemResult = {
       identifier: "i1",
       datestamp: "2026-10-30T12:00:00Z",
@@ -1138,7 +1138,7 @@ describe("outcomes that a CAT engine reports", () => {
     expect(results.context.sessionIdentifiers).toEqual([{ sourceId: "https://cat.example", identifier: "run-7" }]);
   });
 
-  it("[B67][C4] does not let the engine of a later adaptive section overwrite an outcome that another set", () => {
+  it("does not let the engine of a later adaptive section overwrite an outcome that another set", () => {
     const two = engineOf(
       `${outcomes}${part("P", section("A", ADAPTIVE + refs("a1")) + section("B", ADAPTIVE + refs("b1")))}${processing(setOutcome("TOTAL", SUM_SCORES))}`,
       {
@@ -1240,14 +1240,14 @@ describe("the state with pending work", () => {
     return () => deserializeState(JSON.stringify(json));
   };
 
-  it("[E2][E18] keeps the sessions of adaptive sections, their stage, reports and outcomes, through serialization", () => {
+  it("keeps the sessions of adaptive sections, their stage, reports and outcomes, through serialization", () => {
     const state = busy();
     expect(state.cat[0]).toMatchObject({ sessionState: "opaque", outcomes: [{ identifier: "LEVEL", declared: true }] });
     expect(state.needs.personalNeeds).toBeTypeOf("string");
     expect(deserializeState(serializeState(state))).toEqual(state);
   });
 
-  it("[E2] refuses a state whose pending work is not in the format", () => {
+  it("refuses a state whose pending work is not in the format", () => {
     expect(damaged((json) => (json.scoring = JSON.parse("{}")))).toThrow(
       "The state is invalid at scoring: expected an array, found an object.",
     );
@@ -1284,7 +1284,7 @@ describe("drainCat", () => {
     };
   };
 
-  it("[E18][C3][C4] makes each waiting request through the port with an injected clock, until nothing waits", async () => {
+  it("makes each waiting request through the port with an injected clock, until nothing waits", async () => {
     const port = fakePort([["i3"], null], ["i1", "i2"]);
     const now = clock();
     const start = begun(engine);
@@ -1315,7 +1315,7 @@ describe("drainCat", () => {
     expect(played(engine, third, next(4000)).state.status).toBe("ended");
   });
 
-  it("[C5][E18] makes the last Submit Results and End Session of a candidate who ended the test", async () => {
+  it("makes the last Submit Results and End Session of a candidate who ended the test", async () => {
     const port = fakePort([["i3"]], ["i1", "i2"]);
     const now = clock();
     const first = await drainCat(engine, begun(engine).state, port, now);
@@ -1329,13 +1329,13 @@ describe("drainCat", () => {
     expect(done.cat[0]?.status).toBe("ended");
   });
 
-  it("[E18] returns the state as it is when nothing waits", async () => {
+  it("returns the state as it is when nothing waits", async () => {
     const port = fakePort([]);
     const first = await drainCat(engine, begun(engine).state, port, clock());
     expect(await drainCat(engine, first, port, clock())).toBe(first);
   });
 
-  it("[E18] rejects with the error of the port, and with a message when the engine refuses the answer", async () => {
+  it("rejects with the error of the port, and with a message when the engine refuses the answer", async () => {
     const broken = { ...fakePort([]), createSession: () => Promise.reject(new Error("The CAT engine is down.")) };
     await expect(drainCat(engine, begun(engine).state, broken, clock())).rejects.toThrow("The CAT engine is down.");
     const strange = {
@@ -1347,7 +1347,7 @@ describe("drainCat", () => {
     );
   });
 
-  it("[E18] checks its arguments", async () => {
+  it("checks its arguments", async () => {
     const state = begun(engine).state;
     const port = fakePort([]);
     await expect(drainCat(JSON.parse("null"), state, port, clock())).rejects.toThrow(DataError);
@@ -1368,7 +1368,7 @@ describe("createEngine with adaptive sections", () => {
   const adaptive = (id: string): string => section(id, ADAPTIVE + refs(`${id}1`));
   const content = `${outcome("TOTAL", "float")}${part("P", adaptive("A"))}`;
 
-  it("[C1] needs an entry in catSections for each adaptive section, and for no other section", () => {
+  it("needs an entry in catSections for each adaptive section, and for no other section", () => {
     expect(() => engineOf(content)).toThrow(
       'The adaptive section "A" needs an entry in the catSections of the definition: its URL prefix and the identifier that createSection returned (CAT §3.1).',
     );
@@ -1378,7 +1378,7 @@ describe("createEngine with adaptive sections", () => {
     ).toThrow('The catSections of the definition has an entry for "S", which is not an adaptive section of the test.');
   });
 
-  it("[C1] refuses catSections of other types", () => {
+  it("refuses catSections of other types", () => {
     expect(() => engineOf(content, { cat: JSON.parse('{"A":{}}') })).toThrow(
       "The catSections of the definition must be a Map from the identifier of an adaptive section to its prefix and identifier, found an object.",
     );
@@ -1398,7 +1398,7 @@ describe("results", () => {
   const variablesOf = (result: AssessmentResult["itemResults"][number] | undefined) =>
     new Map((result?.variables ?? []).map((variable) => [variable.identifier, variable]));
 
-  it("[E24] reports the context, the test with its durations, context variable and outcomes, and each item presented in order", () => {
+  it("reports the context, the test with its durations, context variable and outcomes, and each item presented in order", () => {
     const { state } = played1();
     expect(state.status).toBe("ended");
     const results = engine.results(state);
@@ -1430,7 +1430,7 @@ describe("results", () => {
     });
   });
 
-  it("[E24] reports an item with the datestamp of its last event, its time, responses, statuses, outcomes and comment", () => {
+  it("reports an item with the datestamp of its last event, its time, responses, statuses, outcomes and comment", () => {
     const results = engine.results(played1().state);
     const [first] = results.itemResults;
     expect(first).toMatchObject({
@@ -1460,7 +1460,7 @@ describe("results", () => {
     });
   });
 
-  it("[E24][B57] reports the order in which the choices were shown when they are shuffled", () => {
+  it("reports the order in which the choices were shown when they are shuffled", () => {
     const [first] = engine.results(played1().state).itemResults;
     const sequence = variablesOf(first).get("RESPONSE");
     const item = choice("q1");
@@ -1473,7 +1473,7 @@ describe("results", () => {
     expect([...(expected ?? [])].sort()).toEqual(["A", "B", "C"]);
   });
 
-  it("[E24][E28] lists the supports used: those of the profile as assigned, the program's as universal", () => {
+  it("lists the supports used: those of the profile as assigned, the program's as universal", () => {
     const [first, second] = engine.results(played1().state).itemResults;
     expect(first?.supports).toEqual([
       { name: "line-reader", assignment: "assigned" },
@@ -1484,7 +1484,7 @@ describe("results", () => {
     expect(engine.results(played1().state).testResult?.supports).toEqual(first?.supports);
   });
 
-  it("[E17][E24] reports an item awaiting an external score as provisional, and as final once the score arrives", () => {
+  it("reports an item awaiting an external score as provisional, and as final once the score arrives", () => {
     const { state } = played1();
     const provisional = engine.results(state).itemResults[1];
     expect(provisional?.sessionStatus).toBe("pendingExternalScoring");
@@ -1514,7 +1514,7 @@ describe("results", () => {
     expect(final.testResult?.datestamp).toBe("1970-01-01T00:00:06.000Z");
   });
 
-  it("[E24] gives the context its default, and no test result for an item delivered alone", () => {
+  it("gives the context its default, and no test result for an item delivered alone", () => {
     const solo = begun(engine);
     expect(engine.results(solo.state).context).toEqual({ sessionIdentifiers: [] });
     const item = createEngine({ kind: "item", item: choice("practice"), base: "practice.xml" });
@@ -1527,7 +1527,7 @@ describe("results", () => {
     ]);
   });
 
-  it("[R1][E24] writes a document that reads back as the same report", () => {
+  it("writes a document that reads back as the same report", () => {
     const supplied = played(engine, played1().state, {
       type: "supply-scores",
       request: "item:w:1:SCORE",
@@ -1541,7 +1541,7 @@ describe("results", () => {
     }
   });
 
-  it("[E24] copies the context of the results at the start and refuses one of another type", () => {
+  it("copies the context of the results at the start and refuses one of another type", () => {
     const given = {
       sourcedId: "candidate-2",
       sessionIdentifiers: [{ sourceId: "https://lms.example/", identifier: "S-2" }],
@@ -1564,7 +1564,7 @@ describe("results", () => {
     );
   });
 
-  it("[E24][E27] checks the state and the request it is given", () => {
+  it("checks the state and the request it is given", () => {
     expect(() => engine.results(JSON.parse("null"))).toThrow(DataError);
     expect(() => engine.pending(JSON.parse("{}"))).toThrow(DataError);
     const { state } = played1();
@@ -1582,14 +1582,14 @@ describe("datestamps and times", () => {
     return engine.results(started.state).testResult?.datestamp ?? fail("The report has no test result.");
   };
 
-  it("[C9][E24] writes the datestamp as RFC 3339 date-time with the offset Z, which an xs:dateTime may lack (CAT binding B1.2)", () => {
+  it("writes the datestamp as RFC 3339 date-time with the offset Z, which an xs:dateTime may lack (CAT binding B1.2)", () => {
     expect(stampOf(0)).toBe("1970-01-01T00:00:00.000Z");
     expect(stampOf(1_761_825_600_123)).toBe("2025-10-30T12:00:00.123Z");
     expect(stampOf(First)).toBe("0001-01-01T00:00:00.000Z");
     expect(stampOf(Last)).toBe("9999-12-31T23:59:59.999Z");
   });
 
-  it("[C9][E24] gives every time between the years 1 and 9999 a datestamp that reads back as the same time", () => {
+  it("gives every time between the years 1 and 9999 a datestamp that reads back as the same time", () => {
     fc.assert(
       fc.property(fc.integer({ min: First, max: Last }), (at) => {
         const text = stampOf(at);
@@ -1600,7 +1600,7 @@ describe("datestamps and times", () => {
     );
   });
 
-  it("[E5] refuses a time outside the years 1 to 9999, which no datestamp can show", () => {
+  it("refuses a time outside the years 1 to 9999, which no datestamp can show", () => {
     expect(() => engine.start({ seed: 1, at: Last + 1 })).toThrow(
       "The option at must be epoch milliseconds from the year 1 to the year 9999, found 253402300800000.",
     );
@@ -1719,14 +1719,14 @@ describe("properties", () => {
     numbers: fc.array(fc.integer({ min: 0, max: 2000 }), { minLength: 1, maxLength: 40 }),
   });
 
-  it("[E1][E3][E13][E15][E18] never throws on a state of its test, keeps every state serializable, and writes a valid report", () => {
+  it("never throws on a state of its test, keeps every state serializable, and writes a valid report", () => {
     fc.assert(
       fc.property(walks, ({ engine, numbers }) => void walk(engine, numbers)),
       { numRuns: 80, seed: 20_261_030 },
     );
   });
 
-  it("[E3][E1] rebuilds the same state by replaying the accepted actions from the seed", () => {
+  it("rebuilds the same state by replaying the accepted actions from the seed", () => {
     fc.assert(
       fc.property(walks, ({ engine: walker, numbers }) => {
         const { state, log } = walk(walker, numbers);
@@ -1744,7 +1744,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E13][E15][E17][E18] asks for every external score once the test ended, and has nothing pending once the host answered all", () => {
+  it("asks for every external score once the test ended, and has nothing pending once the host answered all", () => {
     fc.assert(
       fc.property(walks, ({ engine: walker, numbers }) => {
         const walked = walk(walker, numbers);

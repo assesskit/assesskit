@@ -156,7 +156,7 @@ describe("checkViewEnvelope", () => {
 describe("checkViewEnvelope: documents and refusal", () => {
   const base = { seq: 2, view: {}, assets: {} };
 
-  it("[T71] accepts the documents of a view and the refusal of an action", () => {
+  it("accepts the documents of a view and the refusal of an action", () => {
     const documents = {
       test: "tests/exam.xml",
       item: "items/q1/item.xml",
@@ -167,7 +167,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
     expect(() => checkViewEnvelope(json(JSON.stringify({ ...base, documents, refusal })))).not.toThrow();
   });
 
-  it("[T71] rejects documents that are not an object of the test, the item, the stimuli and the lexicons", () => {
+  it("rejects documents that are not an object of the test, the item, the stimuli and the lexicons", () => {
     const check = (documents: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"documents":${documents}}`));
     expect(() => check("[]")).toThrow("A view envelope is invalid at documents: expected an object, found an array.");
@@ -191,7 +191,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
     );
   });
 
-  it("[T71] rejects a refusal that is not one of the runtime's", () => {
+  it("rejects a refusal that is not one of the runtime's", () => {
     const check = (refusal: string): void =>
       checkViewEnvelope(json(`{"seq":2,"view":{},"assets":{},"refusal":${refusal}}`));
     expect(() => check("5")).toThrow("A view envelope is invalid at refusal: expected an object, found 5.");
@@ -211,7 +211,7 @@ describe("checkViewEnvelope: documents and refusal", () => {
 });
 
 describe("REFUSAL_CODES", () => {
-  it("[T55] lists every refusal code of the runtime", () => {
+  it("lists every refusal code of the runtime", () => {
     const every: Readonly<Record<RefusalCode, true>> = {
       "attempts-exhausted": true,
       "awaiting-cat": true,
@@ -251,7 +251,7 @@ describe("viewDocuments", () => {
         : undefined,
   };
 
-  it("[T73] names the documents of the item presented and the test", () => {
+  it("names the documents of the item presented and the test", () => {
     expect(viewDocuments(view({ key: { ref: "q1", instance: 1 } }), source)).toEqual({
       test: "tests/t.xml",
       item: "items/q1.xml",
@@ -260,7 +260,7 @@ describe("viewDocuments", () => {
     });
   });
 
-  it("[T73] resolves against the root of the package for a variant, an unknown item, no item, and no source", () => {
+  it("resolves against the root of the package for a variant, an unknown item, no item, and no source", () => {
     const root = { test: "tests/t.xml", item: "", stimuli: [], lexicons: [] };
     expect(viewDocuments(view({ key: { ref: "q1", instance: 1 }, variant: { resource: "v" } }), source)).toEqual(root);
     expect(viewDocuments(view({ key: { ref: "q9", instance: 1 } }), source)).toEqual(root);
@@ -277,11 +277,11 @@ describe("viewDocuments", () => {
 describe("the frame of an LTI item", () => {
   const frame = { url: "https://tool.example.com/lti/login", storageUrl: "https://lti.platform.example/storage" };
 
-  it("[T106] names the frames of the tool and of the storage page, which the storage page and the tool look for by name", () => {
+  it("names the frames of the tool and of the storage page, which the storage page and the tool look for by name", () => {
     expect([LTI_TOOL_FRAME, LTI_STORAGE_FRAME]).toEqual(["lti-tool", "lti-storage"]);
   });
 
-  it("[T106] accepts a frame with two URLs, with or without an allow list", () => {
+  it("accepts a frame with two URLs, with or without an allow list", () => {
     expect(() => checkLtiFrame(frame)).not.toThrow();
     expect(() =>
       checkLtiFrame({ ...frame, allow: "microphone; camera 'self' https://tool.example.com" }),
@@ -291,7 +291,7 @@ describe("the frame of an LTI item", () => {
     ).not.toThrow();
   });
 
-  it("[T106] rejects what is not a frame", () => {
+  it("rejects what is not a frame", () => {
     const cases: readonly [unknown, string][] = [
       [json("null"), "The frame of an LTI item must be an object, found null."],
       [
@@ -323,7 +323,7 @@ describe("the frame of an LTI item", () => {
     for (const [value, message] of cases) expect(() => checkLtiFrame(value), message).toThrow(new DataError(message));
   });
 
-  it("[T106] accepts an allow list of the characters of a Permissions Policy and rejects any other", () => {
+  it("accepts an allow list of the characters of a Permissions Policy and rejects any other", () => {
     fc.assert(
       fc.property(fc.stringMatching(/^[A-Za-z0-9 ;*:/.'-]{1,40}$/u), (allow) => {
         expect(() => checkAllowList(allow, "The allow list")).not.toThrow();
@@ -344,7 +344,7 @@ describe("the frame of an LTI item", () => {
 describe("official results", () => {
   const report = (): AssessmentResult => JSON.parse('{"testResults":[],"itemResults":[]}');
 
-  it("[T67] marks the report that the host brands, and no copy of it", () => {
+  it("marks the report that the host brands, and no copy of it", () => {
     const result = report();
     expect(isOfficialResult(result)).toBe(false);
     const official = markOfficial(result);
@@ -356,7 +356,7 @@ describe("official results", () => {
     expect(isOfficialResult(report())).toBe(false);
   });
 
-  it("[T67] marks nothing that is not an object", () => {
+  it("marks nothing that is not an object", () => {
     for (const text of ["null", "5", '"result"', "[]"]) expect(isOfficialResult(json(text)), text).toBe(false);
   });
 });
@@ -412,11 +412,11 @@ function set(node: unknown, path: readonly Step[], value: unknown): unknown {
 const changed = (path: readonly Step[], value: unknown): unknown => json(JSON.stringify(set(SUBMISSION, path, value)));
 
 describe("checkSubmission", () => {
-  it("[T110] accepts a submission with every part of its form", () => {
+  it("accepts a submission with every part of its form", () => {
     expect(() => checkSubmission(json(JSON.stringify(SUBMISSION)))).not.toThrow();
   });
 
-  it("[T110] accepts the optional parts left out, a record declaration and NULL values", () => {
+  it("accepts the optional parts left out, a record declaration and NULL values", () => {
     const edits: readonly (readonly [readonly Step[], unknown])[] = [
       [["supplied"], undefined],
       [["declaration"], { cardinality: "record" }],
@@ -430,7 +430,7 @@ describe("checkSubmission", () => {
       expect(() => checkSubmission(changed(path, value)), path.join(".")).not.toThrow();
   });
 
-  it("[T110] rejects what is not an object, and a property that its form lacks", () => {
+  it("rejects what is not an object, and a property that its form lacks", () => {
     for (const text of ["null", "[]", '"s"', "5"]) {
       expect(() => checkSubmission(json(text)), text).toThrow(/^A submission is invalid: expected an object, found /);
     }
@@ -442,7 +442,7 @@ describe("checkSubmission", () => {
     );
   });
 
-  it("[T110] rejects a field of another type, and says which", () => {
+  it("rejects a field of another type, and says which", () => {
     const cases: readonly (readonly [readonly Step[], unknown, string | RegExp])[] = [
       [["request"], "", "A submission is invalid at request: expected a length of at least 1, found 0."],
       [["outcome"], 5, "A submission is invalid at outcome: expected a string, found 5."],
@@ -517,7 +517,7 @@ describe("checkSubmission", () => {
     }
   });
 
-  it("[T110] rejects a part that names an item the submission lacks, and an item that it has twice", () => {
+  it("rejects a part that names an item the submission lacks, and an item that it has twice", () => {
     expect(() => checkSubmission(changed(["parts", 0, "item", "instance"], 2))).toThrow(
       new DataError('A submission is invalid: A part names the item "e" instance 2, which the submission lacks.'),
     );

@@ -36,7 +36,7 @@ export function contextAt(step: CaliperContext["step"]): CaliperContext {
 
 /**
  * The published JSON-LD context of Caliper 1.2, http://purl.imsglobal.org/ctx/caliper/v1p2/, as 1EdTech serves it: the
- * oracle of the shape checks (docs/evidence.md says where it comes from).
+ * oracle of the shape checks (docs/player/evidence.md says where it comes from).
  */
 const TERMS = new Map<string, unknown>(
   Object.entries(JSON.parse(readFileSync(join(FIXTURES, "caliper-context-v1p2.json"), "utf8"))["@context"]),

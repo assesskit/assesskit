@@ -98,7 +98,7 @@ async function statuses(pkg: QtiPackage): Promise<Map<string, number>> {
 }
 
 describe("the asset gate over the 1EdTech example packages", () => {
-  it("[T73] has 24 directories and 24 archives of packages to serve", () => {
+  it("has 24 directories and 24 archives of packages to serve", () => {
     expect(DIRECTORIES).toHaveLength(24);
     expect(ARCHIVES).toHaveLength(24);
   });
@@ -109,7 +109,7 @@ describe("the asset gate over the 1EdTech example packages", () => {
   ];
 
   for (const [name, open] of packages) {
-    it(`[T73] never serves the manifest, a QTI document, an LTI link or a file that is not a web asset of ${name}, and serves its other files`, async () => {
+    it(`never serves the manifest, a QTI document, an LTI link or a file that is not a web asset of ${name}, and serves its other files`, async () => {
       const pkg = await open();
       const result = await statuses(pkg);
       const adaptive = new Set(adaptiveFiles(pkg));

@@ -9,7 +9,7 @@ const TOKEN = crypto.randomUUID();
 
 /** This file runs in a page of its own, because MathJax is a global of the page and a failure to load it is final. */
 describe("createMathTypesetter with a script that is not MathJax", () => {
-  it("[T9] rejects with an error that says what was expected, and leaves the MathML in place", async () => {
+  it("rejects with an error that says what was expected, and leaves the MathML in place", async () => {
     const typesetter = createMathTypesetter(`${other}/cdn/${TOKEN}/not-mathjax.js`);
     const content = mount('<p><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p>');
     await expect(typesetter.typeset(content.root)).rejects.toThrow(/not MathJax 4/u);

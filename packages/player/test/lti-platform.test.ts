@@ -343,7 +343,7 @@ describe("readAgsScore", () => {
     userId: "5323497",
   };
 
-  it("[T120] reads the final score of LTI AGS 2.0 §3.4.3.1, ignoring the properties it does not use", () => {
+  it("reads the final score of LTI AGS 2.0 §3.4.3.1, ignoring the properties it does not use", () => {
     const body = { ...complete, comment: "This is exceptional work.", scoringUserId: "4567890" };
     expect(readAgsScore(JSON.parse(JSON.stringify(body)))).toEqual({
       userId: "5323497",
@@ -356,7 +356,7 @@ describe("readAgsScore", () => {
     });
   });
 
-  it("[T120] reads the score pending manual grading of §3.4.8.1 with no score", () => {
+  it("reads the score pending manual grading of §3.4.8.1 with no score", () => {
     const score = readAgsScore({
       timestamp: "2017-04-16T18:54:36.736+00:00",
       activityProgress: "Completed",
@@ -368,18 +368,18 @@ describe("readAgsScore", () => {
     expect(score.scoreMaximum).toBeUndefined();
   });
 
-  it("[T120] reads a null score as no score, which clears the previous one (§3.4.4)", () => {
+  it("reads a null score as no score, which clears the previous one (§3.4.4)", () => {
     const score = readAgsScore({ ...complete, scoreGiven: null, scoreMaximum: null });
     expect(score.scoreGiven).toBeUndefined();
     expect(score.scoreMaximum).toBeUndefined();
   });
 
-  it("[T120] accepts a scoreGiven higher than scoreMaximum and a scoreGiven of 0", () => {
+  it("accepts a scoreGiven higher than scoreMaximum and a scoreGiven of 0", () => {
     expect(readAgsScore({ ...complete, scoreGiven: 1.1, scoreMaximum: 1 }).scoreGiven).toBe(1.1);
     expect(readAgsScore({ ...complete, scoreGiven: 0 }).scoreGiven).toBe(0);
   });
 
-  it("[T120] reads the timestamps of §3.4.9.1 and a time zone offset", () => {
+  it("reads the timestamps of §3.4.9.1 and a time zone offset", () => {
     const utc = Date.UTC(2017, 3, 16, 18, 54, 36, 736);
     for (const text of [
       "2017-04-16T18:54:36.736+00:00",
@@ -395,13 +395,13 @@ describe("readAgsScore", () => {
     expect(readAgsScore({ ...complete, timestamp: "2017-04-16T18:54:36.736999Z" }).timestampMs).toBe(utc);
   });
 
-  it("[T120] orders the scores of a user by their timestamps in milliseconds, across time zones", () => {
+  it("orders the scores of a user by their timestamps in milliseconds, across time zones", () => {
     const earlier = readAgsScore({ ...complete, timestamp: "2017-04-16T18:54:36.736Z" });
     const later = readAgsScore({ ...complete, timestamp: "2017-04-16T13:54:36.737-05:00" });
     expect(later.timestampMs).toBeGreaterThan(earlier.timestampMs);
   });
 
-  it("[T120] throws DataError for what is not a score", () => {
+  it("throws DataError for what is not a score", () => {
     const cases: readonly [string, unknown, string][] = [
       ["null", null, "A score must be an object, found null."],
       ["an array", [], "A score must be an object, found an array."],
@@ -478,7 +478,7 @@ describe("readAgsScore", () => {
     }
   });
 
-  it("[T120] throws DataError for a timestamp that JSON cannot carry", () => {
+  it("throws DataError for a timestamp that JSON cannot carry", () => {
     expect(() => readAgsScore({ ...complete, scoreGiven: Number.NaN })).toThrow(
       new DataError("The scoreGiven of a score must be a number from 0, found NaN."),
     );
@@ -487,7 +487,7 @@ describe("readAgsScore", () => {
 });
 
 describe("agsLineItem and agsScores", () => {
-  it("[T120] answers the line item of the launch with the media type of §3.2.1", async () => {
+  it("answers the line item of the launch with the media type of §3.2.1", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     const url = agsClaim(claims).lineitem;
@@ -502,7 +502,7 @@ describe("agsLineItem and agsScores", () => {
     });
   });
 
-  it("[T120] puts the line item under the platform's origin and offers the scopes to read it and to score", async () => {
+  it("puts the line item under the platform's origin and offers the scopes to read it and to score", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     const grade = agsClaim(claims);
@@ -514,7 +514,7 @@ describe("agsLineItem and agsScores", () => {
     ]);
   });
 
-  it("[T120] gives one line item for one item instance, and another for another", async () => {
+  it("gives one line item for one item instance, and another for another", async () => {
     const ctx = setup();
     const first = await lineItemOf(ctx);
     const again = await lineItemOf(ctx);
@@ -524,7 +524,7 @@ describe("agsLineItem and agsScores", () => {
     expect(new Set([first, second, third]).size).toBe(3);
   });
 
-  it("[T120] refuses a request to the line item without a usable token", async () => {
+  it("refuses a request to the line item without a usable token", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const none = await agsLineItem(service(url, undefined), ctx.token);
@@ -539,7 +539,7 @@ describe("agsLineItem and agsScores", () => {
     expect(odd.status).toBe(401);
   });
 
-  it("[T120] refuses an access token after an hour", async () => {
+  it("refuses an access token after an hour", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, LINEITEM_READONLY);
@@ -549,7 +549,7 @@ describe("agsLineItem and agsScores", () => {
     expect((await agsLineItem(service(url, token), ctx.token)).status).toBe(401);
   });
 
-  it("[T120] needs the scope lineitem.readonly to read the line item, and score to post a score", async () => {
+  it("needs the scope lineitem.readonly to read the line item, and score to post a score", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const scoreOnly = await agsLineItem(service(url, await accessToken(ctx, SCORE)), ctx.token);
@@ -571,7 +571,7 @@ describe("agsLineItem and agsScores", () => {
     expect((await agsLineItem(service(url, both), ctx.token)).status).toBe(200);
   });
 
-  it("[T120] refuses the line item of another tool, even with a token of its own", async () => {
+  it("refuses the line item of another tool, even with a token of its own", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const response = await agsLineItem(service(url, await accessToken(ctx, LINEITEM_READONLY, true)), ctx.token);
@@ -582,7 +582,7 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores).toEqual([]);
   });
 
-  it("[T120] answers 404 for a path that names no line item of the platform", async () => {
+  it("answers 404 for a path that names no line item of the platform", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
@@ -607,7 +607,7 @@ describe("agsLineItem and agsScores", () => {
     expect(direct.status).toBe(404);
   });
 
-  it("[T120] refuses another spelling of a line item identifier or an access token that has the same bytes", async () => {
+  it("refuses another spelling of a line item identifier or an access token that has the same bytes", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
@@ -620,7 +620,7 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores).toEqual([]);
   });
 
-  it("[T120] answers 405 for a method that the service does not offer", async () => {
+  it("answers 405 for a method that the service does not offer", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
@@ -634,7 +634,7 @@ describe("agsLineItem and agsScores", () => {
     expect(get.headers.allow).toBe("POST");
   });
 
-  it("[T120] receives a final score and hands it to onScore with the session and the item", async () => {
+  it("receives a final score and hands it to onScore with the session and the item", async () => {
     const ctx = setup();
     const response = await postScore(ctx, scoreBody());
     expect(response.status).toBe(204);
@@ -656,7 +656,7 @@ describe("agsLineItem and agsScores", () => {
     ]);
   });
 
-  it("[T120] receives a score pending manual grading, with no score", async () => {
+  it("receives a score pending manual grading, with no score", async () => {
     const ctx = setup();
     const body = scoreBody({ scoreGiven: undefined, scoreMaximum: undefined, gradingProgress: "PendingManual" });
     expect((await postScore(ctx, body)).status).toBe(204);
@@ -664,20 +664,20 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores[0]?.score.scoreGiven).toBeUndefined();
   });
 
-  it("[T120] receives a scoreGiven higher than scoreMaximum", async () => {
+  it("receives a scoreGiven higher than scoreMaximum", async () => {
     const ctx = setup();
     expect((await postScore(ctx, scoreBody({ scoreGiven: 1.1, scoreMaximum: 1 }))).status).toBe(204);
     expect(ctx.scores[0]?.score).toMatchObject({ scoreGiven: 1.1, scoreMaximum: 1 });
   });
 
-  it("[T120] receives the media type with parameters and in any case", async () => {
+  it("receives the media type with parameters and in any case", async () => {
     const ctx = setup();
     expect((await postScore(ctx, scoreBody(), { type: `${SCORE_TYPE.toUpperCase()}; charset=utf-8` })).status).toBe(
       204,
     );
   });
 
-  it("[T120] refuses a score for a user other than the sub of the launch", async () => {
+  it("refuses a score for a user other than the sub of the launch", async () => {
     const ctx = setup();
     const response = await postScore(ctx, scoreBody({ userId: "someone-else" }));
     expect(response.status).toBe(403);
@@ -688,7 +688,7 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores).toEqual([]);
   });
 
-  it("[T120] refuses a score request with another media type", async () => {
+  it("refuses a score request with another media type", async () => {
     const ctx = setup();
     for (const type of ["application/json", "text/plain", "application/vnd.ims.lis.v2.lineitem+json"]) {
       const response = await postScore(ctx, scoreBody(), { type });
@@ -703,7 +703,7 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores).toEqual([]);
   });
 
-  it("[T120] refuses a body that is not a score with 400 and hands nothing on", async () => {
+  it("refuses a body that is not a score with 400 and hands nothing on", async () => {
     const ctx = setup();
     const bad: readonly [string, string][] = [
       ["not JSON", "<score/>"],
@@ -725,7 +725,7 @@ describe("agsLineItem and agsScores", () => {
     expect(ctx.scores).toEqual([]);
   });
 
-  it("[T120] lets the failure of onScore reach the host", async () => {
+  it("lets the failure of onScore reach the host", async () => {
     const ctx = setup();
     const failing = {
       ...ctx.scoring,
@@ -738,7 +738,7 @@ describe("agsLineItem and agsScores", () => {
     await expect(postScoreWith(ctx, url, token, failing)).rejects.toThrow("The store is down.");
   });
 
-  it("[T120] refuses a request for another origin than the platform's", async () => {
+  it("refuses a request for another origin than the platform's", async () => {
     const ctx = setup();
     const url = await lineItemOf(ctx);
     const token = await accessToken(ctx, `${LINEITEM_READONLY} ${SCORE}`);
@@ -811,7 +811,7 @@ async function launchFor(
 }
 
 describe("ltiPlatformAuthorize", () => {
-  it("[T120] answers the authentication request with the page that posts the id_token to the redirect URI", async () => {
+  it("answers the authentication request with the page that posts the id_token to the redirect URI", async () => {
     const ctx = setup();
     const { parameters } = await begin(ctx);
     const page = await ltiPlatformAuthorize(authenticationRequest(endpoints.authorization, parameters), ctx.authorize);
@@ -823,7 +823,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(post.scripts).toBe(1);
   });
 
-  it("[T120] sends the page under a policy that allows its script by hash, forms to the tool and framing by the player", async () => {
+  it("sends the page under a policy that allows its script by hash, forms to the tool and framing by the player", async () => {
     const ctx = setup();
     const page = await authorize(ctx);
     const post = readPost(page);
@@ -836,7 +836,7 @@ describe("ltiPlatformAuthorize", () => {
     });
   });
 
-  it("[T120] writes every value of the page as text, whatever the tool sends", async () => {
+  it("writes every value of the page as text, whatever the tool sends", async () => {
     const ctx = setup({
       tools: new Map([[TOOL_CLIENT_ID, toolRegistration({ redirectUris: [`${TOOL_REDIRECT_URI}?a=1&b="2"`] })]]),
     });
@@ -852,7 +852,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(page.body).not.toContain("<script>alert");
   });
 
-  it("[T120] issues the id_token with the claims of Security Framework §5.1.2 and LTI 1.3 Core §5", async () => {
+  it("issues the id_token with the claims of Security Framework §5.1.2 and LTI 1.3 Core §5", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     expect(claims).toMatchObject({
@@ -872,7 +872,7 @@ describe("ltiPlatformAuthorize", () => {
     });
   });
 
-  it("[T120] names the resource link by a stable opaque identifier of at most 255 characters", async () => {
+  it("names the resource link by a stable opaque identifier of at most 255 characters", async () => {
     const ctx = setup();
     const first = (await launch(ctx)).claims[`${CLAIM}resource_link`] as { id: string };
     const again = (await launch(ctx)).claims[`${CLAIM}resource_link`] as { id: string };
@@ -885,14 +885,14 @@ describe("ltiPlatformAuthorize", () => {
     expect(first.id).not.toContain("session-1");
   });
 
-  it("[T120] signs the id_token with the key that the key set publishes", async () => {
+  it("signs the id_token with the key that the key set publishes", async () => {
     const ctx = setup();
     const { page } = await launch(ctx);
     const header = readToken(readPost(page).idToken).header;
     expect(header).toEqual({ alg: "RS256", typ: "JWT", kid: await thumbprint(await publicJwk()) });
   });
 
-  it("[T120] works with third-party cookies blocked: nothing but the hint binds the request", async () => {
+  it("works with third-party cookies blocked: nothing but the hint binds the request", async () => {
     const ctx = setup();
     const { parameters } = await begin(ctx);
     const authentication = authenticationRequest(endpoints.authorization, parameters, "POST");
@@ -901,13 +901,13 @@ describe("ltiPlatformAuthorize", () => {
     expect(readPost(page).idToken).toBeTruthy();
   });
 
-  it("[T120] accepts the authentication request as a form POST as well as a GET", async () => {
+  it("accepts the authentication request as a form POST as well as a GET", async () => {
     const ctx = setup();
     const page = await authorize(ctx, () => undefined, "POST");
     expect(readPost(page).action).toBe(TOOL_REDIRECT_URI);
   });
 
-  it("[T120] checks the caller whose cookie arrived, and does not need one", async () => {
+  it("checks the caller whose cookie arrived, and does not need one", async () => {
     const ctx = setup();
     const same = await begin(ctx);
     const request1 = authenticationRequest(endpoints.authorization, same.parameters);
@@ -927,7 +927,7 @@ describe("ltiPlatformAuthorize", () => {
     }
   });
 
-  it("[T120] refuses a request that is not the authentication request of the protocol", async () => {
+  it("refuses a request that is not the authentication request of the protocol", async () => {
     const ctx = setup();
     const cases: readonly [string, (parameters: URLSearchParams) => void, string][] = [
       ["another scope", (p) => p.set("scope", "openid profile"), "scope-invalid"],
@@ -961,7 +961,7 @@ describe("ltiPlatformAuthorize", () => {
     }
   });
 
-  it("[T120] refuses a request without a hint that this platform issued for this launch", async () => {
+  it("refuses a request without a hint that this platform issued for this launch", async () => {
     const ctx = setup();
     const refused: readonly [string, (parameters: URLSearchParams) => Promise<void> | void, string][] = [
       ["no hint", (p) => p.delete("lti_message_hint"), "hint-missing"],
@@ -1017,7 +1017,7 @@ describe("ltiPlatformAuthorize", () => {
     }
   });
 
-  it("[T120] refuses another spelling of a hint that has the same bytes", async () => {
+  it("refuses another spelling of a hint that has the same bytes", async () => {
     const ctx = setup();
     const message = await begin(ctx);
     message.parameters.set("lti_message_hint", respell(message.parameters.get("lti_message_hint") ?? ""));
@@ -1032,7 +1032,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(ctx.used.size).toBe(0);
   });
 
-  it("[T120] refuses the login_hint of another candidate", async () => {
+  it("refuses the login_hint of another candidate", async () => {
     const ctx = setup();
     const mine = await begin(ctx);
     const theirs = await begin(ctx, { principal: "candidate-8", session: "session-9" });
@@ -1042,7 +1042,7 @@ describe("ltiPlatformAuthorize", () => {
     ).rejects.toMatchObject({ name: "AccessError", reason: "principal-mismatch" });
   });
 
-  it("[T120] refuses a hint that was issued for another tool", async () => {
+  it("refuses a hint that was issued for another tool", async () => {
     const ctx = setup();
     const other = await begin(ctx, { link: otherLink });
     const parameters = authenticationParameters({
@@ -1054,7 +1054,7 @@ describe("ltiPlatformAuthorize", () => {
     ).rejects.toMatchObject({ name: "AccessError", reason: "client-mismatch" });
   });
 
-  it("[T120] expires the hint after five minutes", async () => {
+  it("expires the hint after five minutes", async () => {
     const ctx = setup();
     expect(LTI_HINT_TTL_SECONDS).toBe(300);
     const { parameters } = await begin(ctx);
@@ -1068,7 +1068,7 @@ describe("ltiPlatformAuthorize", () => {
     ).rejects.toMatchObject({ name: "AccessError", reason: "hint-expired" });
   });
 
-  it("[T120] uses a hint once", async () => {
+  it("uses a hint once", async () => {
     const ctx = setup();
     const { parameters } = await begin(ctx);
     const authentication = authenticationRequest(endpoints.authorization, parameters);
@@ -1083,7 +1083,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(record[0]?.[1]).toBe((SECONDS + 300) * 1000);
   });
 
-  it("[T120] lets only one of two requests with one hint succeed", async () => {
+  it("lets only one of two requests with one hint succeed", async () => {
     const ctx = setup();
     const { parameters } = await begin(ctx);
     const authentication = authenticationRequest(endpoints.authorization, parameters);
@@ -1094,7 +1094,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
   });
 
-  it("[T120] does not use the hint when another check fails first", async () => {
+  it("does not use the hint when another check fails first", async () => {
     const ctx = setup();
     const { parameters } = await begin(ctx);
     parameters.set("nonce", "");
@@ -1107,7 +1107,7 @@ describe("ltiPlatformAuthorize", () => {
     expect(ctx.used.size).toBe(1);
   });
 
-  it("[T120] refuses a request for the origin of the player, the assets or any origin but its own", async () => {
+  it("refuses a request for the origin of the player, the assets or any origin but its own", async () => {
     const ctx = setup();
     for (const origin of [PLAYER_ORIGIN, ASSET_ORIGIN, "https://evil.example"]) {
       const { parameters } = await begin(ctx);
@@ -1229,7 +1229,7 @@ async function thumbprint(jwk: JsonWebKey): Promise<string> {
 }
 
 describe("platformEndpoints and the configuration", () => {
-  it("[T120] gives the URLs of the authorization endpoint, the key set and the token endpoint", () => {
+  it("gives the URLs of the authorization endpoint, the key set and the token endpoint", () => {
     expect(endpoints).toEqual({
       authorization: `${PLATFORM_ORIGIN}/authorize`,
       jwks: `${PLATFORM_ORIGIN}/jwks`,
@@ -1238,7 +1238,7 @@ describe("platformEndpoints and the configuration", () => {
     });
   });
 
-  it("[T120] refuses a configuration in which two of the platform, the player and the assets share an origin (D-M1)", () => {
+  it("refuses a configuration in which two of the platform, the player and the assets share an origin (D-M1)", () => {
     const pairs: readonly [string, Partial<PlatformConfig>, string][] = [
       [
         "the platform and the player",
@@ -1263,7 +1263,7 @@ describe("platformEndpoints and the configuration", () => {
     }
   });
 
-  it("[T120] refuses an origin that is not an https origin, and an issuer with a query or a fragment", () => {
+  it("refuses an origin that is not an https origin, and an issuer with a query or a fragment", () => {
     const cases: readonly [string, Partial<PlatformConfig>, string][] = [
       [
         "an http origin",
@@ -1301,7 +1301,7 @@ describe("platformEndpoints and the configuration", () => {
     }
   });
 
-  it("[T120] refuses keys that are not what the configuration says", async () => {
+  it("refuses keys that are not what the configuration says", async () => {
     const spki = await crypto.subtle.exportKey("spki", platformKeys.publicKey);
     const hidden = await crypto.subtle.importKey("spki", spki, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, [
       "verify",
@@ -1344,7 +1344,7 @@ describe("platformEndpoints and the configuration", () => {
     );
   });
 
-  it("[T120] makes every handler refuse such a configuration", async () => {
+  it("makes every handler refuse such a configuration", async () => {
     const ctx = setup();
     const bad = { ...config, assetOrigin: PLAYER_ORIGIN };
     const { parameters } = await begin(ctx);
@@ -1362,7 +1362,7 @@ describe("platformEndpoints and the configuration", () => {
 });
 
 describe("platformJwks", () => {
-  it("[T120] publishes the public key of the platform as an RSA signing key with a kid (Security Framework §6.3)", async () => {
+  it("publishes the public key of the platform as an RSA signing key with a kid (Security Framework §6.3)", async () => {
     const ctx = setup();
     const response = await platformJwks(ctx.login);
     const jwk = await publicJwk();
@@ -1374,7 +1374,7 @@ describe("platformJwks", () => {
     });
   });
 
-  it("[T120] names the key by its thumbprint, as RFC 7638 §3.1 computes it", async () => {
+  it("names the key by its thumbprint, as RFC 7638 §3.1 computes it", async () => {
     const rfc = {
       kty: "RSA",
       e: "AQAB",
@@ -1388,13 +1388,13 @@ describe("platformJwks", () => {
     expect(JSON.parse(response.body).keys[0].kid).toBe("NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
   });
 
-  it("[T120] publishes nothing of the private key", async () => {
+  it("publishes nothing of the private key", async () => {
     const ctx = setup();
     const [key] = JSON.parse((await platformJwks(ctx.login)).body).keys;
     expect(Object.keys(key).sort()).toEqual(["alg", "e", "kid", "kty", "n", "use"]);
   });
 
-  it("[T120] publishes a key that verifies the id_token", async () => {
+  it("publishes a key that verifies the id_token", async () => {
     const ctx = setup();
     const { claims } = await launch(ctx);
     expect(claims.iss).toBe(ISSUER);
@@ -1408,7 +1408,7 @@ describe("platformJwks", () => {
 });
 
 describe("ltiPlatformLogin", () => {
-  it("[T120] builds the third-party initiated login for the tool of the link, with the parameters of LTI 1.3 Core §4.1", async () => {
+  it("builds the third-party initiated login for the tool of the link, with the parameters of LTI 1.3 Core §4.1", async () => {
     const ctx = setup();
     const { initiation, url } = await begin(ctx);
     expect(initiation).toMatchObject({
@@ -1429,7 +1429,7 @@ describe("ltiPlatformLogin", () => {
     ]);
   });
 
-  it("[T120] signs a message hint that names the session, the item and the principal with a jti and a five minute expiry", async () => {
+  it("signs a message hint that names the session, the item and the principal with a jti and a five minute expiry", async () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
     const { header, claims, valid } = await openSealed(initiation.messageHint);
@@ -1449,7 +1449,7 @@ describe("ltiPlatformLogin", () => {
     });
   });
 
-  it("[T120] signs the login_hint, which is the principal, with the same key", async () => {
+  it("signs the login_hint, which is the principal, with the same key", async () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
     const { header, claims, valid } = await openSealed(initiation.loginHint);
@@ -1458,14 +1458,14 @@ describe("ltiPlatformLogin", () => {
     expect(claims).toEqual({ principal: "candidate-7" });
   });
 
-  it("[T120] gives every login its own jti", async () => {
+  it("gives every login its own jti", async () => {
     const ctx = setup();
     const ids = new Set<unknown>();
     for (let i = 0; i < 20; i += 1) ids.add((await openSealed((await begin(ctx)).initiation.messageHint)).claims.jti);
     expect(ids.size).toBe(20);
   });
 
-  it("[T120] confirms the caller with the host before it looks for the tool", async () => {
+  it("confirms the caller with the host before it looks for the tool", async () => {
     const ctx = setup();
     await begin(ctx);
     expect(ctx.checked).toEqual(["session-1/candidate-7"]);
@@ -1484,7 +1484,7 @@ describe("ltiPlatformLogin", () => {
     });
   });
 
-  it("[T120] launches the secure launch URL of the link, else its launch URL, and keeps the query of the login URL", async () => {
+  it("launches the secure launch URL of the link, else its launch URL, and keeps the query of the login URL", async () => {
     const ctx = setup();
     const both = { ...link, launchUrl: `${TOOL_ORIGIN}/plain` };
     expect(readInitiation(await ltiPlatformLogin(caller, item, both, ctx.login)).targetLinkUri).toBe(TOOL_LAUNCH_URL);
@@ -1500,7 +1500,7 @@ describe("ltiPlatformLogin", () => {
     expect(url.searchParams.get("iss")).toBe(ISSUER);
   });
 
-  it("[T120] launches a link that the runtime read from a cartridge_basiclti_link document", async () => {
+  it("launches a link that the runtime read from a cartridge_basiclti_link document", async () => {
     const ctx = setup();
     const read = readLtiLink(`<?xml version="1.0" encoding="UTF-8"?>
 <cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0"
@@ -1514,7 +1514,7 @@ describe("ltiPlatformLogin", () => {
     expect((await openSealed(initiation.messageHint)).claims.custom).toEqual({ exam: "tryout-1" });
   });
 
-  it("[T120] keeps an identifier such as __proto__ as data in the custom properties", async () => {
+  it("keeps an identifier such as __proto__ as data in the custom properties", async () => {
     const ctx = setup();
     const odd = { ...link, custom: new Map([["__proto__", "x"]]) };
     const { initiation } = await begin(ctx, { link: odd });
@@ -1522,7 +1522,7 @@ describe("ltiPlatformLogin", () => {
     expect(Object.getOwnPropertyNames(claims.custom)).toEqual(["__proto__"]);
   });
 
-  it("[T120] refuses a link whose tool is on the platform's own origin, the player's or the assets'", async () => {
+  it("refuses a link whose tool is on the platform's own origin, the player's or the assets'", async () => {
     for (const origin of [PLATFORM_ORIGIN, PLAYER_ORIGIN, ASSET_ORIGIN]) {
       const target = `${origin}/tool`;
       const cases: readonly [string, ToolRegistration, LtiLink][] = [
@@ -1541,7 +1541,7 @@ describe("ltiPlatformLogin", () => {
     }
   });
 
-  it("[T120] refuses a link with no tool, without a launch URL, or with one that is not https", async () => {
+  it("refuses a link with no tool, without a launch URL, or with one that is not https", async () => {
     const ctx = setup();
     const unknown = { ...ctx.login, registration: async () => undefined };
     await expect(ltiPlatformLogin(caller, item, link, unknown)).rejects.toMatchObject({
@@ -1560,7 +1560,7 @@ describe("ltiPlatformLogin", () => {
     );
   });
 
-  it("[T120] refuses a registration that is not one", async () => {
+  it("refuses a registration that is not one", async () => {
     const ctx = setup();
     const cases: readonly [string, ToolRegistration, string][] = [
       [
@@ -1703,7 +1703,7 @@ describe("ltiPlatformLogin", () => {
 describe("platformStorage", () => {
   const response = (): Promise<HttpResponse> => platformStorage({ config, clock: { now: () => NOW } });
 
-  it("[T122] serves the page that keeps the values of a tool, with a policy that names its one script by hash and the player as its only frame", async () => {
+  it("serves the page that keeps the values of a tool, with a policy that names its one script by hash and the player as its only frame", async () => {
     const { status, headers, body } = await response();
     expect(status).toBe(200);
     expect(headers["content-type"]).toBe("text/html; charset=utf-8");
@@ -1717,13 +1717,13 @@ describe("platformStorage", () => {
     );
   });
 
-  it("[T122] names the frame of the tool and the limits of LTI postMessage Storage 0.1: 4096 bytes and 500 keys for an origin", async () => {
+  it("names the frame of the tool and the limits of LTI postMessage Storage 0.1: 4096 bytes and 500 keys for an origin", async () => {
     const { body } = await response();
     const config = JSON.parse(unescapeHtml(/data-config="([^"]*)"/u.exec(body)?.[1] ?? ""));
     expect(config).toEqual({ tool: "lti-tool", maxBytes: 4096, maxKeys: 500 });
   });
 
-  it("[T122] throws DataError for options of other types", async () => {
+  it("throws DataError for options of other types", async () => {
     await expect(async () => platformStorage(JSON.parse("null"))).rejects.toThrow(
       new DataError("The options must be an object, found null."),
     );
@@ -1731,7 +1731,7 @@ describe("platformStorage", () => {
 });
 
 describe("ltiPlatformFrame", () => {
-  it("[T122] gives the URL of the login, the URL of the storage page and the allow list of the registration", async () => {
+  it("gives the URL of the login, the URL of the storage page and the allow list of the registration", async () => {
     const tools = new Map([[TOOL_CLIENT_ID, toolRegistration({ allow: "microphone; camera 'self'" })]]);
     const ctx = setup({ tools });
     const frame = await ltiPlatformFrame(caller, item, link, ctx.login);
@@ -1742,14 +1742,14 @@ describe("ltiPlatformFrame", () => {
     expect(ctx.checked).toEqual([`${caller.session}/${caller.principal}`]);
   });
 
-  it("[T122] leaves the allow list out when the registration has none", async () => {
+  it("leaves the allow list out when the registration has none", async () => {
     const ctx = setup();
     const frame = await ltiPlatformFrame(caller, item, link, ctx.login);
     expect(frame).not.toHaveProperty("allow");
     expect(Object.keys(frame)).toEqual(["url", "storageUrl"]);
   });
 
-  it("[T122] refuses what ltiPlatformLogin refuses", async () => {
+  it("refuses what ltiPlatformLogin refuses", async () => {
     const ctx = setup();
     await expect(
       ltiPlatformFrame(caller, item, otherLink, { ...ctx.login, registration: async () => undefined }),
@@ -1774,7 +1774,7 @@ describe("platformToken", () => {
     return platformToken(tokenRequest(endpoints.token, assertion, scope, form), ctx.token);
   }
 
-  it("[T120] grants a bearer token for the scopes requested, as Security Framework §4.1.1 describes", async () => {
+  it("grants a bearer token for the scopes requested, as Security Framework §4.1.1 describes", async () => {
     const ctx = setup();
     const response = await token(ctx, {}, {}, `${LINEITEM_READONLY} ${SCORE}`);
     expect(response.status).toBe(200);
@@ -1791,14 +1791,14 @@ describe("platformToken", () => {
     });
   });
 
-  it("[T120] grants a token with one scope, for either scope that a launch offers", async () => {
+  it("grants a token with one scope, for either scope that a launch offers", async () => {
     const ctx = setup();
     for (const scope of [SCORE, LINEITEM_READONLY]) {
       expect(JSON.parse((await token(ctx, {}, {}, scope)).body).scope).toBe(scope);
     }
   });
 
-  it("[T120] accepts the audience as an array that holds the token URL, and the assertion before the end of its leeway", async () => {
+  it("accepts the audience as an array that holds the token URL, and the assertion before the end of its leeway", async () => {
     const ctx = setup();
     expect((await token(ctx, { aud: [endpoints.token] })).status).toBe(200);
     expect((await token(ctx, { exp: SECONDS - 59 })).status).toBe(200);
@@ -1807,20 +1807,20 @@ describe("platformToken", () => {
     expect((await token(ctx, { iat: undefined })).status).toBe(200);
   });
 
-  it("[T120] remembers the jti of an assertion until its expiry", async () => {
+  it("remembers the jti of an assertion until its expiry", async () => {
     const ctx = setup();
     await token(ctx, { jti: "jti-1", exp: SECONDS + 100 });
     expect([...ctx.used]).toEqual([[`assertion:${TOOL_CLIENT_ID}:jti-1`, (SECONDS + 100) * 1000]]);
   });
 
-  it("[T120] verifies the assertion against the key set of the tool, fetched once and cached", async () => {
+  it("verifies the assertion against the key set of the tool, fetched once and cached", async () => {
     const ctx = setup();
     await token(ctx);
     await token(ctx);
     expect(ctx.toolFetches).toEqual([TOOL_JWKS_URL]);
   });
 
-  it("[T120] verifies the assertion of a tool that gave its key and not a key set", async () => {
+  it("verifies the assertion of a tool that gave its key and not a key set", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(otherToolKeys, endpoints.token, ctx.clock, {
       iss: OTHER_CLIENT_ID,
@@ -1838,7 +1838,7 @@ describe("platformToken", () => {
     );
   });
 
-  it("[T120] lets two tools use the same jti", async () => {
+  it("lets two tools use the same jti", async () => {
     const ctx = setup();
     const first = await token(ctx, { jti: "shared" });
     const assertion = await clientAssertion(otherToolKeys, endpoints.token, ctx.clock, {
@@ -1850,7 +1850,7 @@ describe("platformToken", () => {
     expect([first.status, second.status]).toEqual([200, 200]);
   });
 
-  it("[T120] refuses an assertion twice (RFC 7523 §3, Security Framework §4.1.1)", async () => {
+  it("refuses an assertion twice (RFC 7523 §3, Security Framework §4.1.1)", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
     const again = tokenRequest(endpoints.token, assertion, SCORE);
@@ -1860,14 +1860,14 @@ describe("platformToken", () => {
     expect(JSON.parse(second.body).error).toBe("invalid_client");
   });
 
-  it("[T120] lets only one of two requests with one assertion succeed", async () => {
+  it("lets only one of two requests with one assertion succeed", async () => {
     const ctx = setup();
     const request2 = tokenRequest(endpoints.token, await clientAssertion(toolKeys, endpoints.token, ctx.clock), SCORE);
     const answers = await Promise.all([platformToken(request2, ctx.token), platformToken(request2, ctx.token)]);
     expect(answers.map((answer) => answer.status).sort()).toEqual([200, 400]);
   });
 
-  it("[T120] refuses a request that is not a token request, with invalid_request", async () => {
+  it("refuses a request that is not a token request, with invalid_request", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
     const cases: readonly [string, HttpResponse | Promise<HttpResponse>][] = [
@@ -1912,7 +1912,7 @@ describe("platformToken", () => {
     }
   });
 
-  it("[T120] refuses a grant other than client_credentials", async () => {
+  it("refuses a grant other than client_credentials", async () => {
     const ctx = setup();
     for (const grant of ["authorization_code", "password", undefined]) {
       const response = await token(ctx, {}, { grant_type: grant });
@@ -1921,7 +1921,7 @@ describe("platformToken", () => {
     }
   });
 
-  it("[T120] refuses a scope that a launch does not offer, or none", async () => {
+  it("refuses a scope that a launch does not offer, or none", async () => {
     const ctx = setup();
     for (const scope of ["", LINEITEM, RESULT_READONLY, `${SCORE} https://example.org/other`, "openid"]) {
       const response = await token(ctx, {}, {}, scope);
@@ -1931,7 +1931,7 @@ describe("platformToken", () => {
     expect(JSON.parse((await token(ctx, {}, { scope: undefined })).body).error).toBe("invalid_scope");
   });
 
-  it("[T120] refuses an assertion that is not what Security Framework §4.1.1 requires, with invalid_client", async () => {
+  it("refuses an assertion that is not what Security Framework §4.1.1 requires, with invalid_client", async () => {
     const ctx = setup();
     const iat = SECONDS;
     const cases: readonly [string, Promise<HttpResponse>][] = [
@@ -1969,7 +1969,7 @@ describe("platformToken", () => {
     expect(ctx.used.size).toBe(0);
   });
 
-  it("[T120] does not remember the jti of an assertion that fails another check", async () => {
+  it("does not remember the jti of an assertion that fails another check", async () => {
     const ctx = setup();
     await token(ctx, { jti: "jti-9", signer: attackerKeys });
     await token(ctx, { jti: "jti-9", aud: ISSUER });
@@ -1977,7 +1977,7 @@ describe("platformToken", () => {
     expect((await token(ctx, { jti: "jti-9" })).status).toBe(200);
   });
 
-  it("[T120] lets the failure to fetch the key set of the tool reach the host, and does not burn the assertion", async () => {
+  it("lets the failure to fetch the key set of the tool reach the host, and does not burn the assertion", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
     const retry = tokenRequest(endpoints.token, assertion, SCORE);
@@ -1988,7 +1988,7 @@ describe("platformToken", () => {
     expect((await platformToken(retry, ctx.token)).status).toBe(200);
   });
 
-  it("[T120] refuses a request for another origin than the platform's", async () => {
+  it("refuses a request for another origin than the platform's", async () => {
     const ctx = setup();
     const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
     await expect(
@@ -2020,7 +2020,7 @@ describe("platformToken", () => {
 });
 
 describe("the tool role and the platform role together", () => {
-  it("[T120] launches a tool built on the tool role of this package and takes its score", async () => {
+  it("launches a tool built on the tool role of this package and takes its score", async () => {
     const ctx = setup();
     const store = new MemoryStore();
     const toolSide: PlatformRegistration = {
@@ -2132,7 +2132,7 @@ describe("properties", () => {
     { requiredKeys: [] },
   );
 
-  it("[T120] reads only scores that have a scoreGiven from 0 together with a scoreMaximum above 0", () => {
+  it("reads only scores that have a scoreGiven from 0 together with a scoreMaximum above 0", () => {
     fc.assert(
       fc.property(scoreFields, (body) => {
         let score: AgsScore;
@@ -2153,7 +2153,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T120] reads every ISO 8601 timestamp with a zone to the instant it names", () => {
+  it("reads every ISO 8601 timestamp with a zone to the instant it names", () => {
     const instant = fc.date({ min: new Date(0), max: new Date(Date.UTC(2200, 0, 1)), noInvalidDate: true });
     fc.assert(
       fc.property(instant, fc.integer({ min: -14 * 60, max: 14 * 60 }), (date, minutes) => {
@@ -2173,7 +2173,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T120] never accepts a hint that was changed", async () => {
+  it("never accepts a hint that was changed", async () => {
     const ctx = setup();
     const { initiation } = await begin(ctx);
     const hint = initiation.messageHint;

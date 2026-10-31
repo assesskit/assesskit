@@ -35,7 +35,7 @@ function declaredResponses(item: AssessmentItem): ReadonlyMap<string, Value | nu
 }
 
 describe("the interactions of the 1EdTech examples", () => {
-  it("[B52][C] are all described: the descriptors of an item are the interaction elements of its markup, by kind", () => {
+  it("are all described: the descriptors of an item are the interaction elements of its markup, by kind", () => {
     expect(items).toHaveLength(251);
     const described = new Map<string, number>();
     for (const { path, item, source } of items) {
@@ -62,11 +62,11 @@ describe("the interactions of the 1EdTech examples", () => {
     expect(described.size).toBe(21);
   });
 
-  it("[B52][B65][C] bind a response variable that the interaction accepts, in every example", () => {
+  it("bind a response variable that the interaction accepts, in every example", () => {
     for (const { path, item } of items) expect(checkBindings(item), path).toEqual([]);
   });
 
-  it("[B56][B70][C] have a correct response that is a valid response, but for one example that pairs a hotspot with a choice", () => {
+  it("have a correct response that is a valid response, but for one example that pairs a hotspot with a choice", () => {
     const rejected: string[] = [];
     let checked = 0;
     for (const { path, item } of items) {
@@ -85,7 +85,7 @@ describe("the interactions of the 1EdTech examples", () => {
     expect(rejected).toEqual(["packaging/items/media_coords.xml RESPONSE: unknown-choice"]);
   });
 
-  it("[B57][C] shuffle to a permutation of the choices, with the fixed choices where the document has them", () => {
+  it("shuffle to a permutation of the choices, with the fixed choices where the document has them", () => {
     let shuffling = 0;
     for (const { path, item } of items) {
       for (const descriptor of describeInteractions(item)) {

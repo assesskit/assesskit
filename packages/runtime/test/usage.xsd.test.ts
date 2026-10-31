@@ -9,11 +9,13 @@ import {
   ITEM_STATISTICS,
   type ItemStatistic,
   readUsageData,
+  USAGE_NAMESPACE,
   type UsageData,
   writeUsageData,
 } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { usageData } from "./arbitraries/usage.js";
+import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const schemaDirectory = requireSchemas(root);
@@ -57,7 +59,12 @@ const everything: UsageData = {
     {
       kind: "categorized",
       name: "D-Param",
+      glossary: "http://example.com/other",
       ...base,
+      caseCount: 1200,
+      stdError: 0.01,
+      stdDeviation: 2,
+      lastUpdated: "2004-07-05",
       mapping: {
         lowerBound: 1,
         upperBound: 4,
@@ -72,15 +79,19 @@ const everything: UsageData = {
 };
 
 describe("writeUsageData", () => {
-  it("[U1][X] writes usage data without statistics", async () => {
+  it("writes usage data without statistics", async () => {
     expect(await issuesOf(writeUsageData({ statistics: [] }))).toEqual([]);
   });
 
-  it("[U1][U2][U3][U4][U5][U6][X] writes every element and attribute of the schema", async () => {
-    expect(await issuesOf(writeUsageData(everything))).toEqual([]);
+  it("writes every element and attribute that the schema declares, as documents that it accepts and that read back", async () => {
+    const text = writeUsageData(everything);
+    expect(await issuesOf(text)).toEqual([]);
+    expect(readUsageData(text)).toEqual(everything);
+    const declared = declaredNames(schemaDirectory, ["imsqti_usagedatav3p0_v1p0.xsd"]);
+    expect(unusedNames(declared, usedNames([text], [USAGE_NAMESPACE]))).toEqual([]);
   });
 
-  it("[U7][X] writes every term of ObjectTypeEnum", async () => {
+  it("writes every term of ObjectTypeEnum", async () => {
     const statistics = (["test", "testpart", "section", "item", "outcome", "interaction", "choice"] as const).map(
       (objectType): ItemStatistic => ({
         kind: "ordinary",
@@ -93,14 +104,14 @@ describe("writeUsageData", () => {
     expect(await issuesOf(writeUsageData({ statistics }))).toEqual([]);
   });
 
-  it("[U8][U9][X] writes a statistic under every name of the vocabularies, which the schema reads as identifiers", async () => {
+  it("writes a statistic under every name of the vocabularies, which the schema reads as identifiers", async () => {
     const statistics = [...DISTRACTOR_STATISTICS, ...ITEM_STATISTICS].map(
       (name): ItemStatistic => ({ kind: "ordinary", name, ...base, value: { value: 0.5 } }),
     );
     expect(await issuesOf(writeUsageData({ statistics }))).toEqual([]);
   });
 
-  it("[U6][X] writes the value of every base type", async () => {
+  it("writes the value of every base type", async () => {
     const values = [
       ["boolean", true],
       ["directedPair", ["A", "B"]],
@@ -125,7 +136,7 @@ describe("writeUsageData", () => {
     expect(await issuesOf(writeUsageData({ statistics }))).toEqual([]);
   });
 
-  it("[X][N] has a schema that rejects a statistic without a target object, so the checks above can fail", async () => {
+  it("has a schema that rejects a statistic without a target object, so the checks above can fail", async () => {
     const text = writeUsageData({
       statistics: [{ kind: "ordinary", name: "AIS", ...base, value: { value: 1 } }],
     }).replace('<targetObject identifier="Item_VB123456"/>', "");
@@ -136,14 +147,14 @@ describe("writeUsageData", () => {
 });
 
 describe("usage data of the 1EdTech examples", () => {
-  it("[U1][X][C] writes usageData/example.xml as a document that the schema accepts", async () => {
+  it("writes usageData/example.xml as a document that the schema accepts", async () => {
     const text = writeUsageData(readUsageData(readFileSync(join(examples, "usageData/example.xml"), "utf8")));
     expect(await issuesOf(text, "example.xml")).toEqual([]);
   });
 });
 
 describe("properties", () => {
-  it("[U1][X] writes documents that the UD schema accepts", async () => {
+  it("writes documents that the UD schema accepts", async () => {
     const samples = fc.sample(usageData, { numRuns: 60, seed: 20_220_202 });
     const files = samples.map((model, index) => ({ path: `usage-${index}.xml`, content: writeUsageData(model) }));
     expect(await validateXmlFiles(schemas, files)).toEqual([]);

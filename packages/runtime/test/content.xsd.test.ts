@@ -30,7 +30,7 @@ async function writtenIssues(xml: string) {
 }
 
 describe("the vocabularies of the content", () => {
-  it("[W15] CalculatorTypeEnum: writes basic, graphing, scientific and standard that the schema accepts, and the schema refuses another term", async () => {
+  it("CalculatorTypeEnum: writes basic, graphing, scientific and standard that the schema accepts, and the schema refuses another term", async () => {
     const calculator = (type: string): string =>
       itemOf(
         "<p>x</p>",
@@ -53,31 +53,31 @@ describe("the vocabularies of the content", () => {
     return itemOf("<p>x</p>", `<qti-companion-materials-info>${markup}</qti-companion-materials-info>`);
   }
 
-  it("[W28] SIUnitTypeEnum: writes Millimeter, Centimeter, Meter and Kilometer on a metric ruler that the schema accepts, and the schema refuses another unit", async () => {
+  it("SIUnitTypeEnum: writes Millimeter, Centimeter, Meter and Kilometer on a metric ruler that the schema accepts, and the schema refuses another unit", async () => {
     for (const unit of ["Millimeter", "Centimeter", "Meter", "Kilometer"]) {
       expect(await writtenIssues(increments("rule-si", unit))).toEqual([]);
     }
     expect(await issuesOf(increments("rule-si", "Inch"))).not.toEqual([]);
   });
 
-  it("[W40] USUnitTypeEnum: writes Inch, Foot, Yard and Mile on a ruler in US units that the schema accepts, and the schema refuses another unit", async () => {
+  it("USUnitTypeEnum: writes Inch, Foot, Yard and Mile on a ruler in US units that the schema accepts, and the schema refuses another unit", async () => {
     for (const unit of ["Inch", "Foot", "Yard", "Mile"])
       expect(await writtenIssues(increments("rule-us", unit))).toEqual([]);
     expect(await issuesOf(increments("rule-us", "Meter"))).not.toEqual([]);
   });
 
-  it("[W27] SIRadialUnitTypeEnum: writes Radian on a protractor in SI units that the schema accepts, and the schema refuses another unit", async () => {
+  it("SIRadialUnitTypeEnum: writes Radian on a protractor in SI units that the schema accepts, and the schema refuses another unit", async () => {
     expect(await writtenIssues(increments("protractor-si", "Radian"))).toEqual([]);
     expect(await issuesOf(increments("protractor-si", "Degree"))).not.toEqual([]);
   });
 
-  it("[W39] USRadialUnitTypeEnum: writes Degree, Minute and Second on a protractor in US units that the schema accepts, and the schema refuses another unit", async () => {
+  it("USRadialUnitTypeEnum: writes Degree, Minute and Second on a protractor in US units that the schema accepts, and the schema refuses another unit", async () => {
     for (const unit of ["Degree", "Minute", "Second"])
       expect(await writtenIssues(increments("protractor-us", unit))).toEqual([]);
     expect(await issuesOf(increments("protractor-us", "Radian"))).not.toEqual([]);
   });
 
-  it("[W30] ShowHideEnum: writes show and hide on feedback that the schema accepts, and the schema refuses another term", async () => {
+  it("ShowHideEnum: writes show and hide on feedback that the schema accepts, and the schema refuses another term", async () => {
     const feedback = (term: string): string =>
       itemOf(
         `<qti-feedback-block outcome-identifier="O" identifier="x" show-hide="${term}"><qti-content-body><p>x</p></qti-content-body></qti-feedback-block>`,
@@ -86,7 +86,7 @@ describe("the vocabularies of the content", () => {
     expect(await issuesOf(feedback("visible"))).not.toEqual([]);
   });
 
-  it("[W33][W54] SupportEnum and SupportEnumExt: writes the 15 supports and ext: terms on a card that the schema accepts, and the schema refuses another term", async () => {
+  it("SupportEnum and SupportEnumExt: writes the 15 supports and ext: terms on a card that the schema accepts, and the schema refuses another term", async () => {
     const supports = [
       "additional-directions",
       "audio-description",
@@ -116,14 +116,14 @@ describe("the vocabularies of the content", () => {
       expect(await issuesOf(card(support))).not.toEqual([]);
   });
 
-  it("[W36] TestFeedbackAccessEnum: writes during and atEnd on test feedback that the schema accepts, and the schema refuses another term", async () => {
+  it("TestFeedbackAccessEnum: writes during and atEnd on test feedback that the schema accepts, and the schema refuses another term", async () => {
     const test = (access: string): string =>
       `<qti-assessment-test ${NS} identifier="test" title="Test"><qti-outcome-declaration identifier="O" cardinality="single" base-type="identifier"/><qti-test-part identifier="p" navigation-mode="linear" submission-mode="individual"><qti-assessment-section identifier="s" title="S" visible="true"><qti-assessment-item-ref identifier="i" href="i.xml"/></qti-assessment-section><qti-test-feedback access="${access}" outcome-identifier="O" show-hide="show" identifier="x"><qti-content-body><p>x</p></qti-content-body></qti-test-feedback></qti-test-part></qti-assessment-test>`;
     for (const access of ["during", "atEnd"]) expect(await writtenIssues(test(access))).toEqual([]);
     expect(await issuesOf(test("always"))).not.toEqual([]);
   });
 
-  it("[W41][W55] UseEnum and UseEnumExt: writes instructions, scoring, navigation and ext: terms on a rubric block that the schema accepts, and the schema refuses another term", async () => {
+  it("UseEnum and UseEnumExt: writes instructions, scoring, navigation and ext: terms on a rubric block that the schema accepts, and the schema refuses another term", async () => {
     const rubric = (use: string): string =>
       itemOf(
         `<qti-rubric-block view="author" use="${use}"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block>`,
@@ -134,7 +134,7 @@ describe("the vocabularies of the content", () => {
     for (const use of ["hint", "ext:has space"]) expect(await issuesOf(rubric(use))).not.toEqual([]);
   });
 
-  it("[W49] ViewEnum: writes the six views, alone and together, on a rubric block that the schema accepts, and the schema refuses another term", async () => {
+  it("ViewEnum: writes the six views, alone and together, on a rubric block that the schema accepts, and the schema refuses another term", async () => {
     const rubric = (view: string): string =>
       itemOf(
         `<qti-rubric-block view="${view}" use="instructions"><qti-content-body><p>x</p></qti-content-body></qti-rubric-block>`,

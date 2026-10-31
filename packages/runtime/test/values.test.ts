@@ -92,16 +92,16 @@ const declarationOf = (value: Value): ValueDeclaration =>
     : { cardinality: value.cardinality, baseType: value.baseType };
 
 describe("base types", () => {
-  it("[W13] lists the terms of BaseTypeEnum in alphabetical order", () => {
+  it("lists the terms of BaseTypeEnum in alphabetical order", () => {
     expect([...BASE_TYPES]).toEqual(BASE_TYPE_TERMS);
   });
 
-  it("[W13] accepts every term and no other text", () => {
+  it("accepts every term and no other text", () => {
     for (const term of BASE_TYPE_TERMS) expect(isBaseType(term), term).toBe(true);
     for (const other of NOT_TERMS) expect(isBaseType(other), other).toBe(false);
   });
 
-  it("[W13] rejects values that are not strings", () => {
+  it("rejects values that are not strings", () => {
     for (const other of NOT_STRINGS) expect(isBaseType(other)).toBe(false);
   });
 });
@@ -119,17 +119,17 @@ describe("base64 and base64url", () => {
   ];
   const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text);
 
-  it.each(Vectors)("[C7] encodes %j as the vectors of RFC 4648 §10", (text, base64, base64url) => {
+  it.each(Vectors)("encodes %j as the vectors of RFC 4648 §10", (text, base64, base64url) => {
     expect(encodeBase64(bytesOf(text))).toBe(base64);
     expect(encodeBase64Url(bytesOf(text))).toBe(base64url);
   });
 
-  it.each(Vectors)("[C7] decodes the vectors of RFC 4648 §10 to %j", (text, base64, base64url) => {
+  it.each(Vectors)("decodes the vectors of RFC 4648 §10 to %j", (text, base64, base64url) => {
     expect(decodeBase64(base64)).toEqual(bytesOf(text));
     expect(decodeBase64Url(base64url)).toEqual(bytesOf(text));
   });
 
-  it("[C7] writes the digits 62 and 63 as + and / in base64 and as - and _ in base64url (RFC 4648 §4, §5)", () => {
+  it("writes the digits 62 and 63 as + and / in base64 and as - and _ in base64url (RFC 4648 §4, §5)", () => {
     const bytes = Uint8Array.from([0xfb, 0xff, 0xbf]);
     expect(encodeBase64(bytes)).toBe("+/+/");
     expect(encodeBase64Url(bytes)).toBe("-_-_");
@@ -137,7 +137,7 @@ describe("base64 and base64url", () => {
     expect(decodeBase64Url("-_-_")).toEqual(bytes);
   });
 
-  it("[C7] decodes only the canonical encoding of bytes (RFC 4648 §3.5)", () => {
+  it("decodes only the canonical encoding of bytes (RFC 4648 §3.5)", () => {
     const base64 = [
       "Zh==", // bits after the last byte that are not zero: "f" is "Zg=="
       "Zm9=", // the same after two bytes: "fo" is "Zm8="
@@ -170,7 +170,7 @@ describe("base64 and base64url", () => {
     for (const text of base64url) expect(decodeBase64Url(text), JSON.stringify(text)).toBeUndefined();
   });
 
-  it("[C7] rejects arguments of other types", () => {
+  it("rejects arguments of other types", () => {
     expect(() => encodeBase64(json("[1]"))).toThrow(
       new DataError("The bytes to encode must be a Uint8Array, found an array."),
     );
@@ -181,16 +181,16 @@ describe("base64 and base64url", () => {
 });
 
 describe("cardinalities", () => {
-  it("[W16] lists the terms of CardinalityEnum in alphabetical order", () => {
+  it("lists the terms of CardinalityEnum in alphabetical order", () => {
     expect([...CARDINALITIES]).toEqual(CARDINALITY_TERMS);
   });
 
-  it("[W16] accepts every term and no other text", () => {
+  it("accepts every term and no other text", () => {
     for (const term of CARDINALITY_TERMS) expect(isCardinality(term), term).toBe(true);
     for (const other of [...NOT_TERMS, "Single", "list", "base"]) expect(isCardinality(other), other).toBe(false);
   });
 
-  it("[W16] rejects values that are not strings", () => {
+  it("rejects values that are not strings", () => {
     for (const other of NOT_STRINGS) expect(isCardinality(other)).toBe(false);
   });
 });
@@ -201,37 +201,37 @@ describe("identifiers", () => {
   const accepted = ["a", "_", "A1", "item-1.b", "Q01.SCORE", "_identifier", "ID3", "é", "a\u0301", "a\u00b7", "日本語"];
   const rejected = ["", "1a", "-a", ".a", "a b", "a:b", ":a", "a/b", "a\n", "a@b", "\u0301a", "a\ud800"];
 
-  it("[B51][T5] accepts what INFO §4.1.1 describes", () => {
+  it("accepts what INFO §4.1.1 describes", () => {
     for (const text of accepted) expect(isIdentifier(text), text).toBe(true);
   });
 
-  it("[B51][T5] rejects a digit, hyphen or period first, a colon, white space and other characters", () => {
+  it("rejects a digit, hyphen or period first, a colon, white space and other characters", () => {
     for (const text of rejected) expect(isIdentifier(text), JSON.stringify(text)).toBe(false);
   });
 
-  it("[B51] does not limit the length: 32 characters are only recommended", () => {
+  it("does not limit the length: 32 characters are only recommended", () => {
     expect(isIdentifier("a".repeat(100))).toBe(true);
   });
 
-  it("[B51] tells identifiers that differ in case apart, as they are compared case-sensitively", () => {
+  it("tells identifiers that differ in case apart, as they are compared case-sensitively", () => {
     expect(isIdentifier("id")).toBe(true);
     expect(isIdentifier("ID")).toBe(true);
     expect(matchValues(single("identifier", "id"), single("identifier", "ID"))).toBe(false);
   });
 
-  it("[B51] rejects values that are not strings", () => {
+  it("rejects values that are not strings", () => {
     for (const other of NOT_STRINGS) expect(isIdentifier(other)).toBe(false);
   });
 });
 
 describe("values", () => {
-  it("[T12] builds a single value", () => {
+  it("builds a single value", () => {
     expect(single("integer", 5)).toEqual({ cardinality: "single", baseType: "integer", value: 5 });
     expect(single("identifier", "a")).toEqual({ cardinality: "single", baseType: "identifier", value: "a" });
     expect(single("point", [1, 2])).toEqual({ cardinality: "single", baseType: "point", value: [1, 2] });
   });
 
-  it("[T13] builds a multiple container that keeps repeated values", () => {
+  it("builds a multiple container that keeps repeated values", () => {
     expect(container("multiple", "string", ["b", "a", "b"])).toEqual({
       cardinality: "multiple",
       baseType: "string",
@@ -239,7 +239,7 @@ describe("values", () => {
     });
   });
 
-  it("[T14] builds an ordered container that keeps the order", () => {
+  it("builds an ordered container that keeps the order", () => {
     expect(container("ordered", "integer", [3, 1, 2])).toEqual({
       cardinality: "ordered",
       baseType: "integer",
@@ -247,7 +247,7 @@ describe("values", () => {
     });
   });
 
-  it("[T15] builds a record whose fields have their own base types, in insertion order", () => {
+  it("builds a record whose fields have their own base types, in insertion order", () => {
     const built = record([
       ["rock", single("boolean", true)],
       ["paper", nonNull(single("string", "Four score"))],
@@ -259,14 +259,14 @@ describe("values", () => {
     ]);
   });
 
-  it("[T15] keeps a field named like a property of Object.prototype as data", () => {
+  it("keeps a field named like a property of Object.prototype as data", () => {
     const built = record([["__proto__", single("integer", 1)]]);
     expect(built?.fields.get("__proto__")).toEqual(single("integer", 1));
     expect(Object.getPrototypeOf(built?.fields)).toBe(Map.prototype);
     expect(({} as Record<string, unknown>).integer).toBeUndefined();
   });
 
-  it("[T15] rejects a field that is not an identifier, a field twice and a field that is not a single value", () => {
+  it("rejects a field that is not an identifier, a field twice and a field that is not a single value", () => {
     expect(() => record([["not an identifier", single("integer", 1)]])).toThrow(DataError);
     expect(() =>
       record([
@@ -281,30 +281,30 @@ describe("values", () => {
     expect(() => record([["a", nonNull(single("string", "x"))], json('["b"]')])).toThrow(DataError);
   });
 
-  it("[T16] represents NULL as null: an empty string, an empty container and an empty record", () => {
+  it("represents NULL as null: an empty string, an empty container and an empty record", () => {
     expect(single("string", "")).toBeNull();
     expect(container("multiple", "integer", [])).toBeNull();
     expect(container("ordered", "string", [])).toBeNull();
     expect(record([])).toBeNull();
   });
 
-  it("[T4][T16] treats the empty string as NULL for string only", () => {
+  it("treats the empty string as NULL for string only", () => {
     expect(single("uri", "")).toEqual({ cardinality: "single", baseType: "uri", value: "" });
     expect(() => single("identifier", "")).toThrow(DataError);
     expect(() => container("multiple", "string", ["a", ""])).toThrow("empty string");
   });
 
-  it("[T4] keeps white space in a string", () => {
+  it("keeps white space in a string", () => {
     expect(nonNull(single("string", " a  b ")).value).toBe(" a  b ");
   });
 
-  it("[T2] turns an integer -0 into 0 and keeps the sign of a float", () => {
+  it("turns an integer -0 into 0 and keeps the sign of a float", () => {
     expect(Object.is(single("integer", -0).value, 0)).toBe(true);
     expect(Object.is(single("float", -0).value, -0)).toBe(true);
     expect(single("point", [-0, 0]).value).toEqual([0, 0]);
   });
 
-  it("[T11] copies a file to its reference, content type and name", () => {
+  it("copies a file to its reference, content type and name", () => {
     const given = { reference: "files/1", mimeType: "text/plain", fileName: "a.txt", bytes: "AAAA" };
     expect(single("file", given).value).toEqual({ reference: "files/1", mimeType: "text/plain", fileName: "a.txt" });
     expect(single("file", { reference: "files/2", mimeType: "image/png", fileName: undefined }).value).toStrictEqual({
@@ -324,7 +324,7 @@ describe("values", () => {
     expect(list?.values).toEqual([3, 4]);
   });
 
-  it("[T2][N] rejects an integer that is not a safe integer", () => {
+  it("rejects an integer that is not a safe integer", () => {
     expect(() => single("integer", 2 ** 53)).toThrow(
       "A value of base type integer must be a safe integer, found 9007199254740992.",
     );
@@ -333,7 +333,7 @@ describe("values", () => {
     expect(() => container("ordered", "integer", [1, 2 ** 60])).toThrow(DataError);
   });
 
-  it("[T5][N] rejects an identifier that is not one", () => {
+  it("rejects an identifier that is not one", () => {
     expect(() => single("identifier", "1a")).toThrow("A value of base type identifier must be an identifier");
     expect(() => single("pair", ["a", "b c"])).toThrow(DataError);
   });
@@ -359,7 +359,7 @@ describe("values", () => {
     }
   });
 
-  it("[T12][T13][T14][T15] checks a value deeply and returns a copy of it", () => {
+  it("checks a value deeply and returns a copy of it", () => {
     const values = [
       nonNull(single("integer", 5)),
       nonNull(container("ordered", "string", ["a", "b"])),
@@ -372,7 +372,7 @@ describe("values", () => {
     }
   });
 
-  it("[T12][T15] refuses what is not a value", () => {
+  it("refuses what is not a value", () => {
     expect(() => normalizeValue(json("null"))).toThrow("A value must be an object, found null.");
     expect(() => normalizeValue(json('{"cardinality":"single","baseType":"integer","value":"5"}'))).toThrow(DataError);
     expect(() => normalizeValue(json('{"cardinality":"multiple","baseType":"integer","values":[]}'))).toThrow(
@@ -398,7 +398,7 @@ describe("values", () => {
 });
 
 describe("lexical forms", () => {
-  it("[T1] reads true, false, 1 and 0, the lexical forms of xs:boolean", () => {
+  it("reads true, false, 1 and 0, the lexical forms of xs:boolean", () => {
     expect(parsePrimitive("true", "boolean")).toBe(true);
     expect(parsePrimitive("1", "boolean")).toBe(true);
     expect(parsePrimitive("false", "boolean")).toBe(false);
@@ -407,12 +407,12 @@ describe("lexical forms", () => {
       expect(() => parsePrimitive(text, "boolean"), text).toThrow(DataError);
   });
 
-  it("[T1] writes true and false", () => {
+  it("writes true and false", () => {
     expect(formatPrimitive(true, "boolean")).toBe("true");
     expect(formatPrimitive(false, "boolean")).toBe("false");
   });
 
-  it("[T2][G2] reads xs:integer with an optional sign and leading zeros", () => {
+  it("reads xs:integer with an optional sign and leading zeros", () => {
     expect(parsePrimitive("123", "integer")).toBe(123);
     expect(parsePrimitive("+5", "integer")).toBe(5);
     expect(parsePrimitive("-7", "integer")).toBe(-7);
@@ -421,7 +421,7 @@ describe("lexical forms", () => {
     expect(Object.is(parsePrimitive("-0", "integer"), 0)).toBe(true);
   });
 
-  it("[T2][G2][N] refuses an integer beyond the safe integers, which xs:integer allows", () => {
+  it("refuses an integer beyond the safe integers, which xs:integer allows", () => {
     expect(parsePrimitive("9007199254740991", "integer")).toBe(Number.MAX_SAFE_INTEGER);
     expect(parsePrimitive("-9007199254740991", "integer")).toBe(Number.MIN_SAFE_INTEGER);
     expect(() => parsePrimitive("9007199254740992", "integer")).toThrow(
@@ -430,13 +430,13 @@ describe("lexical forms", () => {
     expect(() => parsePrimitive("-12345678901234567890", "integer")).toThrow(DataError);
   });
 
-  it("[T2][N] refuses text that is not an xs:integer", () => {
+  it("refuses text that is not an xs:integer", () => {
     for (const text of ["", "1.0", "1e3", "0x10", "٣", "--1", "1 2", "+", "one"]) {
       expect(() => parsePrimitive(text, "integer"), text).toThrow(DataError);
     }
   });
 
-  it("[T3] reads xs:double, including INF, -INF and NaN", () => {
+  it("reads xs:double, including INF, -INF and NaN", () => {
     expect(parsePrimitive("23.23", "float")).toBe(23.23);
     expect(parsePrimitive("1E3", "float")).toBe(1000);
     expect(parsePrimitive("-1.5e-2", "float")).toBe(-0.015);
@@ -449,13 +449,13 @@ describe("lexical forms", () => {
     expect(parsePrimitive("1e999", "float")).toBe(Number.POSITIVE_INFINITY);
   });
 
-  it("[T3][N] refuses text that is not an xs:double", () => {
+  it("refuses text that is not an xs:double", () => {
     for (const text of ["", "inf", "Infinity", "nan", "1e", "e5", ".", "1,5", "0x1p3", "1_000"]) {
       expect(() => parsePrimitive(text, "float"), text).toThrow(DataError);
     }
   });
 
-  it("[T3] writes the shortest decimal that reads back, and INF, -INF, NaN and -0", () => {
+  it("writes the shortest decimal that reads back, and INF, -INF, NaN and -0", () => {
     expect(formatPrimitive(23.23, "float")).toBe("23.23");
     expect(formatPrimitive(5, "float")).toBe("5");
     expect(formatPrimitive(1e21, "float")).toBe("1e+21");
@@ -466,13 +466,13 @@ describe("lexical forms", () => {
     expect(formatPrimitive(0.1 + 0.2, "float")).toBe("0.30000000000000004");
   });
 
-  it("[T4] keeps a string as it is, white space and all", () => {
+  it("keeps a string as it is, white space and all", () => {
     expect(parsePrimitive("  a \n b ", "string")).toBe("  a \n b ");
     expect(parsePrimitive("", "string")).toBe("");
     expect(formatPrimitive(" a  b ", "string")).toBe(" a  b ");
   });
 
-  it("[T5] reads an identifier and drops the white space around it", () => {
+  it("reads an identifier and drops the white space around it", () => {
     expect(parsePrimitive(" ID3\n", "identifier")).toBe("ID3");
     expect(() => parsePrimitive("1a", "identifier")).toThrow(
       'The text "1a" is not an identifier: expected an identifier.',
@@ -481,12 +481,12 @@ describe("lexical forms", () => {
     expect(() => parsePrimitive("", "identifier")).toThrow(DataError);
   });
 
-  it("[T6] reads a uri as its text with the white space around it dropped", () => {
+  it("reads a uri as its text with the white space around it dropped", () => {
     expect(parsePrimitive("  file:///somewhere.txt ", "uri")).toBe("file:///somewhere.txt");
     expect(formatPrimitive("file:///somewhere.txt", "uri")).toBe("file:///somewhere.txt");
   });
 
-  it("[T7] reads a point as two integers: BPIG §3.2.16 gives 118 184", () => {
+  it("reads a point as two integers: BPIG §3.2.16 gives 118 184", () => {
     expect(parsePrimitive("118 184", "point")).toEqual([118, 184]);
     expect(parsePrimitive("  -3\t4 ", "point")).toEqual([-3, 4]);
     expect(formatPrimitive([118, 184], "point")).toBe("118 184");
@@ -494,20 +494,20 @@ describe("lexical forms", () => {
       expect(() => parsePrimitive(text, "point"), text).toThrow(DataError);
   });
 
-  it("[T8] reads a pair as two identifiers: BPIG §3.2.5 gives W G1", () => {
+  it("reads a pair as two identifiers: BPIG §3.2.5 gives W G1", () => {
     expect(parsePrimitive("W G1", "pair")).toEqual(["W", "G1"]);
     expect(formatPrimitive(["W", "G1"], "pair")).toBe("W G1");
     for (const text of ["", "W", "W G1 G2", "1 a", "a b:c"])
       expect(() => parsePrimitive(text, "pair"), text).toThrow(DataError);
   });
 
-  it("[T9] reads a directed pair as source and destination in the order written", () => {
+  it("reads a directed pair as source and destination in the order written", () => {
     expect(parsePrimitive("b a", "directedPair")).toEqual(["b", "a"]);
     expect(formatPrimitive(["b", "a"], "directedPair")).toBe("b a");
     expect(() => parsePrimitive("b", "directedPair")).toThrow(DataError);
   });
 
-  it("[T10] reads a duration as seconds in the lexical form of xs:double", () => {
+  it("reads a duration as seconds in the lexical form of xs:double", () => {
     expect(parsePrimitive("90", "duration")).toBe(90);
     expect(parsePrimitive("1.5", "duration")).toBe(1.5);
     expect(parsePrimitive("INF", "duration")).toBe(Number.POSITIVE_INFINITY);
@@ -515,7 +515,7 @@ describe("lexical forms", () => {
     expect(() => parsePrimitive("PT1S", "duration")).toThrow(DataError);
   });
 
-  it("[T11][G10] reads a file as its reference alone, with the content type of unknown bytes", () => {
+  it("reads a file as its reference alone, with the content type of unknown bytes", () => {
     expect(parsePrimitive(" uploads/17 ", "file")).toEqual({
       reference: "uploads/17",
       mimeType: "application/octet-stream",
@@ -536,7 +536,7 @@ describe("lexical forms", () => {
 });
 
 describe("XML Schema dates", () => {
-  it("[R4][R5] accepts the dateTimes of the examples of RR and the forms of XML Schema Part 2, 3.2.7", () => {
+  it("accepts the dateTimes of the examples of RR and the forms of XML Schema Part 2, 3.2.7", () => {
     // The first two are the datestamps of 1EdTech's results/report.xml and conformance-use-case-1.xml.
     for (const text of [
       "2020-08-25T18:19:20",
@@ -553,7 +553,7 @@ describe("XML Schema dates", () => {
     }
   });
 
-  it("[R4][R5][N] rejects what is not a dateTime with a four-digit year", () => {
+  it("rejects what is not a dateTime with a four-digit year", () => {
     for (const text of [
       "",
       "2020-08-25",
@@ -584,20 +584,20 @@ describe("XML Schema dates", () => {
     }
   });
 
-  it("[U2] accepts a date as UD writes lastUpdated: YYYY-MM-DD, with a day of that month", () => {
+  it("accepts a date as UD writes lastUpdated: YYYY-MM-DD, with a day of that month", () => {
     // 2004-07-04 is the lastUpdated of 1EdTech's usageData/example.xml.
     for (const text of ["2004-07-04", "2024-02-29", "0001-01-01", "9999-12-31"])
       expect(isXsdDate(text), text).toBe(true);
   });
 
-  it("[R5][U2][N] rejects a value that is not text", () => {
+  it("rejects a value that is not text", () => {
     for (const value of [json("5"), json("null"), json('["2004-07-04"]'), json('{"a":1}')]) {
       expect(isXsdDate(value)).toBe(false);
       expect(isXsdDateTime(value)).toBe(false);
     }
   });
 
-  it("[U2][N] rejects what the pattern of DateDType or the calendar does not allow", () => {
+  it("rejects what the pattern of DateDType or the calendar does not allow", () => {
     for (const text of [
       "",
       "2023-02-29",
@@ -614,7 +614,7 @@ describe("XML Schema dates", () => {
 });
 
 describe("ISO 8601 durations", () => {
-  it("[T10] reads the durations that 1EdTech's example of a result writes", () => {
+  it("reads the durations that 1EdTech's example of a result writes", () => {
     // results/conformance-use-case-1.xml.
     expect(parseIsoDuration("PT2M0.049722S")).toBe(120.049722);
     expect(parseIsoDuration("PT9.590316S")).toBe(9.590316);
@@ -623,38 +623,38 @@ describe("ISO 8601 durations", () => {
 });
 
 describe("identifier and integer lists", () => {
-  it("[W43] reads identifiers separated by white space", () => {
+  it("reads identifiers separated by white space", () => {
     expect(parseIdentifierList(" a  b\tc\nd ")).toEqual(["a", "b", "c", "d"]);
     expect(parseIdentifierList("")).toEqual([]);
     expect(parseIdentifierList("only")).toEqual(["only"]);
   });
 
-  it("[W43] rejects an item that is not an identifier", () => {
+  it("rejects an item that is not an identifier", () => {
     expect(() => parseIdentifierList("a 1b")).toThrow('The item "1b" of an identifier list is not an identifier.');
     expect(() => parseIdentifierList("a,b")).toThrow(DataError);
   });
 
-  it("[W43] writes identifiers separated by one space", () => {
+  it("writes identifiers separated by one space", () => {
     expect(formatIdentifierList(["a", "b"])).toBe("a b");
     expect(formatIdentifierList([])).toBe("");
     expect(() => formatIdentifierList(["a", "b c"])).toThrow(DataError);
     expect(() => formatIdentifierList(json('["a", 1]'))).toThrow(DataError);
   });
 
-  it("[W44] reads xs:int integers separated by white space", () => {
+  it("reads xs:int integers separated by white space", () => {
     expect(parseIntegerList("1 -2 +3")).toEqual([1, -2, 3]);
     expect(parseIntegerList("")).toEqual([]);
     expect(parseIntegerList("2147483647 -2147483648")).toEqual([2147483647, -2147483648]);
   });
 
-  it("[W44] rejects an item that is not an integer from -2147483648 to 2147483647", () => {
+  it("rejects an item that is not an integer from -2147483648 to 2147483647", () => {
     expect(() => parseIntegerList("2147483648")).toThrow(DataError);
     expect(() => parseIntegerList("-2147483649")).toThrow(DataError);
     expect(() => parseIntegerList("1 1.5")).toThrow(DataError);
     expect(() => parseIntegerList("1, 2")).toThrow(DataError);
   });
 
-  it("[W44] writes integers separated by one space", () => {
+  it("writes integers separated by one space", () => {
     expect(formatIntegerList([1, -2, 0])).toBe("1 -2 0");
     expect(formatIntegerList([])).toBe("");
     expect(() => formatIntegerList([2 ** 31])).toThrow(DataError);
@@ -662,7 +662,7 @@ describe("identifier and integer lists", () => {
     expect(() => formatIntegerList(json('["1"]'))).toThrow(DataError);
   });
 
-  it("[W43][W44] rejects arguments of other types", () => {
+  it("rejects arguments of other types", () => {
     expect(() => parseIdentifierList(json("null"))).toThrow(DataError);
     expect(() => parseIntegerList(json("[1]"))).toThrow(DataError);
     expect(() => formatIdentifierList(json('"a"'))).toThrow("The identifiers must be an array");
@@ -677,7 +677,7 @@ describe("matchValues", () => {
     return built;
   };
 
-  it("[T12] matches single values of the same base type and value", () => {
+  it("matches single values of the same base type and value", () => {
     expect(matchValues(single("integer", 5), single("integer", 5))).toBe(true);
     expect(matchValues(single("integer", 5), single("integer", 6))).toBe(false);
     expect(matchValues(nonNull(single("string", "a")), nonNull(single("string", "A")))).toBe(false);
@@ -693,25 +693,25 @@ describe("matchValues", () => {
     expect(matchValues(ids("ordered", "a"), nonNull(record([["a", single("identifier", "a")]])))).toBe(false);
   });
 
-  it("[T3] compares floats as SameValueZero: NaN matches NaN and 0 matches -0", () => {
+  it("compares floats as SameValueZero: NaN matches NaN and 0 matches -0", () => {
     expect(matchValues(single("float", Number.NaN), single("float", Number.NaN))).toBe(true);
     expect(matchValues(single("float", 0), single("float", -0))).toBe(true);
     expect(matchValues(single("float", 0.1 + 0.2), single("float", 0.3))).toBe(false);
   });
 
-  it("[T8] ignores the order of a pair and [T9] keeps the order of a directed pair (INFO §8.13)", () => {
+  it("ignores the order of a pair and keeps the order of a directed pair (INFO §8.13)", () => {
     expect(matchValues(single("pair", ["A", "B"]), single("pair", ["B", "A"]))).toBe(true);
     expect(matchValues(single("pair", ["A", "B"]), single("pair", ["A", "C"]))).toBe(false);
     expect(matchValues(single("directedPair", ["A", "B"]), single("directedPair", ["A", "B"]))).toBe(true);
     expect(matchValues(single("directedPair", ["A", "B"]), single("directedPair", ["B", "A"]))).toBe(false);
   });
 
-  it("[T7] matches points by both coordinates", () => {
+  it("matches points by both coordinates", () => {
     expect(matchValues(single("point", [1, 2]), single("point", [1, 2]))).toBe(true);
     expect(matchValues(single("point", [1, 2]), single("point", [2, 1]))).toBe(false);
   });
 
-  it("[T11] matches files by reference, content type and name", () => {
+  it("matches files by reference, content type and name", () => {
     const file = (reference: string, mimeType: string, fileName?: string): Value =>
       single("file", fileName === undefined ? { reference, mimeType } : { reference, mimeType, fileName });
     expect(matchValues(file("r", "a/b", "n"), file("r", "a/b", "n"))).toBe(true);
@@ -721,29 +721,29 @@ describe("matchValues", () => {
     expect(matchValues(file("r", "a/b"), file("r", "a/c"))).toBe(false);
   });
 
-  it("[T13] matches multiple containers with the same values in any order, INFO §8.16: [A,B,C] is [C,B,A]", () => {
+  it("matches multiple containers with the same values in any order, INFO §8.16: [A,B,C] is [C,B,A]", () => {
     expect(matchValues(ids("multiple", "A", "B", "C"), ids("multiple", "C", "B", "A"))).toBe(true);
   });
 
-  it("[T13] counts repeated values: [A,B,B,C] is an acceptable container, and it differs from [A,B,C]", () => {
+  it("counts repeated values: [A,B,B,C] is an acceptable container, and it differs from [A,B,C]", () => {
     expect(matchValues(ids("multiple", "A", "B", "B", "C"), ids("multiple", "C", "B", "A", "B"))).toBe(true);
     expect(matchValues(ids("multiple", "A", "B", "B", "C"), ids("multiple", "A", "B", "C"))).toBe(false);
     expect(matchValues(ids("multiple", "A", "A", "B"), ids("multiple", "A", "B", "B"))).toBe(false);
   });
 
-  it("[T13] matches the pairs of a multiple container whatever the order inside each pair", () => {
+  it("matches the pairs of a multiple container whatever the order inside each pair", () => {
     const pairs = (...values: [string, string][]): Value => nonNull(container("multiple", "pair", values));
     expect(matchValues(pairs(["A", "B"], ["C", "D"]), pairs(["D", "C"], ["B", "A"]))).toBe(true);
     expect(matchValues(pairs(["A", "B"], ["C", "D"]), pairs(["A", "C"], ["B", "D"]))).toBe(false);
   });
 
-  it("[T14] matches ordered containers only in the same order: [A,B,C] differs from [C,B,A]", () => {
+  it("matches ordered containers only in the same order: [A,B,C] differs from [C,B,A]", () => {
     expect(matchValues(ids("ordered", "A", "B", "C"), ids("ordered", "A", "B", "C"))).toBe(true);
     expect(matchValues(ids("ordered", "A", "B", "C"), ids("ordered", "C", "B", "A"))).toBe(false);
     expect(matchValues(ids("ordered", "A", "B"), ids("ordered", "A", "B", "C"))).toBe(false);
   });
 
-  it("[T15] matches records with the same fields and values, whatever their order", () => {
+  it("matches records with the same fields and values, whatever their order", () => {
     const fields = (...entries: [string, Value][]): Value => nonNull(record(entries as [string, never][]));
     const rock = single("boolean", true);
     const paper = nonNull(single("string", "x"));
@@ -763,15 +763,15 @@ describe("matchValues", () => {
 });
 
 describe("promote", () => {
-  it("[T17] turns an integer into a float and keeps its number: INFO §2.11.1.2 promotes weighted integers", () => {
+  it("turns an integer into a float and keeps its number: INFO §2.11.1.2 promotes weighted integers", () => {
     expect(promote(single("integer", 3), "float")).toEqual(single("float", 3));
   });
 
-  it("[T17] turns an integer into a duration, as assignment to a duration variable does", () => {
+  it("turns an integer into a duration, as assignment to a duration variable does", () => {
     expect(promote(single("integer", 90), "duration")).toEqual(single("duration", 90));
   });
 
-  it("[T17] promotes every value of a container and keeps its order and cardinality", () => {
+  it("promotes every value of a container and keeps its order and cardinality", () => {
     expect(promote(nonNull(container("ordered", "integer", [3, 1, 3])), "float")).toEqual(
       container("ordered", "float", [3, 1, 3]),
     );
@@ -780,12 +780,12 @@ describe("promote", () => {
     );
   });
 
-  it("[T17] returns a value that has the target base type as it is", () => {
+  it("returns a value that has the target base type as it is", () => {
     const value = single("float", 1.5);
     expect(promote(value, "float")).toBe(value);
   });
 
-  it("[T17][N] refuses every other conversion", () => {
+  it("refuses every other conversion", () => {
     expect(() => promote(single("float", 1.5), "duration")).toThrow(
       "Only a value of base type integer can be promoted to duration, found base type float.",
     );
@@ -964,13 +964,13 @@ const APPENDIX_C: readonly AppendixRow[] = [
 
 describe("JSON codec of BPIG Appendix C", () => {
   for (const { name, declaration, value, json: expected } of APPENDIX_C) {
-    it(`[J1][E30] writes and reads ${name} as the appendix shows`, () => {
+    it(`writes and reads ${name} as the appendix shows`, () => {
       expect(toJsonValue(value, declaration)).toEqual(expected);
       expect(fromJsonValue(expected, declaration)).toEqual(value);
     });
   }
 
-  it("[J3][G37] writes and reads the record of C.3 without its NULL field", () => {
+  it("writes and reads the record of C.3 without its NULL field", () => {
     const appendix = {
       record: [
         { name: "rock", base: { boolean: true } },
@@ -990,25 +990,25 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(toJsonValue(decoded, { cardinality: "record" })).toEqual({ record: appendix.record.slice(0, 3) });
   });
 
-  it("[J3] reads a record whose fields are all NULL as NULL, and an empty record too", () => {
+  it("reads a record whose fields are all NULL as NULL, and an empty record too", () => {
     expect(fromJsonValue({ record: [{ name: "a", base: null }] }, { cardinality: "record" })).toBeNull();
     expect(fromJsonValue({ record: [{ name: "a", base: { string: "" } }] }, { cardinality: "record" })).toBeNull();
     expect(fromJsonValue({ record: [] }, { cardinality: "record" })).toBeNull();
   });
 
-  it("[J3][T15] keeps a field named __proto__ as data", () => {
+  it("keeps a field named __proto__ as data", () => {
     const decoded = fromJsonValue(JSON.parse('{"record":[{"name":"__proto__","base":{"integer":1}}]}'), {
       cardinality: "record",
     });
     expect(decoded).toEqual(record([["__proto__", single("integer", 1)]]));
   });
 
-  it("[J1] reads an empty string and an empty list as NULL", () => {
+  it("reads an empty string and an empty list as NULL", () => {
     expect(fromJsonValue({ base: { string: "" } }, declare("single", "string"))).toBeNull();
     expect(fromJsonValue({ list: { integer: [] } }, declare("multiple", "integer"))).toBeNull();
   });
 
-  it("[J1][G38] reads intOrIdentifier as the declared integer or identifier", () => {
+  it("reads intOrIdentifier as the declared integer or identifier", () => {
     expect(fromJsonValue({ base: { intOrIdentifier: 123456 } }, declare("single", "integer"))).toEqual(
       single("integer", 123456),
     );
@@ -1020,7 +1020,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     );
   });
 
-  it("[J1][G38] reads intOrIdentifier in a record by its JSON type: a number is an integer, a string an identifier", () => {
+  it("reads intOrIdentifier in a record by its JSON type: a number is an integer, a string an identifier", () => {
     const decoded = fromJsonValue(
       {
         record: [
@@ -1038,7 +1038,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     );
   });
 
-  it("[J1][G38][N] refuses intOrIdentifier for another declaration and a list that mixes both", () => {
+  it("refuses intOrIdentifier for another declaration and a list that mixes both", () => {
     expect(() => fromJsonValue({ base: { intOrIdentifier: 1 } }, declare("single", "float"))).toThrow(DataError);
     expect(() => fromJsonValue({ base: { intOrIdentifier: "x" } }, declare("single", "integer"))).toThrow(DataError);
     expect(() => fromJsonValue({ list: { intOrIdentifier: [2, "_id"] } }, declare("multiple", "integer"))).toThrow(
@@ -1046,7 +1046,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     );
   });
 
-  it("[J1] writes a file as its reference with the content type and name, and reads it back", () => {
+  it("writes a file as its reference with the content type and name, and reads it back", () => {
     const file = single("file", { reference: "files/1", mimeType: "text/plain", fileName: "helloworld.txt" });
     const written = { base: { file: { reference: "files/1", mime: "text/plain", name: "helloworld.txt" } } };
     expect(toJsonValue(file, declare("single", "file"))).toEqual(written);
@@ -1057,7 +1057,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     });
   });
 
-  it("[J1][N] refuses a file with its bytes inline, as the appendix shows it", () => {
+  it("refuses a file with its bytes inline, as the appendix shows it", () => {
     const inline = { base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } } };
     expect(() => fromJsonValue(inline, declare("single", "file"))).toThrow(
       'A file must be a reference, not inline "data"',
@@ -1069,7 +1069,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => fromJsonValue({ base: { file: "r" } }, declare("single", "file"))).toThrow(DataError);
   });
 
-  it("[T10][G14] writes a duration as PT<seconds>S with the shortest decimal and reads durations without years or months", () => {
+  it("writes a duration as PT<seconds>S with the shortest decimal and reads durations without years or months", () => {
     const duration = (seconds: number): unknown =>
       toJsonValue(single("duration", seconds), declare("single", "duration"));
     expect(duration(0)).toEqual({ base: { duration: "PT0S" } });
@@ -1081,7 +1081,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(duration(123456.789)).toEqual({ base: { duration: "PT123456.789S" } });
   });
 
-  it("[T10] reads ISO 8601 durations with weeks, days, hours, minutes and seconds", () => {
+  it("reads ISO 8601 durations with weeks, days, hours, minutes and seconds", () => {
     const seconds = (text: string): unknown =>
       (fromJsonValue({ base: { duration: text } }, declare("single", "duration")) as { value: number }).value;
     expect(seconds("PT1H30M")).toBe(5400);
@@ -1094,7 +1094,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(seconds("-PT5S")).toBe(-5);
   });
 
-  it("[G14][G39][N] refuses a duration with years or months, as in the example of C.1: P10Y3M20DT4H30M25S", () => {
+  it("refuses a duration with years or months, as in the example of C.1: P10Y3M20DT4H30M25S", () => {
     const decode = (text: string): unknown =>
       fromJsonValue({ base: { duration: text } }, declare("single", "duration"));
     expect(() => decode("P10Y3M20DT4H30M25S")).toThrow(
@@ -1107,7 +1107,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     );
   });
 
-  it("[G14][N] refuses text and values that are not durations", () => {
+  it("refuses text and values that are not durations", () => {
     for (const text of ["", "P", "PT", "1H", "P1H", "PT1.5H", "PT1S2M", "pt1s", "PT-1S", "PT1,5S", "P1DT", "5"]) {
       expect(() => fromJsonValue({ base: { duration: text } }, declare("single", "duration")), text).toThrow(DataError);
     }
@@ -1117,7 +1117,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     );
   });
 
-  it("[T3][T10] writes the numbers that JSON cannot carry as their xs:double spelling and reads them back", () => {
+  it("writes the numbers that JSON cannot carry as their xs:double spelling and reads them back", () => {
     for (const baseType of ["float", "duration"] as const) {
       const declaration = declare("single", baseType);
       for (const [number, spelling] of [
@@ -1138,7 +1138,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => fromJsonValue({ base: { float: true } }, declare("single", "float"))).toThrow(DataError);
   });
 
-  it("[T2][N] refuses a JSON integer that is not a safe integer", () => {
+  it("refuses a JSON integer that is not a safe integer", () => {
     expect(() => fromJsonValue({ base: { integer: 1.5 } }, declare("single", "integer"))).toThrow(DataError);
     expect(() =>
       fromJsonValue(JSON.parse('{"base":{"integer":9007199254740993}}'), declare("single", "integer")),
@@ -1146,7 +1146,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => fromJsonValue({ base: { integer: "1" } }, declare("single", "integer"))).toThrow(DataError);
   });
 
-  it("[N] refuses JSON of another shape than its declaration", () => {
+  it("refuses JSON of another shape than its declaration", () => {
     const decode = (value: unknown, declaration: ValueDeclaration): unknown => fromJsonValue(value, declaration);
     expect(() => decode({ list: null }, declare("single", "integer"))).toThrow(
       'The JSON of a single value is invalid: missing the property "base".',
@@ -1175,7 +1175,7 @@ describe("JSON codec of BPIG Appendix C", () => {
       expect(() => decode(bad, declare("single", "integer"))).toThrow(DataError);
   });
 
-  it("[N] refuses a record of another shape", () => {
+  it("refuses a record of another shape", () => {
     const decode = (value: unknown): unknown => fromJsonValue({ record: value }, { cardinality: "record" });
     expect(() => decode({})).toThrow("A record is invalid: expected an array, found an object.");
     expect(() => decode([5])).toThrow(DataError);
@@ -1193,7 +1193,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => decode([{ name: "a", base: { intOrIdentifier: true } }])).toThrow(DataError);
   });
 
-  it("[N] refuses a value that differs from its declaration, and a value that is not one", () => {
+  it("refuses a value that differs from its declaration, and a value that is not one", () => {
     expect(() => toJsonValue(single("integer", 1), declare("single", "float"))).toThrow(
       "The value is single integer, but the declaration says single float.",
     );
@@ -1216,7 +1216,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => toJsonValue(json('"x"'), declare("single", "integer"))).toThrow(DataError);
   });
 
-  it("[N] ignores a base type declared for a record and refuses a declaration that is not one", () => {
+  it("ignores a base type declared for a record and refuses a declaration that is not one", () => {
     expect(toJsonValue(null, { cardinality: "record", baseType: "integer" })).toEqual({ record: null });
     expect(() => toJsonValue(null, { cardinality: "record", baseType: json('"unknown"') })).toThrow(DataError);
     expect(() => toJsonValue(null, json("null"))).toThrow(
@@ -1227,7 +1227,7 @@ describe("JSON codec of BPIG Appendix C", () => {
     expect(() => fromJsonValue({ base: null }, json("5"))).toThrow(DataError);
   });
 
-  it("[J1] reads or refuses arbitrary JSON with a DataError, and nothing else, whatever the declaration", () => {
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else, whatever the declaration", () => {
     const declarations: readonly [ValueDeclaration, unknown][] = [
       [declare("single", "integer"), { base: { integer: 1 } }],
       [declare("multiple", "float"), { list: { float: [1.5, "NaN"] } }],
@@ -1240,13 +1240,13 @@ describe("JSON codec of BPIG Appendix C", () => {
 });
 
 describe("wire values", () => {
-  it("[G36] keeps a string exactly, line breaks included, so that an essay travels in state as written", () => {
+  it("keeps a string exactly, line breaks included, so that an essay travels in state as written", () => {
     const essay = nonNull(single("string", "Dear Ana,\r\n\n  I arrived.\t"));
     const wire = toWireValue(essay, declare("single", "string"));
     expect(fromWireValue(JSON.parse(JSON.stringify(wire)))).toEqual(essay);
   });
 
-  it("[E30] wraps the JSON of a value in its cardinality and base type", () => {
+  it("wraps the JSON of a value in its cardinality and base type", () => {
     expect(toWireValue(single("integer", 5), declare("single", "integer"))).toEqual({
       cardinality: "single",
       baseType: "integer",
@@ -1274,12 +1274,12 @@ describe("wire values", () => {
     });
   });
 
-  it("[E30] has no base type for a record", () => {
+  it("has no base type for a record", () => {
     const wire = toWireValue(record([["a", single("integer", 1)]]), { cardinality: "record" });
     expect(wire).toStrictEqual({ cardinality: "record", value: { record: [{ name: "a", base: { integer: 1 } }] } });
   });
 
-  it("[E30] keeps the type of a NULL: the wire value of NULL has null for its value", () => {
+  it("keeps the type of a NULL: the wire value of NULL has null for its value", () => {
     expect(toWireValue(null, declare("multiple", "float"))).toStrictEqual({
       cardinality: "multiple",
       baseType: "float",
@@ -1289,7 +1289,7 @@ describe("wire values", () => {
     expect(fromWireValue({ cardinality: "single", baseType: "integer", value: { base: null } })).toBeNull();
   });
 
-  it("[E30] tells multiple from ordered, which the JSON of Appendix C does not", () => {
+  it("tells multiple from ordered, which the JSON of Appendix C does not", () => {
     const ordered = container("ordered", "identifier", ["a", "b"]);
     const multiple = container("multiple", "identifier", ["a", "b"]);
     expect(toJsonValue(ordered, declare("ordered", "identifier"))).toEqual(
@@ -1299,19 +1299,19 @@ describe("wire values", () => {
     expect(fromWireValue(toWireValue(multiple, declare("multiple", "identifier")))).toEqual(multiple);
   });
 
-  it("[E30][T10] writes a duration as PT<seconds>S, and reads it back as seconds", () => {
+  it("writes a duration as PT<seconds>S, and reads it back as seconds", () => {
     const wire = toWireValue(single("duration", 2.5), declare("single", "duration"));
     expect(wire.value).toEqual({ base: { duration: "PT2.5S" } });
     expect(fromWireValue(wire)).toEqual(single("duration", 2.5));
   });
 
-  it("[E30][G14][N] refuses a duration with years or months", () => {
+  it("refuses a duration with years or months", () => {
     expect(() =>
       fromWireValue({ cardinality: "single", baseType: "duration", value: { base: { duration: "P1Y2M" } } }),
     ).toThrow("years or months");
   });
 
-  it("[E30][N] refuses what is not a wire value", () => {
+  it("refuses what is not a wire value", () => {
     expect(() => fromWireValue(json("null"))).toThrow("A wire value is invalid: expected an object, found null.");
     expect(() => fromWireValue(json("[]"))).toThrow(DataError);
     expect(() => fromWireValue({ baseType: "integer", value: null })).toThrow(DataError);
@@ -1338,12 +1338,12 @@ describe("wire values", () => {
     ).toThrow(DataError);
   });
 
-  it("[E30][N] refuses a value that differs from its declaration", () => {
+  it("refuses a value that differs from its declaration", () => {
     expect(() => toWireValue(single("integer", 1), declare("single", "string"))).toThrow(DataError);
     expect(() => toWireValue(null, json("{}"))).toThrow(DataError);
   });
 
-  it("[E30] reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
+  it("reads or refuses arbitrary JSON with a DataError, and nothing else", () => {
     fuzzJson(fromWireValue, [
       toWireValue(single("integer", 1), declare("single", "integer")),
       toWireValue(container("ordered", "identifier", ["a", "b"]), declare("ordered", "identifier")),
@@ -1357,7 +1357,7 @@ describe("wire values", () => {
 describe("compileXsdRegex", () => {
   const matches = (pattern: string, text: string): boolean => compileXsdRegex(pattern).matches(text);
 
-  it("[B79] matches the whole text, never a part of it", () => {
+  it("matches the whole text, never a part of it", () => {
     expect(matches("abc", "abc")).toBe(true);
     expect(matches("abc", "abcd")).toBe(false);
     expect(matches("abc", "xabc")).toBe(false);
@@ -1366,13 +1366,13 @@ describe("compileXsdRegex", () => {
     expect(matches("a*", "")).toBe(true);
   });
 
-  it("[B79] treats ^ and $ as ordinary characters (XML Schema Part 2, Appendix F)", () => {
+  it("treats ^ and $ as ordinary characters (XML Schema Part 2, Appendix F)", () => {
     expect(matches("^a$", "^a$")).toBe(true);
     expect(matches("^a$", "a")).toBe(false);
     expect(matches("a^b", "a^b")).toBe(true);
   });
 
-  it("[B79] repeats with ?, *, + and counted quantifiers", () => {
+  it("repeats with ?, *, + and counted quantifiers", () => {
     expect(["", "a"].map((text) => matches("a?", text))).toEqual([true, true]);
     expect(matches("a?", "aa")).toBe(false);
     expect(["", "a", "aaa"].map((text) => matches("a*", text))).toEqual([true, true, true]);
@@ -1386,14 +1386,14 @@ describe("compileXsdRegex", () => {
     expect(matches("(ab){2}", "aba")).toBe(false);
   });
 
-  it("[B79] chooses between branches, and a branch can be empty", () => {
+  it("chooses between branches, and a branch can be empty", () => {
     expect(["a", "b", "c", "ab"].map((text) => matches("a|b", text))).toEqual([true, true, false, false]);
     expect(["", "a", "b"].map((text) => matches("a|", text))).toEqual([true, true, false]);
     expect(matches("(a|b)c", "bc")).toBe(true);
     expect(matches("()", "")).toBe(true);
   });
 
-  it("[B79] has the dot match any character but a line feed or a carriage return", () => {
+  it("has the dot match any character but a line feed or a carriage return", () => {
     expect(matches(".", "a")).toBe(true);
     expect(matches(".", "\u2028")).toBe(true);
     expect(matches(".", "\n")).toBe(false);
@@ -1403,7 +1403,7 @@ describe("compileXsdRegex", () => {
     expect(matches("\\.", "a")).toBe(false);
   });
 
-  it("[B79] reads a surrogate pair as one character", () => {
+  it("reads a surrogate pair as one character", () => {
     expect(matches(".", "\u{1d49c}")).toBe(true);
     expect(matches("..", "\u{1d49c}")).toBe(false);
     expect(matches("\\p{L}", "\u{1d49c}")).toBe(true);
@@ -1411,7 +1411,7 @@ describe("compileXsdRegex", () => {
     expect(matches("\\p{IsHighSurrogates}", "\ud800")).toBe(true);
   });
 
-  it("[B79] has the single character escapes", () => {
+  it("has the single character escapes", () => {
     expect(matches("\\n\\r\\t", "\n\r\t")).toBe(true);
     expect(matches("\\\\\\|\\?\\*\\+\\(\\)\\{\\}\\-\\[\\]\\^", "\\|?*+(){}-[]^")).toBe(true);
     expect(matches("[\\n\\t]+", "\n\t\n")).toBe(true);
@@ -1421,7 +1421,7 @@ describe("compileXsdRegex", () => {
     expect(matches("[!-\\-]", "a")).toBe(false);
   });
 
-  it("[B79] has character classes with ranges, negation and a hyphen at the start or the end", () => {
+  it("has character classes with ranges, negation and a hyphen at the start or the end", () => {
     expect(["a", "m", "z", "A"].map((text) => matches("[a-z]", text))).toEqual([true, true, true, false]);
     expect(["a", "A", "-"].map((text) => matches("[^a-z]", text))).toEqual([false, true, true]);
     expect(["a", "-", "b"].map((text) => matches("[a-]", text))).toEqual([true, true, false]);
@@ -1432,7 +1432,7 @@ describe("compileXsdRegex", () => {
     expect(matches("[.]", "a")).toBe(false);
   });
 
-  it("[B79] subtracts a class from a class", () => {
+  it("subtracts a class from a class", () => {
     expect(["b", "a", "e"].map((text) => matches("[a-z-[aeiou]]", text))).toEqual([true, false, false]);
     expect(["a", "x", "y"].map((text) => matches("[^a-c-[x]]", text))).toEqual([false, false, true]);
     expect(["a", "b", "c"].map((text) => matches("[a-c-[b-[c]]]", text))).toEqual([true, false, true]);
@@ -1440,7 +1440,7 @@ describe("compileXsdRegex", () => {
     expect(matches("[\\p{L}-[\\p{Lu}]]+", "aBc")).toBe(false);
   });
 
-  it("[B79] has \\s, \\S, \\d, \\D, \\w and \\W", () => {
+  it("has \\s, \\S, \\d, \\D, \\w and \\W", () => {
     expect(matches("\\s+", " \t\n\r")).toBe(true);
     expect(matches("\\s", "\u00a0")).toBe(false);
     expect(matches("\\S+", "ab")).toBe(true);
@@ -1458,7 +1458,7 @@ describe("compileXsdRegex", () => {
     expect(matches("[\\w-[\\d]]+", "a1")).toBe(false);
   });
 
-  it("[B79] has \\i and \\c for XML names (XML 1.0, fifth edition)", () => {
+  it("has \\i and \\c for XML names (XML 1.0, fifth edition)", () => {
     expect(["a-b.c", "_x", ":a", "é1", "1a", "-a", ""].map((text) => matches("\\i\\c*", text))).toEqual([
       true,
       true,
@@ -1507,7 +1507,7 @@ describe("compileXsdRegex", () => {
       ["Cn", "\u0378"],
     ];
 
-    it("[B79] has \\p{..} for the 29 categories of the language, each matching only its own characters", () => {
+    it("has \\p{..} for the 29 categories of the language, each matching only its own characters", () => {
       for (const [category, character] of samples) {
         for (const [other] of samples) {
           expect(matches(`\\p{${other}}`, character), `\\p{${other}} on a ${category}`).toBe(other === category);
@@ -1515,7 +1515,7 @@ describe("compileXsdRegex", () => {
       }
     });
 
-    it("[B79] has \\p{..} for the major classes and \\P{..} for their complement", () => {
+    it("has \\p{..} for the major classes and \\P{..} for their complement", () => {
       for (const [category, character] of samples) {
         for (const major of ["L", "M", "N", "P", "Z", "S", "C"]) {
           const inClass = category.startsWith(major);
@@ -1525,20 +1525,20 @@ describe("compileXsdRegex", () => {
       }
     });
 
-    it("[B79] counts a lone surrogate among the others, Cs, and does not name Cs", () => {
+    it("counts a lone surrogate among the others, Cs, and does not name Cs", () => {
       expect(matches("\\p{C}", "\ud800")).toBe(true);
       expect(matches("\\w", "\ud800")).toBe(false);
       expect(() => compileXsdRegex("\\p{Cs}")).toThrow(DataError);
     });
 
-    it("[B79] knows the characters of Unicode 17 and not those of later versions", () => {
+    it("knows the characters of Unicode 17 and not those of later versions", () => {
       expect(matches("\\p{L}", "\u{10d4a}")).toBe(true);
       expect(matches("\\p{Cn}", "\u{323b0}")).toBe(false);
     });
   });
 
   describe("blocks", () => {
-    it("[B79] has \\p{IsName} for the blocks of Unicode 3.1, under the names of XML Schema", () => {
+    it("has \\p{IsName} for the blocks of Unicode 3.1, under the names of XML Schema", () => {
       expect(matches("\\p{IsBasicLatin}+", "Hello, world!")).toBe(true);
       expect(matches("\\p{IsBasicLatin}", "é")).toBe(false);
       expect(matches("\\p{IsLatin-1Supplement}", "é")).toBe(true);
@@ -1551,7 +1551,7 @@ describe("compileXsdRegex", () => {
       expect(matches("\\P{IsBasicLatin}", "é")).toBe(true);
     });
 
-    it("[B79] joins the ranges of a block with several: PrivateUse has three, Specials two", () => {
+    it("joins the ranges of a block with several: PrivateUse has three, Specials two", () => {
       for (const character of ["\ue000", "\uf8ff", "\u{f0000}", "\u{ffffd}", "\u{100000}", "\u{10fffd}"]) {
         expect(matches("\\p{IsPrivateUse}", character), character.codePointAt(0)?.toString(16)).toBe(true);
       }
@@ -1560,7 +1560,7 @@ describe("compileXsdRegex", () => {
       expect(matches("\\p{IsSpecials}", "\uff00")).toBe(false);
     });
 
-    it("[B79] refuses a block that Unicode 3.1 does not have, such as a name of a later version", () => {
+    it("refuses a block that Unicode 3.1 does not have, such as a name of a later version", () => {
       for (const name of [
         "IsGreekandCoptic",
         "IsFoo",
@@ -1614,7 +1614,7 @@ describe("compileXsdRegex", () => {
     ];
 
     for (const [pattern, problem] of invalid) {
-      it(`[B79][N] refuses ${JSON.stringify(pattern)}: ${problem}`, () => {
+      it(`refuses ${JSON.stringify(pattern)}: ${problem}`, () => {
         expect(() => compileXsdRegex(pattern)).toThrow(DataError);
         expect(() => compileXsdRegex(pattern)).toThrow(problem);
         expect(() => compileXsdRegex(pattern)).toThrow(
@@ -1623,14 +1623,14 @@ describe("compileXsdRegex", () => {
       });
     }
 
-    it("[B79][N] names the position of the problem in characters", () => {
+    it("names the position of the problem in characters", () => {
       expect(() => compileXsdRegex("ab(cd")).toThrow("a group that is not closed by ) at character 6.");
       expect(() => compileXsdRegex("\u{1d49c}\u{1d49c}*+")).toThrow("a + that stands for nothing at character 4.");
     });
   });
 
   describe("limits", () => {
-    it("[B79] has defaults that allow a{100000} and refuse a larger repeat", () => {
+    it("has defaults that allow a{100000} and refuse a larger repeat", () => {
       expect(DEFAULT_XSD_REGEX_LIMITS).toEqual({ maxStates: 100_000, maxDepth: 100 });
       expect(matches("a{100000}", "a".repeat(100_000))).toBe(true);
       expect(() => compileXsdRegex("a{100001}")).toThrow(
@@ -1638,7 +1638,7 @@ describe("compileXsdRegex", () => {
       );
     });
 
-    it("[B79] counts the states of a pattern once its repeats are expanded", () => {
+    it("counts the states of a pattern once its repeats are expanded", () => {
       const limits = { maxStates: 10 };
       expect(compileXsdRegex("a{10}", { limits }).matches("a".repeat(10))).toBe(true);
       expect(() => compileXsdRegex("a{11}", { limits })).toThrow(DataError);
@@ -1646,12 +1646,12 @@ describe("compileXsdRegex", () => {
       expect(() => compileXsdRegex("a|b|c|d|e|f|g|h|i|j|k", { limits })).toThrow(DataError);
     });
 
-    it("[B79] refuses nested repeats at once, without building their states", () => {
+    it("refuses nested repeats at once, without building their states", () => {
       expect(() => compileXsdRegex("((a{9999}){9999}){9999}")).toThrow("needs more than 100000 states");
       expect(() => compileXsdRegex("((a{99999999999999999999}){9999}){9999}")).toThrow("needs more than 100000 states");
     });
 
-    it("[B79][B94] compiles a repeat of a node without states at once, whatever its count", () => {
+    it("compiles a repeat of a node without states at once, whatever its count", () => {
       const start = performance.now();
       for (const pattern of ["(){500000000}", "(()){500000000,500000000}", "((){500000000}){500000000}"]) {
         expect(compileXsdRegex(pattern).matches(""), pattern).toBe(true);
@@ -1662,7 +1662,7 @@ describe("compileXsdRegex", () => {
       expect(compileXsdRegex("(a|()){3}").matches("aa")).toBe(true);
     });
 
-    it("[B79] limits the nesting of groups and class subtractions", () => {
+    it("limits the nesting of groups and class subtractions", () => {
       const nested = (depth: number): string => `${"(".repeat(depth)}a${")".repeat(depth)}`;
       expect(matches(nested(100), "a")).toBe(true);
       expect(() => compileXsdRegex(nested(101))).toThrow("more than 100 levels of nesting");
@@ -1672,7 +1672,7 @@ describe("compileXsdRegex", () => {
       expect(() => compileXsdRegex(nested(100_000))).toThrow(DataError);
     });
 
-    it("[B79] keeps the default of a limit that is left out", () => {
+    it("keeps the default of a limit that is left out", () => {
       expect(() => compileXsdRegex("a{3}", { limits: { maxStates: 2 } })).toThrow(DataError);
       expect(matches("((((a))))", "a")).toBe(true);
       expect(compileXsdRegex("((((a))))", { limits: { maxStates: 2 } }).matches("a")).toBe(true);
@@ -1680,7 +1680,7 @@ describe("compileXsdRegex", () => {
   });
 
   describe("arguments of other types", () => {
-    it("[B79] refuses a pattern that is not a string and options that are not an object", () => {
+    it("refuses a pattern that is not a string and options that are not an object", () => {
       expect(() => compileXsdRegex(json("5"))).toThrow("The pattern must be a string, found 5.");
       expect(() => compileXsdRegex(json("null"))).toThrow(DataError);
       expect(() => compileXsdRegex("a", json("null"))).toThrow("The options must be an object, found null.");
@@ -1688,7 +1688,7 @@ describe("compileXsdRegex", () => {
       expect(() => compileXsdRegex("a", json("[]"))).toThrow(DataError);
     });
 
-    it("[B79] refuses limits that are not an object and a limit that is not a positive integer", () => {
+    it("refuses limits that are not an object and a limit that is not a positive integer", () => {
       expect(() => compileXsdRegex("a", { limits: json("null") })).toThrow(
         "The option limits must be an object, found null.",
       );
@@ -1703,7 +1703,7 @@ describe("compileXsdRegex", () => {
       );
     });
 
-    it("[B79] refuses text that is not a string", () => {
+    it("refuses text that is not a string", () => {
       const pattern = compileXsdRegex("a");
       expect(() => pattern.matches(json("1"))).toThrow("The text must be a string, found 1.");
       expect(() => pattern.matches(json("null"))).toThrow(DataError);
@@ -1736,12 +1736,12 @@ describe("compileXsdRegex", () => {
     ];
 
     for (const [pattern, text] of fixtures) {
-      it(`[B79][P] matches ${JSON.stringify(pattern)} on ${text.length} characters within ${BudgetMs} ms`, () => {
+      it(`matches ${JSON.stringify(pattern)} on ${text.length} characters within ${BudgetMs} ms`, () => {
         expect(timeOf(pattern, text)).toBeLessThan(BudgetMs);
       });
     }
 
-    it("[B79][P] gives the right answer on the fixtures", () => {
+    it("gives the right answer on the fixtures", () => {
       expect(matches("(a+)+$", "a".repeat(1000))).toBe(false);
       expect(matches("(a+)+$", `${"a".repeat(1000)}$`)).toBe(true);
       expect(matches("(a|a)*b", `${"a".repeat(1000)}b`)).toBe(true);
@@ -1749,7 +1749,7 @@ describe("compileXsdRegex", () => {
       expect(matches("(x+x+)+y", `${"x".repeat(1000)}y`)).toBe(true);
     });
 
-    it("[B79][P] takes time that grows in proportion to the text, whatever the pattern", () => {
+    it("takes time that grows in proportion to the text, whatever the pattern", () => {
       const runs = 7;
       const smallLength = 125_000;
       const largeLength = 2_000_000;
@@ -1776,7 +1776,7 @@ describe("compileXsdRegex", () => {
       }
     }, 30_000);
 
-    it("[B79][P] stays fast when a text needs more deterministic states than the matcher keeps", () => {
+    it("stays fast when a text needs more deterministic states than the matcher keeps", () => {
       // (a|b)*a(a|b){20} has up to 2^21 states, more than a matcher keeps; the pattern needs the last 21 characters.
       const compiled = compileXsdRegex("(a|b)*a(a|b){20}");
       let seed = 12345;
@@ -1790,7 +1790,7 @@ describe("compileXsdRegex", () => {
       expect(result).toBe(text.at(-21) === "a");
     });
 
-    it("[B79][P] uses memory in proportion to the pattern, not to the number of different characters in the text", () => {
+    it("uses memory in proportion to the pattern, not to the number of different characters in the text", () => {
       const text = Array.from({ length: 300_000 }, (_, index) => String.fromCodePoint(0x20000 + (index % 40_000))).join(
         "",
       );
@@ -1893,7 +1893,7 @@ describe("properties", () => {
       FUZZ,
     );
   });
-  it("[T12][T13][T14][T15] builds values of every cardinality and base type that match themselves", () => {
+  it("builds values of every cardinality and base type that match themselves", () => {
     fc.assert(
       fc.property(value, (built) => {
         expect(matchValues(built, built)).toBe(true);
@@ -1901,7 +1901,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T1][T2][T3][T4][T5][T7][T8][T9][T10] reads back the lexical form that it writes", () => {
+  it("reads back the lexical form that it writes", () => {
     // A uri loses the white space around it and a file everything but its reference, so they are not in the list.
     const lossless = fc.constantFrom<BaseType>(
       "boolean",
@@ -1924,7 +1924,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T2][T3][T10] writes numbers so that they read back exactly, -0 and NaN included", () => {
+  it("writes numbers so that they read back exactly, -0 and NaN included", () => {
     fc.assert(
       fc.property(double, (number) => {
         expect(Object.is(parsePrimitive(formatPrimitive(number, "float"), "float"), number)).toBe(true);
@@ -1937,7 +1937,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T12][T13][T14][T15][T16][J1][J3] reads back the Appendix C JSON that it writes", () => {
+  it("reads back the Appendix C JSON that it writes", () => {
     fc.assert(
       fc.property(value, (built) => {
         const declaration = declarationOf(built);
@@ -1946,7 +1946,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E30][T12][T13][T14][T15][T16] reads back the wire value that it writes, without a declaration", () => {
+  it("reads back the wire value that it writes, without a declaration", () => {
     fc.assert(
       fc.property(value, (built) => {
         expect(fromWireValue(toWireValue(built, declarationOf(built)))).toStrictEqual(built);
@@ -1954,7 +1954,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E30][T16] loses nothing through JSON text: ordered versus multiple, durations, -0, NaN and infinities", () => {
+  it("loses nothing through JSON text: ordered versus multiple, durations, -0, NaN and infinities", () => {
     fc.assert(
       fc.property(value, (built) => {
         const wire = JSON.parse(JSON.stringify(toWireValue(built, declarationOf(built))));
@@ -1963,7 +1963,7 @@ describe("properties", () => {
     );
   });
 
-  it("[E30][T16] keeps the type of a NULL through JSON text", () => {
+  it("keeps the type of a NULL through JSON text", () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...CARDINALITIES.filter((cardinality) => cardinality !== "record")),
@@ -1978,7 +1978,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T10][G14] writes a duration that reads back as the same seconds", () => {
+  it("writes a duration that reads back as the same seconds", () => {
     fc.assert(
       fc.property(double, (seconds) => {
         const declaration: ValueDeclaration = { cardinality: "single", baseType: "duration" };
@@ -1991,7 +1991,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T13] matches multiple containers exactly when one is a permutation of the other", () => {
+  it("matches multiple containers exactly when one is a permutation of the other", () => {
     const sample = fc.array(fc.constantFrom("A", "B", "C"), { minLength: 1, maxLength: 8 });
     fc.assert(
       fc.property(sample, sample, (left, right) => {
@@ -2004,7 +2004,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T14] matches ordered containers exactly when they are equal", () => {
+  it("matches ordered containers exactly when they are equal", () => {
     const sample = fc.array(fc.constantFrom("A", "B"), { minLength: 1, maxLength: 6 });
     fc.assert(
       fc.property(sample, sample, (left, right) => {
@@ -2015,7 +2015,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T8][T9] matches a pair whichever way round and a directed pair only the same way round", () => {
+  it("matches a pair whichever way round and a directed pair only the same way round", () => {
     fc.assert(
       fc.property(identifier, identifier, (first, second) => {
         expect(matchValues(single("pair", [first, second]), single("pair", [second, first]))).toBe(true);
@@ -2026,7 +2026,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T12][T13][T14][T15] matches as an equivalence: symmetric and transitive on values of one kind", () => {
+  it("matches as an equivalence: symmetric and transitive on values of one kind", () => {
     const small = fc.array(fc.constantFrom("A", "B", "C"), { minLength: 1, maxLength: 4 });
     const kind = fc.constantFrom("multiple", "ordered");
     fc.assert(
@@ -2039,7 +2039,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T17] keeps the numbers and the shape of a value when it promotes an integer", () => {
+  it("keeps the numbers and the shape of a value when it promotes an integer", () => {
     const integers = fc.array(anyInteger, { minLength: 1, maxLength: 6 });
     fc.assert(
       fc.property(
@@ -2055,11 +2055,11 @@ describe("properties", () => {
     );
   });
 
-  it("[B51] accepts every string of the identifier alphabet that starts with a letter or an underscore", () => {
+  it("accepts every string of the identifier alphabet that starts with a letter or an underscore", () => {
     fc.assert(fc.property(identifier, (candidate) => isIdentifier(candidate)));
   });
 
-  it("[B51] rejects every string that starts with a digit, a hyphen or a period, or holds a colon or white space", () => {
+  it("rejects every string that starts with a digit, a hyphen or a period, or holds a colon or white space", () => {
     const bad = fc.oneof(
       fc.tuple(fc.constantFrom(..."0123456789-."), identifier).map(([first, rest]) => first + rest),
       fc.tuple(identifier, fc.constantFrom(..." \t\n:/@"), identifier).map((parts) => parts.join("")),
@@ -2067,7 +2067,7 @@ describe("properties", () => {
     fc.assert(fc.property(bad, (candidate) => !isIdentifier(candidate)));
   });
 
-  it("[W13][W16] rejects every string that is not a term", () => {
+  it("rejects every string that is not a term", () => {
     fc.assert(
       fc.property(fc.string(), (candidate) => {
         expect(isBaseType(candidate)).toBe(BASE_TYPE_TERMS.includes(candidate));
@@ -2076,7 +2076,7 @@ describe("properties", () => {
     );
   });
 
-  it("[W43] reads back the identifier list that it writes", () => {
+  it("reads back the identifier list that it writes", () => {
     fc.assert(
       fc.property(fc.array(identifier, { maxLength: 8 }), (items) => {
         expect(parseIdentifierList(formatIdentifierList(items))).toEqual(items);
@@ -2084,7 +2084,7 @@ describe("properties", () => {
     );
   });
 
-  it("[W44] reads back the integer list that it writes", () => {
+  it("reads back the integer list that it writes", () => {
     fc.assert(
       fc.property(fc.array(fc.integer({ min: -(2 ** 31), max: 2 ** 31 - 1 }), { maxLength: 8 }), (items) => {
         expect(parseIntegerList(formatIntegerList(items))).toEqual(items);
@@ -2092,7 +2092,7 @@ describe("properties", () => {
     );
   });
 
-  it("[W43][W44] reads lists whatever white space separates the items", () => {
+  it("reads lists whatever white space separates the items", () => {
     const gap = fc.stringMatching(/^[ \t\n\r]{1,4}$/);
     fc.assert(
       fc.property(
@@ -2123,7 +2123,7 @@ describe("properties", () => {
     })).choice;
     const input = fc.string({ unit: fc.constantFrom("a", "b", "c", "0", "1", "."), maxLength: 7 });
 
-    it("[B79][P] agrees with a backtracking engine on the common subset", () => {
+    it("agrees with a backtracking engine on the common subset", () => {
       fc.assert(
         fc.property(pattern, input, (source, candidate) => {
           const oracle = new RegExp(`^(?:${source})$`, "u");
@@ -2135,7 +2135,7 @@ describe("properties", () => {
       );
     });
 
-    it("[B79][B94][N] compiles a mutated pattern within small limits or refuses it with a DataError, and matches any text without throwing", () => {
+    it("compiles a mutated pattern within small limits or refuses it with a DataError, and matches any text without throwing", () => {
       const fragments = [
         "{",
         "}",
@@ -2183,7 +2183,7 @@ describe("properties", () => {
       );
     });
 
-    it("[B79][P] matches every text of a pattern it compiles for a text that the pattern generates by repetition", () => {
+    it("matches every text of a pattern it compiles for a text that the pattern generates by repetition", () => {
       fc.assert(
         fc.property(fc.array(fc.constantFrom("ab", "c", "abc"), { maxLength: 20 }), (parts) => {
           expect(compileXsdRegex("(ab|c|abc)*").matches(parts.join(""))).toBe(true);
@@ -2191,7 +2191,7 @@ describe("properties", () => {
       );
     });
 
-    it("[B79][P] partitions the code points among the 30 categories, each in exactly one", () => {
+    it("partitions the code points among the 30 categories, each in exactly one", () => {
       const categories = "Lu Ll Lt Lm Lo Mn Mc Me Nd Nl No Pc Pd Ps Pe Pi Pf Po Zs Zl Zp Sm Sc Sk So Cc Cf Co Cn".split(
         " ",
       );
@@ -2208,7 +2208,7 @@ describe("properties", () => {
       );
     });
 
-    it("[B79][P] gives the complement for \\P and the negated class", () => {
+    it("gives the complement for \\P and the negated class", () => {
       fc.assert(
         fc.property(fc.integer({ min: 0, max: 0x10ffff }), (point) => {
           const character = String.fromCodePoint(point);

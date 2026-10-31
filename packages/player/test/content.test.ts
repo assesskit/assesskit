@@ -1,12 +1,10 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { DataError } from "@assesskit/runtime/errors";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { scaleSize } from "../src/player/content/attributes.js";
 import { canAnimate } from "../src/player/content/embed.js";
-import { elementName, HTML_ELEMENT_NAMES, isHtmlName } from "../src/player/content/html-elements.js";
+import { elementName, isHtmlName } from "../src/player/content/html-elements.js";
 import { createBodyRenderer } from "../src/player/content/index.js";
 import { isRasterDataUrl, readOrigins, resolveSrcset, resolveUrl, type UrlPolicy } from "../src/player/content/urls.js";
 
@@ -21,7 +19,7 @@ const policy: UrlPolicy = {
 };
 
 describe("scaleSize", () => {
-  it("[T4] multiplies a size in pixels and leaves any other length", () => {
+  it("multiplies a size in pixels and leaves any other length", () => {
     expect(scaleSize("200", 1.5)).toBe("300");
     expect(scaleSize("101", 1.5)).toBe("152");
     expect(scaleSize("50%", 2)).toBe("50%");
@@ -31,7 +29,7 @@ describe("scaleSize", () => {
 });
 
 describe("embed", () => {
-  it("[T95] tells an image that can move by its media type, and without one by its extension", () => {
+  it("tells an image that can move by its media type, and without one by its extension", () => {
     for (const type of ["image/gif", "image/apng", "image/webp", "image/avif", "image/svg+xml", "IMAGE/GIF; q=1"]) {
       expect(canAnimate(type, "a"), type).toBe(true);
     }
@@ -43,17 +41,7 @@ describe("embed", () => {
 });
 
 describe("html-elements", () => {
-  const rows: { readonly id: string; readonly construct: string }[] = JSON.parse(
-    readFileSync(resolve(import.meta.dirname, "../../../conformance/runtime-inventory.json"), "utf8"),
-  ).rows;
-  const inventory = rows.filter(({ id }) => /^H\d+$/u.test(id)).map(({ construct }) => construct.replaceAll("`", ""));
-
-  it("[T3] lists the 76 HTML elements of the inventory rows H1 to H76, and no other", () => {
-    expect(inventory).toHaveLength(76);
-    expect([...HTML_ELEMENT_NAMES].sort()).toEqual([...inventory].sort());
-  });
-
-  it("[T3] keeps the name of an HTML element and gives the elements of QTI the prefix qti-", () => {
+  it("keeps the name of an HTML element and gives the elements of QTI the prefix qti-", () => {
     expect(elementName("p")).toBe("p");
     expect(elementName("table")).toBe("table");
     expect(elementName("choice-interaction")).toBe("qti-choice-interaction");
@@ -67,7 +55,7 @@ describe("createBodyRenderer", () => {
   const valid = { messages: EN_MESSAGES, assets: policy.assets };
   const create = (options: unknown): unknown => createBodyRenderer(options as never);
 
-  it("[T1] accepts the two required options and the optional ones", () => {
+  it("accepts the two required options and the optional ones", () => {
     expect(() => create(valid)).not.toThrow();
     expect(() =>
       create({
@@ -84,7 +72,7 @@ describe("createBodyRenderer", () => {
     ).not.toThrow();
   });
 
-  it("[T1] throws DataError for options as JavaScript or JSON can deliver them", () => {
+  it("throws DataError for options as JavaScript or JSON can deliver them", () => {
     expect(() => create(json("null"))).toThrow("The options must be an object, found null.");
     expect(() => create(json('"options"'))).toThrow('The options must be an object, found "options".');
     expect(() => create({ ...valid, extra: 1 })).toThrow(/^The options has the properties .* found "extra"\.$/u);
@@ -125,7 +113,7 @@ describe("createBodyRenderer", () => {
     expect(() => create({ ...valid, fileUrl: json("1") })).toThrow("The option fileUrl must be a function, found 1.");
   });
 
-  it("[T1] throws DataError for a null option that has a default, as it is no way to leave one out", () => {
+  it("throws DataError for a null option that has a default, as it is no way to leave one out", () => {
     for (const name of ["base", "origins", "interactions", "view", "withholdMedia", "mediaScale"]) {
       expect(() => create({ ...valid, [name]: json("null") }), name).toThrow(DataError);
     }
@@ -136,14 +124,14 @@ describe("resolveUrl", () => {
   const load = (reference: string): string | undefined => resolveUrl(reference, policy, "load");
   const navigate = (reference: string): string | undefined => resolveUrl(reference, policy, "navigate");
 
-  it("[T4] resolves a path against the document of the content, and gives it to assets as a path in the package", () => {
+  it("resolves a path against the document of the content, and gives it to assets as a path in the package", () => {
     expect(load("images/a.png")).toBe(`${ASSETS}items/q1/images/a.png`);
     expect(load("./a.png")).toBe(`${ASSETS}items/q1/a.png`);
     expect(load("../shared/b.png")).toBe(`${ASSETS}items/shared/b.png`);
     expect(resolveUrl("a.png", { ...policy, base: "" }, "load")).toBe(`${ASSETS}a.png`);
   });
 
-  it("[T4][T7] refuses a path that leaves the package, starts at the root of the host, or is empty", () => {
+  it("refuses a path that leaves the package, starts at the root of the host, or is empty", () => {
     expect(load("../../../escape.png")).toBeUndefined();
     expect(load("/etc/passwd")).toBeUndefined();
     expect(load("")).toBeUndefined();
@@ -151,7 +139,7 @@ describe("resolveUrl", () => {
     expect(navigate("..\\..\\x")).toBeUndefined();
   });
 
-  it("[T7] keeps an http or https URL of an allowed origin and refuses any other origin", () => {
+  it("keeps an http or https URL of an allowed origin and refuses any other origin", () => {
     expect(navigate("https://media.example/x.png")).toBe("https://media.example/x.png");
     expect(navigate("HTTPS://MEDIA.EXAMPLE/x.png")).toBe("https://media.example/x.png");
     expect(navigate("https://evil.example/x.png")).toBeUndefined();
@@ -161,13 +149,13 @@ describe("resolveUrl", () => {
     expect(navigate("https:evil.example/x.png")).toBeUndefined();
   });
 
-  it("[T7] resolves a URL without scheme but with a host to https, and refuses it unless the origin is allowed", () => {
+  it("resolves a URL without scheme but with a host to https, and refuses it unless the origin is allowed", () => {
     expect(navigate("//media.example/x.png")).toBe("https://media.example/x.png");
     expect(navigate("//evil.example/x.png")).toBeUndefined();
     expect(navigate("\\\\evil.example\\x.png")).toBeUndefined();
   });
 
-  it("[T7] refuses javascript:, vbscript:, file:, ftp: and blob: URLs, whatever the spelling", () => {
+  it("refuses javascript:, vbscript:, file:, ftp: and blob: URLs, whatever the spelling", () => {
     for (const reference of [
       "javascript:alert(1)",
       "  javascript:alert(1)",
@@ -185,7 +173,7 @@ describe("resolveUrl", () => {
     }
   });
 
-  it("[T4] keeps the data: URL of a raster image for a resource, and refuses every other data: URL", () => {
+  it("keeps the data: URL of a raster image for a resource, and refuses every other data: URL", () => {
     const png = "data:image/png;base64,iVBORw0KGgo=";
     expect(load(png)).toBe(png);
     expect(load("DATA:image/PNG;base64,AAAA")).toBe("data:image/PNG;base64,AAAA");
@@ -200,7 +188,7 @@ describe("resolveUrl", () => {
     }
   });
 
-  it("[T7] keeps a fragment for a link and refuses it for a resource", () => {
+  it("keeps a fragment for a link and refuses it for a resource", () => {
     expect(navigate("#note-1")).toBe("#note-1");
     expect(load("#note-1")).toBeUndefined();
   });
@@ -209,7 +197,7 @@ describe("resolveUrl", () => {
 describe("resolveSrcset", () => {
   const resolve = (value: string): string | undefined => resolveSrcset(value, policy);
 
-  it("[T4] resolves each candidate and keeps its descriptor, as HTML Standard 4.8.4.3.1 reads the list", () => {
+  it("resolves each candidate and keeps its descriptor, as HTML Standard 4.8.4.3.1 reads the list", () => {
     expect(resolve("a.png 1x, b.png 2x")).toBe(`${ASSETS}items/q1/a.png 1x, ${ASSETS}items/q1/b.png 2x`);
     expect(resolve("a.png, b.png 480w")).toBe(`${ASSETS}items/q1/a.png, ${ASSETS}items/q1/b.png 480w`);
     expect(resolve("a.png 1x,b.png 2x")).toBe(`${ASSETS}items/q1/a.png 1x, ${ASSETS}items/q1/b.png 2x`);
@@ -217,20 +205,20 @@ describe("resolveSrcset", () => {
     expect(resolve("a.png .5x")).toBe(`${ASSETS}items/q1/a.png .5x`);
   });
 
-  it("[T4] reads a comma inside a URL as part of it", () => {
+  it("reads a comma inside a URL as part of it", () => {
     expect(resolve("data:image/png;base64,AAAA 1x, b.png 2x")).toBe(
       `data:image/png;base64,AAAA 1x, ${ASSETS}items/q1/b.png 2x`,
     );
   });
 
-  it("[T4] leaves out a candidate with a refused URL or a descriptor that is not a width or a density", () => {
+  it("leaves out a candidate with a refused URL or a descriptor that is not a width or a density", () => {
     expect(resolve("https://evil.example/e.png 1x, a.png 2x")).toBe(`${ASSETS}items/q1/a.png 2x`);
     expect(resolve("javascript:alert(1) 1x, a.png 2x")).toBe(`${ASSETS}items/q1/a.png 2x`);
     expect(resolve("a.png 5q, b.png 2x")).toBe(`${ASSETS}items/q1/b.png 2x`);
     expect(resolve("a.png 1x 2x, b.png")).toBe(`${ASSETS}items/q1/b.png`);
   });
 
-  it("[T4] gives nothing when no candidate remains", () => {
+  it("gives nothing when no candidate remains", () => {
     expect(resolve("")).toBeUndefined();
     expect(resolve(" , , ")).toBeUndefined();
     expect(resolve("https://evil.example/e.png 1x")).toBeUndefined();
@@ -238,14 +226,14 @@ describe("resolveSrcset", () => {
 });
 
 describe("readOrigins", () => {
-  it("[T7] writes each origin as the URL parser does, without path or case", () => {
+  it("writes each origin as the URL parser does, without path or case", () => {
     expect([...readOrigins(["https://Media.example/path?q=1", "http://localhost:8080"])]).toEqual([
       "https://media.example",
       "http://localhost:8080",
     ]);
   });
 
-  it("[T7] throws DataError for an origin that is not an http or https URL, and for a list that is not an array", () => {
+  it("throws DataError for an origin that is not an http or https URL, and for a list that is not an array", () => {
     expect(() => readOrigins(["media.example"])).toThrow(DataError);
     expect(() => readOrigins(["ftp://media.example"])).toThrow(DataError);
     expect(() => readOrigins(["javascript:alert(1)"])).toThrow(
@@ -259,7 +247,7 @@ describe("readOrigins", () => {
 });
 
 describe("properties", () => {
-  it("[T4][T7][P] returns a path of the package, an allowed origin or a raster image, never anything else", () => {
+  it("returns a path of the package, an allowed origin or a raster image, never anything else", () => {
     fc.assert(
       fc.property(
         fc
@@ -281,7 +269,7 @@ describe("properties", () => {
     );
   });
 
-  it("[T4][P] keeps in a srcset only candidates whose URL the policy allows, with a width or a density", () => {
+  it("keeps in a srcset only candidates whose URL the policy allows, with a width or a density", () => {
     fc.assert(
       fc.property(
         fc.array(

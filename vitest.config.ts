@@ -100,6 +100,14 @@ export default defineConfig({
         },
       },
       {
+        // The HTML elements of the ASI schema: `pnpm schemas` downloads it.
+        resolve: { alias: RUNTIME_SOURCES },
+        test: {
+          name: "player-xsd",
+          include: ["packages/player/test/**/*.xsd.test.ts"],
+        },
+      },
+      {
         test: {
           name: "compat",
           include: ["compat/test/**/*.test.ts"],
@@ -124,12 +132,6 @@ export default defineConfig({
         test: {
           name: "scripts",
           include: ["scripts/test/**/*.test.ts"],
-        },
-      },
-      {
-        test: {
-          name: "conformance",
-          include: ["conformance/test/**/*.test.ts"],
         },
       },
       {

@@ -11,7 +11,7 @@ const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "
 const read = (path: string): string => readFileSync(join(examples, path), "utf8");
 
 describe("usage data of the 1EdTech examples", () => {
-  it("[U1][U2][U3][U4][U5][U6][C] reads usageData/example.xml: its item statistics, two categorized ones and the distractor statistics", () => {
+  it("reads usageData/example.xml: its item statistics, two categorized ones and the distractor statistics", () => {
     const text = read("usageData/example.xml");
     const data = readUsageData(text);
     expect(data.glossary).toBeUndefined();
@@ -45,12 +45,12 @@ describe("usage data of the 1EdTech examples", () => {
     expect(conversion && "mapping" in conversion ? conversion.mapping.entries : []).toHaveLength(9);
   });
 
-  it("[U1][C] writes usageData/example.xml back as the same document up to canonical form", () => {
+  it("writes usageData/example.xml back as the same document up to canonical form", () => {
     const text = read("usageData/example.xml");
     expect(canonical(parseXml(writeUsageData(readUsageData(text))))).toEqual(canonical(parseXml(text)));
   });
 
-  it("[U1][N][C] refuses the usage data of the packages, which are in the namespace of QTI 2.2 (D6)", () => {
+  it("refuses the usage data of the packages, which are in the namespace of QTI 2.2 (D6)", () => {
     for (const name of ["FEMALE", "MALE", "TOTAL"]) {
       expect(issueOf(() => readUsageData(read(`packaging/usageData/USAGE-${name}-TEST-106391.xml`)))).toMatchObject({
         code: "assesskit/usage/not-usage-data",

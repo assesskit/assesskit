@@ -4,9 +4,10 @@ import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { readManifest, readPackage, writeManifest, writePackage } from "../src/index.js";
+import { CP_NAMESPACE, CPX_NAMESPACE, readManifest, readPackage, writeManifest, writePackage } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { manifests } from "./arbitraries/package.js";
+import { declaredNames, unusedNames, usedNames } from "./schema-declarations.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const examples = join(requireCorpus(root), "qti-examples/qtiv3-examples");
@@ -30,7 +31,7 @@ describe("the XSD validation of the manifest writer", () => {
     path.endsWith("/imsmanifest.xml"),
   );
 
-  it("[K1][K2][K4][K5][K6][K7][K8] accepts the manifest that writeManifest writes for each of the 24 example manifests", async () => {
+  it("accepts the manifest that writeManifest writes for each of the 24 example manifests", async () => {
     expect(paths).toHaveLength(24);
     for (const path of paths) {
       const manifest = readManifest(new Uint8Array(readFileSync(join(examples, path))), { path });
@@ -38,13 +39,26 @@ describe("the XSD validation of the manifest writer", () => {
     }
   });
 
-  it("[K20] writes the type imsbasiclti_xmlv1p3 that the schema enumerates for the packages whose manifests spell imslti_xmlv1p1, which it rejects", async () => {
+  it("writes the type imsbasiclti_xmlv1p3 that the schema enumerates for the packages whose manifests spell imslti_xmlv1p1, which it rejects", async () => {
     const original = new Uint8Array(readFileSync(join(examples, "packaging/lti/imsmanifest.xml")));
     expect((await messages("lti.xml", original)).join("\n")).toContain("imslti_xmlv1p1");
     expect(writeManifest(readManifest(original))).toContain('type="imsbasiclti_xmlv1p3"');
   });
 
-  it("[K1][K2][K3][K4][K5][K6][K7][K8][K9] accepts the manifest that writeManifest writes for any manifest", async () => {
+  it("writes every element and attribute that the schemas declare, and reads them back", () => {
+    const written = [
+      ...paths.map((path) => writeManifest(readManifest(new Uint8Array(readFileSync(join(examples, path)))))),
+      ...fc.sample(manifests, { numRuns: 200, seed: 20_230_105 }).map(writeManifest),
+    ];
+    for (const text of written) expect(writeManifest(readManifest(text))).toBe(text);
+    const declared = declaredNames(requireSchemas(root), [
+      "imsqtiv3p0_imscpv1p2_v1p0.xsd",
+      "imsqtiv3p0_cpextv1p2_v1p0.xsd",
+    ]);
+    expect(unusedNames(declared, usedNames(written, [CP_NAMESPACE, CPX_NAMESPACE]))).toEqual([]);
+  });
+
+  it("accepts the manifest that writeManifest writes for any manifest", async () => {
     await fc.assert(
       fc.asyncProperty(manifests, async (manifest) => {
         // The schema's wildcard in the DRD is strict, so that an extension must be an element that a schema declares.
@@ -61,7 +75,7 @@ describe("the XSD validation of the manifest writer", () => {
     );
   });
 
-  it("[K30] accepts the manifest of a package that writePackage writes", async () => {
+  it("accepts the manifest of a package that writePackage writes", async () => {
     const manifest = readManifest(
       new Uint8Array(readFileSync(join(examples, "packaging/sharedStimulus/imsmanifest.xml"))),
     );
@@ -69,7 +83,7 @@ describe("the XSD validation of the manifest writer", () => {
     expect(await messages("imsmanifest.xml", pkg.file("imsmanifest.xml") ?? new Uint8Array())).toEqual([]);
   });
 
-  it("[K3] shows that the schema, like the reader, allows no organization, item or nested manifest", async () => {
+  it("shows that the schema, like the reader, allows no organization, item or nested manifest", async () => {
     const manifest = writeManifest({ identifier: "m", metadata: { schema: "QTI Package" }, resources: [] });
     expect(
       await messages(

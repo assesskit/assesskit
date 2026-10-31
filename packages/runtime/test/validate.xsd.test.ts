@@ -9,8 +9,7 @@ import type { ElementVisit, Issue } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { BindRuleSets } from "../src/validate/bind-rule-sets.js";
 import { Findings } from "../src/validate/findings.js";
-import { inventoryElements } from "./asi-elements.js";
-import { ATTRIBUTE_RULES, itemXml, MATCH_LIMITS, NESTING_ROWS } from "./validate-fixtures.js";
+import { ATTRIBUTE_RULES, itemXml, MATCH_LIMITS, NESTING_RULE_SETS } from "./validate-fixtures.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const directory = requireSchemas(root);
@@ -60,19 +59,26 @@ function ruleSetsOn(visit: ElementVisit): Issue[] {
 }
 
 describe("the Schematron rules of the ASI schema", () => {
-  it("[V1][V2][V52] are 53 patterns: the three of the constrained extension, the one of the figure and the 49 explicit rule sets", () => {
+  it("are 53 patterns: the three of the constrained extension, the one of the figure and the 49 explicit rule sets", () => {
     const ids = [...patterns().keys()];
     expect(ids).toHaveLength(53);
     expect(ids.filter((id) => id.startsWith("RULE_SET_"))).toHaveLength(49);
     expect(ids.filter((id) => id.endsWith("_DATAEXTENSIONRULES"))).toHaveLength(3);
   });
 
-  it("[V3][V4][V5][V6][V44][V45][V49][V50][V51] are the explicit rule sets that the validator reports under their identifiers", () => {
-    const nesting = inventoryElements(5, 44, "V");
+  it("have for each nesting rule set the interaction that the rules of the schema are about", () => {
+    // The schema spells the custom interaction of its rule set `qti-custom-interation`.
+    const spelledBySchema = new Map([["qti-custom-interaction", "qti-custom-interation"]]);
+    for (const [container, ruleSet] of NESTING_RULE_SETS) {
+      expect(contextsOf(patterns().get(ruleSet) ?? ""), ruleSet).toContain(spelledBySchema.get(container) ?? container);
+    }
+  });
+
+  it("are the explicit rule sets that the validator reports under their identifiers", () => {
     const reported = new Set([
-      ...NESTING_ROWS.map(([row]) => nesting[Number(row.slice(1)) - 5] ?? ""),
+      ...NESTING_RULE_SETS.map(([, ruleSet]) => ruleSet),
       ...ATTRIBUTE_RULES.map(({ code }) => code),
-      ...MATCH_LIMITS.map(([, code]) => code),
+      ...MATCH_LIMITS.map(([code]) => code),
       "RULE_SET_ARIA_ROLES_1",
       "RULE_SET_GENERAL_1",
       "RULE_SET_INTERACTION_20B",
@@ -84,7 +90,7 @@ describe("the Schematron rules of the ASI schema", () => {
     expect([...reported].sort()).toEqual(stated.sort());
   });
 
-  it("[V5][V7][V9][V11][V13][V15][V17][V19][V21][V23][V25][V27][V29][V31][V33][V35][V37][V39][V41][V43] each interaction a nesting rule set says it must not contain, it reports", () => {
+  it("each interaction a nesting rule set says it must not contain, it reports", () => {
     let pairs = 0;
     for (const [id, body] of patterns()) {
       if (!/^RULE_SET_INTERACTION_\d\dA$/.test(id)) continue;
@@ -95,7 +101,10 @@ describe("the Schematron rules of the ASI schema", () => {
           const container = interactionElement(outer);
           const nested = interactionElement(inner);
           // The schema misspells some of the names, which no rule can follow.
-          if (!NESTING_ROWS.some(([, name]) => name === nested) || !NESTING_ROWS.some(([, name]) => name === container))
+          if (
+            !NESTING_RULE_SETS.some(([name]) => name === nested) ||
+            !NESTING_RULE_SETS.some(([name]) => name === container)
+          )
             continue;
           const issues = ruleSetsOn(visitOf(nested, visitOf(container)));
           expect(
@@ -109,7 +118,7 @@ describe("the Schematron rules of the ASI schema", () => {
     expect(pairs).toBeGreaterThan(400);
   });
 
-  it("[V52] constrain the extension attributes of the elements that allow any, and of the custom interaction", () => {
+  it("constrain the extension attributes of the elements that allow any, and of the custom interaction", () => {
     const contexts = new Set(
       [...patterns()]
         .filter(([id]) => id.endsWith("_DATAEXTENSIONRULES"))
@@ -139,13 +148,13 @@ describe("the Schematron rules of the ASI schema", () => {
 });
 
 describe("the fixtures of the rule sets", () => {
-  it("[V6][V8][V45] are valid against the schema, which does not state the rules that they break", async () => {
+  it("are valid against the schema, which does not state the rules that they break", async () => {
     const fixtures = [
       ...ATTRIBUTE_RULES.map(({ broken: [declarations, body], code }) => ({
         path: `${code}.xml`,
         content: itemXml({ declarations, body }),
       })),
-      ...MATCH_LIMITS.map(([, code, , build]) => {
+      ...MATCH_LIMITS.map(([code, , build]) => {
         const [declarations, body] = build('match-max="1" match-min="2"');
         return { path: `${code}.xml`, content: itemXml({ declarations, body }) };
       }),
