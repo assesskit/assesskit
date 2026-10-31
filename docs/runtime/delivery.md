@@ -298,7 +298,7 @@ Item variables are read with the weights and variable mappings of the item refer
 as drafts. The template defaults of an item reference are evaluated in the test when the item is first presented,
 and replace the defaults of its template variables before template processing.
 
-The cost of outcome processing is stated in [architecture](architecture.md#outcome-processing).
+The cost of outcome processing is stated in [performance](performance.md#outcome-processing).
 
 ### Time limits
 
