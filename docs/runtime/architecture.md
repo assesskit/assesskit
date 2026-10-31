@@ -83,7 +83,7 @@ The subpath `errors` exports the errors and the types `Issue` and `IssueLocation
 `AssesskitError` and `DataError` from it.
 
 Validation does not throw. It returns `Issue`s: a severity, a code (`assesskit/<module>/<name>`, or the identifier of a rule
-set in BIND §5), a message and, when known, a location with the file path, line, column and element path.
+set in BIND section 5), a message and, when known, a location with the file path, line, column and element path.
 
 ## Determinism
 
@@ -129,7 +129,7 @@ No compiled or indexed form of the model exists, because the budgets below hold.
 
 ### Outcome processing
 
-Outcome processing runs after every submission in individual mode (INFO §2.9). The expressions that read item sessions
+Outcome processing runs after every submission in individual mode (INFO section 2.9). The expressions that read item sessions
 (`qti-number-*`, `qti-outcome-minimum`, `qti-outcome-maximum` and `qti-test-variables`) visit every instance of the plan,
 keep the ones that their `section-identifier`, `include-category` and `exclude-category` select, and read each one kept.
 The cost of a submission is therefore the rules that read item sessions times the matching items, and no less than the

@@ -204,7 +204,7 @@ describe("resolveUrl", () => {
 describe("resolveSrcset", () => {
   const resolve = (value: string): string | undefined => resolveSrcset(value, policy);
 
-  it("resolves each candidate and keeps its descriptor, as HTML Standard 4.8.4.3.1 reads the list", () => {
+  it("resolves each candidate and keeps its descriptor, as the HTML Standard reads the list", () => {
     expect(resolve("a.png 1x, b.png 2x")).toBe(`${ASSETS}items/q1/a.png 1x, ${ASSETS}items/q1/b.png 2x`);
     expect(resolve("a.png, b.png 480w")).toBe(`${ASSETS}items/q1/a.png, ${ASSETS}items/q1/b.png 480w`);
     expect(resolve("a.png 1x,b.png 2x")).toBe(`${ASSETS}items/q1/a.png 1x, ${ASSETS}items/q1/b.png 2x`);

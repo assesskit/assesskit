@@ -70,7 +70,7 @@ function responseOf(observed: Observed, declaration: ResponseDeclaration): Value
 }
 
 /**
- * Gives an item the responses of a case as the delivery engine does in the first attempt (INFO §2.2.2.2–3):
+ * Gives an item the responses of a case as the delivery engine does in the first attempt (INFO section 2.2.2.2–3):
  * `numAttempts` becomes 1, `completionStatus` becomes `unknown`, and a response the case leaves out has its default
  * value. A case without responses makes no attempt unless the item is adaptive, as in the oracle.
  */

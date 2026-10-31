@@ -3,6 +3,14 @@
 What `@assesskit/runtime` reads, writes, validates and runs. A cell says Yes, Partly (the note says what is left out), No
 (see Not included) or n/a where the operation makes no sense.
 
+```mermaid
+flowchart LR
+  parts["Parts of QTI 3.0: items, tests, packages,<br/>results, usage data, profiles"] --> read["Read"]
+  read --> write["Write"]
+  read --> validate["Validate"]
+  validate --> run["Run in the delivery engine"]
+```
+
 | Part                                                                       | Specification                                                | Read | Write | Validate | Run                                                |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ----- | -------- | -------------------------------------------------- |
 | Items, stimuli, sections and tests, with their content                     | QTI 3.0.0 and 3.0.1; `writeAsi` names the 3.0.1 schema       | Yes  | Yes   | Yes      | Yes: the delivery engine                           |

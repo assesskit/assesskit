@@ -513,7 +513,7 @@ describe("runtime against the oracle on numeric text", () => {
     );
   });
 
-  it("differ for a number that ends in its point: INFO §2.4.2.2 gives an integerValue when no fractional digits were specified, and the oracle gives none", () => {
+  it("differ for a number that ends in its point: the specification gives an integerValue when no fractional digits were specified, and the oracle gives none", () => {
     for (const [text, value] of [
       ["5.", 5],
       ["-12.", -12],
@@ -523,7 +523,7 @@ describe("runtime against the oracle on numeric text", () => {
     }
   });
 
-  it("differ in the sign of a zero integer: the runtime has none for an integer (T2), and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
+  it("differ in the sign of a zero integer: the runtime has none for an integer, and the oracle gives -0 for the integerValue of `-0` and the exponent of `1e-0`", () => {
     expect(Object.is(oracleFields("-0", 10).integerValue, -0)).toBe(true);
     expect(Object.is(oracleFields("1e-0", 10).exponent, -0)).toBe(true);
     const { subject } = numericFields("-0", 10);

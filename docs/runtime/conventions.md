@@ -4,11 +4,20 @@ A convention is something the runtime defines because QTI does not. It uses QTI'
 against the official schemas and other tools can still read it. There is one: the covers of an externally scored outcome of a
 test.
 
+```mermaid
+flowchart LR
+  test["qti-assessment-test with an<br/>external-scored outcome"] --> block["qti-rubric-block<br/>class external-score-covers"]
+  block -->|"read by the engine"| request["Scoring request<br/>with its covers"]
+  request --> view["Scorer view"]
+  view --> scorer["A person or a scoring service"]
+  block -->|"a person who reads the document"| list["The list of the responses<br/>that the scorer rates"]
+```
+
 ## Covers of externally scored outcomes
 
-An outcome with `external-scored` is set by a scorer, not by processing (INFO §4.5.10). QTI has no element that says which
+An outcome with `external-scored` is set by a scorer, not by processing (INFO section 4.5.10). QTI has no element that says which
 responses a test-level outcome of this kind rates. The runtime records it in a rubric block of the test: the place QTI gives to
-instructions for scorers (INFO §2.8.6, `use="scoring"`, `view="scorer"`). The view hides the block from candidates, and a
+instructions for scorers (INFO section 2.8.6, `use="scoring"`, `view="scorer"`). The view hides the block from candidates, and a
 person who reads the document sees the list of the responses that the scorer rates.
 
 ```xml

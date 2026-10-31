@@ -23,7 +23,7 @@ export interface RegexCase {
 }
 
 /**
- * The XML Schema version whose expectations apply: INFO §2.11.3.40 cites XML Schema Part 2 of 2001, which is version 1.0.
+ * The XML Schema version whose expectations apply: INFO section 2.11.3.40 cites XML Schema Part 2 of 2001, which is version 1.0.
  * Tests whose result depends on the Unicode version follow Unicode 6.0.0, the newest the suite lists.
  */
 const XSD_VERSION = "1.0";

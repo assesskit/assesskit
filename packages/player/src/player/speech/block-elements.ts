@@ -1,4 +1,4 @@
-import { MATHML_NAMESPACE, SSML_NAMESPACE, XHTML_NAMESPACE } from "../namespaces.js";
+import { MATHML_NAMESPACE, SSML_NAMESPACE, XHTML_NAMESPACE } from "../internal.js";
 
 /**
  * Returns whether an element is an expression: MathML, or what MathJax made of it.

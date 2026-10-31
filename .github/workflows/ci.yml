@@ -47,6 +47,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm check:standards
       - run: pnpm knip
       - run: pnpm check:packages
       - run: pnpm compat

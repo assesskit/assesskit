@@ -304,7 +304,7 @@ describe("audio and video", () => {
     expect(tracks.map((track) => track.hasAttribute("default"))).toEqual([true, false, false, false]);
   });
 
-  it("passes axe with the captions track that WCAG 1.2.2 asks for", async () => {
+  it("passes axe with a captions track, which WCAG asks for", async () => {
     const content = renderBody(Media, ASSETS);
     expect(await axeViolations(content.host)).toEqual([]);
   });

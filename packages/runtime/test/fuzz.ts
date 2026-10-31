@@ -37,7 +37,7 @@ const DOCTYPE = '<!DOCTYPE x [<!ENTITY e "v">]>';
  * Fuzzes a reader of documents: it gets mutated text and mutated bytes of valid documents (see `mutations`), and must
  * read them or refuse them with a `ReadError` or a `SecurityError`, and throw nothing else. It must also refuse a valid
  * document with a DOCTYPE before its root, as text and as bytes, with a `SecurityError` whose `limit` is `doctype`
- * (BPIG §6.7).
+ * (BPIG section 6.7).
  */
 export function fuzzReader(documents: fc.Arbitrary<string>, read: (input: string | Uint8Array) => unknown): void {
   const encoder = new TextEncoder();

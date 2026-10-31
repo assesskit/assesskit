@@ -3,9 +3,21 @@
 How the runtime is tested and where the expected values come from. The claim that these tests support is stated in
 [Supported](supported.md).
 
+```mermaid
+flowchart LR
+  spec["Specifications,<br/>cited by ID and section"] --> complete["Completeness tests,<br/>derived from them"]
+  oracles["Oracles: Python scripts,<br/>Longsight qti3-core, W3C suite"] --> fixtures["Fixtures"] --> tests["Tests of the runtime"]
+  corpus["1EdTech examples"] --> corpusTests["Corpus tests"]
+  schemas["Official XSDs"] --> xsdTests["Schema tests"]
+  complete --> claim["The claim of Supported"]
+  tests --> claim
+  corpusTests --> claim
+  xsdTests --> claim
+```
+
 ## Citations
 
-A rule cites its source by an ID and a section, such as `INFO §2.11.3.37`.
+A rule cites its source by an ID and a section, such as `INFO section 2.11.3.37`.
 
 | ID   | Document                                                    | Version                                           | Address                                                                      |
 | ---- | ----------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -19,14 +31,14 @@ A rule cites its source by an ID and a section, such as `INFO §2.11.3.37`.
 | CERT | QTI 3.0 Conformance and Certification                       | Final Release, document 2.0, 15 March 2022        | https://www.imsglobal.org/node/199101                                        |
 | TERM | QTI 3.0 Terms and Definitions                               | Final Release, 1 May 2022                         | https://www.imsglobal.org/node/199091                                        |
 | CAT  | 1EdTech Computer Adaptive Testing (CAT) 1.0                 | Candidate Final Public, 9 November 2020           | https://www.imsglobal.org/spec/cat/v1p0/impl/                                |
-| PCI  | Portable Custom Interactions 1.0, cited by INFO §1.1        | Candidate Final, March 2020                       | not retrievable                                                              |
+| PCI  | Portable Custom Interactions 1.0, cited by INFO section 1.1 | Candidate Final, March 2020                       | not retrievable                                                              |
 | RPT  | The six standard response processing templates              | QTI 3.0                                           | https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/                        |
 | XSD  | The schemas of the specifications                           | ASI 3.0.1 and 3.0.0                               | https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/                         |
 | EX   | The examples of 1EdTech, `qtiv3-examples/`                  | public repository, no license file                | https://github.com/1EdTech/qti-examples                                      |
 | LS   | Longsight `qti3-core`, the differential oracle for items    | `@longsightgroup/qti3-core` 0.13.3, MIT           | https://github.com/LongsightGroup/qti3                                       |
 
 The overview gives addresses for RR, UD, CERT and TERM that return 404; the table gives the addresses that serve them. PCI 1.0
-itself is not retrievable: the requirements of the runtime's `pci` module come from BPIG §3.7.12 and its Appendices C and D, which
+itself is not retrievable: the requirements of the runtime's `pci` module come from BPIG section 3.7.12 and its Appendices C and D, which
 restate them.
 
 ## Completeness

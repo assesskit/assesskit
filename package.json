@@ -15,6 +15,7 @@
     "test:corpus": "vitest run --project '*-corpus*'",
     "test:xsd": "vitest run --project '*-xsd'",
     "lint": "biome check . && cspell --no-progress",
+    "check:standards": "node scripts/check-standards.ts",
     "format": "biome check --write .",
     "knip": "knip",
     "docs:api": "typedoc",

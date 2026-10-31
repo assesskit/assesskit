@@ -29,7 +29,7 @@ export interface IssueLocation {
 export interface Issue {
   /** An `error` makes the content invalid; a `warning` flags content that runs but deviates from a recommendation. */
   readonly severity: "error" | "warning";
-  /** `assesskit/<module>/<name>`, or the identifier of a rule set in BIND §5. */
+  /** `assesskit/<module>/<name>`, or the identifier of a rule set in BIND section 5. */
   readonly code: string;
   /** A full sentence that says what is wrong and what is expected. */
   readonly message: string;

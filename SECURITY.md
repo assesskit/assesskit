@@ -28,7 +28,7 @@ Points to be aware of when deploying the runtime:
   defaults and a `DataError` reports a pattern above them. The time of a match is linear in the text and the memory a
   match keeps is bounded, whatever the pattern.
 - **Processing.** Processing runs no code it is given: a custom operator is a function the caller registers, and what it
-  returns is checked like any input. `qti-template-constraint` runs template processing at most 100 times (INFO §5.150),
+  returns is checked like any input. `qti-template-constraint` runs template processing at most 100 times (INFO section 5.150),
   and a container that an expression builds, such as the result of `qti-repeat`, is limited by `maxContainerSize`; a
   larger one is a `SecurityError`. Expressions are no deeper than the document they were read from, which `maxDepth`
   limits.
@@ -40,7 +40,7 @@ Points to be aware of when deploying the runtime:
 - **Printed variables.** A `format` runs on the runtime's own arithmetic, over the exact value of the number, and a width or
   precision above 1,100 is ignored, so that a document cannot make the formatter allocate gigabytes.
 - **XML.** `parseXml` rejects every DOCTYPE with a `SecurityError`, so no entity is declared, expanded or read (XXE and
-  entity expansion, BPIG §6.7). It reads only the five predefined entities and character references. It also limits the
+  entity expansion, BPIG section 6.7). It reads only the five predefined entities and character references. It also limits the
   document before and while it builds the tree, and refuses what the parser lets through and a tree could not keep: a lone
   surrogate, a namespace declaration with white space at its start or end, and a qualified name that is not made of two
   names. `resolveIncludes` calls only the resolver the caller passes, rejects `xpointer`, detects loops and counts the nodes
@@ -52,7 +52,7 @@ Points to be aware of when deploying the runtime:
 - **Command line.** `assesskit validate` reads the path it is given and the schema directory, and no other file: an `xi:include`
   of a lone document is not resolved. It refuses a package that breaks a rule of **Packages** below, and an XML file above
   `maxBytes` of `parseXml` before it reads the file, with the exit code 2.
-- **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (§2.6, BPIG §6.7). An archive
+- **Packages.** `readPackage` and `readPackageFile` check a package before they read a file of it (section 2.6, BPIG section 6.7). An archive
   entry whose name is absolute, leaves the package with `..`, or has a backslash, a drive letter or a control character
   rejects the archive (zip-slip), as do two entries with one normalized name, a symbolic link, and an encrypted entry. The
   entry count, the declared sizes and the compression ratio are checked from the central directory, and the bytes are counted
@@ -310,7 +310,7 @@ These numbers are fixed and cannot be replaced:
 
 | Number    | Applies to                                                                                                                          |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 100       | Runs of template processing for its constraints (INFO §5.150), fixed by the specification.                                          |
+| 100       | Runs of template processing for its constraints (INFO section 5.150), fixed by the specification.                                   |
 | 256       | Levels of the JSON content of a view that `viewFromJson` reads, the depth that the XML reader allows.                               |
 | 1,100     | The width and the precision of a printed variable format; a larger one is ignored.                                                  |
 | 1,000,000 | Entries, states and transitions together, that the matcher of a pattern keeps of its automaton; beyond it the matcher starts again. |

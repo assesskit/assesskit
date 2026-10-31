@@ -213,7 +213,7 @@ describe("createMathTypesetter", () => {
     await expect(typesetter.typeset(JSON.parse('"p"'))).rejects.toThrow(DataError);
   });
 
-  it("has no braille for UEB math in MathJax 4.1.3: under its UEB code the label is not braille", async () => {
+  it("has no braille for UEB math in the pinned MathJax: under its UEB code the label is not braille", async () => {
     selectBrailleCode("ueb");
     const content = mount(`<p id="sum"><math ${MATHML}><mi>x</mi><mo>+</mo><mn>1</mn></math></p>`);
     await typesetter.typeset(content.root);

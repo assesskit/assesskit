@@ -993,7 +993,7 @@ describe("the calculators", () => {
     expect(display(panel)).toBe("50");
   });
 
-  it("names every key that shows letters with a name that starts with them, so that the label is in the name (WCAG 2.5.3)", async () => {
+  it("names every key that shows letters with a name that starts with them, so that the label is in the name, as WCAG asks", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));
