@@ -14,7 +14,7 @@ function sectionsOf(placed: PlacedTest): readonly PlacedSection[] {
 
 /**
  * Checks the selection of each section: it selects no more children than it has unless it selects with replacement, and no
- * fewer than the children it requires (INFO §5.129.1, §4.2.2, B21). A sub-section counts as one child.
+ * fewer than the children it requires. A sub-section counts as one child.
  */
 function checkSelections(placed: PlacedTest, findings: Findings): void {
   for (const section of sectionsOf(placed)) {
@@ -34,7 +34,7 @@ function checkSelections(placed: PlacedTest, findings: Findings): void {
   }
 }
 
-/** Checks that an adaptive section holds item references only and is a section of a test part (CAT §2.3, B66). */
+/** Checks that an adaptive section holds item references only and is a section of a test part. */
 function checkAdaptiveSections(placed: PlacedTest, findings: Findings): void {
   for (const section of sectionsOf(placed)) {
     if (section.model.adaptiveSelection === undefined) continue;
@@ -51,7 +51,7 @@ function checkAdaptiveSections(placed: PlacedTest, findings: Findings): void {
   }
 }
 
-/** Reports the adaptive items of a part with simultaneous submission, where a candidate takes one attempt (INFO §5.159.5, B27). */
+/** Reports the adaptive items of a part with simultaneous submission, where a candidate takes one attempt. */
 function checkSubmission(
   part: PlacedPart,
   items: ReadonlyMap<string, AssessmentItem | undefined>,
@@ -75,7 +75,9 @@ function checkSubmission(
  * Checks the structure of a test that does not depend on the expressions of its rules: the selections, the adaptive
  * sections and the submission of the parts.
  *
+ * @param placed - The placed test.
  * @param items - The item of each item reference, absent where it could not be resolved.
+ * @param findings - The findings of the document, which receive the issues.
  */
 export function checkTestStructure(
   placed: PlacedTest,

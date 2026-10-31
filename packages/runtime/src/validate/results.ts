@@ -25,7 +25,7 @@ function checkVariables(variables: readonly ResultVariable[], owner: string, fin
   }
 }
 
-/** Checks that a support reports no setting when it was prohibited (RR §2.6.4). */
+/** Checks that a support reports no setting when it was prohibited. */
 function checkSupports(supports: readonly SupportUse[], owner: string, findings: Findings): void {
   for (const support of supports) {
     if (support.assignment !== "prohibited" || support.value === undefined) continue;
@@ -35,7 +35,7 @@ function checkSupports(supports: readonly SupportUse[], owner: string, findings:
 }
 
 /**
- * Checks the item results of a test: each has a `sequenceIndex` that places its item instance in the session (RR §2.4.5),
+ * Checks the item results of a test: each has a `sequenceIndex` that places its item instance in the session,
  * and no two item instances share one. The item results of one instance, such as its attempts, share it.
  */
 function checkSequence(itemResults: readonly ItemResult[], findings: Findings): void {
@@ -78,10 +78,9 @@ function checkShape(result: AssessmentResult): void {
 }
 
 /**
- * Validates a results report beyond its schema (RR): in a test result each item result has its own `sequenceIndex`
- * (§2.4.5); the variables of a result have unique identifiers, `SCORE`, `MAXSCORE` and `PASSED` the base types the
- * specification gives them as a warning (G40, T23), and an outcome a positive `normal-maximum` (§2.4.7); and a prohibited
- * support reports no value (§2.6.4).
+ * Validates a results report beyond its schema: in a test result each item result has its own `sequenceIndex`; the
+ * variables of a result have unique identifiers, `SCORE`, `MAXSCORE` and `PASSED` the base types the specification gives
+ * them as a warning, and an outcome a positive `normal-maximum`; and a prohibited support reports no value.
  *
  * @param result - The report, as `readResults` reads it.
  * @returns The issues in document order; none when the report is valid.

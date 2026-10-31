@@ -20,6 +20,9 @@ type StringOptions = Readonly<Record<string, { readonly type: "string" }>>;
 /**
  * Parses the arguments of a command that has the given options, each taking a string.
  *
+ * @param args - The arguments after the command.
+ * @param options - The options that the command takes.
+ * @returns The values of the options and the arguments that are no option.
  * @throws `UsageError` when an option is unknown or lacks its value.
  */
 export function parseCommand<TOptions extends StringOptions>(

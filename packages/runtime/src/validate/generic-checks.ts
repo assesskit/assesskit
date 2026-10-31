@@ -6,7 +6,10 @@ import { FormatChecks } from "./formats.js";
 
 /**
  * Runs the checks that hold for the elements of every kind of document, without the declarations of an item: the rule sets
- * of BIND §5, the formats of the text attributes, and the checks of {@link DocumentChecks}.
+ * of the XML binding, the formats of the text attributes, and the checks of {@link DocumentChecks}.
+ *
+ * @param document - The document of any kind.
+ * @param findings - The findings of the document, which receive the issues.
  */
 export function checkElements(document: AsiDocument, findings: Findings): void {
   const bind = new BindRuleSets(findings, undefined);

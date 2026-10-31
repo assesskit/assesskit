@@ -4,12 +4,12 @@ import type { DeclaredVariable } from "./item-scope.js";
 import { elementPath, textOf } from "./model-access.js";
 import type { VariableKind } from "./scope.js";
 
-/** The elements whose visibility an outcome variable controls (INFO §5.49, §5.52, §5.93, §5.157). */
+/** The elements whose visibility an outcome variable controls. */
 const FEEDBACK = new Set(["qti-feedback-block", "qti-feedback-inline", "qti-modal-feedback", "qti-test-feedback"]);
 
 /**
  * The elements that name a template variable in `template-identifier` but are not content: the default of a template
- * variable that a test gives an item, and the variable that a portable custom interaction passes (BIND §5.3.42).
+ * variable that a test gives an item, and the variable that a portable custom interaction passes.
  */
 const NOT_CONTENT = new Set(["qti-template-default", "qti-template-variable"]);
 
@@ -25,7 +25,12 @@ export interface Controller {
   readonly showHide: "show" | "hide";
 }
 
-/** Returns what decides whether an element shows, `undefined` for an element that is always shown. */
+/**
+ * Returns what decides whether an element shows, `undefined` for an element that is always shown.
+ *
+ * @param visit - The element that the walk of the document reached.
+ * @returns The controlling variable and the identifiers it shows for.
+ */
 export function controllerOf(visit: ElementVisit): Controller | undefined {
   const outcome = FEEDBACK.has(visit.name);
   const variable = textOf(visit.model, outcome ? "outcomeIdentifier" : "templateIdentifier");
@@ -42,7 +47,7 @@ export function controllerOf(visit: ElementVisit): Controller | undefined {
 /**
  * Checks that the variables which the content of an item or a test names exist and suit what names them: the outcome
  * that shows feedback, the template variable that shows template content or a choice, and the variable a printed variable
- * prints (INFO §2.2.2, §2.6, §2.7.1, §7.30.6).
+ * prints.
  */
 export class ContentReferences {
   private readonly findings: Findings;
@@ -64,7 +69,11 @@ export class ContentReferences {
     this.owner = owner;
   }
 
-  /** Checks one element of the content. */
+  /**
+   * Checks one element of the content.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     if (FEEDBACK.has(visit.name)) {
       this.controlling(visit, textOf(visit.model, "outcomeIdentifier"), ["outcome"], "outcome-identifier");

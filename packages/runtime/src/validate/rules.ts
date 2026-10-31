@@ -14,7 +14,7 @@ interface Branch<TRule> {
   readonly rules: readonly TRule[];
 }
 
-/** The base types a lookup table takes as its source: a match table needs integers (INFO §5.87.2). */
+/** The base types a lookup table takes as its source: a match table needs integers. */
 const MATCH_SOURCE = ["integer"];
 const INTERPOLATION_SOURCE = ["integer", "float", "duration"];
 
@@ -24,7 +24,7 @@ function article(word: string): string {
 
 /**
  * Checks the rules of response, outcome and template processing without running them: the variable each rule sets, the
- * type of the value it gives against the variable's (INFO §5.130.2, D5), the lookup tables, and that each condition is a
+ * type of the value it gives against the variable's, the lookup tables, and that each condition is a
  * single boolean. The expressions go to the `ExpressionChecker`.
  */
 export class RuleChecker {
@@ -32,13 +32,25 @@ export class RuleChecker {
   private readonly scope: RuleScope;
   private readonly expressions: ExpressionChecker;
 
+  /**
+   * Starts the checks of the rules of an item or a test.
+   *
+   * @param findings - The findings of the document, which receive the issues.
+   * @param scope - What the rules set and read.
+   * @param expressions - The checker of the expressions of the rules.
+   */
   constructor(findings: Findings, scope: RuleScope, expressions: ExpressionChecker) {
     this.findings = findings;
     this.scope = scope;
     this.expressions = expressions;
   }
 
-  /** Checks the rules of response processing or outcome processing; the rules of an `xi:include` are left out. */
+  /**
+   * Checks the rules of response processing or outcome processing; the rules of an `xi:include` are left out.
+   *
+   * @param rules - The rules.
+   * @param trail - The element names that lead to the rules, `/`-separated.
+   */
   outcomeRules(rules: readonly Rule[], trail: string): void {
     for (const rule of rules) {
       if (rule.kind === "element") continue;
@@ -81,7 +93,9 @@ export class RuleChecker {
   /**
    * Checks the rules of template processing.
    *
-   * @param nested - Whether the rules are inside a condition, where `qti-template-constraint` may not be (INFO §5.150).
+   * @param rules - The rules.
+   * @param trail - The element names that lead to the rules, `/`-separated.
+   * @param nested - Whether the rules are inside a condition, where `qti-template-constraint` may not be.
    */
   templateRules(rules: readonly TemplateRule[], trail: string, nested = false): void {
     for (const rule of rules) {
@@ -119,12 +133,24 @@ export class RuleChecker {
     }
   }
 
-  /** Checks an expression and returns its type, for a caller that sets a variable itself. */
+  /**
+   * Checks an expression and returns its type, for a caller that sets a variable itself.
+   *
+   * @param expression - The expression.
+   * @param trail - The element names that lead to the expression, `/`-separated.
+   * @returns The type of the expression.
+   */
   expressionType(expression: Expression, trail: string): StaticType {
     return this.expressions.check(expression, trail);
   }
 
-  /** Checks that the expression of a condition is a single boolean, as the interpreter demands (B47). */
+  /**
+   * Checks that the expression of a condition is a single boolean, as the interpreter demands.
+   *
+   * @param expression - The expression of the condition.
+   * @param element - The name of the element that holds it.
+   * @param trail - The element names that lead to the element, `/`-separated.
+   */
   condition(expression: Expression, element: string, trail: string): void {
     const type = this.expressions.check(expression, trail);
     const booleanFits = type.baseType === undefined || type.baseType === "boolean";
@@ -152,7 +178,7 @@ export class RuleChecker {
   private setOutcome(identifier: string, expression: Expression, here: string): void {
     this.assign(identifier, ["outcome"], "qti-set-outcome-value", expression, here);
     if (this.scope.owner === "test" && this.scope.target(identifier)?.outcome?.externalScored !== undefined) {
-      const message = `The rule qti-set-outcome-value sets ${JSON.stringify(identifier)}, which is scored externally; the supplied score is its starting value for every run of outcome processing, and the rule replaces it (G24).`;
+      const message = `The rule qti-set-outcome-value sets ${JSON.stringify(identifier)}, which is scored externally; the supplied score is its starting value for every run of outcome processing, and the rule replaces it.`;
       this.findings.warning("assesskit/validate/external-score-assigned", message, here);
     }
     if (identifier === COMPLETION_STATUS && expression.kind === "base-value" && expression.baseType === "identifier") {

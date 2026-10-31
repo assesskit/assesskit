@@ -9,7 +9,7 @@ export interface LomString {
   readonly text: string;
 }
 
-/** The parts of the LOM category `general` that the runtime types (MD §2.7.1). */
+/** The parts of the LOM category `general` that the runtime types. */
 export interface LomGeneral {
   /** The `entry` of each `identifier` in document order; an identifier without an entry is left out. */
   readonly identifiers: readonly string[];
@@ -22,11 +22,12 @@ function lomChildren(parent: XmlElement, name: string): readonly XmlElement[] {
 }
 
 /**
- * Returns the identifiers and the title of the category `general` of a `lom` element (MD §2.7.1). The rest of the LOM
- * stays in the element: the runtime types no other part of it.
+ * Returns the identifiers and the title of the category `general` of a `lom` element. The rest of the LOM stays in the
+ * element: the runtime types no other part of it.
  *
  * @param lom - A `lom` element in the LOM namespace.
  * @returns Empty lists when the element has no `general`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
 export function lomGeneral(lom: XmlElement): LomGeneral {
   const [general] = lomChildren(lom, "general");

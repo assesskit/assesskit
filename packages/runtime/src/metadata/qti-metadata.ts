@@ -1,20 +1,13 @@
 import { checkArray, checkBoolean, checkChoice, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ElementReader, type ReaderRules, termOf, type XmlElement } from "../xml/index.js";
+import { checkReadArguments, expectRoot, takeLeaf, takeLeaves } from "./element-reading.js";
+import { appendLeaf, branch, leaf } from "./element-writing.js";
+import { boundedStringOf, MAX_TOOL_STRING_LENGTH, parseBoolean, parseString } from "./lexical.js";
 import { QTI_METADATA_NAMESPACE } from "./namespaces.js";
-import {
-  boundedStringOf,
-  checkReadArguments,
-  expectRoot,
-  MAX_TOOL_STRING_LENGTH,
-  parseBoolean,
-  parseString,
-  takeLeaf,
-  takeLeaves,
-} from "./text.js";
-import { appendLeaf, branch, leaf, QMD } from "./write-support.js";
+import { QMD } from "./qualified-name.js";
 
-/** The terms of the vocabulary InteractionType (MD §2.6.2): the interactions an item contains. */
+/** The terms of the vocabulary InteractionType: the interactions an item contains. */
 export const INTERACTION_TYPES = [
   "associateInteraction",
   "choiceInteraction",
@@ -43,19 +36,19 @@ export const INTERACTION_TYPES = [
 /** A term of the vocabulary InteractionType. */
 export type InteractionType = (typeof INTERACTION_TYPES)[number];
 
-/** The terms of the vocabulary FeedbackType (MD §2.6.1). */
+/** The terms of the vocabulary FeedbackType. */
 export const FEEDBACK_TYPES = ["adaptive", "nonadaptive", "none"] as const;
 
 /** A term of the vocabulary FeedbackType. */
 export type FeedbackType = (typeof FEEDBACK_TYPES)[number];
 
-/** The terms of the vocabulary ScoringMode (MD §2.6.3). */
+/** The terms of the vocabulary ScoringMode. */
 export const SCORING_MODES = ["human", "externalmachine", "responseprocessing"] as const;
 
 /** A term of the vocabulary ScoringMode. */
 export type ScoringMode = (typeof SCORING_MODES)[number];
 
-/** The context of a portable custom interaction (MD §2.4.1). */
+/** The context of a portable custom interaction. */
 export interface PciContext {
   /** The type identifier of the custom interaction. */
   readonly customTypeIdentifier?: string;
@@ -63,7 +56,11 @@ export interface PciContext {
   readonly interactionKind?: string;
 }
 
-/** What QTI metadata says about an item (MD §2.3.1). A field the document omits is `undefined`. */
+/**
+ * What QTI metadata says about an item. A field the document omits is `undefined`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
+ */
 export interface QtiMetadata {
   /** Whether the item is an item template: it has template declarations and template processing. */
   readonly itemTemplate?: boolean;
@@ -107,11 +104,13 @@ function readPciContext(reader: ElementReader): PciContext {
  * Reads a `qtiMetadata` element. The children come in the order of the schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name. Default: no path.
+ * @param path - The path of the document, which the issues name.
+ * @returns The metadata; a field that the element omits is `undefined`.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not a `qtiMetadata` of the QTI metadata namespace, has an element, attribute or
- * text that MD §2.3.1 does not allow at that place, a boolean that is not `true`, `false`, `1` or `0`, a term outside its
+ * text that the schema does not allow at that place, a boolean that is not `true`, `false`, `1` or `0`, a term outside its
  * vocabulary, or a tool string above 256 characters.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
 export function readQtiMetadata(element: XmlElement, path?: string): QtiMetadata {
   checkReadArguments(element, path);
@@ -156,6 +155,7 @@ function checkOptionalBoolean(value: unknown, label: string): void {
  * Checks that a value is QTI metadata: an object whose fields have the types of `QtiMetadata`, whose terms are in their
  * vocabularies and whose tool strings have at most 256 characters.
  *
+ * @param metadata - The value to check.
  * @throws `DataError` when it is not.
  */
 export function checkQtiMetadata(metadata: unknown): asserts metadata is QtiMetadata {
@@ -191,9 +191,12 @@ export function checkQtiMetadata(metadata: unknown): asserts metadata is QtiMeta
 }
 
 /**
- * Writes the metadata as a `qtiMetadata` element, with its children in the order of the schema (MD §2.3.1).
+ * Writes the metadata as a `qtiMetadata` element, with its children in the order of the schema.
  *
+ * @param metadata - The metadata to write.
+ * @returns The `qtiMetadata` element.
  * @throws `DataError` when a field has the wrong type, a term is outside its vocabulary, or a tool string is above 256 characters.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
 export function writeQtiMetadata(metadata: QtiMetadata): XmlElement {
   checkQtiMetadata(metadata);

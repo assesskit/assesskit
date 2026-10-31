@@ -1,21 +1,14 @@
 import { checkArray, checkBoolean, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ElementReader, type XmlElement } from "../xml/index.js";
+import { checkReadArguments, expectRoot, takeLeaf, takeLeaves } from "./element-reading.js";
+import { appendLeaf, branch, leaf } from "./element-writing.js";
+import { checkOpenTerm, type ExtensionTerm, openTermOf } from "./extension-term.js";
+import { parseBoolean, parseString } from "./lexical.js";
 import { DRD_NAMESPACE } from "./namespaces.js";
-import {
-  checkOpenTerm,
-  checkReadArguments,
-  type ExtensionTerm,
-  expectRoot,
-  openTermOf,
-  parseBoolean,
-  parseString,
-  takeLeaf,
-  takeLeaves,
-} from "./text.js";
-import { appendLeaf, branch, DRD, leaf } from "./write-support.js";
+import { DRD } from "./qualified-name.js";
 
-/** The terms of the vocabulary AccessMode, also used by `accessModeAdapted` (DRD XSD): the sensory channel of the content. */
+/** The terms of the vocabulary AccessMode, also used by `accessModeAdapted`: the sensory channel of the content. */
 export const ACCESS_MODES = [
   "auditory",
   "colour",
@@ -29,10 +22,10 @@ export const ACCESS_MODES = [
   "visual",
 ] as const;
 
-/** The terms of the vocabulary AdaptationDetail (DRD XSD). */
+/** The terms of the vocabulary AdaptationDetail. */
 export const ADAPTATION_DETAILS = ["enhanced", "verbatim", "realTime", "symbolic", "recorded", "synthesized"] as const;
 
-/** The terms of the vocabulary AdaptationMediaType (DRD XSD). */
+/** The terms of the vocabulary AdaptationMediaType. */
 export const ADAPTATION_MEDIA_TYPES = [
   "Daisy",
   "braille",
@@ -47,7 +40,7 @@ export const ADAPTATION_MEDIA_TYPES = [
   "EPUB3",
 ] as const;
 
-/** The terms of the vocabulary AdaptationType (DRD XSD). */
+/** The terms of the vocabulary AdaptationType. */
 export const ADAPTATION_TYPES = [
   "alternativeText",
   "audioDescription",
@@ -60,7 +53,7 @@ export const ADAPTATION_TYPES = [
   "transcript",
 ] as const;
 
-/** The terms of the vocabulary ApiInteroperable (DRD XSD). */
+/** The terms of the vocabulary ApiInteroperable. */
 export const API_INTEROPERABLE = [
   "AndroidAccessibility",
   "ARIA",
@@ -74,10 +67,10 @@ export const API_INTEROPERABLE = [
   "UIAutomation",
 ] as const;
 
-/** The terms of the vocabulary ControlFlexibility (DRD XSD). */
+/** The terms of the vocabulary ControlFlexibility. */
 export const CONTROL_FLEXIBILITY = ["fullKeyboardControl", "fullMouseControl"] as const;
 
-/** The terms of the vocabulary DisplayTransformability (DRD XSD). */
+/** The terms of the vocabulary DisplayTransformability. */
 export const DISPLAY_TRANSFORMABILITY = [
   "backgroundColour",
   "cursorPresentation",
@@ -93,10 +86,10 @@ export const DISPLAY_TRANSFORMABILITY = [
   "wordSpacing",
 ] as const;
 
-/** The terms of the vocabulary EducationalComplexityOfAdaptation (DRD XSD). */
+/** The terms of the vocabulary EducationalComplexityOfAdaptation. */
 export const COMPLEXITY_OF_ADAPTATION = ["enriched", "simplified"] as const;
 
-/** The terms of the vocabulary Hazard (DRD XSD). */
+/** The terms of the vocabulary Hazard. */
 export const DRD_HAZARDS = ["flashing", "sound", "olfactoryHazard", "motionSimulation"] as const;
 
 /** A hazard of the vocabulary of the DRD XSD. */
@@ -122,7 +115,7 @@ export type ComplexityOfAdaptation = (typeof COMPLEXITY_OF_ADAPTATION)[number] |
 export type Hazard = DrdHazard | ExtensionTerm;
 
 /**
- * The accessibility description of a resource (DRD XSD, `accessForAllResource`, AfA 3.0 Digital Resource Description).
+ * The accessibility description of a resource.
  * Each field has the name of its element; the lists are empty when the document has none of the element.
  */
 export interface AccessForAllResource {
@@ -168,7 +161,8 @@ export interface AccessForAllResource {
  * Reads an `accessForAllResource` element. The children come in the order of the DRD schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name. Default: no path.
+ * @param path - The path of the document, which the issues name.
+ * @returns The description of the resource.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not an `accessForAllResource` of the DRD namespace, has an element, attribute or
  * text that the schema does not allow at that place, a boolean that is not `true`, `false`, `1` or `0`, or a term outside
@@ -217,6 +211,8 @@ function checkList(value: unknown, label: string): asserts value is readonly unk
 /**
  * Writes the description as an `accessForAllResource` element, with its children in the order of the DRD XSD.
  *
+ * @param resource - The description to write.
+ * @returns The `accessForAllResource` element.
  * @throws `DataError` when a field has the wrong type or a term is outside its vocabulary and is not an extension term.
  */
 export function writeAccessForAllResource(resource: AccessForAllResource): XmlElement {

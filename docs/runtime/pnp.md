@@ -5,6 +5,22 @@ supports a candidate needs, such as extra time, reading aloud or magnification. 
 It imports `xml` only and runs in any JavaScript runtime. Deciding which candidate gets which support belongs to the
 system that registers candidates; the runtime reads the decision.
 
+```mermaid
+flowchart LR
+  document["PNP document<br/>access-for-all-pnp<br/>or a bulk file"]
+  profile["PersonalNeedsProfile"]
+  supports["supports<br/>Map of settings"]
+  sets["three sets<br/>activateAtInitialization<br/>activateAsOption, prohibited"]
+  custom["extensions<br/>custom supports"]
+  states["Map of SupportState<br/>prohibited, active,<br/>option, assigned"]
+  document -- "readPnp" --> profile
+  profile -- "writePnp" --> document
+  profile --> supports
+  profile --> sets
+  profile --> custom
+  profile -- "resolveSupports" --> states
+```
+
 | Export                                                                                                                                                                                                                                                                                | Purpose                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `readPnp(input)`                                                                                                                                                                                                                                                                      | Reads text, bytes or a parsed element into a `PersonalNeedsProfile`, or a bulk file into `PnpRecord[]`. |
@@ -29,15 +45,11 @@ const profile = readPnp(`<access-for-all-pnp xmlns="http://www.imsglobal.org/xsd
   <prohibit-set><magnification/></prohibit-set>
 </access-for-all-pnp>`);
 
-if ("supports" in profile) {
-  profile.supports.get("additional-testing-time");
-  // { name: "additional-testing-time", replaceAccessModes: [], time: { kind: "time-multiplier", multiplier: 1.5 } }
-
-  [...resolveSupports(profile)];
-  // [["spoken", "active"], ["additional-testing-time", "assigned"], ["magnification", "prohibited"]]
-
-  writePnp(profile); // the same profile, valid against the PNP schema, in the schema's namespace
-}
+"supports" in profile && profile.supports.get("additional-testing-time");
+// => { name: "additional-testing-time", replaceAccessModes: [], time: { kind: "time-multiplier", multiplier: 1.5 } }
+"supports" in profile && [...resolveSupports(profile)];
+// => [["spoken", "active"], ["additional-testing-time", "assigned"], ["magnification", "prohibited"]]
+writePnp(profile).includes('xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0pnp_v1p0"'); // => true
 ```
 
 ## Model
@@ -77,8 +89,8 @@ Every support but the on-screen tools replaces content of some access modes: `re
 | `ToolSupport`           | `dictionary-on-screen`, `glossary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen`, `spell-checker-on-screen`                                                                   | none                                                                                                                                                               |
 
 - Colors are `#RGB` or `#RRGGBB`. Numbers are finite decimals; `speechRate`, `minutes` and the grade are integers.
-- An extension term is `ext:` and letters, `|`, `.` or `_`: the pattern of the PNP schema. BPIG §5.2.1.2 writes
-  `ext:iowa-reading`, which the schema's pattern does not allow because of the hyphen; the runtime follows the schema.
+- An extension term is `ext:` and letters, `|`, `.` or `_`: the pattern of the PNP schema. The best practices guide
+  writes `ext:iowa-reading`, which the schema's pattern does not allow because of the hyphen; the runtime follows the schema.
 - `uniformFontSizing` and `wordWrapping` are empty elements, so the only value is `true`.
 - A support occurs once in a document. `hazard-avoidance` and `language-of-interface` occur once for each hazard and each
   language, and `readPnp` joins the elements into one setting. Any other repeat is a `ReadError`.
@@ -86,24 +98,24 @@ Every support but the on-screen tools replaces content of some access modes: `re
 ## Sets
 
 `activateAsOption`, `activateAtInitialization` and `prohibited` list supports by name alone; the parameters are in
-`supports` (BPIG §5.3). A set can list 38 supports, all but `hazard-avoidance` and `environment` (`SetSupportName`). A
+`supports`. A set can list 38 supports, all but `hazard-avoidance` and `environment` (`SetSupportName`). A
 set that is empty is not written.
 
-`resolveSupports(profile)` returns a `Map` from each support the profile mentions to its state (B69):
+`resolveSupports(profile)` returns a `Map` from each support the profile mentions to its state:
 
-| State        | When                                                                                                       | Source      |
-| ------------ | ---------------------------------------------------------------------------------------------------------- | ----------- |
-| `prohibited` | The support is in `prohibited`, even if the profile also assigns it: a prohibited support is not assigned. | BPIG §5.3.3 |
-| `active`     | In `activateAtInitialization`: available as soon as the session starts.                                    | BPIG §5.3.2 |
-| `option`     | In `activateAsOption`: available, and on only when the candidate asks.                                     | BPIG §5.3.1 |
-| `assigned`   | The profile assigns it outside the sets, or it is a custom support: the delivery system provides it.       | BPIG §5     |
+| State        | When                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `prohibited` | The support is in `prohibited`, even if the profile also assigns it: a prohibited support is not assigned. |
+| `active`     | In `activateAtInitialization`: available as soon as the session starts.                                    |
+| `option`     | In `activateAsOption`: available, and on only when the candidate asks.                                     |
+| `assigned`   | The profile assigns it outside the sets, or it is a custom support: the delivery system provides it.       |
 
 The first state that applies in this order wins. The map lists assigned supports first, then custom ones, then those that
 only a set lists. A support the profile does not mention is not in the map.
 
 ## Custom supports
 
-An element of another namespace as a child of the profile is a custom support (BPIG §5.4). `extensions` keeps it as an
+An element of another namespace as a child of the profile is a custom support. `extensions` keeps it as an
 `XmlElement`, and its name for catalogs and for the engine is `ext:` and its local name (`extensionName`): the element
 `kxz:kxztesting-illustrated-glossary-on-screen` is the support `ext:kxztesting-illustrated-glossary-on-screen`. The
 schema's wildcard (`##other`) requires a namespace, so an element in none is a `ReadError`. A set lists predefined
@@ -111,13 +123,14 @@ supports only; an element of another namespace in a set is a `ReadError`.
 
 ## Namespaces
 
-`readPnp` reads the schema's namespace and the two others that 1EdTech's own documents use (D6): the examples of
-BPIG §5 and the binding of BIND §7. `PNP_ALTERNATE_NAMESPACES` lists them. `writePnp` writes the schema's namespace and
-names the schema in `xsi:schemaLocation`. `assesskit validate` reports a document in another namespace as an error (L15).
+`readPnp` reads the schema's namespace and the two others that 1EdTech's own documents use: the examples of the best
+practices guide and the XML binding. `PNP_ALTERNATE_NAMESPACES` lists them. `writePnp` writes the schema's namespace and
+names the schema in `xsi:schemaLocation`. `assesskit validate` reports a document in another namespace as an error
+([spec gaps](spec-gaps.md): namespaces of the samples).
 
 ## Bulk files
 
-`access-for-all-pnp-records` holds one record for each candidate and assignment (BPIG §5.5). A `PnpRecord` has the
+`access-for-all-pnp-records` holds one record for each candidate and assignment. A `PnpRecord` has the
 `personSourcedId` with its required `source-system`, the `appointmentIds` that the profile is for, and the profile. The
 schema allows several appointments; none means every assignment of the candidate. A bulk file needs at least one record.
 
@@ -126,6 +139,46 @@ schema allows several appointments; none means every assignment of the candidate
 `readPnp` throws `ReadError` with one issue; `writePnp` and `resolveSupports` throw `DataError` for a model that is not a
 profile: a field of the wrong type, a key that differs from the name of its setting, a name that no set can list, a
 parameter outside its vocabulary, a list that must not be empty, or text with a character that XML 1.0 does not allow.
-The codes are those of [results](results.md#errors) with the module `pnp`: `assesskit/pnp/not-pnp` for another root,
-`missing-attribute` (`xml:lang`, `source-system`), `invalid-attribute`, `invalid-text`, `unexpected-attribute`,
-`missing-element`, `unexpected-element`, `repeated-element` and `unexpected-text`.
+Input that is not text, bytes or an element is a `DataError`, and text or bytes that break a limit of `parseXml` are a
+`SecurityError`. The codes are those of [results](results.md#errors) with the module `pnp`:
+
+| Code                                                                                                      | Meaning                                                                           |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `assesskit/pnp/not-pnp`                                                                                   | The root is neither `access-for-all-pnp` nor `access-for-all-pnp-records`.        |
+| `assesskit/pnp/missing-attribute`                                                                         | A required attribute is missing: `xml:lang` or `source-system`.                   |
+| `assesskit/pnp/invalid-attribute`, `assesskit/pnp/invalid-text`                                           | An attribute or a text is not valid: a number, a color, a language tag or a term. |
+| `assesskit/pnp/unexpected-attribute`, `assesskit/pnp/unexpected-element`, `assesskit/pnp/unexpected-text` | An attribute, element or text that the schema does not allow at that place.       |
+| `assesskit/pnp/missing-element`                                                                           | A required element is missing, such as a time in `additional-testing-time`.       |
+| `assesskit/pnp/repeated-element`                                                                          | A support, set or parameter that occurs twice.                                    |
+
+## Not included
+
+| Not included                                  | Why                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| Deciding which candidate gets which support   | The system that registers candidates decides; the runtime reads the decision |
+| Applying a support to what a candidate sees   | The player presents; the runtime resolves what the profile asks for          |
+| The namespace of QTI 2.x documents            | It is not a PNP namespace of QTI 3.0, and the reader refuses it              |
+| Extension terms with a hyphen                 | The schema's pattern for an extension term does not allow one                |
+| Elements of other namespaces inside a support | The schema allows custom supports only as children of the profile            |
+
+## Files
+
+Each file of `src/pnp/` holds one concept.
+
+| File                                                     | Concept                                                         |
+| -------------------------------------------------------- | --------------------------------------------------------------- |
+| `model.ts`, `settings.ts`                                | The profile and the settings of each support                    |
+| `vocabularies.ts`, `support-names.ts`                    | The terms of the parameters, and the names of the supports      |
+| `lexical.ts`                                             | Reading and writing the numbers, colors and terms of parameters |
+| `read-pnp.ts`, `read-supports.ts`                        | Reading a document, and the element of each support             |
+| `write-pnp.ts`, `write-supports.ts`, `profile-checks.ts` | Writing a document, and checking a profile                      |
+| `resolve-supports.ts`                                    | The state of each support                                       |
+| `namespace.ts`                                           | The namespaces and the schema location                          |
+
+## References
+
+| Topic                         | Specification                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Profile, sets, bulk files     | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/), Personal Needs and Preferences |
+| Names and types of the schema | The PNP schema, `imsqtiv3p0_afa3p0pnp_v1p0.xsd`                                                                                  |
+| Places where the specs differ | [Spec gaps](spec-gaps.md)                                                                                                        |

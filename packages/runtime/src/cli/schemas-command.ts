@@ -10,9 +10,12 @@ function countSchemas(count: number): string {
 }
 
 /**
- * Runs `assesskit schemas fetch [--dir <dir>]` (L14): downloads the files of `SCHEMA_FILES` that the directory lacks, checks
+ * Runs `assesskit schemas fetch [--dir <dir>]`: downloads the files of `SCHEMA_FILES` that the directory lacks, checks
  * their SHA-256 and writes the result to the standard output. This is the only network access in the runtime.
  *
+ * @param args - The arguments after `schemas`.
+ * @param options - The options of the command line, with every default set.
+ * @returns The exit code.
  * @throws `UsageError` when the arguments do not follow the command.
  * @throws `AssesskitError` when a schema cannot be downloaded or has another hash than the pinned one.
  */

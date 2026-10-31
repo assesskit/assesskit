@@ -6,8 +6,8 @@ const ELEMENT = "qti-assessment-test/qti-rubric-block";
 
 /**
  * Checks the covers of the externally scored outcomes of a test, the runtime convention that names the responses an outcome
- * rates (§4.16 of the design). A rubric block of the convention must be shown to scorers and hidden from candidates
- * (INFO §4.4.11, `view` is a list); name an outcome that the test declares as externally scored (INFO §4.5.10); and list
+ * rates. A rubric block of the convention must be shown to scorers and hidden from candidates, as its `view` is a list;
+ * name an outcome that the test declares as externally scored; and list
  * each response once, of an item reference of the test and of an item that declares the response. A block below the
  * test is reported where it is found, by the checks of every element.
  *
@@ -23,6 +23,7 @@ const ELEMENT = "qti-assessment-test/qti-rubric-block";
  * @param test - The test.
  * @param itemRefs - The item references of the test by identifier, with their items where they could be resolved; absent
  * when the test is checked alone, so that what the covers name is not checked.
+ * @param findings - The findings of the document, which receive the issues.
  */
 export function checkCovers(
   test: AssessmentTest,

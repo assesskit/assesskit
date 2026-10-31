@@ -95,8 +95,8 @@ function resolveItem(resolvers: Resolvers, href: string, base: string, reports: 
 }
 
 /**
- * Warns when the item named by an item reference has another identifier than the reference. INFO §4.1.1 says the two must
- * be the same, and the examples of 1EdTech's own tests often differ, so content that deviates still runs.
+ * Warns when the item named by an item reference has another identifier than the reference. The Information Model says the two
+ * must be the same, and the examples of 1EdTech's own tests often differ, so content that deviates still runs.
  */
 function checkIdentifiers(placed: PlacedTest, refs: ReadonlyMap<string, ItemRefInfo>, reports: Reports): void {
   for (const { model, base } of placed.itemRefs) {

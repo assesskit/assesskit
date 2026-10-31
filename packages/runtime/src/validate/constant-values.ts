@@ -70,12 +70,13 @@ function contributionOf(
 }
 
 /**
- * Finds the identifiers that the rules give each variable they set (INFO §5.93, L6): a set when every rule that sets the
+ * Finds the identifiers that the rules give each variable they set: a set when every rule that sets the
  * variable gives constants, `undefined` when one does not. A variable that no rule sets is not in the map. The starting
  * value of a variable is not here: the caller adds the default value of its declaration.
  *
  * @param rules - The rules that run, in any order.
  * @param lookup - Returns the values a lookup table gives an outcome, `undefined` when it has none.
+ * @returns For each variable the rules set, the identifiers it can take; `undefined` when a rule can give it any value.
  */
 export function assignedIdentifiers(
   rules: readonly Rule[],

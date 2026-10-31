@@ -40,6 +40,7 @@ import {
   type XmlNode,
 } from "../src/index.js";
 import { accessForAllResource, curriculumStandardsSet, lom, qtiMetadata } from "./arbitraries/metadata.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const QMD = `xmlns="${QTI_METADATA_NAMESPACE}"`;
 const CSM = `xmlns="${CSM_NAMESPACE}"`;
@@ -74,284 +75,10 @@ function bare(node: XmlNode): XmlNode {
 const qti = (xml: string, path?: string): QtiMetadata =>
   readQtiMetadata(parseXml(`<qtiMetadata ${QMD}>${xml}</qtiMetadata>`), path);
 
-describe("readQtiMetadata", () => {
-  it("reads the QTI metadata of the 1EdTech metaData example from its text", () => {
-    const metadata = qti(`
-      <timeDependent>false</timeDependent>
-      <interactionType>choiceInteraction</interactionType>
-      <feedbackType>nonadaptive</feedbackType>
-      <solutionAvailable>true</solutionAvailable>
-      <toolName>XMLSPY</toolName>
-      <toolVersion>5.4</toolVersion>
-      <toolVendor>ALTOVA</toolVendor>`);
-    expect(metadata).toEqual({
-      timeDependent: false,
-      interactionTypes: ["choiceInteraction"],
-      feedbackType: "nonadaptive",
-      solutionAvailable: true,
-      scoringModes: [],
-      toolName: "XMLSPY",
-      toolVersion: "5.4",
-      toolVendor: "ALTOVA",
-    });
-  });
-
-  it("reads itemTemplate, composite and several scoring modes", () => {
-    const metadata = qti(
-      "<itemTemplate>1</itemTemplate><composite> true </composite><scoringMode>human</scoringMode><scoringMode>responseprocessing</scoringMode>",
-    );
-    expect(metadata).toMatchObject({
-      itemTemplate: true,
-      composite: true,
-      scoringModes: ["human", "responseprocessing"],
-    });
-  });
-
-  it("reads the context of a portable custom interaction", () => {
-    const metadata = qti(
-      "<portableCustomInteractionContext><customTypeIdentifier>urn:x</customTypeIdentifier><interactionKind>sound</interactionKind></portableCustomInteractionContext>",
-    );
-    expect(metadata.portableCustomInteractionContext).toEqual({
-      customTypeIdentifier: "urn:x",
-      interactionKind: "sound",
-    });
-  });
-
-  it("accepts each of the 22 interaction types and no other", () => {
-    expect(INTERACTION_TYPES).toHaveLength(22);
-    for (const type of INTERACTION_TYPES)
-      expect(qti(`<interactionType>${type}</interactionType>`).interactionTypes).toEqual([type]);
-    expect(issueCode(() => qti("<interactionType>choice</interactionType>"))).toBe("assesskit/metadata/invalid-text");
-    expect(issueCode(() => qti("<interactionType>choiceinteraction</interactionType>"))).toBe(
-      "assesskit/metadata/invalid-text",
-    );
-  });
-
-  it("accepts the three feedback types and no other", () => {
-    expect(FEEDBACK_TYPES).toEqual(["adaptive", "nonadaptive", "none"]);
-    for (const type of FEEDBACK_TYPES) expect(qti(`<feedbackType>${type}</feedbackType>`).feedbackType).toBe(type);
-    expect(issueCode(() => qti("<feedbackType>other</feedbackType>"))).toBe("assesskit/metadata/invalid-text");
-  });
-
-  it("accepts the three scoring modes and no other", () => {
-    expect(SCORING_MODES).toEqual(["human", "externalmachine", "responseprocessing"]);
-    for (const mode of SCORING_MODES) expect(qti(`<scoringMode>${mode}</scoringMode>`).scoringModes).toEqual([mode]);
-    expect(issueCode(() => qti("<scoringMode>externalMachine</scoringMode>"))).toBe("assesskit/metadata/invalid-text");
-  });
-
-  it("takes a tool string of 256 characters and rejects one of 257", () => {
-    expect(qti(`<toolName>${"a".repeat(256)}</toolName>`).toolName).toHaveLength(256);
-    expect(issueCode(() => qti(`<toolVersion>${"a".repeat(257)}</toolVersion>`))).toBe(
-      "assesskit/metadata/invalid-text",
-    );
-    expect(qti(`<toolVendor>${"\u{1F600}".repeat(256)}</toolVendor>`).toolVendor).toHaveLength(512);
-  });
-
-  it("reads a normalized string without its tabs and line ends", () => {
-    const metadata = qti(
-      "<portableCustomInteractionContext><interactionKind>a\tb\nc</interactionKind></portableCustomInteractionContext>",
-    );
-    expect(metadata.portableCustomInteractionContext?.interactionKind).toBe("a b c");
-  });
-
-  it("names the document and the position of a problem", () => {
-    const error = thrownAs(ReadError, () => qti("<timeDependent>maybe</timeDependent>", "item.xml"));
-    expect(error.issues[0]).toMatchObject({
-      severity: "error",
-      code: "assesskit/metadata/invalid-text",
-      location: { path: "item.xml", line: 1 },
-    });
-    expect(error.message).toContain("true or false");
-  });
-
-  it("rejects an element the schema does not declare, a foreign one and a repeated one", () => {
-    expect(issueCode(() => qti("<other/>"))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => qti('<x xmlns="urn:x"/>'))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => qti("<composite>true</composite><composite>false</composite>"))).toBe(
-      "assesskit/metadata/unexpected-element",
-    );
-    expect(issueCode(() => qti("<feedbackType>none</feedbackType><feedbackType>none</feedbackType>"))).toBe(
-      "assesskit/metadata/unexpected-element",
-    );
-  });
-});
-
-/** Texts of JSON that are not QTI metadata: a field of the wrong type, a term outside its vocabulary, a long tool string. */
-const INVALID_QTI_METADATA: readonly string[] = (() => {
-  const valid: QtiMetadata = { interactionTypes: [], scoringModes: [] };
-  return [
-    "{}",
-    JSON.stringify({ ...valid, interactionTypes: "choiceInteraction" }),
-    JSON.stringify({ ...valid, interactionTypes: ["choice"] }),
-    JSON.stringify({ ...valid, scoringModes: ["Human"] }),
-    JSON.stringify({ ...valid, feedbackType: "other" }),
-    JSON.stringify({ ...valid, composite: "true" }),
-    JSON.stringify({ ...valid, toolName: 3 }),
-    JSON.stringify({ ...valid, toolName: "a".repeat(257) }),
-    JSON.stringify({ ...valid, portableCustomInteractionContext: { customTypeIdentifier: 3 } }),
-    JSON.stringify({ ...valid, portableCustomInteractionContext: "x" }),
-    "null",
-    "3",
-  ];
-})();
-
-describe("checkQtiMetadata", () => {
-  it("accepts any QTI metadata that the reader can return", () => {
-    fc.assert(
-      fc.property(qtiMetadata, (metadata) => {
-        expect(() => checkQtiMetadata(metadata)).not.toThrow();
-      }),
-    );
-  });
-
-  it("throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
-    for (const metadata of INVALID_QTI_METADATA) {
-      expect(() => checkQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
-    }
-  });
-});
-
-describe("writeQtiMetadata", () => {
-  it("writes the children in the order of the schema, whatever the order of the fields", () => {
-    const element = writeQtiMetadata({
-      toolVendor: "v",
-      feedbackType: "none",
-      composite: false,
-      interactionTypes: ["choiceInteraction", "textEntryInteraction"],
-      scoringModes: ["human"],
-      itemTemplate: true,
-    });
-    expect(element.children.map((child) => (child.kind === "element" ? child.name : child.kind))).toEqual([
-      "itemTemplate",
-      "composite",
-      "interactionType",
-      "interactionType",
-      "feedbackType",
-      "scoringMode",
-      "toolVendor",
-    ]);
-    expect(element).toMatchObject({ namespace: QTI_METADATA_NAMESPACE, name: "qtiMetadata" });
-  });
-
-  it("reads back what it writes, through XML text", () => {
-    fc.assert(
-      fc.property(qtiMetadata, (metadata) => {
-        expect(readQtiMetadata(parseXml(serializeXml(writeQtiMetadata(metadata))))).toEqual(metadata);
-      }),
-      { numRuns: 200 },
-    );
-  });
-
-  it("throws a DataError for metadata that checkQtiMetadata rejects", () => {
-    for (const metadata of INVALID_QTI_METADATA) {
-      expect(() => writeQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
-    }
-  });
-});
-
-const csm = (xml: string): ReturnType<typeof readCurriculumStandardsSet> =>
-  readCurriculumStandardsSet(
-    parseXml(`<curriculumStandardsMetadataSet ${CSM}>${xml}</curriculumStandardsMetadataSet>`),
-    undefined,
-  );
-
-describe("readCurriculumStandardsSet", () => {
-  it("reads the labels, CASE item URIs and GUIDs of the externalMetadata example", () => {
-    const set = readCurriculumStandardsSet(
-      parseXml(`<curriculumStandardsMetadataSet ${CSM} resourceLabel="Math" resourcePartId="p1">
-        <curriculumStandardsMetadata providerId="TEKS">
-          <setOfGUIDs region="TX" version="2017">
-            <labelledGUID>
-              <label>identify a number, its opposite, and its absolute value;</label>
-              <caseItemURI>https://teks-api.texasgateway.org/ims/case/v1p0/CFItems/747eee11-848c-597a-8c9c-a71c5399798d</caseItemURI>
-              <GUID>747eee11-848c-597a-8c9c-a71c5399798d</GUID>
-            </labelledGUID>
-          </setOfGUIDs>
-        </curriculumStandardsMetadata>
-      </curriculumStandardsMetadataSet>`),
-      undefined,
-    );
-    expect(set).toEqual({
-      resourceLabel: "Math",
-      resourcePartId: "p1",
-      standards: [
-        {
-          providerId: "TEKS",
-          guidSets: [
-            {
-              region: "TX",
-              version: "2017",
-              labelledGuids: [
-                {
-                  label: "identify a number, its opposite, and its absolute value;",
-                  caseItemUri:
-                    "https://teks-api.texasgateway.org/ims/case/v1p0/CFItems/747eee11-848c-597a-8c9c-a71c5399798d",
-                  guid: "747eee11-848c-597a-8c9c-a71c5399798d",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-  });
-
-  it("leaves out the optional parts that the document leaves out", () => {
-    const set = csm(
-      "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><GUID>g</GUID></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
-    );
-    expect(set.standards[0]?.guidSets[0]?.labelledGuids[0]).toEqual({ guid: "g" });
-    expect(set.resourceLabel).toBeUndefined();
-  });
-
-  it("rejects a labelled GUID without a GUID, an unknown element and an unknown attribute", () => {
-    expect(
-      issueCode(() =>
-        csm(
-          "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><label>l</label></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
-        ),
-      ),
-    ).toBe("assesskit/metadata/missing-element");
-    expect(issueCode(() => csm("<other/>"))).toBe("assesskit/metadata/unexpected-element");
-    expect(issueCode(() => csm('<curriculumStandardsMetadata other="1"/>'))).toBe(
-      "assesskit/metadata/unexpected-attribute",
-    );
-  });
-});
-
-describe("writeCurriculumStandardsSet", () => {
-  it("reads back what it writes, through XML text", () => {
-    fc.assert(
-      fc.property(curriculumStandardsSet, (set) => {
-        expect(readCurriculumStandardsSet(parseXml(serializeXml(writeCurriculumStandardsSet(set))), undefined)).toEqual(
-          set,
-        );
-      }),
-      { numRuns: 200 },
-    );
-  });
-
-  it("throws a DataError for an empty list that the schema requires to have an item, and for the wrong types", () => {
-    const guid = { guid: "g" };
-    const valid = { standards: [{ guidSets: [{ labelledGuids: [guid] }] }] };
-    for (const set of [
-      JSON.stringify({ standards: [] }),
-      JSON.stringify({ standards: [{ guidSets: [] }] }),
-      JSON.stringify({ standards: [{ guidSets: [{ labelledGuids: [] }] }] }),
-      JSON.stringify({ standards: [{ guidSets: [{ labelledGuids: [{}] }] }] }),
-      JSON.stringify({ ...valid, resourceLabel: 3 }),
-      JSON.stringify({ standards: "x" }),
-      "null",
-    ]) {
-      expect(() => writeCurriculumStandardsSet(JSON.parse(set)), set).toThrow(DataError);
-    }
-  });
-});
-
 const drd = (xml: string, path?: string): AccessForAllResource =>
   readAccessForAllResource(parseXml(`<accessForAllResource ${DRD}>${xml}</accessForAllResource>`), path);
 
-describe("readAccessForAllResource", () => {
+describe("reading the accessibility description", () => {
   it("reads the elements in the order of the schema", () => {
     const resource = drd(`
       <accessMode>auditory</accessMode>
@@ -421,7 +148,7 @@ describe("readAccessForAllResource", () => {
   });
 });
 
-describe("writeAccessForAllResource", () => {
+describe("writing the accessibility description", () => {
   it("writes the elements in the order of the DRD schema", () => {
     const element = writeAccessForAllResource({
       ...drd(""),
@@ -473,163 +200,101 @@ describe("writeAccessForAllResource", () => {
   });
 });
 
-const lomXml = `<lom:lom xmlns:lom="${LOM_NAMESPACE}">
-  <lom:general>
-    <lom:identifier><lom:catalog>c</lom:catalog><lom:entry>qti_v2_item_01</lom:entry></lom:identifier>
-    <lom:identifier><lom:catalog>only a catalog</lom:catalog></lom:identifier>
-    <lom:title><lom:string language="en">Metadata Example Item #1</lom:string><lom:string xml:lang="id">Contoh</lom:string><lom:string>None</lom:string></lom:title>
-    <lom:description><lom:string>ignored</lom:string></lom:description>
-  </lom:general>
-</lom:lom>`;
+const csm = (xml: string): ReturnType<typeof readCurriculumStandardsSet> =>
+  readCurriculumStandardsSet(
+    parseXml(`<curriculumStandardsMetadataSet ${CSM}>${xml}</curriculumStandardsMetadataSet>`),
+    undefined,
+  );
 
-describe("lomGeneral", () => {
-  it("reads the entries of the identifiers and the strings of the title, with their languages", () => {
-    expect(lomGeneral(parseXml(lomXml))).toEqual({
-      identifiers: ["qti_v2_item_01"],
-      titles: [
-        { language: "en", text: "Metadata Example Item #1" },
-        { language: "id", text: "Contoh" },
-        { text: "None" },
+describe("reading curriculum standards", () => {
+  it("reads the labels, CASE item URIs and GUIDs of the externalMetadata example", () => {
+    const set = readCurriculumStandardsSet(
+      parseXml(`<curriculumStandardsMetadataSet ${CSM} resourceLabel="Math" resourcePartId="p1">
+        <curriculumStandardsMetadata providerId="TEKS">
+          <setOfGUIDs region="TX" version="2017">
+            <labelledGUID>
+              <label>identify a number, its opposite, and its absolute value;</label>
+              <caseItemURI>https://teks-api.texasgateway.org/ims/case/v1p0/CFItems/747eee11-848c-597a-8c9c-a71c5399798d</caseItemURI>
+              <GUID>747eee11-848c-597a-8c9c-a71c5399798d</GUID>
+            </labelledGUID>
+          </setOfGUIDs>
+        </curriculumStandardsMetadata>
+      </curriculumStandardsMetadataSet>`),
+      undefined,
+    );
+    expect(set).toEqual({
+      resourceLabel: "Math",
+      resourcePartId: "p1",
+      standards: [
+        {
+          providerId: "TEKS",
+          guidSets: [
+            {
+              region: "TX",
+              version: "2017",
+              labelledGuids: [
+                {
+                  label: "identify a number, its opposite, and its absolute value;",
+                  caseItemUri:
+                    "https://teks-api.texasgateway.org/ims/case/v1p0/CFItems/747eee11-848c-597a-8c9c-a71c5399798d",
+                  guid: "747eee11-848c-597a-8c9c-a71c5399798d",
+                },
+              ],
+            },
+          ],
+        },
       ],
     });
   });
 
-  it("returns empty lists for a lom without a general category", () => {
-    expect(lomGeneral(parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`))).toEqual({ identifiers: [], titles: [] });
-  });
-});
-
-describe("readResourceMetadata", () => {
-  const resourceMetadata = (inner: string): XmlElement =>
-    parseXml(
-      `<metadata xmlns="${CP_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}" xmlns:lom="${LOM_NAMESPACE}">${inner}</metadata>`,
+  it("leaves out the optional parts that the document leaves out", () => {
+    const set = csm(
+      "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><GUID>g</GUID></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
     );
-  const full = `<qmd:qtiMetadata><qmd:composite>false</qmd:composite></qmd:qtiMetadata>
-    <csmd:curriculumStandardsMetadataSet><csmd:curriculumStandardsMetadata><csmd:setOfGUIDs><csmd:labelledGUID><csmd:GUID>g</csmd:GUID></csmd:labelledGUID></csmd:setOfGUIDs></csmd:curriculumStandardsMetadata></csmd:curriculumStandardsMetadataSet>
-    <lom:lom><lom:general><lom:title><lom:string>t</lom:string></lom:title></lom:general></lom:lom>`;
-
-  it("reads the QTI metadata, the curriculum standards and the LOM of a metadata element", () => {
-    const metadata = readResourceMetadata(resourceMetadata(full));
-    expect(metadata.qti).toMatchObject({ composite: false });
-    expect(metadata.curriculumStandards?.standards).toHaveLength(1);
-    expect(metadata.lom?.name).toBe("lom");
+    expect(set.standards[0]?.guidSets[0]?.labelledGuids[0]).toEqual({ guid: "g" });
+    expect(set.resourceLabel).toBeUndefined();
   });
 
-  it("keeps each LOM category as XML", () => {
-    const categories = [
-      "lifeCycle",
-      "metaMetadata",
-      "technical",
-      "educational",
-      "rights",
-      "relation",
-      "annotation",
-      "classification",
-    ];
-    const inner = categories
-      .map((name) => `<lom:${name}><lom:description><lom:string>${name}</lom:string></lom:description></lom:${name}>`)
-      .join("");
-    const metadata = readResourceMetadata(resourceMetadata(`<lom:lom>${inner}</lom:lom>`));
-    const kept = metadata.lom?.children.flatMap((child) => (child.kind === "element" ? [child.name] : []));
-    expect(kept).toEqual(categories);
-  });
-
-  it("reads an external metadata file: the root lom holds the QTI metadata and the curriculum standards", () => {
-    const external = parseXml(
-      `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}"><educational/><qmd:qtiMetadata><qmd:composite>false</qmd:composite></qmd:qtiMetadata></lom>`,
-    );
-    const metadata = readResourceMetadata(external);
-    expect(metadata.qti?.composite).toBe(false);
-    expect(metadata.lom?.children.flatMap((child) => (child.kind === "element" ? [child.name] : []))).toEqual([
-      "educational",
-    ]);
-  });
-
-  it("reads a metadata element without children", () => {
-    expect(readResourceMetadata(resourceMetadata(""))).toEqual({});
-  });
-
-  it("rejects an element that the metadata of a resource does not have, a part twice and parts out of order", () => {
-    const code = (inner: string): string | undefined => issueCode(() => readResourceMetadata(resourceMetadata(inner)));
-    expect(code("<other/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<lom:lom/><lom:lom/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<qmd:qtiMetadata/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<lom:lom/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
-    expect(code("<csmd:curriculumStandardsMetadataSet/><qmd:qtiMetadata/>")).toBe(
-      "assesskit/metadata/unexpected-element",
-    );
-    expect(code("text")).toBe("assesskit/metadata/unexpected-text");
-  });
-
-  it("rejects an external metadata file that has the QTI metadata or the curriculum standards twice", () => {
-    const external = (inner: string): XmlElement =>
-      parseXml(
-        `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}">${inner}</lom>`,
-      );
-    expect(issueCode(() => readResourceMetadata(external("<qmd:qtiMetadata/><qmd:qtiMetadata/>")))).toBe(
-      "assesskit/metadata/duplicate-element",
-    );
+  it("rejects a labelled GUID without a GUID, an unknown element and an unknown attribute", () => {
     expect(
       issueCode(() =>
-        readResourceMetadata(external("<csmd:curriculumStandardsMetadataSet/><csmd:curriculumStandardsMetadataSet/>")),
+        csm(
+          "<curriculumStandardsMetadata><setOfGUIDs><labelledGUID><label>l</label></labelledGUID></setOfGUIDs></curriculumStandardsMetadata>",
+        ),
       ),
-    ).toBe("assesskit/metadata/duplicate-element");
-  });
-
-  it("reports the path the caller gives in the location of an issue", () => {
-    const error = thrownAs(ReadError, () => readResourceMetadata(resourceMetadata("<other/>"), "imsmanifest.xml"));
-    expect(error.issues[0]?.location?.path).toBe("imsmanifest.xml");
-  });
-
-  it("throws a DataError for an argument of another type", () => {
-    for (const input of ["null", '"x"', "[]"]) expect(() => readResourceMetadata(JSON.parse(input))).toThrow(DataError);
-    expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse("3"))).toThrow(DataError);
+    ).toBe("assesskit/metadata/missing-element");
+    expect(issueCode(() => csm("<other/>"))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueCode(() => csm('<curriculumStandardsMetadata other="1"/>'))).toBe(
+      "assesskit/metadata/unexpected-attribute",
+    );
   });
 });
 
-describe("writeResourceMetadata", () => {
-  it("writes a metadata element of the content package namespace in the order of the CP schema", () => {
-    const element = writeResourceMetadata({
-      lom: parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`),
-      curriculumStandards: { standards: [{ guidSets: [{ labelledGuids: [{ guid: "g" }] }] }] },
-      qti: { interactionTypes: [], scoringModes: [], composite: true },
-    });
-    expect(element).toMatchObject({ namespace: CP_NAMESPACE, name: "metadata" });
-    expect(element.children.map((child) => (child.kind === "element" ? child.name : ""))).toEqual([
-      "qtiMetadata",
-      "curriculumStandardsMetadataSet",
-      "lom",
-    ]);
-  });
-
-  it("reads back what it writes", () => {
+describe("writing curriculum standards", () => {
+  it("reads back what it writes, through XML text", () => {
     fc.assert(
-      fc.property(
-        fc.record({
-          qti: fc.option(qtiMetadata, { nil: undefined }),
-          curriculumStandards: fc.option(curriculumStandardsSet, { nil: undefined }),
-          lom: fc.option(lom, { nil: undefined }),
-        }),
-        (metadata) => {
-          const read = readResourceMetadata(parseXml(serializeXml(writeResourceMetadata(metadata))));
-          expect({ ...read, lom: read.lom && bare(read.lom) }).toEqual({
-            ...metadata,
-            lom: metadata.lom && bare(metadata.lom),
-          });
-        },
-      ),
-      { numRuns: 100 },
+      fc.property(curriculumStandardsSet, (set) => {
+        expect(readCurriculumStandardsSet(parseXml(serializeXml(writeCurriculumStandardsSet(set))), undefined)).toEqual(
+          set,
+        );
+      }),
+      { numRuns: 200 },
     );
   });
 
-  it("throws a DataError for a lom that is not a lom element and for the wrong types", () => {
-    for (const metadata of [
-      '{"lom":{"kind":"element","namespace":"","name":"lom","attributes":[],"children":[]}}',
-      '{"lom":3}',
+  it("throws a DataError for an empty list that the schema requires to have an item, and for the wrong types", () => {
+    const guid = { guid: "g" };
+    const valid = { standards: [{ guidSets: [{ labelledGuids: [guid] }] }] };
+    for (const set of [
+      JSON.stringify({ standards: [] }),
+      JSON.stringify({ standards: [{ guidSets: [] }] }),
+      JSON.stringify({ standards: [{ guidSets: [{ labelledGuids: [] }] }] }),
+      JSON.stringify({ standards: [{ guidSets: [{ labelledGuids: [{}] }] }] }),
+      JSON.stringify({ ...valid, resourceLabel: 3 }),
+      JSON.stringify({ standards: "x" }),
       "null",
-      '"x"',
     ]) {
-      expect(() => writeResourceMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
+      expect(() => writeCurriculumStandardsSet(JSON.parse(set)), set).toThrow(DataError);
     }
   });
 });
@@ -733,7 +398,7 @@ const INTERACTION_OF_TYPE: readonly (readonly [string, string])[] = [
   ["uploadInteraction", '<qti-upload-interaction response-identifier="R"/>'],
 ];
 
-describe("deriveQtiMetadata", () => {
+describe("deriving QTI metadata", () => {
   it("derives the metadata of a choice item with a correct response, feedback and response processing", () => {
     expect(
       derive({
@@ -880,7 +545,7 @@ describe("deriveQtiMetadata", () => {
     expect(readQtiMetadata(parseXml(serializeXml(writeQtiMetadata(metadata))))).toEqual(metadata);
   });
 
-  it("derives the same metadata whatever the interactions in the body, as the statements of MD §2.3.1 say", () => {
+  it("derives the same metadata whatever the interactions in the body, as the statements of the schema say", () => {
     fc.assert(
       fc.property(
         fc.array(fc.constantFrom(...INTERACTION_TYPES.filter((type) => type !== "portableCustomInteraction")), {
@@ -908,5 +573,353 @@ describe("deriveQtiMetadata", () => {
     for (const item of ["null", '"x"', "{}", '{"responseDeclarations":[],"outcomeDeclarations":[]}']) {
       expect(() => deriveQtiMetadata(JSON.parse(item)), item).toThrow(DataError);
     }
+  });
+});
+
+const lomXml = `<lom:lom xmlns:lom="${LOM_NAMESPACE}">
+  <lom:general>
+    <lom:identifier><lom:catalog>c</lom:catalog><lom:entry>qti_v2_item_01</lom:entry></lom:identifier>
+    <lom:identifier><lom:catalog>only a catalog</lom:catalog></lom:identifier>
+    <lom:title><lom:string language="en">Metadata Example Item #1</lom:string><lom:string xml:lang="id">Contoh</lom:string><lom:string>None</lom:string></lom:title>
+    <lom:description><lom:string>ignored</lom:string></lom:description>
+  </lom:general>
+</lom:lom>`;
+
+describe("the general category of a LOM", () => {
+  it("reads the entries of the identifiers and the strings of the title, with their languages", () => {
+    expect(lomGeneral(parseXml(lomXml))).toEqual({
+      identifiers: ["qti_v2_item_01"],
+      titles: [
+        { language: "en", text: "Metadata Example Item #1" },
+        { language: "id", text: "Contoh" },
+        { text: "None" },
+      ],
+    });
+  });
+
+  it("returns empty lists for a lom without a general category", () => {
+    expect(lomGeneral(parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`))).toEqual({ identifiers: [], titles: [] });
+  });
+});
+
+describe("reading QTI metadata", () => {
+  it("reads the QTI metadata of the 1EdTech metaData example from its text", () => {
+    const metadata = qti(`
+      <timeDependent>false</timeDependent>
+      <interactionType>choiceInteraction</interactionType>
+      <feedbackType>nonadaptive</feedbackType>
+      <solutionAvailable>true</solutionAvailable>
+      <toolName>XMLSPY</toolName>
+      <toolVersion>5.4</toolVersion>
+      <toolVendor>ALTOVA</toolVendor>`);
+    expect(metadata).toEqual({
+      timeDependent: false,
+      interactionTypes: ["choiceInteraction"],
+      feedbackType: "nonadaptive",
+      solutionAvailable: true,
+      scoringModes: [],
+      toolName: "XMLSPY",
+      toolVersion: "5.4",
+      toolVendor: "ALTOVA",
+    });
+  });
+
+  it("reads itemTemplate, composite and several scoring modes", () => {
+    const metadata = qti(
+      "<itemTemplate>1</itemTemplate><composite> true </composite><scoringMode>human</scoringMode><scoringMode>responseprocessing</scoringMode>",
+    );
+    expect(metadata).toMatchObject({
+      itemTemplate: true,
+      composite: true,
+      scoringModes: ["human", "responseprocessing"],
+    });
+  });
+
+  it("reads the context of a portable custom interaction", () => {
+    const metadata = qti(
+      "<portableCustomInteractionContext><customTypeIdentifier>urn:x</customTypeIdentifier><interactionKind>sound</interactionKind></portableCustomInteractionContext>",
+    );
+    expect(metadata.portableCustomInteractionContext).toEqual({
+      customTypeIdentifier: "urn:x",
+      interactionKind: "sound",
+    });
+  });
+
+  it("accepts each of the 22 interaction types and no other", () => {
+    expect(INTERACTION_TYPES).toHaveLength(22);
+    for (const type of INTERACTION_TYPES)
+      expect(qti(`<interactionType>${type}</interactionType>`).interactionTypes).toEqual([type]);
+    expect(issueCode(() => qti("<interactionType>choice</interactionType>"))).toBe("assesskit/metadata/invalid-text");
+    expect(issueCode(() => qti("<interactionType>choiceinteraction</interactionType>"))).toBe(
+      "assesskit/metadata/invalid-text",
+    );
+  });
+
+  it("accepts the three feedback types and no other", () => {
+    expect(FEEDBACK_TYPES).toEqual(["adaptive", "nonadaptive", "none"]);
+    for (const type of FEEDBACK_TYPES) expect(qti(`<feedbackType>${type}</feedbackType>`).feedbackType).toBe(type);
+    expect(issueCode(() => qti("<feedbackType>other</feedbackType>"))).toBe("assesskit/metadata/invalid-text");
+  });
+
+  it("accepts the three scoring modes and no other", () => {
+    expect(SCORING_MODES).toEqual(["human", "externalmachine", "responseprocessing"]);
+    for (const mode of SCORING_MODES) expect(qti(`<scoringMode>${mode}</scoringMode>`).scoringModes).toEqual([mode]);
+    expect(issueCode(() => qti("<scoringMode>externalMachine</scoringMode>"))).toBe("assesskit/metadata/invalid-text");
+  });
+
+  it("takes a tool string of 256 characters and rejects one of 257", () => {
+    expect(qti(`<toolName>${"a".repeat(256)}</toolName>`).toolName).toHaveLength(256);
+    expect(issueCode(() => qti(`<toolVersion>${"a".repeat(257)}</toolVersion>`))).toBe(
+      "assesskit/metadata/invalid-text",
+    );
+    expect(qti(`<toolVendor>${"\u{1F600}".repeat(256)}</toolVendor>`).toolVendor).toHaveLength(512);
+  });
+
+  it("reads a normalized string without its tabs and line ends", () => {
+    const metadata = qti(
+      "<portableCustomInteractionContext><interactionKind>a\tb\nc</interactionKind></portableCustomInteractionContext>",
+    );
+    expect(metadata.portableCustomInteractionContext?.interactionKind).toBe("a b c");
+  });
+
+  it("names the document and the position of a problem", () => {
+    const error = thrownAs(ReadError, () => qti("<timeDependent>maybe</timeDependent>", "item.xml"));
+    expect(error.issues[0]).toMatchObject({
+      severity: "error",
+      code: "assesskit/metadata/invalid-text",
+      location: { path: "item.xml", line: 1 },
+    });
+    expect(error.message).toContain("true or false");
+  });
+
+  it("rejects an element the schema does not declare, a foreign one and a repeated one", () => {
+    expect(issueCode(() => qti("<other/>"))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueCode(() => qti('<x xmlns="urn:x"/>'))).toBe("assesskit/metadata/unexpected-element");
+    expect(issueCode(() => qti("<composite>true</composite><composite>false</composite>"))).toBe(
+      "assesskit/metadata/unexpected-element",
+    );
+    expect(issueCode(() => qti("<feedbackType>none</feedbackType><feedbackType>none</feedbackType>"))).toBe(
+      "assesskit/metadata/unexpected-element",
+    );
+  });
+});
+
+/** Texts of JSON that are not QTI metadata: a field of the wrong type, a term outside its vocabulary, a long tool string. */
+const INVALID_QTI_METADATA: readonly string[] = (() => {
+  const valid: QtiMetadata = { interactionTypes: [], scoringModes: [] };
+  return [
+    "{}",
+    JSON.stringify({ ...valid, interactionTypes: "choiceInteraction" }),
+    JSON.stringify({ ...valid, interactionTypes: ["choice"] }),
+    JSON.stringify({ ...valid, scoringModes: ["Human"] }),
+    JSON.stringify({ ...valid, feedbackType: "other" }),
+    JSON.stringify({ ...valid, composite: "true" }),
+    JSON.stringify({ ...valid, toolName: 3 }),
+    JSON.stringify({ ...valid, toolName: "a".repeat(257) }),
+    JSON.stringify({ ...valid, portableCustomInteractionContext: { customTypeIdentifier: 3 } }),
+    JSON.stringify({ ...valid, portableCustomInteractionContext: "x" }),
+    "null",
+    "3",
+  ];
+})();
+
+describe("checking QTI metadata", () => {
+  it("accepts any QTI metadata that the reader can return", () => {
+    fc.assert(
+      fc.property(qtiMetadata, (metadata) => {
+        expect(() => checkQtiMetadata(metadata)).not.toThrow();
+      }),
+    );
+  });
+
+  it("throws a DataError for a field of the wrong type, a term outside its vocabulary and a long tool string", () => {
+    for (const metadata of INVALID_QTI_METADATA) {
+      expect(() => checkQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
+    }
+  });
+});
+
+describe("writing QTI metadata", () => {
+  it("writes the children in the order of the schema, whatever the order of the fields", () => {
+    const element = writeQtiMetadata({
+      toolVendor: "v",
+      feedbackType: "none",
+      composite: false,
+      interactionTypes: ["choiceInteraction", "textEntryInteraction"],
+      scoringModes: ["human"],
+      itemTemplate: true,
+    });
+    expect(element.children.map((child) => (child.kind === "element" ? child.name : child.kind))).toEqual([
+      "itemTemplate",
+      "composite",
+      "interactionType",
+      "interactionType",
+      "feedbackType",
+      "scoringMode",
+      "toolVendor",
+    ]);
+    expect(element).toMatchObject({ namespace: QTI_METADATA_NAMESPACE, name: "qtiMetadata" });
+  });
+
+  it("reads back what it writes, through XML text", () => {
+    fc.assert(
+      fc.property(qtiMetadata, (metadata) => {
+        expect(readQtiMetadata(parseXml(serializeXml(writeQtiMetadata(metadata))))).toEqual(metadata);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("throws a DataError for metadata that checkQtiMetadata rejects", () => {
+    for (const metadata of INVALID_QTI_METADATA) {
+      expect(() => writeQtiMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
+    }
+  });
+});
+
+describe("reading resource metadata", () => {
+  const resourceMetadata = (inner: string): XmlElement =>
+    parseXml(
+      `<metadata xmlns="${CP_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}" xmlns:lom="${LOM_NAMESPACE}">${inner}</metadata>`,
+    );
+  const full = `<qmd:qtiMetadata><qmd:composite>false</qmd:composite></qmd:qtiMetadata>
+    <csmd:curriculumStandardsMetadataSet><csmd:curriculumStandardsMetadata><csmd:setOfGUIDs><csmd:labelledGUID><csmd:GUID>g</csmd:GUID></csmd:labelledGUID></csmd:setOfGUIDs></csmd:curriculumStandardsMetadata></csmd:curriculumStandardsMetadataSet>
+    <lom:lom><lom:general><lom:title><lom:string>t</lom:string></lom:title></lom:general></lom:lom>`;
+
+  it("reads the QTI metadata, the curriculum standards and the LOM of a metadata element", () => {
+    const metadata = readResourceMetadata(resourceMetadata(full));
+    expect(metadata.qti).toMatchObject({ composite: false });
+    expect(metadata.curriculumStandards?.standards).toHaveLength(1);
+    expect(metadata.lom?.name).toBe("lom");
+  });
+
+  it("keeps each LOM category as XML", () => {
+    const categories = [
+      "lifeCycle",
+      "metaMetadata",
+      "technical",
+      "educational",
+      "rights",
+      "relation",
+      "annotation",
+      "classification",
+    ];
+    const inner = categories
+      .map((name) => `<lom:${name}><lom:description><lom:string>${name}</lom:string></lom:description></lom:${name}>`)
+      .join("");
+    const metadata = readResourceMetadata(resourceMetadata(`<lom:lom>${inner}</lom:lom>`));
+    const kept = metadata.lom?.children.flatMap((child) => (child.kind === "element" ? [child.name] : []));
+    expect(kept).toEqual(categories);
+  });
+
+  it("reads an external metadata file: the root lom holds the QTI metadata and the curriculum standards", () => {
+    const external = parseXml(
+      `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}"><educational/><qmd:qtiMetadata><qmd:composite>false</qmd:composite></qmd:qtiMetadata></lom>`,
+    );
+    const metadata = readResourceMetadata(external);
+    expect(metadata.qti?.composite).toBe(false);
+    expect(metadata.lom?.children.flatMap((child) => (child.kind === "element" ? [child.name] : []))).toEqual([
+      "educational",
+    ]);
+  });
+
+  it("reads a metadata element without children", () => {
+    expect(readResourceMetadata(resourceMetadata(""))).toEqual({});
+  });
+
+  it("rejects an element that the metadata of a resource does not have, a part twice and parts out of order", () => {
+    const code = (inner: string): string | undefined => issueCode(() => readResourceMetadata(resourceMetadata(inner)));
+    expect(code("<other/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(code("<lom:lom/><lom:lom/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(code("<qmd:qtiMetadata/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(code("<lom:lom/><qmd:qtiMetadata/>")).toBe("assesskit/metadata/unexpected-element");
+    expect(code("<csmd:curriculumStandardsMetadataSet/><qmd:qtiMetadata/>")).toBe(
+      "assesskit/metadata/unexpected-element",
+    );
+    expect(code("text")).toBe("assesskit/metadata/unexpected-text");
+  });
+
+  it("rejects an external metadata file that has the QTI metadata or the curriculum standards twice", () => {
+    const external = (inner: string): XmlElement =>
+      parseXml(
+        `<lom xmlns="${LOM_NAMESPACE}" xmlns:qmd="${QTI_METADATA_NAMESPACE}" xmlns:csmd="${CSM_NAMESPACE}">${inner}</lom>`,
+      );
+    expect(issueCode(() => readResourceMetadata(external("<qmd:qtiMetadata/><qmd:qtiMetadata/>")))).toBe(
+      "assesskit/metadata/duplicate-element",
+    );
+    expect(
+      issueCode(() =>
+        readResourceMetadata(external("<csmd:curriculumStandardsMetadataSet/><csmd:curriculumStandardsMetadataSet/>")),
+      ),
+    ).toBe("assesskit/metadata/duplicate-element");
+  });
+
+  it("reports the path the caller gives in the location of an issue", () => {
+    const error = thrownAs(ReadError, () => readResourceMetadata(resourceMetadata("<other/>"), "imsmanifest.xml"));
+    expect(error.issues[0]?.location?.path).toBe("imsmanifest.xml");
+  });
+
+  it("throws a DataError for an argument of another type", () => {
+    for (const input of ["null", '"x"', "[]"]) expect(() => readResourceMetadata(JSON.parse(input))).toThrow(DataError);
+    expect(() => readResourceMetadata(resourceMetadata(""), JSON.parse("3"))).toThrow(DataError);
+  });
+});
+
+describe("writing resource metadata", () => {
+  it("writes a metadata element of the content package namespace in the order of the CP schema", () => {
+    const element = writeResourceMetadata({
+      lom: parseXml(`<lom xmlns="${LOM_NAMESPACE}"/>`),
+      curriculumStandards: { standards: [{ guidSets: [{ labelledGuids: [{ guid: "g" }] }] }] },
+      qti: { interactionTypes: [], scoringModes: [], composite: true },
+    });
+    expect(element).toMatchObject({ namespace: CP_NAMESPACE, name: "metadata" });
+    expect(element.children.map((child) => (child.kind === "element" ? child.name : ""))).toEqual([
+      "qtiMetadata",
+      "curriculumStandardsMetadataSet",
+      "lom",
+    ]);
+  });
+
+  it("reads back what it writes", () => {
+    fc.assert(
+      fc.property(
+        fc.record({
+          qti: fc.option(qtiMetadata, { nil: undefined }),
+          curriculumStandards: fc.option(curriculumStandardsSet, { nil: undefined }),
+          lom: fc.option(lom, { nil: undefined }),
+        }),
+        (metadata) => {
+          const read = readResourceMetadata(parseXml(serializeXml(writeResourceMetadata(metadata))));
+          expect({ ...read, lom: read.lom && bare(read.lom) }).toEqual({
+            ...metadata,
+            lom: metadata.lom && bare(metadata.lom),
+          });
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it("throws a DataError for a lom that is not a lom element and for the wrong types", () => {
+    for (const metadata of [
+      '{"lom":{"kind":"element","namespace":"","name":"lom","attributes":[],"children":[]}}',
+      '{"lom":3}',
+      "null",
+      '"x"',
+    ]) {
+      expect(() => writeResourceMetadata(JSON.parse(metadata)), metadata).toThrow(DataError);
+    }
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/metadata.md", import.meta.url);
+    const asi = await import("../src/asi/index.js");
+    const metadata = await import("../src/metadata/index.js");
+    const modules = { "@assesskit/runtime/asi": asi, "@assesskit/runtime/metadata": metadata };
+    expect(
+      await runGuideSamples(guide, { ...modules, "@assesskit/runtime/xml": await import("../src/xml/index.js") }),
+    ).toBeGreaterThan(0);
   });
 });

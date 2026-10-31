@@ -15,7 +15,7 @@ import type {
   TypingEcho,
 } from "./vocabularies.js";
 
-/** What every support but the on-screen tools says about the content it replaces (PNP XSD `ReplacesAccessModeDType`). */
+/** What every support but the on-screen tools says about the content it replaces. */
 export interface ReplacesAccessModes {
   /** The access modes whose content the support replaces. */
   readonly replaceAccessModes: readonly PnpAccessMode[];
@@ -27,7 +27,7 @@ export interface ReplacingSupport extends ReplacesAccessModes {
   readonly name: ReplacingSupportName;
 }
 
-/** A language the candidate prefers for a support (PNP XSD `LanguageModeDType`). */
+/** A language the candidate prefers for a support. */
 export interface LanguagePreference extends ReplacesAccessModes {
   /** The language, a BCP 47 tag (`xml:lang`). */
   readonly language: string;
@@ -39,7 +39,7 @@ export interface LanguageSupport extends LanguagePreference {
   readonly name: LanguageSupportName;
 }
 
-/** The languages of the interface, most preferred first: the element occurs once for each (PNP XSD). */
+/** The languages of the interface, most preferred first: the element occurs once for each. */
 export interface LanguageOfInterface {
   /** The name of the support. */
   readonly name: "language-of-interface";
@@ -53,7 +53,7 @@ export interface ToolSupport {
   readonly name: ToolSupportName;
 }
 
-/** The stimuli the candidate must not be exposed to: the element occurs once for each (BPIG §5.2.5). */
+/** The stimuli the candidate must not be exposed to: the element occurs once for each. */
 export interface HazardAvoidance {
   /** The name of the support. */
   readonly name: "hazard-avoidance";
@@ -61,7 +61,7 @@ export interface HazardAvoidance {
   readonly hazards: readonly HazardTerm[];
 }
 
-/** What the candidate needs to operate the interface (PNP XSD). */
+/** What the candidate needs to operate the interface. */
 export interface InputRequirements {
   /** The name of the support. */
   readonly name: "input-requirements";
@@ -69,7 +69,7 @@ export interface InputRequirements {
   readonly requirement: InputRequirement;
 }
 
-/** How the extra time is given (BPIG §5.2.4). */
+/** How the extra time is given. */
 export type TestingTime =
   | {
       /** Tells the three ways apart. */
@@ -88,7 +88,7 @@ export type TestingTime =
       readonly kind: "unlimited";
     };
 
-/** Extra testing time (BPIG §5.2.4). */
+/** Extra testing time. */
 export interface AdditionalTestingTime extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "additional-testing-time";
@@ -96,7 +96,7 @@ export interface AdditionalTestingTime extends ReplacesAccessModes {
   readonly time: TestingTime;
 }
 
-/** A line reader (PNP XSD). */
+/** A line reader. */
 export interface LineReader extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "line-reader";
@@ -104,7 +104,7 @@ export interface LineReader extends ReplacesAccessModes {
   readonly highlightColor?: string;
 }
 
-/** Inverted display polarity (PNP XSD). */
+/** Inverted display polarity. */
 export interface InvertDisplayPolarity extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "invert-display-polarity";
@@ -114,13 +114,13 @@ export interface InvertDisplayPolarity extends ReplacesAccessModes {
   readonly background?: string;
 }
 
-/** A zoom (PNP XSD `ZoomAmountDType`). */
+/** A zoom. */
 export interface Zoom {
   /** The factor by which to enlarge. */
   readonly zoomAmount?: number;
 }
 
-/** Magnification: of all content, or of text and non-text separately (BPIG §5.2.9.6). */
+/** Magnification: of all content, or of text and non-text separately. */
 export interface Magnification extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "magnification";
@@ -132,7 +132,7 @@ export interface Magnification extends ReplacesAccessModes {
   readonly nonText?: Zoom;
 }
 
-/** Reading aloud (BPIG §5.2.1). */
+/** Reading aloud. */
 export interface Spoken extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "spoken";
@@ -152,7 +152,7 @@ export interface Spoken extends ReplacesAccessModes {
   readonly typingEcho?: TypingEcho;
 }
 
-/** Braille (BPIG §5.2.2). */
+/** Braille. */
 export interface Braille extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "braille";
@@ -168,15 +168,15 @@ export interface Braille extends ReplacesAccessModes {
   readonly mathType?: BrailleMathType;
 }
 
-/** A long description of images (PNP XSD). */
+/** A long description of images. */
 export interface LongDescription extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "long-description";
-  /** Whether the description is hidden from sighted candidates. Absent means true (PNP XSD default). */
+  /** Whether the description is hidden from sighted candidates. Absent means true. */
   readonly hideVisually?: boolean;
 }
 
-/** The physical environment of the candidate (BPIG §5.2.11). */
+/** The physical environment of the candidate. */
 export interface Environment extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "environment";
@@ -192,7 +192,7 @@ export interface Environment extends ReplacesAccessModes {
   readonly breaks?: boolean;
 }
 
-/** The face of the text: font names in order of preference, and a generic family (PNP XSD `FontFaceDType`). */
+/** The face of the text: font names in order of preference, and a generic family. */
 export interface FontFace {
   /** The names of the fonts. */
   readonly fontNames: readonly string[];
@@ -200,7 +200,7 @@ export interface FontFace {
   readonly genericFontFace?: GenericFontFace;
 }
 
-/** How text looks (BPIG §5.2.9.7). */
+/** How text looks. */
 export interface TextAppearance extends ReplacesAccessModes {
   /** The name of the support. */
   readonly name: "text-appearance";
@@ -226,7 +226,7 @@ export interface TextAppearance extends ReplacesAccessModes {
   readonly wordWrapping?: true;
 }
 
-/** An on-screen calculator (PNP XSD). */
+/** An on-screen calculator. */
 export interface CalculatorOnScreen {
   /** The name of the support. */
   readonly name: "calculator-on-screen";

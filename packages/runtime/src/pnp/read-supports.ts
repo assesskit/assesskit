@@ -53,7 +53,7 @@ import {
   type RestrictionType,
 } from "./vocabularies.js";
 
-/** The braille grades the schema lists, as the text of `grade` (PNP XSD). */
+/** The braille grades the schema lists, as the text of `grade`. */
 const BRAILLE_GRADE_TEXTS = ["1", "2", "3"] as const;
 
 type ChildReader<TValue> = (child: ElementReader) => TValue;
@@ -431,9 +431,12 @@ function readOther(reader: ElementReader, name: OtherSupportName): SupportSettin
 }
 
 /**
- * Reads the element of a predefined support into its settings (PNP XSD). `language-of-interface` and `hazard-avoidance`
+ * Reads the element of a predefined support into its settings. `language-of-interface` and `hazard-avoidance`
  * occur once for each language and hazard, so each element gives a setting of one.
  *
+ * @param reader - A reader positioned on the element of the support.
+ * @param name - The name of the predefined support that the element is.
+ * @returns The settings of the support.
  * @throws `ReadError` for a parameter that the support does not have, repeats, or gives a value its type does not allow.
  */
 export function readSupport(reader: ElementReader, name: PredefinedSupportName): SupportSetting {

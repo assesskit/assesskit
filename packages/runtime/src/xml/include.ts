@@ -15,7 +15,11 @@ export type IncludeResolver = (href: string, base: string) => XmlElement;
 
 /** Options of {@link resolveIncludes}. */
 export interface ResolveIncludesOptions {
-  /** Limits that replace the defaults, field by field; `maxDepth`, `maxNodes` and `maxIncludeDepth` apply. Default: {@link DEFAULT_XML_LIMITS}. */
+  /**
+   * Limits that replace the defaults, field by field; `maxDepth`, `maxNodes` and `maxIncludeDepth` apply.
+   *
+   * @defaultValue `{}`, which keeps {@link DEFAULT_XML_LIMITS}
+   */
   readonly limits?: Partial<XmlLimits>;
 }
 
@@ -26,10 +30,10 @@ interface Context {
   readonly depth: number;
 }
 
-/** The start of an absolute reference: a scheme (RFC 3986 §3.1). */
+/** The start of an absolute reference: a scheme, as RFC 3986 defines it. */
 const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
-/** Returns the path that a reference names from a base, with the `.` and `..` segments resolved (RFC 3986 §5.2.4). */
+/** Returns the path that a reference names from a base, with the `.` and `..` segments resolved as RFC 3986 removes dot segments. */
 function joinReference(base: string, reference: string): string {
   if (reference.startsWith("/") || SCHEME.test(reference)) return reference;
   const segments: string[] = [];
@@ -153,7 +157,7 @@ class Expander {
     try {
       returned = this.resolve(href, context.base);
     } catch (error) {
-      // XInclude 1.0 §4.4: a resource error falls back; limits and path rules are not resource errors.
+      // Only a resource error falls back; limits and path rules are not resource errors.
       if (error instanceof SecurityError) throw error;
       if (fallback === undefined) throw resourceError(href, error, locationOf(include, context.base));
       return this.expandNodes(fallback.children, context);
@@ -178,11 +182,14 @@ function resourceError(href: string, error: unknown, location: IssueLocation): R
 
 /**
  * Replaces each `xi:include` of a tree with the root element of the document it names, and expands the includes of
- * that document in turn. Only parsed XML is included, an `xpointer` is an error (INFO §2.12), and the resolver is the
- * caller's: the runtime reads nothing itself. If the resolver fails, the `xi:fallback` of the include replaces it; without one,
- * the failure is an error (XInclude 1.0 §4.4). A `SecurityError` from the resolver is never replaced by a fallback.
- * `xml:base` and `xml:lang` fixup is not done, which XInclude 1.0 §4.5.5 and §4.5.6 allow. The attributes `encoding`,
- * `accept` and `accept-language` of an include do not apply to parsed XML and are ignored.
+ * that document in turn.
+ *
+ * @remarks
+ * Only parsed XML is included, an `xpointer` is an error, and the resolver is the caller's: the runtime reads nothing
+ * itself. If the resolver fails, the `xi:fallback` of the include replaces it; without one, the failure is an error. A
+ * `SecurityError` from the resolver is never replaced by a fallback. The fixup of `xml:base` and `xml:lang` is not done,
+ * which XInclude allows. The attributes `encoding`, `accept` and `accept-language` of an include do not apply to parsed
+ * XML and are ignored.
  *
  * @param root - The tree, usually from {@link parseXml}.
  * @param base - The path of the document of `root`, which the resolver gets for the includes of that document.
@@ -195,6 +202,8 @@ function resourceError(href: string, error: unknown, location: IssueLocation): R
  * fragment identifier, when the includes form a loop, or when the resolver fails and there is no fallback.
  * @throws `SecurityError` when the result exceeds `maxDepth` or `maxNodes`, includes nest deeper than `maxIncludeDepth`,
  * or the resolver throws one.
+ * @see {@link https://www.w3.org/TR/xinclude/ | XML Inclusions (XInclude) 1.0}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, XInclude}
  */
 export function resolveIncludes(
   root: XmlElement,

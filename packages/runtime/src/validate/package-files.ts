@@ -12,13 +12,23 @@ export class Contents {
   private readonly present: ReadonlySet<string>;
   private readonly listed: ReadonlySet<string>;
 
+  /**
+   * Indexes the files of a package.
+   *
+   * @param pkg - The package.
+   */
   constructor(pkg: QtiPackage) {
     this.pkg = pkg;
     this.present = new Set(pkg.paths);
     this.listed = listedPaths(pkg.manifest);
   }
 
-  /** Returns whether the package holds a file. */
+  /**
+   * Returns whether the package holds a file.
+   *
+   * @param path - The path in the package.
+   * @returns `true` when the package holds the file.
+   */
   has(path: string): boolean {
     return this.present.has(path);
   }
@@ -26,6 +36,9 @@ export class Contents {
   /**
    * Reports a file that a document names and the package lacks or the manifest does not list.
    *
+   * @param path - The path that the document names, or `undefined` when it names none.
+   * @param findings - The findings of the document, which receive the issues.
+   * @param element - The element path of the element that names the file.
    * @param what - Says what names the file, such as `The settings file of the adaptive section`.
    */
   check(path: string | undefined, what: string, findings: Findings, element: string): void {
@@ -63,9 +76,9 @@ function listedPaths(manifest: Manifest): ReadonlySet<string> {
 }
 
 /**
- * Checks that the files the manifest lists are in the package and that the package holds no other file (BIND §8.1,
- * CAT §2.6): all files of a conformant package are listed, and a listed file must exist. The manifest itself is not listed.
+ * Checks that the files the manifest lists are in the package and that the package holds no other file: all files of a conformant package are listed, and a listed file must exist. The manifest itself is not listed.
  *
+ * @param pkg - The package.
  * @param findings - The findings of the manifest.
  */
 export function checkListedFiles(pkg: QtiPackage, findings: Findings): void {
@@ -94,7 +107,7 @@ function foreignKind(root: XmlElement): "pnp" | "results" | undefined {
   return root.namespace === RESULTS_NAMESPACE && root.name === "assessmentResult" ? "results" : undefined;
 }
 
-/** The namespaces of the personal needs profiles that the runtime reads (D6). */
+/** The namespaces of the personal needs profiles that the runtime reads. */
 const PROFILE_NAMESPACES: ReadonlySet<string> = new Set([PNP_NAMESPACE, ...PNP_ALTERNATE_NAMESPACES]);
 
 /** Reads the root element of a file, `undefined` when the file is absent or not a well-formed document. */
@@ -111,9 +124,10 @@ function rootOf(pkg: QtiPackage, path: string): XmlElement | undefined {
 }
 
 /**
- * Checks that no file of the package is a personal needs profile or a results report, which BIND §7 keeps out of a
+ * Checks that no file of the package is a personal needs profile or a results report, which the XML binding keeps out of a
  * package. Every XML file that is not a QTI document of a resource is read for its root element.
  *
+ * @param pkg - The package.
  * @param documents - The paths of the files that the manifest gives as QTI documents, which are not read again.
  * @param findings - The findings of the manifest.
  */

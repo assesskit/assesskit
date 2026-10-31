@@ -1,4 +1,4 @@
-/** The namespace of usage data documents, the target namespace of the UD schema (UD XSD). */
+/** The namespace of usage data documents, the target namespace of the UD schema. */
 export const USAGE_NAMESPACE = "http://www.imsglobal.org/xsd/imsqti_usagedata_v3p0";
 
 /** The address of the UD schema, which a written document names in `xsi:schemaLocation` as 1EdTech's examples do. */

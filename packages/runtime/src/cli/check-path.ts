@@ -6,7 +6,7 @@ import { DEFAULT_XML_LIMITS } from "../xml/index.js";
 import { documentIssues } from "./check-document.js";
 import { packageIssues } from "./check-package.js";
 
-/** The first two bytes of a ZIP file (APPNOTE 4.3.7), which no XML document can start with. */
+/** The first two bytes of a ZIP file, which no XML document can start with. */
 const ZIP_SIGNATURE = [0x50, 0x4b];
 
 /** Returns whether a file starts like a ZIP file. */
@@ -23,7 +23,7 @@ async function isZip(path: string): Promise<boolean> {
 /** Returns the issues of one XML document: the schema check, then the semantic checks. */
 async function documentFileIssues(path: string, size: number, schemas: SchemaSet): Promise<readonly Issue[]> {
   const { maxBytes } = DEFAULT_XML_LIMITS;
-  // The file is refused before it is read, so that a huge file cannot exhaust the memory (§2.6).
+  // The file is refused before it is read, so that a huge file cannot exhaust the memory.
   if (size > maxBytes) {
     const message = `The file ${path} has ${size} bytes, above the limit maxBytes of ${maxBytes}.`;
     throw new SecurityError(message, "maxBytes", maxBytes);
@@ -41,11 +41,15 @@ async function statOf(path: string): Promise<Stats> {
 }
 
 /**
- * Returns the issues of what a path names (L12): a package when it is a directory or a ZIP file, otherwise one XML
+ * Returns the issues of what a path names: a package when it is a directory or a ZIP file, otherwise one XML
  * document.
  *
+ * @param path - The path of a package or of an XML document.
+ * @param schemas - The loaded schemas.
+ * @returns The issues of the schema check and of the semantic checks.
  * @throws `DataError` when the path cannot be read or is neither a file nor a directory.
- * @throws `SecurityError` when the input is refused: a package that breaks a rule of §2.6, or a document above `maxBytes`.
+ * @throws `SecurityError` when the input is refused: a package that breaks a security rule of `readPackageFile`, or a
+ * document above `maxBytes`.
  */
 export async function pathIssues(path: string, schemas: SchemaSet): Promise<readonly Issue[]> {
   const stats = await statOf(path);

@@ -2,9 +2,8 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { lstat, readdir } from "node:fs/promises";
 import { join, sep } from "node:path";
 import { SecurityError } from "../errors.js";
-import type { PackageFiles } from "../package/index.js";
-import { normalizeEntryName } from "../package/paths.js";
-import type { ZipLimits } from "../package/zip-limits.js";
+import type { PackageFiles, ZipLimits } from "../package/index.js";
+import { normalizeEntryName } from "../package/internal.js";
 
 /** One file found in a directory: its path in the package and its size on disk. */
 interface Found {
@@ -24,7 +23,7 @@ function symlink(path: string): SecurityError {
   );
 }
 
-/** Lists the files below a directory, checking every entry with `lstat` so that no link is followed (§2.6). */
+/** Lists the files below a directory, checking every entry with `lstat` so that no link is followed. */
 class Walk {
   readonly found: Found[] = [];
   private entries = 0;
@@ -70,6 +69,9 @@ class Walk {
  * Opens an unpacked package directory. Listing it checks every entry with `lstat`; reading a file checks again with `lstat`
  * and `realpath` that the file is a regular file below the directory, and its size against `maxEntryBytes`.
  *
+ * @param directory - The path of the package directory.
+ * @param limits - The limits, with every field set.
+ * @returns The paths of the files, and a function that reads one.
  * @throws `SecurityError` when the directory has a symbolic link, a file that is not a regular file, a name that is not
  * allowed in a package, or exceeds `maxEntries`, `maxEntryBytes` or `maxTotalBytes`.
  */

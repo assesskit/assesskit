@@ -1,6 +1,6 @@
 import type { Issue } from "../errors.js";
 
-/** The exit codes of `assesskit validate` (design §3.11, L13). */
+/** The exit codes of `assesskit validate`. */
 export const EXIT_CODES = {
   /** The content has no issue with severity error. */
   valid: 0,
@@ -10,7 +10,7 @@ export const EXIT_CODES = {
   failed: 2,
 } as const;
 
-/** The report of `assesskit validate --format json` (L13). */
+/** The report of `assesskit validate --format json`. */
 export interface Report {
   /** Always `assesskit`. */
   readonly tool: "assesskit";
@@ -26,7 +26,14 @@ export interface Report {
   readonly issues: readonly Issue[];
 }
 
-/** Builds the report of a validation. */
+/**
+ * Builds the report of a validation.
+ *
+ * @param target - The path that was validated.
+ * @param version - The version of the runtime package.
+ * @param issues - The issues found.
+ * @returns The report.
+ */
 export function buildReport(target: string, version: string, issues: readonly Issue[]): Report {
   const errors = issues.filter(({ severity }) => severity === "error").length;
   return {
@@ -39,7 +46,12 @@ export function buildReport(target: string, version: string, issues: readonly Is
   };
 }
 
-/** Returns the exit code of a report. */
+/**
+ * Returns the exit code of a report.
+ *
+ * @param report - The report.
+ * @returns `EXIT_CODES.valid` or `EXIT_CODES.invalid`.
+ */
 export function exitCodeOf(report: Report): number {
   return report.valid ? EXIT_CODES.valid : EXIT_CODES.invalid;
 }
@@ -57,7 +69,12 @@ function formatIssue(issue: Issue, target: string): string {
   return `${location?.path ?? target}${line}${column}${element}: ${issue.severity}: ${issue.message} [${issue.code}]`;
 }
 
-/** Formats a report as text: one line for each issue, then the verdict. */
+/**
+ * Formats a report as text: one line for each issue, then the verdict.
+ *
+ * @param report - The report.
+ * @returns The text, ending with a line feed.
+ */
 export function formatText(report: Report): string {
   const { target, valid, summary } = report;
   const lines = report.issues.map((issue) => formatIssue(issue, target));
@@ -66,7 +83,12 @@ export function formatText(report: Report): string {
   return `${lines.join("\n")}\n`;
 }
 
-/** Formats a report as JSON with two spaces of indentation. */
+/**
+ * Formats a report as JSON with two spaces of indentation.
+ *
+ * @param report - The report.
+ * @returns The JSON, ending with a line feed.
+ */
 export function formatJson(report: Report): string {
   return `${JSON.stringify(report, null, 2)}\n`;
 }

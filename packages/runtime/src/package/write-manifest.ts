@@ -94,7 +94,7 @@ function writeResource(resource: Resource, resourceIds: ReadonlySet<string>): Xm
   checkOptionalString(href, `The href of the resource ${identifier}`);
   checkOptionalString(resourceBase, `The base of the resource ${identifier}`);
   checkArray(files, `The files of the resource ${identifier} must be an array`);
-  if (files.length === 0) throw new DataError(`The resource ${identifier} must list at least one file (CP XSD).`);
+  if (files.length === 0) throw new DataError(`The resource ${identifier} must list at least one file.`);
   checkArray(dependencies, `The dependencies of the resource ${identifier} must be an array`);
   checkArray(variants, `The variants of the resource ${identifier} must be an array`);
   const children: XmlElement[] = [];
@@ -176,9 +176,12 @@ function checkIdentifiers(manifest: Manifest): ReadonlySet<string> {
  * Writes a manifest as `imsmanifest.xml` text. The element `organizations` is written empty, and the namespaces of QTI
  * metadata, curriculum standards, the accessibility description and the manifest extension are declared on the root.
  *
+ * @param manifest - The manifest to write.
+ * @returns The `imsmanifest.xml` document.
  * @throws `DataError` when the manifest is not valid: an identifier that is not an XML name or is used twice, a
  * `schema` or resource type outside its vocabulary, a resource without a file, or a dependency or variant that names no
  * resource.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
  */
 export function writeManifest(manifest: Manifest): string {
   checkRecord(manifest, "The manifest must be an object");

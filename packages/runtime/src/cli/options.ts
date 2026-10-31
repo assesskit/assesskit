@@ -4,22 +4,38 @@ import { defaultSchemaDirectory } from "./schema-directory.js";
 
 /** Options of {@link runCli}: what the command line touches besides its arguments. */
 export interface RunCliOptions {
-  /** Writes text to the standard output, where the report of `validate` goes. Default: `process.stdout.write`. */
+  /**
+   * Writes text to the standard output, where the report of `validate` goes.
+   *
+   * @defaultValue `process.stdout.write`
+   */
   readonly stdout?: (text: string) => void;
-  /** Writes text to the standard error, where errors go. Default: `process.stderr.write`. */
+  /**
+   * Writes text to the standard error, where errors go.
+   *
+   * @defaultValue `process.stderr.write`
+   */
   readonly stderr?: (text: string) => void;
   /**
-   * The directory of the schemas when no option names one. Default: `assesskit/schemas/<version>` in the user cache directory of
-   * the platform, where `<version>` is the start of the SHA-256 of `SCHEMA_FILES`.
+   * The directory of the schemas when no option names one.
+   *
+   * @defaultValue `assesskit/schemas/<version>` in the user cache directory of the platform, where `<version>` is the
+   * start of the SHA-256 of `SCHEMA_FILES`
    */
   readonly schemaDirectory?: string;
-  /** Downloads an address for `schemas fetch`. Default: the global `fetch`. */
+  /**
+   * Downloads an address for `schemas fetch`.
+   *
+   * @defaultValue the global `fetch`
+   */
   readonly fetch?: typeof fetch;
 }
 
 /**
  * Checks the options of {@link runCli} and returns them with their defaults.
  *
+ * @param options - The options of `runCli`.
+ * @returns The options with every default set.
  * @throws `DataError` when they are not an object, or an option has the wrong type.
  */
 export function resolveOptions(options: RunCliOptions): Required<RunCliOptions> {

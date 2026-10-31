@@ -22,6 +22,7 @@ function messageOf(error: unknown): string {
  *
  * @param args - The arguments after the program name, such as `process.argv.slice(2)`.
  * @param options - See {@link RunCliOptions}.
+ * @returns The exit code: 0, 1 or 2.
  * @throws `DataError` when an argument or an option has the wrong type.
  */
 export async function runCli(args: readonly string[], options: RunCliOptions = {}): Promise<number> {

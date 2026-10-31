@@ -1,8 +1,22 @@
-# package
+# Package
 
-`@assesskit/runtime/package` reads and writes QTI content packages (BIND §8): the manifest, the ZIP archive, the documents
-inside, the resolvers that the delivery engine uses, LTI link documents and the dependency closure. It uses no platform
-API and runs in any JavaScript runtime. [node](node.md) adds reading from files and directories.
+`package` reads and writes QTI content packages: the manifest, the ZIP archive, the documents inside, the resolvers that the
+delivery engine uses, LTI link documents and the dependency closure. It builds on `xml`, `values`, `asi` and `metadata`,
+uses no platform API and runs in any JavaScript runtime. [node](node.md) adds reading from files and directories.
+
+```mermaid
+flowchart LR
+  zip["ZIP archive"]
+  files["PackageFiles<br/>paths and bytes"]
+  pkg["QtiPackage<br/>manifest, file, document, resolve"]
+  engine["Resolvers<br/>items, sections, stimuli"]
+  zip -- "readPackage<br/>security checks, limits" --> pkg
+  files -- "openPackage" --> pkg
+  pkg -- "document(path)<br/>xi:include inside the package" --> asi["ASI document"]
+  pkg -- "packageResolvers" --> engine
+  manifest["Manifest"] -- "writePackage" --> zip
+  pkg -- "manifest" --> manifest
+```
 
 | Export                                           | Purpose                                                                          |
 | ------------------------------------------------ | -------------------------------------------------------------------------------- |
@@ -42,7 +56,7 @@ const manifest = readManifest(`<manifest xmlns="http://www.imsglobal.org/xsd/qti
     </resource>
   </resources>
 </manifest>`);
-dependencyClosure(manifest, "test").map(({ identifier }) => identifier); // ["test", "capital"]
+dependencyClosure(manifest, "test").map(({ identifier }) => identifier); // => ["test", "capital"]
 
 const text = new TextEncoder();
 const zip = writePackage(
@@ -65,27 +79,27 @@ const zip = writePackage(
 );
 
 const pkg = readPackage(zip);
-pkg.paths; // ["imsmanifest.xml", "test.xml", "items/capital.xml", "media/map.png"]
-pkg.resolve("items/capital.xml", "../media/map.png"); // "media/map.png"
-pkg.resolve("items/capital.xml", "http://example.com/x.png"); // undefined: outside the package
-packageResolvers(pkg).items("items/capital.xml", "test.xml").deliverable.kind; // "qti"
+pkg.paths; // => ["imsmanifest.xml", "test.xml", "items/capital.xml", "media/map.png"]
+pkg.resolve("items/capital.xml", "../media/map.png"); // => "media/map.png"
+pkg.resolve("items/capital.xml", "http://example.com/x.png"); // => undefined
+packageResolvers(pkg).items("items/capital.xml", "test.xml").deliverable.kind; // => "qti"
 ```
 
 ## The manifest
 
 `readManifest` accepts text, bytes or a parsed root element, and takes the options of `parseXml` (`path`, `limits`). The root must
 be `manifest` in `http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1`; the namespace of IMS Content Packaging 1.1 that some
-samples use is a `ReadError` (D6). The reader follows the CP schema for the structure and rejects what the model cannot hold:
+samples use is a `ReadError` ([spec gaps](spec-gaps.md): namespaces of the samples). The reader follows the CP schema for the structure and rejects what the model cannot hold:
 
-| Rule                                                                                                                                                                                                     | Code                                                    | Source      |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------- |
-| The root is a `manifest` of the content package namespace.                                                                                                                                               | `assesskit/package/not-a-manifest`                      | CP XSD      |
-| `metadata/schema` is one of `MANIFEST_SCHEMAS`, and `schemaversion` is `3.0.0`.                                                                                                                          | `assesskit/package/invalid-text`                        | BIND §8     |
-| A resource `type` is one of the 19 of `RESOURCE_TYPES`. `imslti_xmlv1p1`, which BIND §8.8 lists and the CP schema does not, is read as `imsbasiclti_xmlv1p3`, because 1EdTech's own LTI examples use it. | `assesskit/package/invalid-attribute`                   | CP XSD      |
-| `organizations` is empty or absent: the profile prohibits `cp:organization`, `cp:item` and nested manifests.                                                                                             | `assesskit/package/organizations`, `unexpected-element` | BIND §8     |
-| Identifiers are declared once, among the manifest, the resources and the variants.                                                                                                                       | `assesskit/package/duplicate-identifier`                | CP XSD (ID) |
-| Every `dependency` and `variant` `identifierref` names a resource.                                                                                                                                       | `assesskit/package/dangling-reference`                  | BIND §8.1   |
-| The elements come in the order of the schema, required ones and attributes are there, and nothing is outside the schema.                                                                                 | `assesskit/package/*`                                   | CP XSD      |
+| Rule                                                                                                                                                                                                           | Code                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| The root is a `manifest` of the content package namespace.                                                                                                                                                     | `assesskit/package/not-a-manifest`                      |
+| `metadata/schema` is one of `MANIFEST_SCHEMAS`, and `schemaversion` is `3.0.0`.                                                                                                                                | `assesskit/package/invalid-text`                        |
+| A resource `type` is one of the 19 of `RESOURCE_TYPES`. `imslti_xmlv1p1`, which the XML binding lists and the CP schema does not, is read as `imsbasiclti_xmlv1p3`, because 1EdTech's own LTI examples use it. | `assesskit/package/invalid-attribute`                   |
+| `organizations` is empty or absent: the profile prohibits `cp:organization`, `cp:item` and nested manifests.                                                                                                   | `assesskit/package/organizations`, `unexpected-element` |
+| Identifiers are declared once, among the manifest, the resources and the variants.                                                                                                                             | `assesskit/package/duplicate-identifier`                |
+| Every `dependency` and `variant` `identifierref` names a resource.                                                                                                                                             | `assesskit/package/dangling-reference`                  |
+| The elements come in the order of the schema, required ones and attributes are there, and nothing is outside the schema.                                                                                       | `assesskit/package/*`                                   |
 
 The reader does not check that files exist; the manifest of a package can list a file that the archive lacks (the 1EdTech `pci`
 example does), and `file(path)` then returns `undefined`.
@@ -100,9 +114,18 @@ manifest extension once, on the root.
 ## Paths
 
 Every path in a package is relative to the root, uses `/`, and is normalized: no empty or `.` segment, no `..`. `resolve(base, href)`
-resolves a reference against the path of the file that holds it (RFC 3986 §5.2 on package paths, B93). A `base` that ends in `/`
+resolves a reference against the path of the file that holds it as RFC 3986 resolves a reference, applied to package paths. A `base` that ends in `/`
 stands for a directory, as an `xml:base` does. The query and fragment are dropped, and percent-encoded octets are decoded as UTF-8
 (`my%20file.png` names `my file.png`).
+
+```ts
+import { resolveReference } from "@assesskit/runtime/package";
+
+resolveReference("b/c/d;p", "../g"); // => "b/g"
+resolveReference("items/", "my%20file.png?v=2#top"); // => "items/my file.png"
+resolveReference("items/", "../../x"); // => undefined
+resolveReference("items/a.xml", "https://example.com/x"); // => undefined
+```
 
 | Base          | Reference        | Result        |
 | ------------- | ---------------- | ------------- |
@@ -181,11 +204,11 @@ the document that holds it.
 | ---------------------- | --------------------------------------------------------------------------------------- |
 | `items(href, base)`    | A `ResolvedItem`: `resource` (the identifier), `deliverable`, `hazards` and `variants`. |
 | `sections(href, base)` | The `AssessmentSection` at the path.                                                    |
-| `stimuli(href, base)`  | The `AssessmentStimulus` at the path (B62).                                             |
+| `stimuli(href, base)`  | The `AssessmentStimulus` at the path.                                                   |
 
 An item reference names a file. It resolves to the resource of type `imsqti_item_xmlv3p0` or `imsbasiclti_xmlv1p3` whose main
 file is that file: its `href`, or its only file when it has no `href`. The `deliverable` is `{ kind: "qti", item }` for a QTI item,
-and `{ kind: "lti", identifier, link }` for an LTI link, read with `readLtiLink`. The variants (BIND §8.1.1) are resolved the same
+and `{ kind: "lti", identifier, link }` for an LTI link, read with `readLtiLink`. The variants are resolved the same
 way and keep the DRD of their link, so that the engine can choose among them at the first presentation:
 
 | Field      | Content                                                                                                                                 |
@@ -201,13 +224,13 @@ They are synchronous, as the package holds its files; a resolver that a host wri
 ## Dependencies
 
 `dependencyClosure(manifest, identifier)` returns the resource, then each resource it depends on once, depth first in the order of
-the `dependency` elements; a cycle ends where it closes. A test depends on its items, an item on a shared stimulus (B62), an item on
-a separate outcome declaration or response processing template resource (B91). Variants are not part of the closure.
+the `dependency` elements; a cycle ends where it closes. A test depends on its items, an item on a shared stimulus, an item on
+a separate outcome declaration or response processing template resource. Variants are not part of the closure.
 
 ## LTI links
 
-`readLtiLink(input, options?)` reads the `cartridge_basiclti_link` document of a resource of type `imsbasiclti_xmlv1p3`
-(BPIG §6.2.9.2): `title`, `description`, `launchUrl`, `secureLaunchUrl`, `custom` (a `Map`), `extensions` (a platform and a `Map`)
+`readLtiLink(input, options?)` reads the `cartridge_basiclti_link` document of a resource of type `imsbasiclti_xmlv1p3`:
+`title`, `description`, `launchUrl`, `secureLaunchUrl`, `custom` (a `Map`), `extensions` (a platform and a `Map`)
 and `vendor`. Text is read without the white space around it. The root is accepted in `http://www.imsglobal.org/xsd/imslticc_v1p0`
 and in the relative namespace `/xsd/imslticc_v1p0` that the 1EdTech examples declare. A document without a title, a property
 without a name or with a repeated name, or a vendor without a code is a `ReadError` (`assesskit/package/lti-link`,
@@ -220,3 +243,39 @@ without a name or with a repeated name, or a vendor without a code is a `ReadErr
 | `DataError`     | An argument has the wrong type, a limit is not a positive integer, the paths of `PackageFiles` are not normalized and unique, or `writeManifest` and `writePackage` get a model that is not valid. |
 | `ReadError`     | The data is not a ZIP archive or is cut off; a manifest, document or link cannot be read; a reference cannot be resolved. `issues` names the rule.                                                 |
 | `SecurityError` | The input breaks a rule or limit of the table above, or an XML limit.                                                                                                                              |
+
+## Not included
+
+| Not included                                             | Why                                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                    |
+| Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                   |
+| Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                   |
+| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds every package within the limits |
+| Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                        |
+| Launching an LTI tool                                    | Launching belongs to the player; `readLtiLink` reads the document                     |
+
+## Files
+
+Each file of `src/package/` holds one concept.
+
+| File                                                   | Concept                                                              |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `manifest.ts`, `read-manifest.ts`, `write-manifest.ts` | The manifest model, its reader and its writer                        |
+| `resource-index.ts`, `resource-path.ts`, `closure.ts`  | Finding resources, their paths and their dependencies                |
+| `paths.ts`                                             | Normalizing and resolving package paths                              |
+| `package.ts`, `package-files.ts`                       | The opened package and the files it reads                            |
+| `resolvers.ts`, `lti-link.ts`                          | The resolvers of the engine, and LTI link documents                  |
+| `zip-limits.ts`, `zip-reader.ts`, `crc32.ts`           | Reading archives under limits                                        |
+| `zip-writer.ts`, `write-package.ts`                    | Writing archives                                                     |
+| `internal.ts`                                          | What other modules and the tests use and the package does not export |
+
+## References
+
+| Topic                                  | Specification                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Manifest, resources, variants          | [QTI 3.0 ASI XML Binding](https://www.imsglobal.org/spec/qti/v3p0/bind/), content packages             |
+| Packaging rules, LTI links, security   | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)       |
+| References between files               | [RFC 3986, Uniform Resource Identifier](https://www.rfc-editor.org/rfc/rfc3986)                        |
+| ZIP format                             | [ZIP File Format Specification (APPNOTE)](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) |
+| Places where the specifications differ | [Spec gaps](spec-gaps.md)                                                                              |

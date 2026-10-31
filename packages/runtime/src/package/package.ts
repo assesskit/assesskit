@@ -9,7 +9,7 @@ import { readManifest } from "./read-manifest.js";
 import { resolveZipLimits, type ZipLimits } from "./zip-limits.js";
 import { openZip } from "./zip-reader.js";
 
-/** The path of the manifest in a package (BIND §8). */
+/** The path of the manifest in a package. */
 export const MANIFEST_PATH = "imsmanifest.xml";
 
 /** A QTI content package: its manifest and files, with the documents parsed on first use. */
@@ -37,7 +37,7 @@ export interface QtiPackage {
    */
   document(path: string): AsiDocument;
   /**
-   * Resolves a reference against the path of the file that holds it (B93): the base `items/a.xml` and the href
+   * Resolves a reference against the path of the file that holds it: the base `items/a.xml` and the href
    * `../media/x.png` give `media/x.png`. The query and fragment are dropped and percent-encoded octets decoded.
    *
    * @param base - The path of the referencing file; a path ending in `/` stands for a directory, as an `xml:base` does.
@@ -52,13 +52,21 @@ export interface QtiPackage {
 
 /** Options of {@link openPackage}. */
 export interface OpenPackageOptions {
-  /** XML limits for the manifest and every document, replacing the defaults field by field. Default: {@link DEFAULT_XML_LIMITS}. */
+  /**
+   * XML limits for the manifest and every document, replacing the defaults field by field.
+   *
+   * @defaultValue `{}`, which keeps {@link DEFAULT_XML_LIMITS}
+   */
   readonly xmlLimits?: Partial<XmlLimits>;
 }
 
 /** Options of {@link readPackage}. */
 export interface ReadPackageOptions extends OpenPackageOptions {
-  /** Limits on the archive, replacing the defaults field by field. Default: {@link DEFAULT_ZIP_LIMITS}. */
+  /**
+   * Limits on the archive, replacing the defaults field by field.
+   *
+   * @defaultValue `{}`, which keeps {@link DEFAULT_ZIP_LIMITS}
+   */
   readonly limits?: Partial<ZipLimits>;
 }
 
@@ -163,6 +171,7 @@ class OpenedPackage implements QtiPackage {
  *
  * @param files - The files. The paths must be normalized and unique.
  * @param options - See {@link OpenPackageOptions}.
+ * @returns The opened package.
  * @throws `DataError` when an argument has the wrong type or the paths are not normalized and unique.
  * @throws `ReadError` when the package has no `imsmanifest.xml` at its root, or the manifest cannot be read (see {@link readManifest}).
  * @throws `SecurityError` as {@link parseXml} does for the manifest.
@@ -186,16 +195,19 @@ export function openPackage(files: PackageFiles, options: OpenPackageOptions = {
 
 /**
  * Reads a QTI content package from a ZIP archive. Only the central directory and the manifest are read; a file is
- * inflated when it is asked for. The checks of §2.6 run first: see {@link ZipLimits}.
+ * inflated when it is asked for. The security checks of {@link ZipLimits} run first.
  *
  * @param zip - The archive.
  * @param options - See {@link ReadPackageOptions}.
+ * @returns The package.
  * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
  * @throws `ReadError` when the data is not a ZIP archive, is cut off, or uses a feature the runtime does not read (several
  * parts, a compression method other than stored and deflated), or the package has no readable manifest.
  * @throws `SecurityError` when an entry breaks a rule or limit: a name that is absolute, leaves the package or has a
  * backslash, a drive letter or a control character; two entries with one normalized name; a symbolic link; encryption;
  * or an entry count, size, or compression ratio above its limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
+ * @see {@link https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT | ZIP File Format Specification (APPNOTE)}
  */
 export function readPackage(zip: Uint8Array, options: ReadPackageOptions = {}): QtiPackage {
   checkOptions(options);

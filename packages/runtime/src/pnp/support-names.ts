@@ -1,6 +1,6 @@
 import { checkString } from "../checks.js";
 
-/** The supports that only replace content of an access mode: they have no parameter of their own (PNP XSD `ReplacesAccessModeDType`). */
+/** The supports that only replace content of an access mode: they have no parameter of their own. */
 export const REPLACING_SUPPORTS = [
   "linguistic-guidance",
   "keyword-emphasis",
@@ -19,10 +19,10 @@ export const REPLACING_SUPPORTS = [
   "layout-single-column",
 ] as const;
 
-/** The supports that name a language (PNP XSD `LanguageModeDType`). */
+/** The supports that name a language. */
 export const LANGUAGE_SUPPORTS = ["keyword-translation", "item-translation", "sign-language"] as const;
 
-/** The on-screen tools, which have no parameter (PNP XSD). */
+/** The on-screen tools, which have no parameter. */
 export const TOOL_SUPPORTS = [
   "dictionary-on-screen",
   "glossary-on-screen",
@@ -35,7 +35,7 @@ export const TOOL_SUPPORTS = [
   "spell-checker-on-screen",
 ] as const;
 
-/** The supports with a shape of their own (PNP XSD). */
+/** The supports with a shape of their own. */
 export const OTHER_SUPPORTS = [
   "hazard-avoidance",
   "input-requirements",
@@ -61,16 +61,16 @@ export type ToolSupportName = (typeof TOOL_SUPPORTS)[number];
 /** The name of a support with a shape of its own. */
 export type OtherSupportName = (typeof OTHER_SUPPORTS)[number];
 
-/** The name of a support that the QTI profile of PNP 3.0 defines: the 40 elements of the PNP schema's profile (BPIG App. A). */
+/** The name of a support that the QTI profile of PNP 3.0 defines: the 40 elements of the profile of the PNP schema. */
 export type PredefinedSupportName = ReplacingSupportName | LanguageSupportName | ToolSupportName | OtherSupportName;
 
 /**
  * The name of a support: a predefined one, or `ext:` and the local name of a custom support from another namespace
- * (BPIG §5.4, §3.7.10). The same names tell a catalog card which support it serves.
+ * The same names tell a catalog card which support it serves.
  */
 export type SupportName = PredefinedSupportName | `ext:${string}`;
 
-/** The name of a support that a set can list: every predefined support but `hazard-avoidance` and `environment` (PNP XSD `FeatureSetDType`). */
+/** The name of a support that a set can list: every predefined support but `hazard-avoidance` and `environment` (`FeatureSetDType` of the PNP schema). */
 export type SetSupportName = Exclude<PredefinedSupportName, "hazard-avoidance" | "environment">;
 
 /** The 40 predefined supports, grouped by shape. */
@@ -84,12 +84,22 @@ export const SUPPORT_NAMES: readonly PredefinedSupportName[] = [
 /** The prefix of the name of a custom support. */
 const EXTENSION_PREFIX = "ext:";
 
-/** Returns whether a value is one of the 40 predefined supports, spelled exactly as the schema spells it. */
+/**
+ * Returns whether a value is one of the 40 predefined supports, spelled exactly as the schema spells it.
+ *
+ * @param value - The value to test.
+ * @returns `true` for the name of a predefined support.
+ */
 export function isPredefinedSupportName(value: unknown): value is PredefinedSupportName {
   return SUPPORT_NAMES.some((name) => name === value);
 }
 
-/** Returns whether a value is the name of a support: a predefined one, or `ext:` and at least one character. */
+/**
+ * Returns whether a value is the name of a support: a predefined one, or `ext:` and at least one character.
+ *
+ * @param value - The value to test.
+ * @returns `true` for the name of a predefined or a custom support.
+ */
 export function isSupportName(value: unknown): value is SupportName {
   return (
     isPredefinedSupportName(value) ||
@@ -97,30 +107,51 @@ export function isSupportName(value: unknown): value is SupportName {
   );
 }
 
-/** Returns whether a predefined support only replaces content of an access mode. */
+/**
+ * Returns whether a predefined support only replaces content of an access mode.
+ *
+ * @param name - The name of a predefined support.
+ * @returns `true` for a support that replaces content.
+ */
 export function isReplacingSupportName(name: PredefinedSupportName): name is ReplacingSupportName {
   return REPLACING_SUPPORTS.some((candidate) => candidate === name);
 }
 
-/** Returns whether a predefined support names a language. */
+/**
+ * Returns whether a predefined support names a language.
+ *
+ * @param name - The name of a predefined support.
+ * @returns `true` for a support that names a language.
+ */
 export function isLanguageSupportName(name: PredefinedSupportName): name is LanguageSupportName {
   return LANGUAGE_SUPPORTS.some((candidate) => candidate === name);
 }
 
-/** Returns whether a predefined support is an on-screen tool. */
+/**
+ * Returns whether a predefined support is an on-screen tool.
+ *
+ * @param name - The name of a predefined support.
+ * @returns `true` for an on-screen tool.
+ */
 export function isToolSupportName(name: PredefinedSupportName): name is ToolSupportName {
   return TOOL_SUPPORTS.some((candidate) => candidate === name);
 }
 
-/** Returns whether a value is the name of a support that a set can list. */
+/**
+ * Returns whether a value is the name of a support that a set can list.
+ *
+ * @param value - The value to test.
+ * @returns `true` for the name of a support that a set can list.
+ */
 export function isSetSupportName(value: unknown): value is SetSupportName {
   return isPredefinedSupportName(value) && value !== "hazard-avoidance" && value !== "environment";
 }
 
 /**
- * Returns the name that a custom support has for catalogs and for the engine: `ext:` and the local name of its element
- * (BPIG §3.7.10, §5.4).
+ * Returns the name that a custom support has for catalogs and for the engine: `ext:` and the local name of its element.
  *
+ * @param localName - The local name of the element of the custom support.
+ * @returns The name of the custom support.
  * @throws `DataError` when `localName` is not a string.
  */
 export function extensionName(localName: string): SupportName {

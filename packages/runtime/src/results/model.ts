@@ -9,7 +9,11 @@ import type {
   SupportAssignment,
 } from "./vocabularies.js";
 
-/** A session of the delivery system that produced the report (RR §2.6.3). */
+/**
+ * A session of the delivery system that produced the report.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting, SessionIdentifier}
+ */
 export interface SessionIdentifier {
   /** The system that issued the identifier, as a URI. */
   readonly sourceId: string;
@@ -17,7 +21,7 @@ export interface SessionIdentifier {
   readonly identifier: string;
 }
 
-/** What a report says about who took the assessment and in which sessions (RR §2.4.2). */
+/** What a report says about who took the assessment and in which sessions. */
 export interface ResultContext {
   /** The identifier of the candidate in the system of record. */
   readonly sourcedId?: string;
@@ -25,7 +29,7 @@ export interface ResultContext {
   readonly sessionIdentifiers: readonly SessionIdentifier[];
 }
 
-/** A support the candidate used (RR §2.6.4). */
+/** A support the candidate used. */
 export interface SupportUse {
   /** The name of the support, such as `spoken`: an `NCName`, so a custom support has no `ext:` prefix here. */
   readonly name: string;
@@ -44,11 +48,11 @@ export interface SupportUse {
 export interface ResultVariableType {
   /** The cardinality, taken from the declaration. */
   readonly cardinality: Cardinality;
-  /** The base type, taken from the declaration; required unless the cardinality is `record` (RR §2.4.3). */
+  /** The base type, taken from the declaration; required unless the cardinality is `record`. */
   readonly baseType?: BaseType;
 }
 
-/** The value a response variable should have (RR §2.4.4). */
+/** The value a response variable should have. */
 export interface ResultCorrectResponse {
   /** What the correct response means, free text. */
   readonly interpretation?: string;
@@ -56,7 +60,7 @@ export interface ResultCorrectResponse {
   readonly value: Value;
 }
 
-/** A response variable of an item or a test (RR §2.4.8). */
+/** A response variable of an item or a test. */
 export interface ResponseVariable extends ResultVariableType {
   /** Tells the four kinds of variable apart. */
   readonly kind: "response";
@@ -64,9 +68,9 @@ export interface ResponseVariable extends ResultVariableType {
   readonly identifier: string;
   /** The correct response, when the report discloses it. */
   readonly correctResponse?: ResultCorrectResponse;
-  /** The candidate's last submitted response, or NULL (RR §2.4.1). */
+  /** The candidate's last submitted response, or NULL. */
   readonly candidateResponse: Value | null;
-  /** The order in which the candidate saw the choices (RR §2.4.8). */
+  /** The order in which the candidate saw the choices. */
   readonly choiceSequence?: readonly string[];
   /** Whether the response is scored. */
   readonly scoreStatus?: ScoreStatus;
@@ -76,7 +80,7 @@ export interface ResponseVariable extends ResultVariableType {
   readonly extensions: readonly XmlElement[];
 }
 
-/** An outcome variable of an item or a test (RR §2.4.7). */
+/** An outcome variable of an item or a test. */
 export interface OutcomeVariable extends ResultVariableType {
   /** Tells the four kinds of variable apart. */
   readonly kind: "outcome";
@@ -104,7 +108,7 @@ export interface OutcomeVariable extends ResultVariableType {
   readonly outcomeInformation?: readonly XmlElement[];
 }
 
-/** A variable that has a value: a template variable or a context variable (RR §2.4.3). */
+/** A variable that has a value: a template variable or a context variable. */
 export interface ValuedResultVariable extends ResultVariableType {
   /** The identifier of the variable. */
   readonly identifier: string;
@@ -112,13 +116,13 @@ export interface ValuedResultVariable extends ResultVariableType {
   readonly value: Value | null;
 }
 
-/** A template variable of an item instance (RR §2.4.3). */
+/** A template variable of an item instance. */
 export interface TemplateVariable extends ValuedResultVariable {
   /** Tells the four kinds of variable apart. */
   readonly kind: "template";
 }
 
-/** A context variable that a test declares (RR §2.4.3). */
+/** A context variable that a test declares. */
 export interface ContextVariable extends ValuedResultVariable {
   /** Tells the four kinds of variable apart. */
   readonly kind: "context";
@@ -127,7 +131,7 @@ export interface ContextVariable extends ValuedResultVariable {
 /** A variable in a result: a response, outcome, template or context variable. */
 export type ResultVariable = ResponseVariable | OutcomeVariable | TemplateVariable | ContextVariable;
 
-/** The result of one test (RR §2.4.9). */
+/** The result of one test. */
 export interface TestResult {
   /** The identifier of the test. */
   readonly identifier: string;
@@ -139,7 +143,7 @@ export interface TestResult {
   readonly supports: readonly SupportUse[];
 }
 
-/** The result of one item instance (RR §2.4.5). */
+/** The result of one item instance. */
 export interface ItemResult {
   /** The identifier of the item reference, or of the item. */
   readonly identifier: string;
@@ -157,7 +161,11 @@ export interface ItemResult {
   readonly supports: readonly SupportUse[];
 }
 
-/** A Results Reporting document (RR §2.3.1). */
+/**
+ * A Results Reporting document.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting, AssessmentResult}
+ */
 export interface AssessmentResult {
   /** Who took the assessment; the schema requires it, so a report always has one. */
   readonly context: ResultContext;

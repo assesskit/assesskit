@@ -5,7 +5,12 @@ const TABLE = Array.from({ length: 256 }, (_, index) => {
   return value >>> 0;
 });
 
-/** Returns the CRC-32 of the bytes, as an unsigned 32-bit integer. */
+/**
+ * Returns the CRC-32 of the bytes, as an unsigned 32-bit integer.
+ *
+ * @param bytes - The bytes.
+ * @returns The checksum as an unsigned 32-bit integer.
+ */
 export function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) crc = (TABLE[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);

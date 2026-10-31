@@ -39,12 +39,23 @@ export interface TypeInfo {
 
 const QTI_PREFIX = "qti-";
 
-/** Returns the `kind` of the model of an element: its name without the `qti-` prefix. */
+/**
+ * Returns the `kind` of the model of an element: its name without the `qti-` prefix.
+ *
+ * @param element - The name of an element.
+ * @returns The `kind` that its model has.
+ */
 export function kindOf(element: string): string {
   return element.startsWith(QTI_PREFIX) ? element.slice(QTI_PREFIX.length) : element;
 }
 
-/** Returns the name of an element of another namespace as one string: `{namespace}name`. */
+/**
+ * Returns the name of an element of another namespace as one string: `{namespace}name`.
+ *
+ * @param namespace - The namespace of an element.
+ * @param name - The local name of an element.
+ * @returns The name that the model gives an element of another namespace.
+ */
 export function foreignName(namespace: string, name: string): string {
   return `{${namespace}}${name}`;
 }
@@ -88,6 +99,8 @@ const TYPE_INDEX: ReadonlyMap<string, TypeInfo> = new Map(
 /**
  * Returns the type of the table by name.
  *
+ * @param name - The name of a type of the element table.
+ * @returns The type with its slots and attributes.
  * @throws `Error` when the table has no such type, which only a table that is not consistent with itself causes.
  */
 export function typeNamed(name: string): TypeInfo {

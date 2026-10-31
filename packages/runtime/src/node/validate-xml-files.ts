@@ -13,7 +13,7 @@ export interface XmlFile {
   readonly content: string | Uint8Array;
 }
 
-/** How libxml2 reads a document: with no network and no external entity (BPIG §6.7 applies to libxml2 too), and with line numbers beyond 65,535. */
+/** How libxml2 reads a document: with no network and no external entity, as for the runtime's own parser, and with line numbers beyond 65,535. */
 const READ_OPTIONS = ParseOption.XML_PARSE_NONET | ParseOption.XML_PARSE_NO_XXE | ParseOption.XML_PARSE_BIG_LINES;
 /** How libxml2 reads a string that the runtime encodes as UTF-8, whatever encoding the string declares. */
 const TEXT_OPTIONS = READ_OPTIONS | ParseOption.XML_PARSE_IGNORE_ENC;

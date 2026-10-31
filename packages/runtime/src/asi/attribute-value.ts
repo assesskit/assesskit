@@ -1,10 +1,10 @@
 import { checkArray, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { formatPrimitive, isIdentifier, parsePrimitive } from "../values/index.js";
-import { xmlTokens } from "../values/xml-tokens.js";
+import { xmlTokens } from "../values/internal.js";
 import type { AttributeType } from "./table.js";
 
-/** The prefix of a term that extends a vocabulary (INFO §10.1.6, BIND §6.6). */
+/** The prefix of a term that extends a vocabulary. */
 const EXTENSION_PREFIX = "ext:";
 
 /** `xs:integer`: an optional sign and digits (XML Schema Part 2, 3.3.13). */
@@ -56,7 +56,7 @@ function parseReference(type: Extract<AttributeType, { kind: "reference" }>, tex
 }
 
 /**
- * Reads the text of an attribute, or of an element with text content, as its type says (INFO §8, §9; BIND §2.9). A
+ * Reads the text of an attribute, or of an element with text content, as its type says. A
  * reference is a number when the text is one and otherwise the identifier of a variable, which no number can be.
  *
  * @param type - The type from the element table.
@@ -108,6 +108,7 @@ function formatItem(type: AttributeType, item: unknown): string {
  *
  * @param type - The type from the element table.
  * @param value - The value of the model.
+ * @returns The text of the value.
  * @throws `DataError` when the value is not a value of the type.
  */
 export function formatAttributeValue(type: AttributeType, value: unknown): string {

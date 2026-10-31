@@ -1,7 +1,7 @@
 import type { BaseType, Primitive } from "../values/index.js";
 import type { ObjectType } from "./vocabularies.js";
 
-/** The object a statistic is about (UD §2.6.4). */
+/** The object a statistic is about. */
 export interface TargetObject {
   /** The identifier of the item or of another object, such as a test. */
   readonly identifier: string;
@@ -11,17 +11,21 @@ export interface TargetObject {
   readonly objectType?: ObjectType;
 }
 
-/** The value of an ordinary statistic (UD §2.6.5). */
+/** The value of an ordinary statistic. */
 export interface StatisticValue {
   /** The value, of the base type. */
   readonly value: Primitive;
-  /** The base type of the value. Default: `float`, because an ordinary statistic is a numeric value (UD §2.4.3). */
+  /**
+   * The base type of the value.
+   *
+   * @defaultValue `float`, because an ordinary statistic is a numeric value
+   */
   readonly baseType?: BaseType;
   /** The field of a record that the value is part of. */
   readonly fieldIdentifier?: string;
 }
 
-/** One entry of a mapping (UD §2.6.3). */
+/** One entry of a mapping. */
 export interface StatisticMapEntry {
   /** The source value. */
   readonly mapKey: string;
@@ -31,19 +35,23 @@ export interface StatisticMapEntry {
   readonly caseSensitive?: boolean;
 }
 
-/** A mapping from source values to numbers (UD §2.4.2). */
+/** A mapping from source values to numbers. */
 export interface StatisticMapping {
   /** The least result of the mapping. */
   readonly lowerBound?: number;
   /** The greatest result of the mapping. */
   readonly upperBound?: number;
-  /** The result for a source value that has no entry. Default: `0`. */
+  /**
+   * The result for a source value that has no entry.
+   *
+   * @defaultValue `0`
+   */
   readonly defaultValue?: number;
   /** The entries, at least one. */
   readonly entries: readonly StatisticMapEntry[];
 }
 
-/** What every statistic says about itself (UD §2.4.1, §2.4.3). */
+/** What every statistic says about itself. */
 export interface ItemStatisticBase {
   /** The name of the statistic, an identifier; the vocabularies `ITEM_STATISTICS` and `DISTRACTOR_STATISTICS` list common ones. */
   readonly name: string;
@@ -63,7 +71,7 @@ export interface ItemStatisticBase {
   readonly targetObjects: readonly TargetObject[];
 }
 
-/** A statistic that is one number, such as a p-value (UD §2.4.3). */
+/** A statistic that is one number, such as a p-value. */
 export interface OrdinaryStatistic extends ItemStatisticBase {
   /** Tells the two kinds of statistic apart. */
   readonly kind: "ordinary";
@@ -71,7 +79,7 @@ export interface OrdinaryStatistic extends ItemStatisticBase {
   readonly value: StatisticValue;
 }
 
-/** A statistic that is several numbers, such as the dispersion parameters of IRT (UD §2.4.1). */
+/** A statistic that is several numbers, such as the dispersion parameters of IRT. */
 export interface CategorizedStatistic extends ItemStatisticBase {
   /** Tells the two kinds of statistic apart. */
   readonly kind: "categorized";
@@ -82,7 +90,11 @@ export interface CategorizedStatistic extends ItemStatisticBase {
 /** A statistic about items or other objects. */
 export type ItemStatistic = OrdinaryStatistic | CategorizedStatistic;
 
-/** A usage data document (UD §2.3.1). */
+/**
+ * A usage data document.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data}
+ */
 export interface UsageData {
   /** A URI of the glossary that defines the names of the statistics. */
   readonly glossary?: string;

@@ -25,7 +25,7 @@ const ATTRIBUTE_ESCAPES: ReadonlyMap<string, string> = new Map([
 /** The namespace that each prefix stands for; the empty prefix is the default namespace. */
 type Scope = ReadonlyMap<string, string>;
 
-/** The bindings in effect at the root: the `xml` prefix (Namespaces in XML 1.0 §3). */
+/** The bindings in effect at the root: the `xml` prefix, which every document has bound. */
 const ROOT_SCOPE: Scope = new Map([["xml", XML_NAMESPACE]]);
 
 function escapeWith(value: string, escapes: ReadonlyMap<string, string>): string {
@@ -49,7 +49,7 @@ function declaration(prefix: string, namespace: string): XmlAttribute {
     : { namespace: XMLNS_NAMESPACE, prefix: "xmlns", name: prefix, value: namespace };
 }
 
-/** Returns what is wrong with the namespace and prefix of an attribute, if anything (Namespaces in XML 1.0 §3, §6.1). */
+/** Returns what is wrong with the namespace and prefix of an attribute, if anything, by the rules of Namespaces in XML 1.0. */
 function attributeProblem({ namespace, prefix, name }: XmlAttribute): string | undefined {
   if (namespace === XMLNS_NAMESPACE) {
     const valid = prefix === "xmlns" ? name !== "xmlns" : prefix === undefined && name === "xmlns";
@@ -67,6 +67,7 @@ class Writer {
   private readonly parts: string[] = [DECLARATION];
   private readonly trail: string[] = [];
 
+  /** The text written so far. */
   get text(): string {
     return this.parts.join("");
   }
@@ -181,6 +182,13 @@ class Writer {
     this.parts.push(`<?${target}${data === "" ? "" : ` ${data}`}?>`);
   }
 
+  /**
+   * Writes a node and, for an element, everything inside it.
+   *
+   * @param node - The node.
+   * @param scope - The namespaces in effect where the node is written.
+   * @throws `DataError` when the node cannot be written as well-formed XML.
+   */
   writeNode(node: XmlNode, scope: Scope): void {
     checkRecord(node, "A node must be an object");
     switch (node.kind) {
@@ -211,12 +219,18 @@ class Writer {
 }
 
 /**
- * Writes an element as an XML document in UTF-8: the declaration, then the tree. Text is written as the tree has it,
- * with no white space added and every character that the syntax needs escaped. A namespace that the tree uses
- * without declaring it is declared on the element that uses it.
+ * Writes an element as an XML document in UTF-8: the declaration, then the tree.
  *
+ * @remarks
+ * Text is written as the tree has it, with no white space added and every character that the syntax needs escaped. A
+ * namespace that the tree uses without declaring it is declared on the element that uses it.
+ *
+ * @param root - The root element.
+ * @returns The document.
  * @throws `DataError` when the tree is not made of valid nodes, or has a name, character, prefix or attribute that XML
  * 1.0 or Namespaces in XML 1.0 do not allow.
+ * @see {@link https://www.w3.org/TR/xml/ | Extensible Markup Language (XML) 1.0}
+ * @see {@link https://www.w3.org/TR/xml-names/ | Namespaces in XML 1.0}
  */
 export function serializeXml(root: XmlElement): string {
   checkRecord(root, "The root must be an element");

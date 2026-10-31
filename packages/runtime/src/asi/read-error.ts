@@ -17,6 +17,7 @@ export interface ReadContext {
  * @param element - The element the problem is in.
  * @param code - The issue code, `assesskit/asi/<name>`.
  * @param message - A full sentence that says what is wrong and what is expected.
+ * @returns The error.
  */
 export function asiError(context: ReadContext, element: XmlElement, code: string, message: string): ReadError {
   return readError(code, message, locationOf(element, context.path, context.trail.join("/")));

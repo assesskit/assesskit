@@ -1,6 +1,6 @@
 import { isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
-import { xmlTokens } from "../values/xml-tokens.js";
+import { xmlTokens } from "../values/internal.js";
 import {
   XINCLUDE_NAMESPACE,
   XML_NAMESPACE,
@@ -235,6 +235,7 @@ function readSlots(info: TypeInfo, element: XmlElement, model: Model, context: R
  * @param info - The type of the element.
  * @param element - The element.
  * @param context - Where the reader is.
+ * @returns The model of the element.
  * @throws `ReadError` when the element has an attribute, child element or text the type does not allow, lacks a
  * required attribute or child element, or has a value that is not in its lexical form.
  */

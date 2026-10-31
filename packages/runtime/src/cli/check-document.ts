@@ -10,7 +10,7 @@ import { parseXml, type XmlElement } from "../xml/index.js";
 /** The local name of the root of a manifest; the reader checks its namespace. */
 const MANIFEST_ROOT = "manifest";
 
-/** Returns the issues of a PNP document: those of its profiles, and its elements in a namespace of the examples (L15). */
+/** Returns the issues of a PNP document: those of its profiles, and its elements in a namespace of the examples. */
 function pnpIssues(root: XmlElement): readonly Issue[] {
   const read = readPnp(root);
   const profiles = Array.isArray(read) ? read.map(({ profile }) => profile) : [read];
@@ -38,11 +38,12 @@ function located(issues: readonly Issue[], path: string): readonly Issue[] {
 
 /**
  * Returns the semantic issues of a document: it is read as the kind its root element names (an assessment document,
- * results report, PNP document, usage data or manifest), and the kinds that `validate` has checks for get them (L12). A
+ * results report, PNP document, usage data or manifest), and the kinds that `validate` has checks for get them. A
  * document that cannot be parsed, or whose root is of another kind, has no issues here: the schema check reports it.
  *
  * @param content - The document.
  * @param path - The path that issues name.
+ * @returns The issues of the document; none when it cannot be parsed or is of a kind without checks.
  */
 export function documentIssues(content: Uint8Array, path: string): readonly Issue[] {
   let root: XmlElement;

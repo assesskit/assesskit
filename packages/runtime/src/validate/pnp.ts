@@ -5,7 +5,7 @@ import type { XmlElement } from "../xml/index.js";
 import { Findings } from "./findings.js";
 
 /**
- * Validates a personal needs profile (BPIG §5.3): a support in the prohibit set is listed only there. A support that the
+ * Validates a personal needs profile: a support in the prohibit set is listed only there. A support that the
  * profile also assigns is a recommendation broken, and one that an activate set also lists is a contradiction. A support
  * in both activate sets is on from the start and also an option, which the profile cannot mean.
  *
@@ -43,7 +43,7 @@ export function validatePnp(profile: PersonalNeedsProfile): readonly Issue[] {
 
 /**
  * Reports the elements of a PNP document that are in one of the two namespaces that 1EdTech's own documents use
- * instead of the schema's (D6, L15): those of the examples of BPIG §5 and of BIND §7. `readPnp` reads them, `writePnp`
+ * instead of the schema's: those of the examples of the best practices guide and of the XML binding. `readPnp` reads them, `writePnp`
  * writes the namespace of the schema, and the document is an error because the schema does not validate it. One issue
  * is reported for each element whose parent is not in such a namespace.
  *

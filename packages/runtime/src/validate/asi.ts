@@ -7,7 +7,7 @@ import { Reports } from "./reports.js";
 import { checkTest } from "./test.js";
 
 /**
- * Validates an assessment document beyond its schema: the rule sets of BIND §5, the information-model constraints that a
+ * Validates an assessment document beyond its schema: the rule sets of the XML binding, the information-model constraints that a
  * schema cannot state, and the static types of its processing, so that what would fail when it runs is reported before it
  * does. The checks are listed in the guide `docs/runtime/validate.md`. An item is checked with its declarations; a stimulus, section
  * or processing document by what its elements say alone; a test by its own document, without resolving the items it
@@ -28,7 +28,13 @@ export function validateAsi(document: AsiDocument, options: ValidateOptions = {}
   return reports.issues;
 }
 
-/** Runs the checks of a document of any kind, in the findings of its path. */
+/**
+ * Runs the checks of a document of any kind, in the findings of its path.
+ *
+ * @param document - The document of any kind.
+ * @param reports - The findings by path.
+ * @param options - The checked options.
+ */
 export function checkDocument(document: AsiDocument, reports: Reports, options: CheckedOptions): void {
   const findings = reports.of(options.path);
   if (document.kind === "item") checkItem(document.item, findings, options);

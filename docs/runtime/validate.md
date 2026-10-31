@@ -1,12 +1,21 @@
-# validate
+# Validate
 
-`@assesskit/runtime/validate` finds what a schema cannot: the rule sets of BIND §5, the constraints of the Information
-Model, the static types of processing, the structure of a test, the covers of externally scored outcomes, the files of a
-package, and the rules of Results Reporting and personal needs profiles. It reports what would fail or misbehave when
-content runs, before it does. It imports every module below it in the layers (`xml`, `values`, `asi`, `results`,
-`usage`, `pnp`, `metadata`, `processing`, `interactions`, `pci`, `content`, `cat`, `package`) and runs in any JavaScript
-runtime. Validating a document against the official XSD schemas is `validateXmlFiles` of [node](node.md); `assesskit validate` of the
-[command line](cli.md) runs both.
+`validate` finds what a schema cannot: the rule sets of the XML binding, the constraints of the Information Model, the static
+types of processing, the structure of a test, the covers of externally scored outcomes, the files of a package, and the rules
+of Results Reporting and personal needs profiles. It reports what would fail or misbehave when content runs, before it does.
+It imports every module below it in the layers (`xml`, `values`, `asi`, `results`, `usage`, `pnp`, `metadata`, `processing`,
+`interactions`, `pci`, `content`, `cat`, `package`) and runs in any JavaScript runtime. Validating a document against the official
+XSD schemas is `validateXmlFiles` of [node](node.md); `assesskit validate` of the [command line](cli.md) runs both.
+
+```mermaid
+flowchart LR
+  item["Item, stimulus, section,<br/>processing document"] -- "validateAsi" --> checks
+  test["Test and its<br/>resolved sections and items"] -- "validateTest" --> checks
+  pkg["QtiPackage"] -- "validatePackage" --> checks
+  results["AssessmentResult"] -- "validateResults" --> checks
+  profile["PersonalNeedsProfile"] -- "validatePnp" --> checks
+  checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers"] --> issues["Issue[]<br/>severity, code, message, location"]
+```
 
 | Export                                          | Purpose                                                                                              |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -51,12 +60,11 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
 </qti-assessment-item>`);
 
 const issues = validateAsi(document, { path: "capital.xml" });
-for (const { severity, code } of issues) console.log(severity, code);
-// warning assesskit/validate/standard-outcome
-// error assesskit/validate/undeclared-variable
-// error assesskit/validate/assignment-type
-issues[2]?.message; // 'The variable "SCORE" is a single integer and cannot be set to a single float.'
-issues[2]?.location; // { path: "capital.xml", element: "qti-assessment-item/qti-response-processing/…/qti-set-outcome-value" }
+issues.map(({ severity, code }) => `${severity} ${code}`);
+// => ["warning assesskit/validate/standard-outcome", "error assesskit/validate/undeclared-variable", "error assesskit/validate/assignment-type"]
+issues[1]?.message; // => 'The item declares no response variable "ANSWER", which an expression reads. Declare it with the declaration of its kind.'
+issues[2]?.message; // => 'The variable "SCORE" is a single integer and cannot be set to a single float.'
+issues[2]?.location?.element; // => "qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-set-outcome-value"
 ```
 
 ## Issues
@@ -66,7 +74,7 @@ the `path` of the file and the `element` path.
 
 - An `error` is content that breaks a rule or fails when it runs. A `warning` is content that runs but deviates from a
   recommendation or cannot do what it appears to.
-- The `code` of the rule sets of BIND §5.3 is the identifier of the rule set, such as `RULE_SET_INTERACTION_02B`. The
+- The `code` of the rule sets of the XML binding is the identifier of the rule set, such as `RULE_SET_INTERACTION_02B`. The
   other codes are `assesskit/validate/<name>`, and `assesskit/covers/<name>` for the covers of external scores.
 - `validateTest` and `validatePackage` check many documents. Each issue names its own file in `location.path`: a test
   is reported at the path `base`, its sections, items and stimuli at the paths the resolvers give, and the files and
@@ -79,52 +87,52 @@ the `path` of the file and the `element` path.
 | Option            | Default | Effect                                                                                                                                                                                                                                                                 |
 | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `path`            | none    | The path of the document, named in the location of its issues. Used by `validateAsi` only.                                                                                                                                                                             |
-| `customOperators` | none    | A `Map` from the `definition` or `class` of a `qti-custom-operator` to its function. When given, an operator that no entry serves is an error (G7); when absent, custom operators are not checked.                                                                     |
+| `customOperators` | none    | A `Map` from the `definition` or `class` of a `qti-custom-operator` to its function. When given, an operator that no entry serves is an error; when absent, custom operators are not checked.                                                                          |
 | `resolveTemplate` | none    | Returns the response processing for a template URI other than the six standard ones, called with the `template-location` of the item, else its `template`. When absent, only the standard templates are known. `validatePackage` adds the templates the package holds. |
 
-## Rule sets of BIND §5
+## Rule sets of the XML binding
 
 Each rule set is checked against the typed model, so `qti-label` (a QTI element) and `label` (HTML) are different
 elements, as the schema says. A rule set with the suffix `A` forbids an interaction inside another, `B` checks the
 attributes of the interaction and the base type of its response.
 
-| Code                                     | Reported when                                                                                                                                                                                       | Source          |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `assesskit/validate/figure-multiplicity` | A `figure` has more than one `figcaption`.                                                                                                                                                          | BIND §5.1.1     |
-| `assesskit/validate/ruby-multiplicity`   | A `ruby` has more than one `rp`, `rt` or `rtc`.                                                                                                                                                     | BIND §5.1.2     |
-| `RULE_SET_ARIA_ROLES_1`                  | A `source` has a `role`, or an `h1` has a `role` other than `heading`, `tab` or `presentation`.                                                                                                     | BIND §5.3.1     |
-| `RULE_SET_GENERAL_1`                     | `qti-outcome-minimum`, `qti-outcome-maximum` or `qti-test-variables` in response processing.                                                                                                        | BIND §5.3.2     |
-| `RULE_SET_INTERACTION_01A` to `20A`      | One of the 20 interactions inside another interaction, in the model or in the XML that it keeps (PCI, custom).                                                                                      | BIND §5.3.3–41  |
-| `RULE_SET_INTERACTION_01B` to `19B`      | A `max-choices`, `max-associations`, `max-plays` or `upper-bound` below its minimum; equal `string-identifier` and `response-identifier`; a response whose base type the interaction does not bind. | BIND §5.3.4–40  |
-| `RULE_SET_INTERACTION_20B`               | A context or template variable that a portable custom interaction passes and the item does not declare.                                                                                             | BIND §5.3.42    |
-| `RULE_SET_INTERACTION-RELATED_1` to `_4` | A `match-max` other than 0 below `match-min` on `qti-gap-text`, `qti-gap-img`, `qti-associable-hotspot` or `qti-simple-associable-choice`.                                                          | BIND §5.3.43–46 |
-| `RULE_SET_RUBRICBLOCK`                   | A `qti-rubric-block` inside a `qti-rubric-block`.                                                                                                                                                   | BIND §5.3.47    |
-| `RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC`     | A `mastery-value` outside `normal-minimum` and `normal-maximum`.                                                                                                                                    | BIND §5.3.48    |
-| `RULE_SET_SPECIFIC_CLASS_RESPONSEDEC`    | A cardinality `single` response bound to a `qti-choice-interaction` with a `max-choices` other than 1.                                                                                              | BIND §5.3.49    |
-| `assesskit/validate/extension-attribute` | An attribute beyond the schema's on an element that allows them, not named `data-` and name characters (V52).                                                                                       | BIND §5.2       |
+| Code                                     | Reported when                                                                                                                                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assesskit/validate/figure-multiplicity` | A `figure` has more than one `figcaption`.                                                                                                                                                          |
+| `assesskit/validate/ruby-multiplicity`   | A `ruby` has more than one `rp`, `rt` or `rtc`.                                                                                                                                                     |
+| `RULE_SET_ARIA_ROLES_1`                  | A `source` has a `role`, or an `h1` has a `role` other than `heading`, `tab` or `presentation`.                                                                                                     |
+| `RULE_SET_GENERAL_1`                     | `qti-outcome-minimum`, `qti-outcome-maximum` or `qti-test-variables` in response processing.                                                                                                        |
+| `RULE_SET_INTERACTION_01A` to `20A`      | One of the 20 interactions inside another interaction, in the model or in the XML that it keeps (PCI, custom).                                                                                      |
+| `RULE_SET_INTERACTION_01B` to `19B`      | A `max-choices`, `max-associations`, `max-plays` or `upper-bound` below its minimum; equal `string-identifier` and `response-identifier`; a response whose base type the interaction does not bind. |
+| `RULE_SET_INTERACTION_20B`               | A context or template variable that a portable custom interaction passes and the item does not declare.                                                                                             |
+| `RULE_SET_INTERACTION-RELATED_1` to `_4` | A `match-max` other than 0 below `match-min` on `qti-gap-text`, `qti-gap-img`, `qti-associable-hotspot` or `qti-simple-associable-choice`.                                                          |
+| `RULE_SET_RUBRICBLOCK`                   | A `qti-rubric-block` inside a `qti-rubric-block`.                                                                                                                                                   |
+| `RULE_SET_SPECIFIC_CLASS_OUTCOMEDEC`     | A `mastery-value` outside `normal-minimum` and `normal-maximum`.                                                                                                                                    |
+| `RULE_SET_SPECIFIC_CLASS_RESPONSEDEC`    | A cardinality `single` response bound to a `qti-choice-interaction` with a `max-choices` other than 1.                                                                                              |
+| `assesskit/validate/extension-attribute` | An attribute beyond the schema's on an element that allows them, not named `data-` and name characters.                                                                                             |
 
 ## Declarations and references
 
-| Code                                             | Reported when                                                                                                                                                     | Source                                 |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `assesskit/validate/duplicate-identifier`        | A variable, test part, section or item reference identifier is declared twice (L2); two variable mappings of an item reference share a target.                    | INFO §5.34.1, §4.2.1, §5.159.1, §7.48  |
-| `assesskit/validate/reserved-identifier`         | A declaration of a built-in variable: `numAttempts`, `duration`, `completionStatus`, `QTI_CONTEXT` (T24).                                                         | INFO §2.2.2.1–2.2.2.3                  |
-| `assesskit/validate/base-type`                   | A variable with a cardinality other than record and no base type.                                                                                                 | INFO §5.34.3                           |
-| `assesskit/validate/declared-value`              | A default, correct response, map key or lookup table value that is not a value of the base type of its variable.                                                  | The lexical form of the base type      |
-| `assesskit/validate/standard-outcome`            | `SCORE` or `MAXSCORE` that is not a float, or `PASSED` that is not a boolean (T23, G40). Warning.                                                                 | INFO §2.2.2.3, BPIG §3.5               |
-| `assesskit/validate/undeclared-variable`         | An expression, rule, printed variable, feedback or template content, or PCI variable names a variable the item or test does not declare (L1).                     | INFO §2.2.2, §2.7.2, §5.152.1, §7.48.1 |
-| `assesskit/validate/variable-out-of-reach`       | Template processing reads a response or outcome variable.                                                                                                         | INFO §6.50                             |
-| `assesskit/validate/reference-kind`              | An attribute names a variable of a kind it may not name, such as a response variable for `outcome-identifier`.                                                    | INFO §7.30.6                           |
-| `assesskit/validate/reference-type`              | An attribute names a variable of the wrong base type or cardinality, such as the `outcome-identifier` of feedback, which must be a single or multiple identifier. | INFO §2.7.2, §5.93.1                   |
-| `assesskit/validate/duration-not-time-dependent` | `duration` is read in an item that is not `time-dependent` (L8).                                                                                                  | INFO §2.2.2.2                          |
-| `assesskit/validate/unbound-response`            | A response declaration that no interaction binds (L5). Warning.                                                                                                   | INFO §2.2.2.2                          |
-| `assesskit/validate/identifier-syntax`           | An attribute of the type `identifier` that does not start with a letter or `_` and contain only letters, digits, `_`, `-` and `.`.                                | INFO §4.1.1                            |
-| `assesskit/validate/identifier-style`            | An identifier that has a period or more than 32 characters. Warning.                                                                                              | INFO §4.1.1                            |
-| `assesskit/validate/duplicate-id`                | An `id` that two elements of a document share.                                                                                                                    | INFO §5.16                             |
-| `assesskit/validate/unresolved-reference`        | An `idref` that no element of the document has (S6, S10, S11); a reference or a document that cannot be resolved or read.                                         | INFO §5.16, BIND §8                    |
-| `assesskit/validate/unresolved-include`          | An `xi:include` left in the document: resolve includes before validating.                                                                                         | INFO §2.12                             |
-| `assesskit/validate/rubric-interaction`          | An interaction inside a `qti-rubric-block`.                                                                                                                       | INFO §2.8.6                            |
-| `assesskit/validate/unreachable-content`         | Feedback or template content that shows or hides for an identifier its controlling variable can never take (L6). Warning.                                         | INFO §5.93.2                           |
+| Code                                             | Reported when                                                                                                                                                     | Source                                  |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `assesskit/validate/duplicate-identifier`        | A variable, test part, section or item reference identifier is declared twice; two variable mappings of an item reference share a target.                         | Information Model                       |
+| `assesskit/validate/reserved-identifier`         | A declaration of a built-in variable: `numAttempts`, `duration`, `completionStatus`, `QTI_CONTEXT`.                                                               | Information Model                       |
+| `assesskit/validate/base-type`                   | A variable with a cardinality other than record and no base type.                                                                                                 | Information Model                       |
+| `assesskit/validate/declared-value`              | A default, correct response, map key or lookup table value that is not a value of the base type of its variable.                                                  | The lexical form of the base type       |
+| `assesskit/validate/standard-outcome`            | `SCORE` or `MAXSCORE` that is not a float, or `PASSED` that is not a boolean. Warning.                                                                            | Information Model, Best Practices Guide |
+| `assesskit/validate/undeclared-variable`         | An expression, rule, printed variable, feedback or template content, or PCI variable names a variable the item or test does not declare.                          | Information Model                       |
+| `assesskit/validate/variable-out-of-reach`       | Template processing reads a response or outcome variable.                                                                                                         | Information Model                       |
+| `assesskit/validate/reference-kind`              | An attribute names a variable of a kind it may not name, such as a response variable for `outcome-identifier`.                                                    | Information Model                       |
+| `assesskit/validate/reference-type`              | An attribute names a variable of the wrong base type or cardinality, such as the `outcome-identifier` of feedback, which must be a single or multiple identifier. | Information Model                       |
+| `assesskit/validate/duration-not-time-dependent` | `duration` is read in an item that is not `time-dependent`.                                                                                                       | Information Model                       |
+| `assesskit/validate/unbound-response`            | A response declaration that no interaction binds. Warning.                                                                                                        | Information Model                       |
+| `assesskit/validate/identifier-syntax`           | An attribute of the type `identifier` that does not start with a letter or `_` and contain only letters, digits, `_`, `-` and `.`.                                | Information Model                       |
+| `assesskit/validate/identifier-style`            | An identifier that has a period or more than 32 characters. Warning.                                                                                              | Information Model                       |
+| `assesskit/validate/duplicate-id`                | An `id` that two elements of a document share.                                                                                                                    | Information Model                       |
+| `assesskit/validate/unresolved-reference`        | An `idref` that no element of the document has; a reference or a document that cannot be resolved or read.                                                        | Information Model, XML Binding          |
+| `assesskit/validate/unresolved-include`          | An `xi:include` left in the document: resolve includes before validating.                                                                                         | Information Model                       |
+| `assesskit/validate/rubric-interaction`          | An interaction inside a `qti-rubric-block`.                                                                                                                       | Information Model                       |
+| `assesskit/validate/unreachable-content`         | Feedback or template content that shows or hides for an identifier its controlling variable can never take. Warning.                                              | Information Model                       |
 
 ## Static types of processing
 
@@ -132,50 +140,50 @@ A bottom-up inference gives every expression a cardinality and base type from `O
 declarations. A type that is not known statically (a custom operator, a record field, a variable without a base type)
 is unknown, and an unknown type passes every check, so a finding is a defect and never a guess.
 
-| Code                                            | Reported when                                                                                                                                                 | Source                       |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `assesskit/validate/operand-count`              | An operator has more or fewer operands than its signature allows (L3).                                                                                        | The section of the operator  |
-| `assesskit/validate/operand-type`               | An operand has a base type or cardinality the operator does not take, or operands that must share a base type do not.                                         | The section of the operator  |
-| `assesskit/validate/match-float`                | `qti-match` of floats (G18). Warning.                                                                                                                         | INFO §2.11.3.28              |
-| `assesskit/validate/random-bounds`              | `qti-random-integer` or `qti-random-float` with `min` above `max`: the result is always NULL (G32, G33).                                                      | INFO §7.33, §7.34            |
-| `assesskit/validate/weight-with-integer`        | `qti-test-variables` with a `weight-identifier` and `base-type` integer (G35).                                                                                | INFO §7.39.5                 |
-| `assesskit/validate/weight-undefined`           | A weight that no `qti-weight` of the item reference defines, or one named in an item (L9). Warning: the weight is 1.                                          | INFO §7.47.2                 |
-| `assesskit/validate/item-variable-undefined`    | `ITEM.VAR` of an item reference that selection with replacement can repeat in a test part that submits each item alone (G9). Warning.                         | INFO §2.11.1.2               |
-| `assesskit/validate/missing-mapping`            | `qti-map-response` of a variable without `qti-mapping`, or `qti-map-response-point` of one without `qti-area-mapping` or of a base type other than point.     | INFO §2.11.1.5, §2.11.1.6    |
-| `assesskit/validate/pattern`                    | A `qti-pattern-match` pattern or a `pattern-mask` that `compileXsdRegex` rejects.                                                                             | INFO §5.104.1, §5.162.5      |
-| `assesskit/validate/outcome-only-expression`    | An expression that reads the item sessions of a test, such as `qti-number-correct`, outside outcome processing (B87).                                         | INFO §2.11.2                 |
-| `assesskit/validate/custom-operator`            | A `qti-custom-operator` that none of `customOperators` serves; only when the option is given.                                                                 | INFO §2.11.3.2               |
-| `assesskit/validate/unknown-expression`         | A model with an expression kind that QTI 3.0 does not define.                                                                                                 | INFO §2.11                   |
-| `assesskit/validate/assignment-target`          | A rule sets a variable of a kind the rule may not set.                                                                                                        | The section of the rule      |
-| `assesskit/validate/assignment-type`            | A value that does not fit the variable it is set to, or the template default an item reference gives; an integer fits a float or duration variable (D5) (L4). | INFO §5.130.2, §5.152.2      |
-| `assesskit/validate/condition-type`             | The expression of a condition, pre-condition, branch rule or template constraint is not a single boolean.                                                     | INFO §5.86, §5.23, §5.150, … |
-| `assesskit/validate/completion-status`          | `completionStatus` set to a constant other than `not_attempted`, `unknown`, `incomplete` or `completed`.                                                      | INFO §2.2.2.3                |
-| `assesskit/validate/lookup-table`               | A lookup rule for an outcome that is not a single outcome with a lookup table (L4).                                                                           | INFO §5.87                   |
-| `assesskit/validate/lookup-source`              | The source of a lookup rule has a type the table of the outcome does not take (a match table needs integers).                                                 | INFO §5.87.2                 |
-| `assesskit/validate/template-constraint`        | A `qti-template-constraint` inside a condition.                                                                                                               | INFO §5.150                  |
-| `assesskit/validate/constraint-without-default` | A template variable that a constraint reads has no default (L10). Warning.                                                                                    | INFO §5.150                  |
-| `assesskit/validate/external-score-assigned`    | Outcome processing sets an externally scored outcome, replacing the score supplied to it (G24). Warning.                                                      | INFO §2.9                    |
-| `assesskit/validate/unknown-template`           | A response processing template that is not standard and that `resolveTemplate` does not resolve, in an item without rules (L11, G17).                         | INFO §4.6.1                  |
-| `assesskit/validate/legacy-template`            | A QTI 2.x template address (G43). Warning: the standard template of the same algorithm applies.                                                               | BPIG §2.5.1                  |
+| Code                                            | Reported when                                                                                                                                             | Source                       |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `assesskit/validate/operand-count`              | An operator has more or fewer operands than its signature allows.                                                                                         | Information Model, operators |
+| `assesskit/validate/operand-type`               | An operand has a base type or cardinality the operator does not take, or operands that must share a base type do not.                                     | Information Model, operators |
+| `assesskit/validate/match-float`                | `qti-match` of floats. Warning.                                                                                                                           | Information Model            |
+| `assesskit/validate/random-bounds`              | `qti-random-integer` or `qti-random-float` with `min` above `max`: the result is always NULL.                                                             | Information Model            |
+| `assesskit/validate/weight-with-integer`        | `qti-test-variables` with a `weight-identifier` and `base-type` integer.                                                                                  | Information Model            |
+| `assesskit/validate/weight-undefined`           | A weight that no `qti-weight` of the item reference defines, or one named in an item. Warning: the weight is 1.                                           | Information Model            |
+| `assesskit/validate/item-variable-undefined`    | `ITEM.VAR` of an item reference that selection with replacement can repeat in a test part that submits each item alone. Warning.                          | Information Model            |
+| `assesskit/validate/missing-mapping`            | `qti-map-response` of a variable without `qti-mapping`, or `qti-map-response-point` of one without `qti-area-mapping` or of a base type other than point. | Information Model            |
+| `assesskit/validate/pattern`                    | A `qti-pattern-match` pattern or a `pattern-mask` that `compileXsdRegex` rejects.                                                                         | Information Model            |
+| `assesskit/validate/outcome-only-expression`    | An expression that reads the item sessions of a test, such as `qti-number-correct`, outside outcome processing.                                           | Information Model            |
+| `assesskit/validate/custom-operator`            | A `qti-custom-operator` that none of `customOperators` serves; only when the option is given.                                                             | Information Model            |
+| `assesskit/validate/unknown-expression`         | A model with an expression kind that QTI 3.0 does not define.                                                                                             | Information Model            |
+| `assesskit/validate/assignment-target`          | A rule sets a variable of a kind the rule may not set.                                                                                                    | Information Model, rules     |
+| `assesskit/validate/assignment-type`            | A value that does not fit the variable it is set to, or the template default an item reference gives; an integer fits a float or duration variable.       | Information Model            |
+| `assesskit/validate/condition-type`             | The expression of a condition, pre-condition, branch rule or template constraint is not a single boolean.                                                 | Information Model            |
+| `assesskit/validate/completion-status`          | `completionStatus` set to a constant other than `not_attempted`, `unknown`, `incomplete` or `completed`.                                                  | Information Model            |
+| `assesskit/validate/lookup-table`               | A lookup rule for an outcome that is not a single outcome with a lookup table.                                                                            | Information Model            |
+| `assesskit/validate/lookup-source`              | The source of a lookup rule has a type the table of the outcome does not take (a match table needs integers).                                             | Information Model            |
+| `assesskit/validate/template-constraint`        | A `qti-template-constraint` inside a condition.                                                                                                           | Information Model            |
+| `assesskit/validate/constraint-without-default` | A template variable that a constraint reads has no default. Warning.                                                                                      | Information Model            |
+| `assesskit/validate/external-score-assigned`    | Outcome processing sets an externally scored outcome, replacing the score supplied to it. Warning.                                                        | Information Model            |
+| `assesskit/validate/unknown-template`           | A response processing template that is not standard and that `resolveTemplate` does not resolve, in an item without rules.                                | Information Model            |
+| `assesskit/validate/legacy-template`            | A QTI 2.x template address. Warning: the standard template of the same algorithm applies.                                                                 | Best Practices Guide         |
 
 ## Test structure and covers
 
-| Code                                       | Reported when                                                                                                                                                                                                         | Source                                     |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `assesskit/validate/identifier-mismatch`   | A section reference whose identifier differs from its section's (error); an item reference whose identifier differs from its item's (warning).                                                                        | INFO §7.5, §4.1.1                          |
-| `assesskit/validate/selection`             | A selection without replacement of more children than the section has, or fewer than it requires (B21).                                                                                                               | INFO §5.129.1, §4.2.2                      |
-| `assesskit/validate/adaptive-section`      | An adaptive section with a sub-section, or one that is not directly in a test part (B66).                                                                                                                             | CAT §2.3                                   |
-| `assesskit/validate/adaptive-simultaneous` | An adaptive item in a test part that submits simultaneously (B27).                                                                                                                                                    | INFO §5.159.5                              |
-| `assesskit/validate/branch-target`         | A branch rule whose target is unknown, behind its source, or of a level the rule may not name (L7).                                                                                                                   | INFO §2.8.3.2, §5.23                       |
-| `assesskit/validate/branch-to-repeated`    | A branch rule that targets an item that selection with replacement can repeat (B97).                                                                                                                                  | INFO §5.98                                 |
-| `assesskit/validate/ignored-rule`          | A branch rule or pre-condition that is ignored: in a nonlinear part, on an item of an adaptive section, or targeting one. Warning.                                                                                    | INFO §2.8.3, CAT §2.1                      |
-| `assesskit/validate/unreachable`           | A test part or item that no path reaches because a branch rule that is always true jumps over it (L7). Warning.                                                                                                       | INFO §2.8.3.2                              |
-| `assesskit/covers/undeclared-outcome`      | A covers block for an outcome the test does not declare (O6).                                                                                                                                                         | The runtime convention §4.16               |
-| `assesskit/covers/not-external`            | A covers block for an outcome that is not `external-scored` (O7).                                                                                                                                                     | INFO §4.5.10                               |
-| `assesskit/covers/unknown-item-ref`        | A cover that names an item reference the test does not have (O8).                                                                                                                                                     | The runtime convention §4.16               |
-| `assesskit/covers/unknown-response`        | A cover that names a response the item does not declare (O9).                                                                                                                                                         | The runtime convention §4.16               |
-| `assesskit/covers/duplicate`               | The same cover twice in a block, or two blocks for one outcome (O10).                                                                                                                                                 | The runtime convention §4.16               |
-| `assesskit/covers/malformed`               | A block whose `view` lacks `scorer` or has `candidate`, or without `data-outcome-identifier`; an entry without both attributes (O11). A block below the test with the class token is a warning: it is not recognized. | INFO §4.4.11, the runtime convention §4.16 |
+| Code                                       | Reported when                                                                                                                                                                                                   | Source                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `assesskit/validate/identifier-mismatch`   | A section reference whose identifier differs from its section's (error); an item reference whose identifier differs from its item's (warning).                                                                  | Information Model                         |
+| `assesskit/validate/selection`             | A selection without replacement of more children than the section has, or fewer than it requires.                                                                                                               | Information Model                         |
+| `assesskit/validate/adaptive-section`      | An adaptive section with a sub-section, or one that is not directly in a test part.                                                                                                                             | CAT                                       |
+| `assesskit/validate/adaptive-simultaneous` | An adaptive item in a test part that submits simultaneously.                                                                                                                                                    | Information Model                         |
+| `assesskit/validate/branch-target`         | A branch rule whose target is unknown, behind its source, or of a level the rule may not name.                                                                                                                  | Information Model                         |
+| `assesskit/validate/branch-to-repeated`    | A branch rule that targets an item that selection with replacement can repeat.                                                                                                                                  | Information Model                         |
+| `assesskit/validate/ignored-rule`          | A branch rule or pre-condition that is ignored: in a nonlinear part, on an item of an adaptive section, or targeting one. Warning.                                                                              | Information Model, CAT                    |
+| `assesskit/validate/unreachable`           | A test part or item that no path reaches because a branch rule that is always true jumps over it. Warning.                                                                                                      | Information Model                         |
+| `assesskit/covers/undeclared-outcome`      | A covers block for an outcome the test does not declare.                                                                                                                                                        | The runtime convention                    |
+| `assesskit/covers/not-external`            | A covers block for an outcome that is not `external-scored`.                                                                                                                                                    | Information Model                         |
+| `assesskit/covers/unknown-item-ref`        | A cover that names an item reference the test does not have.                                                                                                                                                    | The runtime convention                    |
+| `assesskit/covers/unknown-response`        | A cover that names a response the item does not declare.                                                                                                                                                        | The runtime convention                    |
+| `assesskit/covers/duplicate`               | The same cover twice in a block, or two blocks for one outcome.                                                                                                                                                 | The runtime convention                    |
+| `assesskit/covers/malformed`               | A block whose `view` lacks `scorer` or has `candidate`, or without `data-outcome-identifier`; an entry without both attributes. A block below the test with the class token is a warning: it is not recognized. | Information Model, the runtime convention |
 
 Branch rules and pre-conditions are evaluated with the structure the test builds when its section references are
 resolved (`validateTest`), so their targets can be checked across documents. `validateAsi` of a test checks the
@@ -183,21 +191,21 @@ document alone.
 
 ## Packages, results and profiles
 
-| Code                                                                         | Reported when                                                                                                                                               | Source                              |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `assesskit/validate/missing-file`                                            | A listed file, or a file that an adaptive section or a portable custom interaction names with a package-relative address (B92, J9), that the package lacks. | BIND §8.1, CAT §2.6, BPIG §3.7.12.2 |
-| `assesskit/validate/unlisted-file`                                           | A file of the package, or one that a document names, that the manifest does not list (K7).                                                                  | BIND §8.1, CAT §2.6                 |
-| `assesskit/validate/outside-package`                                         | A listed `href` that leaves the package.                                                                                                                    | BIND §8.1                           |
-| `assesskit/validate/resource-type`                                           | A resource whose file holds another kind of document than its type says.                                                                                    | BIND §8.1                           |
-| `assesskit/validate/metadata-identifier`                                     | An item whose identifier differs from the one in the LOM metadata of its resource (K6).                                                                     | INFO §4.1.1                         |
-| `assesskit/validate/pnp-in-package`, `assesskit/validate/results-in-package` | A personal needs profile, or a results report, in a package (K29).                                                                                          | BIND §7                             |
-| `assesskit/validate/module-resolution`                                       | A module of a portable custom interaction that no present package-relative location serves (J9).                                                            | BPIG §3.7.12.2                      |
-| `assesskit/validate/sequence-index`                                          | An item result of a test result without `sequenceIndex`, or two item instances with one.                                                                    | RR §2.4.5                           |
-| `assesskit/validate/normal-maximum`                                          | An outcome with a `normal-maximum` of 0 or below.                                                                                                           | RR §2.4.7                           |
-| `assesskit/validate/support-value`                                           | A prohibited support that reports a value.                                                                                                                  | RR §2.6.4                           |
-| `assesskit/validate/pnp-prohibited`                                          | A prohibited support that is also in an activate set (error), or also assigned (warning).                                                                   | BPIG §5.3.3                         |
-| `assesskit/validate/pnp-sets`                                                | A support in both activate sets. Warning.                                                                                                                   | BPIG §5.3                           |
-| `assesskit/validate/pnp-namespace`                                           | An element of a PNP document in one of the two alternate namespaces (L15, D6).                                                                              | BPIG §5, BIND §7                    |
+| Code                                                                         | Reported when                                                                                                                                     | Source                                 |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `assesskit/validate/missing-file`                                            | A listed file, or a file that an adaptive section or a portable custom interaction names with a package-relative address, that the package lacks. | XML Binding, CAT, Best Practices Guide |
+| `assesskit/validate/unlisted-file`                                           | A file of the package, or one that a document names, that the manifest does not list.                                                             | XML Binding, CAT                       |
+| `assesskit/validate/outside-package`                                         | A listed `href` that leaves the package.                                                                                                          | XML Binding                            |
+| `assesskit/validate/resource-type`                                           | A resource whose file holds another kind of document than its type says.                                                                          | XML Binding                            |
+| `assesskit/validate/metadata-identifier`                                     | An item whose identifier differs from the one in the LOM metadata of its resource.                                                                | Information Model                      |
+| `assesskit/validate/pnp-in-package`, `assesskit/validate/results-in-package` | A personal needs profile, or a results report, in a package.                                                                                      | XML Binding                            |
+| `assesskit/validate/module-resolution`                                       | A module of a portable custom interaction that no present package-relative location serves.                                                       | Best Practices Guide                   |
+| `assesskit/validate/sequence-index`                                          | An item result of a test result without `sequenceIndex`, or two item instances with one.                                                          | Results Reporting                      |
+| `assesskit/validate/normal-maximum`                                          | An outcome with a `normal-maximum` of 0 or below.                                                                                                 | Results Reporting                      |
+| `assesskit/validate/support-value`                                           | A prohibited support that reports a value.                                                                                                        | Results Reporting                      |
+| `assesskit/validate/pnp-prohibited`                                          | A prohibited support that is also in an activate set (error), or also assigned (warning).                                                         | Best Practices Guide                   |
+| `assesskit/validate/pnp-sets`                                                | A support in both activate sets. Warning.                                                                                                         | Best Practices Guide                   |
+| `assesskit/validate/pnp-namespace`                                           | An element of a PNP document in one of the two alternate namespaces.                                                                              | Best Practices Guide, XML Binding      |
 
 `validatePackage` reads each resource through `package.document`, so the includes of a document are resolved, an item
 is checked with the response processing templates the package holds, and a test is checked as `validateTest` checks it
@@ -207,20 +215,60 @@ with `packageResolvers`. Each document is checked once, however many tests name 
 
 Where the specifications are silent or ambiguous, the validator reads them like this:
 
-| Gap      | Decision                                                                                                                                                 |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L3       | A type that cannot be known statically passes: custom operators, record fields and variables without a base type are never reported.                     |
-| G40, T23 | A standard outcome of another base type is a warning, as content varies and still runs.                                                                  |
-| G24      | A rule that sets an externally scored outcome is a warning: it replaces the supplied score on every run.                                                 |
-| G9       | `ITEM.VAR` of an item reference that selection with replacement can repeat, in an individual part, is a warning: its value is undefined.                 |
-| G43, G17 | A QTI 2.x template address is a warning; a template that is neither standard nor resolved is an error only for an item with no rules.                    |
-| L9       | A weight with no definition is a warning, because the weight 1 applies.                                                                                  |
-| L6       | Content is reported as never shown or hidden only when every assignment to its controlling variable is a constant.                                       |
-| B21, B66 | The checks of selection, adaptive sections and simultaneous submission are the errors those parts of the specifications name.                            |
-| V52      | `qti-custom-interaction` is constrained to `data-` attributes although its schema allows any: BIND §5.2 lists it.                                        |
-| V44      | An interaction inside the XML that the model keeps (portable custom interactions) counts as nested.                                                      |
-| V51      | The first rule of `RULE_SET_SPECIFIC_CLASS_RESPONSEDEC` is about a `max-choices` of `qti-inline-choice-interaction`, which has none, so it cannot apply. |
-| J9       | A module is served when one package-relative location of it is in the package; each location that is present is listed.                                  |
-| K6       | The identifiers of the LOM metadata and the item are compared after the white space around them is removed.                                              |
-| item ref | An item reference whose identifier differs from its item's is a warning, since INFO §4.2.1 says it should be the same.                                   |
-| Results  | Item results of one instance, such as attempts, share a `sequenceIndex`; two different items must not.                                                   |
+| Case                                                  | Decision                                                                                                                |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| A type that cannot be known statically                | It passes: custom operators, record fields and variables without a base type are never reported.                        |
+| A standard outcome of another base type               | A warning, as content varies and still runs.                                                                            |
+| A rule that sets an externally scored outcome         | A warning: it replaces the supplied score on every run.                                                                 |
+| `ITEM.VAR` of a repeatable item reference             | In an individual part, a warning: its value is undefined.                                                               |
+| A QTI 2.x template address                            | A warning; a template that is neither standard nor resolved is an error only for an item with no rules.                 |
+| A weight with no definition                           | A warning, because the weight 1 applies.                                                                                |
+| Content that never shows or hides                     | Reported only when every assignment to its controlling variable is a constant.                                          |
+| Selection, adaptive sections, simultaneous submission | The errors those parts of the specifications name.                                                                      |
+| `qti-custom-interaction` and its attributes           | It is constrained to `data-` attributes although its schema allows any: the XML binding lists it.                       |
+| An interaction inside kept XML                        | Interactions in the XML that the model keeps (portable custom interactions) count as nested.                            |
+| `RULE_SET_SPECIFIC_CLASS_RESPONSEDEC`                 | Its first rule is about a `max-choices` of `qti-inline-choice-interaction`, which has none, so it cannot apply.         |
+| Modules of a portable custom interaction              | A module is served when one package-relative location of it is in the package; each location that is present is listed. |
+| LOM identifier and item identifier                    | They are compared after the white space around them is removed.                                                         |
+| An item reference with another identifier             | A warning, since the Information Model says it should be the same as the item's.                                        |
+| Results of one item instance                          | Item results of one instance, such as attempts, share a `sequenceIndex`; two different items must not.                  |
+
+Each decision is a place where the specifications differ; [Spec gaps](spec-gaps.md) lists them.
+
+## Not included
+
+| Not included                           | Why                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Validation against the XSD schemas     | [node](node.md) compiles the schemas with libxml2; `validate` is pure and runs everywhere   |
+| Resolving `xi:include`                 | The caller resolves includes first; one left in the document is an error                    |
+| Fixing content                         | The validator reports; it changes nothing                                                   |
+| Checks that need a run                 | A static check cannot tell what a candidate answers; [processing](processing.md) runs rules |
+| Rendering and accessibility of content | The player owns presentation                                                                |
+
+## Files
+
+Each file of `src/validate/` holds one concept.
+
+| File                                                                                                    | Concept                                                              |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `asi.ts`, `item.ts`, `test.ts`, `validate-test.ts`, `package.ts`, `results.ts`, `pnp.ts`                | The entry of each kind of content                                    |
+| `options.ts`, `findings.ts`, `reports.ts`, `failures.ts`                                                | Options, and collecting issues by file                               |
+| `bind-rule-sets.ts`, `formats.ts`, `document-checks.ts`, `generic-checks.ts`                            | The checks of every element of every document                        |
+| `declarations.ts`, `standard-outcomes.ts`, `item-scope.ts`, `test-scope.ts`, `scope.ts`                 | Declarations and the variables in reach                              |
+| `expressions.ts`, `static-type.ts`, `constant-values.ts`, `rules.ts`, `response-rules.ts`               | Static types, expressions and the rules of processing                |
+| `template-constraints.ts`, `attribute-references.ts`, `content-references.ts`, `unreachable-content.ts` | References from attributes and content to variables                  |
+| `test-structure.ts`, `test-structure-checks.ts`, `branch-rules.ts`, `covers.ts`                         | The structure of a test, branch rules and covers                     |
+| `package-files.ts`, `package-references.ts`                                                             | The files of a package and the references to them                    |
+| `model-access.ts`                                                                                       | Reading properties of a model that the checks share                  |
+| `internal.ts`                                                                                           | What other modules and the tests use and the package does not export |
+
+## References
+
+| Topic                                          | Specification                                                                                             |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Constraints of the model, selection, branching | [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                            |
+| Rule sets, packages                            | [QTI 3.0 ASI XML Binding](https://www.imsglobal.org/spec/qti/v3p0/bind/)                                  |
+| Personal needs profiles, security, templates   | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)          |
+| Adaptive sections                              | [CAT 1.0](https://www.imsglobal.org/spec/cat/v1p0/impl/)                                                  |
+| Results                                        | [QTI 3.0 Results Reporting](https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html) |
+| Where the specifications differ                | [Spec gaps](spec-gaps.md)                                                                                 |

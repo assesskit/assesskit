@@ -1,10 +1,26 @@
-# asi
+# ASI
 
-`@assesskit/runtime/asi` reads and writes the assessment documents of QTI 3.0 (ASI): items, stimuli, tests, sections,
-outcome declarations, response processing templates and outcome processing, and the content they hold: HTML, MathML, SSML,
-interactions, feedback, templates, rubric blocks, catalogs and companion materials. Its model has a property for every
-attribute and child element of the ASI schema, with types derived from the same table that drives the reader, the writer
-and the generators of the tests. It imports `xml` and `values` and runs in any JavaScript runtime.
+`asi` reads and writes the assessment documents of QTI 3.0: items, stimuli, tests, sections, outcome declarations, response
+processing templates and outcome processing, and the content they hold: HTML, MathML, SSML, interactions, feedback,
+templates, rubric blocks, catalogs and companion materials. Its model has a property for every attribute and child element
+of the ASI schema, with types derived from the same table that drives the reader, the writer and the generators of the
+tests. It imports `xml` and `values` and runs in any JavaScript runtime.
+
+```mermaid
+flowchart LR
+  text["XML text, bytes<br/>or a parsed tree"]
+  table["Element table<br/>generated from the ASI schema"]
+  document["AsiDocument<br/>kind and model"]
+  output["XML in UTF-8"]
+  text -- "readAsi" --> document
+  document -- "writeAsi" --> output
+  table -. "types, reader, writer,<br/>test generators" .-> document
+  document --> item["item"]
+  document --> test["test"]
+  document --> others["stimulus, section,<br/>declaration, processing"]
+  item --> body["body: flow content,<br/>interactions"]
+  test --> parts["parts, sections,<br/>item references"]
+```
 
 | Export                                             | Purpose                                                                                                                             |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,18 +63,17 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
   </qti-response-processing>
 </qti-assessment-item>`);
 
-if (document.kind === "item") {
-  const { item } = document;
-  item.kind; // "assessment-item"
-  item.timeDependent; // false
-  item.responseDeclarations[0]?.correctResponse?.values; // [{ kind: "value", value: "Paris" }]
-  const [rule] = item.responseProcessing?.rules ?? [];
-  if (rule?.kind === "response-condition") {
-    rule.responseIf.condition; // { kind: "match", operands: [{ kind: "variable", identifier: "RESPONSE" }, { kind: "correct", identifier: "RESPONSE" }] }
-  }
-}
+const item = document.kind === "item" ? document.item : undefined;
+item?.kind; // => "assessment-item"
+item?.timeDependent; // => false
+item?.responseDeclarations[0]?.correctResponse?.values; // => [{ kind: "value", value: "Paris" }]
+const rule = item?.responseProcessing?.rules[0];
+rule?.kind === "response-condition" && rule.responseIf.condition;
+// => { kind: "match", operands: [{ kind: "variable", identifier: "RESPONSE" }, { kind: "correct", identifier: "RESPONSE" }] }
 
-writeAsi(document); // '<?xml version="1.0" encoding="UTF-8"?>\n<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" …'
+writeAsi(document).startsWith(
+  '<?xml version="1.0" encoding="UTF-8"?>\n<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"',
+); // => true
 ```
 
 ### Content
@@ -77,16 +92,10 @@ const document = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/x
   </qti-item-body>
 </qti-assessment-item>`);
 
-if (document.kind === "item") {
-  const [paragraph, interaction] = document.item.body?.children ?? [];
-  if (paragraph?.kind === "p") {
-    paragraph.children; // [{ kind: "text", value: "Which city is the capital of " }, { kind: "b", … }, { kind: "text", value: "?" }]
-  }
-  if (interaction?.kind === "choice-interaction") {
-    interaction.maxChoices; // 1
-    interaction.simpleChoices.map(({ identifier }) => identifier); // ["Paris", "Lyon"]
-  }
-}
+const [paragraph, interaction] = (document.kind === "item" ? document.item.body?.children : undefined) ?? [];
+paragraph?.kind === "p" && paragraph.children.map((child) => child.kind); // => ["text", "b", "text"]
+interaction?.kind === "choice-interaction" && interaction.maxChoices; // => 1
+interaction?.kind === "choice-interaction" && interaction.simpleChoices.map(({ identifier }) => identifier); // => ["Paris", "Lyon"]
 ```
 
 ## The model
@@ -123,7 +132,7 @@ An attribute named `kind` (the kind of a `track`) is `trackKind`, because `kind`
 parameters of `ElementModel` are invariant: a `p` is never an `h1`, though both have the type of the table that models them.
 
 Defaults of the schema are not applied: an attribute the document omits is omitted from the model, and
-`writeAsi` does not write it (G11: the information model, not the schema, says what `normal-minimum` means when it is
+`writeAsi` does not write it ([spec gaps](spec-gaps.md): the information model, not the schema, says what `normal-minimum` means when it is
 absent). The semantic modules apply defaults with their sources.
 
 ### Flow content
@@ -245,7 +254,7 @@ Each vocabulary below is the type of an attribute; the reader refuses any other 
 | W46 | `StringList`               | `class`                 | every element with the common attributes |
 | W48 | `ARIARelevantList`         | `aria-relevant`         | every element with the common attributes |
 
-The lists (W46, W48) are arrays of their items; `aria-relevant` takes `additions`, `all`, `removals` and `text`.
+The lists are arrays of their items; `aria-relevant` takes `additions`, `all`, `removals` and `text`.
 
 ### Walking the content
 
@@ -294,7 +303,7 @@ model; each issue has the code, a sentence, and the path, line, column and eleme
 | `assesskit/asi/exclusive`         | Two child elements the schema allows only one of, such as an adaptive selection and a selection.                              |
 
 The reader is not a validator. It does not check the order of child elements, the minimum of a list, patterns such as
-identifiers and MIME types, ranges such as `xs:int`, the uniqueness of `id`s, or the rules of BIND §5. `validateXmlFiles` of
+identifiers and MIME types, ranges such as `xs:int`, the uniqueness of `id`s, or the rule sets of the XML binding. `validateXmlFiles` of
 [node](node.md) checks the schema, and the `validate` module the rest. A value that must be a number or a boolean cannot
 be represented otherwise, so it is checked. A DOCTYPE or a document over a limit is a `SecurityError` of the XML reader.
 
@@ -303,8 +312,7 @@ the runtime follows the schema, so another text is an `assesskit/asi/invalid-val
 
 ## Writing
 
-`writeAsi` writes the document with `xmlns`, `xmlns:xsi` and `xsi:schemaLocation` that names the 3.0.1 ASI schema (BPIG
-§1.1.5). Attributes and child elements are in the order of the schema, so a valid model gives a valid document. It throws a
+`writeAsi` writes the document with `xmlns`, `xmlns:xsi` and `xsi:schemaLocation` that names the 3.0.1 ASI schema. Attributes and child elements are in the order of the schema, so a valid model gives a valid document. It throws a
 `DataError` for a model that is not the model of its element: a property the element does not have, a missing required
 property, a value of the wrong type, a `kind` that does not match, more members than a place takes, a member that the
 place does not accept, or text where the place takes none. Text without characters writes nothing, and two texts in a row
@@ -349,3 +357,38 @@ The generated documents use every element and attribute that the schema declares
 examples contain every interaction but the custom one; the other elements have no corpus evidence, only the schema and the
 unit tests. Two examples are not read, because the ASI schema rejects them: one lacks the
 required `use` of a rubric block, and one has an attribute `qti-interaction-modules` does not have.
+
+## Not included
+
+| Not included                                          | Why                                                                                            |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Defaults of the schema                                | The model keeps what the document says; the semantic modules apply defaults with their sources |
+| The order of child elements and the minimum of a list | The schema checks them; `validateXmlFiles` of [node](node.md) reports them                     |
+| Patterns, ranges and the uniqueness of `id`s          | `validate` checks them                                                                         |
+| MathML and SSML as typed models                       | The model keeps them as XML, where the schema lets them occur                                  |
+| Resolving `xi:include`                                | `resolveIncludes` of [xml](xml.md) does it before the document is read                         |
+| Comments and processing instructions                  | The model carries none, so a written document has none of the source                           |
+
+## Files
+
+Each file of `src/asi/` holds one concept.
+
+| File                                            | Concept                                                              |
+| ----------------------------------------------- | -------------------------------------------------------------------- |
+| `element-table.ts`, `table.ts`, `type-index.ts` | The generated table of element types, its types, and its lookups     |
+| `model.ts`, `body.ts`, `nodes.ts`               | The types of the model, of flow content, and the nodes of content    |
+| `document.ts`                                   | Reading and writing a document of any kind                           |
+| `read.ts`, `write.ts`, `attribute-value.ts`     | Mapping an element to the model and back, and attribute values       |
+| `walk.ts`                                       | Visiting the elements of a document                                  |
+| `covers.ts`                                     | The covers of externally scored outcomes                             |
+| `guards.ts`, `read-error.ts`, `namespace.ts`    | Guards of the tree, the error of the reader, the namespace           |
+| `internal.ts`                                   | What other modules and the tests use and the package does not export |
+
+## References
+
+| Topic                                  | Specification                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Elements, attributes, vocabularies     | [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   |
+| Schema, namespaces, rule sets          | [QTI 3.0 ASI XML Binding](https://www.imsglobal.org/spec/qti/v3p0/bind/)                         |
+| Packages, portable custom interactions | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) |
+| Places where the specifications differ | [Spec gaps](spec-gaps.md)                                                                        |

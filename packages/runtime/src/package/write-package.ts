@@ -14,8 +14,11 @@ import { writeZip, type ZipEntry } from "./zip-writer.js";
  * @param manifest - The manifest, written as in {@link writeManifest}.
  * @param files - The other files by path. A path must be normalized, which excludes absolute paths, `..` segments,
  * backslashes, drive letters and control characters, and must not be `imsmanifest.xml`.
+ * @returns The archive.
  * @throws `DataError` when an argument has the wrong type, the manifest is not valid, a path is not allowed, or the
  * archive would need ZIP64.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
+ * @see {@link https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT | ZIP File Format Specification (APPNOTE)}
  */
 export function writePackage(manifest: Manifest, files: ReadonlyMap<string, Uint8Array>): Uint8Array {
   const manifestText = writeManifest(manifest);

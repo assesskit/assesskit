@@ -88,7 +88,7 @@ export const base = (baseType: string, text: string): string =>
   `<qti-base-value base-type="${baseType}">${text}</qti-base-value>`;
 export const variable = (identifier: string): string => `<qti-variable identifier="${identifier}"/>`;
 
-// The rule sets of BIND §5 ----------------------------------------------------------------------------------------------
+// The rule sets of the XML binding ----------------------------------------------------------------------------------------------
 
 export const choice = (identifier: string): string =>
   `<qti-simple-choice identifier="${identifier}">${identifier}</qti-simple-choice>`;

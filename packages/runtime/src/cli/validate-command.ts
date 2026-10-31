@@ -24,9 +24,12 @@ async function openSchemas(directory: string | undefined, fallback: string): Pro
 }
 
 /**
- * Runs `assesskit validate <path> [--schemas <dir>] [--format text|json]` (L12, L13): validates the path against the schemas
+ * Runs `assesskit validate <path> [--schemas <dir>] [--format text|json]`: validates the path against the schemas
  * and with the semantic checks, writes the report to the standard output and returns the exit code of the report.
  *
+ * @param args - The arguments after `validate`.
+ * @param options - The options of the command line, with every default set.
+ * @returns The exit code of the report.
  * @throws `UsageError` when the arguments do not follow the command.
  * @throws `DataError` when the schemas or the path cannot be read, and `SecurityError` when the input is refused.
  */

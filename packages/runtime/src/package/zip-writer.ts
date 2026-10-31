@@ -16,7 +16,7 @@ const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
 const LOCAL_HEADER_BYTES = 30;
 const CENTRAL_HEADER_BYTES = 46;
 const END_RECORD_BYTES = 22;
-/** Version 2.0, which deflate needs (APPNOTE §4.4.3). */
+/** Version 2.0, which deflate needs. */
 const VERSION = 20;
 const UTF8_NAME_FLAG = 0x800;
 const STORED = 0;
@@ -24,7 +24,7 @@ const DEFLATED = 8;
 /** 1980-01-01 in the MS-DOS date format (year since 1980 in bits 9 to 15, month in 5 to 8, day in 0 to 4), which every entry gets so that equal input gives equal bytes. */
 const DOS_DATE = 0x21;
 const DOS_TIME = 0;
-/** The largest value of a field of the classic format: the next value is the marker for ZIP64 (APPNOTE §4.4.1.4). */
+/** The largest value of a field of the classic format: the next value is the marker for ZIP64. */
 const MAX_CLASSIC_COUNT = 0xfffe;
 const MAX_CLASSIC_VALUE = 0xfffffffe;
 
@@ -57,7 +57,10 @@ function pack({ name, data }: ZipEntry): Packed {
  * Writes entries as a ZIP archive of the classic format: deflated when that makes an entry smaller, stored otherwise,
  * in the order given, with one fixed time stamp. The classic format holds at most 65,534 entries and values below 4 GiB.
  *
+ * @param entries - The entries, in the order they are written.
+ * @returns The archive.
  * @throws `DataError` when the archive would need ZIP64.
+ * @see {@link https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT | ZIP File Format Specification (APPNOTE)}
  */
 export function writeZip(entries: readonly ZipEntry[]): Uint8Array {
   if (entries.length > MAX_CLASSIC_COUNT) {

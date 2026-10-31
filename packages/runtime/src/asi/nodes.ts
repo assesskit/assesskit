@@ -13,6 +13,9 @@ export interface ModelNode {
 /**
  * Returns whether a value is a node of the content model: an object whose `kind` is a string. The check is shallow;
  * `writeAsi` checks the rest when it writes the tree.
+ *
+ * @param value - The value to test.
+ * @returns `true` for a node of the model of an element.
  */
 export function isModelNode(value: unknown): value is ModelNode {
   return isRecord(value) && typeof value.kind === "string";
@@ -21,6 +24,9 @@ export function isModelNode(value: unknown): value is ModelNode {
 /**
  * Returns whether a value is a node of flow content, such as the children of an item body: like {@link isModelNode}, a
  * shallow check of the `kind`. Use it for a node that came from flow content and went through code that copies nodes.
+ *
+ * @param value - The value to test.
+ * @returns `true` for a node of flow content.
  */
 export function isBodyNode(value: unknown): value is BodyNode {
   return isModelNode(value);
@@ -33,6 +39,9 @@ const XML_ELEMENT = "element";
  * Returns the nodes directly below a node, in every place the model keeps them: the flow content in `children`, a prompt,
  * the choices of an interaction, the content body of feedback, and so on. MathML, SSML and `xi:include` are leaves,
  * because the model keeps them as XML.
+ *
+ * @param node - A node of the model.
+ * @returns The child nodes in document order, text and elements.
  */
 export function childNodes(node: ModelNode): readonly ModelNode[] {
   if (node.kind === XML_ELEMENT) return [];
@@ -42,7 +51,12 @@ export function childNodes(node: ModelNode): readonly ModelNode[] {
   });
 }
 
-/** Returns the nodes below a node at any depth, in document order, without the node itself. */
+/**
+ * Returns the nodes below a node at any depth, in document order, without the node itself.
+ *
+ * @param node - A node of the model.
+ * @returns Every node below it, depth first, in document order.
+ */
 export function descendantNodes(node: ModelNode): readonly ModelNode[] {
   return childNodes(node).flatMap((child) => [child, ...descendantNodes(child)]);
 }

@@ -5,7 +5,7 @@ import type { XmlElement } from "../xml/index.js";
 import type { Findings } from "./findings.js";
 import { elementPath, extensionsOf, kindsOf, numberOf } from "./model-access.js";
 
-/** The number of a rule set `RULE_SET_INTERACTION_<number>A` or `B` of BIND §5.3, by the element it is about. */
+/** The number of a rule set `RULE_SET_INTERACTION_<number>A` or `B` of the XML binding, by the element it is about. */
 const INTERACTION_RULE_SETS: ReadonlyMap<string, number> = new Map([
   ["qti-text-entry-interaction", 1],
   ["qti-choice-interaction", 2],
@@ -31,7 +31,7 @@ const INTERACTION_RULE_SETS: ReadonlyMap<string, number> = new Map([
   ["qti-portable-custom-interaction", 20],
 ]);
 
-/** The interactions whose `max-choices` must not be below `min-choices`, unless it is 0 (BIND §5.3, rule sets B). */
+/** The interactions whose `max-choices` must not be below `min-choices`, unless it is 0. */
 const CHOICE_LIMITS = new Set([
   "qti-choice-interaction",
   "qti-hotspot-interaction",
@@ -53,7 +53,7 @@ const ASSOCIATION_LIMITS = new Set([
 /** The interactions whose `string-identifier` must differ from the `response-identifier`. */
 const STRING_IDENTIFIERS = new Set(["qti-text-entry-interaction", "qti-extended-text-interaction"]);
 
-/** The base types that the response declaration of an interaction must have, where BIND §5.3 fixes them. */
+/** The base types that the response declaration of an interaction must have, where the XML binding fixes them. */
 const BOUND_BASE_TYPES: ReadonlyMap<string, readonly BaseType[]> = new Map([
   ["qti-text-entry-interaction", ["string", "float", "integer"]],
   ["qti-drawing-interaction", ["file"]],
@@ -71,19 +71,19 @@ const MATCH_LIMITS: ReadonlyMap<string, number> = new Map([
   ["qti-simple-associable-choice", 4],
 ]);
 
-/** The values of `role` that `h1` may have (BIND §5.3.1). */
+/** The values of `role` that `h1` may have. */
 const H1_ROLES = new Set(["heading", "tab", "presentation"]);
 
 /**
- * The element whose schema allows attributes of other namespaces and that BIND §5.2 constrains to `data-` attributes all
+ * The element whose schema allows attributes of other namespaces and that the XML binding constrains to `data-` attributes all
  * the same, as the elements whose schema allows any attribute.
  */
 const CONSTRAINED_FOREIGN = "qti-custom-interaction";
 
-/** What an extension attribute of a constrained element is named: `data-` and one or more name characters (BIND §5.2). */
+/** What an extension attribute of a constrained element is named: `data-` and one or more name characters. */
 const DATA_ATTRIBUTE = /^data-[a-zA-Z0-9_.-]+$/;
 
-/** The elements of a `figure` and a `ruby` that BIND §5.1 allows once at most, with the code of their issues. */
+/** The elements of a `figure` and a `ruby` that the XML binding allows once at most, with the code of their issues. */
 const FIGURE = {
   name: "figure",
   code: "assesskit/validate/figure-multiplicity",
@@ -122,7 +122,7 @@ export interface BindContext {
   readonly templates: ReadonlySet<string>;
 }
 
-/** Applies the rule sets of BIND §5 to the elements of a document that they are about. */
+/** Applies the rule sets of the XML binding to the elements of a document that they are about. */
 export class BindRuleSets {
   private readonly findings: Findings;
   private readonly context: BindContext | undefined;
@@ -137,7 +137,11 @@ export class BindRuleSets {
     this.context = context;
   }
 
-  /** Checks one element against every rule set about it. */
+  /**
+   * Checks one element against every rule set about it.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     const { name } = visit;
     this.unorderedClass(visit);
@@ -272,7 +276,7 @@ export class BindRuleSets {
     this.error(`RULE_SET_INTERACTION-RELATED_${number}`, message, visit);
   }
 
-  /** 5.3.47 RULE_SET_RUBRICBLOCK, and INFO §2.8.6: a rubric block holds no rubric block and no interaction. */
+  /** RULE_SET_RUBRICBLOCK, and the Information Model: a rubric block holds no rubric block and no interaction. */
   private rubricBlock(visit: ElementVisit): void {
     for (let at = visit.parent; at !== undefined; at = at.parent) {
       if (at.name !== "qti-rubric-block") continue;

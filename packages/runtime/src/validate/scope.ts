@@ -34,13 +34,13 @@ export interface ExpressionScope {
   declared(identifier: string): Lookup;
   /** Looks up the response variable that `qti-correct`, `qti-map-response` or `qti-map-response-point` names. */
   response(identifier: string): ResponseLookup;
-  /** Returns the problem with a weight that an expression over item sessions names, `undefined` when it is defined (INFO §7.47.2). */
+  /** Returns the problem with a weight that an expression over item sessions names, `undefined` when it is defined. */
   weight(weightIdentifier: string): Problem | undefined;
   /** Returns the type of the template or outcome variable in reach that an attribute names, `undefined` when there is none. */
   reference(identifier: string): StaticType | undefined;
 }
 
-/** The kinds of item variables (INFO §2.2.2). */
+/** The kinds of item variables. */
 export type VariableKind = "context" | "response" | "outcome" | "template";
 
 /** A variable that a rule sets. */

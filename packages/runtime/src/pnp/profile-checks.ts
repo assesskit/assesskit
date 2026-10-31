@@ -5,7 +5,7 @@ import type { PersonalNeedsProfile } from "./model.js";
 import { PNP_NAMESPACE } from "./namespace.js";
 import { isPredefinedSupportName, isSetSupportName } from "./support-names.js";
 
-/** The sets of a profile with the names of their elements, in the order the schema lists them (PNP XSD). */
+/** The sets of a profile with the names of their elements, in the order the schema lists them. */
 export const SET_ELEMENTS = [
   ["activate-at-initialization-set", "activateAtInitialization"],
   ["activate-as-option-set", "activateAsOption"],
@@ -33,6 +33,7 @@ function checkExtensions(value: readonly XmlElement[]): void {
  * Checks the structure of a profile: its fields, the names of its supports and of the members of its sets, and its
  * extensions. The settings of the supports are checked where they are written.
  *
+ * @param profile - The profile to check.
  * @throws `DataError` when a field has the wrong type or a name is not one of the predefined supports.
  */
 export function checkProfile(profile: PersonalNeedsProfile): void {

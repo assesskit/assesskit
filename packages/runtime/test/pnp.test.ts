@@ -20,6 +20,7 @@ import {
 import { asProfile, personalNeedsProfile, pnpRecords } from "./arbitraries/pnp.js";
 import { withoutPositions } from "./arbitraries/xml.js";
 import { fuzzReader } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${PNP_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqtiv3p0_afa3p0pnp_v1p0.xsd`;
@@ -107,7 +108,7 @@ describe("support names", () => {
     expect(isSetSupportName("ext:vendor")).toBe(false);
   });
 
-  it("names a custom support by ext: and the local name of its element (BPIG §3.7.10, §5.4)", () => {
+  it("names a custom support by ext: and the local name of its element", () => {
     expect(extensionName("kxztesting-illustrated-glossary-on-screen")).toBe(
       "ext:kxztesting-illustrated-glossary-on-screen",
     );
@@ -120,7 +121,7 @@ describe("support names", () => {
 });
 
 describe("supports", () => {
-  it("hazard-avoidance: one element for each hazard, from the vocabulary or an extension (BPIG §5.2.5)", () => {
+  it("hazard-avoidance: one element for each hazard, from the vocabulary or an extension", () => {
     expectSupport(
       "<hazard-avoidance>flashing</hazard-avoidance><hazard-avoidance>olfactory-hazard</hazard-avoidance><hazard-avoidance>ext:vendor.glare</hazard-avoidance>",
       { name: "hazard-avoidance", hazards: ["flashing", "olfactory-hazard", "ext:vendor.glare"] },
@@ -161,7 +162,7 @@ describe("supports", () => {
     );
   });
 
-  it("the supports that only replace content name the access modes (PNP XSD)", () => {
+  it("the supports that only replace content name the access modes", () => {
     const names = [
       "linguistic-guidance",
       "keyword-emphasis",
@@ -204,7 +205,7 @@ describe("supports", () => {
     });
   });
 
-  it("keyword-translation: the language of the translation of keywords (BPIG §5.2.6.2)", () => {
+  it("keyword-translation: the language of the translation of keywords", () => {
     expectSupport('<keyword-translation xml:lang="es"/>', {
       name: "keyword-translation",
       language: "es",
@@ -212,7 +213,7 @@ describe("supports", () => {
     });
   });
 
-  it("item-translation: the language of the translated item (BPIG §5.2.6.1)", () => {
+  it("item-translation: the language of the translated item", () => {
     expectSupport('<item-translation xml:lang="ko"/>', {
       name: "item-translation",
       language: "ko",
@@ -220,7 +221,7 @@ describe("supports", () => {
     });
   });
 
-  it("sign-language: the sign language, such as American Sign Language, ase (BPIG §5.2.6.4)", () => {
+  it("sign-language: the sign language, such as American Sign Language, ase", () => {
     expectSupport(`<sign-language xml:lang="ase">${MODES}</sign-language>`, {
       name: "sign-language",
       language: "ase",
@@ -228,7 +229,7 @@ describe("supports", () => {
     });
   });
 
-  it("additional-testing-time: unlimited, a multiplier or fixed minutes (BPIG §5.2.4)", () => {
+  it("additional-testing-time: unlimited, a multiplier or fixed minutes", () => {
     expectSupport("<additional-testing-time><unlimited/></additional-testing-time>", {
       name: "additional-testing-time",
       replaceAccessModes: [],
@@ -246,7 +247,7 @@ describe("supports", () => {
     });
   });
 
-  it("line-reader: the color of the highlight (BPIG §5.5)", () => {
+  it("line-reader: the color of the highlight", () => {
     expectSupport('<line-reader highlight-color="#336699"/>', {
       name: "line-reader",
       replaceAccessModes: [],
@@ -269,7 +270,7 @@ describe("supports", () => {
     });
   });
 
-  it("magnification: the zoom of all content, or of text and of non-text (BPIG §5.2.9.6)", () => {
+  it("magnification: the zoom of all content, or of text and of non-text", () => {
     expectSupport('<magnification><text zoom-amount="1.5"/><non-text zoom-amount="2"/></magnification>', {
       name: "magnification",
       replaceAccessModes: [],
@@ -288,7 +289,7 @@ describe("supports", () => {
     });
   });
 
-  it("spoken: the reading type, the restrictions and the voice (BPIG §5.2.1)", () => {
+  it("spoken: the reading type, the restrictions and the voice", () => {
     expectSupport("<spoken><reading-type>screen-reader</reading-type></spoken>", {
       name: "spoken",
       replaceAccessModes: [],
@@ -332,7 +333,7 @@ describe("supports", () => {
     }
   });
 
-  it("braille: the delivery, grade and kind of braille and of its mathematics (BPIG §5.2.2)", () => {
+  it("braille: the delivery, grade and kind of braille and of its mathematics", () => {
     expectSupport(
       `<braille xml:lang="en-US">${MODES}<delivery-mode>embossed</delivery-mode><grade>2</grade><braille-type>ueb</braille-type><math-type>nemeth</math-type></braille>`,
       {
@@ -382,7 +383,7 @@ describe("supports", () => {
     expectSupport("<long-description/>", { name: "long-description", replaceAccessModes: [] });
   });
 
-  it("environment: the description, medical needs, software, hardware and breaks (BPIG §5.2.11)", () => {
+  it("environment: the description, medical needs, software, hardware and breaks", () => {
     // BPIG's example lists the parameters in another order than the schema's sequence; the order of a choice is free.
     const profile = profileOf(
       "<environment><breaks>true</breaks><description>Candidate requires a room with low-levels of lighting.</description><medical>Candidate will bring an EPI pen for their bee sting allergy.</medical></environment>",
@@ -406,7 +407,7 @@ describe("supports", () => {
     );
   });
 
-  it("text-appearance: colors, size, face, spacing and wrapping (BPIG §5.2.9.7)", () => {
+  it("text-appearance: colors, size, face, spacing and wrapping", () => {
     expectSupport(
       `<text-appearance>${MODES}<background-color>#FFFF00</background-color><font-color>#000</font-color><font-size>18</font-size><font-face><font-name>Helvetica</font-name><font-name>Arial</font-name><generic-font-face>sans serif</generic-font-face></font-face><line-spacing>1.5</line-spacing><line-height>2</line-height><letter-spacing>0.1</letter-spacing><uniform-font-sizing/><word-spacing>0.2</word-spacing><word-wrapping/></text-appearance>`,
       {
@@ -478,7 +479,7 @@ describe("supports", () => {
 });
 
 describe("sets", () => {
-  it("activate-as-option-set: the supports to offer as options, by name alone (BPIG §5.3.1)", () => {
+  it("activate-as-option-set: the supports to offer as options, by name alone", () => {
     const profile = profileOf(
       '<sign-language xml:lang="ase"/><activate-as-option-set><sign-language/></activate-as-option-set>',
     );
@@ -489,7 +490,7 @@ describe("sets", () => {
     );
   });
 
-  it("activate-at-initialization-set: the supports to have on from the start (BPIG §5.3.2)", () => {
+  it("activate-at-initialization-set: the supports to have on from the start", () => {
     const profile = profileOf(
       "<spoken><reading-type>computer-read-aloud</reading-type></spoken><additional-testing-time><unlimited/></additional-testing-time><activate-at-initialization-set><spoken/></activate-at-initialization-set>",
     );
@@ -497,7 +498,7 @@ describe("sets", () => {
     expect([...profile.supports.keys()]).toEqual(["spoken", "additional-testing-time"]);
   });
 
-  it("prohibit-set: the supports that the candidate must not have (BPIG §5.3.3)", () => {
+  it("prohibit-set: the supports that the candidate must not have", () => {
     const profile = profileOf(
       "<additional-testing-time><unlimited/></additional-testing-time><prohibit-set><magnification/><answer-masking/><text-appearance/></prohibit-set>",
     );
@@ -531,13 +532,13 @@ describe("sets", () => {
   });
 });
 
-describe("resolveSupports", () => {
+describe("resolving supports", () => {
   it("resolves a support that a profile assigns, and is in no set, as assigned", () => {
     const states = resolveSupports(profileOf('<item-translation xml:lang="ko"/>'));
     expect([...states]).toEqual([["item-translation", "assigned"]]);
   });
 
-  it("resolves the sets: initialization is active, option is option, prohibit is prohibited (BPIG §5.3)", () => {
+  it("resolves the sets: initialization is active, option is option, prohibit is prohibited", () => {
     const states = resolveSupports(
       profileOf(
         "<spoken/><activate-at-initialization-set><spoken/><captions/></activate-at-initialization-set><activate-as-option-set><tactile/></activate-as-option-set><prohibit-set><magnification/></prohibit-set>",
@@ -581,7 +582,7 @@ describe("resolveSupports", () => {
 });
 
 describe("extensions", () => {
-  it("keeps the custom supports of other namespaces as elements (BPIG §5.4)", () => {
+  it("keeps the custom supports of other namespaces as elements", () => {
     const profile = profileOf(
       '<kxz:kxztesting-illustrated-glossary-on-screen xmlns:kxz="http://www.kxztesting.com/2019/pnp-extensions"/>',
     );
@@ -609,7 +610,7 @@ describe("extensions", () => {
 });
 
 describe("namespaces", () => {
-  it("reads the two namespaces that 1EdTech's own documents use, and writes the schema's (D6)", () => {
+  it("reads the two namespaces that 1EdTech's own documents use, and writes the schema's", () => {
     expect(PNP_ALTERNATE_NAMESPACES).toEqual([
       "http://www.imsglobal.org/xsd/qtiv3p0/imsafa3p0pnp_v1p0",
       "http://www.imsglobal.org/xsd/qt/qtiv3p0/imsafa3p0pnp_v1p0",
@@ -647,7 +648,7 @@ describe("namespaces", () => {
 describe("bulk files", () => {
   const Bulk = `<access-for-all-pnp-records xmlns="${PNP_NAMESPACE}"><access-for-all-pnp-record><person-sourced-id source-system="IMSGlobalExamples">111</person-sourced-id><access-for-all-pnp><keyword-translation xml:lang="es"/><line-reader highlight-color="#336699"/></access-for-all-pnp></access-for-all-pnp-record><access-for-all-pnp-record><person-sourced-id source-system="IMSGlobalExamples">1000001</person-sourced-id><appointment-id>g8alg12345</appointment-id><appointment-id>g8ela12345</appointment-id><access-for-all-pnp><answer-masking/></access-for-all-pnp></access-for-all-pnp-record></access-for-all-pnp-records>`;
 
-  it("reads the bulk file of BPIG §5.5: a candidate and their appointments for each profile", () => {
+  it("reads a bulk file: a candidate and their appointments for each profile", () => {
     const records = readPnp(Bulk) as readonly PnpRecord[];
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({
@@ -971,6 +972,14 @@ describe("errors", () => {
     expect(() =>
       writePnp([{ personSourcedId: { sourceSystem: json("5"), id: "1" }, appointmentIds: [], profile }]),
     ).toThrow("The sourceSystem of a person must be a string, found 5.");
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/pnp.md", import.meta.url);
+    const pnp = await import("../src/pnp/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/pnp": pnp })).toBeGreaterThan(0);
   });
 });
 

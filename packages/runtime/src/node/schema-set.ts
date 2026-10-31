@@ -99,6 +99,7 @@ function compile(directory: string, schema: SchemaFile): XsdValidator {
  * SHA-256. A schema is compiled the first time a document needs it, and the compiled schema is reused afterwards.
  *
  * @param directory - The directory that holds the files under their `file` names.
+ * @returns The set, open.
  * @throws `DataError` when the argument is not a string, or a file is missing, unreadable or changed.
  */
 export async function loadSchemaSet(directory: string): Promise<SchemaSet> {
@@ -145,6 +146,7 @@ function openState(set: SchemaSet): State {
 /**
  * Checks that a value is a set that is open.
  *
+ * @param set - The value to check.
  * @throws `DataError` when it is not.
  */
 export function checkSchemaSet(set: SchemaSet): void {
@@ -154,6 +156,9 @@ export function checkSchemaSet(set: SchemaSet): void {
 /**
  * Returns the compiled validator of a schema, compiling it on first use.
  *
+ * @param set - The open set.
+ * @param schema - The schema to compile.
+ * @returns The compiled validator.
  * @throws `DataError` when the argument is not a set that {@link loadSchemaSet} returned, or the set is closed.
  */
 export function validatorFor(set: SchemaSet, schema: SchemaFile): XsdValidator {

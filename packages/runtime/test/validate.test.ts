@@ -36,11 +36,10 @@ import {
   validateTest,
   writeManifest,
 } from "../src/index.js";
-import { type BindContext, BindRuleSets } from "../src/validate/bind-rule-sets.js";
-import { DocumentChecks } from "../src/validate/document-checks.js";
-import { Findings } from "../src/validate/findings.js";
+import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src/validate/internal.js";
 import { readError } from "../src/xml/index.js";
 import { FUZZ } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 import {
   ATTRIBUTE_RULES,
   base,
@@ -72,7 +71,7 @@ import {
   variable,
 } from "./validate-fixtures.js";
 
-describe("the unordered classes of BIND §5.1", () => {
+describe("the unordered classes of the XML binding", () => {
   it("allows one figcaption in a figure and reports a second", () => {
     expect(check({ body: "<figure><figcaption>a</figcaption><p>x</p></figure>" })).toEqual([]);
     const issues = check({ body: "<figure><figcaption>a</figcaption><p>x</p><figcaption>b</figcaption></figure>" });
@@ -89,7 +88,7 @@ describe("the unordered classes of BIND §5.1", () => {
   });
 });
 
-describe("the explicit rule sets of BIND §5.3: the roles and the general rule", () => {
+describe("the explicit rule sets of the XML binding: the roles and the general rule", () => {
   it("lets an h1 have the role heading, tab or presentation and no other", () => {
     for (const role of ["heading", "tab", "presentation"])
       expect(check({ body: `<h1 role="${role}">x</h1>` })).toEqual([]);
@@ -125,7 +124,7 @@ describe("the explicit rule sets of BIND §5.3: the roles and the general rule",
   });
 });
 
-describe("the explicit rule sets of BIND §5.3: the attributes of the interactions", () => {
+describe("the explicit rule sets of the XML binding: the attributes of the interactions", () => {
   it.each(ATTRIBUTE_RULES)("$code: reports the broken fixture once and accepts the kept one", (rule) => {
     const [brokenDeclarations, brokenBody] = rule.broken;
     expect(only(check({ declarations: brokenDeclarations, body: brokenBody }), rule.code)).toMatchObject([
@@ -170,7 +169,7 @@ function ruleSetsOn(visit: ElementVisit, context?: BindContext): Issue[] {
   return findings.issues;
 }
 
-describe("the nesting rule sets A of BIND §5.3", () => {
+describe("the nesting rule sets A of the XML binding", () => {
   it.each(NESTING_RULE_SETS)(
     "reports an interaction inside the %s with the rule set A of the container",
     (container, ruleSet) => {
@@ -229,9 +228,9 @@ describe("the nesting rule sets A of BIND §5.3", () => {
   });
 });
 
-// The remaining rule sets of BIND §5.3 and the constrained extension of §5.2 ---------------------------------------------
+// The remaining rule sets of the XML binding and the constrained extension ---------------------------------------------
 
-describe("the explicit rule sets of BIND §5.3: the associable elements, the rubric block and the declarations", () => {
+describe("the explicit rule sets of the XML binding: the associable elements, the rubric block and the declarations", () => {
   it.each(MATCH_LIMITS)("%s: reports a match-max below match-min, but not 0 or a limit that holds", (code, build) => {
     const [declarations, body] = build('match-max="1" match-min="2"');
     expect(only(check({ declarations, body }), code)).toMatchObject([{ severity: "error" }]);
@@ -461,7 +460,7 @@ describe("the declarations", () => {
     ]);
   });
 
-  it("[INFO §5.34.3] reports a variable that is not a record and has no base type", () => {
+  it("reports a variable that is not a record and has no base type", () => {
     const issues = check({ declarations: '<qti-outcome-declaration identifier="O" cardinality="single"/>' });
     expect(issues).toMatchObject([{ code: "assesskit/validate/base-type", severity: "error" }]);
     expect(check({ declarations: '<qti-outcome-declaration identifier="O" cardinality="record"/>' })).toEqual([]);
@@ -751,7 +750,7 @@ describe("assignments and lookup tables", () => {
     );
   });
 
-  it("promotes an integer to a float or a duration outcome (D5), and nothing else", () => {
+  it("promotes an integer to a float or a duration outcome, and nothing else", () => {
     expect(assigned("SCORE", int("1"))).toEqual([]);
     const declarations = `${OUTCOMES}${outcome("T", "single", "duration")}`;
     expect(assigned("T", int("1"), declarations)).toEqual([]);
@@ -872,7 +871,7 @@ describe("constants and the options", () => {
     expect(issues[0]?.message).toContain('"urn:x:op" or "op"');
   });
 
-  it("[INFO §5.104.1] reports a pattern that is not in the dialect of XML Schema, or too large", () => {
+  it("reports a pattern that is not in the dialect of XML Schema, or too large", () => {
     const body = (pattern: string): string => textEntry(` pattern-mask="${pattern}"`);
     expect(check({ declarations: single("string"), body: body("[a-z]+") })).toEqual([]);
     const issues = only(check({ declarations: single("string"), body: body("[a-") }), "assesskit/validate/pattern");
@@ -1120,7 +1119,7 @@ const testOutcomes = `${outcome("TOTAL", "single", "float")}${outcome("COUNT", "
 const outcomeRules = (...inner: string[]): string =>
   `<qti-outcome-processing>${inner.join("")}</qti-outcome-processing>`;
 
-describe("validateTest: the variables a test reads", () => {
+describe("the variables that a test reads", () => {
   it("reads the item variables as ITEM.VARIABLE and ITEM.n.VARIABLE, and the duration of a part or section", () => {
     const processing = outcomeRules(
       setOutcome("TOTAL", variable("I1.SCORE")),
@@ -1190,13 +1189,13 @@ describe("validateTest: the variables a test reads", () => {
     expect(found).toMatchObject([{ severity: "warning" }]);
     expect(found[0]?.message).toContain('selection with replacement can repeat the item reference "I1"');
     expect(found[0]?.message).toContain('"I1.1.SCORE"');
-    // An instance number names the value; INFO §2.11.1.2 leaves only the lookup without one undefined.
+    // An instance number names the value; the Information Model leaves only the lookup without one undefined.
     expect(warned(variable("I1.2.SCORE"))).toEqual([]);
     const once = section("S", `<qti-selection select="1"/>${itemRef("I1")}`);
     expect(warned(variable("I1.SCORE"), once)).toEqual([]);
     const nested = section("S", `<qti-selection select="1" with-replacement="true"/>${section("In", itemRef("I1"))}`);
     expect(warned(variable("I1.SCORE"), nested)).toHaveLength(1);
-    // A simultaneous part takes the value of the instance submitted last (INFO §2.11.1.2).
+    // A simultaneous part takes the value of the instance submitted last.
     const simultaneous = 'navigation-mode="nonlinear" submission-mode="simultaneous"';
     expect(warned(variable("I1.SCORE"), repeated, simultaneous)).toEqual([]);
     expect(warned(`<qti-default identifier="I1.SCORE"/>`)).toEqual([]);
@@ -1284,7 +1283,7 @@ describe("validateTest: the variables a test reads", () => {
   });
 });
 
-describe("validateTest: the structure of a test", () => {
+describe("the structure of a test", () => {
   const two = (attributes = "", children = `${itemRef("I1")}${itemRef("I2")}`): string =>
     section("S", children, ` visible="true"${attributes}`);
 
@@ -1433,7 +1432,7 @@ describe("validateTest: the structure of a test", () => {
   });
 });
 
-describe("validateTest: branch rules and pre-conditions", () => {
+describe("branch rules and pre-conditions", () => {
   const rules = (...children: string[]): string => children.join("");
   const branchTarget = (issues: readonly Issue[]): Issue[] => only(issues, "assesskit/validate/branch-target");
 
@@ -1570,7 +1569,7 @@ describe("validateTest: branch rules and pre-conditions", () => {
   });
 });
 
-describe("validateTest: the covers of externally scored outcomes", () => {
+describe("the covers of externally scored outcomes", () => {
   const declarations = `${outcome("CONTENT", "single", "float", ' external-scored="human"')}${outcome("PLAIN", "single", "float")}`;
   const entry = (itemRefId = "I1", responseId = "RESPONSE"): string =>
     `<li data-item-ref="${itemRefId}" data-response-identifier="${responseId}">Task</li>`;
@@ -1688,7 +1687,7 @@ const ITEM_TYPE = "imsqti_item_xmlv3p0";
 const TEST_TYPE = "imsqti_test_xmlv3p0";
 const SIMPLE_ITEM = itemXml({ identifier: "Q1", declarations: single("string"), body: textEntry("") });
 
-describe("validatePackage: the manifest and the files", () => {
+describe("the manifest and the files of a package", () => {
   it("accepts a package whose files are all listed and present", () => {
     const pkg = packageOf([{ identifier: "q1", type: ITEM_TYPE, href: "q1.xml", files: ["media/a.png"] }], {
       "q1.xml": SIMPLE_ITEM,
@@ -1791,7 +1790,7 @@ describe("validatePackage: the manifest and the files", () => {
   });
 });
 
-describe("validatePackage: the documents", () => {
+describe("the documents of a package", () => {
   const TestXml = (children: string): string =>
     `<qti-assessment-test ${NS} identifier="T" title="T"><qti-test-part identifier="P" navigation-mode="linear" submission-mode="individual">${section("S", children)}</qti-test-part></qti-assessment-test>`;
   const entries: Entry[] = [
@@ -1840,7 +1839,7 @@ describe("validatePackage: the documents", () => {
   });
 });
 
-describe("validatePackage: the files that documents name", () => {
+describe("the files that documents name", () => {
   const Engine = '<qti-adaptive-engine-ref identifier="E" href="https://cat.example.org"/>';
   const adaptive = (refs: string): string =>
     `<qti-assessment-test ${NS} identifier="T" title="T"><qti-test-part identifier="P" navigation-mode="linear" submission-mode="individual">${section("A", `<qti-adaptive-selection>${Engine}${refs}</qti-adaptive-selection>${itemRef("Q1", "", "q1.xml")}`)}</qti-test-part></qti-assessment-test>`;
@@ -2014,7 +2013,7 @@ const report = (
   itemResults,
 });
 
-describe("validateResults", () => {
+describe("results", () => {
   it("accepts a report whose item results each have a sequenceIndex of their own", () => {
     expect(validateResults(report([itemResult("A", 1, [scoreOutcome("float")]), itemResult("B", 2)], {}))).toEqual([]);
     expect(validateResults(report([itemResult("A", undefined)]))).toEqual([]);
@@ -2079,7 +2078,7 @@ describe("validateResults", () => {
   });
 });
 
-describe("validatePnp and validatePnpNamespace", () => {
+describe("personal needs profiles", () => {
   const PnpNs = "http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0pnp_v1p0";
   const profile = (inner: string, namespace = PnpNs): PersonalNeedsProfile => {
     const read = readPnp(`<access-for-all-pnp xmlns="${namespace}">${inner}</access-for-all-pnp>`);
@@ -2087,7 +2086,7 @@ describe("validatePnp and validatePnpNamespace", () => {
     return read as PersonalNeedsProfile;
   };
 
-  it("[BPIG §5.3.3] accepts a prohibited support that is listed only in the prohibit set", () => {
+  it("accepts a prohibited support that is listed only in the prohibit set", () => {
     expect(
       validatePnp(
         profile(
@@ -2097,7 +2096,7 @@ describe("validatePnp and validatePnpNamespace", () => {
     ).toEqual([]);
   });
 
-  it("[BPIG §5.3.3] reports a prohibited support that an activate set lists, and warns about one that the profile also assigns", () => {
+  it("reports a prohibited support that an activate set lists, and warns about one that the profile also assigns", () => {
     const listed = validatePnp(
       profile(
         "<prohibit-set><magnification/></prohibit-set><activate-as-option-set><magnification/></activate-as-option-set>",
@@ -2112,7 +2111,7 @@ describe("validatePnp and validatePnpNamespace", () => {
     expect(assigned).toMatchObject([{ code: "assesskit/validate/pnp-prohibited", severity: "warning" }]);
   });
 
-  it("[BPIG §5.3] warns about a support that is both an option and active from the start", () => {
+  it("warns about a support that is both an option and active from the start", () => {
     const both = validatePnp(
       profile(
         "<activate-as-option-set><spoken/></activate-as-option-set><activate-at-initialization-set><spoken/></activate-at-initialization-set>",
@@ -2269,6 +2268,17 @@ describe("the entry points", () => {
     expect(check({ body: '<h1 role="button">a</h1>' })[0]?.location).toEqual({
       element: "qti-assessment-item/qti-item-body/h1",
     });
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/validate.md", import.meta.url);
+    const modules = {
+      "@assesskit/runtime/asi": await import("../src/asi/index.js"),
+      "@assesskit/runtime/validate": await import("../src/validate/index.js"),
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
   });
 });
 

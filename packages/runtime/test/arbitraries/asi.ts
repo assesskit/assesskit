@@ -1,7 +1,6 @@
 import fc from "fast-check";
-import type { AsiDocument } from "../../src/asi/index.js";
-import type { AttributeType, SlotDef } from "../../src/asi/table.js";
-import { foreignName, kindOf, type SlotInfo, type TypeInfo, typeNamed } from "../../src/asi/type-index.js";
+import type { AsiDocument, AttributeType } from "../../src/asi/index.js";
+import { foreignName, kindOf, type SlotDef, type SlotInfo, type TypeInfo, typeNamed } from "../../src/asi/internal.js";
 import { isRecord } from "../../src/checks.js";
 import {
   XINCLUDE_NAMESPACE,

@@ -25,7 +25,7 @@ function tableValues(declaration: OutcomeDeclaration | undefined): readonly stri
 }
 
 /**
- * Finds the feedback and template content that its controlling variable can never show or hide (INFO §5.93.2, L6): a
+ * Finds the feedback and template content that its controlling variable can never show or hide: a
  * `show` element whose identifier the variable never takes is never shown, and a `hide` element is never hidden. It
  * knows what a variable can take only when it is declared with base type identifier and every rule that sets it gives a
  * constant; it says nothing when it cannot tell.
@@ -33,7 +33,11 @@ function tableValues(declaration: OutcomeDeclaration | undefined): readonly stri
 export class UnreachableContent {
   private readonly controlled: { readonly visit: ElementVisit; readonly controller: Controller }[] = [];
 
-  /** Takes note of one element of the content. */
+  /**
+   * Takes note of one element of the content.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     const controller = controllerOf(visit);
     if (controller !== undefined) this.controlled.push({ visit, controller });
@@ -45,6 +49,7 @@ export class UnreachableContent {
    * @param item - The item.
    * @param rules - The rules that set variables; absent when response processing names a template that cannot be found,
    * so that nothing is known of the outcomes it sets.
+   * @param findings - The findings of the document, which receive the issues.
    */
   report(item: AssessmentItem, rules: readonly Rule[] | undefined, findings: Findings): void {
     const outcomes = new Map(item.outcomeDeclarations.map((declaration) => [declaration.identifier, declaration]));

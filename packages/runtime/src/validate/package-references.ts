@@ -21,14 +21,16 @@ import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";
 import type { Contents } from "./package-files.js";
 
-/** The extension of a module file, which the module resolution files leave out of a path (BPIG §3.7.12.2, App. D). */
+/** The extension of a module file, which the module resolution files leave out of a path. */
 const MODULE_EXTENSION = ".js";
 
 /**
- * Checks the configuration files of the adaptive sections of a document (CAT §2.6): a settings, usage data or metadata
+ * Checks the configuration files of the adaptive sections of a document: a settings, usage data or metadata
  * file that the section names with a relative address must be in the package and listed in the manifest. An address with
  * a scheme names a service or a file elsewhere and is not checked, and neither is the address of the CAT engine.
  *
+ * @param contents - The files of the package.
+ * @param findings - The findings of the document, which receive the issues.
  * @param document - A test or section.
  * @param path - The path of the document, against which the addresses resolve.
  */
@@ -104,10 +106,13 @@ function checkModuleFiles(contents: Contents, module: PciModule, itemPath: strin
 
 /**
  * Checks the portable custom interactions of an item against the package: that each names modules which a module
- * resolution file or its own paths locate (BPIG §3.7.12.4) and that the module files at package-relative locations, and
- * the resolution files, are in the package and listed in the manifest (BPIG §3.7.12.2). A location with a scheme is
+ * resolution file or its own paths locate and that the module files at package-relative locations, and
+ * the resolution files, are in the package and listed in the manifest. A location with a scheme is
  * fetched from there and is not checked.
  *
+ * @param contents - The files of the package.
+ * @param item - The item.
+ * @param findings - The findings of the document, which receive the issues.
  * @param itemPath - The path of the item, against which the module locations resolve.
  */
 export function checkPciFiles(contents: Contents, item: AssessmentItem, itemPath: string, findings: Findings): void {

@@ -1,11 +1,17 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { formatAttributeValue, parseAttributeValue } from "../src/asi/attribute-value.js";
-import { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION } from "../src/asi/element-table.js";
-import { readElement } from "../src/asi/read.js";
-import type { TypeDef } from "../src/asi/table.js";
-import { kindOf, typeNamed } from "../src/asi/type-index.js";
-import { writeElement } from "../src/asi/write.js";
+import {
+  DOCUMENT_ELEMENTS,
+  ELEMENT_TYPES,
+  EXPRESSION,
+  formatAttributeValue,
+  kindOf,
+  parseAttributeValue,
+  readElement,
+  type TypeDef,
+  typeNamed,
+  writeElement,
+} from "../src/asi/internal.js";
 import {
   ASI_NAMESPACE,
   type AsiDocument,
@@ -45,6 +51,7 @@ import {
 import { DOCUMENT_ARBITRARIES, modelArbitrary } from "./arbitraries/asi.js";
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 import { fuzzReader } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
@@ -176,7 +183,7 @@ function foreignElement(name: string, prefix = "x", namespace = "urn:x"): XmlEle
   return { kind: "element", namespace, prefix, name, attributes: [], children: [] };
 }
 
-describe("parseAttributeValue and formatAttributeValue", () => {
+describe("attribute values", () => {
   const boolean = { kind: "boolean" } as const;
   const integer = { kind: "integer" } as const;
   const double = { kind: "double" } as const;
@@ -254,7 +261,7 @@ describe("parseAttributeValue and formatAttributeValue", () => {
     expect(() => formatAttributeValue(tolerance, "INF")).toThrow(DataError);
   });
 
-  it("reads {identifier} where the schema leaves the string open, and writes a variable in braces (INFO §9.3.1)", () => {
+  it("reads {identifier} where the schema leaves the string open, and writes a variable in braces", () => {
     const braced = { kind: "reference", value: "double", braced: true } as const;
     expect(["{T}", "T", "0.1", "{INF}", "INF", "{ITEM.n}"].map((text) => parseAttributeValue(braced, text))).toEqual([
       "T",
@@ -323,8 +330,8 @@ describe("parseAttributeValue and formatAttributeValue", () => {
 /** A node of the content of a rubric block of a test. */
 type RubricContent = TestRubricBlock["contentBody"]["children"][number];
 
-describe("scoreCoversBlock and readScoreCovers", () => {
-  /** The example of the convention: the markup of design §4.16, one rubric block that covers two responses. */
+describe("building and reading the covers", () => {
+  /** The example of the convention: one rubric block that covers two responses. */
   const coversBlock =
     '<qti-rubric-block view="scorer" use="scoring" class="external-score-covers" data-outcome-identifier="CONTENT"><qti-content-body><p>Rate content once, across both writing tasks.</p><ul><li data-item-ref="W1" data-response-identifier="RESPONSE">Task 1: essay</li><li data-item-ref="W2" data-response-identifier="RESPONSE">Task 2: letter</li></ul></qti-content-body></qti-rubric-block>';
   const testWith = (blocks: string) =>
@@ -483,7 +490,7 @@ function testModel(): AssessmentTest {
   return testOf(`${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part>`);
 }
 
-describe("scoreCoverBlocks", () => {
+describe("the covers as written", () => {
   const entries = (text: string): string =>
     `<qti-rubric-block view="scorer" use="scoring" class="external-score-covers other" data-outcome-identifier="CONTENT"><qti-content-body><p>Notes</p><ul>${text}</ul><ul><li data-item-ref="W3" data-response-identifier="R">Third</li></ul></qti-content-body></qti-rubric-block>`;
   const testWith = (blocks: string) =>
@@ -538,105 +545,7 @@ describe("scoreCoverBlocks", () => {
   });
 });
 
-describe("walkDocument", () => {
-  const namesOf = (document: AsiDocument): string[] => {
-    const names: string[] = [];
-    walkDocument(document, ({ name }) => names.push(name));
-    return names;
-  };
-
-  it("visits the elements of a document in document order, an element before its children, by their element names", () => {
-    const document = checked(
-      item(
-        '<qti-response-declaration identifier="R" cardinality="single" base-type="string"/><qti-item-body><p>a <em>b</em><qti-text-entry-interaction response-identifier="R"/></p></qti-item-body>',
-      ),
-    );
-    expect(namesOf(document)).toEqual([
-      "qti-assessment-item",
-      "qti-response-declaration",
-      "qti-item-body",
-      "p",
-      "em",
-      "qti-text-entry-interaction",
-    ]);
-  });
-
-  it("tells the HTML label from qti-label, which have the same kind", () => {
-    const document = checked(
-      item(
-        '<qti-item-body><p><label>x</label><qti-inline-choice-interaction response-identifier="R"><qti-label>y</qti-label><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p></qti-item-body>',
-      ),
-    );
-    const found: string[] = [];
-    walkDocument(document, ({ name, model }) => {
-      if (model.kind === "label") found.push(name);
-    });
-    expect(found).toEqual(["label", "qti-label"]);
-  });
-
-  it("gives the parent, the model, the attribute definitions and the kind of attribute wildcard of an element", () => {
-    const document = checked(item('<qti-item-body><p data-x="1" class="c">a</p></qti-item-body>'));
-    const visits: ElementVisit[] = [];
-    walkDocument(document, (visit) => visits.push(visit));
-    const paragraph = visits.find(({ name }) => name === "p");
-    expect(paragraph?.parent?.name).toBe("qti-item-body");
-    expect(paragraph?.parent?.parent?.name).toBe("qti-assessment-item");
-    expect(paragraph?.parent?.parent?.parent).toBeUndefined();
-    expect(paragraph?.model).toMatchObject({ kind: "p", class: ["c"] });
-    expect(paragraph?.attributes.map(({ name }) => name)).toContain("class");
-    expect(paragraph?.attributeWildcard).toBe("any");
-    expect(visits[0]?.attributeWildcard).toBe("any");
-    expect(visits.find(({ name }) => name === "qti-item-body")?.attributeWildcard).toBeUndefined();
-  });
-
-  it("keeps MathML, SSML and xi:include out of the visits and gives them as the foreign elements of the element that holds them", () => {
-    const document = checked(
-      item(
-        '<qti-item-body><p>a <math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p></qti-item-body>',
-      ),
-    );
-    const visits: ElementVisit[] = [];
-    walkDocument(document, (visit) => visits.push(visit));
-    expect(visits.map(({ name }) => name)).toEqual(["qti-assessment-item", "qti-item-body", "p"]);
-    expect(visits.find(({ name }) => name === "p")?.foreign.map(({ name }) => name)).toEqual(["math"]);
-  });
-
-  it("walks every kind of document", () => {
-    for (const xml of [
-      `<qti-assessment-stimulus ${NAMESPACE} identifier="s" title="t"><qti-stimulus-body><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
-      `<qti-assessment-section ${NAMESPACE} identifier="s" title="t" visible="true"/>`.replace(
-        "/>",
-        '><qti-assessment-item-ref identifier="a" href="a.xml"/></qti-assessment-section>',
-      ),
-      `<qti-outcome-declaration ${NAMESPACE} identifier="O" cardinality="single" base-type="float"/>`,
-      `<qti-outcome-processing ${NAMESPACE}/>`,
-      `<qti-response-processing ${NAMESPACE}/>`,
-    ]) {
-      expect(namesOf(readAsi(xml))[0]).toMatch(/^qti-/);
-    }
-  });
-
-  it("throws a DataError for a model that is not the shape the schema gives it, naming where", () => {
-    const document = checked(item("<qti-item-body><p>a</p></qti-item-body>"));
-    if (document.kind !== "item") throw new Error("Expected an item.");
-    const withBody = (children: unknown): AsiDocument =>
-      JSON.parse(
-        JSON.stringify({ kind: "item", item: { ...document.item, body: { ...document.item.body, children } } }),
-      );
-    expect(() => walkDocument(withBody("x"), () => undefined)).toThrow(
-      'The property children of qti-item-body must be an array, found "x". It is in qti-assessment-item/qti-item-body.',
-    );
-    expect(() => walkDocument(withBody([null]), () => undefined)).toThrow(
-      "A member of children of qti-item-body must be an object",
-    );
-    expect(() => walkDocument(withBody([{ kind: "nope" }]), () => undefined)).toThrow('has the kind "nope"');
-    expect(() => walkDocument(JSON.parse("null"), () => undefined)).toThrow("The document must be an object");
-    expect(() => walkDocument(JSON.parse('{"kind":"x"}'), () => undefined)).toThrow(DataError);
-    expect(() => walkDocument(document, JSON.parse("1"))).toThrow("The visitor must be a function");
-  });
-});
-
-describe("readAsi: documents", () => {
+describe("reading documents", () => {
   it("qti-assessment-item: reads every attribute and leaves the omitted ones omitted", () => {
     const read = itemOf(item("", ' label="L" xml:lang="en-GB" tool-name="Tool" tool-version="1.2" adaptive="true"'));
     expect(read).toEqual({
@@ -724,7 +633,7 @@ describe("readAsi: documents", () => {
   });
 });
 
-describe("readAsi: test structure", () => {
+describe("reading the structure of a test", () => {
   it("qti-assessment-item-ref: reads the attributes and the children in schema order", () => {
     const section = sectionOf(
       '<qti-assessment-item-ref identifier="Q1" href="q1.xml" required="true" fixed="false" category="math easy" class="c"><qti-pre-condition>' +
@@ -965,7 +874,7 @@ describe("readAsi: test structure", () => {
   });
 });
 
-describe("readAsi: declarations", () => {
+describe("reading declarations", () => {
   const response = (content: string, attributes = 'cardinality="single" base-type="string"') =>
     itemOf(item(`<qti-response-declaration identifier="R" ${attributes}>${content}</qti-response-declaration>`))
       .responseDeclarations[0];
@@ -1183,7 +1092,7 @@ describe("readAsi: declarations", () => {
   });
 });
 
-describe("readAsi: rules", () => {
+describe("reading rules", () => {
   const setOutcome = `<qti-set-outcome-value identifier="SCORE">${ONE_XML}</qti-set-outcome-value>`;
   const setOutcomeModel = { kind: "set-outcome-value", identifier: "SCORE", expression: ONE };
 
@@ -1421,7 +1330,7 @@ describe("readAsi: rules", () => {
   });
 });
 
-describe("readAsi: expressions", () => {
+describe("reading expressions", () => {
   it("qti-and: reads its operands in document order", () => {
     expect(expressionOf(`<qti-and>${ONE_XML}${RESPONSE_XML}</qti-and>`)).toEqual({
       kind: "and",
@@ -1877,7 +1786,7 @@ function wrappedBy(element: "p" | "div", content: string) {
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
 const SSML_NAMESPACE = "http://www.w3.org/2001/10/synthesis";
 
-describe("readAsi: flow content", () => {
+describe("reading flow content", () => {
   it("reads text and elements in document order, with each run of text as one node", () => {
     expect(bodyOf("<p>One <b>two</b> three<i>four</i></p>")).toEqual([
       {
@@ -1976,7 +1885,7 @@ describe("readAsi: flow content", () => {
   });
 });
 
-describe("readAsi: HTML", () => {
+describe("reading HTML", () => {
   it("img: needs the source and the alternative text, and reads the optional attributes", () => {
     const [image] = wrappedBy("p", '<img src="fig/a.png" alt="A cat" longdesc="fig/a.html" height="40" width="50%"/>');
     expect(image).toEqual({
@@ -2189,7 +2098,7 @@ describe("readAsi: HTML", () => {
   });
 });
 
-describe("readAsi: MathML and SSML", () => {
+describe("reading MathML and SSML", () => {
   const math =
     '<m:math xmlns:m="http://www.w3.org/1998/Math/MathML" display="inline"><m:mfrac><m:mn>1</m:mn><m:mi>x</m:mi></m:mfrac><m:annotation encoding="x"> a </m:annotation></m:math>';
 
@@ -2394,8 +2303,8 @@ function onlyIn<TKind extends string>(content: string, kind: TKind) {
   return node;
 }
 
-describe("readAsi: interactions", () => {
-  it("qti-choice-interaction: reads the limits, the orientation, the prompt and the choices (INFO §5.30)", () => {
+describe("reading interactions", () => {
+  it("qti-choice-interaction: reads the limits, the orientation, the prompt and the choices", () => {
     const interaction = onlyIn(
       '<qti-choice-interaction response-identifier="RESPONSE" shuffle="true" max-choices="2" min-choices="1" orientation="horizontal" data-min-selections-message="Pick one" data-max-selections-message="Pick two at most"><qti-prompt>Which <b>two</b> are prime?</qti-prompt><qti-simple-choice identifier="A" fixed="true">2</qti-simple-choice><qti-simple-choice identifier="B" show-hide="hide" template-identifier="T">4</qti-simple-choice></qti-choice-interaction>',
       "choice-interaction",
@@ -2427,7 +2336,7 @@ describe("readAsi: interactions", () => {
     expect(Object.keys(interaction).sort()).toEqual(["extensions", "kind", "responseIdentifier", "simpleChoices"]);
   });
 
-  it("qti-order-interaction: reads the limits and the orientation, and orders simple choices (INFO §5.97)", () => {
+  it("qti-order-interaction: reads the limits and the orientation, and orders simple choices", () => {
     const interaction = onlyIn(
       '<qti-order-interaction response-identifier="R" shuffle="true" min-choices="2" max-choices="3" orientation="vertical" data-choices-container-width="200"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice></qti-order-interaction>',
       "order-interaction",
@@ -2442,7 +2351,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-associate-interaction: reads the association limits and the choices with the number of times each takes part (INFO §5.8)", () => {
+  it("qti-associate-interaction: reads the association limits and the choices with the number of times each takes part", () => {
     const interaction = onlyIn(
       '<qti-associate-interaction response-identifier="R" shuffle="true" min-associations="1" max-associations="3"><qti-simple-associable-choice identifier="A" match-max="1" match-min="0" match-group="g1 g2">Antonio</qti-simple-associable-choice><qti-simple-associable-choice identifier="C" match-max="2" fixed="true">Capulet</qti-simple-associable-choice></qti-associate-interaction>',
       "associate-interaction",
@@ -2458,7 +2367,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-match-interaction: holds two sets of choices (INFO §5.89)", () => {
+  it("qti-match-interaction: holds two sets of choices", () => {
     const interaction = onlyIn(
       '<qti-match-interaction response-identifier="R" shuffle="true" max-associations="4" min-associations="0" data-first-column-header="Hero"><qti-simple-match-set><qti-simple-associable-choice identifier="C" match-max="1">Capulet</qti-simple-associable-choice></qti-simple-match-set><qti-simple-match-set><qti-simple-associable-choice identifier="D" match-max="4">Demetrius</qti-simple-associable-choice><qti-simple-associable-choice identifier="L" match-max="2">Lysander</qti-simple-associable-choice></qti-simple-match-set></qti-match-interaction>',
       "match-interaction",
@@ -2478,7 +2387,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-gap-match-interaction: holds the choices, and the text with the gaps (INFO §5.57)", () => {
+  it("qti-gap-match-interaction: holds the choices, and the text with the gaps", () => {
     const interaction = onlyIn(
       '<qti-gap-match-interaction response-identifier="R" shuffle="true" min-associations="1" max-associations="2" data-choices-container-width="150"><qti-gap-text identifier="W" match-max="1">winter</qti-gap-text><qti-gap-img identifier="I" match-max="1" object-label="sun" top="1" left="2"><img src="sun.png" alt="Sun"/></qti-gap-img><blockquote><p>Shall I compare thee to a <qti-gap identifier="G1" required="true"/> day?</p></blockquote></qti-gap-match-interaction>',
       "gap-match-interaction",
@@ -2515,7 +2424,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-inline-choice-interaction: sits in a sentence and holds the label and the choices (INFO §5.74)", () => {
+  it("qti-inline-choice-interaction: sits in a sentence and holds the label and the choices", () => {
     const [paragraph] = bodyOf(
       '<p>Cheese is <qti-inline-choice-interaction response-identifier="R" shuffle="true" required="true" min-choices="1" data-prompt="Choose" data-min-selections-message="Required"><qti-label>Color</qti-label><qti-inline-choice identifier="Y" fixed="true">yellow</qti-inline-choice><qti-inline-choice identifier="N">none</qti-inline-choice></qti-inline-choice-interaction>.</p>',
     );
@@ -2539,7 +2448,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-text-entry-interaction: sits in a sentence and reads the answer constraints (INFO §5.162)", () => {
+  it("qti-text-entry-interaction: sits in a sentence and reads the answer constraints", () => {
     const [paragraph] = bodyOf(
       '<p>Born in <qti-text-entry-interaction response-identifier="R" base="16" string-identifier="S" expected-length="4" pattern-mask="[0-9]+" placeholder-text="year" format="digits" data-patternmask-message="Digits"/>.</p>',
     );
@@ -2562,7 +2471,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-extended-text-interaction: reads the answer constraints and the format (INFO §5.48)", () => {
+  it("qti-extended-text-interaction: reads the answer constraints and the format", () => {
     const interaction = onlyIn(
       '<qti-extended-text-interaction response-identifier="R" base="10" string-identifier="S" expected-length="200" pattern-mask=".+" placeholder-text="Write" max-strings="2" min-strings="1" expected-lines="5" format="preformatted" data-patternmask-message="m"><qti-prompt>Describe it.</qti-prompt></qti-extended-text-interaction>',
       "extended-text-interaction",
@@ -2577,7 +2486,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-slider-interaction: reads the bounds, the step and the appearance (INFO §5.134)", () => {
+  it("qti-slider-interaction: reads the bounds, the step and the appearance", () => {
     const interaction = onlyIn(
       '<qti-slider-interaction response-identifier="R" lower-bound="0" upper-bound="10.5" step="0.5" step-label="true" orientation="vertical" reverse="true"/>',
       "slider-interaction",
@@ -2592,7 +2501,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-upload-interaction: reads the MIME types that it accepts (INFO §5.165)", () => {
+  it("qti-upload-interaction: reads the MIME types that it accepts", () => {
     const interaction = onlyIn(
       '<qti-upload-interaction response-identifier="R" type="image/png application/pdf"/>',
       "upload-interaction",
@@ -2600,7 +2509,7 @@ describe("readAsi: interactions", () => {
     expect(interaction).toMatchObject({ type: ["image/png", "application/pdf"] });
   });
 
-  it("qti-end-attempt-interaction: needs the title and reads whether the attempt counts (INFO §5.45)", () => {
+  it("qti-end-attempt-interaction: needs the title and reads whether the attempt counts", () => {
     const [interaction] = wrappedBy(
       "p",
       '<qti-end-attempt-interaction response-identifier="HINT" title="Show hint" count-attempt="false"/>',
@@ -2613,7 +2522,7 @@ describe("readAsi: interactions", () => {
     ).toMatchObject({ code: "assesskit/asi/missing-attribute" });
   });
 
-  it("qti-media-interaction: reads the plays and the media element (INFO §5.92)", () => {
+  it("qti-media-interaction: reads the plays and the media element", () => {
     const interaction = onlyIn(
       '<qti-media-interaction response-identifier="R" autostart="true" min-plays="1" max-plays="3" loop="true" coords="0,0,100,60"><qti-prompt>Listen.</qti-prompt><audio src="a.mp3" controls="controls"/></qti-media-interaction>',
       "media-interaction",
@@ -2628,7 +2537,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-hotspot-interaction: holds the image and the hotspots with their shapes (INFO §5.68)", () => {
+  it("qti-hotspot-interaction: holds the image and the hotspots with their shapes", () => {
     const interaction = onlyIn(
       '<qti-hotspot-interaction response-identifier="R" min-choices="1" max-choices="2"><qti-prompt>Where?</qti-prompt><object type="image/png" data="uk.png" width="206" height="280">UK</object><qti-hotspot-choice identifier="A" shape="circle" coords="77,115,8" hotspot-label="Edinburgh"/><qti-hotspot-choice identifier="B" shape="rect" coords="0,0,10,10"/></qti-hotspot-interaction>',
       "hotspot-interaction",
@@ -2644,7 +2553,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-graphic-order-interaction: holds the image and the hotspots to put in order (INFO §5.61)", () => {
+  it("qti-graphic-order-interaction: holds the image and the hotspots to put in order", () => {
     const interaction = onlyIn(
       '<qti-graphic-order-interaction response-identifier="R" min-choices="2" max-choices="4"><img src="g.png" alt="Map"/><qti-hotspot-choice identifier="A" shape="rect" coords="0,0,5,5"/></qti-graphic-order-interaction>',
       "graphic-order-interaction",
@@ -2657,7 +2566,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-graphic-associate-interaction: holds the image and the associable hotspots (INFO §5.59)", () => {
+  it("qti-graphic-associate-interaction: holds the image and the associable hotspots", () => {
     const interaction = onlyIn(
       '<qti-graphic-associate-interaction response-identifier="R" min-associations="1" max-associations="3"><picture><source srcset="a.webp"/><img src="a.png" alt="A"/></picture><qti-associable-hotspot identifier="A" match-max="2" match-min="1" match-group="g" shape="ellipse" coords="1,2,3,4" hotspot-label="Spot"/></qti-graphic-associate-interaction>',
       "graphic-associate-interaction",
@@ -2679,7 +2588,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-graphic-gap-match-interaction: holds the image, the choices to drop and the hotspots to drop them on (INFO §5.60)", () => {
+  it("qti-graphic-gap-match-interaction: holds the image, the choices to drop and the hotspots to drop them on", () => {
     const interaction = onlyIn(
       '<qti-graphic-gap-match-interaction response-identifier="R" min-associations="1" max-associations="2" data-choices-container-width="80"><img src="g.png" alt="Map"/><qti-gap-img identifier="I" match-max="1"><img src="i.png" alt="I"/></qti-gap-img><qti-gap-text identifier="T" match-max="1">T</qti-gap-text><qti-associable-hotspot identifier="H" match-max="1" shape="default" coords="0,0"/></qti-graphic-gap-match-interaction>',
       "graphic-gap-match-interaction",
@@ -2692,7 +2601,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-select-point-interaction: holds the image on which the candidate marks points (INFO §5.128)", () => {
+  it("qti-select-point-interaction: holds the image on which the candidate marks points", () => {
     const interaction = onlyIn(
       '<qti-select-point-interaction response-identifier="R" min-choices="1" max-choices="3"><img src="g.png" alt="Map"/></qti-select-point-interaction>',
       "select-point-interaction",
@@ -2700,7 +2609,7 @@ describe("readAsi: interactions", () => {
     expect(interaction).toMatchObject({ minChoices: 1, maxChoices: 3, image: { kind: "img" } });
   });
 
-  it("qti-position-object-stage: holds the image and the position object interactions (INFO §5.107, §5.108)", () => {
+  it("qti-position-object-stage: holds the image and the position object interactions", () => {
     const stage = onlyIn(
       '<qti-position-object-stage id="stage"><img src="g.png" alt="Map"/><qti-position-object-interaction response-identifier="R1" center-point="10 20" min-choices="0" max-choices="1"><img src="pin.png" alt="Pin"/></qti-position-object-interaction></qti-position-object-stage>',
       "position-object-stage",
@@ -2720,7 +2629,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-hottext-interaction: holds a text with the words that the candidate can select (INFO §5.66)", () => {
+  it("qti-hottext-interaction: holds a text with the words that the candidate can select", () => {
     const interaction = onlyIn(
       '<qti-hottext-interaction response-identifier="R" max-choices="2" min-choices="1" data-min-selections-message="a" data-max-selections-message="b"><qti-prompt>Find the error.</qti-prompt><p>Sing <qti-hottext identifier="A">a</qti-hottext> song</p></qti-hottext-interaction>',
       "hottext-interaction",
@@ -2741,7 +2650,7 @@ describe("readAsi: interactions", () => {
     });
   });
 
-  it("qti-drawing-interaction: holds the canvas image (INFO §5.44)", () => {
+  it("qti-drawing-interaction: holds the canvas image", () => {
     const interaction = onlyIn(
       '<qti-drawing-interaction response-identifier="R"><qti-prompt>Draw.</qti-prompt><img src="canvas.png" alt="Canvas"/></qti-drawing-interaction>',
       "drawing-interaction",
@@ -2749,7 +2658,7 @@ describe("readAsi: interactions", () => {
     expect(interaction).toMatchObject({ prompt: { kind: "prompt" }, image: { kind: "img", src: "canvas.png" } });
   });
 
-  it("qti-custom-interaction: keeps any content, in any namespace, as XML elements (INFO §5.36)", () => {
+  it("qti-custom-interaction: keeps any content, in any namespace, as XML elements", () => {
     const interaction = onlyIn(
       '<qti-custom-interaction xmlns:ext="urn:ext" response-identifier="R" ext:flag="1"><ext:widget xmlns:ext="urn:ext" size="3">text</ext:widget><p>in the ASI namespace</p></qti-custom-interaction>',
       "custom-interaction",
@@ -2771,11 +2680,11 @@ describe("readAsi: interactions", () => {
   });
 });
 
-describe("readAsi: portable custom interactions", () => {
+describe("reading portable custom interactions", () => {
   const pci =
     '<qti-portable-custom-interaction response-identifier="RESPONSE" custom-interaction-type-identifier="urn:fdc:example.com:pci:graph" module="graph" data-min="0"><qti-prompt>Plot it.</qti-prompt><qti-interaction-modules primary-configuration="modules/primary.js" secondary-configuration="modules/secondary.js"><qti-interaction-module id="graph" primary-path="modules/graph.js" fallback-path="https://cdn.example.com/graph.js"/><qti-interaction-module id="lib"/></qti-interaction-modules><qti-interaction-markup><div class="graph" data-points="3"><p>Graph here <qti-printed-variable identifier="N"/></p></div><template><span>t</span></template></qti-interaction-markup><qti-template-variable template-identifier="N"/><qti-template-variable template-identifier="M"/><qti-context-variable identifier="CTX"/><qti-stylesheet href="css/graph.css" type="text/css"/><qti-catalog-info><qti-catalog id="c1"><qti-card support="spoken"><qti-html-content>Plot the points.</qti-html-content></qti-card></qti-catalog></qti-catalog-info></qti-portable-custom-interaction>';
 
-  it("qti-portable-custom-interaction: reads the type, the modules, the markup, the variables, the style sheets and the catalogs (BPIG §3.7.12)", () => {
+  it("qti-portable-custom-interaction: reads the type, the modules, the markup, the variables, the style sheets and the catalogs", () => {
     const [interaction] = bodyOf(pci);
     expect(interaction).toMatchObject({
       kind: "portable-custom-interaction",
@@ -2840,8 +2749,8 @@ describe("readAsi: portable custom interactions", () => {
   });
 });
 
-describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
-  it("qti-feedback-block, qti-feedback-inline: read the outcome, the identifier and whether to show or hide (INFO §5.49, §5.52)", () => {
+describe("reading feedback, templates, rubric blocks and catalogs", () => {
+  it("qti-feedback-block, qti-feedback-inline: read the outcome, the identifier and whether to show or hide", () => {
     const [block, paragraph] = bodyOf(
       '<qti-feedback-block outcome-identifier="FEEDBACK" identifier="correct" show-hide="show"><qti-content-body><p>Correct.</p></qti-content-body></qti-feedback-block><p>You <qti-feedback-inline outcome-identifier="FEEDBACK" identifier="wrong" show-hide="hide">did not</qti-feedback-inline> pass.</p>',
     );
@@ -2867,7 +2776,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     });
   });
 
-  it("qti-template-block, qti-template-inline: read the template variable and the identifier (INFO §5.122, §5.124)", () => {
+  it("qti-template-block, qti-template-inline: read the template variable and the identifier", () => {
     const [block, paragraph] = bodyOf(
       '<qti-template-block template-identifier="T" identifier="a" show-hide="show"><qti-content-body><p>Shown.</p></qti-content-body></qti-template-block><p><qti-template-inline template-identifier="T" identifier="b" show-hide="hide">hidden</qti-template-inline></p>',
     );
@@ -2883,7 +2792,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     });
   });
 
-  it("qti-printed-variable: reads the variable and the formatting attributes (INFO §7.30)", () => {
+  it("qti-printed-variable: reads the variable and the formatting attributes", () => {
     const [paragraph] = bodyOf(
       '<p><qti-printed-variable identifier="SCORE" format="%.2f" base="8" index="2" power-form="true" field="f" delimiter="," mapping-indicator=":"/><qti-printed-variable identifier="N" base="B" index="I"/></p>',
     );
@@ -2905,7 +2814,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     });
   });
 
-  it("qti-rubric-block: reads the views and the use in an item body, and the content body after the style sheets (INFO §5.120)", () => {
+  it("qti-rubric-block: reads the views and the use in an item body, and the content body after the style sheets", () => {
     const [block] = bodyOf(
       '<qti-rubric-block view="author scorer" use="scoring" class="r"><qti-stylesheet href="r.css" type="text/css"/><qti-content-body><p>Give one point.</p></qti-content-body><qti-catalog-info><qti-catalog id="r1"><qti-card support="braille"><qti-card-entry xml:lang="en"/></qti-card></qti-catalog></qti-catalog-info></qti-rubric-block>',
     );
@@ -2920,7 +2829,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     });
   });
 
-  it("qti-test-feedback: reads when it is shown, the outcome and whether to show or hide (INFO §5.157)", () => {
+  it("qti-test-feedback: reads when it is shown, the outcome and whether to show or hide", () => {
     const test = testOf(
       `${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/><qti-test-feedback access="during" outcome-identifier="FB" identifier="fb1" show-hide="show" title="Halfway"><qti-content-body><p>Keep going.</p></qti-content-body></qti-test-feedback></qti-test-part>`,
     );
@@ -2936,7 +2845,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     ]);
   });
 
-  it("qti-modal-feedback: needs the outcome, the identifier and the show or hide, and holds the content body (INFO §5.93)", () => {
+  it("qti-modal-feedback: needs the outcome, the identifier and the show or hide, and holds the content body", () => {
     const { modalFeedback } = itemOf(
       item(
         '<qti-modal-feedback outcome-identifier="FB" show-hide="show" identifier="m1" title="Result"><qti-stylesheet href="m.css" type="text/css"/><qti-content-body><p>Well done.</p></qti-content-body><qti-catalog-info><qti-catalog id="mc"><qti-card support="spoken"><qti-html-content>Well done.</qti-html-content></qti-card></qti-catalog></qti-catalog-info></qti-modal-feedback>',
@@ -2963,7 +2872,7 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
     ).toMatchObject({ code: "assesskit/asi/missing-attribute" });
   });
 
-  it("catalog, card, card entry, html content, file reference: read the cards of a support by language (BPIG §3.7.10)", () => {
+  it("catalog, card, card entry, html content, file reference: read the cards of a support by language", () => {
     const { catalogInfo } = itemOf(
       item(
         '<qti-catalog-info><qti-catalog id="glossary"><qti-card support="glossary-on-screen" xml:lang="en"><qti-html-content xml:lang="en">A <b>word</b>.</qti-html-content><qti-file-href mime-type="audio/mpeg">word.mp3</qti-file-href></qti-card><qti-card support="keyword-translation"><qti-card-entry xml:lang="id" default="true"><qti-html-content>word</qti-html-content></qti-card-entry><qti-card-entry xml:lang="fr"><qti-file-href mime-type="audio/mpeg">mot.mp3</qti-file-href></qti-card-entry></qti-card><qti-card support="ext:note"/></qti-catalog></qti-catalog-info>',
@@ -3019,11 +2928,11 @@ describe("readAsi: feedback, templates, rubric blocks and catalogs", () => {
   });
 });
 
-describe("readAsi: companion materials", () => {
+describe("reading companion materials", () => {
   const materials =
     '<qti-companion-materials-info><qti-calculator><qti-calculator-type>scientific</qti-calculator-type><qti-description>Scientific</qti-description><qti-calculator-info mime-type="application/x-calc"><qti-file-href>calc.js</qti-file-href><qti-resource-icon>calc.png</qti-resource-icon></qti-calculator-info></qti-calculator><qti-rule><qti-description>Ruler</qti-description><qti-rule-system-si><qti-minimum-length>5</qti-minimum-length><qti-minor-increment unit="Millimeter">1</qti-minor-increment><qti-major-increment unit="Centimeter">10</qti-major-increment></qti-rule-system-si></qti-rule><qti-rule><qti-description>Yardstick</qti-description><qti-rule-system-us><qti-minimum-length>2</qti-minimum-length><qti-major-increment unit="Inch">1</qti-major-increment></qti-rule-system-us></qti-rule><qti-protractor><qti-description>Protractor</qti-description><qti-increment-si><qti-minor-increment unit="Radian">0.1</qti-minor-increment><qti-major-increment unit="Radian">1</qti-major-increment></qti-increment-si></qti-protractor><qti-protractor><qti-description>US protractor</qti-description><qti-increment-us><qti-major-increment unit="Degree">10</qti-major-increment></qti-increment-us></qti-protractor><qti-digital-material mime-type="text/html"><qti-file-href>periodic.html</qti-file-href></qti-digital-material><qti-physical-material>A compass</qti-physical-material></qti-companion-materials-info>';
 
-  it("qti-companion-materials-info, qti-calculator: read the calculators of an item (INFO §5.33, §5.24)", () => {
+  it("qti-companion-materials-info, qti-calculator: read the calculators of an item", () => {
     const { companionMaterials } = itemOf(item(materials));
     expect(companionMaterials?.calculators).toEqual([
       {
@@ -3040,7 +2949,7 @@ describe("readAsi: companion materials", () => {
     ]);
   });
 
-  it("qti-rule: reads a ruler in SI or US units with its lengths and increments (INFO §5.126)", () => {
+  it("qti-rule: reads a ruler in SI or US units with its lengths and increments", () => {
     const rules = itemOf(item(materials)).companionMaterials?.rules;
     expect(rules).toMatchObject([
       {
@@ -3063,7 +2972,7 @@ describe("readAsi: companion materials", () => {
     ]);
   });
 
-  it("qti-protractor: reads a protractor with SI or US increments (INFO §5.110)", () => {
+  it("qti-protractor: reads a protractor with SI or US increments", () => {
     const protractors = itemOf(item(materials)).companionMaterials?.protractors;
     expect(protractors).toMatchObject([
       {
@@ -3106,151 +3015,7 @@ describe("readAsi: companion materials", () => {
   });
 });
 
-/** The element of the model that a path of keys leads to. */
-function dig(value: unknown, path: readonly (string | number)[]): unknown {
-  return path.reduce<unknown>(
-    (current, key) => (typeof current === "object" && current !== null ? Reflect.get(current, key) : undefined),
-    value,
-  );
-}
-
-/** Checks the vocabulary of an attribute: every term reads as itself and is written as itself, and other text is refused. */
-function checkVocabulary(row: string): void {
-  const { element, attribute, property, terms } = vocabularyOf(row);
-  const { markup, path } = PLACES[element];
-  const body = (text: string) => `<qti-item-body>${markup(` ${attribute}="${text}"`)}</qti-item-body>`;
-  for (const term of terms) {
-    const read = itemOf(item(body(term)));
-    expect(dig(read.body?.children[0], path), term).toMatchObject({ [property]: term });
-    expect(writeAsi({ kind: "item", item: read }), term).toContain(`${attribute}="${term}"`);
-  }
-  for (const text of ["", "x", `${terms[0]}x`, `x${terms[0]}`, ` ${terms[0]?.toUpperCase()}`]) {
-    expect(
-      readIssue(() => readAsi(item(body(text)))),
-      text,
-    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
-  }
-}
-
-describe("vocabularies of the content", () => {
-  it("ARIAAutoCompleteEnum: reads 4 terms of aria-autocomplete and refuses any other text (INFO §8.1)", () => {
-    checkVocabulary("W1");
-  });
-
-  it("ARIACheckedEnum: reads 4 terms of aria-checked and refuses any other text (INFO §8.2)", () => {
-    checkVocabulary("W2");
-  });
-
-  it("ARIACurrentEnum: reads 8 terms of aria-current and refuses any other text (INFO §8.3)", () => {
-    checkVocabulary("W3");
-  });
-
-  it("ARIAExpandedEnum: reads 3 terms of aria-expanded and refuses any other text (INFO §8.4)", () => {
-    checkVocabulary("W4");
-  });
-
-  it("ARIAInvalidEnum: reads 4 terms of aria-invalid and refuses any other text (INFO §8.5)", () => {
-    checkVocabulary("W5");
-  });
-
-  it("ARIALiveValueEnum: reads 3 terms of aria-live and refuses any other text (INFO §8.6)", () => {
-    checkVocabulary("W6");
-  });
-
-  it("ARIAOrientationValueEnum: reads 2 terms of aria-orientation and refuses any other text (INFO §8.7)", () => {
-    checkVocabulary("W7");
-  });
-
-  it("ARIAPressedEnum: reads 4 terms of aria-pressed and refuses any other text (INFO §8.8)", () => {
-    checkVocabulary("W8");
-  });
-
-  it("ARIARoleValue: reads 74 terms of role and refuses any other text (INFO §8.9)", () => {
-    checkVocabulary("W9");
-  });
-
-  it("ARIASelectedEnum: reads 3 terms of aria-selected and refuses any other text (INFO §8.10)", () => {
-    checkVocabulary("W10");
-  });
-
-  it("ARIASortEnum: reads 4 terms of aria-sort and refuses any other text (INFO §8.11)", () => {
-    checkVocabulary("W11");
-  });
-
-  it("AlignEnum: reads 5 terms of align and refuses any other text (INFO §8.12)", () => {
-    checkVocabulary("W12");
-  });
-
-  it("CORSSettingsEnum: reads 2 terms of crossorigin and refuses any other text (INFO §8.14)", () => {
-    checkVocabulary("W14");
-  });
-
-  it("DIR: reads 3 terms of dir and refuses any other text (INFO §8.17)", () => {
-    checkVocabulary("W17");
-  });
-
-  it("KindValueEnum: reads 5 terms of kind and refuses any other text (INFO §8.19)", () => {
-    checkVocabulary("W19");
-  });
-
-  it("ParamTypeEnum: reads 2 terms of valuetype and refuses any other text (INFO §8.24)", () => {
-    checkVocabulary("W24");
-  });
-
-  it("PreLoadValueEnum: reads 3 terms of preload and refuses any other text (INFO §8.25)", () => {
-    checkVocabulary("W25");
-  });
-
-  it("SuppressTTSEnum: reads 3 terms of data-qti-suppress-tts and refuses any other text (INFO §8.34)", () => {
-    checkVocabulary("W34");
-  });
-
-  it("TableCellScopeEnum: reads 4 terms of scope and refuses any other text (INFO §8.35)", () => {
-    checkVocabulary("W35");
-  });
-
-  it("ValignEnum: reads 4 terms of valign and refuses any other text (INFO §8.42)", () => {
-    checkVocabulary("W42");
-  });
-});
-
-describe("vocabularies of the content: lists", () => {
-  it("StringList: reads the class as the strings separated by white space and writes them with one space", () => {
-    const read = itemOf(
-      item('<qti-item-body><div class="  a  b&#9;c&#10;d ">x</div><p class="">y</p></qti-item-body>'),
-    );
-    expect(read.body?.children).toMatchObject([{ class: ["a", "b", "c", "d"] }, { class: [] }]);
-    expect(writeAsi({ kind: "item", item: read })).toContain('<div class="a b c d">');
-    expect(writeAsi({ kind: "item", item: read })).toContain('<p class="">');
-    expect(() =>
-      writeAsi({
-        kind: "item",
-        item: {
-          ...read,
-          body: { kind: "item-body", children: [{ kind: "div", class: ["a b"], children: [], extensions: [] }] },
-        } as AssessmentItem,
-      }),
-    ).toThrow(/must be text without white space/);
-  });
-
-  it("ARIARelevantList: reads the terms additions, all, removals and text as a list and refuses any other", () => {
-    const relevant = (value: string) => bodyOf(`<div aria-relevant="${value}"/>`)[0];
-    expect(relevant("additions")).toMatchObject({ ariaRelevant: ["additions"] });
-    expect(relevant("all")).toMatchObject({ ariaRelevant: ["all"] });
-    expect(relevant("removals text")).toMatchObject({ ariaRelevant: ["removals", "text"] });
-    expect(relevant("additions removals text")).toMatchObject({ ariaRelevant: ["additions", "removals", "text"] });
-    for (const text of ["bogus", "additions bogus", "ALL"]) {
-      expect(
-        readIssue(() => readAsi(item(`<qti-item-body><div aria-relevant="${text}"/></qti-item-body>`))),
-        text,
-      ).toMatchObject({
-        code: "assesskit/asi/invalid-value",
-      });
-    }
-  });
-});
-
-describe("readAsi: common attributes and extension points", () => {
+describe("reading common attributes and extension points", () => {
   const body = (attributes: string) => itemOf(item(`<qti-item-body${attributes}><p>x</p></qti-item-body>`)).body;
   const rubric = (attributes: string, content = "") =>
     testOf(
@@ -3425,7 +3190,7 @@ describe("readAsi: common attributes and extension points", () => {
   });
 });
 
-describe("readAsi: input and errors", () => {
+describe("reading input and errors", () => {
   it("reads text, bytes and a tree alike", () => {
     const xml = item("<qti-item-body><p>é</p></qti-item-body>");
     const fromText = readAsi(xml);
@@ -3626,6 +3391,150 @@ describe("readAsi: input and errors", () => {
   });
 });
 
+/** The element of the model that a path of keys leads to. */
+function dig(value: unknown, path: readonly (string | number)[]): unknown {
+  return path.reduce<unknown>(
+    (current, key) => (typeof current === "object" && current !== null ? Reflect.get(current, key) : undefined),
+    value,
+  );
+}
+
+/** Checks the vocabulary of an attribute: every term reads as itself and is written as itself, and other text is refused. */
+function checkVocabulary(row: string): void {
+  const { element, attribute, property, terms } = vocabularyOf(row);
+  const { markup, path } = PLACES[element];
+  const body = (text: string) => `<qti-item-body>${markup(` ${attribute}="${text}"`)}</qti-item-body>`;
+  for (const term of terms) {
+    const read = itemOf(item(body(term)));
+    expect(dig(read.body?.children[0], path), term).toMatchObject({ [property]: term });
+    expect(writeAsi({ kind: "item", item: read }), term).toContain(`${attribute}="${term}"`);
+  }
+  for (const text of ["", "x", `${terms[0]}x`, `x${terms[0]}`, ` ${terms[0]?.toUpperCase()}`]) {
+    expect(
+      readIssue(() => readAsi(item(body(text)))),
+      text,
+    ).toMatchObject({ code: "assesskit/asi/invalid-value" });
+  }
+}
+
+describe("vocabularies of the content", () => {
+  it("ARIAAutoCompleteEnum: reads 4 terms of aria-autocomplete and refuses any other text", () => {
+    checkVocabulary("W1");
+  });
+
+  it("ARIACheckedEnum: reads 4 terms of aria-checked and refuses any other text", () => {
+    checkVocabulary("W2");
+  });
+
+  it("ARIACurrentEnum: reads 8 terms of aria-current and refuses any other text", () => {
+    checkVocabulary("W3");
+  });
+
+  it("ARIAExpandedEnum: reads 3 terms of aria-expanded and refuses any other text", () => {
+    checkVocabulary("W4");
+  });
+
+  it("ARIAInvalidEnum: reads 4 terms of aria-invalid and refuses any other text", () => {
+    checkVocabulary("W5");
+  });
+
+  it("ARIALiveValueEnum: reads 3 terms of aria-live and refuses any other text", () => {
+    checkVocabulary("W6");
+  });
+
+  it("ARIAOrientationValueEnum: reads 2 terms of aria-orientation and refuses any other text", () => {
+    checkVocabulary("W7");
+  });
+
+  it("ARIAPressedEnum: reads 4 terms of aria-pressed and refuses any other text", () => {
+    checkVocabulary("W8");
+  });
+
+  it("ARIARoleValue: reads 74 terms of role and refuses any other text", () => {
+    checkVocabulary("W9");
+  });
+
+  it("ARIASelectedEnum: reads 3 terms of aria-selected and refuses any other text", () => {
+    checkVocabulary("W10");
+  });
+
+  it("ARIASortEnum: reads 4 terms of aria-sort and refuses any other text", () => {
+    checkVocabulary("W11");
+  });
+
+  it("AlignEnum: reads 5 terms of align and refuses any other text", () => {
+    checkVocabulary("W12");
+  });
+
+  it("CORSSettingsEnum: reads 2 terms of crossorigin and refuses any other text", () => {
+    checkVocabulary("W14");
+  });
+
+  it("DIR: reads 3 terms of dir and refuses any other text", () => {
+    checkVocabulary("W17");
+  });
+
+  it("KindValueEnum: reads 5 terms of kind and refuses any other text", () => {
+    checkVocabulary("W19");
+  });
+
+  it("ParamTypeEnum: reads 2 terms of valuetype and refuses any other text", () => {
+    checkVocabulary("W24");
+  });
+
+  it("PreLoadValueEnum: reads 3 terms of preload and refuses any other text", () => {
+    checkVocabulary("W25");
+  });
+
+  it("SuppressTTSEnum: reads 3 terms of data-qti-suppress-tts and refuses any other text", () => {
+    checkVocabulary("W34");
+  });
+
+  it("TableCellScopeEnum: reads 4 terms of scope and refuses any other text", () => {
+    checkVocabulary("W35");
+  });
+
+  it("ValignEnum: reads 4 terms of valign and refuses any other text", () => {
+    checkVocabulary("W42");
+  });
+});
+
+describe("vocabularies of the content: lists", () => {
+  it("StringList: reads the class as the strings separated by white space and writes them with one space", () => {
+    const read = itemOf(
+      item('<qti-item-body><div class="  a  b&#9;c&#10;d ">x</div><p class="">y</p></qti-item-body>'),
+    );
+    expect(read.body?.children).toMatchObject([{ class: ["a", "b", "c", "d"] }, { class: [] }]);
+    expect(writeAsi({ kind: "item", item: read })).toContain('<div class="a b c d">');
+    expect(writeAsi({ kind: "item", item: read })).toContain('<p class="">');
+    expect(() =>
+      writeAsi({
+        kind: "item",
+        item: {
+          ...read,
+          body: { kind: "item-body", children: [{ kind: "div", class: ["a b"], children: [], extensions: [] }] },
+        } as AssessmentItem,
+      }),
+    ).toThrow(/must be text without white space/);
+  });
+
+  it("ARIARelevantList: reads the terms additions, all, removals and text as a list and refuses any other", () => {
+    const relevant = (value: string) => bodyOf(`<div aria-relevant="${value}"/>`)[0];
+    expect(relevant("additions")).toMatchObject({ ariaRelevant: ["additions"] });
+    expect(relevant("all")).toMatchObject({ ariaRelevant: ["all"] });
+    expect(relevant("removals text")).toMatchObject({ ariaRelevant: ["removals", "text"] });
+    expect(relevant("additions removals text")).toMatchObject({ ariaRelevant: ["additions", "removals", "text"] });
+    for (const text of ["bogus", "additions bogus", "ALL"]) {
+      expect(
+        readIssue(() => readAsi(item(`<qti-item-body><div aria-relevant="${text}"/></qti-item-body>`))),
+        text,
+      ).toMatchObject({
+        code: "assesskit/asi/invalid-value",
+      });
+    }
+  });
+});
+
 describe("the nodes of the content", () => {
   const body = (content: string): readonly ModelNode[] =>
     itemOf(item(`<qti-item-body>${content}</qti-item-body>`)).body?.children ?? [];
@@ -3672,7 +3581,105 @@ describe("the nodes of the content", () => {
   });
 });
 
-describe("writeAsi", () => {
+describe("walking a document", () => {
+  const namesOf = (document: AsiDocument): string[] => {
+    const names: string[] = [];
+    walkDocument(document, ({ name }) => names.push(name));
+    return names;
+  };
+
+  it("visits the elements of a document in document order, an element before its children, by their element names", () => {
+    const document = checked(
+      item(
+        '<qti-response-declaration identifier="R" cardinality="single" base-type="string"/><qti-item-body><p>a <em>b</em><qti-text-entry-interaction response-identifier="R"/></p></qti-item-body>',
+      ),
+    );
+    expect(namesOf(document)).toEqual([
+      "qti-assessment-item",
+      "qti-response-declaration",
+      "qti-item-body",
+      "p",
+      "em",
+      "qti-text-entry-interaction",
+    ]);
+  });
+
+  it("tells the HTML label from qti-label, which have the same kind", () => {
+    const document = checked(
+      item(
+        '<qti-item-body><p><label>x</label><qti-inline-choice-interaction response-identifier="R"><qti-label>y</qti-label><qti-inline-choice identifier="A">a</qti-inline-choice></qti-inline-choice-interaction></p></qti-item-body>',
+      ),
+    );
+    const found: string[] = [];
+    walkDocument(document, ({ name, model }) => {
+      if (model.kind === "label") found.push(name);
+    });
+    expect(found).toEqual(["label", "qti-label"]);
+  });
+
+  it("gives the parent, the model, the attribute definitions and the kind of attribute wildcard of an element", () => {
+    const document = checked(item('<qti-item-body><p data-x="1" class="c">a</p></qti-item-body>'));
+    const visits: ElementVisit[] = [];
+    walkDocument(document, (visit) => visits.push(visit));
+    const paragraph = visits.find(({ name }) => name === "p");
+    expect(paragraph?.parent?.name).toBe("qti-item-body");
+    expect(paragraph?.parent?.parent?.name).toBe("qti-assessment-item");
+    expect(paragraph?.parent?.parent?.parent).toBeUndefined();
+    expect(paragraph?.model).toMatchObject({ kind: "p", class: ["c"] });
+    expect(paragraph?.attributes.map(({ name }) => name)).toContain("class");
+    expect(paragraph?.attributeWildcard).toBe("any");
+    expect(visits[0]?.attributeWildcard).toBe("any");
+    expect(visits.find(({ name }) => name === "qti-item-body")?.attributeWildcard).toBeUndefined();
+  });
+
+  it("keeps MathML, SSML and xi:include out of the visits and gives them as the foreign elements of the element that holds them", () => {
+    const document = checked(
+      item(
+        '<qti-item-body><p>a <math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></p></qti-item-body>',
+      ),
+    );
+    const visits: ElementVisit[] = [];
+    walkDocument(document, (visit) => visits.push(visit));
+    expect(visits.map(({ name }) => name)).toEqual(["qti-assessment-item", "qti-item-body", "p"]);
+    expect(visits.find(({ name }) => name === "p")?.foreign.map(({ name }) => name)).toEqual(["math"]);
+  });
+
+  it("walks every kind of document", () => {
+    for (const xml of [
+      `<qti-assessment-stimulus ${NAMESPACE} identifier="s" title="t"><qti-stimulus-body><p>x</p></qti-stimulus-body></qti-assessment-stimulus>`,
+      `<qti-assessment-section ${NAMESPACE} identifier="s" title="t" visible="true"/>`.replace(
+        "/>",
+        '><qti-assessment-item-ref identifier="a" href="a.xml"/></qti-assessment-section>',
+      ),
+      `<qti-outcome-declaration ${NAMESPACE} identifier="O" cardinality="single" base-type="float"/>`,
+      `<qti-outcome-processing ${NAMESPACE}/>`,
+      `<qti-response-processing ${NAMESPACE}/>`,
+    ]) {
+      expect(namesOf(readAsi(xml))[0]).toMatch(/^qti-/);
+    }
+  });
+
+  it("throws a DataError for a model that is not the shape the schema gives it, naming where", () => {
+    const document = checked(item("<qti-item-body><p>a</p></qti-item-body>"));
+    if (document.kind !== "item") throw new Error("Expected an item.");
+    const withBody = (children: unknown): AsiDocument =>
+      JSON.parse(
+        JSON.stringify({ kind: "item", item: { ...document.item, body: { ...document.item.body, children } } }),
+      );
+    expect(() => walkDocument(withBody("x"), () => undefined)).toThrow(
+      'The property children of qti-item-body must be an array, found "x". It is in qti-assessment-item/qti-item-body.',
+    );
+    expect(() => walkDocument(withBody([null]), () => undefined)).toThrow(
+      "A member of children of qti-item-body must be an object",
+    );
+    expect(() => walkDocument(withBody([{ kind: "nope" }]), () => undefined)).toThrow('has the kind "nope"');
+    expect(() => walkDocument(JSON.parse("null"), () => undefined)).toThrow("The document must be an object");
+    expect(() => walkDocument(JSON.parse('{"kind":"x"}'), () => undefined)).toThrow(DataError);
+    expect(() => walkDocument(document, JSON.parse("1"))).toThrow("The visitor must be a function");
+  });
+});
+
+describe("writing documents", () => {
   it("writes attributes and child elements in the order of the schema, whatever the order of the properties", () => {
     const written = writeAsi({
       kind: "item",
@@ -3989,6 +3996,14 @@ describe("the element table", () => {
       expect(new Set(properties).size, name).toBe(properties.length);
       expect(properties, name).not.toContain("kind");
     }
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/asi.md", import.meta.url);
+    const asi = await import("../src/asi/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/asi": asi })).toBeGreaterThan(0);
   });
 });
 

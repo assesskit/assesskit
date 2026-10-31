@@ -1,21 +1,36 @@
-# xml
+# XML
 
-`@assesskit/runtime/xml` reads XML 1.0 into an immutable tree, writes a tree back, replaces `xi:include` elements, and gives the
-readers of typed documents the checks they share.
-It is the only XML parser in the runtime: every module that reads a document starts here. It uses no platform API and runs in any
-JavaScript runtime. The reader is [saxes](https://github.com/lddubeau/saxes), a namespace-aware parser that rejects
-documents that are not well-formed and reads no DTD.
+`xml` reads XML 1.0 into an immutable tree, writes a tree back, replaces `xi:include` elements, and gives the readers of typed
+documents the checks they share. It is the only XML parser in the runtime: every module that reads a document starts here.
+It uses no platform API and runs in any JavaScript runtime. The reader is [saxes](https://github.com/lddubeau/saxes), a
+namespace-aware parser that rejects documents that are not well-formed and reads no DTD.
+
+```mermaid
+flowchart LR
+  input["Text or bytes"]
+  tree["XmlElement tree<br/>immutable"]
+  merged["Tree without includes"]
+  model["Model of a typed document<br/>asi, results, usage, pnp"]
+  output["UTF-8 document"]
+  input -- "parseXml<br/>limits, no DOCTYPE" --> tree
+  tree -- "resolveIncludes<br/>caller's resolver" --> merged
+  tree -- "ElementReader" --> model
+  merged -- "ElementReader" --> model
+  model -- "buildElement" --> tree
+  merged -- "serializeXml" --> output
+  tree -- "serializeXml" --> output
+```
 
 | Export                                                                                | Purpose                                                                    |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `parseXml(input, options?)`                                                           | Parses text or bytes into an `XmlElement`.                                 |
 | `serializeXml(root)`                                                                  | Writes an `XmlElement` as a UTF-8 document.                                |
-| `ElementReader`, `ReaderRules`                                                        | Reads an element into a model and reports what the model leaves unread.    |
+| `ElementReader`, `ReaderRules`, `termOf`                                              | Reads an element into a model and reports what the model leaves unread.    |
 | `buildElement(namespace, name, attributes?, children?)`                               | Builds an element for a writer.                                            |
 | `isXmlLanguage(value)`                                                                | Tells whether a value can be the value of `xml:lang`.                      |
 | `resolveIncludes(root, base, resolve, options?)`                                      | Replaces each `xi:include` with the root element of the document it names. |
 | `childElements(element)`, `attributeOf(element, name, namespace?)`, `textOf(element)` | The child elements, an attribute and the text of an element.               |
-| `readError(code, message, location?)`, `locationOf(element, path)`                    | Build the `ReadError` of one problem, and the location of an element.      |
+| `readError(code, message, location?)`, `locationOf(element, path, trail?)`            | Build the `ReadError` of one problem, and the location of an element.      |
 | `DEFAULT_XML_LIMITS`, `XmlLimits`                                                     | The limits on size, depth, attributes, nodes and include nesting.          |
 | `XML_NAMESPACE`, `XMLNS_NAMESPACE`, `XSI_NAMESPACE`, `XINCLUDE_NAMESPACE`             | Namespace URIs the reader and writer treat specially.                      |
 | `XmlElement`, `XmlAttribute`, `XmlNode`, `XmlCharacterData`, `XmlInstruction`         | The tree.                                                                  |
@@ -25,31 +40,16 @@ documents that are not well-formed and reads no DTD.
 ```ts
 import { parseXml, resolveIncludes, serializeXml } from "@assesskit/runtime/xml";
 
-const NAMESPACE = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
-const fragments = new Map([
-  ["fragments/prompt.xml", `<qti-prompt xmlns="${NAMESPACE}">Which city is the capital?</qti-prompt>`],
-]);
-
-const item = parseXml(
-  `<qti-assessment-item xmlns="${NAMESPACE}" xmlns:xi="http://www.w3.org/2001/XInclude" identifier="capital">
-  <xi:include href="fragments/prompt.xml"/>
-</qti-assessment-item>`,
-  { path: "items/capital.xml" },
+const fragments = new Map([["parts/b.xml", '<b xmlns="urn:demo">included</b>']]);
+const root = parseXml(
+  '<a xmlns="urn:demo" xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="parts/b.xml"/></a>',
+  { path: "a.xml" },
 );
-item.name; // "qti-assessment-item"
-item.namespace; // "http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
-[item.line, item.column]; // [1, 1]
+[root.name, root.namespace, root.line, root.column]; // => ["a", "urn:demo", 1, 1]
 
-const resolved = resolveIncludes(item, "items/capital.xml", (href) => {
-  const source = fragments.get(href);
-  if (source === undefined) throw new Error(`${href} is not in the package.`);
-  return parseXml(source, { path: href });
-});
+const resolved = resolveIncludes(root, "a.xml", (href) => parseXml(fragments.get(href) ?? "", { path: href }));
 serializeXml(resolved);
-// <?xml version="1.0" encoding="UTF-8"?>
-// <qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" xmlns:xi="http://www.w3.org/2001/XInclude" identifier="capital">
-//   <qti-prompt xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0">Which city is the capital?</qti-prompt>
-// </qti-assessment-item>
+// => '<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="urn:demo" xmlns:xi="http://www.w3.org/2001/XInclude"><b xmlns="urn:demo">included</b></a>'
 ```
 
 ## The tree
@@ -65,9 +65,20 @@ serializeXml(resolved);
 - Namespace declarations are attributes: `xmlns="u"` has the namespace `XMLNS_NAMESPACE`, the name `xmlns` and no prefix;
   `xmlns:p="u"` has the name `p` and the prefix `xmlns`.
 - Children and attributes keep document order. Entity and character references are replaced, line ends are normalized to a
-  line feed (XML 1.0 §2.11), and attribute values are normalized (§3.3.3). Adjacent text is one node.
+  line feed, and attribute values are normalized. Adjacent text is one node.
 - The tree leaves out the XML declaration and whatever precedes and follows the root element.
 - `line` and `column` (from 1, columns count characters) locate the start tag of an element that `parseXml` read.
+
+```ts
+import { attributeOf, childElements, parseXml, textOf } from "@assesskit/runtime/xml";
+
+const root = parseXml('<a xmlns="urn:demo" id="x">one <b/><!--note-->two <![CDATA[<3]]></a>');
+attributeOf(root, "id"); // => "x"
+attributeOf(root, "id", "urn:other"); // => undefined
+childElements(root).map((child) => child.name); // => ["b"]
+textOf(root); // => "one two <3"
+root.children.map((child) => child.kind); // => ["text", "element", "comment", "text", "cdata"]
+```
 
 ## Reading
 
@@ -78,7 +89,7 @@ serializeXml(resolved);
 | `path`   | none                 | The path of the document; errors and issues name it. |
 | `limits` | `DEFAULT_XML_LIMITS` | Limits that replace the defaults field by field.     |
 
-A string is taken as it is: the encoding it declares is ignored. Bytes are decoded by XML 1.0 §4.3.3 and App. F.1:
+A string is taken as it is: the encoding it declares is ignored. Bytes are decoded as XML 1.0 says:
 
 | Bytes begin with                     | Encoding                                                                                              |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
@@ -87,9 +98,9 @@ A string is taken as it is: the encoding it declares is ignored. Bytes are decod
 | no mark and no declaration           | UTF-8. Bytes that are not valid UTF-8 are a `ReadError`.                                              |
 
 A document that declares XML 1.1 is a `ReadError`. So is one that has what the parser lets through and a tree could not
-keep or write: a lone surrogate in a string (it is no character, XML 1.0 §2.2), a namespace declaration with white space at
-its start or end (the parser strips it from the namespace of the elements but keeps it in the declaration), and a qualified
-name whose prefix or local part is not an `NCName`, such as `p:1` (Namespaces in XML 1.0 §3).
+keep or write: a lone surrogate in a string (it is no character), a namespace declaration with white space at its start or
+end (the parser strips it from the namespace of the elements but keeps it in the declaration), and a qualified name whose
+prefix or local part is not an `NCName`, such as `p:1`.
 
 ## Limits
 
@@ -115,16 +126,24 @@ read from. Node.js with its default stack reads, writes and evaluates trees of 1
 
 ## Security
 
-| Threat                                 | Control                                                                                                                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| XXE, entity expansion (billion laughs) | Any DOCTYPE throws a `SecurityError` with `limit` `"doctype"` before an entity is declared. Only the five predefined entities and character references exist (BPIG §6.7). |
-| Network and file access                | The reader and the writer read nothing. `resolveIncludes` calls only the resolver the caller passes.                                                                      |
-| Oversized, deep or wide documents      | The limits above.                                                                                                                                                         |
-| Prototype pollution                    | The tree is arrays of objects with fixed fields; a name such as `__proto__` is data.                                                                                      |
+| Threat                                 | Control                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| XXE, entity expansion (billion laughs) | Any DOCTYPE throws a `SecurityError` with `limit` `"doctype"` before an entity is declared. Only the five predefined entities and character references exist. |
+| Network and file access                | The reader and the writer read nothing. `resolveIncludes` calls only the resolver the caller passes.                                                          |
+| Oversized, deep or wide documents      | The limits above.                                                                                                                                             |
+| Prototype pollution                    | The tree is arrays of objects with fixed fields; a name such as `__proto__` is data.                                                                          |
 
 ## Writing
 
 `serializeXml(root)` writes `<?xml version="1.0" encoding="UTF-8"?>`, a line feed and the element. It adds no white space.
+
+```ts
+import { buildElement, serializeXml } from "@assesskit/runtime/xml";
+
+const item = buildElement("urn:demo", "item", { id: "q1", note: undefined, "xml:lang": "en" }, ["a < b", ""]);
+serializeXml(item);
+// => '<?xml version="1.0" encoding="UTF-8"?>\n<item id="q1" xml:lang="en" xmlns="urn:demo">a &lt; b</item>'
+```
 
 - Text escapes `&`, `<`, `>` and the carriage return. Attribute values also escape the quote, the tab and the line feed.
 - A CDATA section that contains `]]>` is split into two sections at that sequence.
@@ -134,6 +153,10 @@ read from. Node.js with its default stack reads, writes and evaluates trees of 1
 - It throws `DataError` for a tree that cannot be written as well-formed XML: a character XML 1.0 does not allow, a name that is not
   an NCName, a prefix without a namespace or a namespace without a prefix on an attribute, one prefix for two namespaces on an
   element, a repeated attribute, `--` in a comment, a processing instruction named `xml` or containing `?>`. The message names the element.
+
+`buildElement` leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one; a name
+with the prefix `xml:` or `xsi:` is in that namespace. `isXmlLanguage` accepts the language tags of `xs:language` and the
+empty string, which undoes an inherited language.
 
 ## Mapping a document to a model
 
@@ -145,9 +168,10 @@ part of a document is dropped without notice.
 import { ElementReader } from "@assesskit/runtime/xml";
 
 const rules = { module: "demo", namespaces: ["urn:demo"] };
-const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b/></a>', rules, "The demo");
-reader.attribute("n", Number); // 12
-reader.done(); // ReadError: The element b is not allowed in a at this place. (line 1, column 28)
+const reader = ElementReader.open('<a xmlns="urn:demo" n="12"><b>5</b></a>', rules, "The demo");
+reader.attribute("n", Number); // => 12
+reader.require("b").leaf(Number); // => 5
+reader.done(); // => undefined
 ```
 
 | Member                                              | Purpose                                                                                                                                          |
@@ -163,14 +187,25 @@ reader.done(); // ReadError: The element b is not allowed in a at this place. (l
 | `fail(code, message)`, `attempt(...)`               | Build a `ReadError` at the element; run a conversion and turn its `DataError` into one.                                                          |
 | `done()`                                            | Fail on an attribute, child or text that was not read. Namespace declarations and `xsi:` attributes never count.                                 |
 
-`ReaderRules` names the module, whose issue codes are `assesskit/<module>/<name>`, the
-namespaces of the schema's elements and, optionally, the path of the document. `termOf(terms)` makes the conversion for `text`
-and `attribute` that accepts one of some terms. A reader takes the children in the order of the schema. An issue has the line and column of the element and its path, such as
+| `ReaderRules` field | Meaning                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `module`            | The module that reads; its issue codes are `assesskit/<module>/<name>`.                           |
+| `namespaces`        | The namespaces of the schema's elements; an element in another namespace is an extension.         |
+| `path`              | The path of the document, which the issues name. `open` takes it from its options. Default: none. |
+
+`termOf(terms, label?)` makes the conversion for `text` and `attribute` that accepts one of some terms. A reader takes the
+children in the order of the schema. An issue has the line and column of the element and its path, such as
 `assessmentResult/itemResult`.
 
-`buildElement` leaves out an attribute whose value is `undefined`, writes a string child as text and drops an empty one;
-a name with the prefix `xml:` or `xsi:` is in that namespace. `isXmlLanguage` accepts the language tags of `xs:language`
-and the empty string (XML 1.0 §2.12).
+| Code of an issue       | Meaning                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `missing-attribute`    | A required attribute is not there.                                                                              |
+| `invalid-attribute`    | An attribute cannot be converted, is not one of its terms, or is not a language tag.                            |
+| `unexpected-attribute` | `done` found an attribute that was not read.                                                                    |
+| `missing-element`      | `require` found another element or none.                                                                        |
+| `unexpected-element`   | `done` found a child that was not taken, or an element where only text may be, or an extension in no namespace. |
+| `unexpected-text`      | An element that holds elements only has text.                                                                   |
+| `invalid-text`         | The text of an element cannot be converted.                                                                     |
 
 ## XInclude
 
@@ -178,16 +213,16 @@ and the empty string (XML 1.0 §2.12).
 `href` names, then does the same inside that document. `base` is the path of the document of `root`; `resolve(href, base)` is
 the caller's function that returns the parsed root of the document, usually with `parseXml`. The runtime never fetches.
 
-| Rule                                                                                                                                                                                               | Source                               |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| Only `parse="xml"` (the default) is included. `parse="text"` is a `ReadError`.                                                                                                                     | INFO §2.12                           |
-| `xpointer` is a `ReadError`.                                                                                                                                                                       | INFO §2.12 (MUST NOT)                |
-| `href` is required, not empty, and has no fragment identifier.                                                                                                                                     | XInclude 1.0 §3.1                    |
-| An include has at most one `xi:fallback` child and no other element of the XInclude namespace; an `xi:fallback` elsewhere is a `ReadError`.                                                        | XInclude 1.0 §3.1, §3.2              |
-| If `resolve` throws, the `xi:fallback` takes the include's place (its content is expanded in turn). Without one, the failure is a `ReadError`. A `SecurityError` from `resolve` always propagates. | XInclude 1.0 §4.4                    |
-| An include of a document that is already being included is a `ReadError`. Paths are compared after `.` and `..` segments are resolved against `base`.                                              | XInclude 1.0 §4.2.7                  |
-| Includes nest at most `maxIncludeDepth` deep; the result has at most `maxDepth` levels and `maxNodes` nodes.                                                                                       | The runtime limits                   |
-| `encoding`, `accept` and `accept-language` are ignored; `xml:base` and `xml:lang` are not added to included roots.                                                                                 | XInclude 1.0 §4.5.5, §4.5.6 allow it |
+| Rule                                                                                                                                                                                               | Source                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Only `parse="xml"` (the default) is included. `parse="text"` is a `ReadError`.                                                                                                                     | ASI Information Model, XInclude                                   |
+| `xpointer` is a `ReadError`.                                                                                                                                                                       | ASI Information Model, XInclude (the specification says MUST NOT) |
+| `href` is required, not empty, and has no fragment identifier.                                                                                                                                     | XInclude 1.0, the `xi:include` element                            |
+| An include has at most one `xi:fallback` child and no other element of the XInclude namespace; an `xi:fallback` elsewhere is a `ReadError`.                                                        | XInclude 1.0, the `xi:include` and `xi:fallback` elements         |
+| If `resolve` throws, the `xi:fallback` takes the include's place (its content is expanded in turn). Without one, the failure is a `ReadError`. A `SecurityError` from `resolve` always propagates. | XInclude 1.0, resource errors                                     |
+| An include of a document that is already being included is a `ReadError`. Paths are compared after `.` and `..` segments are resolved against `base`.                                              | XInclude 1.0, inclusion loops                                     |
+| Includes nest at most `maxIncludeDepth` deep; the result has at most `maxDepth` levels and `maxNodes` nodes.                                                                                       | The limits of the runtime                                         |
+| `encoding`, `accept` and `accept-language` are ignored; `xml:base` and `xml:lang` are not added to included roots.                                                                                 | XInclude 1.0 allows it                                            |
 
 An include that is the root of the tree must be replaced by exactly one element.
 
@@ -200,15 +235,58 @@ fail: an attribute or a child that is not there is `undefined` or left out. A re
 
 ## Errors
 
-| Code                               | Class       | Meaning                                                                            | Source                                       |
-| ---------------------------------- | ----------- | ---------------------------------------------------------------------------------- | -------------------------------------------- |
-| `assesskit/xml/not-well-formed`    | `ReadError` | The document is not well-formed, has a lone surrogate or a bad qualified name.     | XML 1.0 §2.1, §2.2, Namespaces in XML 1.0 §3 |
-| `assesskit/xml/version`            | `ReadError` | The document declares XML 1.1.                                                     | XML 1.0 §2.8                                 |
-| `assesskit/xml/encoding`           | `ReadError` | Bytes in an unsupported, contradicting or invalid encoding.                        | XML 1.0 §4.3.3                               |
-| `assesskit/xml/namespace`          | `ReadError` | A namespace declaration with white space at its start or end.                      | Namespaces in XML 1.0 §2.2                   |
-| `assesskit/xml/xinclude-attribute` | `ReadError` | An include has an `xpointer`, a `parse` other than `xml`, or a bad `href`.         | INFO §2.12, XInclude 1.0 §3.1                |
-| `assesskit/xml/xinclude-structure` | `ReadError` | Misplaced or repeated `xi:fallback`, or a root replaced by other than one element. | XInclude 1.0 §3.1, §3.2                      |
-| `assesskit/xml/xinclude-cycle`     | `ReadError` | Includes form a loop.                                                              | XInclude 1.0 §4.2.7                          |
-| `assesskit/xml/xinclude-resource`  | `ReadError` | The resolver failed and the include has no fallback.                               | XInclude 1.0 §4.4                            |
+| Code                               | Class       | Meaning                                                                            |
+| ---------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
+| `assesskit/xml/not-well-formed`    | `ReadError` | The document is not well-formed, has a lone surrogate or a bad qualified name.     |
+| `assesskit/xml/version`            | `ReadError` | The document declares XML 1.1.                                                     |
+| `assesskit/xml/encoding`           | `ReadError` | Bytes in an unsupported, contradicting or invalid encoding.                        |
+| `assesskit/xml/namespace`          | `ReadError` | A namespace declaration with white space at its start or end.                      |
+| `assesskit/xml/xinclude-attribute` | `ReadError` | An include has an `xpointer`, a `parse` other than `xml`, or a bad `href`.         |
+| `assesskit/xml/xinclude-structure` | `ReadError` | Misplaced or repeated `xi:fallback`, or a root replaced by other than one element. |
+| `assesskit/xml/xinclude-cycle`     | `ReadError` | Includes form a loop.                                                              |
+| `assesskit/xml/xinclude-resource`  | `ReadError` | The resolver failed and the include has no fallback.                               |
 
-`ReadError.issues` has one issue with the code, the path, and the line and column where the parser stopped.
+`ReadError.issues` has one issue with the code, the path, and the line and column where the parser stopped. Every function
+checks its arguments, as plain JavaScript and JSON can pass anything: a value of the wrong type is a `DataError` that names the
+argument and what was found.
+
+## Not included
+
+| Not included                                           | Why                                                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| DTDs, general entities and external entities           | A DOCTYPE is the vector of XXE and entity expansion; QTI documents need none        |
+| XML 1.1                                                | QTI 3.0 documents are XML 1.0                                                       |
+| `xi:include` with `parse="text"`, XPointer             | QTI forbids them, and `xml` is the only parsed form QTI uses                        |
+| The fixup of `xml:base` and `xml:lang` by `xi:include` | XInclude makes it optional, and the readers of the runtime resolve paths themselves |
+| Canonical XML, pretty printing                         | `serializeXml` adds no white space and keeps the tree as it is                      |
+| Schema validation                                      | [node](node.md) validates files against the official XSDs                           |
+| Streaming                                              | A tree is the form every reader needs, and the limits bound its size                |
+
+## Files
+
+Each file of `src/xml/` holds one concept.
+
+| File                                                | Concept                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `tree.ts`                                           | The nodes of the tree and the namespaces it treats specially |
+| `limits.ts`                                         | The limits, their defaults and their checks                  |
+| `encoding.ts`                                       | Decoding bytes by byte order mark and declaration            |
+| `locator.ts`                                        | Line and column of an offset                                 |
+| `tree-builder.ts`, `parse.ts`                       | Building the tree from parser events, and `parseXml`         |
+| `serialize.ts`, `build-element.ts`                  | Writing a tree, and building elements to write               |
+| `include.ts`                                        | XInclude                                                     |
+| `element-reader.ts`, `read-error.ts`, `language.ts` | Mapping an element to a model, its errors, and language tags |
+| `query.ts`                                          | Reading a tree without mapping it                            |
+
+## References
+
+| Topic                                  | Specification                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| XML syntax, encodings, `xml:lang`      | [Extensible Markup Language (XML) 1.0](https://www.w3.org/TR/xml/)                               |
+| Namespaces and prefixes                | [Namespaces in XML 1.0](https://www.w3.org/TR/xml-names/)                                        |
+| Inclusion                              | [XML Inclusions (XInclude) 1.0](https://www.w3.org/TR/xinclude/)                                 |
+| Language tags                          | [XML Schema Part 2, data types](https://www.w3.org/TR/xmlschema-2/)                              |
+| The `xsi:` attributes                  | [XML Schema Part 1, structures](https://www.w3.org/TR/xmlschema-1/)                              |
+| XInclude in QTI                        | [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   |
+| XML security                           | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) |
+| Places where the specifications differ | [Spec gaps](spec-gaps.md)                                                                        |

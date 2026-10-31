@@ -6,8 +6,9 @@ import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
 import { DataError } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles, type XmlFile } from "../src/node/index.js";
-import { PRIMARY_SCHEMAS } from "../src/node/select-schema.js";
+import { PRIMARY_SCHEMAS } from "../src/node/internal.js";
 import { parseXml } from "../src/xml/index.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const schemaDirectory = requireSchemas(root);
@@ -37,7 +38,7 @@ afterAll(() => {
   schemas.close();
 });
 
-describe("loadSchemaSet", () => {
+describe("loading schemas", () => {
   it("loads the pinned schemas from the directory that pnpm schemas fills", () => {
     expect(schemas.directory).toBe(schemaDirectory);
   });
@@ -50,8 +51,8 @@ describe("loadSchemaSet", () => {
   });
 });
 
-describe("validateXmlFiles", () => {
-  it("accepts the 1EdTech example items and test of the design's evidence under the ASI schema", async () => {
+describe("validating documents", () => {
+  it("accepts the 1EdTech example items and test under the ASI schema", async () => {
     const files = [
       "packaging/items/choice.xml",
       "packaging/items/adaptive_template.xml",
@@ -244,5 +245,27 @@ describe("validateXmlFiles", () => {
       'The content of the file "a.xml" must be a string or a Uint8Array, found 5.',
     );
     await expect(validateXmlFiles(schemas, JSON.parse('[{"path":"a.xml"}]'))).rejects.toThrow(DataError);
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/node.md", import.meta.url);
+    const node = await import("../src/node/index.js");
+    // The sample reads ./schemas and items/capital.xml; the test serves the schema directory and an item without time-dependent.
+    const modules = {
+      "@assesskit/runtime/node": {
+        ...node,
+        loadSchemaSet: (directory: string) =>
+          node.loadSchemaSet(directory === "./schemas" ? schemaDirectory : directory),
+      },
+      "node:fs/promises": {
+        readFile: async () =>
+          new TextEncoder().encode(
+            `<qti-assessment-item xmlns="${ASI}" identifier="capital" title="Capital" adaptive="false"/>`,
+          ),
+      },
+    };
+    expect(await runGuideSamples(guide, modules)).toBeGreaterThan(0);
   });
 });

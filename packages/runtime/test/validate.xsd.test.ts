@@ -3,12 +3,10 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { DOCUMENT_ELEMENTS, ELEMENT_TYPES } from "../src/asi/element-table.js";
-import type { TypeDef } from "../src/asi/table.js";
+import { DOCUMENT_ELEMENTS, ELEMENT_TYPES, type TypeDef } from "../src/asi/internal.js";
 import type { ElementVisit, Issue } from "../src/index.js";
 import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
-import { BindRuleSets } from "../src/validate/bind-rule-sets.js";
-import { Findings } from "../src/validate/findings.js";
+import { BindRuleSets, Findings } from "../src/validate/internal.js";
 import { ATTRIBUTE_RULES, itemXml, MATCH_LIMITS, NESTING_RULE_SETS } from "./validate-fixtures.js";
 
 const root = resolve(import.meta.dirname, "../../..");

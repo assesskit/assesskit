@@ -20,7 +20,7 @@ import { checkAdaptiveFiles, checkPciFiles } from "./package-references.js";
 import { Reports } from "./reports.js";
 import { checkTest } from "./test.js";
 
-/** The kind of document that a resource of each type holds (BIND §8.1–8.7). */
+/** The kind of document that a resource of each type holds. */
 const DOCUMENT_KINDS: ReadonlyMap<ResourceType, AsiDocument["kind"]> = new Map([
   ["imsqti_item_xmlv3p0", "item"],
   ["imsqti_test_xmlv3p0", "test"],
@@ -51,7 +51,7 @@ function packageTemplate(pkg: QtiPackage, itemPath: string, uri: string): Respon
   }
 }
 
-/** Checks that the identifier of an item is the identifier its resource's LOM metadata gives (INFO §4.1.1, K6). */
+/** Checks that the identifier of an item is the identifier its resource's LOM metadata gives. */
 function checkMetadataIdentifier(resource: Resource, identifier: string, findings: Findings): void {
   const identifiers =
     resource.metadata?.lom === undefined
@@ -91,15 +91,15 @@ function checkResource(
 /**
  * Validates a content package: the manifest, the files it lists, and every document of its resources.
  *
- * - The files: a listed file must be in the package and every file of the package must be listed (BIND §8.1, CAT §2.6),
- *   and no file may be a personal needs profile or a results report (BIND §7).
- * - The resources: the file of a resource must hold the kind of document its type says (BIND §8.1–8.7), and the
- *   identifier of an item must be the one its LOM metadata gives (INFO §4.1.1).
+ * - The files: a listed file must be in the package and every file of the package must be listed,
+ *   and no file may be a personal needs profile or a results report.
+ * - The resources: the file of a resource must hold the kind of document its type says, and the
+ *   identifier of an item must be the one its LOM metadata gives.
  * - The documents: each item is checked as `validateAsi` checks it, with the response processing templates the package
  *   holds, and each test as `validateTest` checks it with the package's resolvers; the items of a test are those of the
  *   resources and are checked once. A document that cannot be read is an issue.
- * - What documents name: the settings, usage data and metadata files of an adaptive section (CAT §2.6), and the resolution
- *   and module files of a portable custom interaction (BPIG §3.7.12.2), when their addresses are relative, must be in
+ * - What documents name: the settings, usage data and metadata files of an adaptive section, and the resolution
+ *   and module files of a portable custom interaction, when their addresses are relative, must be in
  *   the package and listed.
  *
  * The manifest itself was checked when the package was read.

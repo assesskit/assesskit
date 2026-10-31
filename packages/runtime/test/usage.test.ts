@@ -13,6 +13,7 @@ import {
 } from "../src/index.js";
 import { usageData } from "./arbitraries/usage.js";
 import { fuzzReader } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 import { issueOf } from "./read-failure.js";
 
 const SCHEMA_LOCATION = `${USAGE_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_usagedatav3p0_v1p0.xsd`;
@@ -41,8 +42,8 @@ function statisticOf(body: string): ItemStatistic {
 
 const base = { name: "AIS", context: CONTEXT, targetObjects: [{ identifier: "Item_VB123456" }] };
 
-describe("readUsageData", () => {
-  it("reads the glossary of the usage data and the statistics in the order of the document (UD §2.3.1)", () => {
+describe("reading usage data", () => {
+  it("reads the glossary of the usage data and the statistics in the order of the document", () => {
     const data = readUsageData(
       document(
         `${ordinary("", `${TARGET}<value>0.87</value>`)}<categorizedStatistic name="D-Param" context="${CONTEXT}">${TARGET}<mapping><mapEntry mapKey="d1" mappedValue="1"/></mapping></categorizedStatistic>${ordinary("", `${TARGET}<value>1</value>`)}`,
@@ -57,7 +58,7 @@ describe("readUsageData", () => {
     expect(readUsageData(document())).toEqual({ statistics: [] });
   });
 
-  it("reads the attributes of an ordinary statistic and its value (UD §2.4.3)", () => {
+  it("reads the attributes of an ordinary statistic and its value", () => {
     // The first statistic of 1EdTech's usageData/example.xml.
     expect(
       statisticOf(
@@ -77,7 +78,7 @@ describe("readUsageData", () => {
     });
   });
 
-  it("reads a categorized statistic with its mapping, bounds and entries (UD §2.4.1, §2.4.2, §2.6.3)", () => {
+  it("reads a categorized statistic with its mapping, bounds and entries", () => {
     // The D-Parm statistic of 1EdTech's usageData/example.xml.
     expect(
       statisticOf(
@@ -110,7 +111,7 @@ describe("readUsageData", () => {
     expect((statistic as { mapping: object }).mapping).not.toHaveProperty("defaultValue");
   });
 
-  it("reads the target objects of a statistic: the item, a part of it and the kind of object (UD §2.6.4)", () => {
+  it("reads the target objects of a statistic: the item, a part of it and the kind of object", () => {
     const statistic = statisticOf(
       ordinary(
         "",
@@ -139,7 +140,7 @@ describe("readUsageData", () => {
     expect(value(' baseType="boolean"', "true")).toEqual({ value: true, baseType: "boolean" });
   });
 
-  it("accepts the seven terms of ObjectTypeEnum and no other (UD §2.7.2)", () => {
+  it("accepts the seven terms of ObjectTypeEnum and no other", () => {
     for (const objectType of ["test", "testpart", "section", "item", "outcome", "interaction", "choice"]) {
       const statistic = statisticOf(
         ordinary("", `<targetObject identifier="x" objectType="${objectType}"/><value>1</value>`),
@@ -154,7 +155,7 @@ describe("readUsageData", () => {
     );
   });
 
-  it("lists the four terms of the Distractor Statistics vocabulary (UD §2.8.1)", () => {
+  it("lists the four terms of the Distractor Statistics vocabulary", () => {
     expect(DISTRACTOR_STATISTICS).toEqual([
       "AISResponse",
       "NumberChoosingResponse",
@@ -163,7 +164,7 @@ describe("readUsageData", () => {
     ]);
   });
 
-  it("lists the sixteen terms of the Item Statistics vocabulary (UD §2.8.2)", () => {
+  it("lists the sixteen terms of the Item Statistics vocabulary", () => {
     expect(ITEM_STATISTICS).toEqual([
       "A-Param",
       "AIS",
@@ -197,7 +198,7 @@ describe("readUsageData", () => {
   });
 });
 
-describe("writeUsageData", () => {
+describe("writing usage data", () => {
   it("writes usage data without statistics", () => {
     expect(writeUsageData({ statistics: [] })).toBe(
       `${DECLARATION}<usageData xsi:schemaLocation="${SCHEMA_LOCATION}" xmlns="${USAGE_NAMESPACE}" xmlns:xsi="${XSI_NAMESPACE}"/>`,
@@ -267,7 +268,7 @@ describe("writeUsageData", () => {
 });
 
 describe("errors", () => {
-  it("refuses a root that is not usageData of the UD namespace, among them the namespace of QTI 2.2 (D6)", () => {
+  it("refuses a root that is not usageData of the UD namespace, among them the namespace of QTI 2.2", () => {
     expect(
       issueOf(() => readUsageData('<usageData xmlns="http://www.imsglobal.org/xsd/imsqti_usagedata_v2p2"/>')),
     ).toEqual({
@@ -397,6 +398,14 @@ describe("errors", () => {
     expect(() => writeUsageData(mapped({ entries: [{ mapKey: "a", mappedValue: 1, caseSensitive: "yes" }] }))).toThrow(
       'The caseSensitive of a map entry must be a boolean, found "yes".',
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/usage.md", import.meta.url);
+    const usage = await import("../src/usage/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/usage": usage })).toBeGreaterThan(0);
   });
 });
 

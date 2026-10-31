@@ -1,5 +1,6 @@
 import type { AssessmentItem } from "../asi/index.js";
 import { checkArray, checkRecord } from "../checks.js";
+import { MAX_TOOL_STRING_LENGTH } from "./lexical.js";
 import {
   INTERACTION_TYPES,
   type InteractionType,
@@ -8,14 +9,13 @@ import {
   SCORING_MODES,
   type ScoringMode,
 } from "./qti-metadata.js";
-import { MAX_TOOL_STRING_LENGTH } from "./text.js";
 
 /** Returns the kind of the model of an interaction type: `choiceInteraction` is `choice-interaction`. */
 function kindOf(type: InteractionType): string {
   return type.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
-/** The interaction type of each interaction (MD §2.6.2: the names of the leaf classes derived from interaction). */
+/** The interaction type of each interaction: the names of the leaf classes derived from interaction. */
 const TYPE_OF_KIND: ReadonlyMap<string, InteractionType> = new Map(
   INTERACTION_TYPES.map((type) => [kindOf(type), type]),
 );
@@ -79,7 +79,7 @@ function correctResponsesSet(model: unknown, identifiers: Set<string>): void {
   }
 }
 
-/** Returns whether every declared response has a correct response, in its declaration or set by template processing (MD §2.3.1.7). */
+/** Returns whether every declared response has a correct response, in its declaration or set by template processing. */
 function solutionAvailable(item: AssessmentItem): boolean {
   const set = new Set<string>();
   correctResponsesSet(item.templateProcessing, set);
@@ -101,14 +101,15 @@ function scoringModesOf(item: AssessmentItem): ScoringMode[] {
   return SCORING_MODES.filter((mode) => present.has(mode));
 }
 
-/** Returns a tool string of the item when it fits the 256 characters of `String256` (MD §2.5.1), otherwise nothing. */
+/** Returns a tool string of the item when it fits the 256 characters of `String256`, otherwise nothing. */
 function toolString(value: string | undefined): string | undefined {
   return value !== undefined && [...value].length <= MAX_TOOL_STRING_LENGTH ? value : undefined;
 }
 
 /**
- * Derives the QTI metadata that an item shows (MD §2.3.1):
+ * Derives the QTI metadata that an item shows.
  *
+ * @remarks
  * - `itemTemplate` is true when the item has template processing.
  * - `timeDependent` is the attribute of the item.
  * - `composite` is true when the item has more than one interaction.
@@ -116,18 +117,20 @@ function toolString(value: string | undefined): string | undefined {
  *   interaction also gives `portableCustomInteractionContext` with the `customTypeIdentifier` of the first one;
  *   `interactionKind` is not in the item.
  * - `feedbackType` is `none` without feedback (`qti-modal-feedback`, `qti-feedback-block`, `qti-feedback-inline`), and
- *   with feedback `adaptive` for an adaptive item and `nonadaptive` otherwise (MD §2.6.1).
+ *   with feedback `adaptive` for an adaptive item and `nonadaptive` otherwise.
  * - `solutionAvailable` is true when the item declares a response and every declared response has a correct response,
  *   in its declaration or set by `qti-set-correct-response` in the template processing.
  * - `scoringModes` are `human` and `externalmachine` for outcomes with `external-scored`, and `responseprocessing` when
- *   the item has response processing (MD §2.6.3), in the order of the vocabulary.
+ *   the item has response processing, in the order of the vocabulary.
  * - `toolName` and `toolVersion` are the attributes of the item when they have at most 256 characters. The item has no
  *   vendor.
  *
  * The body of an item is walked as the model keeps it; an `xi:include` that is still in the item is not followed.
  *
  * @param item - An item from `readAsi`.
+ * @returns The metadata that the item shows.
  * @throws `DataError` when the argument is not an item model.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/md-bind/ | QTI 3.0 Metadata Binding}
  */
 export function deriveQtiMetadata(item: AssessmentItem): QtiMetadata {
   checkRecord(item, "The item must be an object");

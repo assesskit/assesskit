@@ -10,7 +10,7 @@ export interface ItemRefInfo {
   readonly ref: AssessmentItemRef;
   /** The item; absent when it could not be resolved or is a link to a tool, whose variables are then not known. */
   readonly item?: AssessmentItem;
-  /** Whether `ITEM.VAR`, with no instance number, names no value of the item reference (INFO §2.11.1.2, G9). */
+  /** Whether `ITEM.VAR`, with no instance number, names no value of the item reference. */
   readonly undefinedInstance: boolean;
 }
 
@@ -22,12 +22,12 @@ export interface TestContext {
   readonly containers: ReadonlySet<string>;
 }
 
-/** The instance number in `ITEM.n.VAR`: a positive integer (INFO §2.11.1.2). */
+/** The instance number in `ITEM.n.VAR`: a positive integer. */
 const INSTANCE = /^[1-9][0-9]*$/;
 
 const UNDECLARED = { code: "assesskit/validate/undeclared-variable" } as const;
 
-/** The problem with a weight that an expression names and that is not defined where it is looked up (INFO §7.47.2). */
+/** The problem with a weight that an expression names and that is not defined where it is looked up. */
 function weightProblem(weightIdentifier: string, owner: string): Problem {
   return {
     code: "assesskit/validate/weight-undefined",
@@ -37,7 +37,7 @@ function weightProblem(weightIdentifier: string, owner: string): Problem {
 
 /**
  * The problem with a value that an expression reads without naming the instance of an item that selection with
- * replacement can repeat (INFO §2.11.1.2).
+ * replacement can repeat.
  */
 function instanceProblem(identifier: string, head: string, name: string): Problem {
   return {
@@ -48,7 +48,9 @@ function instanceProblem(identifier: string, head: string, name: string): Proble
 
 /** The variables of a test, as the expressions of its outcome processing, pre-conditions and branch rules read them. */
 export class TestScope implements RuleScope {
+  /** Names the test in messages. */
   readonly owner = "test";
+  /** The processing whose expressions are checked: always outcome processing. */
   readonly processing: Processing = "outcome";
   private readonly outcomes: ReadonlyMap<string, OutcomeDeclaration>;
   private readonly contexts: ReadonlyMap<string, DeclaredVariable>;
@@ -72,7 +74,12 @@ export class TestScope implements RuleScope {
     this.contexts = contexts;
   }
 
-  /** The variables of the test that are its own: outcomes, context variables and its `duration`. */
+  /**
+   * The variables of the test that are its own: outcomes, context variables and its `duration`.
+   *
+   * @param identifier - The identifier.
+   * @returns The variable, or `undefined` when the test has none of that name.
+   */
   own(identifier: string): DeclaredVariable | undefined {
     const outcome = this.outcomes.get(identifier);
     if (outcome !== undefined) return { kind: "outcome", type: outcome };
@@ -149,7 +156,7 @@ export class TestScope implements RuleScope {
       : { type };
   }
 
-  /** A weight turns the values of integer and float variables into floats (INFO §7.47.2). */
+  /** A weight turns the values of integer and float variables into floats. */
   private weighted(type: StaticType, weighted: boolean): StaticType {
     if (!weighted || (type.baseType !== "integer" && type.baseType !== "float")) return type;
     return { ...type, baseType: "float" };
@@ -169,6 +176,13 @@ export class TestScope implements RuleScope {
     return this.prefixedVariable(identifier, split.head, split.name, weightIdentifier);
   }
 
+  /**
+   * Looks up the variable that `qti-variable` names, with a warning when the item instance is undefined.
+   *
+   * @param identifier - The identifier, which may name an item variable as `ITEM.VAR`.
+   * @param weightIdentifier - The weight that the expression names, when it names one.
+   * @returns The type of the variable, or the problem with naming it.
+   */
   variable(identifier: string, weightIdentifier: string | undefined): Lookup {
     const found = this.find(identifier, weightIdentifier);
     const split = this.own(identifier) === undefined ? TestScope.prefixed(identifier) : undefined;
@@ -177,11 +191,22 @@ export class TestScope implements RuleScope {
     return { ...found, warnings: [...(found.warnings ?? []), instanceProblem(identifier, split.head, split.name)] };
   }
 
-  /** Looks up the variable that `qti-default` names: a default value does not depend on the instance. */
+  /**
+   * Looks up the variable that `qti-default` names: a default value does not depend on the instance.
+   *
+   * @param identifier - The identifier.
+   * @returns The type of the variable, or the problem with naming it.
+   */
   declared(identifier: string): Lookup {
     return this.find(identifier, undefined);
   }
 
+  /**
+   * Returns the problem with a weight that no item reference of the test defines.
+   *
+   * @param weightIdentifier - The identifier of the weight.
+   * @returns The problem, or `undefined` when the weight is defined or the test is checked alone.
+   */
   weight(weightIdentifier: string): Problem | undefined {
     if (this.context === undefined) return undefined;
     const defined = [...this.context.itemRefs.values()].some(({ ref }) =>
@@ -190,6 +215,12 @@ export class TestScope implements RuleScope {
     return defined ? undefined : weightProblem(weightIdentifier, "any item reference of the test");
   }
 
+  /**
+   * Looks up the response variable of an item reference that an expression names.
+   *
+   * @param identifier - The identifier, as `ITEM.RESPONSE`.
+   * @returns The declaration, or the problem with naming it.
+   */
   response(identifier: string): ResponseLookup {
     const split = TestScope.prefixed(identifier);
     if (split === undefined) return { problem: this.problem(identifier, "response variable") };
@@ -202,11 +233,23 @@ export class TestScope implements RuleScope {
     return declaration === undefined ? { problem: this.problem(identifier, "response variable") } : { declaration };
   }
 
+  /**
+   * Returns the type of the outcome variable that an attribute names.
+   *
+   * @param identifier - The identifier.
+   * @returns The type, or `undefined` when the test declares no such outcome.
+   */
   reference(identifier: string): StaticType | undefined {
     const outcome = this.outcomes.get(identifier);
     return outcome === undefined ? undefined : typeOfVariable(outcome);
   }
 
+  /**
+   * Returns the outcome variable that a rule sets.
+   *
+   * @param identifier - The identifier.
+   * @returns The variable, or `undefined` when the test declares no such outcome.
+   */
   target(identifier: string): Target | undefined {
     const outcome = this.outcomes.get(identifier);
     return outcome === undefined ? undefined : { kind: "outcome", type: outcome, outcome };

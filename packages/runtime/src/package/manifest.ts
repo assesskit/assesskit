@@ -1,10 +1,10 @@
 import type { AccessForAllResource, CurriculumStandardsSet, ResourceMetadata } from "../metadata/index.js";
 import type { XmlElement } from "../xml/index.js";
 
-/** The namespace of the manifest extension that holds the variants of a resource (CPX XSD). */
+/** The namespace of the manifest extension that holds the variants of a resource. */
 export const CPX_NAMESPACE = "http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_extensionv1p2";
 
-/** The types of a resource (CP XSD; K10 to K28). */
+/** The types of a resource. */
 export const RESOURCE_TYPES = [
   "imsqti_test_xmlv3p0",
   "imsqti_section_xmlv3p0",
@@ -30,7 +30,7 @@ export const RESOURCE_TYPES = [
 /** The type of a resource. */
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
-/** The values of the metadata element `schema` of a manifest (CP XSD, BIND §8.8.1). */
+/** The values of the metadata element `schema` of a manifest. */
 export const MANIFEST_SCHEMAS = [
   "QTI Package",
   "QTI Test Bank",
@@ -44,10 +44,10 @@ export const MANIFEST_SCHEMAS = [
 /** A value of the metadata element `schema` of a manifest. */
 export type ManifestSchema = (typeof MANIFEST_SCHEMAS)[number];
 
-/** The only value of the metadata element `schemaversion` of a manifest (CP XSD). */
+/** The only value of the metadata element `schemaversion` of a manifest. */
 export const MANIFEST_SCHEMA_VERSION = "3.0.0";
 
-/** The metadata of a manifest (CP XSD, `ManifestMetadata.Type`). The `schemaversion` is always `3.0.0`. */
+/** The metadata of a manifest. The `schemaversion` is always `3.0.0`. */
 export interface ManifestMetadata {
   /** What the package holds. */
   readonly schema: ManifestSchema;
@@ -57,7 +57,7 @@ export interface ManifestMetadata {
   readonly lom?: XmlElement;
 }
 
-/** A file of a resource (CP XSD, `file`). */
+/** A file of a resource. */
 export interface ResourceFile {
   /** The reference to the file, relative to the base of the resource. */
   readonly href: string;
@@ -65,7 +65,7 @@ export interface ResourceFile {
   readonly metadata?: readonly XmlElement[];
 }
 
-/** An alternative to a resource that suits another need of a candidate (CPX XSD, BIND §8.1.1). */
+/** An alternative to a resource that suits another need of a candidate. */
 export interface Variant {
   /** The identifier of the variant link. */
   readonly identifier: string;
@@ -75,7 +75,7 @@ export interface Variant {
   readonly drd: AccessForAllResource;
 }
 
-/** A resource of a manifest: an item, test, section, stimulus or a file that belongs to them (CP XSD, `resource`). */
+/** A resource of a manifest: an item, test, section, stimulus or a file that belongs to them. */
 export interface Resource {
   /** The identifier, unique in the manifest. */
   readonly identifier: string;
@@ -95,7 +95,7 @@ export interface Resource {
   readonly variants: readonly Variant[];
 }
 
-/** The manifest of a QTI content package, `imsmanifest.xml` (CP XSD, BIND §8). The profile has no organizations. */
+/** The manifest of a QTI content package, `imsmanifest.xml`. The profile has no organizations. */
 export interface Manifest {
   /** The identifier of the manifest. */
   readonly identifier: string;

@@ -5,11 +5,11 @@ import { resolveReference } from "./paths.js";
 
 /**
  * Returns the path in the package that an href of a resource names. The href is resolved against the `xml:base` of the
- * manifest, of its `resources` element and of the resource, each against the one before (BIND §8, B93).
+ * manifest, of its `resources` element and of the resource, each against the one before.
  *
  * @param manifest - The manifest the resource is in.
  * @param resource - The resource.
- * @param href - The reference to resolve, such as the `href` of one of the files of the resource. Default: the `href` of the resource.
+ * @param href - The reference to resolve, such as the `href` of one of the files of the resource. Without it, the `href` of the resource.
  * @returns The normalized path; `undefined` when the resource has no href to resolve, or the reference is outside the
  * package (see {@link QtiPackage.resolve}).
  * @throws `DataError` when an argument has the wrong type.

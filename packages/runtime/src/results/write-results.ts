@@ -35,7 +35,7 @@ import {
   SUPPORT_ASSIGNMENTS,
 } from "./vocabularies.js";
 
-/** The name of the attribute that holds the system of a session identifier, spelled as the RR schema spells it (RR §2.6.3). */
+/** The name of the attribute that holds the system of a session identifier, spelled as the RR schema spells it. */
 const SOURCE_ID = "sourceID";
 
 type Attributes = Readonly<Record<string, string | undefined>>;
@@ -82,7 +82,7 @@ function extensionElements(value: readonly XmlElement[], label: string): readonl
   return value;
 }
 
-/** Checks the cardinality and base type of a variable; only a record may have no base type (RR §2.4.3). */
+/** Checks the cardinality and base type of a variable; only a record may have no base type. */
 function checkType(
   variable: { readonly cardinality: unknown; readonly baseType?: unknown },
   label: string,
@@ -259,17 +259,21 @@ function writeItemResult(result: ItemResult): XmlElement {
 }
 
 /**
- * Writes a Results Reporting document (RR §2.3.1) in UTF-8, valid against the RR schema, which names it in
- * `xsi:schemaLocation`. The `context` is always written, empty when nothing is known, because the schema requires it. A
- * `file` value is written as its reference alone (D7, G10), a duration as seconds, and a NULL as a variable without
- * `value` elements. Text is written as given: the schema types a `value` as `xs:normalizedString`, so a consumer that
- * applies the schema reads a newline in an essay as a space (G36).
+ * Writes a Results Reporting document in UTF-8, valid against the RR schema, which names it in `xsi:schemaLocation`.
+ *
+ * @remarks
+ * The `context` is always written, empty when nothing is known, because the schema requires it. A `file` value is
+ * written as its reference alone, a duration as seconds, and a NULL as a variable without `value` elements. Text is
+ * written as given: the schema types a `value` as `xs:normalizedString`, so a consumer that applies the schema reads a
+ * newline in an essay as a space.
  *
  * @param result - The result to write; it is checked deeply.
  * @returns The document.
  * @throws `DataError` when the model is not a result: a field of the wrong type, an identifier that is not one, a date that
  * is not an `xs:dateTime`, a value that is not of the type its variable declares, a term outside its vocabulary, or text
  * with a character that XML 1.0 does not allow.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function writeResults(result: AssessmentResult): string {
   checkRecord(result, "The result must be an object");

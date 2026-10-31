@@ -15,13 +15,25 @@ export interface StaticType {
 /** Nothing is known of the value. */
 export const UNKNOWN: StaticType = {};
 
-/** Returns the type that the declaration of a variable gives it. */
-export function typeOfVariable({ cardinality, baseType }: VariableType): StaticType {
+/**
+ * Returns the type that the declaration of a variable gives it.
+ *
+ * @param type - The type of the declaration.
+ * @returns The static type.
+ */
+export function typeOfVariable(type: VariableType): StaticType {
+  const { cardinality, baseType } = type;
   return baseType === undefined ? { cardinality } : { cardinality, baseType };
 }
 
-/** Describes a type for a message: `a single float`, `a multiple value`, or `a value of another cardinality`. */
-export function describeStatic({ cardinality, baseType }: StaticType): string {
+/**
+ * Describes a type for a message: `a single float`, `a multiple value`, or `a value of another cardinality`.
+ *
+ * @param type - The static type.
+ * @returns The description.
+ */
+export function describeStatic(type: StaticType): string {
+  const { cardinality, baseType } = type;
   if (cardinality === undefined) return baseType === undefined ? "a value" : `a ${baseType} value`;
   if (cardinality === "record") return "a record";
   const article = cardinality === "ordered" ? "an" : "a";
@@ -30,8 +42,12 @@ export function describeStatic({ cardinality, baseType }: StaticType): string {
 
 /**
  * Returns whether a value of a type could be assigned to a variable: the same cardinality and, except for a record, the
- * same base type or an integer that promotes to a float or duration (INFO §5.130.2, D5). A part of the type that is
+ * same base type or an integer that promotes to a float or duration. A part of the type that is
  * unknown fits.
+ *
+ * @param value - The type of the value.
+ * @param variable - The type of the variable.
+ * @returns `true` when the value may be assigned.
  */
 export function fitsVariable(value: StaticType, variable: VariableType): boolean {
   if (value.cardinality !== undefined && value.cardinality !== variable.cardinality) return false;

@@ -423,83 +423,83 @@ describe("the vocabularies of the content", () => {
     expect((await issuesOf("other.xml", other)).length, attribute).toBeGreaterThan(0);
   }
 
-  it("ARIAAutoCompleteEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.1)", async () => {
+  it("ARIAAutoCompleteEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W1");
   });
 
-  it("ARIACheckedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.2)", async () => {
+  it("ARIACheckedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W2");
   });
 
-  it("ARIACurrentEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.3)", async () => {
+  it("ARIACurrentEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W3");
   });
 
-  it("ARIAExpandedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.4)", async () => {
+  it("ARIAExpandedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W4");
   });
 
-  it("ARIAInvalidEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.5)", async () => {
+  it("ARIAInvalidEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W5");
   });
 
-  it("ARIALiveValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.6)", async () => {
+  it("ARIALiveValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W6");
   });
 
-  it("ARIAOrientationValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.7)", async () => {
+  it("ARIAOrientationValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W7");
   });
 
-  it("ARIAPressedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.8)", async () => {
+  it("ARIAPressedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W8");
   });
 
-  it("ARIARoleValue: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.9)", async () => {
+  it("ARIARoleValue: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W9");
   });
 
-  it("ARIASelectedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.10)", async () => {
+  it("ARIASelectedEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W10");
   });
 
-  it("ARIASortEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.11)", async () => {
+  it("ARIASortEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W11");
   });
 
-  it("AlignEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.12)", async () => {
+  it("AlignEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W12");
   });
 
-  it("CORSSettingsEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.14)", async () => {
+  it("CORSSettingsEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W14");
   });
 
-  it("DIR: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.17)", async () => {
+  it("DIR: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W17");
   });
 
-  it("KindValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.19)", async () => {
+  it("KindValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W19");
   });
 
-  it("ParamTypeEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.24)", async () => {
+  it("ParamTypeEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W24");
   });
 
-  it("PreLoadValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.25)", async () => {
+  it("PreLoadValueEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W25");
   });
 
-  it("SuppressTTSEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.34)", async () => {
+  it("SuppressTTSEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W34");
   });
 
-  it("TableCellScopeEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.35)", async () => {
+  it("TableCellScopeEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W35");
   });
 
-  it("ValignEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other (INFO §8.42)", async () => {
+  it("ValignEnum: has the terms of the schema, writes each in a document that the schema accepts, and the schema refuses any other", async () => {
     await checkVocabulary("W42");
   });
 

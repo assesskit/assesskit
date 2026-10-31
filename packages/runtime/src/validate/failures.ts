@@ -6,6 +6,7 @@ import { AssesskitError, type Issue, ReadError } from "../errors.js";
  *
  * @param error - What was thrown.
  * @param path - The path of the document that holds the reference.
+ * @returns The issues of the error.
  * @throws The error itself when it is not one of the runtime's, which is a defect and not a finding.
  */
 export function failureIssues(error: unknown, path: string | undefined): readonly Issue[] {

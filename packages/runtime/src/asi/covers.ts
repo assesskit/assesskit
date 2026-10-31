@@ -1,13 +1,13 @@
 import { checkArray, checkRecord, checkString, describe, isRecord } from "../checks.js";
 import { DataError } from "../errors.js";
 import { isIdentifier } from "../values/index.js";
-import { xmlTokens } from "../values/xml-tokens.js";
+import { xmlTokens } from "../values/internal.js";
 import type { XmlAttribute, XmlNode } from "../xml/index.js";
 import type { AssessmentTest, ElementModel, TestRubricBlock } from "./model.js";
 import { typeNamed } from "./type-index.js";
 import { writeElement } from "./write.js";
 
-/** The class token that marks a test-level rubric block as the covers of an outcome (the runtime convention, §4.16). */
+/** The class token that marks a test-level rubric block as the covers of an outcome (a convention of the runtime). */
 export const SCORE_COVERS_CLASS = "external-score-covers";
 /** The attributes of the convention: the outcome on the block, and the item reference and response on an `li`. */
 const OUTCOME_ATTRIBUTE = "data-outcome-identifier";
@@ -84,8 +84,8 @@ function entriesOf(block: TestRubricBlock): ScoreCoverEntry[] {
 }
 
 /**
- * Reads the rubric blocks of a test that carry the class token `external-score-covers` (the runtime convention, §4.16), as they
- * are written: a block without `data-outcome-identifier` and a list entry without `data-item-ref` or
+ * Reads the rubric blocks of a test that carry the class token `external-score-covers` (a convention of the runtime),
+ * as they are written: a block without `data-outcome-identifier` and a list entry without `data-item-ref` or
  * `data-response-identifier` are kept, with the attribute absent, so that a check can report them. Rubric blocks of test
  * parts and sections are not recognized.
  *
@@ -116,12 +116,13 @@ export function scoreCoverBlocks(test: AssessmentTest): readonly ScoreCoverBlock
 /**
  * Reads the covers of the externally scored outcomes of a test: the responses that each outcome rates. The covers are in
  * the test-level rubric blocks whose class has the token `external-score-covers` and that name an outcome in
- * `data-outcome-identifier`; they are not copied into the model (the runtime convention, §4.16). Rubric blocks of test parts
- * and sections are not recognized, and a list entry without `data-item-ref` or `data-response-identifier` is left out.
+ * `data-outcome-identifier`; they are not copied into the model (a convention of the runtime). Rubric blocks of test
+ * parts and sections are not recognized, and a list entry without `data-item-ref` or `data-response-identifier` is left out.
  *
  * @param test - The test.
  * @returns The covers by outcome identifier, in document order; a test without covers blocks gives an empty map.
  * @throws `DataError` when the test, its rubric blocks or their content are not objects and arrays of the model.
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, covers}
  */
 export function readScoreCovers(test: AssessmentTest): ReadonlyMap<string, readonly ScoreCover[]> {
   const covers = new Map<string, ScoreCover[]>();
@@ -167,15 +168,18 @@ function coverEntry(cover: unknown): Entry {
 }
 
 /**
- * Builds the rubric block that names the responses an externally scored outcome of a test covers (the runtime convention,
- * §4.16): `view="scorer"`, `use="scoring"`, the class token `external-score-covers` and `data-outcome-identifier`, with
+ * Builds the rubric block that names the responses an externally scored outcome of a test covers (a convention of the
+ * runtime): `view="scorer"`, `use="scoring"`, the class token `external-score-covers` and `data-outcome-identifier`, with
  * the notes and then a list of the covers as content. Put it in `rubricBlocks` of the test, where
  * {@link readScoreCovers} finds it again. A label is written with its white space normalized.
  *
  * @param outcomeIdentifier - The identifier of the outcome.
  * @param covers - The responses the outcome covers.
- * @param notes - Content for the scorers before the list, such as instructions. Default: none.
+ * @param notes - Content for the scorers before the list, such as instructions.
+ * @returns The rubric block.
  * @throws `DataError` when an identifier is not an identifier, a label is not a string, or an argument has the wrong type.
+ * @defaultValue `[]`
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, covers}
  */
 export function scoreCoversBlock(
   outcomeIdentifier: string,

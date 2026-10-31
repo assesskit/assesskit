@@ -10,7 +10,7 @@ import {
   readPackage,
   writePackage,
 } from "../package/index.js";
-import { resolveZipLimits } from "../package/zip-limits.js";
+import { resolveZipLimits } from "../package/internal.js";
 import { openDirectory } from "./directory-files.js";
 
 function reasonOf(error: unknown): string {
@@ -27,6 +27,7 @@ function reasonOf(error: unknown): string {
  *
  * @param path - The ZIP file or directory.
  * @param options - See {@link ReadPackageOptions}.
+ * @returns The package.
  * @throws `DataError` when an argument has the wrong type, a limit is not a positive integer, or the path cannot be read.
  * @throws `ReadError` and `SecurityError` as {@link readPackage} does, and `SecurityError` for the directory rules above.
  */
@@ -57,6 +58,9 @@ export async function readPackageFile(path: string, options: ReadPackageOptions 
 /**
  * Writes a package as a ZIP file, as {@link writePackage} builds it. An existing file at the path is replaced.
  *
+ * @param path - The path of the ZIP file to write.
+ * @param manifest - The manifest, written as in `writePackage`.
+ * @param files - The other files by path.
  * @throws `DataError` as {@link writePackage} does, and when the file cannot be written.
  */
 export async function writePackageFile(

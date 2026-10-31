@@ -24,7 +24,12 @@ export type VariableType =
 
 /**
  * Returns the type of a variable from its cardinality and base type, or `undefined` when the base type is missing:
- * only a record may leave it out (RR §2.4.3).
+ * only a record may leave it out.
+ *
+ * @param cardinality - The cardinality of the variable.
+ * @param baseType - The base type of the variable, when it has one.
+ * @returns The type, or `undefined` when a variable that is not a record has no base type.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting, variable declarations}
  */
 export function variableType(cardinality: Cardinality, baseType: BaseType | undefined): VariableType | undefined {
   if (cardinality === "record") return baseType === undefined ? { cardinality } : { cardinality, baseType };
@@ -45,8 +50,10 @@ interface ValueItem {
 const toIdentifier = (text: string): string => parsePrimitive(text, "identifier");
 
 /**
- * Reads the text of a value. A duration is a number of seconds (INFO §8.13); a text that starts with `P` is read as the
- * ISO 8601 duration that 1EdTech's own example of a result writes, as long as it has no years or months (G14).
+ * Reads the text of a value. A duration is a number of seconds; a text that starts with `P` is read as the ISO 8601
+ * duration that 1EdTech's own example of a result writes, as long as it has no years or months.
+ *
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps, ISO 8601 durations in results}
  */
 function readPrimitive(text: string, baseType: BaseType): Primitive {
   const token = text.trim();
@@ -94,11 +101,13 @@ function readField(item: ValueItem): readonly [string, SingleValue][] {
 }
 
 /**
- * Builds the value of a variable from its `value` elements, or NULL when there are none (RR §2.6.6).
+ * Builds the value of a variable from its `value` elements, or NULL when there are none.
  *
  * @param owner - The element of the variable, which reports the problems of the whole value.
  * @param elements - The `value` elements, in order.
  * @param type - The type of the variable.
+ * @returns The value, or `null`.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting, value}
  * @throws `ReadError` when a value is not of the type, a single variable has several values, or a record repeats a field.
  */
 export function readValue(owner: ElementReader, elements: readonly ElementReader[], type: VariableType): Value | null {
@@ -137,6 +146,7 @@ const describeType = ({
  * @param value - The value, or `null`.
  * @param type - The type the variable declares; the value must have it.
  * @param label - Names the variable in messages, such as `The candidate response of RESPONSE`.
+ * @returns The `value` elements; one for each value of a container and for each field of a record.
  * @throws `DataError` when `value` is not a value of the type.
  */
 export function valueElements(value: unknown, type: VariableType, label: string): XmlElement[] {

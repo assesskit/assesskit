@@ -3,7 +3,9 @@ import { SCHEMA_FILES, type SchemaFile } from "./schema-files.js";
 
 /**
  * The schema of each namespace a document can have at its root: the primary schema that validates every document of
- * the namespace (BPIG §1.1.5 for ASI, and the schema of the same name in each specification).
+ * the namespace.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, schemas}
  */
 export const PRIMARY_SCHEMAS: ReadonlyMap<string, string> = new Map([
   ["http://www.imsglobal.org/xsd/imsqtiasi_v3p0", "imsqti_asiv3p0p1_v1p0.xsd"],
@@ -23,7 +25,9 @@ const SCHEMAS_BY_FILE: ReadonlyMap<string, SchemaFile> = new Map(SCHEMA_FILES.ma
 
 /**
  * Returns the schema that the root element's own `xsi:schemaLocation` names for the root's namespace, when it is one of
- * the pinned schemas (XML Schema Part 1 §4.3.2). It selects the 3.0.0 schema or a single-document schema.
+ * the pinned schemas. It selects the 3.0.0 schema or a single-document schema.
+ *
+ * @see {@link https://www.w3.org/TR/xmlschema-1/ | XML Schema Part 1, schema-related markup in documents being validated}
  */
 function hintedSchema(root: XmlElement): SchemaFile | undefined {
   const hint = root.attributes.find(({ namespace, name }) => namespace === XSI_NAMESPACE && name === "schemaLocation");
@@ -37,6 +41,9 @@ function hintedSchema(root: XmlElement): SchemaFile | undefined {
 /**
  * Returns the schema a document validates against: the pinned schema its `xsi:schemaLocation` names for the namespace
  * of its root, otherwise the primary schema of that namespace; `undefined` when the runtime has none.
+ *
+ * @param root - The root element of the document.
+ * @returns The schema file, or `undefined` when the namespace of the root has none.
  */
 export function selectSchema(root: XmlElement): SchemaFile | undefined {
   const primary = PRIMARY_SCHEMAS.get(root.namespace);

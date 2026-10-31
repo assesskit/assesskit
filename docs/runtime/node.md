@@ -1,9 +1,25 @@
-# node
+# Node
 
-`@assesskit/runtime/node` is for Node.js 22 and later. It validates XML documents against the official XSD schemas of
-QTI 3.0 and the specifications it references, and reads and writes QTI content packages as files. The schemas are 1EdTech and
-W3C files that the runtime does not ship (they are copyrighted); the module pins them by SHA-256 and compiles them with libxml2 in
-WebAssembly.
+`node` is for Node.js 22 and later. It validates XML documents against the official XSD schemas of QTI 3.0 and the
+specifications it references, and reads and writes QTI content packages as files. The schemas are 1EdTech and W3C files that
+the runtime does not ship (they are copyrighted); the module pins them by SHA-256 and compiles them with libxml2 in WebAssembly.
+
+```mermaid
+flowchart LR
+  directory["Schema directory<br/>pinned by SHA-256"]
+  set["SchemaSet<br/>compiled on first use"]
+  documents["XmlFile[]<br/>path and content"]
+  parse["parseXml<br/>limits, no DOCTYPE"]
+  select["Schema of the root<br/>xsi:schemaLocation,<br/>then the namespace"]
+  issues["Issue[]"]
+  directory -- "loadSchemaSet" --> set
+  documents -- "validateXmlFiles" --> parse
+  parse --> select
+  set --> select
+  select -- "libxml2" --> issues
+  zip["ZIP file or<br/>package directory"] -- "readPackageFile" --> pkg["QtiPackage"]
+  pkg -- "writePackageFile" --> zip
+```
 
 | Export                                    | Purpose                                                                                  |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -22,19 +38,12 @@ import { readFile } from "node:fs/promises";
 import { loadSchemaSet, validateXmlFiles } from "@assesskit/runtime/node";
 
 const schemas = await loadSchemaSet("./schemas"); // the directory the schemas are in
-try {
-  const content = await readFile("items/capital.xml");
-  const issues = await validateXmlFiles(schemas, [{ path: "items/capital.xml", content }]);
-  issues;
-  // [{
-  //   severity: "error",
-  //   code: "assesskit/node/xsd-invalid",
-  //   message: "Element '{http://www.imsglobal.org/xsd/imsqtiasi_v3p0}qti-assessment-item': The attribute 'time-dependent' is required but missing.",
-  //   location: { path: "items/capital.xml", line: 1 }
-  // }]
-} finally {
-  schemas.close();
-}
+const content = await readFile("items/capital.xml");
+const issues = await validateXmlFiles(schemas, [{ path: "items/capital.xml", content }]);
+issues.map((issue) => issue.code); // => ["assesskit/node/xsd-invalid"]
+issues[0]?.message.includes("The attribute 'time-dependent' is required but missing."); // => true
+issues[0]?.location; // => { path: "items/capital.xml", line: 1 }
+schemas.close(); // frees the compiled schemas
 ```
 
 ## Package files
@@ -47,7 +56,7 @@ try {
 | A file      | The bytes go to `readPackage`. A file larger than `maxTotalBytes` is a `SecurityError` before it is read.                 |
 | A directory | The directory is listed once; each file is read when `file(path)` asks for it. `paths` are sorted, with `/` as separator. |
 
-A directory is read with these rules (§2.6):
+A directory is read with these rules:
 
 - Listing checks every entry with `lstat`. A symbolic link anywhere below the directory is a `SecurityError` with `limit` `"symlink"`,
   also a link to a file inside the directory; a socket, device or pipe has `limit` `"special-file"`; a name that is not allowed in a
@@ -70,7 +79,7 @@ into `.cache/schemas` (the files are about 140 MB); `pnpm schemas:pin` writes ne
 that is missing, unreadable or has another hash. The files read during a compilation are checked again, so a file changed
 after loading is never compiled.
 
-`SCHEMA_FILES` holds, with the 3.0.1 and 3.0.0 versions of the ASI schemas (BPIG §1.1.5):
+`SCHEMA_FILES` holds, with the 3.0.1 and 3.0.0 versions of the ASI schemas:
 
 | Schemas                                                                                                             | Files |
 | ------------------------------------------------------------------------------------------------------------------- | ----- |
@@ -104,13 +113,13 @@ after loading is never compiled.
 
 `validateXmlFiles` does not throw for a bad document. It returns issues, in the order of the files:
 
-| Code                                                                               | When                                                                                        | `source`                                             |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `assesskit/xml/not-well-formed`, `assesskit/xml/version`, `assesskit/xml/encoding` | `parseXml` rejects the document (the issues of its `ReadError`).                            | as in [xml](xml.md#errors)                           |
-| `assesskit/xml/security`                                                           | `parseXml` throws a `SecurityError`: a DOCTYPE, or a limit exceeded.                        | `BPIG §6.7` for a DOCTYPE, `SECURITY.md` for a limit |
-| `assesskit/node/no-schema`                                                         | The root is in a namespace with no schema in the table above.                               | `SCHEMA_FILES`                                       |
-| `assesskit/node/xsd-invalid`                                                       | The schema rejects the document. One issue per message of libxml2.                          | The schema file that reported it                     |
-| `assesskit/node/xml-rejected`                                                      | libxml2 cannot parse a document that the runtime parsed (for example an encoding it lacks). | The schema file                                      |
+| Code                                                                               | When                                                                                        | `source`                                                          |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `assesskit/xml/not-well-formed`, `assesskit/xml/version`, `assesskit/xml/encoding` | `parseXml` rejects the document (the issues of its `ReadError`).                            | as in [xml](xml.md#errors)                                        |
+| `assesskit/xml/security`                                                           | `parseXml` throws a `SecurityError`: a DOCTYPE, or a limit exceeded.                        | The best practices guide for a DOCTYPE, `SECURITY.md` for a limit |
+| `assesskit/node/no-schema`                                                         | The root is in a namespace with no schema in the table above.                               | `SCHEMA_FILES`                                                    |
+| `assesskit/node/xsd-invalid`                                                       | The schema rejects the document. One issue per message of libxml2.                          | The schema file that reported it                                  |
+| `assesskit/node/xml-rejected`                                                      | libxml2 cannot parse a document that the runtime parsed (for example an encoding it lacks). | The schema file                                                   |
 
 A document goes through `parseXml` first, with the default limits, so a DOCTYPE, a document over a limit and one that is not
 well-formed never reach libxml2. libxml2 also runs with network access and external entities off. It throws `DataError` for
@@ -160,3 +169,34 @@ is process-wide. Both are covered by the tests, which compile each primary schem
 | `usageData/example.xml`                                                                                                                 | valid under the usage data schema                                   |
 | `packaging/simple/imsmanifest.xml`                                                                                                      | valid under the content package schema                              |
 | An item with `xi:include` and `xi:fallback`                                                                                             | valid; an include with `parse="binary"` is rejected                 |
+
+## Not included
+
+| Not included                                                 | Why                                                                                                                  |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| The schemas themselves                                       | They are copyrighted files of 1EdTech and W3C; the module pins and verifies them, and a script fetches them          |
+| Writing unpacked package directories                         | `writePackageFile` writes ZIP files, which is the form that packages are exchanged in                                |
+| Protection against a directory that changes while it is read | A race between the check and the read needs the host to keep the directory private                                   |
+| Validation in a browser                                      | The compiled libxml2 and the schema files are Node.js concerns; the runtime core validates the model with `validate` |
+| Business rules                                               | XSD checks structure; [validate](validate.md) checks what the schemas cannot express                                 |
+
+## Files
+
+Each file of `src/node/` holds one concept.
+
+| File                                    | Concept                                                              |
+| --------------------------------------- | -------------------------------------------------------------------- |
+| `schema-files.ts`, `schema-files.json`  | The pinned list of schemas                                           |
+| `schema-set.ts`                         | Loading, verifying and compiling a set of schemas                    |
+| `select-schema.ts`                      | Choosing the schema of a document                                    |
+| `validate-xml-files.ts`                 | Validating documents and reporting issues                            |
+| `package-file.ts`, `directory-files.ts` | Reading and writing packages as files and directories                |
+| `internal.ts`                           | What other modules and the tests use and the package does not export |
+
+## References
+
+| Topic                          | Specification                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| The schemas and their versions | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) |
+| `xsi:schemaLocation`           | [XML Schema Part 1, structures](https://www.w3.org/TR/xmlschema-1/)                              |
+| Packages as files              | [package](package.md)                                                                            |

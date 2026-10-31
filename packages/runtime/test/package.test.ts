@@ -34,6 +34,7 @@ import {
 import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 import { buildZip, bytes, concat, type RawEntry } from "./zip-builder.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures/zip");
@@ -99,7 +100,7 @@ const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
 const item = (identifier: string, body = ""): string =>
   `<qti-assessment-item xmlns="${ASI}" xmlns:xi="http://www.w3.org/2001/XInclude" identifier="${identifier}" title="${identifier}" adaptive="false" time-dependent="false">${body}</qti-assessment-item>`;
 
-describe("dependencyClosure", () => {
+describe("dependency closure", () => {
   const manifest = readManifest(
     manifestXml(
       resources(
@@ -173,7 +174,7 @@ const LTI_ROOT =
 const lti = (inner: string, root = LTI_ROOT): string =>
   `<cartridge_basiclti_link ${root}>${inner}</cartridge_basiclti_link>`;
 
-describe("readLtiLink", () => {
+describe("reading LTI links", () => {
   it("reads the title, description, launch URLs, custom properties, extensions and vendor of a link", () => {
     const link = readLtiLink(
       lti(`
@@ -266,7 +267,315 @@ describe("readLtiLink", () => {
   });
 });
 
-describe("readManifest", () => {
+/** Files in memory for `openPackage`, which count how often a file is read. */
+function memoryFiles(files: Readonly<Record<string, string>>): PackageFiles & { reads: string[] } {
+  const reads: string[] = [];
+  return {
+    reads,
+    paths: Object.keys(files),
+    read: (path) => {
+      reads.push(path);
+      const text = files[path];
+      return text === undefined ? undefined : bytes(text);
+    },
+  };
+}
+
+describe("opening a package", () => {
+  const manifest = manifestXml(resources(resourceXml("a", "imsqti_item_xmlv3p0", "items/a.xml")));
+
+  it("reads only the manifest when it opens, and each document once when it is asked for", () => {
+    const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
+    const pkg = openPackage(files);
+    expect(files.reads).toEqual(["imsmanifest.xml"]);
+    expect(pkg.paths).toEqual(["imsmanifest.xml", "items/a.xml"]);
+    expect(pkg.document("items/a.xml")).toMatchObject({ kind: "item", item: { identifier: "a" } });
+    expect(pkg.document("items/a.xml")).toBe(pkg.document("items/a.xml"));
+    expect(files.reads).toEqual(["imsmanifest.xml", "items/a.xml"]);
+  });
+
+  it("returns the bytes of a file, and undefined for a path the package does not list", () => {
+    const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "a.txt": "hello" }));
+    expect(pkg.file("a.txt")).toEqual(bytes("hello"));
+    expect(pkg.file("b.txt")).toBeUndefined();
+    expect(pkg.file("../a.txt")).toBeUndefined();
+  });
+
+  it("resolves an xi:include against the including document, inside the package", () => {
+    const pkg = openPackage(
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": item("a", '<xi:include href="fragments/f.xml"/>'),
+        "items/fragments/f.xml": `<qti-item-body xmlns="${ASI}"/>`,
+      }),
+    );
+    expect(pkg.document("items/a.xml").kind).toBe("item");
+  });
+
+  it("rejects an xi:include that names a file outside the package, even with a fallback", () => {
+    const files = (href: string): PackageFiles =>
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": item("a", `<xi:include href="${href}"><xi:fallback><qti-item-body/></xi:fallback></xi:include>`),
+      });
+    for (const href of ["../../x.xml", "http://example.com/x.xml", "/etc/passwd", "..\\x.xml"]) {
+      expect(
+        securityLimit(() => openPackage(files(href)).document("items/a.xml")),
+        href,
+      ).toBe("path");
+    }
+  });
+
+  it("uses the fallback of an xi:include whose target is missing, and fails without one", () => {
+    const pkg = openPackage(
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": item(
+          "a",
+          '<xi:include href="missing.xml"><xi:fallback><qti-item-body/></xi:fallback></xi:include>',
+        ),
+        "items/b.xml": item("b", '<xi:include href="missing.xml"/>'),
+      }),
+    );
+    expect(pkg.document("items/a.xml").kind).toBe("item");
+    expect(issueCode(() => pkg.document("items/b.xml"))).toBe("assesskit/xml/xinclude-resource");
+  });
+
+  it("rejects an xi:include with an xpointer and a loop of includes", () => {
+    const pkg = openPackage(
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": item("a", '<xi:include href="b.xml" xpointer="x"/>'),
+        "items/c.xml": item("c", '<xi:include href="d.xml"/>'),
+        "items/d.xml": `<x xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="d.xml"/></x>`,
+      }),
+    );
+    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/xml/xinclude-attribute");
+    expect(issueCode(() => pkg.document("items/c.xml"))).toBe("assesskit/xml/xinclude-cycle");
+  });
+
+  it("reads and parses a file once for a document, however many includes name it", () => {
+    const includes = (href: string): string => `<xi:include href="${href}"/>`.repeat(2_000);
+    const files = memoryFiles({
+      "imsmanifest.xml": manifest,
+      "items/a.xml": item("a", `<qti-item-body>${includes("p.xml")}</qti-item-body>`),
+      "items/p.xml": `<p xmlns="${ASI}">x</p>`,
+    });
+    const body = openPackage(files).document("items/a.xml");
+    expect(body.kind === "item" && body.item.body?.children).toHaveLength(2_000);
+    expect(files.reads.filter((path) => path === "items/p.xml")).toHaveLength(1);
+  });
+
+  it("reads a file that fails once for a document, however many includes with a fallback name it", () => {
+    const failing = memoryFiles({
+      "imsmanifest.xml": manifest,
+      "items/a.xml": item(
+        "a",
+        `<qti-item-body>${'<xi:include href="bad.xml"><xi:fallback><p>x</p></xi:fallback></xi:include>'.repeat(500)}</qti-item-body>`,
+      ),
+      "items/bad.xml": "<p>",
+    });
+    const document = openPackage(failing).document("items/a.xml");
+    expect(document.kind === "item" && document.item.body?.children).toHaveLength(500);
+    expect(failing.reads.filter((path) => path === "items/bad.xml")).toHaveLength(1);
+  });
+
+  it("never lets a fallback hide a DOCTYPE in the document, in an included file or in the manifest", () => {
+    const doctype = '<!DOCTYPE a [<!ENTITY x "y">]>';
+    const pkg = openPackage(
+      memoryFiles({
+        "imsmanifest.xml": manifest,
+        "items/a.xml": `${doctype}${item("a")}`,
+        "items/b.xml": item("b", '<xi:include href="f.xml"><xi:fallback><qti-item-body/></xi:fallback></xi:include>'),
+        "items/f.xml": `${doctype}<qti-item-body xmlns="${ASI}"/>`,
+      }),
+    );
+    expect(securityLimit(() => pkg.document("items/a.xml"))).toBe("doctype");
+    expect(securityLimit(() => pkg.document("items/b.xml"))).toBe("doctype");
+    expect(securityLimit(() => openPackage(memoryFiles({ "imsmanifest.xml": `${doctype}${manifest}` })))).toBe(
+      "doctype",
+    );
+  });
+
+  it("applies the xml limits to the manifest and the documents", () => {
+    const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
+    expect(securityLimit(() => openPackage(files, { xmlLimits: { maxNodes: 5 } }))).toBe("maxNodes");
+    const pkg = openPackage(files, { xmlLimits: { maxNodes: 100 } });
+    expect(pkg.manifest.identifier).toBe("m");
+    expect(securityLimit(() => openPackage(files, { xmlLimits: { maxBytes: 100 } }))).toBe("maxBytes");
+  });
+
+  it("rejects a package without a manifest, and a document that is missing or is not an ASI document", () => {
+    expect(issueCode(() => openPackage(memoryFiles({ "a.txt": "x" })))).toBe("assesskit/package/no-manifest");
+    const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": "<x/>" }));
+    expect(issueCode(() => pkg.document("items/missing.xml"))).toBe("assesskit/package/missing-file");
+    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/asi/document-element");
+  });
+
+  it("throws a DataError for files that are not normalized or not unique, and for arguments of another type", () => {
+    const valid = { "imsmanifest.xml": manifest };
+    const base = memoryFiles(valid);
+    for (const paths of [
+      ["imsmanifest.xml", "a/../b"],
+      ["imsmanifest.xml", "/b"],
+      ["imsmanifest.xml", "imsmanifest.xml"],
+      ["imsmanifest.xml", "a\\b"],
+      ["imsmanifest.xml", 3],
+    ]) {
+      expect(() => openPackage({ ...base, paths: JSON.parse(JSON.stringify(paths)) }), JSON.stringify(paths)).toThrow(
+        DataError,
+      );
+    }
+    for (const files of ["null", '"x"', '{"paths":"x","read":null}', '{"paths":[]}'])
+      expect(() => openPackage(JSON.parse(files)), files).toThrow(DataError);
+    expect(() => openPackage(base, JSON.parse("null"))).toThrow(DataError);
+    expect(() => openPackage(base, JSON.parse('{"xmlLimits":null}'))).toThrow(DataError);
+    const pkg = openPackage(base);
+    expect(() => pkg.file(JSON.parse("3"))).toThrow(DataError);
+    expect(() => pkg.document(JSON.parse("null"))).toThrow(DataError);
+  });
+});
+
+function readManifestVariant(): unknown {
+  return variantTo("a", "v").drd;
+}
+
+function variantTo(
+  target: string,
+  identifier: string,
+): { identifier: string; identifierref: string; drd: Resource["variants"][number]["drd"] } {
+  const manifest = readManifest(
+    manifestXml(
+      resources(
+        resourceXml(
+          "a",
+          "webcontent",
+          "a",
+          `<cpx:variant identifier="${identifier}" identifierref="a"><cpx:metadata><drd:accessForAllResource/></cpx:metadata></cpx:variant>`,
+        ),
+      ),
+    ),
+  );
+  const variant = manifest.resources[0]?.variants[0];
+  if (variant === undefined) throw new Error("No variant.");
+  return { ...variant, identifierref: target };
+}
+
+describe("resolving references", () => {
+  const pkg = packageOf(manifestXml(resources(resourceXml("a", "webcontent", "a.txt"))), { "a.txt": "a" });
+  const resolve = (base: string, href: string): string | undefined => pkg.resolve(base, href);
+
+  // RFC 3986 resolves references against the base http://a/b/c/d;p?q; on package paths the base is b/c/d;p, and a
+  // result above the root of the package is outside it (RFC 3986 would clamp it at the root).
+  it("resolves the normal examples of RFC 3986 against the referencing file", () => {
+    const examples: readonly (readonly [string, string])[] = [
+      ["g", "b/c/g"],
+      ["./g", "b/c/g"],
+      ["g/", "b/c/g/"],
+      ["../g", "b/g"],
+      ["..", "b/"],
+      ["../", "b/"],
+      ["../g", "b/g"],
+      ["../..", ""],
+      ["../../", ""],
+      ["../../g", "g"],
+      [";x", "b/c/;x"],
+      ["g;x", "b/c/g;x"],
+      ["", "b/c/d;p"],
+      [".", "b/c/"],
+      ["./", "b/c/"],
+      ["g?y", "b/c/g"],
+      ["g#s", "b/c/g"],
+      ["?y", "b/c/d;p"],
+      ["#s", "b/c/d;p"],
+      ["./g/.", "b/c/g/"],
+      ["g/./h", "b/c/g/h"],
+      ["g/../h", "b/c/h"],
+      ["g;x=1/./y", "b/c/g;x=1/y"],
+      ["g;x=1/../y", "b/c/y"],
+    ];
+    for (const [reference, expected] of examples) expect(resolve("b/c/d;p", reference), reference).toBe(expected);
+  });
+
+  it("resolves against the directory that an xml:base names, and from the root", () => {
+    expect(resolve("items/", "a.xml")).toBe("items/a.xml");
+    expect(resolve("items/sub/", "../b.xml")).toBe("items/b.xml");
+    expect(resolve("", "a/b.xml")).toBe("a/b.xml");
+    expect(resolve("imsmanifest.xml", "items/a.xml")).toBe("items/a.xml");
+    expect(resolve("items/a.xml", "../media/x.png")).toBe("media/x.png");
+  });
+
+  it("decodes percent-encoded octets and keeps other characters", () => {
+    expect(resolve("", "my%20file.png")).toBe("my file.png");
+    expect(resolve("", "%C3%BCn%C3%AF.txt")).toBe("ünï.txt");
+    expect(resolve("", "ünï/a b.txt")).toBe("ünï/a b.txt");
+    expect(resolve("", "%41.xml")).toBe("A.xml");
+  });
+
+  it("reports a reference outside the package as undefined", () => {
+    const outside = [
+      "../x.xml",
+      "a/../../x.xml",
+      "/abs.xml",
+      "//host/x.xml",
+      "http://example.com/x.xml",
+      "https://example.com/x.xml",
+      "file:///etc/passwd",
+      "data:text/plain,hi",
+      "mailto:a@b.c",
+      "C:/x.xml",
+      "C:\\x.xml",
+      "a\\b.xml",
+      "a/b\\..\\..\\c.xml",
+      "a\u0000b.xml",
+      "a\u001fb.xml",
+      "a\u007fb.xml",
+      "%2e%2e/x.xml",
+      "%2E%2E%2Fx.xml",
+      "a%2Fb.xml",
+      "a%5Cb.xml",
+      "%00",
+      "%zz",
+      "%4",
+      "%ff",
+      "%C3",
+    ];
+    for (const href of outside) expect(resolve("", href), JSON.stringify(href)).toBeUndefined();
+    expect(resolve("items/", "../../x.xml")).toBeUndefined();
+    expect(resolve("items/a.xml", "../../x.xml")).toBeUndefined();
+  });
+
+  it("resolves a reference that contains a colon in a segment after a slash as a path", () => {
+    expect(resolve("", "items/a:b.xml")).toBe("items/a:b.xml");
+  });
+
+  it("throws a DataError when an argument is not a string", () => {
+    expect(() => pkg.resolve(JSON.parse("null"), "a")).toThrow(DataError);
+    expect(() => pkg.resolve("", JSON.parse("3"))).toThrow(DataError);
+  });
+
+  it("gives a normalized path that stays inside the package, for any base and reference", () => {
+    const paths = (segments: readonly string[]): fc.Arbitrary<string> =>
+      fc.array(fc.constantFrom(...segments), { maxLength: 5 }).map((chosen) => chosen.join("/"));
+    fc.assert(
+      fc.property(
+        paths(["a", "b", "..", ".", "", "c d", "é"]),
+        paths(["a", "..", ".", "", "c d", "%2e%2e", "%C3%A9"]),
+        (base, reference) => {
+          const resolved = resolve(base, reference);
+          if (resolved === undefined) return;
+          const segments = resolved.split("/").filter((part) => part !== "");
+          expect(segments.some((part) => part === ".." || part === ".")).toBe(false);
+          expect(resolved.startsWith("/")).toBe(false);
+          expect(resolve("", resolved)).toBe(resolved);
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
+});
+
+describe("reading manifests", () => {
   const minimal = manifestXml(resources(resourceXml("a", "webcontent", "a.txt")));
 
   it("reads the identifier, the xml:base attributes and a resource", () => {
@@ -387,7 +696,7 @@ describe("readManifest", () => {
     }
   });
 
-  it("reads the type imslti_xmlv1p1 of BIND §8.8, which the 1EdTech examples use, as imsbasiclti_xmlv1p3", () => {
+  it("reads the type imslti_xmlv1p1, which the 1EdTech examples use, as imsbasiclti_xmlv1p3", () => {
     const manifest = readManifest(manifestXml(resources(resourceXml("a", "imslti_xmlv1p1", "links/a.xml"))));
     expect(manifest.resources[0]?.type).toBe("imsbasiclti_xmlv1p3");
   });
@@ -598,7 +907,196 @@ describe("readManifest", () => {
   });
 });
 
-describe("writeManifest", () => {
+describe("resolvers of a package", () => {
+  const drd = (inner: string): string =>
+    `<cpx:metadata><drd:accessForAllResource>${inner}</drd:accessForAllResource></cpx:metadata>`;
+  const link = (identifier: string, to: string, inner: string): string =>
+    `<cpx:variant identifier="${identifier}" identifierref="${to}">${drd(inner)}</cpx:variant>`;
+  const manifest = manifestXml(
+    resources(
+      resourceXml(
+        "core",
+        "imsqti_item_xmlv3p0",
+        "items/core.xml",
+        `${link("v1", "plain", "<drd:hazard>flashing</drd:hazard><drd:hazard>ext:x</drd:hazard>")}${link("v2", "tool", "<drd:languageOfAdaptation>id</drd:languageOfAdaptation>")}`,
+      ),
+      resourceXml(
+        "plain",
+        "imsqti_item_xmlv3p0",
+        "items/plain.xml",
+        link("v3", "plain2", "<drd:hazard>sound</drd:hazard>"),
+      ),
+      resourceXml(
+        "plain2",
+        "imsqti_item_xmlv3p0",
+        "items/plain2.xml",
+        link("v4", "plain", "<drd:hazard>sound</drd:hazard><drd:hazard>flashing</drd:hazard>"),
+      ),
+      resourceXml("tool", "imslti_xmlv1p1", "links/tool.xml"),
+      resourceXml("passage", "imsqti_stimulus_xmlv3p0", "passages/s.xml"),
+      resourceXml("sec", "imsqti_section_xmlv3p0", "sections/s.xml"),
+      resourceXml("test", "imsqti_test_xmlv3p0", "tests/t.xml"),
+      resourceXml("img", "webcontent", "media/x.png"),
+      '<resource identifier="headless" type="imsqti_item_xmlv3p0"><file href="items/headless.xml"/></resource>',
+      resourceXml("outside", "imsqti_item_xmlv3p0", "../out.xml"),
+    ),
+  );
+  const toolLink = lti("<blti:title>Tool</blti:title><blti:launch_url>https://tool.example/launch</blti:launch_url>");
+  const pkg = packageOf(manifest, {
+    "items/core.xml": item("core"),
+    "items/plain.xml": item("plain"),
+    "items/plain2.xml": item("plain2"),
+    "links/tool.xml": toolLink,
+    "passages/s.xml": `<qti-assessment-stimulus xmlns="${ASI}" identifier="passage" title="s"><qti-stimulus-body/></qti-assessment-stimulus>`,
+    "sections/s.xml": `<qti-assessment-section xmlns="${ASI}" identifier="sec" title="s" visible="true"/>`,
+    "tests/t.xml": `<qti-assessment-test xmlns="${ASI}" identifier="test" title="t"/>`,
+    "media/x.png": "png",
+    "items/headless.xml": item("headless"),
+  });
+  const resolvers = packageResolvers(pkg);
+
+  it("resolves an item reference to the item, its variants and the DRD of the links to them", () => {
+    const resolved = resolvers.items("../items/core.xml", "tests/t.xml");
+    expect(resolved.resource).toBe("core");
+    expect(resolved.deliverable).toMatchObject({ kind: "qti", item: { identifier: "core" } });
+    expect(resolved.hazards).toEqual([]);
+    expect(resolved.variants.map(({ resource }) => resource)).toEqual(["plain", "tool"]);
+    expect(resolved.variants[0]).toMatchObject({
+      deliverable: { kind: "qti", item: { identifier: "plain" } },
+      drd: { hazard: ["flashing", "ext:x"] },
+    });
+    expect(resolved.variants[1]).toMatchObject({
+      deliverable: {
+        kind: "lti",
+        identifier: "tool",
+        link: { title: "Tool", launchUrl: "https://tool.example/launch" },
+      },
+      drd: { languageOfAdaptation: ["id"] },
+    });
+  });
+
+  it("gives an item the hazards of the DRD of the variant links that point at it, once each and without extension terms", () => {
+    expect(resolvers.items("items/plain.xml", "").hazards).toEqual(["flashing", "sound"]);
+    expect(resolvers.items("items/plain2.xml", "").hazards).toEqual(["sound"]);
+    expect(resolvers.items("items/plain2.xml", "").variants.map(({ resource }) => resource)).toEqual(["plain"]);
+  });
+
+  it("resolves an item reference to an LTI link as an LTI deliverable", () => {
+    const resolved = resolvers.items("../links/tool.xml", "tests/t.xml");
+    expect(resolved).toMatchObject({ resource: "tool", deliverable: { kind: "lti", identifier: "tool" } });
+  });
+
+  it("resolves a stimulus reference to the stimulus and a section reference to the section", () => {
+    expect(resolvers.stimuli("../passages/s.xml", "items/core.xml")).toMatchObject({ identifier: "passage" });
+    expect(resolvers.sections("../sections/s.xml", "tests/t.xml")).toMatchObject({ identifier: "sec" });
+  });
+
+  it("reports a reference outside the package, to no item resource, to a missing file or to a document of another kind", () => {
+    expect(issueCode(() => resolvers.items("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
+    expect(issueCode(() => resolvers.items("http://example.com/x.xml", "tests/t.xml"))).toBe(
+      "assesskit/package/outside-package",
+    );
+    expect(issueCode(() => resolvers.items("items/other.xml", "tests/t.xml"))).toBe(
+      "assesskit/package/unknown-resource",
+    );
+    expect(issueCode(() => resolvers.items("media/x.png", ""))).toBe("assesskit/package/unknown-resource");
+    expect(issueCode(() => resolvers.items("sections/s.xml", ""))).toBe("assesskit/package/unknown-resource");
+    expect(issueCode(() => resolvers.sections("../missing.xml", "tests/t.xml"))).toBe("assesskit/package/missing-file");
+    expect(issueCode(() => resolvers.sections("../passages/s.xml", "tests/t.xml"))).toBe(
+      "assesskit/package/document-kind",
+    );
+    expect(issueCode(() => resolvers.stimuli("../sections/s.xml", "tests/t.xml"))).toBe(
+      "assesskit/package/document-kind",
+    );
+    expect(issueCode(() => resolvers.stimuli("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
+  });
+
+  it("reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
+    const variant = `<cpx:variant identifier="v" identifierref="headless">${drd("")}</cpx:variant>`;
+    const linked = packageResolvers(
+      packageOf(
+        manifestXml(
+          resources(
+            resourceXml("i", "imsqti_item_xmlv3p0", "i.xml", variant),
+            '<resource identifier="headless" type="imsqti_item_xmlv3p0"><file href="n.xml"/><file href="m.xml"/></resource>',
+          ),
+        ),
+        { "i.xml": item("i") },
+      ),
+    );
+    expect(issueCode(() => linked.items("i.xml", ""))).toBe("assesskit/package/resource-href");
+    const kind = packageResolvers(
+      packageOf(manifestXml(resources(resourceXml("i", "imsqti_item_xmlv3p0", "i.xml"))), {
+        "i.xml": `<qti-assessment-test xmlns="${ASI}" identifier="t" title="t"/>`,
+      }),
+    );
+    expect(issueCode(() => kind.items("i.xml", ""))).toBe("assesskit/package/document-kind");
+    const missing = packageResolvers(
+      packageOf(manifestXml(resources(resourceXml("l", "imsbasiclti_xmlv1p3", "l.xml")))),
+    );
+    expect(issueCode(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
+  });
+
+  it("resolves the outcome declaration and response processing resources that items depend on through the closure", () => {
+    const linked = readManifest(
+      manifestXml(
+        resources(
+          resourceXml(
+            "i",
+            "imsqti_item_xmlv3p0",
+            "i.xml",
+            '<dependency identifierref="o"/><dependency identifierref="rp"/>',
+          ),
+          resourceXml("o", "imsqti_outcomes_xmlv3p0", "outcomes.xml"),
+          resourceXml("rp", "imsqti_rptemplate_xmlv3p0", "rp.xml"),
+        ),
+      ),
+    );
+    expect(dependencyClosure(linked, "i").map(({ identifier, type }) => [identifier, type])).toEqual([
+      ["i", "imsqti_item_xmlv3p0"],
+      ["o", "imsqti_outcomes_xmlv3p0"],
+      ["rp", "imsqti_rptemplate_xmlv3p0"],
+    ]);
+  });
+
+  it("throws a DataError for an argument of another type", () => {
+    for (const input of ["null", '"x"']) expect(() => packageResolvers(JSON.parse(input)), input).toThrow(DataError);
+  });
+});
+
+describe("paths of resources", () => {
+  const manifest = readManifest(
+    manifestXml(
+      `<resources xml:base="items/"><resource identifier="a" type="imsqti_item_xmlv3p0" href="a.xml" xml:base="sub/"><file href="a.xml"/><file href="../b.png"/></resource><resource identifier="b" type="webcontent" xml:base="/abs/"><file href="x"/></resource><resource identifier="c" type="webcontent"><file href="x"/></resource></resources>`,
+      { root: 'xml:base="pkg/"' },
+    ),
+  );
+  const [a, b, c] = manifest.resources;
+
+  it("resolves an href against the xml:base of the manifest, the resources and the resource, each against the one before", () => {
+    expect(resourcePath(manifest, a as Resource)).toBe("pkg/items/sub/a.xml");
+    expect(resourcePath(manifest, a as Resource, "../b.png")).toBe("pkg/items/b.png");
+    expect(resourcePath(manifest, c as Resource, "x")).toBe("pkg/items/x");
+  });
+
+  it("returns undefined for a resource without an href and for a base outside the package", () => {
+    expect(resourcePath(manifest, c as Resource)).toBeUndefined();
+    expect(resourcePath(manifest, b as Resource, "x")).toBeUndefined();
+  });
+
+  it("resolves against the root when no xml:base is given", () => {
+    const plain = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "x/a.png"))));
+    expect(resourcePath(plain, plain.resources[0] as Resource)).toBe("x/a.png");
+  });
+
+  it("throws a DataError for an argument of another type", () => {
+    expect(() => resourcePath(JSON.parse("null"), a as Resource)).toThrow(DataError);
+    expect(() => resourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
+    expect(() => resourcePath(manifest, a as Resource, JSON.parse("3"))).toThrow(DataError);
+  });
+});
+
+describe("writing manifests", () => {
   const manifest = readManifest(
     manifestXml(
       resources(
@@ -693,347 +1191,76 @@ describe("writeManifest", () => {
   });
 });
 
-function readManifestVariant(): unknown {
-  return variantTo("a", "v").drd;
-}
+describe("writing packages", () => {
+  const manifest: Manifest = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a.txt"))));
 
-function variantTo(
-  target: string,
-  identifier: string,
-): { identifier: string; identifierref: string; drd: Resource["variants"][number]["drd"] } {
-  const manifest = readManifest(
-    manifestXml(
-      resources(
-        resourceXml(
-          "a",
-          "webcontent",
-          "a",
-          `<cpx:variant identifier="${identifier}" identifierref="a"><cpx:metadata><drd:accessForAllResource/></cpx:metadata></cpx:variant>`,
-        ),
-      ),
-    ),
-  );
-  const variant = manifest.resources[0]?.variants[0];
-  if (variant === undefined) throw new Error("No variant.");
-  return { ...variant, identifierref: target };
-}
+  it("writes an archive that readPackage reads back: the manifest first, then the files in the order of the map", () => {
+    const files = new Map([
+      ["b.bin", new Uint8Array([1, 2, 3])],
+      ["a/ünï.txt", bytes("hello ".repeat(100))],
+      ["empty", new Uint8Array()],
+    ]);
+    const pkg = readPackage(writePackage(manifest, files));
+    expect(pkg.paths).toEqual(["imsmanifest.xml", "b.bin", "a/ünï.txt", "empty"]);
+    expect(pkg.file("b.bin")).toEqual(new Uint8Array([1, 2, 3]));
+    expect(pkg.file("a/ünï.txt")).toEqual(bytes("hello ".repeat(100)));
+    expect(pkg.file("empty")).toEqual(new Uint8Array());
+    expect(bare(pkg.manifest)).toEqual(bare(manifest));
+  });
 
-describe("QtiPackage.resolve", () => {
-  const pkg = packageOf(manifestXml(resources(resourceXml("a", "webcontent", "a.txt"))), { "a.txt": "a" });
-  const resolve = (base: string, href: string): string | undefined => pkg.resolve(base, href);
+  it("writes an archive that fflate's own reader reads, and the same bytes for the same input", () => {
+    const files = new Map([
+      ["a.txt", bytes("x".repeat(500))],
+      ["ünï/b.bin", new Uint8Array([9, 8, 7])],
+    ]);
+    const zip = writePackage(manifest, files);
+    expect(writePackage(manifest, files)).toEqual(zip);
+    const unzipped = unzipSync(zip);
+    expect(Object.keys(unzipped)).toEqual(["imsmanifest.xml", "a.txt", "ünï/b.bin"]);
+    expect(unzipped["a.txt"]).toEqual(bytes("x".repeat(500)));
+    expect(unzipped["ünï/b.bin"]).toEqual(new Uint8Array([9, 8, 7]));
+    expect(new TextDecoder().decode(unzipped["imsmanifest.xml"])).toBe(writeManifest(manifest));
+  });
 
-  // RFC 3986 §5.4.1 resolves references against the base http://a/b/c/d;p?q; on package paths the base is b/c/d;p, and a
-  // result above the root of the package is outside it (RFC 3986 would clamp it at the root).
-  it("resolves the normal examples of RFC 3986 §5.4.1 against the referencing file", () => {
-    const examples: readonly (readonly [string, string])[] = [
-      ["g", "b/c/g"],
-      ["./g", "b/c/g"],
-      ["g/", "b/c/g/"],
-      ["../g", "b/g"],
-      ["..", "b/"],
-      ["../", "b/"],
-      ["../g", "b/g"],
-      ["../..", ""],
-      ["../../", ""],
-      ["../../g", "g"],
-      [";x", "b/c/;x"],
-      ["g;x", "b/c/g;x"],
-      ["", "b/c/d;p"],
-      [".", "b/c/"],
-      ["./", "b/c/"],
-      ["g?y", "b/c/g"],
-      ["g#s", "b/c/g"],
-      ["?y", "b/c/d;p"],
-      ["#s", "b/c/d;p"],
-      ["./g/.", "b/c/g/"],
-      ["g/./h", "b/c/g/h"],
-      ["g/../h", "b/c/h"],
-      ["g;x=1/./y", "b/c/g;x=1/y"],
-      ["g;x=1/../y", "b/c/y"],
+  it("deflates an entry when that makes it smaller and stores it otherwise", () => {
+    const text = bytes("a".repeat(1000));
+    const zip = writePackage(
+      manifest,
+      new Map([
+        ["text", text],
+        ["tiny", bytes("a")],
+      ]),
+    );
+    expect(zip.length).toBeLessThan(2000);
+    const pkg = readPackage(zip);
+    expect(pkg.file("text")).toEqual(text);
+    expect(pkg.file("tiny")).toEqual(bytes("a"));
+  });
+
+  it("throws a DataError for a path that is not normalized, the manifest as a file, bytes of another type, and a manifest that is not valid", () => {
+    const bad: readonly [string, unknown][] = [
+      ["a path with ..", new Map([["../a", bytes("x")]])],
+      ["an absolute path", new Map([["/a", bytes("x")]])],
+      ["a path with a backslash", new Map([["a\\b", bytes("x")]])],
+      ["the manifest", new Map([["imsmanifest.xml", bytes("x")]])],
+      ["a path that is not normalized", new Map([["./a", bytes("x")]])],
+      ["bytes that are a string", new Map([["a", "x"]])],
+      ["files that are an object", { a: bytes("x") }],
+      ["files that are null", null],
     ];
-    for (const [reference, expected] of examples) expect(resolve("b/c/d;p", reference), reference).toBe(expected);
+    for (const [name, files] of bad)
+      expect(() => writePackage(manifest, files as ReadonlyMap<string, Uint8Array>), name).toThrow(DataError);
+    expect(() => writePackage(JSON.parse('{"identifier":"m"}'), new Map())).toThrow(DataError);
   });
 
-  it("resolves against the directory that an xml:base names, and from the root", () => {
-    expect(resolve("items/", "a.xml")).toBe("items/a.xml");
-    expect(resolve("items/sub/", "../b.xml")).toBe("items/b.xml");
-    expect(resolve("", "a/b.xml")).toBe("a/b.xml");
-    expect(resolve("imsmanifest.xml", "items/a.xml")).toBe("items/a.xml");
-    expect(resolve("items/a.xml", "../media/x.png")).toBe("media/x.png");
-  });
-
-  it("decodes percent-encoded octets and keeps other characters", () => {
-    expect(resolve("", "my%20file.png")).toBe("my file.png");
-    expect(resolve("", "%C3%BCn%C3%AF.txt")).toBe("ünï.txt");
-    expect(resolve("", "ünï/a b.txt")).toBe("ünï/a b.txt");
-    expect(resolve("", "%41.xml")).toBe("A.xml");
-  });
-
-  it("reports a reference outside the package as undefined", () => {
-    const outside = [
-      "../x.xml",
-      "a/../../x.xml",
-      "/abs.xml",
-      "//host/x.xml",
-      "http://example.com/x.xml",
-      "https://example.com/x.xml",
-      "file:///etc/passwd",
-      "data:text/plain,hi",
-      "mailto:a@b.c",
-      "C:/x.xml",
-      "C:\\x.xml",
-      "a\\b.xml",
-      "a/b\\..\\..\\c.xml",
-      "a\u0000b.xml",
-      "a\u001fb.xml",
-      "a\u007fb.xml",
-      "%2e%2e/x.xml",
-      "%2E%2E%2Fx.xml",
-      "a%2Fb.xml",
-      "a%5Cb.xml",
-      "%00",
-      "%zz",
-      "%4",
-      "%ff",
-      "%C3",
-    ];
-    for (const href of outside) expect(resolve("", href), JSON.stringify(href)).toBeUndefined();
-    expect(resolve("items/", "../../x.xml")).toBeUndefined();
-    expect(resolve("items/a.xml", "../../x.xml")).toBeUndefined();
-  });
-
-  it("resolves a reference that contains a colon in a segment after a slash as a path", () => {
-    expect(resolve("", "items/a:b.xml")).toBe("items/a:b.xml");
-  });
-
-  it("throws a DataError when an argument is not a string", () => {
-    expect(() => pkg.resolve(JSON.parse("null"), "a")).toThrow(DataError);
-    expect(() => pkg.resolve("", JSON.parse("3"))).toThrow(DataError);
-  });
-
-  it("gives a normalized path that stays inside the package, for any base and reference", () => {
-    const paths = (segments: readonly string[]): fc.Arbitrary<string> =>
-      fc.array(fc.constantFrom(...segments), { maxLength: 5 }).map((chosen) => chosen.join("/"));
-    fc.assert(
-      fc.property(
-        paths(["a", "b", "..", ".", "", "c d", "é"]),
-        paths(["a", "..", ".", "", "c d", "%2e%2e", "%C3%A9"]),
-        (base, reference) => {
-          const resolved = resolve(base, reference);
-          if (resolved === undefined) return;
-          const segments = resolved.split("/").filter((part) => part !== "");
-          expect(segments.some((part) => part === ".." || part === ".")).toBe(false);
-          expect(resolved.startsWith("/")).toBe(false);
-          expect(resolve("", resolved)).toBe(resolved);
-        },
-      ),
-      { numRuns: 500 },
-    );
+  it("throws a DataError when the archive would need ZIP64", () => {
+    const files = new Map<string, Uint8Array>();
+    for (let index = 0; index < 65_535; index++) files.set(`f${index}`, new Uint8Array());
+    expect(() => writePackage(manifest, files)).toThrow(/needs ZIP64/);
   });
 });
 
-describe("resourcePath", () => {
-  const manifest = readManifest(
-    manifestXml(
-      `<resources xml:base="items/"><resource identifier="a" type="imsqti_item_xmlv3p0" href="a.xml" xml:base="sub/"><file href="a.xml"/><file href="../b.png"/></resource><resource identifier="b" type="webcontent" xml:base="/abs/"><file href="x"/></resource><resource identifier="c" type="webcontent"><file href="x"/></resource></resources>`,
-      { root: 'xml:base="pkg/"' },
-    ),
-  );
-  const [a, b, c] = manifest.resources;
-
-  it("resolves an href against the xml:base of the manifest, the resources and the resource, each against the one before", () => {
-    expect(resourcePath(manifest, a as Resource)).toBe("pkg/items/sub/a.xml");
-    expect(resourcePath(manifest, a as Resource, "../b.png")).toBe("pkg/items/b.png");
-    expect(resourcePath(manifest, c as Resource, "x")).toBe("pkg/items/x");
-  });
-
-  it("returns undefined for a resource without an href and for a base outside the package", () => {
-    expect(resourcePath(manifest, c as Resource)).toBeUndefined();
-    expect(resourcePath(manifest, b as Resource, "x")).toBeUndefined();
-  });
-
-  it("resolves against the root when no xml:base is given", () => {
-    const plain = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "x/a.png"))));
-    expect(resourcePath(plain, plain.resources[0] as Resource)).toBe("x/a.png");
-  });
-
-  it("throws a DataError for an argument of another type", () => {
-    expect(() => resourcePath(JSON.parse("null"), a as Resource)).toThrow(DataError);
-    expect(() => resourcePath(manifest, JSON.parse("null"))).toThrow(DataError);
-    expect(() => resourcePath(manifest, a as Resource, JSON.parse("3"))).toThrow(DataError);
-  });
-});
-
-/** Files in memory for `openPackage`, which count how often a file is read. */
-function memoryFiles(files: Readonly<Record<string, string>>): PackageFiles & { reads: string[] } {
-  const reads: string[] = [];
-  return {
-    reads,
-    paths: Object.keys(files),
-    read: (path) => {
-      reads.push(path);
-      const text = files[path];
-      return text === undefined ? undefined : bytes(text);
-    },
-  };
-}
-
-describe("openPackage", () => {
-  const manifest = manifestXml(resources(resourceXml("a", "imsqti_item_xmlv3p0", "items/a.xml")));
-
-  it("reads only the manifest when it opens, and each document once when it is asked for", () => {
-    const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
-    const pkg = openPackage(files);
-    expect(files.reads).toEqual(["imsmanifest.xml"]);
-    expect(pkg.paths).toEqual(["imsmanifest.xml", "items/a.xml"]);
-    expect(pkg.document("items/a.xml")).toMatchObject({ kind: "item", item: { identifier: "a" } });
-    expect(pkg.document("items/a.xml")).toBe(pkg.document("items/a.xml"));
-    expect(files.reads).toEqual(["imsmanifest.xml", "items/a.xml"]);
-  });
-
-  it("returns the bytes of a file, and undefined for a path the package does not list", () => {
-    const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "a.txt": "hello" }));
-    expect(pkg.file("a.txt")).toEqual(bytes("hello"));
-    expect(pkg.file("b.txt")).toBeUndefined();
-    expect(pkg.file("../a.txt")).toBeUndefined();
-  });
-
-  it("resolves an xi:include against the including document, inside the package", () => {
-    const pkg = openPackage(
-      memoryFiles({
-        "imsmanifest.xml": manifest,
-        "items/a.xml": item("a", '<xi:include href="fragments/f.xml"/>'),
-        "items/fragments/f.xml": `<qti-item-body xmlns="${ASI}"/>`,
-      }),
-    );
-    expect(pkg.document("items/a.xml").kind).toBe("item");
-  });
-
-  it("rejects an xi:include that names a file outside the package, even with a fallback", () => {
-    const files = (href: string): PackageFiles =>
-      memoryFiles({
-        "imsmanifest.xml": manifest,
-        "items/a.xml": item("a", `<xi:include href="${href}"><xi:fallback><qti-item-body/></xi:fallback></xi:include>`),
-      });
-    for (const href of ["../../x.xml", "http://example.com/x.xml", "/etc/passwd", "..\\x.xml"]) {
-      expect(
-        securityLimit(() => openPackage(files(href)).document("items/a.xml")),
-        href,
-      ).toBe("path");
-    }
-  });
-
-  it("uses the fallback of an xi:include whose target is missing, and fails without one", () => {
-    const pkg = openPackage(
-      memoryFiles({
-        "imsmanifest.xml": manifest,
-        "items/a.xml": item(
-          "a",
-          '<xi:include href="missing.xml"><xi:fallback><qti-item-body/></xi:fallback></xi:include>',
-        ),
-        "items/b.xml": item("b", '<xi:include href="missing.xml"/>'),
-      }),
-    );
-    expect(pkg.document("items/a.xml").kind).toBe("item");
-    expect(issueCode(() => pkg.document("items/b.xml"))).toBe("assesskit/xml/xinclude-resource");
-  });
-
-  it("rejects an xi:include with an xpointer and a loop of includes", () => {
-    const pkg = openPackage(
-      memoryFiles({
-        "imsmanifest.xml": manifest,
-        "items/a.xml": item("a", '<xi:include href="b.xml" xpointer="x"/>'),
-        "items/c.xml": item("c", '<xi:include href="d.xml"/>'),
-        "items/d.xml": `<x xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="d.xml"/></x>`,
-      }),
-    );
-    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/xml/xinclude-attribute");
-    expect(issueCode(() => pkg.document("items/c.xml"))).toBe("assesskit/xml/xinclude-cycle");
-  });
-
-  it("reads and parses a file once for a document, however many includes name it", () => {
-    const includes = (href: string): string => `<xi:include href="${href}"/>`.repeat(2_000);
-    const files = memoryFiles({
-      "imsmanifest.xml": manifest,
-      "items/a.xml": item("a", `<qti-item-body>${includes("p.xml")}</qti-item-body>`),
-      "items/p.xml": `<p xmlns="${ASI}">x</p>`,
-    });
-    const body = openPackage(files).document("items/a.xml");
-    expect(body.kind === "item" && body.item.body?.children).toHaveLength(2_000);
-    expect(files.reads.filter((path) => path === "items/p.xml")).toHaveLength(1);
-  });
-
-  it("reads a file that fails once for a document, however many includes with a fallback name it", () => {
-    const failing = memoryFiles({
-      "imsmanifest.xml": manifest,
-      "items/a.xml": item(
-        "a",
-        `<qti-item-body>${'<xi:include href="bad.xml"><xi:fallback><p>x</p></xi:fallback></xi:include>'.repeat(500)}</qti-item-body>`,
-      ),
-      "items/bad.xml": "<p>",
-    });
-    const document = openPackage(failing).document("items/a.xml");
-    expect(document.kind === "item" && document.item.body?.children).toHaveLength(500);
-    expect(failing.reads.filter((path) => path === "items/bad.xml")).toHaveLength(1);
-  });
-
-  it("never lets a fallback hide a DOCTYPE in the document, in an included file or in the manifest", () => {
-    const doctype = '<!DOCTYPE a [<!ENTITY x "y">]>';
-    const pkg = openPackage(
-      memoryFiles({
-        "imsmanifest.xml": manifest,
-        "items/a.xml": `${doctype}${item("a")}`,
-        "items/b.xml": item("b", '<xi:include href="f.xml"><xi:fallback><qti-item-body/></xi:fallback></xi:include>'),
-        "items/f.xml": `${doctype}<qti-item-body xmlns="${ASI}"/>`,
-      }),
-    );
-    expect(securityLimit(() => pkg.document("items/a.xml"))).toBe("doctype");
-    expect(securityLimit(() => pkg.document("items/b.xml"))).toBe("doctype");
-    expect(securityLimit(() => openPackage(memoryFiles({ "imsmanifest.xml": `${doctype}${manifest}` })))).toBe(
-      "doctype",
-    );
-  });
-
-  it("applies the xml limits to the manifest and the documents", () => {
-    const files = memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": item("a") });
-    expect(securityLimit(() => openPackage(files, { xmlLimits: { maxNodes: 5 } }))).toBe("maxNodes");
-    const pkg = openPackage(files, { xmlLimits: { maxNodes: 100 } });
-    expect(pkg.manifest.identifier).toBe("m");
-    expect(securityLimit(() => openPackage(files, { xmlLimits: { maxBytes: 100 } }))).toBe("maxBytes");
-  });
-
-  it("rejects a package without a manifest, and a document that is missing or is not an ASI document", () => {
-    expect(issueCode(() => openPackage(memoryFiles({ "a.txt": "x" })))).toBe("assesskit/package/no-manifest");
-    const pkg = openPackage(memoryFiles({ "imsmanifest.xml": manifest, "items/a.xml": "<x/>" }));
-    expect(issueCode(() => pkg.document("items/missing.xml"))).toBe("assesskit/package/missing-file");
-    expect(issueCode(() => pkg.document("items/a.xml"))).toBe("assesskit/asi/document-element");
-  });
-
-  it("throws a DataError for files that are not normalized or not unique, and for arguments of another type", () => {
-    const valid = { "imsmanifest.xml": manifest };
-    const base = memoryFiles(valid);
-    for (const paths of [
-      ["imsmanifest.xml", "a/../b"],
-      ["imsmanifest.xml", "/b"],
-      ["imsmanifest.xml", "imsmanifest.xml"],
-      ["imsmanifest.xml", "a\\b"],
-      ["imsmanifest.xml", 3],
-    ]) {
-      expect(() => openPackage({ ...base, paths: JSON.parse(JSON.stringify(paths)) }), JSON.stringify(paths)).toThrow(
-        DataError,
-      );
-    }
-    for (const files of ["null", '"x"', '{"paths":"x","read":null}', '{"paths":[]}'])
-      expect(() => openPackage(JSON.parse(files)), files).toThrow(DataError);
-    expect(() => openPackage(base, JSON.parse("null"))).toThrow(DataError);
-    expect(() => openPackage(base, JSON.parse('{"xmlLimits":null}'))).toThrow(DataError);
-    const pkg = openPackage(base);
-    expect(() => pkg.file(JSON.parse("3"))).toThrow(DataError);
-    expect(() => pkg.document(JSON.parse("null"))).toThrow(DataError);
-  });
-});
-
-describe("readPackage", () => {
+describe("reading ZIP archives", () => {
   it("reads the archives that Python's zipfile writes: stored and deflated entries, UTF-8 names, directories, data descriptors", () => {
     for (const name of ["valid.zip", "streamed.zip"]) {
       const pkg = readPackage(fixture(name));
@@ -1234,7 +1461,7 @@ describe("readPackage", () => {
   });
 });
 
-describe("DEFAULT_ZIP_LIMITS", () => {
+describe("default ZIP limits", () => {
   it("is about 1,000 times the entries of the largest example, 100 times its largest entry, 200 times its size and 9 times its ratio", () => {
     // The largest 1EdTech example package has 99 entries, an entry of 5,251,725 bytes, 11,018,253 bytes and a ratio of 27.9.
     expect(DEFAULT_ZIP_LIMITS).toEqual({
@@ -1246,229 +1473,11 @@ describe("DEFAULT_ZIP_LIMITS", () => {
   });
 });
 
-describe("packageResolvers", () => {
-  const drd = (inner: string): string =>
-    `<cpx:metadata><drd:accessForAllResource>${inner}</drd:accessForAllResource></cpx:metadata>`;
-  const link = (identifier: string, to: string, inner: string): string =>
-    `<cpx:variant identifier="${identifier}" identifierref="${to}">${drd(inner)}</cpx:variant>`;
-  const manifest = manifestXml(
-    resources(
-      resourceXml(
-        "core",
-        "imsqti_item_xmlv3p0",
-        "items/core.xml",
-        `${link("v1", "plain", "<drd:hazard>flashing</drd:hazard><drd:hazard>ext:x</drd:hazard>")}${link("v2", "tool", "<drd:languageOfAdaptation>id</drd:languageOfAdaptation>")}`,
-      ),
-      resourceXml(
-        "plain",
-        "imsqti_item_xmlv3p0",
-        "items/plain.xml",
-        link("v3", "plain2", "<drd:hazard>sound</drd:hazard>"),
-      ),
-      resourceXml(
-        "plain2",
-        "imsqti_item_xmlv3p0",
-        "items/plain2.xml",
-        link("v4", "plain", "<drd:hazard>sound</drd:hazard><drd:hazard>flashing</drd:hazard>"),
-      ),
-      resourceXml("tool", "imslti_xmlv1p1", "links/tool.xml"),
-      resourceXml("passage", "imsqti_stimulus_xmlv3p0", "passages/s.xml"),
-      resourceXml("sec", "imsqti_section_xmlv3p0", "sections/s.xml"),
-      resourceXml("test", "imsqti_test_xmlv3p0", "tests/t.xml"),
-      resourceXml("img", "webcontent", "media/x.png"),
-      '<resource identifier="headless" type="imsqti_item_xmlv3p0"><file href="items/headless.xml"/></resource>',
-      resourceXml("outside", "imsqti_item_xmlv3p0", "../out.xml"),
-    ),
-  );
-  const toolLink = lti("<blti:title>Tool</blti:title><blti:launch_url>https://tool.example/launch</blti:launch_url>");
-  const pkg = packageOf(manifest, {
-    "items/core.xml": item("core"),
-    "items/plain.xml": item("plain"),
-    "items/plain2.xml": item("plain2"),
-    "links/tool.xml": toolLink,
-    "passages/s.xml": `<qti-assessment-stimulus xmlns="${ASI}" identifier="passage" title="s"><qti-stimulus-body/></qti-assessment-stimulus>`,
-    "sections/s.xml": `<qti-assessment-section xmlns="${ASI}" identifier="sec" title="s" visible="true"/>`,
-    "tests/t.xml": `<qti-assessment-test xmlns="${ASI}" identifier="test" title="t"/>`,
-    "media/x.png": "png",
-    "items/headless.xml": item("headless"),
-  });
-  const resolvers = packageResolvers(pkg);
-
-  it("resolves an item reference to the item, its variants and the DRD of the links to them", () => {
-    const resolved = resolvers.items("../items/core.xml", "tests/t.xml");
-    expect(resolved.resource).toBe("core");
-    expect(resolved.deliverable).toMatchObject({ kind: "qti", item: { identifier: "core" } });
-    expect(resolved.hazards).toEqual([]);
-    expect(resolved.variants.map(({ resource }) => resource)).toEqual(["plain", "tool"]);
-    expect(resolved.variants[0]).toMatchObject({
-      deliverable: { kind: "qti", item: { identifier: "plain" } },
-      drd: { hazard: ["flashing", "ext:x"] },
-    });
-    expect(resolved.variants[1]).toMatchObject({
-      deliverable: {
-        kind: "lti",
-        identifier: "tool",
-        link: { title: "Tool", launchUrl: "https://tool.example/launch" },
-      },
-      drd: { languageOfAdaptation: ["id"] },
-    });
-  });
-
-  it("gives an item the hazards of the DRD of the variant links that point at it, once each and without extension terms", () => {
-    expect(resolvers.items("items/plain.xml", "").hazards).toEqual(["flashing", "sound"]);
-    expect(resolvers.items("items/plain2.xml", "").hazards).toEqual(["sound"]);
-    expect(resolvers.items("items/plain2.xml", "").variants.map(({ resource }) => resource)).toEqual(["plain"]);
-  });
-
-  it("resolves an item reference to an LTI link as an LTI deliverable", () => {
-    const resolved = resolvers.items("../links/tool.xml", "tests/t.xml");
-    expect(resolved).toMatchObject({ resource: "tool", deliverable: { kind: "lti", identifier: "tool" } });
-  });
-
-  it("resolves a stimulus reference to the stimulus and a section reference to the section", () => {
-    expect(resolvers.stimuli("../passages/s.xml", "items/core.xml")).toMatchObject({ identifier: "passage" });
-    expect(resolvers.sections("../sections/s.xml", "tests/t.xml")).toMatchObject({ identifier: "sec" });
-  });
-
-  it("reports a reference outside the package, to no item resource, to a missing file or to a document of another kind", () => {
-    expect(issueCode(() => resolvers.items("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
-    expect(issueCode(() => resolvers.items("http://example.com/x.xml", "tests/t.xml"))).toBe(
-      "assesskit/package/outside-package",
-    );
-    expect(issueCode(() => resolvers.items("items/other.xml", "tests/t.xml"))).toBe(
-      "assesskit/package/unknown-resource",
-    );
-    expect(issueCode(() => resolvers.items("media/x.png", ""))).toBe("assesskit/package/unknown-resource");
-    expect(issueCode(() => resolvers.items("sections/s.xml", ""))).toBe("assesskit/package/unknown-resource");
-    expect(issueCode(() => resolvers.sections("../missing.xml", "tests/t.xml"))).toBe("assesskit/package/missing-file");
-    expect(issueCode(() => resolvers.sections("../passages/s.xml", "tests/t.xml"))).toBe(
-      "assesskit/package/document-kind",
-    );
-    expect(issueCode(() => resolvers.stimuli("../sections/s.xml", "tests/t.xml"))).toBe(
-      "assesskit/package/document-kind",
-    );
-    expect(issueCode(() => resolvers.stimuli("../../x.xml", "tests/t.xml"))).toBe("assesskit/package/outside-package");
-  });
-
-  it("reports a variant resource that has no main file inside the package, a file of the wrong kind and a missing LTI file", () => {
-    const variant = `<cpx:variant identifier="v" identifierref="headless">${drd("")}</cpx:variant>`;
-    const linked = packageResolvers(
-      packageOf(
-        manifestXml(
-          resources(
-            resourceXml("i", "imsqti_item_xmlv3p0", "i.xml", variant),
-            '<resource identifier="headless" type="imsqti_item_xmlv3p0"><file href="n.xml"/><file href="m.xml"/></resource>',
-          ),
-        ),
-        { "i.xml": item("i") },
-      ),
-    );
-    expect(issueCode(() => linked.items("i.xml", ""))).toBe("assesskit/package/resource-href");
-    const kind = packageResolvers(
-      packageOf(manifestXml(resources(resourceXml("i", "imsqti_item_xmlv3p0", "i.xml"))), {
-        "i.xml": `<qti-assessment-test xmlns="${ASI}" identifier="t" title="t"/>`,
-      }),
-    );
-    expect(issueCode(() => kind.items("i.xml", ""))).toBe("assesskit/package/document-kind");
-    const missing = packageResolvers(
-      packageOf(manifestXml(resources(resourceXml("l", "imsbasiclti_xmlv1p3", "l.xml")))),
-    );
-    expect(issueCode(() => missing.items("l.xml", ""))).toBe("assesskit/package/missing-file");
-  });
-
-  it("resolves the outcome declaration and response processing resources that items depend on through the closure", () => {
-    const linked = readManifest(
-      manifestXml(
-        resources(
-          resourceXml(
-            "i",
-            "imsqti_item_xmlv3p0",
-            "i.xml",
-            '<dependency identifierref="o"/><dependency identifierref="rp"/>',
-          ),
-          resourceXml("o", "imsqti_outcomes_xmlv3p0", "outcomes.xml"),
-          resourceXml("rp", "imsqti_rptemplate_xmlv3p0", "rp.xml"),
-        ),
-      ),
-    );
-    expect(dependencyClosure(linked, "i").map(({ identifier, type }) => [identifier, type])).toEqual([
-      ["i", "imsqti_item_xmlv3p0"],
-      ["o", "imsqti_outcomes_xmlv3p0"],
-      ["rp", "imsqti_rptemplate_xmlv3p0"],
-    ]);
-  });
-
-  it("throws a DataError for an argument of another type", () => {
-    for (const input of ["null", '"x"']) expect(() => packageResolvers(JSON.parse(input)), input).toThrow(DataError);
-  });
-});
-
-describe("writePackage", () => {
-  const manifest: Manifest = readManifest(manifestXml(resources(resourceXml("a", "webcontent", "a.txt"))));
-
-  it("writes an archive that readPackage reads back: the manifest first, then the files in the order of the map", () => {
-    const files = new Map([
-      ["b.bin", new Uint8Array([1, 2, 3])],
-      ["a/ünï.txt", bytes("hello ".repeat(100))],
-      ["empty", new Uint8Array()],
-    ]);
-    const pkg = readPackage(writePackage(manifest, files));
-    expect(pkg.paths).toEqual(["imsmanifest.xml", "b.bin", "a/ünï.txt", "empty"]);
-    expect(pkg.file("b.bin")).toEqual(new Uint8Array([1, 2, 3]));
-    expect(pkg.file("a/ünï.txt")).toEqual(bytes("hello ".repeat(100)));
-    expect(pkg.file("empty")).toEqual(new Uint8Array());
-    expect(bare(pkg.manifest)).toEqual(bare(manifest));
-  });
-
-  it("writes an archive that fflate's own reader reads, and the same bytes for the same input", () => {
-    const files = new Map([
-      ["a.txt", bytes("x".repeat(500))],
-      ["ünï/b.bin", new Uint8Array([9, 8, 7])],
-    ]);
-    const zip = writePackage(manifest, files);
-    expect(writePackage(manifest, files)).toEqual(zip);
-    const unzipped = unzipSync(zip);
-    expect(Object.keys(unzipped)).toEqual(["imsmanifest.xml", "a.txt", "ünï/b.bin"]);
-    expect(unzipped["a.txt"]).toEqual(bytes("x".repeat(500)));
-    expect(unzipped["ünï/b.bin"]).toEqual(new Uint8Array([9, 8, 7]));
-    expect(new TextDecoder().decode(unzipped["imsmanifest.xml"])).toBe(writeManifest(manifest));
-  });
-
-  it("deflates an entry when that makes it smaller and stores it otherwise", () => {
-    const text = bytes("a".repeat(1000));
-    const zip = writePackage(
-      manifest,
-      new Map([
-        ["text", text],
-        ["tiny", bytes("a")],
-      ]),
-    );
-    expect(zip.length).toBeLessThan(2000);
-    const pkg = readPackage(zip);
-    expect(pkg.file("text")).toEqual(text);
-    expect(pkg.file("tiny")).toEqual(bytes("a"));
-  });
-
-  it("throws a DataError for a path that is not normalized, the manifest as a file, bytes of another type, and a manifest that is not valid", () => {
-    const bad: readonly [string, unknown][] = [
-      ["a path with ..", new Map([["../a", bytes("x")]])],
-      ["an absolute path", new Map([["/a", bytes("x")]])],
-      ["a path with a backslash", new Map([["a\\b", bytes("x")]])],
-      ["the manifest", new Map([["imsmanifest.xml", bytes("x")]])],
-      ["a path that is not normalized", new Map([["./a", bytes("x")]])],
-      ["bytes that are a string", new Map([["a", "x"]])],
-      ["files that are an object", { a: bytes("x") }],
-      ["files that are null", null],
-    ];
-    for (const [name, files] of bad)
-      expect(() => writePackage(manifest, files as ReadonlyMap<string, Uint8Array>), name).toThrow(DataError);
-    expect(() => writePackage(JSON.parse('{"identifier":"m"}'), new Map())).toThrow(DataError);
-  });
-
-  it("throws a DataError when the archive would need ZIP64", () => {
-    const files = new Map<string, Uint8Array>();
-    for (let index = 0; index < 65_535; index++) files.set(`f${index}`, new Uint8Array());
-    expect(() => writePackage(manifest, files)).toThrow(/needs ZIP64/);
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/package.md", import.meta.url);
+    const pkg = await import("../src/package/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/package": pkg })).toBeGreaterThan(0);
   });
 });
 

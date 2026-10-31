@@ -6,11 +6,11 @@ import type { PnpExtensionTerm } from "./vocabularies.js";
 const FLOAT = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 /** `xs:integer`. */
 const INTEGER = /^[+-]?\d+$/;
-/** `HexDType`: `#` and three or six hexadecimal digits (PNP XSD). */
+/** `HexDType`: `#` and three or six hexadecimal digits. */
 const HEX_COLOR = /^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
-/** `ExtensionStringDType`: `ext:` and one or more letters, `|`, `.` or `_` (PNP XSD). */
+/** `ExtensionStringDType`: `ext:` and one or more letters, `|`, `.` or `_`. */
 const EXTENSION_TERM = /^ext:[A-Za-z|._]+$/;
-/** The greatest `VolumeDType` (PNP XSD). */
+/** The greatest `VolumeDType`. */
 const MAX_VOLUME = 1;
 
 function isExtensionTerm(text: string): text is PnpExtensionTerm {
@@ -23,6 +23,8 @@ const withoutNegativeZero = (value: number): number => value + 0;
 /**
  * Reads a decimal number, as `xs:float` writes it, with white space around it dropped.
  *
+ * @param text - The text of an attribute or element.
+ * @returns The number.
  * @throws `DataError` when the text is not a finite decimal number.
  */
 export function toFloat(text: string): number {
@@ -37,7 +39,9 @@ export function toFloat(text: string): number {
 /**
  * Reads an integer, as `xs:integer` writes it, with white space around it dropped.
  *
- * @throws `DataError` when the text is not an integer, or one beyond the safe integers (D3).
+ * @param text - The text of an attribute or element.
+ * @returns The integer.
+ * @throws `DataError` when the text is not an integer, or one beyond the safe integers.
  */
 export function toInteger(text: string): number {
   const token = text.trim();
@@ -53,6 +57,8 @@ export function toInteger(text: string): number {
 /**
  * Reads `true`, `false`, `1` or `0`, as `xs:boolean` writes it, with white space around it dropped.
  *
+ * @param text - The text of an attribute or element.
+ * @returns The boolean.
  * @throws `DataError` when the text is none of these.
  */
 export function toBoolean(text: string): boolean {
@@ -65,6 +71,8 @@ export function toBoolean(text: string): boolean {
 /**
  * Reads a color as `#RGB` or `#RRGGBB`.
  *
+ * @param text - The text of an attribute or element.
+ * @returns The color without the white space around it.
  * @throws `DataError` when the text is not one.
  */
 export function toHexColor(text: string): string {
@@ -74,8 +82,10 @@ export function toHexColor(text: string): string {
 }
 
 /**
- * Reads a volume: a decimal number of at most 1 (PNP XSD `VolumeDType`).
+ * Reads a volume: a decimal number of at most 1, the `VolumeDType` of the PNP schema.
  *
+ * @param text - The text of an attribute or element.
+ * @returns The volume, from 0 to 1.
  * @throws `DataError` when the text is not a finite decimal number, or is above 1.
  */
 export function toVolume(text: string): number {
@@ -89,6 +99,8 @@ export function toVolume(text: string): number {
  *
  * @param terms - The terms.
  * @param label - Names what the text is, such as `A hazard`, for the message.
+ * @returns A function that returns the term or the extension term it was given.
+ * @throws `DataError` from the returned function when the text is neither a term nor an extension term.
  */
 export function termOrExtension<T extends string>(
   terms: readonly T[],
@@ -107,7 +119,9 @@ export function termOrExtension<T extends string>(
 /**
  * Writes a finite number as a decimal.
  *
+ * @param value - The number to write.
  * @param label - Names the value in the message, such as `The pitch`.
+ * @returns The number in its shortest decimal form.
  * @throws `DataError` when `value` is not a finite number.
  */
 export function floatText(value: unknown, label: string): string {
@@ -120,7 +134,9 @@ export function floatText(value: unknown, label: string): string {
 /**
  * Writes a safe integer.
  *
+ * @param value - The integer to write.
  * @param label - Names the value in the message, such as `The fixed minutes`.
+ * @returns The integer in decimal.
  * @throws `DataError` when `value` is not a safe integer.
  */
 export function integerText(value: unknown, label: string): string {
@@ -131,6 +147,9 @@ export function integerText(value: unknown, label: string): string {
 /**
  * Writes `true` or `false`.
  *
+ * @param value - The boolean to write.
+ * @param label - Names the value in the message.
+ * @returns `true` or `false`.
  * @throws `DataError` when `value` is not a boolean.
  */
 export function booleanText(value: unknown, label: string): string {
@@ -141,6 +160,9 @@ export function booleanText(value: unknown, label: string): string {
 /**
  * Writes a color as it is.
  *
+ * @param value - The color to write.
+ * @param label - Names the value in the message.
+ * @returns The color as given.
  * @throws `DataError` when `value` is not `#RGB` or `#RRGGBB`.
  */
 export function hexColorText(value: unknown, label: string): string {
@@ -153,6 +175,9 @@ export function hexColorText(value: unknown, label: string): string {
 /**
  * Writes a volume.
  *
+ * @param value - The volume to write.
+ * @param label - Names the value in the message.
+ * @returns The volume in decimal.
  * @throws `DataError` when `value` is not a finite number of at most 1.
  */
 export function volumeText(value: unknown, label: string): string {
@@ -164,6 +189,10 @@ export function volumeText(value: unknown, label: string): string {
 /**
  * Writes one of some terms or an extension term, as the converter of {@link termOrExtension} reads it.
  *
+ * @param value - The term to write.
+ * @param terms - The terms.
+ * @param label - Names the value in the message.
+ * @returns The term or extension term as given.
  * @throws `DataError` when `value` is neither.
  */
 export function termText<T extends string>(value: unknown, terms: readonly T[], label: string): string {

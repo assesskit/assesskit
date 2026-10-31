@@ -21,13 +21,16 @@ async function schemaIssues(pkg: QtiPackage, path: string, schemas: SchemaSet): 
 }
 
 /**
- * Returns the issues of a package given as a ZIP file or a directory (L12): the schema issues of every XML file of the
+ * Returns the issues of a package given as a ZIP file or a directory: the schema issues of every XML file of the
  * package, one file at a time, then those of `validatePackage`. A package whose manifest cannot be read has the issues
  * of its reader only.
  *
+ * @param path - The ZIP file or the directory of the package.
+ * @param schemas - The loaded schemas.
+ * @returns The schema issues of each XML file, then the issues of `validatePackage`.
  * @throws `DataError` when the path cannot be read.
- * @throws `SecurityError` when the package breaks a limit or a rule of §2.6, such as a symbolic link or a path that
- * leaves the package.
+ * @throws `SecurityError` when the package breaks a limit or a security rule of `readPackageFile`, such as a symbolic
+ * link or a path that leaves the package.
  */
 export async function packageIssues(path: string, schemas: SchemaSet): Promise<readonly Issue[]> {
   let pkg: QtiPackage;

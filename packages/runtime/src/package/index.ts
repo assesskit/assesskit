@@ -1,5 +1,5 @@
 /**
- * QTI content packages: the manifest, ZIP archives with the security checks of §2.6, the documents of a package, the
+ * QTI content packages: the manifest, ZIP archives with the security checks of their limits, the documents of a package, the
  * resolvers that the delivery engine uses, LTI link documents and the dependency closure.
  *
  * @module @assesskit/runtime/package

@@ -23,6 +23,7 @@ function toAttribute(qualified: string, value: string): XmlAttribute {
  * @param attributes - The attributes by name. A name with the prefix `xml:` or `xsi:` is in that namespace; the others are
  * in none.
  * @param children - The child nodes. A string is a text node, and an empty string is left out.
+ * @returns The element.
  * @throws `DataError` when an argument has the wrong type. The tree is checked further when `serializeXml` writes it.
  */
 export function buildElement(

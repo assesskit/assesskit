@@ -1,9 +1,22 @@
-# cli
+# Command line
 
-`@assesskit/runtime/cli` is the command line of the runtime, for Node.js 22 and later. The package installs it as the program `assesskit`.
-It validates a content package or an XML document against the official schemas and with the semantic checks of
-[validate](validate.md), and it downloads the schemas, which the runtime does not ship. `assesskit schemas fetch` is the only code in the runtime
-that uses the network.
+`cli` is the command line of the runtime, for Node.js 22 and later. The package installs it as the program `assesskit`. It
+validates a content package or an XML document against the official schemas and with the semantic checks of
+[validate](validate.md), and it downloads the schemas, which the runtime does not ship. `assesskit schemas fetch` is the only
+code in the runtime that uses the network.
+
+```mermaid
+flowchart LR
+  args["Arguments"] --> run["runCli"]
+  run -- "validate" --> kind{"What is the path?"}
+  kind -- "directory or ZIP file" --> package["readPackageFile<br/>schema check of each XML file<br/>validatePackage"]
+  kind -- "XML file" --> document["schema check<br/>read by the root element<br/>semantic checks"]
+  package --> report["Report<br/>text or JSON"]
+  document --> report
+  report --> code["Exit code<br/>0, 1 or 2"]
+  run -- "schemas fetch" --> fetch["Download, check SHA-256,<br/>write to the directory"]
+  fetch --> code
+```
 
 | Command                                                             | Purpose                                                           |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -77,9 +90,9 @@ path:line:column (element): severity: message [code]
 
 ```console
 $ assesskit validate packaging/items/feedback_adaptive.xml
-packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-set-outcome-value): error: The variable "FEEDBACK" is a multiple identifier and cannot be set to a single identifier. [assesskit/validate/assignment-type, INFO §5.130.2]
-packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes single boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a multiple identifier as operand 1. [assesskit/validate/operand-type, INFO §2.11.3.29]
-packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes multiple or ordered boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a single identifier as operand 2. [assesskit/validate/operand-type, INFO §2.11.3.29]
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-set-outcome-value): error: The variable "FEEDBACK" is a multiple identifier and cannot be set to a single identifier. [assesskit/validate/assignment-type]
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes single boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a multiple identifier as operand 1. [assesskit/validate/operand-type]
+packaging/items/feedback_adaptive.xml (qti-assessment-item/qti-response-processing/qti-response-condition/qti-response-if/qti-member): error: The operator qti-member takes multiple or ordered boolean or directedPair or file or float or identifier or integer or pair or point or string or uri operands, found a single identifier as operand 2. [assesskit/validate/operand-type]
 packaging/items/feedback_adaptive.xml: invalid (3 errors, 0 warnings)
 ```
 
@@ -127,9 +140,9 @@ $ assesskit validate --format json packaging/items/Example03-feedbackBlock-solut
 | 1    | `validate` found at least one issue with the severity `error`, including a document that is not well-formed and a manifest that cannot be read. |
 | 2    | No verdict: the command line is wrong, the path cannot be read, the schemas are missing or changed, or the input is refused.                    |
 
-The report goes to the standard output; every message of an exit with 2 goes to the standard error as `The runtime: <message>`, and
+The report goes to the standard output; every message of an exit with 2 goes to the standard error as `assesskit: <message>`, and
 a wrong command line adds the commands. Input is refused with the code 2, before any of its content is checked, when it is a
-package that breaks a rule of the security model (§2.6, SECURITY.md) (a path that leaves the package, a symbolic link, an
+package that breaks a rule of the security model of [SECURITY.md](../../SECURITY.md) (a path that leaves the package, a symbolic link, an
 encrypted entry, a size, count or ratio above its limit) or an XML file above `maxBytes`. A DOCTYPE inside a document is an
 issue, not a refusal.
 
@@ -171,9 +184,14 @@ tests and for programs that embed the command.
 ```ts
 import { runCli } from "@assesskit/runtime/cli";
 
-const code = await runCli(["validate", "packaging/simple/simple.zip", "--format", "json"], {
-  schemaDirectory: "./schemas",
-});
+const output = [];
+const code = await runCli(["--help"], { stdout: (text) => output.push(text) });
+code; // => 0
+output[0]?.startsWith("Usage:"); // => true
+
+const errors = [];
+await runCli(["validate"], { stderr: (text) => errors.push(text) }); // => 2
+errors[0]?.startsWith("assesskit: The command validate takes one path."); // => true
 ```
 
 | Option            | Default                     | Meaning                                                                                                    |
@@ -184,3 +202,33 @@ const code = await runCli(["validate", "packaging/simple/simple.zip", "--format"
 | `fetch`           | the global `fetch`          | Downloads an address for `schemas fetch`; tests pass a function that serves the files from a local server. |
 
 It throws a `DataError` when an argument or an option has the wrong type. Every other failure is an exit code.
+
+## Not included
+
+| Not included                        | Why                                                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| Other addresses for the schemas     | The addresses are pinned with the hashes, so that a download cannot change what is validated |
+| Fixing the issues it reports        | The command reports; the author or the generating program fixes                              |
+| Validating several paths in one run | A shell loop does it, and each report names its path                                         |
+| Colors and progress output          | The text format is one line for each issue, which other programs read                        |
+
+## Files
+
+Each file of `src/cli/` holds one concept.
+
+| File                                                            | Concept                                                              |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `bin.ts`, `run.ts`, `options.ts`, `usage.ts`                    | The program, the dispatch of a command and its options               |
+| `validate-command.ts`, `schemas-command.ts`                     | The two commands                                                     |
+| `check-path.ts`, `check-document.ts`, `check-package.ts`        | What a path names, and the issues of a document or package           |
+| `report.ts`                                                     | The report, its formats and the exit codes                           |
+| `fetch-schemas.ts`, `schema-directory.ts`, `package-version.ts` | Downloading the schemas, where they live, the version                |
+| `internal.ts`                                                   | What other modules and the tests use and the package does not export |
+
+## References
+
+| Topic                        | Specification                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Cache directory on Linux     | [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) |
+| The schemas and their hashes | [node](node.md#getting-the-schemas)                                                             |
+| The checks that run          | [validate](validate.md)                                                                         |

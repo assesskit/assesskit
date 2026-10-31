@@ -120,7 +120,9 @@ function writeStatistic(statistic: ItemStatistic): XmlElement {
 }
 
 /**
- * Writes a usage data document (UD §2.3.1) in UTF-8, valid against the UD schema, which names it in `xsi:schemaLocation`.
+ * Writes a usage data document in UTF-8, valid against the UD schema, which names it in `xsi:schemaLocation`.
+ *
+ * @remarks
  * An ordinary statistic whose value has no base type is written without the attribute, as a float.
  *
  * @param data - The usage data to write; it is checked deeply.
@@ -128,6 +130,7 @@ function writeStatistic(statistic: ItemStatistic): XmlElement {
  * @throws `DataError` when the model is not usage data: a field of the wrong type, a name that is not an identifier, a
  * date that is not `YYYY-MM-DD`, a statistic without a target object or a mapping without an entry, a value that is not
  * of its base type, or text with a character that XML 1.0 does not allow.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data}
  */
 export function writeUsageData(data: UsageData): string {
   checkRecord(data, "The usage data must be an object");

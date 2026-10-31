@@ -20,8 +20,11 @@ function constraintVariables(rules: readonly TemplateRule[], into: Set<string>):
 
 /**
  * Warns about a template variable that a `qti-template-constraint` reads and that has no default value: when the
- * constraint is not met after the last run, the variables take their default values (INFO §5.150), which for these are
+ * constraint is not met after the last run, the variables take their default values, which for these are
  * NULL.
+ *
+ * @param item - The item.
+ * @param findings - The findings of the document, which receive the issues.
  */
 export function checkConstraintDefaults(item: AssessmentItem, findings: Findings): void {
   const read = new Set<string>();

@@ -91,7 +91,7 @@ function listOf<T>(value: readonly T[], label: string, minimum: number): readonl
   return value;
 }
 
-/** Writes the access modes a support replaces; each is a term, and none is repeated (PNP XSD). */
+/** Writes the access modes a support replaces; each is a term, and none is repeated. */
 function modeElements({ replaceAccessModes }: ReplacesAccessModes, name: string): XmlElement[] {
   const label = `The replaceAccessModes of ${name}`;
   const modes = listOf(replaceAccessModes, label, 0);
@@ -297,6 +297,8 @@ const isTool = (setting: SupportSetting): setting is ToolSupport => isToolSuppor
  * Writes the settings of a support as its elements: one, except for `hazard-avoidance` and `language-of-interface`, which
  * occur once for each hazard and each language.
  *
+ * @param setting - The settings of a predefined support.
+ * @returns The elements of the support.
  * @throws `DataError` when the setting is not one: a parameter of the wrong type or outside its vocabulary, or a list
  * that must not be empty.
  */

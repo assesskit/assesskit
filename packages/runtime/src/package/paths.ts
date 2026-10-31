@@ -1,4 +1,4 @@
-/** The characters a path segment must not contain: C0 and C1 control characters (NUL included) and the backslash (BPIG §6.7). */
+/** The characters a path segment must not contain: C0 and C1 control characters (NUL included) and the backslash. */
 function isSafeSegment(segment: string): boolean {
   for (const char of segment) {
     const code = char.codePointAt(0) ?? 0;
@@ -7,7 +7,7 @@ function isSafeSegment(segment: string): boolean {
   return true;
 }
 
-/** The start of a Windows drive path, such as `C:` (BPIG §6.7). */
+/** The start of a Windows drive path, such as `C:`. */
 const DRIVE_LETTER = /^[A-Za-z]:/;
 
 /**
@@ -34,8 +34,10 @@ function normalizeSegments(segments: readonly string[]): string[] | undefined {
 /**
  * Normalizes the name of an entry of a package.
  *
+ * @param name - The name of an archive entry or a path of a package.
  * @returns The path without `.` and empty segments and with the `..` segments resolved; `undefined` when the name is
- * absolute, has a `..` that leaves the root, a backslash, a drive letter, a control character, or no segment (BPIG §6.7).
+ * absolute, has a `..` that leaves the root, a backslash, a drive letter, a control character, or no segment.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, packaging}
  */
 export function normalizeEntryName(name: string): string | undefined {
   if (name.startsWith("/")) return undefined;
@@ -43,12 +45,12 @@ export function normalizeEntryName(name: string): string | undefined {
   return normalized === undefined || normalized.length === 0 ? undefined : normalized.join("/");
 }
 
-/** The start of an absolute reference: a scheme (RFC 3986 §3.1). */
+/** The start of an absolute reference: a scheme. */
 const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
 const HEX = /^[0-9A-Fa-f]{2}$/;
 
-/** Decodes the percent-encoded octets of a segment as UTF-8 (RFC 3986 §2.1); `undefined` when an escape or the UTF-8 is invalid. */
+/** Decodes the percent-encoded octets of a segment as UTF-8; `undefined` when an escape or the UTF-8 is invalid. */
 function decodeSegment(segment: string): string | undefined {
   if (!segment.includes("%")) return segment;
   const bytes: number[] = [];
@@ -72,14 +74,14 @@ function decodeSegment(segment: string): string | undefined {
   }
 }
 
-/** Returns the path of a URI reference: what precedes the first `?` or `#` (RFC 3986 §3). */
+/** Returns the path of a URI reference: what precedes the first `?` or `#`. */
 function pathOf(reference: string): string {
   const ends = [reference.indexOf("?"), reference.indexOf("#")].filter((index) => index >= 0);
   return ends.length === 0 ? reference : reference.slice(0, Math.min(...ends));
 }
 
 /**
- * Resolves a reference against a base inside a package (RFC 3986 §5.2 on package paths, B93). The query and the
+ * Resolves a reference against a base inside a package. The query and the
  * fragment are dropped and percent-encoded octets are decoded, so that `my%20file.png` names the entry `my file.png`.
  *
  * @param base - The path of the referencing file, or of a directory when it ends with `/`; empty for the root.

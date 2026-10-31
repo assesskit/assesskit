@@ -211,6 +211,7 @@ class Writer {
  * @param info - The type of the element.
  * @param name - The element name, such as `qti-assessment-item`.
  * @param model - The model.
+ * @returns The element of the tree.
  * @throws `DataError` when the model is not an object of the kind of the element, has a property the type does not have,
  * lacks a required property, or has a property of the wrong type or in the wrong form.
  */

@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { SchemaFile } from "../node/schema-files.js";
+import type { SchemaFile } from "../node/index.js";
 
 export type { SchemaFile };
 
@@ -20,13 +20,18 @@ interface SchemaFailure {
 
 /** What {@link fetchSchemas} did. */
 export interface FetchResult {
-  /** The schemas that were not in the directory with their pinned hashes and are now, in the order of the list. */
+  /** The schemas that the directory lacked, or held with another hash, and that were downloaded, in the order of the list. */
   readonly downloaded: readonly SchemaFile[];
   /** The schemas that could not be downloaded or whose download had another hash; none of them was written. */
   readonly failures: readonly SchemaFailure[];
 }
 
-/** Returns the SHA-256 of some bytes as lowercase hexadecimal. */
+/**
+ * Returns the SHA-256 of some bytes as lowercase hexadecimal.
+ *
+ * @param bytes - The bytes.
+ * @returns The hash as lowercase hexadecimal.
+ */
 export function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -39,6 +44,9 @@ function reasonOf(error: unknown): string {
 /**
  * Downloads a file.
  *
+ * @param url - The address.
+ * @param fetchUrl - Downloads an address.
+ * @returns The bytes of the response.
  * @throws `Error` when the request fails or the status is not a success.
  */
 export async function download(url: string, fetchUrl: typeof fetch = fetch): Promise<Uint8Array> {
@@ -47,7 +55,13 @@ export async function download(url: string, fetchUrl: typeof fetch = fetch): Pro
   return new Uint8Array(await response.arrayBuffer());
 }
 
-/** Runs a function on every item, a few at a time, and returns the results in order. */
+/**
+ * Runs a function on every item, a few at a time, and returns the results in order.
+ *
+ * @param items - The items.
+ * @param run - The function to run on one item.
+ * @returns The results, in the order of the items.
+ */
 export async function mapConcurrently<T, TResult>(
   items: readonly T[],
   run: (item: T) => Promise<TResult>,
@@ -90,7 +104,9 @@ async function fetchOne(directory: string, schema: SchemaFile, fetchUrl: typeof 
  *
  * @param directory - The directory to write to; it is created when it is missing.
  * @param schemas - The schemas, which are the ones `SCHEMA_FILES` pins.
- * @param fetchUrl - Downloads an address. Default: the global `fetch`.
+ * @param fetchUrl - Downloads an address.
+ * @returns The schemas that were downloaded and those that failed.
+ * @defaultValue the global `fetch`
  */
 export async function fetchSchemas(
   directory: string,

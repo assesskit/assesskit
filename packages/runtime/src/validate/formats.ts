@@ -3,10 +3,10 @@ import { isIdentifier } from "../values/index.js";
 import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";
 
-/** The most characters an identifier should have, for compatibility with QTI version 1 (INFO §4.1.1). */
+/** The most characters an identifier should have, for compatibility with QTI version 1. */
 const RECOMMENDED_IDENTIFIER_LENGTH = 32;
 
-/** The elements whose `identifier` is a name for the rest of the document or test: a period is reserved in it for prefixes (INFO §4.1.1). */
+/** The elements whose `identifier` is a name for the rest of the document or test: a period is reserved in it for prefixes. */
 const NAMING_ELEMENTS = new Set([
   "qti-assessment-item",
   "qti-assessment-section",
@@ -46,8 +46,8 @@ interface Reference {
 }
 
 /**
- * Checks the formats of the text attributes of a document, which the reader does not check: identifiers are names
- * (INFO §4.1.1), an `id` is unique in the document and a reference to an `id` names one (the schema's `xs:ID` and
+ * Checks the formats of the text attributes of a document, which the reader does not check: identifiers are names, an
+ * `id` is unique in the document and a reference to an `id` names one (the schema's `xs:ID` and
  * `xs:IDREF`).
  */
 export class FormatChecks {
@@ -55,11 +55,20 @@ export class FormatChecks {
   private readonly ids = new Map<string, ElementVisit>();
   private readonly references: Reference[] = [];
 
+  /**
+   * Starts the checks of a document.
+   *
+   * @param findings - The findings of the document, which receive the issues.
+   */
   constructor(findings: Findings) {
     this.findings = findings;
   }
 
-  /** Checks the attributes of one element. */
+  /**
+   * Checks the attributes of one element.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     for (const definition of visit.attributes) {
       const { format, texts } = textsOf(definition, visit.model[definition.property]);

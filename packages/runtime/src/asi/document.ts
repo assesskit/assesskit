@@ -70,9 +70,17 @@ export type AsiDocument =
 
 /** Options of {@link readAsi}. */
 export interface ReadAsiOptions {
-  /** The path of the document in its package or directory; errors and issues name the document by it. */
+  /**
+   * The path of the document in its package or directory; errors and issues name the document by it.
+   *
+   * @defaultValue `undefined`, which names the document "The document"
+   */
   readonly path?: string;
-  /** Limits that replace the defaults of {@link parseXml}, field by field; they apply to text and bytes. */
+  /**
+   * Limits that replace the defaults of {@link parseXml}, field by field; they apply to text and bytes.
+   *
+   * @defaultValue `{}`, which keeps the defaults of {@link parseXml}
+   */
   readonly limits?: ParseXmlOptions["limits"];
 }
 
@@ -96,10 +104,10 @@ const BY_ELEMENT: ReadonlyMap<string, DocumentEntry> = new Map(ENTRIES.map((entr
 const BY_KIND: ReadonlyMap<string, DocumentEntry> = new Map(ENTRIES.map((entry) => [entry.kind, entry]));
 
 const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
-/** The schema that `writeAsi` names: the primary ASI schema, version 3.0.1 (BPIG §1.1.5). */
+/** The schema that `writeAsi` names: the primary ASI schema, version 3.0.1. */
 const SCHEMA_LOCATION = `${ASI_NAMESPACE} https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0p1_v1p0.xsd`;
 
-/** Returns the root without the attributes that name a schema, which are not part of the model (BIND §3). */
+/** Returns the root without the attributes that name a schema, which are not part of the model. */
 function withoutSchemaLocation(root: XmlElement): XmlElement {
   const attributes = root.attributes.filter(
     ({ namespace, name }) =>
@@ -129,17 +137,20 @@ function rootOf(input: string | Uint8Array | XmlElement, options: ReadAsiOptions
  * `xi:include` stay `XmlElement`s. It does not check the order of child elements or the minimum of a list, which the
  * schema does. The model carries no source positions, and no comments or processing instructions.
  *
- * The document must be in the ASI namespace; versions 3.0.0 and 3.0.1 share it (BIND §3). An `xsi:schemaLocation` is
+ * The document must be in the ASI namespace; versions 3.0.0 and 3.0.1 share it. An `xsi:schemaLocation` is
  * ignored. `xi:include` elements stay in the model, as the `XmlElement`s they are; resolve them first with
  * `resolveIncludes` of `xml` to read the included content.
  *
  * @param input - The document as text, bytes or a tree from `parseXml` or `resolveIncludes`.
  * @param options - See {@link ReadAsiOptions}.
+ * @returns The document, with its kind and model.
  * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
  * @throws `ReadError` when the document is not well-formed, the root is not a document element of the ASI namespace, or an
  * element has an attribute, child element or text that the schema does not allow, lacks a required one, or has a value
  * that is not in its lexical form.
  * @throws `SecurityError` when the document has a DOCTYPE or exceeds a limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function readAsi(input: string | Uint8Array | XmlElement, options: ReadAsiOptions = {}): AsiDocument {
   checkOptions(options);
@@ -169,13 +180,16 @@ function entryOfDocument(document: unknown): DocumentEntry {
 
 /**
  * Writes a document as XML in UTF-8: the root element in the ASI namespace, with `xsi:schemaLocation` naming the 3.0.1
- * ASI schema (BPIG §1.1.5). Attributes and child elements are in the order of the schema, so that the output is valid
+ * ASI schema. Attributes and child elements are in the order of the schema, so that the output is valid
  * against it when the model is.
  *
  * @param document - The document.
+ * @returns The document as text, in UTF-8.
  * @throws `DataError` when the document is not an object of one of the kinds of {@link AsiDocument}, or its model is not
  * an object of the shape the element has: a missing required property, a property the element does not have, or a
  * value of the wrong type.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function writeAsi(document: AsiDocument): string {
   const entry = entryOfDocument(document);

@@ -6,7 +6,7 @@ import type { PackageFiles } from "./package-files.js";
 import { normalizeEntryName } from "./paths.js";
 import { RATIO_GRACE_BYTES, type ZipLimits } from "./zip-limits.js";
 
-// The record signatures and sizes of the ZIP format (PKWARE APPNOTE 6.3.10, §4.3).
+// The record signatures and sizes of the ZIP format.
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
 const END_RECORD_BYTES = 22;
 const MAX_COMMENT_BYTES = 0xffff;
@@ -19,15 +19,15 @@ const CENTRAL_HEADER_BYTES = 46;
 const LOCAL_HEADER = 0x04034b50;
 const LOCAL_HEADER_BYTES = 30;
 const ZIP64_EXTRA_FIELD = 0x0001;
-/** A 16-bit field holds this when the value is in the ZIP64 record (APPNOTE §4.4.1.4). */
+/** A 16-bit field holds this when the value is in the ZIP64 record. */
 const MARKER_16 = 0xffff;
-/** A 32-bit field holds this when the value is in the ZIP64 record or extra field (APPNOTE §4.4.1.4). */
+/** A 32-bit field holds this when the value is in the ZIP64 record or extra field. */
 const MARKER_32 = 0xffffffff;
 const STORED = 0;
 const DEFLATED = 8;
-/** General purpose bit flags: encrypted (bit 0), strong encryption (bit 6) and encrypted central directory (bit 13), APPNOTE §4.4.4. */
+/** General purpose bit flags: encrypted (bit 0), strong encryption (bit 6) and encrypted central directory (bit 13) */
 const ENCRYPTION_FLAGS = 0x1 | 0x40 | 0x2000;
-/** The "version made by" host systems that store a Unix mode in the external attributes: Unix and OS X (APPNOTE §4.4.2.2). */
+/** The "version made by" host systems that store a Unix mode in the external attributes: Unix and OS X. */
 const UNIX_HOSTS: readonly number[] = [3, 19];
 const UNIX_FILE_TYPE_MASK = 0o170000;
 const UNIX_SYMLINK = 0o120000;
@@ -88,7 +88,7 @@ class Reader {
   }
 }
 
-/** Finds the end of central directory record: the last one whose comment ends the archive (APPNOTE §4.3.16). */
+/** Finds the end of central directory record: the last one whose comment ends the archive. */
 function findEnd(reader: Reader): number {
   const { length } = reader.bytes;
   for (
@@ -141,14 +141,14 @@ function locateDirectory(reader: Reader, end: number): Directory {
   };
 }
 
-/** The values a ZIP64 extra field replaces: those whose 32-bit field holds the marker (APPNOTE §4.5.3). */
+/** The values a ZIP64 extra field replaces: those whose 32-bit field holds the marker. */
 interface Zip64Values {
   size: number;
   compressedSize: number;
   offset: number;
 }
 
-/** Finds the data of the ZIP64 extra field in the extra data of an entry (APPNOTE §4.5.3). */
+/** Finds the data of the ZIP64 extra field in the extra data of an entry. */
 function findZip64Field(
   reader: Reader,
   extra: { start: number; end: number },
@@ -378,10 +378,15 @@ function extract(reader: Reader, entry: Entry): Uint8Array {
 }
 
 /**
- * Reads the central directory of a ZIP archive and returns its files, inflated one at a time when they are read. The
- * checks of §2.6 run here: names (zip-slip), duplicate names, symbolic links, encryption, the entry count, and the
+ * Reads the central directory of a ZIP archive and returns its files, inflated one at a time when they are read.
+ *
+ * @remarks
+ * The security checks run here: names (zip-slip), duplicate names, symbolic links, encryption, the entry count, and the
  * declared sizes and ratios against the limits; each read counts the inflated bytes again.
  *
+ * @param zip - The archive.
+ * @param limits - The limits, with every field set.
+ * @returns The paths of the files, and a function that reads one.
  * @throws `ReadError` when the data is not a ZIP archive, is cut off, or uses a feature the runtime does not read.
  * @throws `SecurityError` when an entry breaks a rule or a limit.
  */

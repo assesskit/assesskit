@@ -6,11 +6,15 @@ import {
   readCurriculumStandardsSet,
   writeCurriculumStandardsSet,
 } from "./curriculum-standards.js";
+import { checkReadArguments, expectRoot } from "./element-reading.js";
 import { CP_NAMESPACE, CSM_NAMESPACE, LOM_NAMESPACE, QTI_METADATA_NAMESPACE } from "./namespaces.js";
 import { type QtiMetadata, readQtiMetadata, writeQtiMetadata } from "./qti-metadata.js";
-import { checkReadArguments, expectRoot } from "./text.js";
 
-/** The metadata of a resource in a content package (BIND §8.8). */
+/**
+ * The metadata of a resource in a content package.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
+ */
 export interface ResourceMetadata {
   /** The `lom` element, kept as XML: the runtime types only its category `general` (see {@link lomGeneral}). */
   readonly lom?: XmlElement;
@@ -76,16 +80,19 @@ function readExternal(element: XmlElement, path: string | undefined): ResourceMe
 
 /**
  * Reads the metadata of a resource from the `metadata` element of the resource in a manifest, or from the root `lom`
- * element of an external metadata file (resource type `resourcemetadata/xml`, BPIG §6.3), which holds the QTI metadata
+ * element of an external metadata file (resource type `resourcemetadata/xml`), which holds the QTI metadata
  * and the curriculum standards among the LOM elements. In the second case `lom` is the element without those two.
  *
- * The `metadata` element has `qtiMetadata`, `curriculumStandardsMetadataSet` and `lom` in that order (BIND §8.8).
+ * The `metadata` element has `qtiMetadata`, `curriculumStandardsMetadataSet` and `lom` in that order.
  *
  * @param element - The `metadata` element, or the `lom` root.
- * @param path - The path of the document, which the issues name. Default: no path.
+ * @param path - The path of the document, which the issues name.
+ * @returns The parts of the metadata: the LOM, the QTI metadata and the curriculum standards.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when a `metadata` element has anything but those three elements in that order, or one of the parts
  * cannot be read; an external file has one of the two parts twice.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide}
  */
 export function readResourceMetadata(element: XmlElement, path?: string): ResourceMetadata {
   checkReadArguments(element, path);
@@ -96,8 +103,11 @@ export function readResourceMetadata(element: XmlElement, path?: string): Resour
  * Writes the metadata of a resource as a `metadata` element of the content package namespace, with the children in
  * the order of the CP XSD: QTI metadata, curriculum standards, LOM.
  *
+ * @param metadata - The metadata to write.
+ * @returns The `metadata` element.
  * @throws `DataError` when a field has the wrong type, the `lom` is not a `lom` element of the LOM namespace, or the QTI
  * metadata or the curriculum standards are invalid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding}
  */
 export function writeResourceMetadata(metadata: ResourceMetadata): XmlElement {
   const input: unknown = metadata;

@@ -1,6 +1,5 @@
-import { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION, NUMERIC_EXPRESSION } from "../src/asi/element-table.js";
-import { ASI_NAMESPACE } from "../src/asi/namespace.js";
-import type { TypeDef } from "../src/asi/table.js";
+import { ASI_NAMESPACE } from "../src/asi/index.js";
+import { DOCUMENT_ELEMENTS, ELEMENT_TYPES, EXPRESSION, NUMERIC_EXPRESSION, type TypeDef } from "../src/asi/internal.js";
 import { type Names, nameOf } from "./schema-declarations.js";
 
 /** What the element table, which `scripts/asi-table.ts` generates from the ASI schema, says the schema declares. */

@@ -24,17 +24,33 @@ export class Findings {
     });
   }
 
-  /** Reports content that breaks a rule. */
+  /**
+   * Reports content that breaks a rule.
+   *
+   * @param code - The issue code.
+   * @param message - A full sentence that says what is wrong and what is expected.
+   * @param element - The element path.
+   */
   error(code: string, message: string, element?: string): void {
     this.report("error", code, message, element);
   }
 
-  /** Reports content that runs but deviates from a recommendation. */
+  /**
+   * Reports content that runs but deviates from a recommendation.
+   *
+   * @param code - The issue code.
+   * @param message - A full sentence that says what deviates and what is recommended.
+   * @param element - The element path.
+   */
   warning(code: string, message: string, element?: string): void {
     this.report("warning", code, message, element);
   }
 
-  /** Adds issues that another check returned, such as `checkBindings`, naming the file when they do not. */
+  /**
+   * Adds issues that another check returned, such as `checkBindings`, naming the file when they do not.
+   *
+   * @param issues - The issues to add.
+   */
   adopt(issues: readonly Issue[]): void {
     for (const issue of issues) {
       const { location } = issue;

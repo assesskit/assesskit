@@ -137,218 +137,234 @@ export interface TextNode {
   readonly value: string;
 }
 
-/** An expression, which processing evaluates to a value or NULL: one of the 64 operators and values (INFO §2.11). */
+/**
+ * An expression, which processing evaluates to a value or NULL: one of the 64 operators and values.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, expressions}
+ */
 export type Expression = Member<(typeof EXPRESSION)[number]>;
 
-/** An expression that yields a number: the operands of `qti-sum` (INFO §6.9.8). */
+/** An expression that yields a number: the operands of `qti-sum`. */
 export type NumericExpression = Member<(typeof NUMERIC_EXPRESSION)[number]>;
 
-/** A rule of response processing, or an `xi:include` of one (INFO §4.6). */
+/** A rule of response processing, or an `xi:include` of one. */
 export type ResponseRule = Member<(typeof RESPONSE_RULES)[number]> | XmlElement;
 
-/** A rule of outcome processing, or an `xi:include` of one (INFO §5.102). */
+/** A rule of outcome processing, or an `xi:include` of one. */
 export type OutcomeRule = Member<(typeof OUTCOME_RULES)[number]> | XmlElement;
 
-/** A rule of template processing (INFO §5.156). */
+/** A rule of template processing. */
 export type TemplateRule = Member<(typeof TEMPLATE_RULES)[number]>;
 
-/** A `qti-assessment-item`: one question or task, with its declarations, body and processing (INFO §4.1). */
+/**
+ * A `qti-assessment-item`: one question or task, with its declarations, body and processing.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-assessment-item}
+ */
 export type AssessmentItem = ElementModel<"AssessmentItem", "qti-assessment-item">;
 
-/** A `qti-assessment-stimulus`: material that several items share (INFO §4.3). */
+/** A `qti-assessment-stimulus`: material that several items share. */
 export type AssessmentStimulus = ElementModel<"AssessmentStimulus", "qti-assessment-stimulus">;
 
-/** A `qti-assessment-stimulus-ref`: the reference from an item to a stimulus (INFO §7.6). */
+/** A `qti-assessment-stimulus-ref`: the reference from an item to a stimulus. */
 export type AssessmentStimulusRef = ElementModel<"AssessmentStimulusRef", "qti-assessment-stimulus-ref">;
 
-/** A `qti-item-body`: the content of an item (INFO §5.79). */
+/** A `qti-item-body`: the content of an item. */
 export type ItemBody = ElementModel<"ItemBody", "qti-item-body">;
 
-/** A `qti-stimulus-body`: the content of a stimulus (INFO §5.137). */
+/** A `qti-stimulus-body`: the content of a stimulus. */
 export type StimulusBody = ElementModel<"StimulusBody", "qti-stimulus-body">;
 
-/** A `qti-stylesheet`: the reference to a style sheet (INFO §7.36). */
+/** A `qti-stylesheet`: the reference to a style sheet. */
 export type Stylesheet = ElementModel<"StyleSheet", "qti-stylesheet">;
 
-/** A `qti-assessment-item-ref`: the reference from a section to an item (INFO §5.6). */
+/** A `qti-assessment-item-ref`: the reference from a section to an item. */
 export type AssessmentItemRef = ElementModel<"AssessmentItemRef", "qti-assessment-item-ref">;
 
-/** A `qti-assessment-section`: a group of item references and sections (INFO §4.2). */
+/**
+ * A `qti-assessment-section`: a group of item references and sections.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-assessment-section}
+ */
 export type AssessmentSection = ElementModel<"AssessmentSection", "qti-assessment-section">;
 
-/** A `qti-assessment-section-ref`: the reference from a section or test part to a section document (INFO §7.5). */
+/** A `qti-assessment-section-ref`: the reference from a section or test part to a section document. */
 export type AssessmentSectionRef = ElementModel<"AssessmentSectionRef", "qti-assessment-section-ref">;
 
-/** A `qti-assessment-test`: items arranged in test parts and sections (INFO §4.4). */
+/**
+ * A `qti-assessment-test`: items arranged in test parts and sections.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-assessment-test}
+ */
 export type AssessmentTest = ElementModel<"AssessmentTest", "qti-assessment-test">;
 
-/** A `qti-branch-rule`: a jump to another item, section or test part when its expression is true (INFO §5.23). */
+/** A `qti-branch-rule`: a jump to another item, section or test part when its expression is true. */
 export type BranchRule = ElementModel<"BranchRule", "qti-branch-rule">;
 
-/** A `qti-item-session-control`: the rules for attempts, feedback, review and skipping (INFO §7.19). */
+/** A `qti-item-session-control`: the rules for attempts, feedback, review and skipping. */
 export type ItemSessionControl = ElementModel<"ItemSessionControl", "qti-item-session-control">;
 
-/** A `qti-ordering`: whether the children of a section are shuffled (INFO §5.98). */
+/** A `qti-ordering`: whether the children of a section are shuffled. */
 export type Ordering = ElementModel<"Ordering", "qti-ordering">;
 
-/** A `qti-pre-condition`: an expression that must be true for a part, section or item to be presented (INFO §5.86). */
+/** A `qti-pre-condition`: an expression that must be true for a part, section or item to be presented. */
 export type PreCondition = ElementModel<"LogicSingle", "qti-pre-condition">;
 
-/** A `qti-selection`: how many children of a section are selected (INFO §5.129). */
+/** A `qti-selection`: how many children of a section are selected. */
 export type Selection = ElementModel<"Selection", "qti-selection">;
 
-/** A `qti-template-default`: the default of a template variable that a test gives an item (INFO §5.152). */
+/** A `qti-template-default`: the default of a template variable that a test gives an item. */
 export type TemplateDefault = ElementModel<"TemplateDefault", "qti-template-default">;
 
-/** A `qti-test-part`: a major division of a test (INFO §5.159). */
+/** A `qti-test-part`: a major division of a test. */
 export type TestPart = ElementModel<"TestPart", "qti-test-part">;
 
-/** A `qti-time-limits`: the minimum and maximum time (INFO §7.40). */
+/** A `qti-time-limits`: the minimum and maximum time. */
 export type TimeLimits = ElementModel<"TimeLimits", "qti-time-limits">;
 
-/** A `qti-variable-mapping`: the rename of an item outcome for the test (INFO §7.48). */
+/** A `qti-variable-mapping`: the rename of an item outcome for the test. */
 export type VariableMapping = ElementModel<"VariableMapping", "qti-variable-mapping">;
 
-/** A `qti-weight`: the weight of an item outcome in the test (INFO §7.50). */
+/** A `qti-weight`: the weight of an item outcome in the test. */
 export type Weight = ElementModel<"Weight", "qti-weight">;
 
-/** A `qti-adaptive-engine-ref`: the reference to the engine of an adaptive section (INFO §7.3). */
+/** A `qti-adaptive-engine-ref`: the reference to the engine of an adaptive section. */
 export type AdaptiveEngineRef = ElementModel<"AdaptiveHref", "qti-adaptive-engine-ref">;
 
-/** A `qti-adaptive-selection`: the selection of the items of a section by a computer adaptive testing engine (INFO §5.3). */
+/** A `qti-adaptive-selection`: the selection of the items of a section by a computer adaptive testing engine. */
 export type AdaptiveSelection = ElementModel<"AdaptiveSelection", "qti-adaptive-selection">;
 
-/** A `qti-adaptive-settings-ref`: the reference to the settings of an adaptive section (INFO §7.3). */
+/** A `qti-adaptive-settings-ref`: the reference to the settings of an adaptive section. */
 export type AdaptiveSettingsRef = ElementModel<"AdaptiveHref", "qti-adaptive-settings-ref">;
 
-/** A `qti-metadata-ref`: the reference to the item metadata of an adaptive section (INFO §7.3). */
+/** A `qti-metadata-ref`: the reference to the item metadata of an adaptive section. */
 export type MetadataRef = ElementModel<"AdaptiveHref", "qti-metadata-ref">;
 
-/** A `qti-usagedata-ref`: the reference to the usage data of an adaptive section (INFO §7.3). */
+/** A `qti-usagedata-ref`: the reference to the usage data of an adaptive section. */
 export type UsageDataRef = ElementModel<"AdaptiveHref", "qti-usagedata-ref">;
 
-/** A `qti-area-map-entry`: the mapped value of an area (INFO §7.4). */
+/** A `qti-area-map-entry`: the mapped value of an area. */
 export type AreaMapEntry = ElementModel<"AreaMapEntry", "qti-area-map-entry">;
 
-/** A `qti-area-mapping`: the mapping from areas to values (INFO §5.5). */
+/** A `qti-area-mapping`: the mapping from areas to values. */
 export type AreaMapping = ElementModel<"AreaMapping", "qti-area-mapping">;
 
-/** A `qti-context-declaration`: a variable that a test declares and its items read (INFO §5.34). */
+/** A `qti-context-declaration`: a variable that a test declares and its items read. */
 export type ContextDeclaration = ElementModel<"ContextDeclaration", "qti-context-declaration">;
 
-/** A `qti-correct-response`: the correct value of a response (INFO §5.35). */
+/** A `qti-correct-response`: the correct value of a response. */
 export type CorrectResponse = ElementModel<"CorrectResponse", "qti-correct-response">;
 
-/** A `qti-default-value`: the value a variable has before processing sets it (INFO §5.41). */
+/** A `qti-default-value`: the value a variable has before processing sets it. */
 export type DefaultValue = ElementModel<"DefaultValue", "qti-default-value">;
 
-/** A `qti-interpolation-table`: the mapping from number ranges to values (INFO §5.78). */
+/** A `qti-interpolation-table`: the mapping from number ranges to values. */
 export type InterpolationTable = ElementModel<"InterpolationTable", "qti-interpolation-table">;
 
-/** A `qti-interpolation-table-entry`: one range of an interpolation table (INFO §7.18). */
+/** A `qti-interpolation-table-entry`: one range of an interpolation table. */
 export type InterpolationTableEntry = ElementModel<"InterpolationTableEntry", "qti-interpolation-table-entry">;
 
-/** A `qti-map-entry`: the mapped value of one response value (INFO §7.21). */
+/** A `qti-map-entry`: the mapped value of one response value. */
 export type MapEntry = ElementModel<"MapEntry", "qti-map-entry">;
 
-/** A `qti-mapping`: the mapping from response values to numbers (INFO §5.88). */
+/** A `qti-mapping`: the mapping from response values to numbers. */
 export type Mapping = ElementModel<"Mapping", "qti-mapping">;
 
-/** A `qti-match-table`: the mapping from integers to values (INFO §5.90). */
+/** A `qti-match-table`: the mapping from integers to values. */
 export type MatchTable = ElementModel<"MatchTable", "qti-match-table">;
 
-/** A `qti-match-table-entry`: one integer of a match table (INFO §7.23). */
+/** A `qti-match-table-entry`: one integer of a match table. */
 export type MatchTableEntry = ElementModel<"MatchTableEntry", "qti-match-table-entry">;
 
-/** A `qti-outcome-declaration`: an outcome variable (INFO §4.5). */
+/** A `qti-outcome-declaration`: an outcome variable. */
 export type OutcomeDeclaration = ElementModel<"OutcomeDeclaration", "qti-outcome-declaration">;
 
-/** A `qti-response-declaration`: a response variable (INFO §5.115). */
+/** A `qti-response-declaration`: a response variable. */
 export type ResponseDeclaration = ElementModel<"ResponseDeclaration", "qti-response-declaration">;
 
-/** A `qti-template-declaration`: a template variable (INFO §5.151). */
+/** A `qti-template-declaration`: a template variable. */
 export type TemplateDeclaration = ElementModel<"TemplateDeclaration", "qti-template-declaration">;
 
-/** A `qti-value`: one value of a default value or a correct response (INFO §7.46). */
+/** A `qti-value`: one value of a default value or a correct response. */
 export type ValueElement = ElementModel<"Value", "qti-value">;
 
-/** A `qti-exit-response`: the end of response processing (INFO §6.39.5). */
+/** A `qti-exit-response`: the end of response processing. */
 export type ExitResponse = ElementModel<"EmptyPrimitiveType", "qti-exit-response">;
 
-/** A `qti-exit-template`: the end of template processing (INFO §6.50.2). */
+/** A `qti-exit-template`: the end of template processing. */
 export type ExitTemplate = ElementModel<"EmptyPrimitiveType", "qti-exit-template">;
 
-/** A `qti-exit-test`: the end of outcome processing (INFO §6.32.5). */
+/** A `qti-exit-test`: the end of outcome processing. */
 export type ExitTest = ElementModel<"EmptyPrimitiveType", "qti-exit-test">;
 
-/** A `qti-lookup-outcome-value`: sets an outcome from a lookup table (INFO §5.87, §6.32.1, §6.39.6). */
+/** A `qti-lookup-outcome-value`: sets an outcome from a lookup table. */
 export type LookupOutcomeValue = ElementModel<"LookupOutcomeValue", "qti-lookup-outcome-value">;
 
-/** A `qti-outcome-condition`: an if, else-if and else of outcome rules (INFO §5.99, §6.32.6). */
+/** A `qti-outcome-condition`: an if, else-if and else of outcome rules. */
 export type OutcomeCondition = ElementModel<"OutcomeCondition", "qti-outcome-condition">;
 
-/** A `qti-outcome-else`: the rules of an outcome condition when no expression is true (INFO §5.100). */
+/** A `qti-outcome-else`: the rules of an outcome condition when no expression is true. */
 export type OutcomeElse = ElementModel<"OutcomeElse", "qti-outcome-else">;
 
-/** A `qti-outcome-else-if`: an expression and the rules to run when it is true and no earlier one was (INFO §5.101). */
+/** A `qti-outcome-else-if`: an expression and the rules to run when it is true and no earlier one was. */
 export type OutcomeElseIf = ElementModel<"OutcomeIf", "qti-outcome-else-if">;
 
-/** A `qti-outcome-if`: an expression and the rules to run when it is true (INFO §5.101). */
+/** A `qti-outcome-if`: an expression and the rules to run when it is true. */
 export type OutcomeIf = ElementModel<"OutcomeIf", "qti-outcome-if">;
 
-/** A `qti-outcome-processing`: the rules that set the outcomes of a test (INFO §5.102). */
+/** A `qti-outcome-processing`: the rules that set the outcomes of a test. */
 export type OutcomeProcessing = ElementModel<"OutcomeProcessing", "qti-outcome-processing">;
 
-/** A `qti-outcome-processing-fragment`: a group of outcome rules (INFO §5.103, §6.32.2). */
+/** A `qti-outcome-processing-fragment`: a group of outcome rules. */
 export type OutcomeProcessingFragment = ElementModel<"OutcomeProcessingFragment", "qti-outcome-processing-fragment">;
 
-/** A `qti-response-condition`: an if, else-if and else of response rules (INFO §5.114, §6.39.2). */
+/** A `qti-response-condition`: an if, else-if and else of response rules. */
 export type ResponseCondition = ElementModel<"ResponseCondition", "qti-response-condition">;
 
-/** A `qti-response-else`: the rules of a response condition when no expression is true (INFO §5.116). */
+/** A `qti-response-else`: the rules of a response condition when no expression is true. */
 export type ResponseElse = ElementModel<"ResponseElse", "qti-response-else">;
 
-/** A `qti-response-else-if`: an expression and the rules to run when it is true and no earlier one was (INFO §5.117). */
+/** A `qti-response-else-if`: an expression and the rules to run when it is true and no earlier one was. */
 export type ResponseElseIf = ElementModel<"ResponseIf", "qti-response-else-if">;
 
-/** A `qti-response-if`: an expression and the rules to run when it is true (INFO §5.117). */
+/** A `qti-response-if`: an expression and the rules to run when it is true. */
 export type ResponseIf = ElementModel<"ResponseIf", "qti-response-if">;
 
-/** A `qti-response-processing`: the rules that score the responses of an item (INFO §4.6). */
+/** A `qti-response-processing`: the rules that score the responses of an item. */
 export type ResponseProcessing = ElementModel<"ResponseProcessing", "qti-response-processing">;
 
-/** A `qti-response-processing-fragment`: a group of response rules (INFO §5.118, §6.39.3). */
+/** A `qti-response-processing-fragment`: a group of response rules. */
 export type ResponseProcessingFragment = ElementModel<"ResponseProcessingFragment", "qti-response-processing-fragment">;
 
-/** A `qti-set-correct-response`: sets the correct response of a response variable (INFO §5.130, §6.50.5). */
+/** A `qti-set-correct-response`: sets the correct response of a response variable. */
 export type SetCorrectResponse = ElementModel<"SetValue", "qti-set-correct-response">;
 
-/** A `qti-set-default-value`: sets the default value of a variable (INFO §5.130, §6.50.4). */
+/** A `qti-set-default-value`: sets the default value of a variable. */
 export type SetDefaultValue = ElementModel<"SetValue", "qti-set-default-value">;
 
-/** A `qti-set-outcome-value`: sets an outcome (INFO §5.130, §6.32.3, §6.39.4). */
+/** A `qti-set-outcome-value`: sets an outcome. */
 export type SetOutcomeValue = ElementModel<"SetValue", "qti-set-outcome-value">;
 
-/** A `qti-set-template-value`: sets a template variable (INFO §5.130, §6.50.1). */
+/** A `qti-set-template-value`: sets a template variable. */
 export type SetTemplateValue = ElementModel<"SetValue", "qti-set-template-value">;
 
-/** A `qti-template-condition`: an if, else-if and else of template rules (INFO §5.149, §6.50.3). */
+/** A `qti-template-condition`: an if, else-if and else of template rules. */
 export type TemplateCondition = ElementModel<"TemplateCondition", "qti-template-condition">;
 
-/** A `qti-template-constraint`: an expression that template processing must make true (INFO §5.150, §6.50.6). */
+/** A `qti-template-constraint`: an expression that template processing must make true. */
 export type TemplateConstraint = ElementModel<"TemplateConstraint", "qti-template-constraint">;
 
-/** A `qti-template-else`: the rules of a template condition when no expression is true (INFO §5.153). */
+/** A `qti-template-else`: the rules of a template condition when no expression is true. */
 export type TemplateElse = ElementModel<"TemplateElse", "qti-template-else">;
 
-/** A `qti-template-else-if`: an expression and the rules to run when it is true and no earlier one was (INFO §5.154). */
+/** A `qti-template-else-if`: an expression and the rules to run when it is true and no earlier one was. */
 export type TemplateElseIf = ElementModel<"TemplateIf", "qti-template-else-if">;
 
-/** A `qti-template-if`: an expression and the rules to run when it is true (INFO §5.154). */
+/** A `qti-template-if`: an expression and the rules to run when it is true. */
 export type TemplateIf = ElementModel<"TemplateIf", "qti-template-if">;
 
-/** A `qti-template-processing`: the rules that set the template variables of an item (INFO §5.156). */
+/** A `qti-template-processing`: the rules that set the template variables of an item. */
 export type TemplateProcessing = ElementModel<"TemplateProcessing", "qti-template-processing">;
 
-/** A `qti-rubric-block` of a test, test part or section: instructions for the people who read or score (INFO §5.160). */
+/** A `qti-rubric-block` of a test, test part or section: instructions for the people who read or score. */
 export type TestRubricBlock = ElementModel<"TestRubricBlock", "qti-rubric-block">;

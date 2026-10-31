@@ -11,7 +11,11 @@ export interface ReaderRules {
   readonly module: string;
   /** The namespaces of the elements the schema defines, the schema's own first; elements in other namespaces are extensions. */
   readonly namespaces: readonly string[];
-  /** The path of the document in its package or directory, which the issues name. `open` sets it from its options. */
+  /**
+   * The path of the document in its package or directory, which the issues name. `open` sets it from its options.
+   *
+   * @defaultValue `undefined`
+   */
   readonly path?: string;
 }
 
@@ -19,7 +23,10 @@ export interface ReaderRules {
  * Returns a conversion for `ElementReader.text` and `ElementReader.attribute`: the text must be one of some terms.
  *
  * @param terms - The terms.
- * @param label - Names the text in the message of the `DataError` that a wrong term gives. Default: `The text`.
+ * @param label - Names the text in the message of the `DataError` that a wrong term gives.
+ * @defaultValue `"The text"`
+ * @returns A function that returns its text when it is one of the terms.
+ * @throws `DataError` from the returned function when the text is not one of the terms.
  */
 export function termOf<T extends string>(terms: readonly T[], label = "The text"): (text: string) => T {
   return (text) => {
@@ -28,17 +35,18 @@ export function termOf<T extends string>(terms: readonly T[], label = "The text"
   };
 }
 
-/** Returns whether a text node holds only XML white space. */
 const isBlank = (value: string): boolean => value.trim() === "";
 
 /**
  * Reads one element of a document that is being mapped to a model: its attributes, its child elements in order, or its
- * text. It reports what the model leaves unread, so that nothing in a document is dropped without notice, and it turns
- * each problem into a `ReadError` that names the element, its position and the rule.
+ * text.
  *
- * A reader is positioned on an element and moves forward through its children: `take`, `takeAny`, `require`, `takeAll` and
- * `takeForeign` consume the children that follow, `next` consumes the next child whatever it is. {@link done} fails when
- * an attribute or a child is left.
+ * @remarks
+ * The reader reports what the model leaves unread, so that nothing in a document is dropped without notice, and it turns
+ * each problem into a `ReadError` that names the element, its position and the rule. It is positioned on an element and
+ * moves forward through its children: `take`, `takeAny`, `require`, `takeAll` and `takeForeign` consume the children
+ * that follow, and `next` consumes the next child whatever it is. {@link ElementReader.done} fails when an attribute or a
+ * child is left.
  */
 export class ElementReader {
   /** The element this reader reads. */
@@ -51,6 +59,8 @@ export class ElementReader {
   private textRead = false;
 
   /**
+   * Starts reading an element.
+   *
    * @param element - The element to read, from `parseXml` or built by the caller.
    * @param rules - See {@link ReaderRules}.
    * @param trail - The path of the parent elements, `/`-separated; empty for a root.
@@ -76,9 +86,11 @@ export class ElementReader {
    * @param rules - See {@link ReaderRules}.
    * @param what - Names the document in messages, such as `The results`.
    * @param options - The options of {@link parseXml}: `path` names the document in the issues, and `limits` apply to text
-   * and bytes. Default: none.
+   * and bytes.
+   * @defaultValue `{}`
+   * @returns A reader positioned on the root element.
    * @throws `DataError` when `input` is none of these, or an option has the wrong type.
-   * @throws `ReadError`, `SecurityError` as {@link parseXml} does.
+   * @throws `ReadError` and `SecurityError` as {@link parseXml} does.
    */
   static open(input: unknown, rules: ReaderRules, what: string, options: ParseXmlOptions = {}): ElementReader {
     checkOptions(options);
@@ -107,7 +119,13 @@ export class ElementReader {
     return !this.isModel(this.element);
   }
 
-  /** Builds the `ReadError` for a problem at this element. Throw the result. */
+  /**
+   * Builds the `ReadError` for a problem at this element. Throw the result.
+   *
+   * @param code - The issue code of the problem, such as `missing-attribute`; the module of the rules goes before it.
+   * @param message - A full sentence that says what is wrong and what is expected.
+   * @returns The error, with the position of the element.
+   */
   fail(code: string, message: string): ReadError {
     return readError(
       `assesskit/${this.rules.module}/${code}`,
@@ -121,7 +139,11 @@ export class ElementReader {
    * `ReadError` at this element.
    *
    * @param code - The issue code of the problem, such as `invalid-value`.
+   * @param run - The conversion.
    * @param lead - Text that opens the message of the `ReadError` before the message of the `DataError`.
+   * @defaultValue `""`
+   * @returns What `run` returns.
+   * @throws `ReadError` when `run` throws a `DataError`; any other error passes through.
    */
   attempt<T>(code: string, run: () => T, lead = ""): T {
     try {
@@ -153,6 +175,7 @@ export class ElementReader {
    * Returns the value of an attribute that is in no namespace, or `undefined` when the element has none.
    *
    * @param name - The local name of the attribute.
+   * @returns The text of the attribute.
    */
   attribute(name: string): string | undefined;
   /**
@@ -161,6 +184,8 @@ export class ElementReader {
    * @param name - The local name of the attribute.
    * @param parse - Converts the text of the attribute, for instance with `parsePrimitive`. A `DataError` that it throws
    * becomes a `ReadError` that names the attribute.
+   * @returns The converted value.
+   * @throws `ReadError` when `parse` fails.
    */
   attribute<T>(name: string, parse: (text: string) => T): T | undefined;
   attribute<T>(name: string, parse?: (text: string) => T): string | T | undefined {
@@ -169,9 +194,22 @@ export class ElementReader {
     return this.convert(parse, text, "invalid-attribute", `The attribute ${name} of the element ${this.name}`);
   }
 
-  /** Returns the value of an attribute in no namespace; a `ReadError` when the element has none. */
+  /**
+   * Returns the value of an attribute in no namespace.
+   *
+   * @param name - The local name of the attribute.
+   * @returns The text of the attribute.
+   * @throws `ReadError` when the element has none.
+   */
   required(name: string): string;
-  /** Returns the value of an attribute in no namespace, converted as {@link attribute} does; a `ReadError` when the element has none. */
+  /**
+   * Returns the value of an attribute in no namespace, converted as {@link ElementReader.attribute} does.
+   *
+   * @param name - The local name of the attribute.
+   * @param parse - Converts the text of the attribute.
+   * @returns The converted value.
+   * @throws `ReadError` when the element has none or `parse` fails.
+   */
   required<T>(name: string, parse: (text: string) => T): T;
   required<T>(name: string, parse?: (text: string) => T): string | T {
     const value = parse === undefined ? this.attribute(name) : this.attribute(name, parse);
@@ -184,6 +222,9 @@ export class ElementReader {
   /**
    * Returns the value of an attribute that must be one of some terms, or `undefined` when the element has none.
    *
+   * @param name - The local name of the attribute.
+   * @param terms - The terms that the attribute may have.
+   * @returns The term.
    * @throws `ReadError` when the value is another term.
    */
   term<T extends string>(name: string, terms: readonly T[]): T | undefined {
@@ -193,7 +234,14 @@ export class ElementReader {
     });
   }
 
-  /** Returns the value of an attribute that must be one of some terms; a `ReadError` when the element has none or another term. */
+  /**
+   * Returns the value of an attribute that must be one of some terms.
+   *
+   * @param name - The local name of the attribute.
+   * @param terms - The terms that the attribute may have.
+   * @returns The term.
+   * @throws `ReadError` when the element has none or another term.
+   */
   requiredTerm<T extends string>(name: string, terms: readonly T[]): T {
     const value = this.term(name, terms);
     if (value === undefined) {
@@ -205,6 +253,7 @@ export class ElementReader {
   /**
    * Returns the value of `xml:lang`, or `undefined` when the element has none.
    *
+   * @returns The language tag, or the empty string that undoes an inherited language.
    * @throws `ReadError` when the value is not a language tag or empty.
    */
   language(): string | undefined {
@@ -214,12 +263,21 @@ export class ElementReader {
     throw this.fail("invalid-attribute", message);
   }
 
-  /** Returns the value of `xml:base`, or `undefined` when the element has none. */
+  /**
+   * Returns the value of `xml:base`, or `undefined` when the element has none.
+   *
+   * @returns The base reference.
+   */
   base(): string | undefined {
     return this.attributeNamed(XML_NAMESPACE, "base")?.value;
   }
 
-  /** Returns the value of `xml:lang`; a `ReadError` when the element has none or an invalid one. */
+  /**
+   * Returns the value of `xml:lang`.
+   *
+   * @returns The language tag.
+   * @throws `ReadError` when the element has none or an invalid one.
+   */
   requiredLanguage(): string {
     const value = this.language();
     if (value === undefined) {
@@ -250,7 +308,12 @@ export class ElementReader {
     return this.rules.namespaces.includes(element.namespace);
   }
 
-  /** Consumes and returns the next child element, or `undefined` when none is left. */
+  /**
+   * Consumes the next child element.
+   *
+   * @returns A reader of the child, or `undefined` when none is left.
+   * @throws `ReadError` when the element has text other than white space.
+   */
   next(): ElementReader | undefined {
     const element = this.content()[this.position];
     if (element === undefined) return undefined;
@@ -258,7 +321,13 @@ export class ElementReader {
     return this.reader(element);
   }
 
-  /** Consumes the next child if it is one of the elements `names` of the namespace of the rules; otherwise returns `undefined`. */
+  /**
+   * Consumes the next child if it is one of the elements `names` of the namespace of the rules.
+   *
+   * @param names - The local names.
+   * @returns A reader of the child, or `undefined` when the next child is another element or none is left.
+   * @throws `ReadError` when the element has text other than white space.
+   */
   takeAny(names: readonly string[]): ElementReader | undefined {
     const element = this.content()[this.position];
     if (element === undefined || !(this.isModel(element) && names.includes(element.name))) return undefined;
@@ -266,12 +335,24 @@ export class ElementReader {
     return this.reader(element);
   }
 
-  /** Consumes the next child if it is the element `name` of the namespace of the rules; otherwise returns `undefined`. */
+  /**
+   * Consumes the next child if it is the element `name` of the namespace of the rules.
+   *
+   * @param name - The local name.
+   * @returns A reader of the child, or `undefined` when the next child is another element or none is left.
+   * @throws `ReadError` when the element has text other than white space.
+   */
   take(name: string): ElementReader | undefined {
     return this.takeAny([name]);
   }
 
-  /** Consumes the next child, which must be the element `name`; a `ReadError` when it is not. */
+  /**
+   * Consumes the next child, which must be the element `name`.
+   *
+   * @param name - The local name.
+   * @returns A reader of the child.
+   * @throws `ReadError` when the next child is another element or none is left.
+   */
   require(name: string): ElementReader {
     const reader = this.take(name);
     if (reader === undefined) {
@@ -282,7 +363,13 @@ export class ElementReader {
     return reader;
   }
 
-  /** Consumes the run of children that are the element `name`, and returns them; none gives an empty array. */
+  /**
+   * Consumes the run of children that are the element `name`.
+   *
+   * @param name - The local name.
+   * @returns A reader of each child; an empty array when none follows.
+   * @throws `ReadError` when the element has text other than white space.
+   */
   takeAll(name: string): ElementReader[] {
     const readers: ElementReader[] = [];
     for (let reader = this.take(name); reader !== undefined; reader = this.take(name)) readers.push(reader);
@@ -293,6 +380,7 @@ export class ElementReader {
    * Returns the element of a reader as an extension: an element of another namespace than the schema's, which a model keeps
    * as it is. The schema's wildcards (`##other`) do not allow an element in no namespace.
    *
+   * @returns The element.
    * @throws `ReadError` when the element is in no namespace.
    */
   extension(): XmlElement {
@@ -306,6 +394,7 @@ export class ElementReader {
   /**
    * Consumes the run of children that are in another namespace, extensions that the model keeps as they are.
    *
+   * @returns The extensions; an empty array when none follows.
    * @throws `ReadError` when one is in no namespace; see {@link extension}.
    */
   takeForeign(): XmlElement[] {
@@ -324,13 +413,15 @@ export class ElementReader {
   /**
    * Returns the text of the element: its text and CDATA sections joined, without comments and processing instructions.
    *
+   * @returns The text.
    * @throws `ReadError` when the element has child elements.
    */
   text(): string;
   /**
    * Returns the text of the element, converted.
    *
-   * @param parse - Converts the text, as for {@link attribute}.
+   * @param parse - Converts the text, as for {@link ElementReader.attribute}.
+   * @returns The converted value.
    * @throws `ReadError` when the element has child elements, or `parse` fails.
    */
   text<T>(parse: (text: string) => T): T;
@@ -352,7 +443,8 @@ export class ElementReader {
   /**
    * Returns the text of an element that holds text only, converted, and finishes the element: `text(parse)` and `done()`.
    *
-   * @param parse - Converts the text, as for {@link attribute}.
+   * @param parse - Converts the text, as for {@link ElementReader.attribute}.
+   * @returns The converted value.
    * @throws `ReadError` as `text` and `done` do.
    */
   leaf<T>(parse: (text: string) => T): T {
@@ -363,7 +455,7 @@ export class ElementReader {
 
   /**
    * Finishes the element: it must have no attribute, no child element and no text left unread. Namespace declarations and the
-   * attributes of `xsi:` (XML Schema Part 1, 2.6) are never unread.
+   * attributes of `xsi:` are never unread.
    *
    * @throws `ReadError` for the first attribute or child element left.
    */

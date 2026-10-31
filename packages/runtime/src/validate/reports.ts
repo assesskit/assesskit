@@ -5,7 +5,12 @@ import { Findings } from "./findings.js";
 export class Reports {
   private readonly byPath = new Map<string | undefined, Findings>();
 
-  /** Returns the findings of a document, created on first use. */
+  /**
+   * Returns the findings of a document, created on first use.
+   *
+   * @param path - The path of the document.
+   * @returns The findings of the document.
+   */
   of(path: string | undefined): Findings {
     let findings = this.byPath.get(path);
     if (findings === undefined) {

@@ -1,12 +1,12 @@
 /**
- * The vocabularies of the content that the unit and the schema tests check, with the terms that INFO §8 gives each. The
+ * The vocabularies of the content that the unit and the schema tests check, with the terms that the Information Model gives each. The
  * element is where an item body puts an attribute of the vocabulary; the attribute is as written, and the property is the
  * name in the model.
  */
 export interface Vocabulary {
   /** The inventory row, such as `W1`. */
   readonly row: string;
-  /** The name of the vocabulary in INFO §8. */
+  /** The name of the vocabulary in the Information Model. */
   readonly name: string;
   /** The element that has the attribute. */
   readonly element: "div" | "td" | "audio" | "video" | "track" | "param";
@@ -35,7 +35,7 @@ export const PLACES = {
   },
 } as const;
 
-/** The 74 role values of INFO §8.9. */
+/** The 74 role values of the Information Model. */
 const ARIA_ROLES = [
   "alert",
   "alertdialog",

@@ -16,7 +16,7 @@ const RULES: ReaderRules = {
   namespaces: [PNP_NAMESPACE, ...PNP_ALTERNATE_NAMESPACES],
 };
 
-/** Reads the members of a set: each is an empty element named after a support that a set can list (PNP XSD `FeatureSetDType`). */
+/** Reads the members of a set: each is an empty element named after a support that a set can list. */
 function readSet(reader: ElementReader): Set<SetSupportName> {
   const names = new Set<SetSupportName>();
   for (let child = reader.next(); child !== undefined; child = reader.next()) {
@@ -35,7 +35,7 @@ function readSet(reader: ElementReader): Set<SetSupportName> {
 
 /**
  * Joins a second element of a support to the first. Only `hazard-avoidance` and `language-of-interface` occur once for
- * each hazard and each language (PNP XSD); any other repeat gives `undefined`.
+ * each hazard and each language; any other repeat gives `undefined`.
  */
 function join(first: SupportSetting, second: SupportSetting): SupportSetting | undefined {
   if (first.name === "hazard-avoidance" && second.name === "hazard-avoidance") {
@@ -131,11 +131,14 @@ function readRecord(reader: ElementReader): PnpRecord {
 }
 
 /**
- * Reads a PNP document of the QTI profile of PNP 3.0 (BPIG §5, PNP XSD): a single profile, `access-for-all-pnp`, or a bulk
- * file of profiles, `access-for-all-pnp-records` (BPIG §5.5). It also reads the two namespaces that 1EdTech's own documents
- * use instead of the schema's (D6); {@link PNP_ALTERNATE_NAMESPACES} lists them. A support may occur once; the exceptions
- * are `hazard-avoidance` and `language-of-interface`, which occur once for each hazard and each language. A set lists
- * predefined supports only; an element of another namespace is a custom support only as a child of the profile.
+ * Reads a PNP document of the QTI profile of PNP 3.0: a single profile, `access-for-all-pnp`, or a bulk file of
+ * profiles, `access-for-all-pnp-records`.
+ *
+ * @remarks
+ * The reader also accepts the two namespaces that 1EdTech's own documents use instead of the schema's;
+ * {@link PNP_ALTERNATE_NAMESPACES} lists them. A support may occur once; the exceptions are `hazard-avoidance` and
+ * `language-of-interface`, which occur once for each hazard and each language. A set lists predefined supports only; an
+ * element of another namespace is a custom support only as a child of the profile.
  *
  * @param input - The document as text or bytes, or the root element of a parsed document.
  * @returns A profile for `access-for-all-pnp`, the records for `access-for-all-pnp-records`.
@@ -144,6 +147,7 @@ function readRecord(reader: ElementReader): PnpRecord {
  * mapped to the model: an unknown, repeated or misplaced element, a parameter outside its vocabulary, a number that is not
  * one, or a missing `xml:lang` or `source-system`.
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, PNP}
  */
 export function readPnp(input: string | Uint8Array | XmlElement): PersonalNeedsProfile | readonly PnpRecord[] {
   const reader = ElementReader.open(input, RULES, "The PNP");

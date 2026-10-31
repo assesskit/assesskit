@@ -15,9 +15,11 @@ export interface ResponseRules {
 /**
  * Returns the rules that response processing runs and reports the template when it cannot be found. Its own rules win;
  * else the standard template its `template` names; else the rules the resolver returns for its `template-location`, or its
- * `template` when it has no location (INFO §4.6.1–2, B45). A QTI 2.x template URI names the template of the same algorithm
- * with a warning (G43); a URI that is neither standard nor resolved is an error (G17).
+ * `template` when it has no location. A QTI 2.x template URI names the template of the same algorithm
+ * with a warning; a URI that is neither standard nor resolved is an error.
  *
+ * @param findings - The findings of the document, which receive the issues.
+ * @param trail - The element names that lead to the response processing, `/`-separated.
  * @param processing - The response processing, absent when the item has none.
  * @param resolveTemplate - The host's resolver of templates, absent when it is not known: then a template that is not
  * standard cannot be found.

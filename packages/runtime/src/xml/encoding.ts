@@ -1,6 +1,6 @@
 import { documentName, readError } from "./read-error.js";
 
-/** The XML declaration is ASCII and short; its encoding declaration is looked for in this many bytes (XML 1.0 App. F.1). */
+/** The XML declaration is ASCII and short, so its encoding declaration is looked for in this many bytes. */
 const DECLARATION_LENGTH = 256;
 const ENCODING_DECLARATION = /^<\?xml[ \t\r\n][^>]*?[ \t\r\n]encoding[ \t\r\n]*=[ \t\r\n]*(?:"([^"]*)"|'([^']*)')/;
 
@@ -10,7 +10,7 @@ interface ByteOrderMark {
   readonly encoding: string;
 }
 
-/** The byte order marks of UTF-8 and UTF-16 (XML 1.0 App. F.1). */
+/** The byte order marks of UTF-8 and UTF-16. */
 const BYTE_ORDER_MARKS: readonly ByteOrderMark[] = [
   { bytes: [0xef, 0xbb, 0xbf], encoding: "utf-8" },
   { bytes: [0xff, 0xfe], encoding: "utf-16le" },
@@ -62,12 +62,19 @@ function decodeMarked(bytes: Uint8Array, mark: ByteOrderMark, path: string | und
 }
 
 /**
- * Decodes the bytes of a document into text by the rules of XML 1.0 §4.3.3 and App. F.1: a UTF-8 or UTF-16 byte order
- * mark decides, and a declaration that names another encoding is an error; without a mark, the declared encoding is
- * used when `TextDecoder` supports it, and UTF-8 when the document declares none. UTF-16 needs a mark.
+ * Decodes the bytes of a document into text.
  *
+ * @remarks
+ * A UTF-8 or UTF-16 byte order mark decides, and a declaration that names another encoding is an error. Without a mark,
+ * the declared encoding is used when `TextDecoder` supports it, and UTF-8 when the document declares none. UTF-16 needs
+ * a mark.
+ *
+ * @param bytes - The bytes of the document.
+ * @param path - The path of the document, which the error names.
+ * @returns The text of the document, without its byte order mark.
  * @throws `ReadError` when the bytes are not valid in their encoding, the encoding is not supported, or a declaration
  * contradicts the byte order mark.
+ * @see {@link https://www.w3.org/TR/xml/ | Extensible Markup Language (XML) 1.0, Character Encoding in Entities}
  */
 export function decodeXml(bytes: Uint8Array, path: string | undefined): string {
   const mark = BYTE_ORDER_MARKS.find(({ bytes: prefix }) => prefix.every((byte, index) => bytes[index] === byte));

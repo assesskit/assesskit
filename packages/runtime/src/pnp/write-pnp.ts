@@ -68,15 +68,18 @@ const isRecords = (value: PersonalNeedsProfile | readonly PnpRecord[]): value is
 
 /**
  * Writes a PNP document of the QTI profile of PNP 3.0 in UTF-8, valid against the PNP schema, which names it in
- * `xsi:schemaLocation`, and always in the schema's namespace. Supports are written in the order of the profile, then the
- * non-empty sets, then the custom supports. A profile gives `access-for-all-pnp`; an array of records gives the bulk file
- * `access-for-all-pnp-records`.
+ * `xsi:schemaLocation`, and always in the schema's namespace.
+ *
+ * @remarks
+ * Supports are written in the order of the profile, then the non-empty sets, then the custom supports. A profile gives
+ * `access-for-all-pnp`; an array of records gives the bulk file `access-for-all-pnp-records`.
  *
  * @param profile - A profile, or one or more records; it is checked deeply.
  * @returns The document.
  * @throws `DataError` when the model is not one: a field of the wrong type, a key that differs from the name of its
  * setting, a name that no set can list, a parameter outside its vocabulary, an empty list of records, or text with a
  * character that XML 1.0 does not allow.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, PNP}
  */
 export function writePnp(profile: PersonalNeedsProfile | readonly PnpRecord[]): string {
   if (isRecords(profile)) {

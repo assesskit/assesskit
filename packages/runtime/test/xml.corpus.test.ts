@@ -10,7 +10,7 @@ const paths = readdirSync(examples, { recursive: true, encoding: "utf8" })
   .filter((path) => path.endsWith(".xml"))
   .sort();
 
-/** The examples that the runtime's reader rejects, with the reason: a saved web page, and a file that is not well-formed (design §0). */
+/** The examples that the runtime's reader rejects, with the reason: a saved web page, and a file that is not well-formed. */
 const REJECTED = new Map<string, typeof ReadError | typeof SecurityError>([
   ["CAT/test.xml", SecurityError],
   ["results/full-example.xml", ReadError],

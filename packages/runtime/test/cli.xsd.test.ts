@@ -15,9 +15,8 @@ import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { pathIssues } from "../src/cli/check-path.js";
-import { sha256 } from "../src/cli/fetch-schemas.js";
 import { runCli } from "../src/cli/index.js";
+import { pathIssues, sha256 } from "../src/cli/internal.js";
 import { type Issue, ReadError, readAsi } from "../src/index.js";
 import { loadSchemaSet, readPackageFile, SCHEMA_FILES, type SchemaSet, validateXmlFiles } from "../src/node/index.js";
 import { PNP_NAMESPACE } from "../src/pnp/index.js";
@@ -89,7 +88,7 @@ function example(path: string): string {
   return join(examples, path);
 }
 
-/** The issues of the libraries for an assessment document: the schema check, then the reader and the semantic checks (L12). */
+/** The issues of the libraries for an assessment document: the schema check, then the reader and the semantic checks. */
 async function expectedForDocument(path: string): Promise<readonly Issue[]> {
   const content = new Uint8Array(readFileSync(path));
   const schema = await validateXmlFiles(schemas, [{ path, content }]);
@@ -101,7 +100,7 @@ async function expectedForDocument(path: string): Promise<readonly Issue[]> {
   }
 }
 
-/** The issues of the libraries for a package: the schema check of each of its XML files that has a schema, then `validatePackage` (L12). */
+/** The issues of the libraries for a package: the schema check of each of its XML files that has a schema, then `validatePackage`. */
 async function expectedForPackage(path: string): Promise<readonly Issue[]> {
   const pkg = await readPackageFile(path);
   const issues: Issue[] = [];
@@ -122,7 +121,7 @@ describe("assesskit validate: documents", () => {
     });
   });
 
-  it("gives the report of the design in JSON, with the fields in order, for an item that is valid", async () => {
+  it("gives the report in JSON, with the fields in order, for an item that is valid", async () => {
     const path = example("packaging/items/choice.xml");
     const { code, stdout, stderr } = await run(["validate", path, "--format=json"]);
     expect([code, stderr]).toEqual([0, ""]);
@@ -150,7 +149,7 @@ describe("assesskit validate: documents", () => {
   });
 
   it("exits with 1 for an item with errors, and reports what the semantic checks find", async () => {
-    // INFO §2.11.3.29: qti-member takes a single value and then a container, and this example has them the wrong way round.
+    // qti-member takes a single value and then a container, and this example has them the wrong way round.
     const path = example("packaging/items/feedback_adaptive.xml");
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
@@ -186,7 +185,7 @@ describe("assesskit validate: documents", () => {
     }
   });
 
-  it("applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex (RR §2.4.5)", async () => {
+  it("applies the rules of Results Reporting to a report: an item result of a test has a sequenceIndex", async () => {
     const { code, report: found } = await report(example("results/conformance-use-case-1.xml"));
     expect(code).toBe(1);
     expect(found.issues.map(({ code: each }) => each)).toEqual(Array(4).fill("assesskit/validate/sequence-index"));
@@ -206,7 +205,7 @@ describe("assesskit validate: documents", () => {
     expect(found.issues.map(({ code: each }) => each)).toEqual(["assesskit/node/no-schema"]);
   });
 
-  it("reports a document with a DOCTYPE as an error without reading it (BPIG §6.7)", async () => {
+  it("reports a document with a DOCTYPE as an error without reading it", async () => {
     const path = write("doctype.xml", '<!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>');
     const { code, report: found } = await report(path);
     expect(code).toBe(1);
@@ -249,7 +248,7 @@ describe("assesskit validate: documents", () => {
     const read = await report(manifest);
     expect(read.code).toBe(1);
     expect(read.report.issues.map(({ code: each }) => each)).toContain("assesskit/package/missing-attribute");
-    // A lone document has no files to include, and a package does: INFO §2.12 asks for the includes to be resolved first.
+    // A lone document has no files to include, and a package does: QTI asks for the includes to be resolved first.
     const fragment = await report(example("tests/rtest01-set01.xml"));
     expect(fragment.report.issues.map(({ code: each }) => each)).toContain("assesskit/validate/unresolved-include");
   });

@@ -5,16 +5,29 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import fc from "fast-check";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { download, fetchSchemas, mapConcurrently, sha256 } from "../src/cli/fetch-schemas.js";
 import { runCli } from "../src/cli/index.js";
-import { resolveOptions } from "../src/cli/options.js";
-import { packageVersion } from "../src/cli/package-version.js";
-import { buildReport, EXIT_CODES, exitCodeOf, formatJson, formatText } from "../src/cli/report.js";
-import { defaultSchemaDirectory, userCacheDirectory } from "../src/cli/schema-directory.js";
-import { parseCommand, USAGE, UsageError } from "../src/cli/usage.js";
+import {
+  buildReport,
+  defaultSchemaDirectory,
+  download,
+  EXIT_CODES,
+  exitCodeOf,
+  fetchSchemas,
+  formatJson,
+  formatText,
+  mapConcurrently,
+  packageVersion,
+  parseCommand,
+  resolveOptions,
+  sha256,
+  USAGE,
+  UsageError,
+  userCacheDirectory,
+} from "../src/cli/internal.js";
 import { DataError, type Issue } from "../src/index.js";
 import { SCHEMA_FILES, type SchemaFile } from "../src/node/index.js";
 import { FUZZ } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** The SHA-256 of "abc" is the vector of FIPS 180-4 B.1; the others come from `shasum -a 256`. */
 const ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -103,248 +116,7 @@ async function run(args: readonly string[], options: Parameters<typeof runCli>[1
   return { code, stdout, stderr };
 }
 
-describe("sha256", () => {
-  it("hashes the vectors of FIPS 180-4", () => {
-    expect(sha256(new TextEncoder().encode("abc"))).toBe(ABC);
-    expect(sha256(new Uint8Array())).toBe(EMPTY);
-  });
-});
-
-describe("download", () => {
-  it("returns the bytes of a successful answer", async () => {
-    routes.set("/x", { status: 200, body: "abc" });
-    expect(new TextDecoder().decode(await download(`${base}/x`))).toBe("abc");
-  });
-
-  it("rejects an answer that is not a success, naming the address and the status", async () => {
-    await expect(download(`${base}/missing`)).rejects.toThrow(`Downloading ${base}/missing failed: HTTP 404.`);
-  });
-});
-
-describe("mapConcurrently", () => {
-  it("returns the results in the order of the items, whatever order they finish in", async () => {
-    const results = await mapConcurrently([30, 1, 20, 2, 10], async (milliseconds) => {
-      await new Promise((resolve) => setTimeout(resolve, milliseconds));
-      return milliseconds;
-    });
-    expect(results).toEqual([30, 1, 20, 2, 10]);
-  });
-
-  it("runs at most four at once", async () => {
-    let running = 0;
-    let most = 0;
-    await mapConcurrently(
-      Array.from({ length: 12 }, (_, index) => index),
-      async () => {
-        running += 1;
-        most = Math.max(most, running);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        running -= 1;
-      },
-    );
-    expect(most).toBe(4);
-  });
-
-  it("applies the function to every item exactly once", async () => {
-    await fc.assert(
-      fc.asyncProperty(fc.array(fc.integer()), async (items) => {
-        const seen: number[] = [];
-        const results = await mapConcurrently(items, async (item) => {
-          seen.push(item);
-          return item * 2;
-        });
-        expect(results).toEqual(items.map((item) => item * 2));
-        expect(seen.toSorted((a, b) => a - b)).toEqual(items.toSorted((a, b) => a - b));
-      }),
-      FUZZ,
-    );
-  });
-});
-
-describe("fetchSchemas", () => {
-  it("downloads the files into the directory, creating it, and lists them in the order of the list", async () => {
-    const { all } = fixtureSchemas();
-    const target = join(freshDirectory("fetch"), "nested", "schemas");
-    const result = await fetchSchemas(target, all);
-    expect(result).toEqual({ downloaded: all, failures: [] });
-    expect(readdirSync(target).sort()).toEqual(["a.xsd", "b.xsd", "c.xsd"]);
-    expect(readFileSync(join(target, "b.xsd"), "utf8")).toBe("beta");
-  });
-
-  it("requests only the files that are not in the directory with their pinned hashes", async () => {
-    const { all } = fixtureSchemas();
-    const target = freshDirectory("current");
-    await fetchSchemas(target, all);
-    requests = [];
-    expect(await fetchSchemas(target, all)).toEqual({ downloaded: [], failures: [] });
-    expect(requests).toEqual([]);
-    rmSync(join(target, "a.xsd"));
-    const changed = join(target, "b.xsd");
-    await writeFile(changed, "changed");
-    const again = await fetchSchemas(target, all);
-    expect(again.downloaded.map(({ file }) => file)).toEqual(["a.xsd", "b.xsd"]);
-    expect(requests.sort()).toEqual(["/a.xsd", "/b.xsd"]);
-    expect(readFileSync(changed, "utf8")).toBe("beta");
-  });
-
-  it("writes no file whose bytes have another hash than the pinned one, and still writes the others", async () => {
-    const { b, all } = fixtureSchemas();
-    routes.set("/b.xsd", { status: 200, body: "tampered" });
-    const target = freshDirectory("tampered");
-    const result = await fetchSchemas(target, all);
-    expect(result.downloaded.map(({ file }) => file)).toEqual(["a.xsd", "c.xsd"]);
-    const tampered = sha256(new TextEncoder().encode("tampered"));
-    expect(result.failures).toEqual([
-      { schema: b, reason: `${base}/b.xsd has the SHA-256 ${tampered}, not the pinned ${BETA}.` },
-    ]);
-    expect(readdirSync(target).sort()).toEqual(["a.xsd", "c.xsd"]);
-  });
-
-  it("reports a status that is not a success and a server that cannot be reached, in the order of the list", async () => {
-    const { a, b, c } = fixtureSchemas();
-    routes.set("/a.xsd", { status: 500, body: "" });
-    const closed = createServer();
-    await new Promise<void>((resolve) => closed.listen(0, "127.0.0.1", resolve));
-    const address = closed.address();
-    await new Promise((resolve) => closed.close(resolve));
-    if (address === null || typeof address === "string") throw new Error("The server has no port.");
-    const unreachable = `http://127.0.0.1:${address.port}/c.xsd`;
-    const result = await fetchSchemas(freshDirectory("failing"), [a, b, { ...c, url: unreachable }]);
-    expect(result.downloaded.map(({ file }) => file)).toEqual(["b.xsd"]);
-    expect(result.failures.map(({ schema }) => schema.file)).toEqual(["a.xsd", "c.xsd"]);
-    expect(result.failures[0]?.reason).toBe(`Downloading ${base}/a.xsd failed: HTTP 500.`);
-    expect(result.failures[1]?.reason).toMatch(/^fetch failed: .*ECONNREFUSED/);
-  });
-
-  it("downloads at most four files at once", async () => {
-    const schemas = Array.from({ length: 10 }, (_, index) => {
-      routes.set(`/s${index}.xsd`, { status: 200, body: "abc" });
-      return { url: `${base}/s${index}.xsd`, file: `s${index}.xsd`, sha256: ABC };
-    });
-    delay = 20;
-    await fetchSchemas(freshDirectory("concurrent"), schemas);
-    expect(mostInFlight).toBe(4);
-  });
-
-  it("uses the function it is given in place of the global fetch", async () => {
-    const { a } = fixtureSchemas();
-    const asked: string[] = [];
-    const fetchUrl: typeof fetch = async (input) => {
-      asked.push(String(input));
-      return new Response("abc");
-    };
-    const result = await fetchSchemas(freshDirectory("own"), [a], fetchUrl);
-    expect(asked).toEqual([`${base}/a.xsd`]);
-    expect(result.failures).toEqual([]);
-  });
-});
-
-describe("resolveOptions", () => {
-  it("fills in what the options leave out", () => {
-    const resolved = resolveOptions({});
-    expect(resolved.schemaDirectory).toBe(defaultSchemaDirectory(SCHEMA_FILES));
-    expect(resolved.fetch).toBe(fetch);
-    expect(typeof resolved.stdout).toBe("function");
-    expect(typeof resolved.stderr).toBe("function");
-  });
-
-  it("keeps what the options give", () => {
-    const stdout = () => undefined;
-    expect(resolveOptions({ stdout, schemaDirectory: "/schemas" })).toMatchObject({
-      stdout,
-      schemaDirectory: "/schemas",
-    });
-  });
-
-  it("rejects options of other types, as JavaScript or JSON pass them", () => {
-    const wrong: [string, string][] = [
-      ["null", "The options must be an object, found null."],
-      ['{"stdout":1}', "The option stdout must be a function of a text, found 1."],
-      ['{"stderr":"x"}', 'The option stderr must be a function of a text, found "x".'],
-      ['{"schemaDirectory":[]}', "The option schemaDirectory must be a string, found an array."],
-      ['{"fetch":{}}', "The option fetch must be a function of an address, found an object."],
-      ['{"schemaDirectory":null}', "The option schemaDirectory must be a string, found null."],
-    ];
-    for (const [json, message] of wrong) {
-      expect(() => resolveOptions(JSON.parse(json)), json).toThrow(new DataError(message));
-    }
-  });
-});
-
-describe("packageVersion", () => {
-  it("is the version in the package.json of the runtime", () => {
-    const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
-    expect(packageVersion()).toBe(manifest.version);
-  });
-});
-
-describe("report", () => {
-  const error: Issue = {
-    severity: "error",
-    code: "assesskit/node/xsd-invalid",
-    message: "Element 'x': Not expected.",
-    location: { path: "items/a.xml", line: 12, column: 5 },
-  };
-  const warning: Issue = {
-    severity: "warning",
-    code: "assesskit/validate/unbound-response",
-    message: "The response variable is bound to no interaction.",
-    location: { path: "items/b.xml", element: "qti-assessment-item/qti-response-declaration" },
-  };
-  const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place." };
-
-  it("counts the issues of each severity, and is valid when none is an error", () => {
-    expect(buildReport("t", "1.2.3", [warning, bare])).toEqual({
-      tool: "assesskit",
-      version: "1.2.3",
-      target: "t",
-      valid: true,
-      summary: { errors: 0, warnings: 2 },
-      issues: [warning, bare],
-    });
-    expect(buildReport("t", "1.2.3", [error, warning])).toMatchObject({
-      valid: false,
-      summary: { errors: 1, warnings: 1 },
-    });
-    expect(buildReport("t", "1.2.3", [])).toMatchObject({ valid: true, summary: { errors: 0, warnings: 0 } });
-  });
-
-  it("exits with 0 for a valid report and 1 for a report with an error", () => {
-    expect(EXIT_CODES).toEqual({ valid: 0, invalid: 1, failed: 2 });
-    expect(exitCodeOf(buildReport("t", "v", [warning]))).toBe(0);
-    expect(exitCodeOf(buildReport("t", "v", [error]))).toBe(1);
-  });
-
-  it("writes a line for each issue and the verdict as text", () => {
-    expect(formatText(buildReport("pkg", "v", [error, warning, bare]))).toBe(
-      [
-        "items/a.xml:12:5: error: Element 'x': Not expected. [assesskit/node/xsd-invalid]",
-        "items/b.xml (qti-assessment-item/qti-response-declaration): warning: The response variable is bound to no interaction. [assesskit/validate/unbound-response]",
-        "pkg: warning: No place. [assesskit/x/y]",
-        "pkg: invalid (1 error, 2 warnings)",
-        "",
-      ].join("\n"),
-    );
-    expect(formatText(buildReport("pkg", "v", []))).toBe("pkg: valid (0 errors, 0 warnings)\n");
-  });
-
-  it("writes the report as JSON with the fields of the design in its order", () => {
-    const text = formatJson(buildReport("pkg", "1.2.3", [error]));
-    expect(text.endsWith("}\n")).toBe(true);
-    const parsed = JSON.parse(text);
-    expect(Object.keys(parsed)).toEqual(["tool", "version", "target", "valid", "summary", "issues"]);
-    expect(parsed).toEqual({
-      tool: "assesskit",
-      version: "1.2.3",
-      target: "pkg",
-      valid: false,
-      summary: { errors: 1, warnings: 0 },
-      issues: [error],
-    });
-  });
-});
-
-describe("runCli", () => {
+describe("running the command line", () => {
   it("prints the usage to the standard output for --help and -h", async () => {
     for (const flag of ["--help", "-h"]) {
       expect(await run([flag])).toEqual({ code: 0, stdout: USAGE, stderr: "" });
@@ -462,7 +234,263 @@ describe("runCli", () => {
   });
 });
 
-describe("userCacheDirectory", () => {
+describe("options of the command line", () => {
+  it("fills in what the options leave out", () => {
+    const resolved = resolveOptions({});
+    expect(resolved.schemaDirectory).toBe(defaultSchemaDirectory(SCHEMA_FILES));
+    expect(resolved.fetch).toBe(fetch);
+    expect(typeof resolved.stdout).toBe("function");
+    expect(typeof resolved.stderr).toBe("function");
+  });
+
+  it("keeps what the options give", () => {
+    const stdout = () => undefined;
+    expect(resolveOptions({ stdout, schemaDirectory: "/schemas" })).toMatchObject({
+      stdout,
+      schemaDirectory: "/schemas",
+    });
+  });
+
+  it("rejects options of other types, as JavaScript or JSON pass them", () => {
+    const wrong: [string, string][] = [
+      ["null", "The options must be an object, found null."],
+      ['{"stdout":1}', "The option stdout must be a function of a text, found 1."],
+      ['{"stderr":"x"}', 'The option stderr must be a function of a text, found "x".'],
+      ['{"schemaDirectory":[]}', "The option schemaDirectory must be a string, found an array."],
+      ['{"fetch":{}}', "The option fetch must be a function of an address, found an object."],
+      ['{"schemaDirectory":null}', "The option schemaDirectory must be a string, found null."],
+    ];
+    for (const [json, message] of wrong) {
+      expect(() => resolveOptions(JSON.parse(json)), json).toThrow(new DataError(message));
+    }
+  });
+});
+
+describe("parsing a command", () => {
+  it("separates the positional arguments from the options, which take the next argument or follow an equals sign", () => {
+    const options = { schemas: { type: "string" }, format: { type: "string" } } as const;
+    expect(parseCommand(["a.xml", "--schemas", "dir", "--format=json"], options)).toEqual({
+      values: { schemas: "dir", format: "json" },
+      positionals: ["a.xml"],
+    });
+    expect(parseCommand(["--", "--a.xml"], options)).toEqual({ values: {}, positionals: ["--a.xml"] });
+  });
+
+  it("throws a UsageError for an option that is unknown", () => {
+    expect(() => parseCommand(["--x"], {})).toThrow(UsageError);
+  });
+});
+
+describe("the report", () => {
+  const error: Issue = {
+    severity: "error",
+    code: "assesskit/node/xsd-invalid",
+    message: "Element 'x': Not expected.",
+    location: { path: "items/a.xml", line: 12, column: 5 },
+  };
+  const warning: Issue = {
+    severity: "warning",
+    code: "assesskit/validate/unbound-response",
+    message: "The response variable is bound to no interaction.",
+    location: { path: "items/b.xml", element: "qti-assessment-item/qti-response-declaration" },
+  };
+  const bare: Issue = { severity: "warning", code: "assesskit/x/y", message: "No place." };
+
+  it("counts the issues of each severity, and is valid when none is an error", () => {
+    expect(buildReport("t", "1.2.3", [warning, bare])).toEqual({
+      tool: "assesskit",
+      version: "1.2.3",
+      target: "t",
+      valid: true,
+      summary: { errors: 0, warnings: 2 },
+      issues: [warning, bare],
+    });
+    expect(buildReport("t", "1.2.3", [error, warning])).toMatchObject({
+      valid: false,
+      summary: { errors: 1, warnings: 1 },
+    });
+    expect(buildReport("t", "1.2.3", [])).toMatchObject({ valid: true, summary: { errors: 0, warnings: 0 } });
+  });
+
+  it("exits with 0 for a valid report and 1 for a report with an error", () => {
+    expect(EXIT_CODES).toEqual({ valid: 0, invalid: 1, failed: 2 });
+    expect(exitCodeOf(buildReport("t", "v", [warning]))).toBe(0);
+    expect(exitCodeOf(buildReport("t", "v", [error]))).toBe(1);
+  });
+
+  it("writes a line for each issue and the verdict as text", () => {
+    expect(formatText(buildReport("pkg", "v", [error, warning, bare]))).toBe(
+      [
+        "items/a.xml:12:5: error: Element 'x': Not expected. [assesskit/node/xsd-invalid]",
+        "items/b.xml (qti-assessment-item/qti-response-declaration): warning: The response variable is bound to no interaction. [assesskit/validate/unbound-response]",
+        "pkg: warning: No place. [assesskit/x/y]",
+        "pkg: invalid (1 error, 2 warnings)",
+        "",
+      ].join("\n"),
+    );
+    expect(formatText(buildReport("pkg", "v", []))).toBe("pkg: valid (0 errors, 0 warnings)\n");
+  });
+
+  it("writes the report as JSON with its fields in order", () => {
+    const text = formatJson(buildReport("pkg", "1.2.3", [error]));
+    expect(text.endsWith("}\n")).toBe(true);
+    const parsed = JSON.parse(text);
+    expect(Object.keys(parsed)).toEqual(["tool", "version", "target", "valid", "summary", "issues"]);
+    expect(parsed).toEqual({
+      tool: "assesskit",
+      version: "1.2.3",
+      target: "pkg",
+      valid: false,
+      summary: { errors: 1, warnings: 0 },
+      issues: [error],
+    });
+  });
+});
+
+describe("the version", () => {
+  it("is the version in the package.json of the runtime", () => {
+    const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
+    expect(packageVersion()).toBe(manifest.version);
+  });
+});
+
+describe("hashing", () => {
+  it("hashes the vectors of FIPS 180-4", () => {
+    expect(sha256(new TextEncoder().encode("abc"))).toBe(ABC);
+    expect(sha256(new Uint8Array())).toBe(EMPTY);
+  });
+});
+
+describe("downloading", () => {
+  it("returns the bytes of a successful answer", async () => {
+    routes.set("/x", { status: 200, body: "abc" });
+    expect(new TextDecoder().decode(await download(`${base}/x`))).toBe("abc");
+  });
+
+  it("rejects an answer that is not a success, naming the address and the status", async () => {
+    await expect(download(`${base}/missing`)).rejects.toThrow(`Downloading ${base}/missing failed: HTTP 404.`);
+  });
+});
+
+describe("running downloads a few at a time", () => {
+  it("returns the results in the order of the items, whatever order they finish in", async () => {
+    const results = await mapConcurrently([30, 1, 20, 2, 10], async (milliseconds) => {
+      await new Promise((resolve) => setTimeout(resolve, milliseconds));
+      return milliseconds;
+    });
+    expect(results).toEqual([30, 1, 20, 2, 10]);
+  });
+
+  it("runs at most four at once", async () => {
+    let running = 0;
+    let most = 0;
+    await mapConcurrently(
+      Array.from({ length: 12 }, (_, index) => index),
+      async () => {
+        running += 1;
+        most = Math.max(most, running);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running -= 1;
+      },
+    );
+    expect(most).toBe(4);
+  });
+
+  it("applies the function to every item exactly once", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(fc.integer()), async (items) => {
+        const seen: number[] = [];
+        const results = await mapConcurrently(items, async (item) => {
+          seen.push(item);
+          return item * 2;
+        });
+        expect(results).toEqual(items.map((item) => item * 2));
+        expect(seen.toSorted((a, b) => a - b)).toEqual(items.toSorted((a, b) => a - b));
+      }),
+      FUZZ,
+    );
+  });
+});
+
+describe("fetching the schemas", () => {
+  it("downloads the files into the directory, creating it, and lists them in the order of the list", async () => {
+    const { all } = fixtureSchemas();
+    const target = join(freshDirectory("fetch"), "nested", "schemas");
+    const result = await fetchSchemas(target, all);
+    expect(result).toEqual({ downloaded: all, failures: [] });
+    expect(readdirSync(target).sort()).toEqual(["a.xsd", "b.xsd", "c.xsd"]);
+    expect(readFileSync(join(target, "b.xsd"), "utf8")).toBe("beta");
+  });
+
+  it("requests only the files that are not in the directory with their pinned hashes", async () => {
+    const { all } = fixtureSchemas();
+    const target = freshDirectory("current");
+    await fetchSchemas(target, all);
+    requests = [];
+    expect(await fetchSchemas(target, all)).toEqual({ downloaded: [], failures: [] });
+    expect(requests).toEqual([]);
+    rmSync(join(target, "a.xsd"));
+    const changed = join(target, "b.xsd");
+    await writeFile(changed, "changed");
+    const again = await fetchSchemas(target, all);
+    expect(again.downloaded.map(({ file }) => file)).toEqual(["a.xsd", "b.xsd"]);
+    expect(requests.sort()).toEqual(["/a.xsd", "/b.xsd"]);
+    expect(readFileSync(changed, "utf8")).toBe("beta");
+  });
+
+  it("writes no file whose bytes have another hash than the pinned one, and still writes the others", async () => {
+    const { b, all } = fixtureSchemas();
+    routes.set("/b.xsd", { status: 200, body: "tampered" });
+    const target = freshDirectory("tampered");
+    const result = await fetchSchemas(target, all);
+    expect(result.downloaded.map(({ file }) => file)).toEqual(["a.xsd", "c.xsd"]);
+    const tampered = sha256(new TextEncoder().encode("tampered"));
+    expect(result.failures).toEqual([
+      { schema: b, reason: `${base}/b.xsd has the SHA-256 ${tampered}, not the pinned ${BETA}.` },
+    ]);
+    expect(readdirSync(target).sort()).toEqual(["a.xsd", "c.xsd"]);
+  });
+
+  it("reports a status that is not a success and a server that cannot be reached, in the order of the list", async () => {
+    const { a, b, c } = fixtureSchemas();
+    routes.set("/a.xsd", { status: 500, body: "" });
+    const closed = createServer();
+    await new Promise<void>((resolve) => closed.listen(0, "127.0.0.1", resolve));
+    const address = closed.address();
+    await new Promise((resolve) => closed.close(resolve));
+    if (address === null || typeof address === "string") throw new Error("The server has no port.");
+    const unreachable = `http://127.0.0.1:${address.port}/c.xsd`;
+    const result = await fetchSchemas(freshDirectory("failing"), [a, b, { ...c, url: unreachable }]);
+    expect(result.downloaded.map(({ file }) => file)).toEqual(["b.xsd"]);
+    expect(result.failures.map(({ schema }) => schema.file)).toEqual(["a.xsd", "c.xsd"]);
+    expect(result.failures[0]?.reason).toBe(`Downloading ${base}/a.xsd failed: HTTP 500.`);
+    expect(result.failures[1]?.reason).toMatch(/^fetch failed: .*ECONNREFUSED/);
+  });
+
+  it("downloads at most four files at once", async () => {
+    const schemas = Array.from({ length: 10 }, (_, index) => {
+      routes.set(`/s${index}.xsd`, { status: 200, body: "abc" });
+      return { url: `${base}/s${index}.xsd`, file: `s${index}.xsd`, sha256: ABC };
+    });
+    delay = 20;
+    await fetchSchemas(freshDirectory("concurrent"), schemas);
+    expect(mostInFlight).toBe(4);
+  });
+
+  it("uses the function it is given in place of the global fetch", async () => {
+    const { a } = fixtureSchemas();
+    const asked: string[] = [];
+    const fetchUrl: typeof fetch = async (input) => {
+      asked.push(String(input));
+      return new Response("abc");
+    };
+    const result = await fetchSchemas(freshDirectory("own"), [a], fetchUrl);
+    expect(asked).toEqual([`${base}/a.xsd`]);
+    expect(result.failures).toEqual([]);
+  });
+});
+
+describe("the cache directory of a platform", () => {
   it("is Library/Caches on macOS, whatever the environment says", () => {
     expect(userCacheDirectory("darwin", { XDG_CACHE_HOME: "/x" }, "/Users/ada")).toBe("/Users/ada/Library/Caches");
   });
@@ -484,7 +512,7 @@ describe("userCacheDirectory", () => {
   });
 });
 
-describe("defaultSchemaDirectory", () => {
+describe("the default schema directory", () => {
   const first: SchemaFile = { url: "https://example.org/a.xsd", file: "a.xsd", sha256: ABC };
   const second: SchemaFile = { url: "https://example.org/b.xsd", file: "b.xsd", sha256: BETA };
 
@@ -504,17 +532,10 @@ describe("defaultSchemaDirectory", () => {
   });
 });
 
-describe("parseCommand", () => {
-  it("separates the positional arguments from the options, which take the next argument or follow an equals sign", () => {
-    const options = { schemas: { type: "string" }, format: { type: "string" } } as const;
-    expect(parseCommand(["a.xml", "--schemas", "dir", "--format=json"], options)).toEqual({
-      values: { schemas: "dir", format: "json" },
-      positionals: ["a.xml"],
-    });
-    expect(parseCommand(["--", "--a.xml"], options)).toEqual({ values: {}, positionals: ["--a.xml"] });
-  });
-
-  it("throws a UsageError for an option that is unknown", () => {
-    expect(() => parseCommand(["--x"], {})).toThrow(UsageError);
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/cli.md", import.meta.url);
+    const cli = await import("../src/cli/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/cli": cli })).toBeGreaterThan(0);
   });
 });

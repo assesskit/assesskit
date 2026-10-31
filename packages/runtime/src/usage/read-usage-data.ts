@@ -45,7 +45,7 @@ function readTargetObject(reader: ElementReader): TargetObject {
   };
 }
 
-/** Reads the value of an ordinary statistic; without a base type it is a float (UD §2.4.3). */
+/** Reads the value of an ordinary statistic; without a base type it is a float. */
 function readStatisticValue(reader: ElementReader): StatisticValue {
   const fieldIdentifier = reader.attribute("fieldIdentifier", toIdentifier);
   const baseType = reader.term("baseType", BASE_TYPES);
@@ -127,8 +127,10 @@ function readStatistic(reader: ElementReader): ItemStatistic {
 }
 
 /**
- * Reads a usage data document (UD §2.3.1) into a model. An `xs:date` in `lastUpdated` must have the form `YYYY-MM-DD`, as
- * the schema's pattern says.
+ * Reads a usage data document into a model.
+ *
+ * @remarks
+ * An `xs:date` in `lastUpdated` must have the form `YYYY-MM-DD`, as the schema's pattern says.
  *
  * @param input - The document as text or bytes, or the root element of a parsed document.
  * @returns The usage data; every optional field the document leaves out is absent.
@@ -137,6 +139,7 @@ function readStatistic(reader: ElementReader): ItemStatistic {
  * document cannot be mapped to the model: a missing, unknown or misplaced element or attribute, a statistic without a
  * target object, a value that is not of its base type, or a date that is not `YYYY-MM-DD`.
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data}
  */
 export function readUsageData(input: string | Uint8Array | XmlElement): UsageData {
   const reader = ElementReader.open(input, RULES, "The usage data");

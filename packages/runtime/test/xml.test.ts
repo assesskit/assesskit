@@ -29,6 +29,7 @@ import {
 } from "../src/index.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 const XSI = "http://www.w3.org/2001/XMLSchema-instance";
 const DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -94,826 +95,7 @@ function issueOf(error: unknown): Issue {
   return issue;
 }
 
-describe("DEFAULT_XML_LIMITS", () => {
-  it("is about 1,000 times the largest example for size and nodes, 16 times for depth and 20 times for attributes", () => {
-    // The largest 1EdTech example has 32 KiB, depth 16, 12 attributes on an element and 1,126 nodes.
-    expect(DEFAULT_XML_LIMITS).toEqual({
-      maxBytes: 33_554_432,
-      maxDepth: 256,
-      maxAttributes: 256,
-      maxNodes: 1_000_000,
-      maxIncludeDepth: 8,
-    });
-  });
-});
-
-describe("parseXml", () => {
-  it("reads names, namespaces, prefixes and attributes, and keeps the namespace declarations as attributes", () => {
-    const xml = `<a xmlns="urn:a" xmlns:b="urn:b" xmlns:xsi="${XSI}" xsi:schemaLocation="urn:a a.xsd" b:x="1" y="2"><b:c/></a>`;
-    expect(parsed(xml)).toEqual(
-      element(
-        "a",
-        [element("c", [], [], "urn:b", "b")],
-        [
-          attribute("xmlns", "urn:a", XMLNS_NAMESPACE),
-          attribute("b", "urn:b", XMLNS_NAMESPACE, "xmlns"),
-          attribute("xsi", XSI, XMLNS_NAMESPACE, "xmlns"),
-          attribute("schemaLocation", "urn:a a.xsd", XSI, "xsi"),
-          attribute("x", "1", "urn:b", "b"),
-          attribute("y", "2"),
-        ],
-        "urn:a",
-      ),
-    );
-  });
-
-  it("puts an unprefixed element in no namespace when the default namespace is undeclared", () => {
-    expect(parsed('<a xmlns="urn:a"><b xmlns=""/></a>')).toEqual(
-      element(
-        "a",
-        [element("b", [], [attribute("xmlns", "", XMLNS_NAMESPACE)])],
-        [attribute("xmlns", "urn:a", XMLNS_NAMESPACE)],
-        "urn:a",
-      ),
-    );
-  });
-
-  it("keeps text, CDATA sections, comments and processing instructions in order, with references replaced", () => {
-    const root = parsed("<a>x &amp; &#65;&#x42;<![CDATA[<y>]]><!--c--><?pi some data?>z</a>");
-    expect(root.children).toEqual([
-      text("x & AB"),
-      { kind: "cdata", value: "<y>" },
-      { kind: "comment", value: "c" },
-      { kind: "instruction", target: "pi", data: "some data" },
-      text("z"),
-    ]);
-  });
-
-  it("replaces the five predefined entities", () => {
-    expect(parsed("<a>&lt;&gt;&amp;&apos;&quot;</a>").children).toEqual([text("<>&'\"")]);
-  });
-
-  it("normalizes line ends to a line feed, as XML 1.0 §2.11 says", () => {
-    expect(parsed("<a>1\r\n2\r3\n4</a>").children).toEqual([text("1\n2\n3\n4")]);
-  });
-
-  it("normalizes white space in attribute values to spaces, but keeps it when it is a character reference", () => {
-    expect(parsed('<a x="1\n2\t3&#10;4"/>').attributes).toEqual([attribute("x", "1 2 3\n4")]);
-  });
-
-  it("leaves out the declaration and the comments and white space around the root", () => {
-    expect(parsed('<?xml version="1.0"?>\n<!-- before --><a/>\n<!-- after -->\n')).toEqual(element("a"));
-  });
-
-  it("gives each element the line and column of its start tag, counting from 1", () => {
-    const root = parseXml('<a>\n  <!-- c --><b\n    x="1">\n\n<c/></b></a>');
-    const b = childElement(root, 2);
-    const c = childElement(b, 1);
-    expect([root.line, root.column]).toEqual([1, 1]);
-    expect([b.line, b.column]).toEqual([2, 13]);
-    expect([c.line, c.column]).toEqual([5, 1]);
-  });
-
-  it("counts a line end of \\r\\n, \\r or \\n as one, and gives a byte order mark no column", () => {
-    const root = parseXml("\uFEFF<a>\r\n<b/>\r<c/>\n<d/></a>");
-    const positions = root.children
-      .filter((child): child is XmlElement => child.kind === "element")
-      .map(({ name, line, column }) => [name, line, column]);
-    expect(positions).toEqual([
-      ["b", 2, 1],
-      ["c", 3, 1],
-      ["d", 4, 1],
-    ]);
-    expect([root.line, root.column]).toEqual([1, 1]);
-  });
-
-  it("counts columns in characters, not in UTF-16 units", () => {
-    const root = parseXml("<a>😀<b/></a>");
-    expect(childElement(root, 1).column).toBe(5);
-  });
-
-  it("reads an attribute named like a property of Object.prototype as data", () => {
-    const root = parseXml('<a __proto__="1" constructor="2" toString="3"/>');
-    expect(root.attributes.map(({ name, value }) => [name, value])).toEqual([
-      ["__proto__", "1"],
-      ["constructor", "2"],
-      ["toString", "3"],
-    ]);
-    expect(Object.getPrototypeOf({})).toBe(Object.prototype);
-  });
-
-  describe("encodings", () => {
-    const body = "<a>é€</a>";
-    const bytes = (value: string, encoding: "utf8" | "utf16le" | "latin1" = "utf8") =>
-      new Uint8Array(Buffer.from(value, encoding));
-    const swapped = (value: string) => new Uint8Array(Buffer.from(value, "utf16le").swap16());
-
-    it("reads UTF-8 without a declaration", () => {
-      expect(parsed(`${body}`)).toEqual(element("a", [text("é€")]));
-      expect(withoutPositions(parseXml(bytes(body)))).toEqual(element("a", [text("é€")]));
-    });
-
-    it("reads UTF-8 with a byte order mark", () => {
-      const root = parseXml(bytes(`﻿<?xml version="1.0" encoding="utf-8"?>${body}`));
-      expect(root.children).toEqual([text("é€")]);
-    });
-
-    it("reads UTF-16 in both byte orders when a byte order mark says which", () => {
-      const xml = `﻿<?xml version="1.0" encoding="UTF-16"?>${body}`;
-      expect(parseXml(bytes(xml, "utf16le")).children).toEqual([text("é€")]);
-      expect(parseXml(swapped(xml)).children).toEqual([text("é€")]);
-    });
-
-    it("reads the encoding that the declaration names when there is no byte order mark", () => {
-      const xml = new Uint8Array(Buffer.from('<?xml version="1.0" encoding="ISO-8859-1"?><a>\xE9</a>', "latin1"));
-      expect(parseXml(xml).children).toEqual([text("é")]);
-    });
-
-    it("takes a string as it is and ignores the encoding it declares", () => {
-      expect(parseXml('<?xml version="1.0" encoding="ISO-8859-1"?><a>é€</a>').children).toEqual([text("é€")]);
-      expect(parseXml(`﻿${body}`).children).toEqual([text("é€")]);
-    });
-
-    it.each([
-      [
-        "a UTF-8 byte order mark and another encoding",
-        bytes('﻿<?xml version="1.0" encoding="ISO-8859-1"?><a/>'),
-        /declares the encoding "ISO-8859-1"/,
-      ],
-      [
-        "a UTF-16 byte order mark and UTF-8",
-        bytes('﻿<?xml version="1.0" encoding="UTF-8"?><a/>', "utf16le"),
-        /declares the encoding "UTF-8"/,
-      ],
-      [
-        "an encoding the runtime does not know",
-        bytes('<?xml version="1.0" encoding="no-such-encoding"?><a/>'),
-        /does not support it/,
-      ],
-      [
-        "UTF-16 without a byte order mark",
-        bytes('<?xml version="1.0" encoding="UTF-16"?><a/>'),
-        /needs a byte order mark/,
-      ],
-      [
-        "bytes that are not UTF-8",
-        new Uint8Array([0x3c, 0x61, 0x3e, 0xff, 0x3c, 0x2f, 0x61, 0x3e]),
-        /is not valid utf-8/,
-      ],
-    ])("rejects %s", (_name, input, message) => {
-      const issue = issueOf(thrown(() => parseXml(input, { path: "items/a.xml" })));
-      expect(issue).toMatchObject({
-        severity: "error",
-        code: "assesskit/xml/encoding",
-        location: { path: "items/a.xml" },
-      });
-      expect(issue.message).toMatch(message);
-    });
-  });
-
-  describe("limits", () => {
-    it("counts the bytes of UTF-8: a document of exactly maxBytes is read and one byte more is not", () => {
-      const xml = "<a>é</a>";
-      expect(parseXml(xml, { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
-      expect(parseXml(new TextEncoder().encode(xml), { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
-      for (const input of [xml, new TextEncoder().encode(xml)]) {
-        const error = thrown(() => parseXml(input, { limits: { maxBytes: 8 } }));
-        expect(error).toBeInstanceOf(SecurityError);
-        expect(error).toMatchObject({ limit: "maxBytes", value: 8 });
-      }
-    });
-
-    it("allows nesting up to maxDepth, counting the root as 1", () => {
-      expect(parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 3 } }).name).toBe("a");
-      expect(thrown(() => parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 2 } }))).toMatchObject({
-        limit: "maxDepth",
-        value: 2,
-      });
-    });
-
-    it("allows maxAttributes on an element, namespace declarations included", () => {
-      expect(parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 2 } }).attributes).toHaveLength(2);
-      expect(thrown(() => parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 1 } }))).toMatchObject({
-        limit: "maxAttributes",
-        value: 1,
-      });
-    });
-
-    it("allows maxNodes elements, text, CDATA sections, comments and processing instructions", () => {
-      const xml = "<a><b/>t<![CDATA[c]]><!--c--><?p d?></a>";
-      expect(parseXml(xml, { limits: { maxNodes: 6 } }).children).toHaveLength(5);
-      expect(thrown(() => parseXml(xml, { limits: { maxNodes: 5 } }))).toMatchObject({ limit: "maxNodes", value: 5 });
-    });
-
-    it("replaces only the limits it is given", () => {
-      expect(thrown(() => parseXml("<a><b/></a>", { limits: { maxDepth: 1 } }))).toMatchObject({ limit: "maxDepth" });
-      expect(parseXml(`<a x="1"/>`, { limits: { maxDepth: 1 } }).attributes).toHaveLength(1);
-    });
-  });
-
-  describe("security fixtures", () => {
-    const xxe = '<?xml version="1.0"?><!DOCTYPE a [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><a>&xxe;</a>';
-    const lolz = `<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;"><!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">]><lolz>&lol4;</lolz>`;
-
-    it.each([
-      ["an external entity (XXE)", xxe],
-      ["entities that expand into each other (billion laughs)", lolz],
-      ["a parameter entity that loads a file", '<!DOCTYPE a [<!ENTITY % p SYSTEM "http://example.org/x.dtd">%p;]><a/>'],
-      ["an external DTD", '<!DOCTYPE a SYSTEM "http://example.org/a.dtd"><a/>'],
-      ["a DOCTYPE without a subset", "<!DOCTYPE html><a/>"],
-    ])("rejects a DOCTYPE with %s before it declares or expands anything", (_name, xml) => {
-      const error = thrownAs(SecurityError, () => parseXml(xml, { path: "evil.xml" }));
-      expect(error).toMatchObject({ limit: "doctype", value: 0 });
-      expect(error.message).toBe(
-        'The document "evil.xml" has a DOCTYPE declaration, which the runtime rejects so that no entity is declared or read.',
-      );
-    });
-
-    it("rejects a DOCTYPE in bytes of every encoding it can arrive in, and reads one inside a comment or a CDATA section as data", () => {
-      const doctype = '<!DOCTYPE a [<!ENTITY x "y">]><a/>';
-      const utf16 = (text: string, order: readonly [number, number]): Uint8Array =>
-        Uint8Array.from([
-          ...order,
-          ...[...text].flatMap((char) => {
-            const unit = char.charCodeAt(0);
-            return order[0] === 0xff ? [unit & 0xff, unit >> 8] : [unit >> 8, unit & 0xff];
-          }),
-        ]);
-      const encoder = new TextEncoder();
-      for (const bytes of [
-        utf16(doctype, [0xff, 0xfe]),
-        utf16(doctype, [0xfe, 0xff]),
-        Uint8Array.from([0xef, 0xbb, 0xbf, ...encoder.encode(doctype)]),
-        encoder.encode(`<?xml version="1.0" encoding="ISO-8859-1"?>${doctype}`),
-      ]) {
-        expect(thrown(() => parseXml(bytes))).toMatchObject({ limit: "doctype" });
-      }
-      expect(parseXml("<a><!-- <!DOCTYPE a> --><![CDATA[<!DOCTYPE a>]]></a>").children).toHaveLength(2);
-      expect(issueOf(thrown(() => parseXml("<!doctype a><a/>")))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
-      });
-    });
-
-    it("reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
-      expect(issueOf(thrown(() => parseXml("<a>&xxe;</a>")))).toMatchObject({ code: "assesskit/xml/not-well-formed" });
-    });
-
-    it("rejects input over the default size without reading it", () => {
-      const error = thrown(() => parseXml(new Uint8Array(DEFAULT_XML_LIMITS.maxBytes + 1)));
-      expect(error).toMatchObject({ limit: "maxBytes", value: DEFAULT_XML_LIMITS.maxBytes });
-      expect(thrown(() => parseXml(`<a>${"x".repeat(DEFAULT_XML_LIMITS.maxBytes)}</a>`))).toMatchObject({
-        limit: "maxBytes",
-      });
-    });
-
-    it("rejects deep nesting at the default depth before it reads the rest", () => {
-      const error = thrown(() => parseXml("<a>".repeat(100_000)));
-      expect(error).toBeInstanceOf(SecurityError);
-      expect(error).toMatchObject({ limit: "maxDepth", value: 256 });
-      expect(parseXml(`${"<a>".repeat(256)}${"</a>".repeat(256)}`).name).toBe("a");
-    });
-
-    it("rejects more attributes than the default allows on one element", () => {
-      const attributes = Array.from({ length: 257 }, (_, index) => ` a${index}="1"`).join("");
-      expect(thrown(() => parseXml(`<a${attributes}/>`))).toMatchObject({ limit: "maxAttributes", value: 256 });
-    });
-  });
-
-  describe("errors", () => {
-    it.each([
-      ["a mismatched end tag", "<a><b></a>", 1],
-      ["an unclosed element", "<a><b/>", 1],
-      ["two roots", "<a/>\n<b/>", 2],
-      ["no root", "", 1],
-      ["text outside the root", "\n\nx<a/>", 3],
-      ["an unbound prefix", "<p:a/>", 1],
-      ["a repeated attribute", '<a x="1" x="2"/>', 1],
-      ["a control character", "<a>\n\u0001</a>", 2],
-      ["a malformed character reference", "<a>&#0;</a>", 1],
-      ["a lone ampersand", "<a>&</a>", 1],
-      ["a less-than sign in an attribute value", '<a x="<"/>', 1],
-    ])("reports %s on the line where the parser stopped", (_name, xml, line) => {
-      const error = thrownAs(ReadError, () => parseXml(xml, { path: "bad.xml" }));
-      expect(error.issues).toHaveLength(1);
-      const issue = issueOf(error);
-      expect(issue).toMatchObject({
-        severity: "error",
-        code: "assesskit/xml/not-well-formed",
-        location: { path: "bad.xml", line },
-      });
-      expect(issue.location?.column).toBeGreaterThanOrEqual(1);
-      expect(issue.message).toMatch(/^The document "bad\.xml" is not well-formed: .+\.$/);
-      expect(error.message).toBe(`${issue.message} (line ${line}, column ${issue.location?.column})`);
-    });
-
-    it.each([
-      ["a lone high surrogate in text", "<a>\ud800</a>", 1, 4],
-      ["a high surrogate that no low surrogate follows", "<a b='x'>a\ud800b</a>", 1, 11],
-      ["a lone low surrogate in an attribute value", '<a\n b="\udc00"/>', 2, 5],
-      ["a lone surrogate in a comment", "<a><!--\ud83d--></a>", 1, 8],
-    ])("rejects %s, which is no character (XML 1.0 §2.2)", (_name, xml, line, column) => {
-      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
-        location: { path: "bad.xml", line, column },
-      });
-      expect(parseXml("<a>\ud83d\ude00</a>").children).toEqual([text("😀")]);
-    });
-
-    it.each([
-      ["a trailing space", '<a xmlns="urn:a "/>'],
-      ["a no-break space", '<p:a xmlns:p="\u00a0urn:a"/>'],
-      ["a byte order mark", '<a xmlns="urn:a\ufeff"/>'],
-    ])(
-      "rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
-      (_name, xml) => {
-        expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-          code: "assesskit/xml/namespace",
-          location: { path: "bad.xml", line: 1, column: 1 },
-        });
-      },
-    );
-
-    it.each([
-      ["an element whose local name starts with a digit", '<p:1 xmlns:p="urn:p"/>'],
-      ["an attribute whose local name starts with a hyphen", '<a xmlns:p="urn:p" p:-x="1"/>'],
-      ["a declaration of a prefix that starts with a digit", '<a xmlns:1p="urn:p"/>'],
-    ])("rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
-      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
-        code: "assesskit/xml/not-well-formed",
-        location: { path: "bad.xml", line: 1, column: 1 },
-      });
-    });
-
-    it("reports the column of the character that ends a malformed construct", () => {
-      expect(issueOf(thrown(() => parseXml("<a>\u0001</a>")))).toMatchObject({ location: { line: 1, column: 4 } });
-      expect(issueOf(thrown(() => parseXml("<a><b></a>")))).toMatchObject({ location: { line: 1, column: 10 } });
-    });
-
-    it("names the document by its position only, when it has no path", () => {
-      expect(issueOf(thrown(() => parseXml("<a>")))).toMatchObject({
-        message: "The document is not well-formed: unclosed tag: a.",
-      });
-    });
-
-    it("rejects XML 1.1, which has other rules for characters and names", () => {
-      const issue = issueOf(thrown(() => parseXml('<?xml version="1.1"?><a/>')));
-      expect(issue).toMatchObject({ code: "assesskit/xml/version" });
-      expect(issue.message).toBe('The document declares XML version "1.1", but the runtime reads XML 1.0.');
-    });
-
-    it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
-      for (const input of ["1", "null", "[]", '{"a":1}']) {
-        expect(() => parseXml(JSON.parse(input))).toThrow(DataError);
-      }
-      expect(() => parseXml(JSON.parse("1"))).toThrow("The XML input must be a string or a Uint8Array, found 1.");
-      expect(() => parseXml("<a/>", JSON.parse("null"))).toThrow("The options must be an object, found null.");
-      expect(() => parseXml("<a/>", JSON.parse('{"path": 5}'))).toThrow("The option path must be a string, found 5.");
-      expect(() => parseXml("<a/>", JSON.parse('{"path": null}'))).toThrow(
-        "The option path must be a string, found null.",
-      );
-      expect(() => parseXml("<a/>", JSON.parse('{"limits": null}'))).toThrow(
-        "The option limits must be an object, found null.",
-      );
-      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxBytes": "5"}}'))).toThrow(
-        'The limit maxBytes must be a positive integer, found "5".',
-      );
-      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxDepth": 0}}'))).toThrow(
-        "The limit maxDepth must be a positive integer, found 0.",
-      );
-      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxNodes": null}}'))).toThrow(
-        "The limit maxNodes must be a positive integer, found null.",
-      );
-    });
-  });
-});
-
-describe("serializeXml", () => {
-  it("writes the declaration and the element, with text as the tree has it", () => {
-    const tree = element("a", [
-      text("1"),
-      element("b"),
-      text(" 2 "),
-      { kind: "comment", value: " c " },
-      { kind: "instruction", target: "pi", data: "d" },
-    ]);
-    expect(serializeXml(tree)).toBe(`${DECLARATION}<a>1<b/> 2 <!-- c --><?pi d?></a>`);
-  });
-
-  it("escapes what the syntax needs in text and in attribute values", () => {
-    const tree = element("a", [text('x & y < z > "q" \r')], [attribute("v", "a&b<c>\"d'\t\n\r")]);
-    expect(serializeXml(tree)).toBe(
-      `${DECLARATION}<a v="a&amp;b&lt;c&gt;&quot;d'&#9;&#10;&#13;">x &amp; y &lt; z &gt; "q" &#13;</a>`,
-    );
-  });
-
-  it("writes a CDATA section, splitting it where its text has ]]>", () => {
-    expect(serializeXml(element("a", [{ kind: "cdata", value: "a]]>b" }]))).toBe(
-      `${DECLARATION}<a><![CDATA[a]]]]><![CDATA[>b]]></a>`,
-    );
-    expect(parsed(serializeXml(element("a", [{ kind: "cdata", value: "a]]>b" }]))).children).toEqual([
-      { kind: "cdata", value: "a]]" },
-      { kind: "cdata", value: ">b" },
-    ]);
-  });
-
-  it("writes a processing instruction without data as its target alone", () => {
-    expect(serializeXml(element("a", [{ kind: "instruction", target: "pi", data: "" }]))).toBe(
-      `${DECLARATION}<a><?pi?></a>`,
-    );
-  });
-
-  it("declares the namespaces that the tree uses and does not declare", () => {
-    const tree = element(
-      "a",
-      [element("c", [], [attribute("x", "1", "urn:b", "b")], "urn:b", "b"), element("d", [], [], "")],
-      [attribute("lang", "en", XML_NAMESPACE, "xml")],
-      "urn:a",
-    );
-    expect(serializeXml(tree)).toBe(
-      `${DECLARATION}<a xml:lang="en" xmlns="urn:a"><b:c b:x="1" xmlns:b="urn:b"/><d xmlns=""/></a>`,
-    );
-  });
-
-  it("keeps the declarations the tree has, and declares nothing that is in scope", () => {
-    const xml = `${DECLARATION}<a xmlns="urn:a" xmlns:b="urn:b"><b:c><d/></b:c></a>`;
-    expect(serializeXml(parseXml(xml))).toBe(xml);
-  });
-
-  it("writes a parsed document unchanged when it is in canonical form", () => {
-    const xml = `${DECLARATION}<a x="1"><!--c--><b y="&amp;">t &lt; u<![CDATA[v]]></b><?p q?></a>`;
-    expect(serializeXml(parseXml(xml))).toBe(xml);
-  });
-
-  describe("errors", () => {
-    it.each([
-      [
-        "a character XML 1.0 does not allow in text",
-        element("a", [text("a\u0001b")]),
-        "A text node has the character U+0001, which XML 1.0 does not allow. It is in a.",
-      ],
-      [
-        "a lone surrogate in an attribute value",
-        element("a", [], [attribute("x", "\uD800")]),
-        "The value of the attribute x has the character U+D800, which XML 1.0 does not allow. It is in a.",
-      ],
-      ["a name with a colon", element("a:b"), 'The name of an element must be a name without a colon, found "a:b".'],
-      [
-        "a name that starts with a digit",
-        element("1a"),
-        'The name of an element must be a name without a colon, found "1a".',
-      ],
-      [
-        "a prefix without a namespace",
-        element("a", [], [], "", "p"),
-        "The element a has a prefix but no namespace. It is in a.",
-      ],
-      [
-        "an attribute in a namespace without a prefix",
-        element("a", [], [attribute("x", "1", "urn:b")]),
-        "The attribute x is in a namespace but has no prefix. It is in a.",
-      ],
-      [
-        "an attribute with a prefix and no namespace",
-        element("a", [], [attribute("x", "1", "", "p")]),
-        "The attribute p:x has a prefix but no namespace. It is in a.",
-      ],
-      [
-        "the prefix xml for another namespace",
-        element("a", [], [attribute("x", "1", "urn:b", "xml")]),
-        'The attribute xml:x uses the prefix "xml" and the XML namespace apart. It is in a.',
-      ],
-      [
-        "a declaration that is not xmlns",
-        element("a", [], [attribute("x", "1", XMLNS_NAMESPACE)]),
-        "The attribute x is not a namespace declaration, `xmlns` or `xmlns:prefix`. It is in a.",
-      ],
-      [
-        "an attribute twice",
-        element("a", [], [attribute("x", "1"), attribute("x", "2")]),
-        "The attribute x occurs twice. It is in a.",
-      ],
-      [
-        "one prefix for two namespaces on an element",
-        element("a", [], [attribute("x", "1", "urn:b", "p")], "urn:a", "p"),
-        'The prefix "p" stands for two namespaces on one element. It is in a.',
-      ],
-      [
-        "a comment with two hyphens",
-        element("a", [{ kind: "comment", value: "a--b" }]),
-        'A comment must not contain "--" or end with "-". It is in a.',
-      ],
-      [
-        "a comment that ends with a hyphen",
-        element("a", [{ kind: "comment", value: "a-" }]),
-        'A comment must not contain "--" or end with "-". It is in a.',
-      ],
-      [
-        "a processing instruction named xml",
-        element("a", [{ kind: "instruction", target: "XML", data: "" }]),
-        'A processing instruction must not have the target "xml" or contain "?>". It is in a.',
-      ],
-      [
-        "a processing instruction with ?>",
-        element("a", [{ kind: "instruction", target: "p", data: "a?>b" }]),
-        'A processing instruction must not have the target "xml" or contain "?>". It is in a.',
-      ],
-    ])("rejects %s", (_name, tree, message) => {
-      expect(thrownAs(DataError, () => serializeXml(tree)).message).toBe(message);
-    });
-
-    it("names the path of the element that has the problem", () => {
-      const tree = element("a", [element("b", [element("c", [text("\u0000")])])]);
-      expect(() => serializeXml(tree)).toThrow(
-        "A text node has the character U+0000, which XML 1.0 does not allow. It is in a/b/c.",
-      );
-    });
-
-    it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
-      expect(() => serializeXml(JSON.parse("null"))).toThrow("The root must be an element, found null.");
-      expect(() => serializeXml(JSON.parse('{"kind":"text","value":"x"}'))).toThrow(
-        "The root must be an element, found a node of the kind",
-      );
-      expect(() =>
-        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":{},"children":[]}')),
-      ).toThrow("The attributes of the element a must be an array, found an object.");
-      expect(() =>
-        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[],"children":[1]}')),
-      ).toThrow("A node must be an object, found 1.");
-      expect(() =>
-        serializeXml(
-          JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[],"children":[{"kind":"pi"}]}'),
-        ),
-      ).toThrow('A node must have the kind "element", "text", "cdata", "comment" or "instruction", found "pi".');
-      expect(() =>
-        serializeXml(JSON.parse('{"kind":"element","namespace":5,"name":"a","attributes":[],"children":[]}')),
-      ).toThrow("The namespace of the element a must be a string, found 5.");
-      expect(() =>
-        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[1],"children":[]}')),
-      ).toThrow("An attribute must be an object, found 1.");
-    });
-  });
-});
-
-describe("resolveIncludes", () => {
-  const xi = (name: string, children: readonly XmlNode[] = [], attributes: readonly XmlAttribute[] = []): XmlElement =>
-    element(name, children, attributes, XINCLUDE_NAMESPACE, "xi");
-  const include = (href: string, children: readonly XmlNode[] = [], extra: readonly XmlAttribute[] = []): XmlElement =>
-    xi("include", children, [attribute("href", href), ...extra]);
-  const resolver =
-    (documents: Readonly<Record<string, string>>, log: [string, string][] = []) =>
-    (href: string, base: string) => {
-      log.push([href, base]);
-      const source = documents[href];
-      if (source === undefined) throw new ReadError(`${href} is not in the package.`, []);
-      return parseXml(source, { path: href });
-    };
-  const strip = (node: XmlNode): XmlNode => withoutPositions(node);
-
-  it("replaces an include with the root element of the fragment it names (INFO §2.12)", () => {
-    const item = parseXml(
-      '<item xmlns:xi="http://www.w3.org/2001/XInclude"><body><p>before</p><xi:include href="choice.xml"/><p>after</p></body></item>',
-    );
-    const result = resolveIncludes(
-      item,
-      "items/a.xml",
-      resolver({ "choice.xml": '<choice id="c"><text>Pick</text></choice>' }),
-    );
-    expect(strip(result)).toEqual(
-      strip(
-        parseXml(
-          '<item xmlns:xi="http://www.w3.org/2001/XInclude"><body><p>before</p><choice id="c"><text>Pick</text></choice><p>after</p></body></item>',
-        ),
-      ),
-    );
-  });
-
-  it("expands the includes of an included fragment, resolving them against the fragment's own path", () => {
-    const calls: [string, string][] = [];
-    const root = parseXml(
-      '<test xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="sections/s1.xml"/></test>',
-    );
-    const result = resolveIncludes(
-      root,
-      "tests/t.xml",
-      resolver(
-        {
-          "sections/s1.xml":
-            '<section xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="../items/i1.xml"/></section>',
-          "../items/i1.xml": "<item/>",
-        },
-        calls,
-      ),
-    );
-    expect(strip(result)).toEqual(
-      strip(
-        parseXml(
-          '<test xmlns:xi="http://www.w3.org/2001/XInclude"><section xmlns:xi="http://www.w3.org/2001/XInclude"><item/></section></test>',
-        ),
-      ),
-    );
-    expect(calls).toEqual([
-      ["sections/s1.xml", "tests/t.xml"],
-      ["../items/i1.xml", "tests/sections/s1.xml"],
-    ]);
-  });
-
-  it("gives a tree without includes back unchanged in content", () => {
-    const root = parseXml("<a><b>t</b><!--c--></a>");
-    expect(resolveIncludes(root, "a.xml", () => root)).toEqual(root);
-  });
-
-  it("ignores encoding, accept and accept-language, which concern text and HTTP", () => {
-    const root = element("a", [
-      include(
-        "f.xml",
-        [],
-        [attribute("encoding", "UTF-8"), attribute("accept", "text/xml"), attribute("accept-language", "en")],
-      ),
-    ]);
-    expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
-  });
-
-  it("uses the xi:fallback of an include whose resource cannot be read", () => {
-    const root = element("a", [
-      include("missing.xml", [xi("fallback", [text("default "), element("p")])]),
-      element("z"),
-    ]);
-    expect(resolveIncludes(root, "a.xml", resolver({})).children).toEqual([
-      text("default "),
-      element("p"),
-      element("z"),
-    ]);
-  });
-
-  it("expands the includes inside a fallback", () => {
-    const root = element("a", [include("missing.xml", [xi("fallback", [include("other.xml")])])]);
-    expect(resolveIncludes(root, "a.xml", resolver({ "other.xml": "<o/>" })).children).toEqual([parseXml("<o/>")]);
-  });
-
-  it("does not use the fallback when the resource is read, and drops it", () => {
-    const root = element("a", [include("f.xml", [xi("fallback", [text("unused")])])]);
-    expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
-  });
-
-  it("never replaces a SecurityError of the resolver with the fallback", () => {
-    const refuse = () => {
-      throw new SecurityError("The href leaves the package.", "pathEscape", 0);
-    };
-    const root = element("a", [include("../../etc/passwd", [xi("fallback")])]);
-    expect(thrown(() => resolveIncludes(root, "a.xml", refuse))).toBeInstanceOf(SecurityError);
-  });
-
-  it("rejects an include whose resource cannot be read and that has no fallback", () => {
-    const root = element("a", [include("missing.xml")]);
-    const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({}))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource" });
-    expect(issue.message).toBe(
-      'The document "missing.xml" of an xi:include cannot be read and the include has no xi:fallback: missing.xml is not in the package.',
-    );
-  });
-
-  it("rejects an xpointer (INFO §2.12: MUST NOT)", () => {
-    const root = element("a", [
-      xi("include", [], [attribute("href", "f.xml"), attribute("xpointer", "element(/1/2)")]),
-    ]);
-    const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" }))));
-    expect(issue).toMatchObject({
-      code: "assesskit/xml/xinclude-attribute",
-      location: { path: "a.xml" },
-    });
-    expect(issue.message).toBe("An xi:include must not have an xpointer attribute.");
-  });
-
-  it.each([
-    [
-      "parse=text",
-      xi("include", [], [attribute("href", "f.xml"), attribute("parse", "text")]),
-      'An xi:include must include parsed XML, found parse="text".',
-    ],
-    ["no href", xi("include"), "An xi:include must have a non-empty href attribute."],
-    ["an empty href", include(""), "An xi:include must have a non-empty href attribute."],
-    [
-      "a fragment identifier",
-      include("f.xml#part"),
-      'The href "f.xml#part" of an xi:include must not have a fragment identifier.',
-    ],
-  ])("rejects an include with %s", (_name, bad, message) => {
-    const issue = issueOf(thrown(() => resolveIncludes(element("a", [bad]), "a.xml", resolver({ "f.xml": "<f/>" }))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-attribute" });
-    expect(issue.message).toBe(message);
-  });
-
-  it("rejects an include with two fallbacks or another element of the XInclude namespace", () => {
-    for (const children of [[xi("fallback"), xi("fallback")], [xi("include")]]) {
-      const issue = issueOf(
-        thrown(() =>
-          resolveIncludes(element("a", [include("f.xml", children)]), "a.xml", resolver({ "f.xml": "<f/>" })),
-        ),
-      );
-      expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
-    }
-  });
-
-  it("rejects an xi:fallback outside an include", () => {
-    const issue = issueOf(thrown(() => resolveIncludes(element("a", [xi("fallback")]), "a.xml", resolver({}))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
-  });
-
-  it("rejects includes that form a loop, however long", () => {
-    const documents = {
-      "a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="b.xml"/></a>',
-      "b.xml": '<b xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="a.xml"/></b>',
-    };
-    const issue = issueOf(thrown(() => resolveIncludes(parseXml(documents["a.xml"]), "a.xml", resolver(documents))));
-    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
-    expect(issue.message).toBe('The xi:include of "a.xml" includes a document that is already being included.');
-  });
-
-  it("finds a loop through a different spelling of the same path", () => {
-    const documents = {
-      "d/a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="./x/../a.xml"/></a>',
-    };
-    const run = () =>
-      resolveIncludes(parseXml(documents["d/a.xml"]), "d/a.xml", (href) => parseXml(documents["d/a.xml"] ?? href));
-    expect(issueOf(thrown(run))).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
-  });
-
-  it("allows includes to nest maxIncludeDepth deep and no deeper", () => {
-    const chain = (href: string) =>
-      parseXml(
-        href === "f8.xml"
-          ? "<end/>"
-          : `<n xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="f${Number(href.slice(1, -4)) + 1}.xml"/></n>`,
-      );
-    const root = element("a", [include("f1.xml")]);
-    expect(resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 8 } }).name).toBe("a");
-    const error = thrown(() => resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 7 } }));
-    expect(error).toMatchObject({ limit: "maxIncludeDepth", value: 7 });
-  });
-
-  it("counts the nodes of the result against maxNodes, so that includes cannot multiply a document", () => {
-    const ten = (href: string) =>
-      element(
-        "n",
-        Array.from({ length: 10 }, () => include(href === "l1.xml" ? "l2.xml" : "l3.xml")),
-      );
-    const resolve = (href: string) => (href === "l3.xml" ? element("leaf") : ten(href));
-    const root = element(
-      "a",
-      Array.from({ length: 10 }, () => include("l1.xml")),
-    );
-    const error = thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxNodes: 500 } }));
-    expect(error).toBeInstanceOf(SecurityError);
-    expect(error).toMatchObject({ limit: "maxNodes", value: 500 });
-  });
-
-  it("counts the depth of the result against maxDepth", () => {
-    const root = element("a", [element("b", [include("f.xml")])]);
-    const resolve = () => element("f", [element("g")]);
-    expect(resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 4 } }).name).toBe("a");
-    expect(thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 3 } }))).toMatchObject({
-      limit: "maxDepth",
-      value: 3,
-    });
-  });
-
-  it("lets an include be the root when it is replaced by exactly one element", () => {
-    expect(resolveIncludes(include("f.xml"), "a.xml", resolver({ "f.xml": "<f/>" }))).toEqual(parseXml("<f/>"));
-    const two = include("missing.xml", [xi("fallback", [element("x"), element("y")])]);
-    expect(issueOf(thrown(() => resolveIncludes(two, "a.xml", resolver({}))))).toMatchObject({
-      code: "assesskit/xml/xinclude-structure",
-    });
-  });
-
-  it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
-    const root = element("a");
-    const resolve = () => root;
-    expect(() => resolveIncludes(JSON.parse("null"), "a.xml", resolve)).toThrow(
-      "The root must be an element, found null.",
-    );
-    expect(() => resolveIncludes(root, JSON.parse("1"), resolve)).toThrow("The base must be a string, found 1.");
-    expect(() => resolveIncludes(root, "a.xml", JSON.parse("{}"))).toThrow(
-      "The resolver must be a function of an href and a base, found an object.",
-    );
-    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse("null"))).toThrow(
-      "The options must be an object, found null.",
-    );
-    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": null}'))).toThrow(
-      "The option limits must be an object, found null.",
-    );
-    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": {"maxIncludeDepth": 0}}'))).toThrow(
-      "The limit maxIncludeDepth must be a positive integer, found 0.",
-    );
-    expect(() => resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse("null"))).toThrow(
-      "The include resolver must return an element, found null.",
-    );
-    expect(() =>
-      resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse('{"kind":"text","value":"x"}')),
-    ).toThrow(DataError);
-  });
-});
-
-describe("buildElement", () => {
+describe("building elements", () => {
   it("builds an element in a namespace and leaves out the attributes that are undefined", () => {
     const built = buildElement("urn:a", "item", { id: "x", title: undefined, "xml:lang": "en", "xsi:nil": "true" }, [
       "text",
@@ -952,7 +134,7 @@ describe("buildElement", () => {
   });
 });
 
-describe("ElementReader", () => {
+describe("mapping an element to a model", () => {
   const Ns = "urn:demo";
   const rules = { module: "demo", namespaces: [Ns] };
   const open = (xml: string): ElementReader => ElementReader.open(xml, rules, "The demo");
@@ -1215,7 +397,266 @@ describe("ElementReader", () => {
   });
 });
 
-describe("isXmlLanguage", () => {
+describe("XInclude", () => {
+  const xi = (name: string, children: readonly XmlNode[] = [], attributes: readonly XmlAttribute[] = []): XmlElement =>
+    element(name, children, attributes, XINCLUDE_NAMESPACE, "xi");
+  const include = (href: string, children: readonly XmlNode[] = [], extra: readonly XmlAttribute[] = []): XmlElement =>
+    xi("include", children, [attribute("href", href), ...extra]);
+  const resolver =
+    (documents: Readonly<Record<string, string>>, log: [string, string][] = []) =>
+    (href: string, base: string) => {
+      log.push([href, base]);
+      const source = documents[href];
+      if (source === undefined) throw new ReadError(`${href} is not in the package.`, []);
+      return parseXml(source, { path: href });
+    };
+  const strip = (node: XmlNode): XmlNode => withoutPositions(node);
+
+  it("replaces an include with the root element of the fragment it names", () => {
+    const item = parseXml(
+      '<item xmlns:xi="http://www.w3.org/2001/XInclude"><body><p>before</p><xi:include href="choice.xml"/><p>after</p></body></item>',
+    );
+    const result = resolveIncludes(
+      item,
+      "items/a.xml",
+      resolver({ "choice.xml": '<choice id="c"><text>Pick</text></choice>' }),
+    );
+    expect(strip(result)).toEqual(
+      strip(
+        parseXml(
+          '<item xmlns:xi="http://www.w3.org/2001/XInclude"><body><p>before</p><choice id="c"><text>Pick</text></choice><p>after</p></body></item>',
+        ),
+      ),
+    );
+  });
+
+  it("expands the includes of an included fragment, resolving them against the fragment's own path", () => {
+    const calls: [string, string][] = [];
+    const root = parseXml(
+      '<test xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="sections/s1.xml"/></test>',
+    );
+    const result = resolveIncludes(
+      root,
+      "tests/t.xml",
+      resolver(
+        {
+          "sections/s1.xml":
+            '<section xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="../items/i1.xml"/></section>',
+          "../items/i1.xml": "<item/>",
+        },
+        calls,
+      ),
+    );
+    expect(strip(result)).toEqual(
+      strip(
+        parseXml(
+          '<test xmlns:xi="http://www.w3.org/2001/XInclude"><section xmlns:xi="http://www.w3.org/2001/XInclude"><item/></section></test>',
+        ),
+      ),
+    );
+    expect(calls).toEqual([
+      ["sections/s1.xml", "tests/t.xml"],
+      ["../items/i1.xml", "tests/sections/s1.xml"],
+    ]);
+  });
+
+  it("gives a tree without includes back unchanged in content", () => {
+    const root = parseXml("<a><b>t</b><!--c--></a>");
+    expect(resolveIncludes(root, "a.xml", () => root)).toEqual(root);
+  });
+
+  it("ignores encoding, accept and accept-language, which concern text and HTTP", () => {
+    const root = element("a", [
+      include(
+        "f.xml",
+        [],
+        [attribute("encoding", "UTF-8"), attribute("accept", "text/xml"), attribute("accept-language", "en")],
+      ),
+    ]);
+    expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
+  });
+
+  it("uses the xi:fallback of an include whose resource cannot be read", () => {
+    const root = element("a", [
+      include("missing.xml", [xi("fallback", [text("default "), element("p")])]),
+      element("z"),
+    ]);
+    expect(resolveIncludes(root, "a.xml", resolver({})).children).toEqual([
+      text("default "),
+      element("p"),
+      element("z"),
+    ]);
+  });
+
+  it("expands the includes inside a fallback", () => {
+    const root = element("a", [include("missing.xml", [xi("fallback", [include("other.xml")])])]);
+    expect(resolveIncludes(root, "a.xml", resolver({ "other.xml": "<o/>" })).children).toEqual([parseXml("<o/>")]);
+  });
+
+  it("does not use the fallback when the resource is read, and drops it", () => {
+    const root = element("a", [include("f.xml", [xi("fallback", [text("unused")])])]);
+    expect(resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" })).children).toEqual([parseXml("<f/>")]);
+  });
+
+  it("never replaces a SecurityError of the resolver with the fallback", () => {
+    const refuse = () => {
+      throw new SecurityError("The href leaves the package.", "pathEscape", 0);
+    };
+    const root = element("a", [include("../../etc/passwd", [xi("fallback")])]);
+    expect(thrown(() => resolveIncludes(root, "a.xml", refuse))).toBeInstanceOf(SecurityError);
+  });
+
+  it("rejects an include whose resource cannot be read and that has no fallback", () => {
+    const root = element("a", [include("missing.xml")]);
+    const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({}))));
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-resource" });
+    expect(issue.message).toBe(
+      'The document "missing.xml" of an xi:include cannot be read and the include has no xi:fallback: missing.xml is not in the package.',
+    );
+  });
+
+  it("rejects an xpointer, which QTI forbids", () => {
+    const root = element("a", [
+      xi("include", [], [attribute("href", "f.xml"), attribute("xpointer", "element(/1/2)")]),
+    ]);
+    const issue = issueOf(thrown(() => resolveIncludes(root, "a.xml", resolver({ "f.xml": "<f/>" }))));
+    expect(issue).toMatchObject({
+      code: "assesskit/xml/xinclude-attribute",
+      location: { path: "a.xml" },
+    });
+    expect(issue.message).toBe("An xi:include must not have an xpointer attribute.");
+  });
+
+  it.each([
+    [
+      "parse=text",
+      xi("include", [], [attribute("href", "f.xml"), attribute("parse", "text")]),
+      'An xi:include must include parsed XML, found parse="text".',
+    ],
+    ["no href", xi("include"), "An xi:include must have a non-empty href attribute."],
+    ["an empty href", include(""), "An xi:include must have a non-empty href attribute."],
+    [
+      "a fragment identifier",
+      include("f.xml#part"),
+      'The href "f.xml#part" of an xi:include must not have a fragment identifier.',
+    ],
+  ])("rejects an include with %s", (_name, bad, message) => {
+    const issue = issueOf(thrown(() => resolveIncludes(element("a", [bad]), "a.xml", resolver({ "f.xml": "<f/>" }))));
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-attribute" });
+    expect(issue.message).toBe(message);
+  });
+
+  it("rejects an include with two fallbacks or another element of the XInclude namespace", () => {
+    for (const children of [[xi("fallback"), xi("fallback")], [xi("include")]]) {
+      const issue = issueOf(
+        thrown(() =>
+          resolveIncludes(element("a", [include("f.xml", children)]), "a.xml", resolver({ "f.xml": "<f/>" })),
+        ),
+      );
+      expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
+    }
+  });
+
+  it("rejects an xi:fallback outside an include", () => {
+    const issue = issueOf(thrown(() => resolveIncludes(element("a", [xi("fallback")]), "a.xml", resolver({}))));
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-structure" });
+  });
+
+  it("rejects includes that form a loop, however long", () => {
+    const documents = {
+      "a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="b.xml"/></a>',
+      "b.xml": '<b xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="a.xml"/></b>',
+    };
+    const issue = issueOf(thrown(() => resolveIncludes(parseXml(documents["a.xml"]), "a.xml", resolver(documents))));
+    expect(issue).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
+    expect(issue.message).toBe('The xi:include of "a.xml" includes a document that is already being included.');
+  });
+
+  it("finds a loop through a different spelling of the same path", () => {
+    const documents = {
+      "d/a.xml": '<a xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="./x/../a.xml"/></a>',
+    };
+    const run = () =>
+      resolveIncludes(parseXml(documents["d/a.xml"]), "d/a.xml", (href) => parseXml(documents["d/a.xml"] ?? href));
+    expect(issueOf(thrown(run))).toMatchObject({ code: "assesskit/xml/xinclude-cycle" });
+  });
+
+  it("allows includes to nest maxIncludeDepth deep and no deeper", () => {
+    const chain = (href: string) =>
+      parseXml(
+        href === "f8.xml"
+          ? "<end/>"
+          : `<n xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="f${Number(href.slice(1, -4)) + 1}.xml"/></n>`,
+      );
+    const root = element("a", [include("f1.xml")]);
+    expect(resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 8 } }).name).toBe("a");
+    const error = thrown(() => resolveIncludes(root, "a.xml", chain, { limits: { maxIncludeDepth: 7 } }));
+    expect(error).toMatchObject({ limit: "maxIncludeDepth", value: 7 });
+  });
+
+  it("counts the nodes of the result against maxNodes, so that includes cannot multiply a document", () => {
+    const ten = (href: string) =>
+      element(
+        "n",
+        Array.from({ length: 10 }, () => include(href === "l1.xml" ? "l2.xml" : "l3.xml")),
+      );
+    const resolve = (href: string) => (href === "l3.xml" ? element("leaf") : ten(href));
+    const root = element(
+      "a",
+      Array.from({ length: 10 }, () => include("l1.xml")),
+    );
+    const error = thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxNodes: 500 } }));
+    expect(error).toBeInstanceOf(SecurityError);
+    expect(error).toMatchObject({ limit: "maxNodes", value: 500 });
+  });
+
+  it("counts the depth of the result against maxDepth", () => {
+    const root = element("a", [element("b", [include("f.xml")])]);
+    const resolve = () => element("f", [element("g")]);
+    expect(resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 4 } }).name).toBe("a");
+    expect(thrown(() => resolveIncludes(root, "a.xml", resolve, { limits: { maxDepth: 3 } }))).toMatchObject({
+      limit: "maxDepth",
+      value: 3,
+    });
+  });
+
+  it("lets an include be the root when it is replaced by exactly one element", () => {
+    expect(resolveIncludes(include("f.xml"), "a.xml", resolver({ "f.xml": "<f/>" }))).toEqual(parseXml("<f/>"));
+    const two = include("missing.xml", [xi("fallback", [element("x"), element("y")])]);
+    expect(issueOf(thrown(() => resolveIncludes(two, "a.xml", resolver({}))))).toMatchObject({
+      code: "assesskit/xml/xinclude-structure",
+    });
+  });
+
+  it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
+    const root = element("a");
+    const resolve = () => root;
+    expect(() => resolveIncludes(JSON.parse("null"), "a.xml", resolve)).toThrow(
+      "The root must be an element, found null.",
+    );
+    expect(() => resolveIncludes(root, JSON.parse("1"), resolve)).toThrow("The base must be a string, found 1.");
+    expect(() => resolveIncludes(root, "a.xml", JSON.parse("{}"))).toThrow(
+      "The resolver must be a function of an href and a base, found an object.",
+    );
+    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse("null"))).toThrow(
+      "The options must be an object, found null.",
+    );
+    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": null}'))).toThrow(
+      "The option limits must be an object, found null.",
+    );
+    expect(() => resolveIncludes(root, "a.xml", resolve, JSON.parse('{"limits": {"maxIncludeDepth": 0}}'))).toThrow(
+      "The limit maxIncludeDepth must be a positive integer, found 0.",
+    );
+    expect(() => resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse("null"))).toThrow(
+      "The include resolver must return an element, found null.",
+    );
+    expect(() =>
+      resolveIncludes(element("a", [include("f.xml")]), "a.xml", () => JSON.parse('{"kind":"text","value":"x"}')),
+    ).toThrow(DataError);
+  });
+});
+
+describe("language tags", () => {
   it("accepts language tags of letters and digits in subtags of up to eight, and the empty string", () => {
     for (const tag of ["en", "pt-BR", "es-419", "zh-Hant-TW", "ase", "x-private", ""])
       expect(isXmlLanguage(tag), tag).toBe(true);
@@ -1228,7 +669,400 @@ describe("isXmlLanguage", () => {
   });
 });
 
-describe("childElements, attributeOf and textOf", () => {
+describe("default limits", () => {
+  it("is about 1,000 times the largest example for size and nodes, 16 times for depth and 20 times for attributes", () => {
+    // The largest 1EdTech example has 32 KiB, depth 16, 12 attributes on an element and 1,126 nodes.
+    expect(DEFAULT_XML_LIMITS).toEqual({
+      maxBytes: 33_554_432,
+      maxDepth: 256,
+      maxAttributes: 256,
+      maxNodes: 1_000_000,
+      maxIncludeDepth: 8,
+    });
+  });
+});
+
+describe("parsing", () => {
+  it("reads names, namespaces, prefixes and attributes, and keeps the namespace declarations as attributes", () => {
+    const xml = `<a xmlns="urn:a" xmlns:b="urn:b" xmlns:xsi="${XSI}" xsi:schemaLocation="urn:a a.xsd" b:x="1" y="2"><b:c/></a>`;
+    expect(parsed(xml)).toEqual(
+      element(
+        "a",
+        [element("c", [], [], "urn:b", "b")],
+        [
+          attribute("xmlns", "urn:a", XMLNS_NAMESPACE),
+          attribute("b", "urn:b", XMLNS_NAMESPACE, "xmlns"),
+          attribute("xsi", XSI, XMLNS_NAMESPACE, "xmlns"),
+          attribute("schemaLocation", "urn:a a.xsd", XSI, "xsi"),
+          attribute("x", "1", "urn:b", "b"),
+          attribute("y", "2"),
+        ],
+        "urn:a",
+      ),
+    );
+  });
+
+  it("puts an unprefixed element in no namespace when the default namespace is undeclared", () => {
+    expect(parsed('<a xmlns="urn:a"><b xmlns=""/></a>')).toEqual(
+      element(
+        "a",
+        [element("b", [], [attribute("xmlns", "", XMLNS_NAMESPACE)])],
+        [attribute("xmlns", "urn:a", XMLNS_NAMESPACE)],
+        "urn:a",
+      ),
+    );
+  });
+
+  it("keeps text, CDATA sections, comments and processing instructions in order, with references replaced", () => {
+    const root = parsed("<a>x &amp; &#65;&#x42;<![CDATA[<y>]]><!--c--><?pi some data?>z</a>");
+    expect(root.children).toEqual([
+      text("x & AB"),
+      { kind: "cdata", value: "<y>" },
+      { kind: "comment", value: "c" },
+      { kind: "instruction", target: "pi", data: "some data" },
+      text("z"),
+    ]);
+  });
+
+  it("replaces the five predefined entities", () => {
+    expect(parsed("<a>&lt;&gt;&amp;&apos;&quot;</a>").children).toEqual([text("<>&'\"")]);
+  });
+
+  it("normalizes line ends to a line feed, as XML 1.0 says", () => {
+    expect(parsed("<a>1\r\n2\r3\n4</a>").children).toEqual([text("1\n2\n3\n4")]);
+  });
+
+  it("normalizes white space in attribute values to spaces, but keeps it when it is a character reference", () => {
+    expect(parsed('<a x="1\n2\t3&#10;4"/>').attributes).toEqual([attribute("x", "1 2 3\n4")]);
+  });
+
+  it("leaves out the declaration and the comments and white space around the root", () => {
+    expect(parsed('<?xml version="1.0"?>\n<!-- before --><a/>\n<!-- after -->\n')).toEqual(element("a"));
+  });
+
+  it("gives each element the line and column of its start tag, counting from 1", () => {
+    const root = parseXml('<a>\n  <!-- c --><b\n    x="1">\n\n<c/></b></a>');
+    const b = childElement(root, 2);
+    const c = childElement(b, 1);
+    expect([root.line, root.column]).toEqual([1, 1]);
+    expect([b.line, b.column]).toEqual([2, 13]);
+    expect([c.line, c.column]).toEqual([5, 1]);
+  });
+
+  it("counts a line end of \\r\\n, \\r or \\n as one, and gives a byte order mark no column", () => {
+    const root = parseXml("\uFEFF<a>\r\n<b/>\r<c/>\n<d/></a>");
+    const positions = root.children
+      .filter((child): child is XmlElement => child.kind === "element")
+      .map(({ name, line, column }) => [name, line, column]);
+    expect(positions).toEqual([
+      ["b", 2, 1],
+      ["c", 3, 1],
+      ["d", 4, 1],
+    ]);
+    expect([root.line, root.column]).toEqual([1, 1]);
+  });
+
+  it("counts columns in characters, not in UTF-16 units", () => {
+    const root = parseXml("<a>😀<b/></a>");
+    expect(childElement(root, 1).column).toBe(5);
+  });
+
+  it("reads an attribute named like a property of Object.prototype as data", () => {
+    const root = parseXml('<a __proto__="1" constructor="2" toString="3"/>');
+    expect(root.attributes.map(({ name, value }) => [name, value])).toEqual([
+      ["__proto__", "1"],
+      ["constructor", "2"],
+      ["toString", "3"],
+    ]);
+    expect(Object.getPrototypeOf({})).toBe(Object.prototype);
+  });
+
+  describe("encodings", () => {
+    const body = "<a>é€</a>";
+    const bytes = (value: string, encoding: "utf8" | "utf16le" | "latin1" = "utf8") =>
+      new Uint8Array(Buffer.from(value, encoding));
+    const swapped = (value: string) => new Uint8Array(Buffer.from(value, "utf16le").swap16());
+
+    it("reads UTF-8 without a declaration", () => {
+      expect(parsed(`${body}`)).toEqual(element("a", [text("é€")]));
+      expect(withoutPositions(parseXml(bytes(body)))).toEqual(element("a", [text("é€")]));
+    });
+
+    it("reads UTF-8 with a byte order mark", () => {
+      const root = parseXml(bytes(`﻿<?xml version="1.0" encoding="utf-8"?>${body}`));
+      expect(root.children).toEqual([text("é€")]);
+    });
+
+    it("reads UTF-16 in both byte orders when a byte order mark says which", () => {
+      const xml = `﻿<?xml version="1.0" encoding="UTF-16"?>${body}`;
+      expect(parseXml(bytes(xml, "utf16le")).children).toEqual([text("é€")]);
+      expect(parseXml(swapped(xml)).children).toEqual([text("é€")]);
+    });
+
+    it("reads the encoding that the declaration names when there is no byte order mark", () => {
+      const xml = new Uint8Array(Buffer.from('<?xml version="1.0" encoding="ISO-8859-1"?><a>\xE9</a>', "latin1"));
+      expect(parseXml(xml).children).toEqual([text("é")]);
+    });
+
+    it("takes a string as it is and ignores the encoding it declares", () => {
+      expect(parseXml('<?xml version="1.0" encoding="ISO-8859-1"?><a>é€</a>').children).toEqual([text("é€")]);
+      expect(parseXml(`﻿${body}`).children).toEqual([text("é€")]);
+    });
+
+    it.each([
+      [
+        "a UTF-8 byte order mark and another encoding",
+        bytes('﻿<?xml version="1.0" encoding="ISO-8859-1"?><a/>'),
+        /declares the encoding "ISO-8859-1"/,
+      ],
+      [
+        "a UTF-16 byte order mark and UTF-8",
+        bytes('﻿<?xml version="1.0" encoding="UTF-8"?><a/>', "utf16le"),
+        /declares the encoding "UTF-8"/,
+      ],
+      [
+        "an encoding the runtime does not know",
+        bytes('<?xml version="1.0" encoding="no-such-encoding"?><a/>'),
+        /does not support it/,
+      ],
+      [
+        "UTF-16 without a byte order mark",
+        bytes('<?xml version="1.0" encoding="UTF-16"?><a/>'),
+        /needs a byte order mark/,
+      ],
+      [
+        "bytes that are not UTF-8",
+        new Uint8Array([0x3c, 0x61, 0x3e, 0xff, 0x3c, 0x2f, 0x61, 0x3e]),
+        /is not valid utf-8/,
+      ],
+    ])("rejects %s", (_name, input, message) => {
+      const issue = issueOf(thrown(() => parseXml(input, { path: "items/a.xml" })));
+      expect(issue).toMatchObject({
+        severity: "error",
+        code: "assesskit/xml/encoding",
+        location: { path: "items/a.xml" },
+      });
+      expect(issue.message).toMatch(message);
+    });
+  });
+
+  describe("limits", () => {
+    it("counts the bytes of UTF-8: a document of exactly maxBytes is read and one byte more is not", () => {
+      const xml = "<a>é</a>";
+      expect(parseXml(xml, { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
+      expect(parseXml(new TextEncoder().encode(xml), { limits: { maxBytes: 9 } }).children).toEqual([text("é")]);
+      for (const input of [xml, new TextEncoder().encode(xml)]) {
+        const error = thrown(() => parseXml(input, { limits: { maxBytes: 8 } }));
+        expect(error).toBeInstanceOf(SecurityError);
+        expect(error).toMatchObject({ limit: "maxBytes", value: 8 });
+      }
+    });
+
+    it("allows nesting up to maxDepth, counting the root as 1", () => {
+      expect(parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 3 } }).name).toBe("a");
+      expect(thrown(() => parseXml("<a><b><c/></b></a>", { limits: { maxDepth: 2 } }))).toMatchObject({
+        limit: "maxDepth",
+        value: 2,
+      });
+    });
+
+    it("allows maxAttributes on an element, namespace declarations included", () => {
+      expect(parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 2 } }).attributes).toHaveLength(2);
+      expect(thrown(() => parseXml('<a xmlns="urn:a" x="1"/>', { limits: { maxAttributes: 1 } }))).toMatchObject({
+        limit: "maxAttributes",
+        value: 1,
+      });
+    });
+
+    it("allows maxNodes elements, text, CDATA sections, comments and processing instructions", () => {
+      const xml = "<a><b/>t<![CDATA[c]]><!--c--><?p d?></a>";
+      expect(parseXml(xml, { limits: { maxNodes: 6 } }).children).toHaveLength(5);
+      expect(thrown(() => parseXml(xml, { limits: { maxNodes: 5 } }))).toMatchObject({ limit: "maxNodes", value: 5 });
+    });
+
+    it("replaces only the limits it is given", () => {
+      expect(thrown(() => parseXml("<a><b/></a>", { limits: { maxDepth: 1 } }))).toMatchObject({ limit: "maxDepth" });
+      expect(parseXml(`<a x="1"/>`, { limits: { maxDepth: 1 } }).attributes).toHaveLength(1);
+    });
+  });
+
+  describe("security fixtures", () => {
+    const xxe = '<?xml version="1.0"?><!DOCTYPE a [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><a>&xxe;</a>';
+    const lolz = `<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;"><!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">]><lolz>&lol4;</lolz>`;
+
+    it.each([
+      ["an external entity (XXE)", xxe],
+      ["entities that expand into each other (billion laughs)", lolz],
+      ["a parameter entity that loads a file", '<!DOCTYPE a [<!ENTITY % p SYSTEM "http://example.org/x.dtd">%p;]><a/>'],
+      ["an external DTD", '<!DOCTYPE a SYSTEM "http://example.org/a.dtd"><a/>'],
+      ["a DOCTYPE without a subset", "<!DOCTYPE html><a/>"],
+    ])("rejects a DOCTYPE with %s before it declares or expands anything", (_name, xml) => {
+      const error = thrownAs(SecurityError, () => parseXml(xml, { path: "evil.xml" }));
+      expect(error).toMatchObject({ limit: "doctype", value: 0 });
+      expect(error.message).toBe(
+        'The document "evil.xml" has a DOCTYPE declaration, which the runtime rejects so that no entity is declared or read.',
+      );
+    });
+
+    it("rejects a DOCTYPE in bytes of every encoding it can arrive in, and reads one inside a comment or a CDATA section as data", () => {
+      const doctype = '<!DOCTYPE a [<!ENTITY x "y">]><a/>';
+      const utf16 = (text: string, order: readonly [number, number]): Uint8Array =>
+        Uint8Array.from([
+          ...order,
+          ...[...text].flatMap((char) => {
+            const unit = char.charCodeAt(0);
+            return order[0] === 0xff ? [unit & 0xff, unit >> 8] : [unit >> 8, unit & 0xff];
+          }),
+        ]);
+      const encoder = new TextEncoder();
+      for (const bytes of [
+        utf16(doctype, [0xff, 0xfe]),
+        utf16(doctype, [0xfe, 0xff]),
+        Uint8Array.from([0xef, 0xbb, 0xbf, ...encoder.encode(doctype)]),
+        encoder.encode(`<?xml version="1.0" encoding="ISO-8859-1"?>${doctype}`),
+      ]) {
+        expect(thrown(() => parseXml(bytes))).toMatchObject({ limit: "doctype" });
+      }
+      expect(parseXml("<a><!-- <!DOCTYPE a> --><![CDATA[<!DOCTYPE a>]]></a>").children).toHaveLength(2);
+      expect(issueOf(thrown(() => parseXml("<!doctype a><a/>")))).toMatchObject({
+        code: "assesskit/xml/not-well-formed",
+      });
+    });
+
+    it("reads no entity but the predefined ones: an entity that no DOCTYPE declares is an error", () => {
+      expect(issueOf(thrown(() => parseXml("<a>&xxe;</a>")))).toMatchObject({ code: "assesskit/xml/not-well-formed" });
+    });
+
+    it("rejects input over the default size without reading it", () => {
+      const error = thrown(() => parseXml(new Uint8Array(DEFAULT_XML_LIMITS.maxBytes + 1)));
+      expect(error).toMatchObject({ limit: "maxBytes", value: DEFAULT_XML_LIMITS.maxBytes });
+      expect(thrown(() => parseXml(`<a>${"x".repeat(DEFAULT_XML_LIMITS.maxBytes)}</a>`))).toMatchObject({
+        limit: "maxBytes",
+      });
+    });
+
+    it("rejects deep nesting at the default depth before it reads the rest", () => {
+      const error = thrown(() => parseXml("<a>".repeat(100_000)));
+      expect(error).toBeInstanceOf(SecurityError);
+      expect(error).toMatchObject({ limit: "maxDepth", value: 256 });
+      expect(parseXml(`${"<a>".repeat(256)}${"</a>".repeat(256)}`).name).toBe("a");
+    });
+
+    it("rejects more attributes than the default allows on one element", () => {
+      const attributes = Array.from({ length: 257 }, (_, index) => ` a${index}="1"`).join("");
+      expect(thrown(() => parseXml(`<a${attributes}/>`))).toMatchObject({ limit: "maxAttributes", value: 256 });
+    });
+  });
+
+  describe("errors", () => {
+    it.each([
+      ["a mismatched end tag", "<a><b></a>", 1],
+      ["an unclosed element", "<a><b/>", 1],
+      ["two roots", "<a/>\n<b/>", 2],
+      ["no root", "", 1],
+      ["text outside the root", "\n\nx<a/>", 3],
+      ["an unbound prefix", "<p:a/>", 1],
+      ["a repeated attribute", '<a x="1" x="2"/>', 1],
+      ["a control character", "<a>\n\u0001</a>", 2],
+      ["a malformed character reference", "<a>&#0;</a>", 1],
+      ["a lone ampersand", "<a>&</a>", 1],
+      ["a less-than sign in an attribute value", '<a x="<"/>', 1],
+    ])("reports %s on the line where the parser stopped", (_name, xml, line) => {
+      const error = thrownAs(ReadError, () => parseXml(xml, { path: "bad.xml" }));
+      expect(error.issues).toHaveLength(1);
+      const issue = issueOf(error);
+      expect(issue).toMatchObject({
+        severity: "error",
+        code: "assesskit/xml/not-well-formed",
+        location: { path: "bad.xml", line },
+      });
+      expect(issue.location?.column).toBeGreaterThanOrEqual(1);
+      expect(issue.message).toMatch(/^The document "bad\.xml" is not well-formed: .+\.$/);
+      expect(error.message).toBe(`${issue.message} (line ${line}, column ${issue.location?.column})`);
+    });
+
+    it.each([
+      ["a lone high surrogate in text", "<a>\ud800</a>", 1, 4],
+      ["a high surrogate that no low surrogate follows", "<a b='x'>a\ud800b</a>", 1, 11],
+      ["a lone low surrogate in an attribute value", '<a\n b="\udc00"/>', 2, 5],
+      ["a lone surrogate in a comment", "<a><!--\ud83d--></a>", 1, 8],
+    ])("rejects %s, which is no character", (_name, xml, line, column) => {
+      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+        code: "assesskit/xml/not-well-formed",
+        location: { path: "bad.xml", line, column },
+      });
+      expect(parseXml("<a>\ud83d\ude00</a>").children).toEqual([text("😀")]);
+    });
+
+    it.each([
+      ["a trailing space", '<a xmlns="urn:a "/>'],
+      ["a no-break space", '<p:a xmlns:p="\u00a0urn:a"/>'],
+      ["a byte order mark", '<a xmlns="urn:a\ufeff"/>'],
+    ])(
+      "rejects a namespace declaration with %s, which the parser would strip from the namespace of the element",
+      (_name, xml) => {
+        expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+          code: "assesskit/xml/namespace",
+          location: { path: "bad.xml", line: 1, column: 1 },
+        });
+      },
+    );
+
+    it.each([
+      ["an element whose local name starts with a digit", '<p:1 xmlns:p="urn:p"/>'],
+      ["an attribute whose local name starts with a hyphen", '<a xmlns:p="urn:p" p:-x="1"/>'],
+      ["a declaration of a prefix that starts with a digit", '<a xmlns:1p="urn:p"/>'],
+    ])("rejects %s: a qualified name has names without a colon on both sides of it", (_name, xml) => {
+      expect(issueOf(thrown(() => parseXml(xml, { path: "bad.xml" })))).toMatchObject({
+        code: "assesskit/xml/not-well-formed",
+        location: { path: "bad.xml", line: 1, column: 1 },
+      });
+    });
+
+    it("reports the column of the character that ends a malformed construct", () => {
+      expect(issueOf(thrown(() => parseXml("<a>\u0001</a>")))).toMatchObject({ location: { line: 1, column: 4 } });
+      expect(issueOf(thrown(() => parseXml("<a><b></a>")))).toMatchObject({ location: { line: 1, column: 10 } });
+    });
+
+    it("names the document by its position only, when it has no path", () => {
+      expect(issueOf(thrown(() => parseXml("<a>")))).toMatchObject({
+        message: "The document is not well-formed: unclosed tag: a.",
+      });
+    });
+
+    it("rejects XML 1.1, which has other rules for characters and names", () => {
+      const issue = issueOf(thrown(() => parseXml('<?xml version="1.1"?><a/>')));
+      expect(issue).toMatchObject({ code: "assesskit/xml/version" });
+      expect(issue.message).toBe('The document declares XML version "1.1", but the runtime reads XML 1.0.');
+    });
+
+    it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
+      for (const input of ["1", "null", "[]", '{"a":1}']) {
+        expect(() => parseXml(JSON.parse(input))).toThrow(DataError);
+      }
+      expect(() => parseXml(JSON.parse("1"))).toThrow("The XML input must be a string or a Uint8Array, found 1.");
+      expect(() => parseXml("<a/>", JSON.parse("null"))).toThrow("The options must be an object, found null.");
+      expect(() => parseXml("<a/>", JSON.parse('{"path": 5}'))).toThrow("The option path must be a string, found 5.");
+      expect(() => parseXml("<a/>", JSON.parse('{"path": null}'))).toThrow(
+        "The option path must be a string, found null.",
+      );
+      expect(() => parseXml("<a/>", JSON.parse('{"limits": null}'))).toThrow(
+        "The option limits must be an object, found null.",
+      );
+      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxBytes": "5"}}'))).toThrow(
+        'The limit maxBytes must be a positive integer, found "5".',
+      );
+      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxDepth": 0}}'))).toThrow(
+        "The limit maxDepth must be a positive integer, found 0.",
+      );
+      expect(() => parseXml("<a/>", JSON.parse('{"limits": {"maxNodes": null}}'))).toThrow(
+        "The limit maxNodes must be a positive integer, found null.",
+      );
+    });
+  });
+});
+
+describe("reading a tree without mapping it", () => {
   const root = parsed(
     '<a xmlns:p="urn:p" x="1" p:x="2" xml:lang="en">t1<b/><!--c-->t2<![CDATA[<cd>]]><p:c/><?pi d?></a>',
   );
@@ -1252,7 +1086,7 @@ describe("childElements, attributeOf and textOf", () => {
   });
 });
 
-describe("readError and locationOf", () => {
+describe("read errors and locations", () => {
   it("builds a ReadError with one issue and the position in its message", () => {
     const error = readError("assesskit/xml/example", "The example is wrong.", {
       path: "a.xml",
@@ -1280,6 +1114,181 @@ describe("readError and locationOf", () => {
 
   it("adds the path of the element names when the caller tracks it", () => {
     expect(locationOf(parseXml("<a/>"), "x.xml", "r/a")).toEqual({ path: "x.xml", line: 1, column: 1, element: "r/a" });
+  });
+});
+
+describe("serializing", () => {
+  it("writes the declaration and the element, with text as the tree has it", () => {
+    const tree = element("a", [
+      text("1"),
+      element("b"),
+      text(" 2 "),
+      { kind: "comment", value: " c " },
+      { kind: "instruction", target: "pi", data: "d" },
+    ]);
+    expect(serializeXml(tree)).toBe(`${DECLARATION}<a>1<b/> 2 <!-- c --><?pi d?></a>`);
+  });
+
+  it("escapes what the syntax needs in text and in attribute values", () => {
+    const tree = element("a", [text('x & y < z > "q" \r')], [attribute("v", "a&b<c>\"d'\t\n\r")]);
+    expect(serializeXml(tree)).toBe(
+      `${DECLARATION}<a v="a&amp;b&lt;c&gt;&quot;d'&#9;&#10;&#13;">x &amp; y &lt; z &gt; "q" &#13;</a>`,
+    );
+  });
+
+  it("writes a CDATA section, splitting it where its text has ]]>", () => {
+    expect(serializeXml(element("a", [{ kind: "cdata", value: "a]]>b" }]))).toBe(
+      `${DECLARATION}<a><![CDATA[a]]]]><![CDATA[>b]]></a>`,
+    );
+    expect(parsed(serializeXml(element("a", [{ kind: "cdata", value: "a]]>b" }]))).children).toEqual([
+      { kind: "cdata", value: "a]]" },
+      { kind: "cdata", value: ">b" },
+    ]);
+  });
+
+  it("writes a processing instruction without data as its target alone", () => {
+    expect(serializeXml(element("a", [{ kind: "instruction", target: "pi", data: "" }]))).toBe(
+      `${DECLARATION}<a><?pi?></a>`,
+    );
+  });
+
+  it("declares the namespaces that the tree uses and does not declare", () => {
+    const tree = element(
+      "a",
+      [element("c", [], [attribute("x", "1", "urn:b", "b")], "urn:b", "b"), element("d", [], [], "")],
+      [attribute("lang", "en", XML_NAMESPACE, "xml")],
+      "urn:a",
+    );
+    expect(serializeXml(tree)).toBe(
+      `${DECLARATION}<a xml:lang="en" xmlns="urn:a"><b:c b:x="1" xmlns:b="urn:b"/><d xmlns=""/></a>`,
+    );
+  });
+
+  it("keeps the declarations the tree has, and declares nothing that is in scope", () => {
+    const xml = `${DECLARATION}<a xmlns="urn:a" xmlns:b="urn:b"><b:c><d/></b:c></a>`;
+    expect(serializeXml(parseXml(xml))).toBe(xml);
+  });
+
+  it("writes a parsed document unchanged when it is in canonical form", () => {
+    const xml = `${DECLARATION}<a x="1"><!--c--><b y="&amp;">t &lt; u<![CDATA[v]]></b><?p q?></a>`;
+    expect(serializeXml(parseXml(xml))).toBe(xml);
+  });
+
+  describe("errors", () => {
+    it.each([
+      [
+        "a character XML 1.0 does not allow in text",
+        element("a", [text("a\u0001b")]),
+        "A text node has the character U+0001, which XML 1.0 does not allow. It is in a.",
+      ],
+      [
+        "a lone surrogate in an attribute value",
+        element("a", [], [attribute("x", "\uD800")]),
+        "The value of the attribute x has the character U+D800, which XML 1.0 does not allow. It is in a.",
+      ],
+      ["a name with a colon", element("a:b"), 'The name of an element must be a name without a colon, found "a:b".'],
+      [
+        "a name that starts with a digit",
+        element("1a"),
+        'The name of an element must be a name without a colon, found "1a".',
+      ],
+      [
+        "a prefix without a namespace",
+        element("a", [], [], "", "p"),
+        "The element a has a prefix but no namespace. It is in a.",
+      ],
+      [
+        "an attribute in a namespace without a prefix",
+        element("a", [], [attribute("x", "1", "urn:b")]),
+        "The attribute x is in a namespace but has no prefix. It is in a.",
+      ],
+      [
+        "an attribute with a prefix and no namespace",
+        element("a", [], [attribute("x", "1", "", "p")]),
+        "The attribute p:x has a prefix but no namespace. It is in a.",
+      ],
+      [
+        "the prefix xml for another namespace",
+        element("a", [], [attribute("x", "1", "urn:b", "xml")]),
+        'The attribute xml:x uses the prefix "xml" and the XML namespace apart. It is in a.',
+      ],
+      [
+        "a declaration that is not xmlns",
+        element("a", [], [attribute("x", "1", XMLNS_NAMESPACE)]),
+        "The attribute x is not a namespace declaration, `xmlns` or `xmlns:prefix`. It is in a.",
+      ],
+      [
+        "an attribute twice",
+        element("a", [], [attribute("x", "1"), attribute("x", "2")]),
+        "The attribute x occurs twice. It is in a.",
+      ],
+      [
+        "one prefix for two namespaces on an element",
+        element("a", [], [attribute("x", "1", "urn:b", "p")], "urn:a", "p"),
+        'The prefix "p" stands for two namespaces on one element. It is in a.',
+      ],
+      [
+        "a comment with two hyphens",
+        element("a", [{ kind: "comment", value: "a--b" }]),
+        'A comment must not contain "--" or end with "-". It is in a.',
+      ],
+      [
+        "a comment that ends with a hyphen",
+        element("a", [{ kind: "comment", value: "a-" }]),
+        'A comment must not contain "--" or end with "-". It is in a.',
+      ],
+      [
+        "a processing instruction named xml",
+        element("a", [{ kind: "instruction", target: "XML", data: "" }]),
+        'A processing instruction must not have the target "xml" or contain "?>". It is in a.',
+      ],
+      [
+        "a processing instruction with ?>",
+        element("a", [{ kind: "instruction", target: "p", data: "a?>b" }]),
+        'A processing instruction must not have the target "xml" or contain "?>". It is in a.',
+      ],
+    ])("rejects %s", (_name, tree, message) => {
+      expect(thrownAs(DataError, () => serializeXml(tree)).message).toBe(message);
+    });
+
+    it("names the path of the element that has the problem", () => {
+      const tree = element("a", [element("b", [element("c", [text("\u0000")])])]);
+      expect(() => serializeXml(tree)).toThrow(
+        "A text node has the character U+0000, which XML 1.0 does not allow. It is in a/b/c.",
+      );
+    });
+
+    it("throws DataError for input of other types, as JavaScript or JSON pass it", () => {
+      expect(() => serializeXml(JSON.parse("null"))).toThrow("The root must be an element, found null.");
+      expect(() => serializeXml(JSON.parse('{"kind":"text","value":"x"}'))).toThrow(
+        "The root must be an element, found a node of the kind",
+      );
+      expect(() =>
+        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":{},"children":[]}')),
+      ).toThrow("The attributes of the element a must be an array, found an object.");
+      expect(() =>
+        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[],"children":[1]}')),
+      ).toThrow("A node must be an object, found 1.");
+      expect(() =>
+        serializeXml(
+          JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[],"children":[{"kind":"pi"}]}'),
+        ),
+      ).toThrow('A node must have the kind "element", "text", "cdata", "comment" or "instruction", found "pi".');
+      expect(() =>
+        serializeXml(JSON.parse('{"kind":"element","namespace":5,"name":"a","attributes":[],"children":[]}')),
+      ).toThrow("The namespace of the element a must be a string, found 5.");
+      expect(() =>
+        serializeXml(JSON.parse('{"kind":"element","namespace":"","name":"a","attributes":[1],"children":[]}')),
+      ).toThrow("An attribute must be an object, found 1.");
+    });
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    const guide = new URL("../../../docs/runtime/xml.md", import.meta.url);
+    const xml = await import("../src/xml/index.js");
+    expect(await runGuideSamples(guide, { "@assesskit/runtime/xml": xml })).toBeGreaterThan(0);
   });
 });
 
@@ -1314,7 +1323,7 @@ describe("properties", () => {
           ),
         ),
     );
-  // A parser reads a carriage return in a CDATA section, comment or instruction as a line feed (XML 1.0 §2.11), so the
+  // A parser reads a carriage return in a CDATA section, comment or instruction as a line feed, so the
   // trees avoid it there.
   const lineEnds = characters.map((value) => value.replaceAll("\r", ""));
   const leaf: fc.Arbitrary<XmlNode> = fc.oneof(

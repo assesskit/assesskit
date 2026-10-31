@@ -20,6 +20,9 @@ export interface DeclaredVariable {
 /**
  * Returns the variables an item has by identifier: the built-in ones, then the declared ones. The first declaration of
  * an identifier wins, so that a duplicate does not change what the checks see.
+ *
+ * @param item - The item.
+ * @returns The variables by identifier.
  */
 export function itemVariables(item: AssessmentItem): ReadonlyMap<string, DeclaredVariable> {
   const variables = new Map<string, DeclaredVariable>();
@@ -40,7 +43,9 @@ const UNDECLARED: Pick<Problem, "code"> = { code: "assesskit/validate/undeclared
 
 /** The variables of an item, as the expressions of its response and template processing read them. */
 export class ItemScope implements RuleScope {
+  /** Names the item in messages. */
   readonly owner = "item";
+  /** The processing whose expressions are checked. */
   readonly processing: Processing;
   private readonly variables: ReadonlyMap<string, DeclaredVariable>;
   private readonly responses: ReadonlyMap<string, ResponseDeclaration>;
@@ -50,7 +55,7 @@ export class ItemScope implements RuleScope {
   /**
    * @param item - The item.
    * @param processing - The processing whose expressions are checked: template processing reads only template and
-   * context variables (INFO §6.50).
+   * context variables.
    */
   constructor(item: AssessmentItem, processing: "response" | "template") {
     this.processing = processing;
@@ -67,6 +72,13 @@ export class ItemScope implements RuleScope {
     };
   }
 
+  /**
+   * Looks up the variable that `qti-variable` names, with the reach that the processing has.
+   *
+   * @param identifier - The identifier.
+   * @param weightIdentifier - The weight that the expression names, when it names one.
+   * @returns The type of the variable, or the problem with naming it.
+   */
   variable(identifier: string, weightIdentifier: string | undefined): Lookup {
     const found = this.variables.get(identifier);
     if (found === undefined) return { problem: this.undeclared(identifier, "variable") };
@@ -92,7 +104,11 @@ export class ItemScope implements RuleScope {
     return { type, warnings: [this.weightProblem(weightIdentifier)] };
   }
 
-  /** An item has no item sessions to weigh, and the expressions that read them are reported as outcome-only. */
+  /**
+   * An item has no item sessions to weigh, and the expressions that read them are reported as outcome-only.
+   *
+   * @returns Always `undefined`: an item has no weights.
+   */
   weight(): undefined {
     return undefined;
   }
@@ -104,6 +120,12 @@ export class ItemScope implements RuleScope {
     };
   }
 
+  /**
+   * Looks up the variable that `qti-default` names.
+   *
+   * @param identifier - The identifier.
+   * @returns The type of the variable, or the problem with naming it.
+   */
   declared(identifier: string): Lookup {
     const found = this.variables.get(identifier);
     return found === undefined
@@ -111,18 +133,36 @@ export class ItemScope implements RuleScope {
       : { type: typeOfVariable(found.type) };
   }
 
+  /**
+   * Looks up the response variable that `qti-correct` or a mapping names.
+   *
+   * @param identifier - The identifier.
+   * @returns The declaration, or the problem with naming it.
+   */
   response(identifier: string): ResponseLookup {
     const found = this.variables.get(identifier);
     if (found?.kind !== "response") return { problem: this.undeclared(identifier, "response variable") };
     return { declaration: this.responses.get(identifier) };
   }
 
+  /**
+   * Returns the variable that a rule sets.
+   *
+   * @param identifier - The identifier.
+   * @returns The variable, or `undefined` when the item declares none.
+   */
   target(identifier: string): Target | undefined {
     const found = this.variables.get(identifier);
     const outcome = this.outcomes.get(identifier);
     return found === undefined ? undefined : { ...found, ...(outcome === undefined ? {} : { outcome }) };
   }
 
+  /**
+   * Returns the type of the template or outcome variable that an attribute names.
+   *
+   * @param identifier - The identifier.
+   * @returns The type, or `undefined` when no such variable is in reach.
+   */
   reference(identifier: string): StaticType | undefined {
     const found = this.variables.get(identifier);
     const referable = found?.kind === "template" || (found?.kind === "outcome" && this.processing !== "template");

@@ -21,7 +21,7 @@ import { checkStandardOutcome } from "./standard-outcomes.js";
 
 type Declaration = ContextDeclaration | ResponseDeclaration | OutcomeDeclaration | TemplateDeclaration;
 
-/** The built-in variables, whose identifiers a declaration must not use (INFO §2.2.2). */
+/** The built-in variables, whose identifiers a declaration must not use. */
 const RESERVED = new Set([NUM_ATTEMPTS, DURATION, COMPLETION_STATUS, QTI_CONTEXT]);
 
 /** The declarations of one kind, with the element that declares them. */
@@ -49,10 +49,13 @@ function typeOf(declaration: Declaration): VariableType {
 }
 
 /**
- * Checks the variable declarations of an item or a test: that no built-in variable is declared (INFO §2.2.2) and no
- * identifier twice (INFO §5.34.1); that a variable that is not a record has a base type; that the standard outcomes have
- * their types (T23, G40); and that every declared value, mapping key and lookup table value is written in the lexical form
+ * Checks the variable declarations of an item or a test: that no built-in variable is declared and no
+ * identifier twice; that a variable that is not a record has a base type; that the standard outcomes have
+ * their types; and that every declared value, mapping key and lookup table value is written in the lexical form
  * of the base type, so that processing cannot meet a value it cannot read.
+ *
+ * @param findings - The findings of the document, which receive the issues.
+ * @param scope - The declarations of the item or the test.
  */
 export function checkDeclarations(findings: Findings, scope: DeclarationScope): void {
   const seen = new Set<string>();
@@ -113,7 +116,7 @@ function checkValues(findings: Findings, identifier: string, declaration: Declar
   }
 }
 
-/** Reads the values a lookup table gives, which are values of the outcome's base type (INFO §5.87). */
+/** Reads the values a lookup table gives, which are values of the outcome's base type. */
 function checkLookupTable(findings: Findings, declaration: OutcomeDeclaration, baseType: BaseType, here: string): void {
   const { lookupTable: table, identifier } = declaration;
   if (table === undefined) return;

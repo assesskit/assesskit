@@ -4,22 +4,31 @@ import { checkPatternText } from "./expressions.js";
 import type { Findings } from "./findings.js";
 import { elementPath, textOf } from "./model-access.js";
 
-/** The interactions with a `pattern-mask` (INFO §5.162.5, §5.48.4). */
+/** The interactions with a `pattern-mask`. */
 const PATTERN_MASKS = new Set(["qti-text-entry-interaction", "qti-extended-text-interaction"]);
 
 /**
- * The checks of an element that hold for every kind of document: an include left unresolved (F-m18), the pattern of an
- * interaction, an interaction inside a rubric block (INFO §2.8.6), and the class of the covers of an outcome below the
- * test, where it is not recognized (§4.16 of the design, O11).
+ * The checks of an element that hold for every kind of document: an include left unresolved, the pattern of an
+ * interaction, an interaction inside a rubric block, and the class of the covers of an outcome below the test, where it
+ * is not recognized.
  */
 export class DocumentChecks {
   private readonly findings: Findings;
 
+  /**
+   * Starts the checks of a document.
+   *
+   * @param findings - The findings of the document, which receive the issues.
+   */
   constructor(findings: Findings) {
     this.findings = findings;
   }
 
-  /** Checks one element. */
+  /**
+   * Checks one element.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     this.includes(visit);
     const mask = PATTERN_MASKS.has(visit.name) ? textOf(visit.model, "patternMask") : undefined;

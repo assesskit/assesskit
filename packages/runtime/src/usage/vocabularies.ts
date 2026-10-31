@@ -1,4 +1,8 @@
-/** The terms of `ObjectTypeEnum` (UD §2.7.2). */
+/**
+ * The terms of `ObjectTypeEnum`.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data, ObjectTypeEnum}
+ */
 export const STATISTIC_OBJECT_TYPES = [
   "test",
   "testpart",
@@ -9,12 +13,14 @@ export const STATISTIC_OBJECT_TYPES = [
   "choice",
 ] as const;
 
-/** The kind of object a statistic is about: a term of `ObjectTypeEnum` (UD §2.7.2). */
+/** The kind of object a statistic is about: a term of `ObjectTypeEnum`. */
 export type ObjectType = (typeof STATISTIC_OBJECT_TYPES)[number];
 
 /**
- * The terms of the "Distractor Statistics" external vocabulary, the names of the statistics about one response option
- * (UD §2.8.1). A statistic may have another name, which a glossary then defines.
+ * The terms of the "Distractor Statistics" external vocabulary, the names of the statistics about one response option.
+ * A statistic may have another name, which a glossary then defines.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data, external vocabularies}
  */
 export const DISTRACTOR_STATISTICS: readonly string[] = [
   "AISResponse",
@@ -24,8 +30,10 @@ export const DISTRACTOR_STATISTICS: readonly string[] = [
 ];
 
 /**
- * The terms of the "Item Statistics" external vocabulary, the names of the statistics about an item (UD §2.8.2). A
- * statistic may have another name, which a glossary then defines.
+ * The terms of the "Item Statistics" external vocabulary, the names of the statistics about an item. A statistic may
+ * have another name, which a glossary then defines.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/ud-bind/index.html | QTI 3.0 Usage Data, external vocabularies}
  */
 export const ITEM_STATISTICS: readonly string[] = [
   "A-Param",

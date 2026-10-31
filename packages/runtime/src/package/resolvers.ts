@@ -17,7 +17,7 @@ export interface QtiDeliverable {
   readonly item: AssessmentItem;
 }
 
-/** The link to an item that a tool provides over LTI (BPIG §6.2.9). */
+/** The link to an item that a tool provides over LTI. */
 export interface LtiDeliverable {
   /** Tells an LTI link from a QTI item. */
   readonly kind: "lti";
@@ -30,7 +30,7 @@ export interface LtiDeliverable {
 /** An item the engine can present: a QTI item or the link to an item that a tool provides. */
 export type DeliverableItem = QtiDeliverable | LtiDeliverable;
 
-/** A variant of an item with the description of how it differs (BIND §8.1.1). */
+/** A variant of an item with the description of how it differs. */
 export interface ResolvedVariant {
   /** The identifier of the manifest resource that is the variant. */
   readonly resource: string;
@@ -40,7 +40,7 @@ export interface ResolvedVariant {
   readonly drd: AccessForAllResource;
 }
 
-/** An item reference resolved: the item with the variants the engine may choose from (BIND §8.1.1, BPIG §6.6). */
+/** An item reference resolved: the item with the variants the engine may choose from. */
 export interface ResolvedItem {
   /** The identifier of the manifest resource. */
   readonly resource: string;
@@ -97,9 +97,11 @@ function incomingHazards(resources: readonly Resource[]): Map<string, DrdHazard[
 /**
  * Builds the resolvers of the engine over a package. An item reference resolves to the manifest resource of type
  * `imsqti_item_xmlv3p0` or `imsbasiclti_xmlv1p3` whose main file, its `href` or its only file, is the file the reference names, so that the item comes with
- * its variants and their DRD (D-M2); the engine chooses among them. Section and stimulus references resolve to the
+ * its variants and their DRD; the engine chooses among them. Section and stimulus references resolve to the
  * document at their path. All resolvers are synchronous: the package holds the files.
  *
+ * @param pkg - The opened package.
+ * @returns The resolvers of the package.
  * @throws `DataError` when the argument is not a package.
  * @throws `ReadError` from the resolvers, when a reference is outside the package, names no resource of the right type,
  * names a file that is missing or is not a document of the expected kind.

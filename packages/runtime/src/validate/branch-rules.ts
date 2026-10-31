@@ -10,7 +10,7 @@ import {
   partOf,
 } from "./test-structure.js";
 
-/** The targets of a branch rule that name no identifier (INFO §5.23.1). */
+/** The targets of a branch rule that name no identifier. */
 const EXIT_SECTION = "EXIT_SECTION";
 const EXIT_TESTPART = "EXIT_TESTPART";
 const EXIT_TEST = "EXIT_TEST";
@@ -53,6 +53,12 @@ export class BranchRuleChecks {
   private readonly placed: PlacedTest;
   private readonly nodes: readonly Ruled[];
 
+  /**
+   * Starts the checks of a placed test.
+   *
+   * @param placed - The placed test.
+   * @param findings - The findings of the document, which receive the issues.
+   */
   constructor(placed: PlacedTest, findings: Findings) {
     this.findings = findings;
     this.placed = placed;
@@ -77,7 +83,7 @@ export class BranchRuleChecks {
     return `${ROOT}/${elementOf(node)}/qti-branch-rule`;
   }
 
-  /** Checks that the target of a branch rule is a node ahead of the one that has the rule, of the kind it may name (INFO §5.23). */
+  /** Checks that the target of a branch rule is a node ahead of the one that has the rule, of the kind it may name. */
   private target(source: Ruled, rule: BranchRule): void {
     const { target } = rule;
     if (EXITS.has(target)) return;
@@ -106,7 +112,7 @@ export class BranchRuleChecks {
     }
   }
 
-  /** Warns about the rules of items and sections that the navigation mode or an adaptive section ignores (INFO §2.8.3, CAT §2.1). */
+  /** Warns about the rules of items and sections that the navigation mode or an adaptive section ignores. */
   private ignored(node: Ruled): void {
     if (node.kind === "part" || (node.model.branchRules.length === 0 && node.model.preConditions.length === 0)) return;
     const nonlinear = partOf(node).model.navigationMode === "nonlinear";

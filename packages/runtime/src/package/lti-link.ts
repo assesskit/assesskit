@@ -26,7 +26,7 @@ export interface LtiExtensions {
   readonly properties: ReadonlyMap<string, string>;
 }
 
-/** The link to an item that a tool provides, from the `cartridge_basiclti_link` document of an LTI resource (BPIG §6.2.9.2). */
+/** The link to an item that a tool provides, from the `cartridge_basiclti_link` document of an LTI resource. */
 export interface LtiLink {
   /** The title of the link. */
   readonly title: string;
@@ -111,17 +111,19 @@ function readPart(child: ElementReader, draft: Draft): void {
 }
 
 /**
- * Reads the `cartridge_basiclti_link` document that an LTI resource names (BPIG §6.2.9.2). The parts the model does not
+ * Reads the `cartridge_basiclti_link` document that an LTI resource names. The parts the model does not
  * hold, such as icons and bundles, are ignored, the parts may come in any order, and the text of an element is read without
  * the white space around it. The root is accepted in the namespace `http://www.imsglobal.org/xsd/imslticc_v1p0` and in the
  * relative namespace `/xsd/imslticc_v1p0` that the 1EdTech examples declare.
  *
  * @param input - The document as text or bytes, or the parsed root element.
  * @param options - See {@link ParseXmlOptions}.
+ * @returns The link.
  * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
  * @throws `ReadError` when the document is not well-formed, is not a `cartridge_basiclti_link`, has no title, a property
  * without a name or twice, or a vendor without a code.
  * @throws `SecurityError` when the document has a DOCTYPE or exceeds a limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, packaging}
  */
 export function readLtiLink(input: string | Uint8Array | XmlElement, options: ParseXmlOptions = {}): LtiLink {
   const reader = ElementReader.open(input, RULES, "The LTI link", options);

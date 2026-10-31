@@ -16,7 +16,7 @@ import type { Findings } from "./findings.js";
 import type { ExpressionScope, Lookup } from "./scope.js";
 import { describeStatic, type StaticType, typeOfVariable, UNKNOWN } from "./static-type.js";
 
-/** The expressions that read the item sessions of a test and so belong to outcome processing (INFO §2.11.2). */
+/** The expressions that read the item sessions of a test and so belong to outcome processing. */
 const OUTCOME_ONLY = new Set<Expression["kind"]>([
   "number-correct",
   "number-incorrect",
@@ -28,13 +28,13 @@ const OUTCOME_ONLY = new Set<Expression["kind"]>([
   "test-variables",
 ]);
 
-/** The ones of them that BIND §5.3.2 forbids in response processing by name. */
+/** The ones of them that the XML binding forbids in response processing by name. */
 const BIND_OUTCOME_ONLY = new Set<Expression["kind"]>(["outcome-maximum", "outcome-minimum", "test-variables"]);
 
-/** A `StringOrVariableRef` that names a variable: its identifier in braces (INFO §2.7.2). */
+/** A `StringOrVariableRef` that names a variable: its identifier in braces. */
 const BRACED = /^\{(.+)\}$/;
 
-/** The `name`s of `qti-math-operator` whose result is an integer (INFO §2.11.3.39). */
+/** The `name`s of `qti-math-operator` whose result is an integer. */
 const INTEGER_MATH = new Set(["signum", "floor", "ceil"]);
 
 function known<T>(values: readonly (T | undefined)[]): T[] {
@@ -55,14 +55,14 @@ function attributeBaseType(expression: Expression): BaseType | undefined {
     case "base-value":
       return expression.baseType;
     case "test-variables":
-      // A weight makes integers and floats floats (INFO §7.39.6); without a base type the result depends on the values.
+      // A weight makes integers and floats floats; without a base type the result depends on the values.
       return expression.baseType ?? (expression.weightIdentifier === undefined ? undefined : "float");
     default:
       return undefined;
   }
 }
 
-/** Returns the base type of a result that is an integer when every operand is one and a float when one is (INFO §2.11.3). */
+/** Returns the base type of a result that is an integer when every operand is one and a float when one is. */
 function numericBaseType(operands: readonly StaticType[]): BaseType | undefined {
   const baseTypes = operands.map(({ baseType }) => baseType);
   if (baseTypes.every((baseType) => baseType === "integer")) return "integer";
@@ -71,7 +71,7 @@ function numericBaseType(operands: readonly StaticType[]): BaseType | undefined 
 
 /**
  * Checks the expressions of response, template and outcome processing without running them: the variables they name,
- * the cardinality and base type of each operand against the signature of its operator (INFO §2.11.3), and the values
+ * the cardinality and base type of each operand against the signature of its operator, and the values
  * that are constant. The type of an expression is inferred from the bottom up; what depends on a value is unknown, and an
  * unknown type passes every check, so that a check reports only what no value could satisfy.
  */
@@ -101,6 +101,7 @@ export class ExpressionChecker {
    *
    * @param expression - The expression.
    * @param trail - The element path of the element that holds it, for the location of issues.
+   * @returns The type of the expression.
    */
   check(expression: Expression, trail: string): StaticType {
     const here = `${trail}/qti-${expression.kind}`;
@@ -260,7 +261,7 @@ export class ExpressionChecker {
     }
   }
 
-  /** Compiles the pattern of `qti-pattern-match`, unless it names a variable that holds the pattern (INFO §5.104.1). */
+  /** Compiles the pattern of `qti-pattern-match`, unless it names a variable that holds the pattern. */
   private checkPattern(pattern: string, here: string): void {
     const identifier = BRACED.exec(pattern)?.[1];
     if (identifier !== undefined && this.scope.reference(identifier) !== undefined) return;
@@ -326,6 +327,11 @@ export class ExpressionChecker {
 /**
  * Compiles the text of a pattern of the regular expression dialect of XML Schema and reports it when it is not in the
  * dialect or too large.
+ *
+ * @param findings - The findings of the document, which receive the issues.
+ * @param pattern - The text of the pattern.
+ * @param what - Says what holds the pattern, such as `The pattern attribute`.
+ * @param element - The element path of the element that holds it.
  */
 export function checkPatternText(findings: Findings, pattern: string, what: string, element: string): void {
   try {

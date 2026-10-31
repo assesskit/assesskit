@@ -30,7 +30,7 @@ const RULES: ReaderRules = {
 };
 
 /**
- * The resource types that BIND §8.8 lists and the CP XSD does not enumerate, read as the type of the schema. 1EdTech's
+ * The resource types that the XML binding lists and the CP schema does not enumerate, read as the type of the schema. 1EdTech's
  * own LTI examples use `imslti_xmlv1p1` for the resource type `imsbasiclti_xmlv1p3`.
  */
 const BIND_RESOURCE_TYPES: ReadonlyMap<string, ResourceType> = new Map([["imslti_xmlv1p1", "imsbasiclti_xmlv1p3"]]);
@@ -133,7 +133,7 @@ class ManifestReader {
     };
   }
 
-  /** The QTI profile prohibits organizations (BIND §8): the element may be there, and must be empty. */
+  /** The QTI profile prohibits organizations: the element may be there, and must be empty. */
   private checkOrganizations(reader: ElementReader): void {
     const first = reader.next();
     if (first !== undefined) {
@@ -143,7 +143,7 @@ class ManifestReader {
     reader.done();
   }
 
-  /** Checks that identifiers are unique and that every `identifierref` names a resource (xs:ID and xs:IDREF in the CP XSD, BIND §8.1). */
+  /** Checks that identifiers are unique and that every `identifierref` names a resource (`xs:ID` and `xs:IDREF` in the CP schema). */
   private checkIdentifiers(): void {
     const issues: Issue[] = [];
     const seen = new Set<string>();
@@ -193,16 +193,19 @@ class ManifestReader {
  * elements come in the order of the CP schema. The reader checks the vocabularies of `schema`, `schemaversion` and the
  * resource type, the ones that the model cannot hold otherwise. It does not check that files exist.
  *
- * The resource type `imslti_xmlv1p1`, which BIND §8.8 lists and the CP XSD does not, is read as `imsbasiclti_xmlv1p3`.
- *
+ * @remarks
+ * The resource type `imslti_xmlv1p1`, which the XML binding lists and the CP schema does not, is read as
+ * `imsbasiclti_xmlv1p3`.
  * @param input - The manifest as text or bytes, or the parsed root element.
  * @param options - See {@link ParseXmlOptions}.
+ * @returns The manifest.
  * @throws `DataError` when an argument has the wrong type or a limit is not a positive integer.
  * @throws `ReadError` when the document is not well-formed, is not a manifest of the content package namespace, has an
- * element, attribute or text that the CP XSD does not allow at that place, lacks a required element or attribute, has a
+ * element, attribute or text that the CP schema does not allow at that place, lacks a required element or attribute, has a
  * value outside its vocabulary, has organizations, declares an identifier twice or has an `identifierref` that names no
  * resource.
  * @throws `SecurityError` when the document has a DOCTYPE or exceeds a limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, content packages}
  */
 export function readManifest(input: string | Uint8Array | XmlElement, options: ParseXmlOptions = {}): Manifest {
   const reader = ElementReader.open(input, RULES, "The manifest", options);

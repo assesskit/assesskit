@@ -1,11 +1,13 @@
 import { checkArray, checkRecord, checkString } from "../checks.js";
 import { DataError } from "../errors.js";
 import { ElementReader, type XmlElement } from "../xml/index.js";
+import { checkReadArguments, expectRoot, takeLeaf } from "./element-reading.js";
+import { appendLeaf, branch } from "./element-writing.js";
+import { parseString } from "./lexical.js";
 import { CSM_NAMESPACE } from "./namespaces.js";
-import { checkReadArguments, expectRoot, parseString, takeLeaf } from "./text.js";
-import { appendLeaf, branch, CSMD } from "./write-support.js";
+import { CSMD } from "./qualified-name.js";
 
-/** A curriculum standard: its label, the address of its CASE item and its GUID (CSM XSD, `labelledGUID`). */
+/** A curriculum standard: its label, the address of its CASE item and its GUID. */
 export interface LabelledGuid {
   /** The label that names the standard. */
   readonly label?: string;
@@ -15,7 +17,7 @@ export interface LabelledGuid {
   readonly guid: string;
 }
 
-/** Standards of one region and version (CSM XSD, `setOfGUIDs`). */
+/** Standards of one region and version. */
 export interface GuidSet {
   /** The region the standards apply to. */
   readonly region?: string;
@@ -25,7 +27,7 @@ export interface GuidSet {
   readonly labelledGuids: readonly LabelledGuid[];
 }
 
-/** The standards of one provider (CSM XSD, `curriculumStandardsMetadata`). */
+/** The standards of one provider. */
 export interface CurriculumStandards {
   /** The identifier of the provider. */
   readonly providerId?: string;
@@ -33,7 +35,7 @@ export interface CurriculumStandards {
   readonly guidSets: readonly GuidSet[];
 }
 
-/** The curriculum standards a resource addresses (CSM XSD, `curriculumStandardsMetadataSet`). */
+/** The curriculum standards a resource addresses. */
 export interface CurriculumStandardsSet {
   /** The label of the resource the standards are about. */
   readonly resourceLabel?: string;
@@ -76,7 +78,8 @@ function readStandards(reader: ElementReader): CurriculumStandards {
  * Reads a `curriculumStandardsMetadataSet` element. The children come in the order of the schema.
  *
  * @param element - The element.
- * @param path - The path of the document, which the issues name. Default: no path.
+ * @param path - The path of the document, which the issues name.
+ * @returns The standards of the set.
  * @throws `DataError` when an argument has the wrong type.
  * @throws `ReadError` when the element is not a `curriculumStandardsMetadataSet` of the CSM namespace, or has an element,
  * attribute or text that the CSM schema does not allow at that place, or a `labelledGUID` without a `GUID`.
@@ -104,7 +107,7 @@ function checkOptionalString(value: unknown, label: string): void {
 
 function checkNonEmpty(items: unknown, label: string): asserts items is readonly unknown[] {
   checkArray(items, `${label} must be an array`);
-  if (items.length === 0) throw new DataError(`${label} must have at least one item (CSM XSD).`);
+  if (items.length === 0) throw new DataError(`${label} must have at least one item.`);
 }
 
 function writeGuid(guid: LabelledGuid): XmlElement {
@@ -139,6 +142,8 @@ function writeStandards(standards: CurriculumStandards): XmlElement {
 /**
  * Writes the standards as a `curriculumStandardsMetadataSet` element.
  *
+ * @param set - The standards to write.
+ * @returns The `curriculumStandardsMetadataSet` element.
  * @throws `DataError` when a field has the wrong type, or a list that the schema requires to have an item is empty.
  */
 export function writeCurriculumStandardsSet(set: CurriculumStandardsSet): XmlElement {

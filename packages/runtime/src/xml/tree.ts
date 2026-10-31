@@ -1,13 +1,29 @@
-/** The namespace of the `xml` prefix, which every document has bound (Namespaces in XML 1.0 §3). */
+/**
+ * The namespace of the `xml` prefix, which every document has bound.
+ *
+ * @see {@link https://www.w3.org/TR/xml-names/ | Namespaces in XML 1.0, Declaring Namespaces}
+ */
 export const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 
-/** The namespace of the `xmlns` attributes that declare namespaces (Namespaces in XML 1.0 §3). */
+/**
+ * The namespace of the `xmlns` attributes that declare namespaces.
+ *
+ * @see {@link https://www.w3.org/TR/xml-names/ | Namespaces in XML 1.0, Declaring Namespaces}
+ */
 export const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
 
-/** The namespace of the attributes that schema-validated documents use, such as `xsi:schemaLocation` (XML Schema Part 1, 2.6). */
+/**
+ * The namespace of the attributes that schema-validated documents use, such as `xsi:schemaLocation`.
+ *
+ * @see {@link https://www.w3.org/TR/xmlschema-1/ | XML Schema Part 1, Schema-Related Markup in Documents Being Validated}
+ */
 export const XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 
-/** The namespace of XInclude (XInclude 1.0 §2). */
+/**
+ * The namespace of XInclude.
+ *
+ * @see {@link https://www.w3.org/TR/xinclude/ | XML Inclusions (XInclude) 1.0, Terminology}
+ */
 export const XINCLUDE_NAMESPACE = "http://www.w3.org/2001/XInclude";
 
 /**

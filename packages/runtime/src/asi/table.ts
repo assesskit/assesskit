@@ -3,7 +3,7 @@
  *
  * | Format | Text |
  * | --- | --- |
- * | `identifier` | an identifier (INFO §4.1.1) |
+ * | `identifier` | an identifier |
  * | `id`, `idref` | an identifier that is unique in the document, and one that refers to such an identifier |
  * | `mime-type` | a MIME type, such as `image/png` |
  * | `coords` | the coordinates of a shape, such as `10,20,5` |
@@ -34,7 +34,7 @@ export type StringFormat =
  * | `double` | a number, with `INF`, `-INF` and `NaN` |
  * | `enum` | one of `terms`, or an `ext:` term when `extension` is set |
  * | `list` | the items, separated by white space in the text |
- * | `reference` | a number, or the identifier of a variable that holds it; with `braced`, the identifier is written `{identifier}` (INFO §9.3.1) and a bare identifier reads too |
+ * | `reference` | a number, or the identifier of a variable that holds it; with `braced`, the identifier is written `{identifier}` and a bare identifier reads too |
  */
 export type AttributeType =
   | {
@@ -80,7 +80,7 @@ export type AttributeType =
       readonly value: "integer" | "double";
       /** The least value, when the schema bounds it. */
       readonly minimum?: number;
-      /** Whether the identifier is written `{identifier}` (INFO §9.3.1). */
+      /** Whether the identifier is written `{identifier}`. */
       readonly braced?: true;
     };
 

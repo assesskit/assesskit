@@ -28,9 +28,13 @@ function boundResponses(item: AssessmentItem): ReadonlySet<string> {
 }
 
 /**
- * Runs every check on an item: the rule sets of BIND §5, the formats of its text attributes, its declarations, the
+ * Runs every check on an item: the rule sets of the XML binding, the formats of its text attributes, its declarations, the
  * bindings of its interactions, the variables its content names, and the static types of its template and response
  * processing.
+ *
+ * @param item - The item.
+ * @param findings - The findings of the document, which receive the issues.
+ * @param options - The checked options.
  */
 export function checkItem(item: AssessmentItem, findings: Findings, options: CheckedOptions): void {
   const responseScope = new ItemScope(item, "response");

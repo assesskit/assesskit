@@ -3,7 +3,7 @@ import type { Findings } from "./findings.js";
 import { elementPath } from "./model-access.js";
 import type { StaticType } from "./static-type.js";
 
-/** The base types a reference to a number may name, by the type of the attribute (INFO §2.7.2, §9.3, G34). */
+/** The base types a reference to a number may name, by the type of the attribute. */
 const REFERABLE_BASE_TYPES = { integer: ["integer"], double: ["float", "integer"] } as const;
 
 /** The type of an attribute that holds numbers or the identifiers of variables, alone or in a list. */
@@ -19,7 +19,7 @@ export type ReferenceLookup = (identifier: string, templateProcessing: boolean) 
 
 /**
  * Checks the attributes that hold either a number or the identifier of a variable that holds it, such as the `figures` of
- * `qti-round-to`, the `tolerance` of `qti-equal` and the `base` of a printed variable (INFO §2.7.2, §9.3): the variable
+ * `qti-round-to`, the `tolerance` of `qti-equal` and the `base` of a printed variable: the variable
  * must be a template or outcome variable in reach, single, of a base type that fits the attribute, so that the reference
  * resolves when the attribute is read.
  */
@@ -39,7 +39,11 @@ export class AttributeReferences {
     this.owner = owner;
   }
 
-  /** Checks the references of one element. */
+  /**
+   * Checks the references of one element.
+   *
+   * @param visit - The element that the walk of the document reached.
+   */
   visit(visit: ElementVisit): void {
     const templateProcessing = this.within(visit, "qti-template-processing");
     for (const definition of visit.attributes) {

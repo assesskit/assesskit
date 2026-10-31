@@ -37,7 +37,7 @@ const toIdentifier = (text: string): string => parsePrimitive(text, "identifier"
 const toInteger = (text: string): number => parsePrimitive(text, "integer");
 const toDouble = (text: string): number => parsePrimitive(text, "float");
 
-/** Reads an `xs:dateTime`, whose white space is collapsed (RR XSD `DateTimeDType`). */
+/** Reads an `xs:dateTime`, whose white space is collapsed. */
 function toDateTime(text: string): string {
   const collapsed = text.trim();
   if (!isXsdDateTime(collapsed)) {
@@ -60,7 +60,7 @@ function readText(reader: ElementReader): string {
   return text;
 }
 
-/** Reads the cardinality and base type of a variable; only a record may leave out the base type (RR §2.4.3). */
+/** Reads the cardinality and base type of a variable; only a record may leave out the base type. */
 function readType(reader: ElementReader): VariableType {
   const type = variableType(reader.requiredTerm("cardinality", CARDINALITIES), reader.term("baseType", BASE_TYPES));
   if (type === undefined) {
@@ -226,19 +226,23 @@ function readItemResult(reader: ElementReader): ItemResult {
 }
 
 /**
- * Reads a Results Reporting document (RR §2.3.1) into a model. A `file` value becomes a reference with the content type
- * `application/octet-stream`, because the XML form of a file is its reference alone (D7, G10). A duration is read as seconds,
- * or as an ISO 8601 duration without years and months, which 1EdTech's own example writes. Elements in other
- * namespaces are kept only where the schema allows them: after the candidate response of a response variable and in
- * `outcomeInformation`.
+ * Reads a Results Reporting document into a model.
+ *
+ * @remarks
+ * A `file` value becomes a reference with the content type `application/octet-stream`, because the XML form of a file is
+ * its reference alone. A duration is read as seconds, or as an ISO 8601 duration without years and months, which
+ * 1EdTech's own example writes. Elements in other namespaces are kept only where the schema allows them: after the
+ * candidate response of a response variable and in `outcomeInformation`.
  *
  * @param input - The document as text or bytes, or the root element of a parsed document.
  * @returns The result; every optional field the document leaves out is absent.
  * @throws `DataError` when `input` is none of these.
  * @throws `ReadError` when the document is not well-formed, the root is not `assessmentResult` of the RR namespace, or the
  * document cannot be mapped to the model: a missing, unknown or misplaced element or attribute, a value that is not of the
- * variable's type, an `xs:integer` beyond the safe integers (D3), or a date that is not an `xs:dateTime`.
+ * variable's type, an `xs:integer` beyond the safe integers, or a date that is not an `xs:dateTime`.
  * @throws `SecurityError` when the text or bytes break a limit of `parseXml`.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
  */
 export function readResults(input: string | Uint8Array | XmlElement): AssessmentResult {
   const reader = ElementReader.open(input, RULES, "The results");
