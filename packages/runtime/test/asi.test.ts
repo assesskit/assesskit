@@ -66,7 +66,7 @@ import { DOCUMENT_ARBITRARIES, modelArbitrary, SCORING_RUBRICS } from "./arbitra
 import { PLACES, VOCABULARIES, vocabularyOf } from "./asi-vocabularies.js";
 import { fuzzReader } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
-import { ESSAY, ESSAY_MARKUP, KIND_EXAMPLES } from "./scoring-rubrics.js";
+import { criterionMarkup, ESSAY, ESSAY_MARKUP, KIND_EXAMPLES, rubricMarkup } from "./scoring-rubrics.js";
 
 const NAMESPACE = `xmlns="${ASI_NAMESPACE}"`;
 const SCHEMA_LOCATION =
@@ -564,15 +564,6 @@ const itemWithBlocks = (blocks: string, attributes = ""): AssessmentItem =>
 /** A test with the markup of rubric blocks as its own, before the test part. */
 const testWithBlocks = (blocks: string): AssessmentTest =>
   testOf(`${blocks}${PART}<qti-assessment-section-ref identifier="s" href="s.xml"/></qti-test-part>`);
-
-/** The markup of a rubric block of the convention with the given attributes and criteria lists. */
-function rubricMarkup(body: string, attributes = ' data-outcome-identifier="SCORE"', view = "scorer"): string {
-  return `<qti-rubric-block view="${view}" use="scoring" class="external-scoring-rubric"${attributes}><qti-content-body>${body}</qti-content-body></qti-rubric-block>`;
-}
-
-/** The markup of a criterion with levels given by their scores. */
-const criterionMarkup = (identifier: string, scores: readonly string[], attributes = ""): string =>
-  `<li data-criterion-identifier="${identifier}"${attributes}><ol>${scores.map((score) => `<li data-score="${score}">level ${score}</li>`).join("")}</ol></li>`;
 
 /** The rubric of an outcome that a document gives, or `undefined`. */
 const rubricOf = (document: AssessmentItem | AssessmentTest, outcome = "SCORE"): ScoringRubric | undefined =>

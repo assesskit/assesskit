@@ -43,6 +43,8 @@ export interface MarkedRubricBlock {
   readonly block: RubricBlock;
   /** The language of the item, which the block inherits; absent for a test and for an item without `xml:lang`. */
   readonly language: string | undefined;
+  /** The `data-outcome-identifier` attribute; absent when the block lacks it. */
+  readonly outcomeIdentifier: string | undefined;
 }
 
 /** What {@link scoringRubricOf} found in a block. */
@@ -76,7 +78,7 @@ function markedBlocks(blocks: readonly ModelNode[], language: string | undefined
     .filter(isMarked)
     .map((block) => {
       checkBlock(block);
-      return { block, language };
+      return { block, language, outcomeIdentifier: attributeOf(block, OUTCOME_ATTRIBUTE) };
     });
 }
 
@@ -256,12 +258,11 @@ export function scoringRubricOf(block: RubricBlock, language?: string): ScoringR
 export function readScoringRubrics(document: AssessmentItem | AssessmentTest): ReadonlyMap<string, ScoringRubric> {
   const rubrics = new Map<string, ScoringRubric>();
   const decided = new Set<string>();
-  for (const { block, language } of scoringRubricBlocks(document)) {
-    const outcome = attributeOf(block, OUTCOME_ATTRIBUTE);
-    if (outcome === undefined || decided.has(outcome)) continue;
-    decided.add(outcome);
+  for (const { block, language, outcomeIdentifier } of scoringRubricBlocks(document)) {
+    if (outcomeIdentifier === undefined || decided.has(outcomeIdentifier)) continue;
+    decided.add(outcomeIdentifier);
     const { rubric } = scoringRubricOf(block, language);
-    if (rubric !== undefined) rubrics.set(outcome, rubric);
+    if (rubric !== undefined) rubrics.set(outcomeIdentifier, rubric);
   }
   return rubrics;
 }

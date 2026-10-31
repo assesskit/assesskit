@@ -319,6 +319,14 @@ sections 7.1.17 (`CFRubric`), 7.1.18 (`CFRubricCriterion`) and 7.1.19 (`CFRubric
 | An item with several external outcomes                           | One block per outcome                                                                 |
 | An empty list of ratings                                         | `null`                                                                                |
 
+### Checks
+
+`validateAsi` of an item or a test reports the rubrics as errors, with the codes `assesskit/scoring-rubric/*`: a block that breaks
+the form of the convention, the shape of its kind, or uses an identifier or a score twice; a block for an outcome that is
+undeclared, not `external-scored`, or not a single integer or float (an integer outcome needs whole points); two blocks for one
+outcome. A rubric whose sums leave the normal range of the outcome, and a block with the class token where it is not
+recognized, are warnings. [Validate](validate.md#scoring-rubrics) lists the codes.
+
 ### Not included
 
 | Not included                                           | Reason                                                                                       |

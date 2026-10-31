@@ -78,3 +78,12 @@ export const KIND_EXAMPLES: Readonly<Record<RubricKind, ScoringRubric>> = {
     ],
   },
 };
+
+/** The markup of a rubric block of the convention with the given attributes and criteria lists. */
+export function rubricMarkup(body: string, attributes = ' data-outcome-identifier="SCORE"', view = "scorer"): string {
+  return `<qti-rubric-block view="${view}" use="scoring" class="external-scoring-rubric"${attributes}><qti-content-body>${body}</qti-content-body></qti-rubric-block>`;
+}
+
+/** The markup of a criterion with levels given by their scores. */
+export const criterionMarkup = (identifier: string, scores: readonly string[], attributes = ""): string =>
+  `<li data-criterion-identifier="${identifier}"${attributes}><ol>${scores.map((score) => `<li data-score="${score}">level ${score}</li>`).join("")}</ol></li>`;

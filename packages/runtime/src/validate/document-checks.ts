@@ -1,16 +1,19 @@
-import { type ElementVisit, SCORE_COVERS_CLASS } from "../asi/index.js";
+import { type ElementVisit, SCORE_COVERS_CLASS, SCORING_RUBRIC_CLASS } from "../asi/index.js";
 import { XINCLUDE_NAMESPACE } from "../xml/index.js";
 import { checkPatternText } from "./expressions.js";
 import type { Findings } from "./findings.js";
 import { elementPath, textOf } from "./model-access.js";
+
+const TEST = "qti-assessment-test";
+const ITEM_BODY = "qti-item-body";
 
 /** The interactions with a `pattern-mask`. */
 const PATTERN_MASKS = new Set(["qti-text-entry-interaction", "qti-extended-text-interaction"]);
 
 /**
  * The checks of an element that hold for every kind of document: an include left unresolved, the pattern of an
- * interaction, an interaction inside a rubric block, and the class of the covers of an outcome below the test, where it
- * is not recognized.
+ * interaction, an interaction inside a rubric block, and the class of the covers or of the scoring rubric of an outcome
+ * where it is not recognized.
  */
 export class DocumentChecks {
   private readonly findings: Findings;
@@ -39,9 +42,14 @@ export class DocumentChecks {
       const message = `The ${visit.name} is inside a qti-rubric-block, which must not contain interactions.`;
       this.findings.error("assesskit/validate/rubric-interaction", message, elementPath(visit));
     }
-    if (visit.name === "qti-rubric-block" && this.coversBelowTest(visit)) {
+    if (visit.name !== "qti-rubric-block") return;
+    if (this.hasClass(visit, SCORE_COVERS_CLASS) && visit.parent?.name !== TEST) {
       const message = `The qti-rubric-block has the class ${SCORE_COVERS_CLASS}, which only a rubric block of the test is recognized by; here it is an ordinary rubric block.`;
       this.findings.warning("assesskit/covers/malformed", message, elementPath(visit));
+    }
+    if (this.hasClass(visit, SCORING_RUBRIC_CLASS) && visit.parent?.name !== TEST && !this.within(visit, ITEM_BODY)) {
+      const message = `The qti-rubric-block has the class ${SCORING_RUBRIC_CLASS}, which only a rubric block of an item body or of the test is recognized by; here it is an ordinary rubric block.`;
+      this.findings.warning("assesskit/scoring-rubric/malformed", message, elementPath(visit));
     }
   }
 
@@ -58,9 +66,8 @@ export class DocumentChecks {
     return false;
   }
 
-  private coversBelowTest(visit: ElementVisit): boolean {
+  private hasClass(visit: ElementVisit, token: string): boolean {
     const classes = visit.model.class;
-    const marked = Array.isArray(classes) && classes.includes(SCORE_COVERS_CLASS);
-    return marked && visit.parent?.name !== "qti-assessment-test";
+    return Array.isArray(classes) && classes.includes(token);
   }
 }

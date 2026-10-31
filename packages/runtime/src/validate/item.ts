@@ -13,6 +13,7 @@ import { ItemScope, itemVariables } from "./item-scope.js";
 import type { CheckedOptions } from "./options.js";
 import { responseRulesOf } from "./response-rules.js";
 import { RuleChecker } from "./rules.js";
+import { checkScoringRubrics } from "./scoring-rubric.js";
 import { checkConstraintDefaults } from "./template-constraints.js";
 import { UnreachableContent } from "./unreachable-content.js";
 
@@ -29,8 +30,8 @@ function boundResponses(item: AssessmentItem): ReadonlySet<string> {
 
 /**
  * Runs every check on an item: the rule sets of the XML binding, the formats of its text attributes, its declarations, the
- * bindings of its interactions, the variables its content names, and the static types of its template and response
- * processing.
+ * bindings of its interactions, the variables its content names, its scoring rubrics, and the static types of its template
+ * and response processing.
  *
  * @param item - The item.
  * @param findings - The findings of the document, which receive the issues.
@@ -75,6 +76,7 @@ export function checkItem(item: AssessmentItem, findings: Findings, options: Che
     ],
   });
   findings.adopt(checkBindings(item));
+  checkScoringRubrics(item, findings);
   const bound = boundResponses(item);
   for (const { identifier } of item.responseDeclarations) {
     if (bound.has(identifier)) continue;

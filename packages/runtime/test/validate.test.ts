@@ -40,6 +40,7 @@ import { type BindContext, BindRuleSets, DocumentChecks, Findings } from "../src
 import { readError } from "../src/xml/index.js";
 import { FUZZ } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
+import { criterionMarkup, rubricMarkup } from "./scoring-rubrics.js";
 import {
   ATTRIBUTE_RULES,
   base,
@@ -1646,6 +1647,184 @@ describe("the covers of externally scored outcomes", () => {
     expect(validateAsi(read(testXml({ declarations, rubric: block("NOPE", entry()) })))).toMatchObject([
       { code: "assesskit/covers/undeclared-outcome" },
     ]);
+  });
+});
+
+describe("the scoring rubrics of externally scored outcomes", () => {
+  const externalScored = 'external-scored="human"';
+  const declarations = `${outcome("SCORE", "single", "float", ` ${externalScored}`)}${outcome("PLAIN", "single", "float")}`;
+  const analytic = `<ol>${criterionMarkup("content", ["0", "1", "2"])}${criterionMarkup("language", ["0", "1"], ' data-weight="2"')}</ol>`;
+  const named = (outcomeId: string, body = analytic, attributes = ""): string =>
+    rubricMarkup(body, ` data-outcome-identifier="${outcomeId}"${attributes}`);
+  const inItem = (body: string, declared = declarations): readonly Issue[] => check({ declarations: declared, body });
+  const inTest = (rubric: string, declared = declarations): readonly Issue[] =>
+    validated({ declarations: declared, rubric });
+  const codes = (issues: readonly Issue[], code: string): Issue[] => only(issues, `assesskit/scoring-rubric/${code}`);
+
+  it("accepts a rubric of every kind in an item body and among the rubric blocks of a test", () => {
+    const kinds: readonly (readonly [string, string])[] = [
+      ["analytic", analytic],
+      ["holistic", `<ol>${criterionMarkup("overall", ["0", "1", "2", "3"])}</ol>`],
+      ["checklist", `<ol>${criterionMarkup("title", ["0", "1"])}${criterionMarkup("date", ["1", "0"])}</ol>`],
+      ["single-point", `<ol>${criterionMarkup("clarity", ["0", "1", "2"])}</ol>`],
+    ];
+    for (const [kind, body] of kinds) {
+      const block = named("SCORE", body, ` data-rubric-kind="${kind}"`);
+      expect(inItem(block), kind).toEqual([]);
+      expect(inTest(block), kind).toEqual([]);
+    }
+  });
+
+  it("locates an issue at the rubric block of the item and of the test", () => {
+    const bad = named("SCORE", `<ol>${criterionMarkup("a", ["0"])}</ol>`);
+    expect(inItem(bad)[0]?.location?.element).toBe("qti-assessment-item/qti-item-body/qti-rubric-block");
+    expect(inTest(bad)[0]?.location?.element).toBe("qti-assessment-test/qti-rubric-block");
+  });
+
+  it("reports a block that breaks the form of the convention, with the path of the rule", () => {
+    const cases: readonly (readonly [string, string])[] = [
+      [
+        rubricMarkup(analytic, ' data-outcome-identifier="SCORE"', "proctor"),
+        "The scoring rubric of SCORE is invalid: the view",
+      ],
+      [rubricMarkup(analytic, ' data-outcome-identifier="SCORE"', "scorer candidate"), "not candidate"],
+      [rubricMarkup(analytic, ""), "A scoring rubric is invalid: the block must name the outcome it rates"],
+      [named("SCORE", analytic, ' data-rubric-kind="rank"'), "data-rubric-kind must be one of"],
+      [named("SCORE", "<p>No criteria</p>"), "at criteria: a scoring rubric has one or more criteria"],
+      [
+        named("SCORE", `<ol><li><ol><li data-score="0"/><li data-score="1"/></ol></li></ol>`),
+        "at criteria[0].identifier",
+      ],
+      [
+        named("SCORE", `<ol><li data-criterion-identifier="a"><p>x</p></li></ol>`),
+        "at criteria[0].levels: a criterion needs an ol",
+      ],
+      [
+        named("SCORE", `<ol>${criterionMarkup("a", ["x", "1"])}</ol>`),
+        "at criteria[0].levels[0].score: a level needs data-score",
+      ],
+      [
+        named("SCORE", `<ol>${criterionMarkup("a", ["0", "1"], ' data-weight="0"')}</ol>`),
+        "at criteria[0].weight: data-weight must be",
+      ],
+    ];
+    for (const [block, text] of cases) {
+      for (const issues of [inItem(block), inTest(block)]) {
+        const found = codes(issues, "malformed");
+        expect(found, text).toMatchObject([{ severity: "error" }]);
+        expect(found[0]?.message, text).toContain(text);
+      }
+    }
+  });
+
+  it("reports a block that carries the class of the covers as well", () => {
+    const both = named("SCORE").replace("external-scoring-rubric", "external-scoring-rubric external-score-covers");
+    expect(codes(inTest(both), "malformed")).toMatchObject([{ severity: "error" }]);
+  });
+
+  it("reports the shape that the kind requires", () => {
+    const shapes: readonly (readonly [string, string, string])[] = [
+      ["analytic", `<ol>${criterionMarkup("a", ["0"])}</ol>`, "a criterion has two or more levels, found 1"],
+      [
+        "holistic",
+        `<ol>${criterionMarkup("a", ["0", "1"])}${criterionMarkup("b", ["0", "1"])}</ol>`,
+        "a holistic rubric has one criterion, found 2",
+      ],
+      ["holistic", `<ol>${criterionMarkup("a", ["0", "1"], ' data-weight="2"')}</ol>`, "at criteria[0].weight"],
+      [
+        "checklist",
+        `<ol>${criterionMarkup("a", ["0", "1", "2"])}</ol>`,
+        "a checklist criterion has two levels, found 3",
+      ],
+      ["checklist", `<ol>${criterionMarkup("a", ["1", "2"])}</ol>`, "exactly one level that scores 0"],
+      [
+        "single-point",
+        `<ol>${criterionMarkup("a", ["0", "1"])}</ol>`,
+        "a single-point criterion has three levels, found 2",
+      ],
+      ["single-point", `<ol>${criterionMarkup("a", ["2", "1", "0"])}</ol>`, "must score strictly more in turn"],
+    ];
+    for (const [kind, body, text] of shapes) {
+      const issues = codes(inItem(named("SCORE", body, ` data-rubric-kind="${kind}"`)), "shape");
+      expect(issues, text).toMatchObject([{ severity: "error" }]);
+      expect(issues[0]?.message, text).toContain(text);
+    }
+  });
+
+  it("reports a criterion identifier or a score that occurs twice", () => {
+    const criteria = `<ol>${criterionMarkup("a", ["0", "1"])}${criterionMarkup("a", ["0", "1"])}</ol>`;
+    expect(codes(inTest(named("SCORE", criteria)), "duplicate")).toMatchObject([{ severity: "error" }]);
+    expect(
+      codes(inItem(named("SCORE", `<ol>${criterionMarkup("a", ["1", "1", "2"])}</ol>`)), "duplicate"),
+    ).toHaveLength(1);
+  });
+
+  it("reports two blocks for one outcome, whether the first is valid or not", () => {
+    const twice = `${named("SCORE")}${named("SCORE")}`;
+    expect(codes(inItem(twice), "duplicate")).toHaveLength(1);
+    expect(codes(inTest(twice), "duplicate")).toHaveLength(1);
+    const first = `${named("SCORE", "<ol/>")}${named("SCORE")}`;
+    const issues = inItem(first);
+    expect(codes(issues, "malformed")).toHaveLength(1);
+    expect(codes(issues, "duplicate")).toHaveLength(1);
+  });
+
+  it("allows a rubric for each of several outcomes", () => {
+    const two = outcome("TRAIT", "single", "float", ` ${externalScored}`);
+    expect(inItem(`${named("SCORE")}${named("TRAIT")}`, `${declarations}${two}`)).toEqual([]);
+  });
+
+  it("reports an outcome that the document does not declare, or that is not external-scored", () => {
+    expect(codes(inItem(named("NOPE")), "undeclared-outcome")).toMatchObject([{ severity: "error" }]);
+    expect(codes(inTest(named("NOPE")), "undeclared-outcome")[0]?.message).toContain("the test does not declare");
+    const plain = codes(inItem(named("PLAIN")), "not-external");
+    expect(plain).toMatchObject([{ severity: "error" }]);
+    expect(plain[0]?.message).toContain("PLAIN");
+  });
+
+  it("requires a single integer or float, and whole points for an integer", () => {
+    const declared = (cardinality: string, baseType: string) =>
+      outcome("POINTS", cardinality, baseType, ` ${externalScored}`);
+    for (const [cardinality, baseType] of [
+      ["multiple", "float"],
+      ["single", "string"],
+      ["single", "boolean"],
+    ] as const) {
+      expect(codes(inItem(named("POINTS"), declared(cardinality, baseType)), "outcome-type"), baseType).toHaveLength(1);
+    }
+    expect(inItem(named("POINTS"), declared("single", "integer"))).toEqual([]);
+    const fractional = `<ol>${criterionMarkup("a", ["0", "1"], ' data-weight="0.5"')}</ol>`;
+    expect(codes(inItem(named("POINTS", fractional), declared("single", "integer")), "outcome-type")).toHaveLength(1);
+    expect(inItem(named("POINTS", fractional), declared("single", "float"))).toEqual([]);
+  });
+
+  it("warns about a rubric whose sums leave the normal range of the outcome", () => {
+    const ranged = (attributes: string) => outcome("SCORE", "single", "float", ` ${externalScored}${attributes}`);
+    expect(inItem(named("SCORE"), ranged(' normal-maximum="5"'))).toEqual([]);
+    const high = codes(inItem(named("SCORE"), ranged(' normal-maximum="3"')), "out-of-range");
+    expect(high).toMatchObject([{ severity: "warning" }]);
+    expect(high[0]?.message).toContain("is 4, above the normal maximum of 3");
+    const low = `<ol>${criterionMarkup("a", ["1", "2"])}</ol>`;
+    expect(codes(inItem(named("SCORE", low), ranged(' normal-minimum="2"')), "out-of-range")).toMatchObject([
+      { severity: "warning" },
+    ]);
+    expect(inItem(named("SCORE", low), ranged(' normal-minimum="1" normal-maximum="2"'))).toEqual([]);
+  });
+
+  it("warns about a block with the class token where it is not recognized", () => {
+    const stray = named("SCORE");
+    const inSection = section("S", itemRef("I1"), ' visible="true"', stray);
+    const issues = codes(validated({ declarations, sections: inSection }), "malformed");
+    expect(issues).toMatchObject([{ severity: "warning" }]);
+    const inPart = codes(validated({ declarations, part: stray }), "malformed");
+    expect(inPart).toMatchObject([{ severity: "warning" }]);
+    expect(codes(inItem(stray), "malformed")).toEqual([]);
+    expect(codes(inTest(stray), "malformed")).toEqual([]);
+  });
+
+  it("checks a test that is validated alone, without its items", () => {
+    const bad = testXml({ declarations, rubric: named("NOPE") });
+    expect(validateAsi(read(bad))).toMatchObject([{ code: "assesskit/scoring-rubric/undeclared-outcome" }]);
   });
 });
 

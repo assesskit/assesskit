@@ -1,7 +1,7 @@
 # Validate
 
 `validate` finds what a schema cannot: the rule sets of the XML binding, the constraints of the Information Model, the static
-types of processing, the structure of a test, the covers of externally scored outcomes, the files of a package, and the rules
+types of processing, the structure of a test, the covers and scoring rubrics of externally scored outcomes, the files of a package, and the rules
 of Results Reporting and personal needs profiles. It reports what would fail or misbehave when content runs, before it does.
 It imports every module below it in the layers (`xml`, `values`, `asi`, `results`, `usage`, `pnp`, `metadata`, `processing`,
 `interactions`, `pci`, `content`, `cat`, `package`) and runs in any JavaScript runtime. Validating a document against the official
@@ -14,7 +14,7 @@ flowchart LR
   pkg["QtiPackage"] -- "validatePackage" --> checks
   results["AssessmentResult"] -- "validateResults" --> checks
   profile["PersonalNeedsProfile"] -- "validatePnp" --> checks
-  checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers"] --> issues["Issue[]<br/>severity, code, message, location"]
+  checks["Checks<br/>rule sets, declarations, static types,<br/>structure, files, covers, scoring rubrics"] --> issues["Issue[]<br/>severity, code, message, location"]
 ```
 
 | Export                                          | Purpose                                                                                              |
@@ -75,7 +75,7 @@ the `path` of the file and the `element` path.
 - An `error` is content that breaks a rule or fails when it runs. A `warning` is content that runs but deviates from a
   recommendation or cannot do what it appears to.
 - The `code` of the rule sets of the XML binding is the identifier of the rule set, such as `RULE_SET_INTERACTION_02B`. The
-  other codes are `assesskit/validate/<name>`, and `assesskit/covers/<name>` for the covers of external scores.
+  other codes are `assesskit/validate/<name>`, and `assesskit/covers/<name>` for the covers and `assesskit/scoring-rubric/<name>` for the scoring rubrics of external scores.
 - `validateTest` and `validatePackage` check many documents. Each issue names its own file in `location.path`: a test
   is reported at the path `base`, its sections, items and stimuli at the paths the resolvers give, and the files and
   resources of a package at `imsmanifest.xml`.
@@ -189,6 +189,26 @@ Branch rules and pre-conditions are evaluated with the structure the test builds
 resolved (`validateTest`), so their targets can be checked across documents. `validateAsi` of a test checks the
 document alone.
 
+## Scoring rubrics
+
+`validateAsi` of an item or a test checks each rubric block that carries the class token `external-scoring-rubric`
+(the [convention](conventions.md#scoring-rubrics) of the runtime), whether or not the test can resolve its items. Every
+rule of the convention is an error, and each issue names the outcome and the path of the rule that is broken, such as
+`criteria[1].levels`.
+
+| Code                                          | Reported when                                                                                                                                                                                                                                                                                                                                                                                                                                             | Source             |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `assesskit/scoring-rubric/malformed`          | A block whose `view` lacks `scorer` or has `candidate`; without `data-outcome-identifier`; with an unknown `data-rubric-kind`; with no criteria; a criterion without an identifier or a levels list; a level without `data-score`; a `data-weight` or `data-score` that is not a finite number in range; a block that has the class token of the covers too. A block with the class token in a test part or a section is a warning: it is not recognized. | Runtime convention |
+| `assesskit/scoring-rubric/shape`              | The shape of the kind is broken: fewer than two levels, a holistic rubric with more than one criterion or a weight other than 1, a checklist criterion without two levels of which one scores 0, a single-point criterion without three levels of strictly ascending scores.                                                                                                                                                                              | Runtime convention |
+| `assesskit/scoring-rubric/duplicate`          | Two blocks for one outcome; a criterion identifier twice; a score twice within a criterion.                                                                                                                                                                                                                                                                                                                                                               | Runtime convention |
+| `assesskit/scoring-rubric/undeclared-outcome` | A block for an outcome that the item or test does not declare.                                                                                                                                                                                                                                                                                                                                                                                            | Runtime convention |
+| `assesskit/scoring-rubric/not-external`       | A block for an outcome that is not `external-scored`.                                                                                                                                                                                                                                                                                                                                                                                                     | Information Model  |
+| `assesskit/scoring-rubric/outcome-type`       | An outcome that is not single and integer or float; an integer outcome with a weight times score that is not a whole number.                                                                                                                                                                                                                                                                                                                              | Runtime convention |
+| `assesskit/scoring-rubric/out-of-range`       | The highest sum of the rubric is above `normal-maximum`, or the lowest is below `normal-minimum`. Warning.                                                                                                                                                                                                                                                                                                                                                | Information Model  |
+
+When the first block of an outcome is malformed, the outcome has no rubric for the engine, and a later valid block is reported as
+a duplicate. A shape or duplicate rule is checked once every value of the block is well formed.
+
 ## Packages, results and profiles
 
 | Code                                                                         | Reported when                                                                                                                                     | Source                                 |
@@ -258,6 +278,7 @@ Each file of `src/validate/` holds one concept.
 | `expressions.ts`, `static-type.ts`, `constant-values.ts`, `rules.ts`, `response-rules.ts`               | Static types, expressions and the rules of processing                |
 | `template-constraints.ts`, `attribute-references.ts`, `content-references.ts`, `unreachable-content.ts` | References from attributes and content to variables                  |
 | `test-structure.ts`, `test-structure-checks.ts`, `branch-rules.ts`, `covers.ts`                         | The structure of a test, branch rules and covers                     |
+| `scoring-rubric.ts`                                                                                     | The scoring rubrics of an item or a test                             |
 | `package-files.ts`, `package-references.ts`                                                             | The files of a package and the references to them                    |
 | `model-access.ts`                                                                                       | Reading properties of a model that the checks share                  |
 | `internal.ts`                                                                                           | What other modules and the tests use and the package does not export |

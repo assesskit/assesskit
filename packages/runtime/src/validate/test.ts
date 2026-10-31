@@ -18,6 +18,7 @@ import { itemVariables } from "./item-scope.js";
 import type { CheckedOptions } from "./options.js";
 import type { Reports } from "./reports.js";
 import { RuleChecker } from "./rules.js";
+import { checkScoringRubrics } from "./scoring-rubric.js";
 import { describeStatic, fitsVariable, typeOfVariable } from "./static-type.js";
 import { type ItemRefInfo, TEST_BUILT_IN, TestScope } from "./test-scope.js";
 import {
@@ -185,7 +186,7 @@ function checkNodeRules(
 /**
  * Runs every check on a test: the elements of its document, its declarations and outcome processing, the structure it
  * places its parts, sections and item references in, the branch rules and pre-conditions, the covers of its externally
- * scored outcomes, and, when it can resolve what the test names, the section documents and the items.
+ * scored outcomes and its scoring rubrics, and, when it can resolve what the test names, the section documents and the items.
  *
  * @param test - The test.
  * @param reports - Where the issues go, by document.
@@ -238,6 +239,7 @@ export function checkTest(
   rulesFor(findings).outcomeRules(test.outcomeProcessing?.rules ?? [], `${ROOT}/qti-outcome-processing`);
   checkNodeRules(placed, resolved?.refs ?? new Map(), rulesFor, reports, path);
   checkCovers(test, resolved?.refs, findings);
+  checkScoringRubrics(test, findings);
   if (placed.complete) {
     new BranchRuleChecks(placed, findings).check();
     const items = new Map([...(resolved?.refs ?? [])].map(([identifier, { item }]) => [identifier, item]));
