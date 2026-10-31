@@ -6,6 +6,7 @@ const DRIFT = 0.3;
  *
  * @param element - The element.
  * @param except - An element inside it whose recordings do not count, such as the card that a support added.
+ * @returns The recording, or `undefined` when there is none.
  */
 export function recordingOf(element: Element, except: Element): HTMLMediaElement | undefined {
   if (element instanceof HTMLMediaElement) return element;
@@ -13,11 +14,13 @@ export function recordingOf(element: Element, except: Element): HTMLMediaElement
 }
 
 /**
- * Makes a recording follow another: it plays, pauses, seeks and changes speed with it, never by itself. A sign language
- * video or an audio description of a recording is the same recording in another form, so it must keep the rules of the
- * recording it goes with: a candidate who has played it as often as `max-plays` allows cannot play it again through the
- * companion. The companion is muted and has no controls of its own while it follows, since the recording it goes with
- * carries the sound and the controls.
+ * Makes a recording follow another: it plays, pauses, seeks and changes speed with it, never by itself.
+ *
+ * @remarks
+ * A sign language video or an audio description of a recording is the same recording in another form, so it must keep
+ * the rules of the recording it goes with: a candidate who has played it as often as `max-plays` allows cannot play it
+ * again through the companion. The companion is muted and has no controls of its own while it follows, since the
+ * recording it goes with carries the sound and the controls.
  *
  * @param primary - The recording that the player controls.
  * @param companion - The recording that goes with it.

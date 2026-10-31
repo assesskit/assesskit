@@ -1,13 +1,13 @@
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html, XHTML_NAMESPACE } from "../internal.js";
 import type { TextField } from "./text.js";
-
-const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
 
 /**
  * The elements that an answer in XHTML keeps, by the name they are written with: the markup that the editor offers and
- * that browsers make when the candidate types (the player design §3). Another element is replaced by what it holds, and has
- * no attributes in any case.
+ * that browsers make when the candidate types.
+ *
+ * @remarks
+ * Another element is replaced by what it holds, and has no attributes in any case.
  */
 const KEPT: ReadonlyMap<string, string> = new Map([
   ["p", "p"],
@@ -69,8 +69,11 @@ function keptText(node: Node): string {
 }
 
 /**
- * Writes what the candidate typed in an editor as XHTML. Text between blocks is a paragraph, and an element that is not in
- * the list of kept elements is replaced by its text, so that pasted markup cannot carry anything else.
+ * Writes what the candidate typed in an editor as XHTML.
+ *
+ * @remarks
+ * Text between blocks is a paragraph, and an element that is not in the list of kept elements is replaced by its text,
+ * so that pasted markup cannot carry anything else.
  */
 function writeXhtml(editor: Node): string {
   const paragraphs: string[] = [];
@@ -118,8 +121,10 @@ function readXhtml(xhtml: string): Node[] {
 }
 
 /**
- * The field of an extended text with `format="xhtml"`: an editable area and the buttons that format it. Its text is XHTML
- * of a few elements ({@link writeXhtml}).
+ * The field of an extended text with `format="xhtml"`: an editable area and the buttons that format it.
+ *
+ * @remarks
+ * Its text is XHTML of a few elements ({@link writeXhtml}).
  */
 export class EditorField implements TextField {
   /** The element for the interaction: the toolbar and the editable area. */
@@ -128,6 +133,7 @@ export class EditorField implements TextField {
   readonly area: HTMLElement;
 
   /**
+   *
    * @param messages - The text of the interface.
    * @param label - The accessible name of the editable area.
    */
@@ -158,23 +164,35 @@ export class EditorField implements TextField {
     this.element = html("div", { class: "ak-editor" }, toolbar, this.area);
   }
 
-  /** The characters the candidate typed: those of the text, not of the markup (VOCAB §1.2.3.2). */
+  /** The characters the candidate typed: those of the text, not of the markup. */
   get typedText(): string {
     return keptText(this.area);
   }
 
+  /** The text of the field as XHTML. */
   get text(): string {
     return writeXhtml(this.area);
   }
 
+  /**
+   * Replaces the content of the field with XHTML.
+   *
+   * @param text - The XHTML.
+   */
   set text(text: string) {
     this.area.replaceChildren(...readXhtml(text));
   }
 
+  /** Whether the candidate cannot change the text. */
   get locked(): boolean {
     return this.area.contentEditable === "false";
   }
 
+  /**
+   * Locks the field for a candidate who cannot respond, or unlocks it.
+   *
+   * @param locked - `true` to lock the field.
+   */
   set locked(locked: boolean) {
     this.area.contentEditable = locked ? "false" : "true";
     this.area.setAttribute("aria-readonly", String(locked));

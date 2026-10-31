@@ -4,9 +4,16 @@ import { describeInteractions, type InteractionDescriptor } from "@assesskit/run
 import { container, single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { centerOf, clampPoint, parseArea, pointAt } from "../src/player/elements/graphic/geometry.js";
-import { fillRuns, type Pixels } from "../src/player/elements/graphic/operations.js";
-import { pointsOf, responseOf } from "../src/player/elements/values.js";
+import {
+  centerOf,
+  clampPoint,
+  fillRuns,
+  type Pixels,
+  parseArea,
+  pointAt,
+  pointsOf,
+  responseOf,
+} from "../src/player/elements/internal.js";
 
 /** The descriptor of the only interaction of an item that has the given declaration and body. */
 function descriptorOf(declaration: string, interaction: string): InteractionDescriptor {
@@ -23,8 +30,8 @@ const IMAGE = '<object type="image/png" data="a.png" width="200" height="100"/>'
 const SIZE = { width: 200, height: 100 };
 
 describe("geometry", () => {
-  it("gives the box of each shape as INFO §7.9 states its coordinates", () => {
-    // INFO §7.9: rect is left-x, top-y, right-x, bottom-y; circle is center-x, center-y, radius; ellipse is center-x,
+  it("gives the box of each shape as the information model states its coordinates", () => {
+    // The information model: rect is left-x, top-y, right-x, bottom-y; circle is center-x, center-y, radius; ellipse is center-x,
     // center-y, h-radius, v-radius; poly is x1, y1, ... xN, yN; default is the whole image.
     expect(parseArea("rect", "10,20,30,50", SIZE).box).toEqual({ x: 10, y: 20, width: 20, height: 30 });
     expect(parseArea("circle", "50,60,10", SIZE).box).toEqual({ x: 40, y: 50, width: 20, height: 20 });
@@ -41,7 +48,7 @@ describe("geometry", () => {
 
   it("reads a percentage against the width for x, the height for y, and the smaller side for a radius", () => {
     expect(parseArea("rect", "10%,20%,50%,100%", SIZE).box).toEqual({ x: 20, y: 20, width: 80, height: 80 });
-    // INFO §7.9: the radius is the smaller of the two values: 10% of 100, not of 200.
+    // The radius is the smaller of the two values: 10% of 100, not of 200.
     expect(parseArea("circle", "50%,50%,10%", SIZE).box).toEqual({ x: 90, y: 40, width: 20, height: 20 });
     expect(parseArea("ellipse", "50%,50%,10%,10%", SIZE).box).toEqual({ x: 80, y: 40, width: 40, height: 20 });
   });

@@ -1,11 +1,13 @@
 import type { HotspotInteraction } from "@assesskit/runtime/asi";
 import type { Point } from "@assesskit/runtime/values";
 import { type BodyRenderer, DECLARED_HEIGHT, DECLARED_WIDTH } from "../../content/index.js";
-import { html } from "../../dom.js";
+import { html } from "../../internal.js";
 import { pointAt, type Size } from "./geometry.js";
 
 /**
- * The smallest side of a target in CSS pixels (WCAG 2.2, 2.5.8); `--ak-target-size` in `player.css` has the same value.
+ * The smallest side of a target in CSS pixels; `--ak-target-size` in `player.css` has the same value.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#target-size-minimum | WCAG 2.2, target size}
  */
 const TARGET_SIZE = 24;
 
@@ -13,32 +15,59 @@ const TARGET_SIZE = 24;
 const SMALL = "data-ak-small";
 
 /**
- * The image of an interaction with the layer that lies over it. Everything that the candidate points at is in the layer,
- * and its position is measured in the units of the image, whatever the scale at which the image is drawn.
+ * The image of an interaction with the layer that lies over it.
+ *
+ * @remarks
+ * Everything that the candidate points at is in the layer, and its position is measured in the units of the image,
+ * whatever the scale at which the image is drawn.
  */
 export interface Stage {
   /** The layer over the image, which has the drawn size of the image. */
   readonly layer: HTMLElement;
   /** The size of the image in its own units, or `undefined` while an image without a declared size loads. */
   readonly size: Size | undefined;
-  /** Calls the listener with the size of the image as soon as it is known, which may be at once. */
+  /**
+   * Calls the listener with the size of the image as soon as it is known, which may be at once.
+   *
+   * @param listener - What to call.
+   */
   whenSized(listener: (size: Size) => void): void;
   /**
-   * Watches an element in the layer whose box in the units of the image is `box`: while it is drawn smaller than
-   * {@link TARGET_SIZE} on either side, it has the attribute `data-ak-small`, and the stylesheet gives it a target of
-   * the minimum size (WCAG 2.2, 2.5.8).
+   * Watches an element in the layer whose box in the units of the image is `box`.
+   *
+   * @remarks
+   * While it is drawn smaller than {@link TARGET_SIZE} on either side, it has the attribute `data-ak-small`, and the
+   * stylesheet gives it a target of the minimum size.
+   *
+   * @param element - The element.
+   * @param box - Its size in the units of the image.
    */
   track(element: HTMLElement, box: Size): void;
-  /** Stops watching an element that left the layer. */
+  /**
+   * Stops watching an element that left the layer.
+   *
+   * @param element - The element.
+   */
   untrack(element: HTMLElement): void;
-  /** Returns the point of the image under a position on the screen, or `undefined` when the position is off the image or the size is unknown. */
+  /**
+   * Returns the point of the image under a position on the screen.
+   *
+   * @param clientX - The horizontal position on the screen.
+   * @param clientY - The vertical position on the screen.
+   * @returns The point, or `undefined` when the position is off the image or the size is unknown.
+   */
   pointAt(clientX: number, clientY: number): Point | undefined;
 }
 
 /** The stages by their layers, so that an element finds the stage of its layer. */
 const STAGES = new WeakMap<Element, Stage>();
 
-/** Returns the stage that watches a layer, or `undefined` when none does. */
+/**
+ * Returns the stage that watches a layer.
+ *
+ * @param layer - The layer, or `null`.
+ * @returns The stage, or `undefined` when none watches the layer.
+ */
 export function stageOf(layer: Element | null): Stage | undefined {
   return layer === null ? undefined : STAGES.get(layer);
 }
@@ -50,7 +79,13 @@ function declaredSize(image: HTMLImageElement | null): Size | undefined {
   return width > 0 && height > 0 ? { width, height } : undefined;
 }
 
-/** Returns the size of an image in its own units: the size the author declared, else the natural size of the file once it has loaded. */
+/**
+ * Returns the size of an image in its own units: the size the author declared, else the natural size of the file once it
+ * has loaded.
+ *
+ * @param image - The image, or `null` for none.
+ * @returns The size, or `undefined` while it is unknown.
+ */
 export function imageSize(image: HTMLImageElement | null): Size | undefined {
   const declared = declaredSize(image);
   if (declared !== undefined || image === null) return declared;
@@ -60,11 +95,15 @@ export function imageSize(image: HTMLImageElement | null): Size | undefined {
 }
 
 /**
- * Watches the image in `host` and the `layer` that lies over it. The size of the image is the one the author declared with
- * `width` and `height`; without them it is the natural size of the file, once it has loaded.
+ * Watches the image in `host` and the `layer` that lies over it.
+ *
+ * @remarks
+ * The size of the image is the one the author declared with `width` and `height`; without them it is the natural size
+ * of the file, once it has loaded.
  *
  * @param host - The element that holds the image the renderer built, directly or in a `picture`.
  * @param layer - The element over the image, a child of `host` or of an element in it.
+ * @returns The stage.
  */
 export function watchStage(host: HTMLElement, layer: HTMLElement): Stage {
   const image = host.querySelector<HTMLImageElement>(":scope > img, :scope > picture img");
@@ -133,6 +172,10 @@ export type StageImage = HotspotInteraction["image"];
 /**
  * Builds the stage of an interaction around its image: an element that holds the image the renderer built for it, and the
  * layer over it, to which the interaction adds what the candidate points at.
+ *
+ * @param image - The image of the interaction.
+ * @param renderer - The renderer of content.
+ * @returns The element and the stage.
  */
 export function createStage(
   image: StageImage,

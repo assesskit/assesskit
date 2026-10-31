@@ -1,9 +1,12 @@
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 
 /**
- * What an interaction says besides its task: the limits it asks for, the hints for a response that breaks a rule, and the
- * announcements of what the candidate just did. The hints and the announcements are `role="status"` regions that are
- * never focused, so that a screen reader says them without moving the candidate (WCAG 4.1.3).
+ * What an interaction says besides its task: the limits it asks for, the hints for a response that breaks a rule, and
+ * the announcements of what the candidate just did.
+ *
+ * @remarks
+ * The hints and the announcements are `role="status"` regions that are never focused, so that a screen reader says them
+ * without moving the candidate (WCAG 4.1.3).
  */
 export class Notes {
   /** The element for the interaction: `div.ak-notes`, or a `span` of the same class inside a line of text. */
@@ -13,7 +16,9 @@ export class Notes {
   readonly #announcement: HTMLElement;
 
   /**
-   * @param inline - Whether the notes stand inside a line of text, as those of a text entry do. Default: `false`.
+   * Builds the notes.
+   *
+   * @param inline - Whether the notes stand inside a line of text, as those of a text entry do; without it they are blocks.
    */
   constructor(inline = false) {
     const tag = inline ? "span" : "div";
@@ -23,24 +28,40 @@ export class Notes {
     this.element = html(tag, { class: "ak-notes" }, this.#instruction, this.#hint, this.#announcement);
   }
 
-  /** Sets the limits that the candidate is told; the empty text takes them away. */
+  /**
+   * Sets the limits that the candidate is told; the empty text takes them away.
+   *
+   * @param text - The text.
+   */
   setInstruction(text: string): void {
     this.#instruction.textContent = text;
   }
 
-  /** Sets the hints for a response that breaks rules, one for each rule; none takes them away. */
+  /**
+   * Sets the hints for a response that breaks rules, one for each rule; none takes them away.
+   *
+   * @param texts - The hints.
+   */
   setHints(texts: readonly string[]): void {
     const text = texts.join(" ");
     // The region says what changes, so the same text is not set again.
     if (this.#hint.textContent !== text) this.#hint.textContent = text;
   }
 
-  /** Says something to the candidate who cannot see the change, such as where a choice was put. */
+  /**
+   * Says something to the candidate who cannot see the change, such as where a choice was put.
+   *
+   * @param text - What to say.
+   */
   announce(text: string): void {
     this.#announcement.textContent = text;
   }
 
-  /** Returns the `id`s that a control is described by: the limits and, while there are any, the hints. */
+  /**
+   * Returns the `id`s that a control is described by: the limits and, while there are any, the hints.
+   *
+   * @returns The ids, separated by spaces.
+   */
   describedBy(): string {
     return [this.#instruction, this.#hint]
       .filter((part) => part.textContent !== "")

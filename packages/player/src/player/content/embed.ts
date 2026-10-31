@@ -1,4 +1,4 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { RenderContext } from "./context.js";
 
 /** What to embed: a file that the URL policy has resolved, its media type, and what stands for it where it is withheld. */
@@ -15,10 +15,10 @@ export interface Embedding {
   readonly height?: string;
 }
 
-/** The media types of pages that go in a frame; the frame has an empty `sandbox`, so it runs no script (the player design §3). */
+/** The media types of pages that go in a frame; the frame has an empty `sandbox`, so it runs no script. */
 const PAGE_TYPES: ReadonlySet<string> = new Set(["text/html", "application/xhtml+xml"]);
 
-/** The image types that can move: an animation is withheld where a hazard remains (the player design §2.5). */
+/** The image types that can move: an animation is withheld where a hazard remains. */
 const ANIMATED_IMAGE_TYPES: ReadonlySet<string> = new Set([
   "image/apng",
   "image/avif",
@@ -30,12 +30,23 @@ const ANIMATED_IMAGE_TYPES: ReadonlySet<string> = new Set([
 /** The file extensions of those types, for an `img` that states no type. */
 const ANIMATED_IMAGE_EXTENSIONS = /\.(?:apng|avif|gif|svg|webp)$/iu;
 
-/** Returns the media type without its parameters, in lower case. */
+/**
+ * Returns the media type without its parameters, in lower case.
+ *
+ * @param type - A media type, with or without parameters.
+ * @returns The type and subtype.
+ */
 export function essence(type: string): string {
   return (type.split(";")[0] ?? "").trim().toLowerCase();
 }
 
-/** Returns whether an image can move, by its media type or, when it has none, by the extension of its path. */
+/**
+ * Returns whether an image can move, by its media type or, when it has none, by the extension of its path.
+ *
+ * @param type - The media type of the image, if the author gave one.
+ * @param path - The path or URL of the image.
+ * @returns `true` for a type or extension of an animated format.
+ */
 export function canAnimate(type: string | undefined, path: string): boolean {
   return type === undefined || type === ""
     ? ANIMATED_IMAGE_EXTENSIONS.test(path.split(/[?#]/u)[0] ?? "")
@@ -69,15 +80,21 @@ function player(name: "audio" | "video", embedding: Embedding): HTMLElement {
 }
 
 /**
- * Embeds a file by its media type, the way the player design §3 asks and without running anything of it:
+ * Embeds a file by its media type, without running anything of it.
  *
- * - an image is an `img` with the text alternative as its `alt`;
- * - audio and video are `audio` and `video` with controls, and the alternative as fallback content;
- * - a page (`text/html`) is an `iframe` with an empty `sandbox`, titled by the alternative;
- * - anything else is a link that opens in a tab of its own.
+ * @remarks
+ * - An image is an `img` with the text alternative as its `alt`.
+ * - Audio and video are `audio` and `video` with controls, and the alternative as fallback content.
+ * - A page (`text/html`) is an `iframe` with an empty `sandbox`, titled by the alternative.
+ * - Anything else is a link that opens in a tab of its own.
  *
  * Where a hazard remains, what plays or can move (audio, video, a page and an animated image) is replaced by its
  * alternative.
+ *
+ * @param context - The context of the rendering.
+ * @param embedding - The file and what stands for it.
+ * @returns The DOM nodes that stand for the file.
+ * @see {@link https://www.w3.org/TR/WCAG22/#audio-control | WCAG 2.2, audio control}
  */
 export function embed(context: RenderContext, embedding: Embedding): Node[] {
   const type = essence(embedding.type);

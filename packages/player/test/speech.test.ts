@@ -3,18 +3,26 @@ import { attributeOf, parseXml } from "@assesskit/runtime/xml";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { applyDataSsml, readDataSsml } from "../src/player/speech/data-ssml.js";
-import { type Lexicon, type Pronounced, parseLexicon, pronounce } from "../src/player/speech/lexicon.js";
-import { checkSpeechRequest } from "../src/player/speech/request.js";
-import { checkSpeechSettings } from "../src/player/speech/settings.js";
-import { plainText, speakDocument, ssmlElement, xmlSafe } from "../src/player/speech/ssml.js";
+import { type Lexicon, parseLexicon } from "../src/player/speech/index.js";
+import {
+  applyDataSsml,
+  checkSpeechRequest,
+  checkSpeechSettings,
+  type Pronounced,
+  plainText,
+  pronounce,
+  readDataSsml,
+  speakDocument,
+  ssmlElement,
+  xmlSafe,
+} from "../src/player/speech/internal.js";
 
 /** Parses JSON text, so that a test passes input as JavaScript or JSON delivers it. */
 const json = (text: string): unknown => JSON.parse(text);
 
 const PLS = 'xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0"';
 
-/** A PLS document with the given lexemes, in the form of the examples of PLS 1.0 §4. */
+/** A PLS document with the given lexemes, in the form of the examples of PLS 1.0. */
 const lexicon = (lexemes: string, attributes = 'alphabet="ipa" xml:lang="en-US"'): string =>
   `<?xml version="1.0" encoding="UTF-8"?><lexicon ${PLS} ${attributes}>${lexemes}</lexicon>`;
 
@@ -28,7 +36,7 @@ const joined = (pieces: readonly (string | Pronounced)[]): string =>
 describe("data-ssml", () => {
   const read = (value: string) => readDataSsml(value);
 
-  it("reads the five functions of DSSML §4.1.3 with the values of its examples", () => {
+  it("reads the five functions of data-ssml with the values of its examples", () => {
     expect(read('{"say-as":{"interpret-as":"characters"}}')?.get("say-as")).toEqual({ "interpret-as": "characters" });
     expect(read('{"phoneme":{"alphabet":"ipa","ph":"ˈrɛdɪŋ"}}')?.get("phoneme")).toEqual({
       alphabet: "ipa",
@@ -39,11 +47,11 @@ describe("data-ssml", () => {
     expect(read('{"prosody":{"rate":"slow"}}')?.get("prosody")).toEqual({ rate: "slow" });
   });
 
-  it("reads emphasis, which the example of BPIG §5.2.1.8 uses", () => {
+  it("reads emphasis, which the example of the best practices guide uses", () => {
     expect(read('{"emphasis":{"level":"strong"}}')?.get("emphasis")).toEqual({ level: "strong" });
   });
 
-  it("reads the break strengths, the alphabets and the rates that DSSML §2.7 and SSML 1.1 §3.2.4 list", () => {
+  it("reads the break strengths, the alphabets and the rates that data-ssml and SSML 1.1 list", () => {
     for (const strength of ["none", "x-weak", "weak", "medium", "strong", "x-strong"]) {
       expect(read(`{"break":{"strength":"${strength}"}}`), strength).toBeDefined();
     }
@@ -53,7 +61,7 @@ describe("data-ssml", () => {
     }
   });
 
-  it("gives no effect to a value that DSSML §4.2 does not define", () => {
+  it("gives no effect to a value that data-ssml does not define", () => {
     const invalid = [
       "not json",
       "[]",
@@ -78,7 +86,7 @@ describe("data-ssml", () => {
     for (const value of invalid) expect(read(value), value).toBeUndefined();
   });
 
-  it("reads the same value in every serialization of DSSML §4.1", () => {
+  it("reads the same value in every serialization of data-ssml", () => {
     const serializations = [
       '<p data-ssml=\'{"sub":{"alias":"x"}}\'/>',
       '<p data-ssml="{&quot;sub&quot;:{&quot;alias&quot;:&quot;x&quot;}}"/>',
@@ -109,13 +117,13 @@ describe("data-ssml", () => {
 });
 
 describe("parseLexicon", () => {
-  it("reads the lexicon of PLS 1.0 §4.1: the language, the phonemes and the default alphabet", () => {
+  it("reads the lexicon of PLS 1.0: the language, the phonemes and the default alphabet", () => {
     const parsed = parseLexicon(lexicon("<lexeme><grapheme>tomato</grapheme><phoneme>təmei̥ɾou̥</phoneme></lexeme>"));
     expect(parsed.language).toBe("en-US");
     expect(parsed.entries.get("tomato")).toEqual({ kind: "phoneme", alphabet: "ipa", ph: "təmei̥ɾou̥" });
   });
 
-  it("reads an alias (PLS 1.0 §4.7) and the alphabet of a phoneme that differs from the default (PLS 1.0 §4.6)", () => {
+  it("reads an alias and the alphabet of a phoneme that differs from the default", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme><grapheme>W3C</grapheme><alias>World Wide Web Consortium</alias></lexeme><lexeme><grapheme>x</grapheme><phoneme alphabet="x-sampa">eks</phoneme></lexeme>',
@@ -125,7 +133,7 @@ describe("parseLexicon", () => {
     expect(parsed.entries.get("x")).toEqual({ kind: "phoneme", alphabet: "x-sampa", ph: "eks" });
   });
 
-  it("gives every grapheme of a lexeme its pronunciation (PLS 1.0 §4.5)", () => {
+  it("gives every grapheme of a lexeme its pronunciation", () => {
     const parsed = parseLexicon(
       lexicon(
         "<lexeme><grapheme>nihongo</grapheme><grapheme>日本語</grapheme><grapheme>にほんご</grapheme><phoneme>ɲihoŋo</phoneme></lexeme>",
@@ -137,7 +145,7 @@ describe("parseLexicon", () => {
     }
   });
 
-  it("takes the first pronunciation with prefer true, else the first (PLS 1.0 §4.9.2)", () => {
+  it("takes the first pronunciation with prefer true, else the first", () => {
     const first = parseLexicon(
       lexicon("<lexeme><grapheme>a</grapheme><phoneme>one</phoneme><phoneme>two</phoneme></lexeme>"),
     );
@@ -150,7 +158,7 @@ describe("parseLexicon", () => {
     expect(preferred.entries.get("a")).toMatchObject({ ph: "two" });
   });
 
-  it("collects the pronunciations of a grapheme in several lexemes in document order (PLS 1.0 §4.9.2)", () => {
+  it("collects the pronunciations of a grapheme in several lexemes in document order", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme><grapheme>a</grapheme><phoneme>one</phoneme></lexeme><lexeme><grapheme>a</grapheme><phoneme prefer="true">two</phoneme></lexeme>',
@@ -159,7 +167,7 @@ describe("parseLexicon", () => {
     expect(parsed.entries.get("a")).toMatchObject({ ph: "two" });
   });
 
-  it("leaves out a lexeme with a role, because the player knows no part of speech (PLS 1.0 §4.4)", () => {
+  it("leaves out a lexeme with a role, because the player knows no part of speech", () => {
     const parsed = parseLexicon(
       lexicon(
         '<lexeme role="ex:noun"><grapheme>file</grapheme><phoneme>faɪl</phoneme></lexeme><lexeme><grapheme>eu</grapheme><alias>Europe</alias></lexeme>',
@@ -258,7 +266,7 @@ describe("pronounce", () => {
 });
 
 describe("ssml", () => {
-  it("writes a speak element of SSML 1.1 (SSML 1.1 §3.1.1) with the language and the paragraphs", () => {
+  it("writes a speak element of SSML 1.1 with the language and the paragraphs", () => {
     const ssml = speakDocument([ssmlElement("p", {}, ["Hello"])], "en-US");
     expect(ssml).toMatch(/^<\?xml version="1\.0" encoding="UTF-8"\?>\s*<speak /u);
     expect(ssml).toContain('xmlns="http://www.w3.org/2001/10/synthesis"');
@@ -279,7 +287,7 @@ describe("ssml", () => {
     );
   });
 
-  it("says the alias of a sub, a space for a break, and nothing for a mark (SSML 1.1 §3.1.10)", () => {
+  it("says the alias of a sub, a space for a break, and nothing for a mark", () => {
     const nodes = [
       ssmlElement("p", {}, [
         "Read ",

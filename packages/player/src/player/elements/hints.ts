@@ -3,7 +3,9 @@ import type { Messages } from "../../messages/index.js";
 
 /**
  * The texts that an item gives for the rules that a response breaks, in the `data-*-message` attributes of its
- * interaction (INFO §5.30.5, §5.30.6, §5.48.10): they replace the player's own text.
+ * interaction: they replace the player's own text.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, interactions}
  */
 export interface CustomMessages {
   /** The text for too few choices, associations or selections (`data-min-selections-message`). */
@@ -34,7 +36,7 @@ function counted(message: string, count: number | undefined): string {
   return count === undefined ? message : `${message} ${count}.`;
 }
 
-/** Returns the limits of choices, with the number of choices when the kind orders all of them by default (INFO §5.97.2). */
+/** Returns the limits of choices, with the number of choices when the kind orders all of them by default. */
 function choiceLimits(descriptor: InteractionDescriptor): { readonly min?: number; readonly max?: number } {
   const { minChoices, maxChoices } = descriptor.constraints;
   if (!ORDERING.has(descriptor.kind)) return { min: minChoices, max: maxChoices };
@@ -79,7 +81,8 @@ function limitText(
  * @param reason - A reason of the runtime's `checkResponse`.
  * @param descriptor - The descriptor whose rules the response breaks.
  * @param messages - The text of the interface.
- * @param custom - The item's own texts. Default: none.
+ * @param custom - The item's own texts; none without it.
+ * @returns The text.
  */
 export function violationText(
   reason: ResponseViolation,
@@ -128,11 +131,14 @@ function choiceInstructions(descriptor: InteractionDescriptor, messages: Message
 
 /**
  * Returns the limits of an interaction that the candidate cannot guess, as sentences (WCAG 3.3.2): the fewest and most
- * choices, placements, associations and texts. A limit of one is not told, because the control shows it. The text is empty
- * when there is nothing to tell.
+ * choices, placements, associations and texts.
+ *
+ * @remarks
+ * A limit of one is not told, because the control shows it. The text is empty when there is nothing to tell.
  *
  * @param descriptor - The descriptor of the interaction.
  * @param messages - The text of the interface.
+ * @returns The sentences, or the empty text when there is nothing to tell.
  */
 export function instructionText(descriptor: InteractionDescriptor, messages: Messages): string {
   const { minAssociations, maxAssociations, minStrings, maxStrings } = descriptor.constraints;

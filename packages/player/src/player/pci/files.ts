@@ -4,13 +4,18 @@ import {
   decodeBase64,
   encodeBase64,
   type FileValue,
-  type Primitive,
   type Value,
   type ValueDeclaration,
 } from "@assesskit/runtime/values";
 import { checkRecord, checkString } from "../../checks.js";
+import { isFileValue } from "../internal.js";
 
-/** The value of a variable with its declaration, which the JSON of BPIG App. C needs to be written and read. */
+/**
+ * The value of a variable with its declaration, which the JSON of the portable custom interaction binding needs to be
+ * written and read.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
+ */
 export interface PciVariable {
   /** The value, or `null` for NULL. */
   readonly value: Value | null;
@@ -19,26 +24,38 @@ export interface PciVariable {
 }
 
 /**
- * The host's storage of the files that a portable custom interaction reads and writes. A file value only refers to its
- * bytes (the runtime D7), and the codec of the runtime calls its callbacks synchronously, so the host's storage is asynchronous here:
- * the bytes of the files that go to the interaction are read before it starts, and the files it gives are stored before
- * the player gets its response.
+ * The host's storage of the files that a portable custom interaction reads and writes.
+ *
+ * @remarks
+ * A file value only refers to its bytes, and the codec of the runtime calls its callbacks synchronously, so the host's
+ * storage is asynchronous here: the bytes of the files that go to the interaction are read before it starts, and the files
+ * it gives are stored before the player gets its response.
  */
 export interface PciFiles {
-  /** Reads the bytes of a stored file. */
+  /**
+   * Reads the bytes of a stored file.
+   *
+   * @param file - The file value.
+   * @returns The bytes.
+   */
   read(file: FileValue): Promise<Uint8Array>;
-  /** Stores the bytes of a file that an interaction gave, and resolves with the file value that refers to them. */
+  /**
+   * Stores the bytes of a file that an interaction gave, and resolves with the file value that refers to them.
+   *
+   * @param bytes - The bytes.
+   * @param mimeType - Their media type.
+   * @param fileName - The name of the file, if it has one.
+   * @returns The file value.
+   */
   upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
 }
 
+/** Decodes the base64 of an inline file; text that is not base64 is a `DataError`. */
 function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   const bytes = decodeBase64(text);
   if (bytes === undefined) throw new DataError("The data of a file must be base64.");
   return bytes;
 }
-
-const isFile = (primitive: Primitive): primitive is FileValue =>
-  typeof primitive === "object" && "reference" in primitive;
 
 /** Returns the file values in a value, wherever its cardinality puts them. */
 function filesOf(value: Value | null): readonly FileValue[] {
@@ -49,7 +66,7 @@ function filesOf(value: Value | null): readonly FileValue[] {
       : value.cardinality === "single"
         ? [value.value]
         : value.values;
-  return primitives.filter(isFile);
+  return primitives.filter(isFileValue);
 }
 
 /** Returns the bytes of the files as base64, by reference, for the `load` callback of the codec. */
@@ -62,8 +79,12 @@ function loader(loaded: ReadonlyMap<string, string>): (reference: string) => str
 }
 
 /**
- * Checks that a variable is one: the value has the declared cardinality and base type. The files are not read.
+ * Checks that a variable is one: the value has the declared cardinality and base type.
  *
+ * @remarks
+ * The files are not read.
+ *
+ * @param variable - The value to check.
  * @throws `DataError` when it is not.
  */
 export function checkVariable(variable: unknown): asserts variable is PciVariable {
@@ -73,12 +94,16 @@ export function checkVariable(variable: unknown): asserts variable is PciVariabl
 }
 
 /**
- * Writes a variable as the JSON that an interaction reads (BPIG App. C). The bytes of each file value are read from the
- * host's storage first, and the codec puts them inline as base64.
+ * Writes a variable as the JSON that an interaction reads.
+ *
+ * @remarks
+ * The bytes of each file value are read from the host's storage first, and the codec puts them inline as base64.
  *
  * @param variable - The variable, checked with {@link checkVariable}.
  * @param files - The host's storage.
+ * @returns The JSON.
  * @throws `DataError` when the variable is not valid. The error of `files.read` passes through.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
 export async function encodeVariable(variable: PciVariable, files: PciFiles): Promise<PciJson> {
   const loaded = new Map<string, string>();
@@ -118,18 +143,22 @@ function next(references: string[]): string {
  *
  * @param json - The parsed JSON, or `null` when the interaction has no response.
  * @param declaration - The cardinality and base type of the variable.
- * @returns the value, or `null` for NULL.
+ * @returns The value, or `null` for NULL.
  * @throws `DataError` when the JSON is not the JSON of a value of the declaration or has a file that is not base64.
  */
 export type ResponseDecoder = (json: unknown, declaration: ValueDeclaration) => Promise<Value | null>;
 
 /**
- * Builds the decoder of the responses of one interaction. The codec of the runtime stores a file synchronously, so a decoder
- * reads the JSON twice: once to find and check the inline files, then, after the host has stored them, to build the value
- * with their references. A file that an earlier response of the decoder held is not stored again, since an interaction
- * that draws gives the same image with every change.
+ * Builds the decoder of the responses of one interaction.
+ *
+ * @remarks
+ * The codec of the runtime stores a file synchronously, so a decoder reads the JSON twice: once to find and check the
+ * inline files, then, after the host has stored them, to build the value with their references. A file that an earlier
+ * response of the decoder held is not stored again, since an interaction that draws gives the same image with every
+ * change.
  *
  * @param files - The host's storage.
+ * @returns The decoder.
  */
 export function createResponseDecoder(files: PciFiles): ResponseDecoder {
   let known = new Map<string, string>();

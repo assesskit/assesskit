@@ -4,7 +4,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { Assignment, Board } from "./board/model.js";
 import { BoardElement, type BoardLayout, limitsOf, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
@@ -22,18 +22,29 @@ import { pairsOf, responseOf } from "./values.js";
 const isGap = (node: { readonly kind: string }): node is Gap => node.kind === "gap";
 
 /**
- * The element of `qti-gap-match-interaction` (INFO §5.57): choices that the candidate puts in the gaps of a passage, so
- * that the passage can be read with the gaps filled, in context. A gap holds one choice, and a choice can fill as many
- * gaps as its `match-max` allows.
+ * The element of `qti-gap-match-interaction`: choices that the candidate puts in the gaps of a passage, so that the
+ * passage can be read with the gaps filled, in context.
+ *
+ * @remarks
+ * A gap holds one choice, and a choice can fill as many gaps as its `match-max` allows.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, gap match interaction}
  */
 export class GapMatchInteractionElement extends BoardElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "gap-match-interaction";
   readonly #choices: BuiltChoice[] = [];
   readonly #gaps: { readonly id: string; readonly element: Element }[] = [];
   #passage: readonly Node[] = [];
   #prompt: RenderedPrompt | undefined;
 
-  /** Fills the element with the prompt, the choices and the passage of the node, and pairs the gaps with their identifiers. */
+  /**
+   * Fills the element with the prompt, the choices and the passage of the node, and pairs the gaps with their identifiers.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   * @throws `AssesskitError` when the renderer drew a different number of gaps than the model has.
+   */
   build(node: GapMatchInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     for (const choice of node.choices) {
@@ -86,7 +97,14 @@ export class GapMatchInteractionElement extends BoardElement {
   }
 }
 
-/** Renders a `qti-gap-match-interaction`. */
+/**
+ * Renders a `qti-gap-match-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderGapMatch(node: GapMatchInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(GapMatchInteractionElement, "qti-gap-match-interaction", node, renderer, messages);
   element.build(node, renderer);

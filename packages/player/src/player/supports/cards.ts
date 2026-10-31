@@ -1,20 +1,31 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
-import { html, uniqueId } from "../dom.js";
-import { followPlayback, recordingOf } from "../media/companion.js";
+import { html, uniqueId } from "../internal.js";
+import { followPlayback, recordingOf } from "../media/index.js";
 import { supportLabel } from "./names.js";
 import { attachPopup } from "./popup.js";
 
-/** How a card shows (BPIG §3.7.10 leaves it to the player): on request, in place of the content, or beside it. */
+/**
+ * How a card shows: on request, in place of the content, or beside it.
+ *
+ * @remarks
+ * The best practices guide leaves it to the player.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, catalogs and cards}
+ */
 export type CardKind = "popup" | "replace" | "alongside";
 
 /**
- * The supports with cards, and how each shows. A `qti-card` names one of 15 supports or an extension (INFO §5.26.1, the
- * schema's `support`). The glossary, the translation of keywords and the guidance and directions explain, so they wait
- * for the candidate in a popup (the player design §5.6, T76–T78). High contrast and the simplified graphics and language
- * take the place of the content (T79, T80). Sign language, audio description, transcript, long description, braille and
- * tactile come beside the content (T81–T84). The `spoken` card is for the voice of a host, not for the screen.
+ * The supports with cards, and how each shows.
+ *
+ * @remarks
+ * A `qti-card` names one of 15 supports or an extension. The glossary, the translation of keywords and the guidance and
+ * directions explain, so they wait for the candidate in a popup. High contrast and the simplified graphics and language
+ * take the place of the content. Sign language, audio description, transcript, long description, braille and tactile
+ * come beside the content. The `spoken` card is for the voice of a host, not for the screen.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, card}
  */
 const CARD_KINDS: ReadonlyMap<SupportName, CardKind> = new Map<SupportName, CardKind>([
   ["glossary-on-screen", "popup"],
@@ -33,13 +44,22 @@ const CARD_KINDS: ReadonlyMap<SupportName, CardKind> = new Map<SupportName, Card
   ["tactile", "alongside"],
 ]);
 
-/** A custom support (BPIG §5.4) has the cards of its catalogs shown on request, since the player knows nothing else of it. */
+/**
+ * A custom support has the cards of its catalogs shown on request, since the player knows nothing else of it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, custom supports}
+ */
 const CUSTOM_KIND: CardKind = "popup";
 
 /** The order in which the kinds apply to one element, so that what replaces the content does so before anything is added to it. */
 export const CARD_KIND_ORDER: readonly CardKind[] = ["replace", "alongside", "popup"];
 
-/** Returns how the cards of a support show, or `undefined` for a support that has none. */
+/**
+ * Returns how the cards of a support show.
+ *
+ * @param name - The name of the support.
+ * @returns The kind, or `undefined` for a support that has no cards.
+ */
 export function cardKindOf(name: SupportName): CardKind | undefined {
   return CARD_KINDS.get(name) ?? (name.startsWith("ext:") ? CUSTOM_KIND : undefined);
 }
@@ -86,7 +106,11 @@ function addTo(element: Element, node: Node): void {
   else element.append(node);
 }
 
-/** Hides an HTML content of a card from sight and leaves it to assistive technology (VOCAB §1.1.6.1). */
+/**
+ * Hides an HTML content of a card from sight and leaves it to assistive technology.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, visually hidden}
+ */
 function hideVisually(content: DocumentFragment): void {
   for (const child of content.querySelectorAll("qti-html-content")) child.classList.add("qti-visually-hidden");
 }
@@ -97,7 +121,7 @@ function isHidden(support: SupportView): boolean {
   // The description is for a screen reader unless the profile says otherwise (PNP XSD `hide-visually` default).
   if (support.name === "long-description")
     return settings?.name !== "long-description" || settings.hideVisually !== false;
-  // Braille text reaches a refreshable display through the screen reader, which reads it from the page (T83).
+  // Braille text reaches a refreshable display through the screen reader, which reads it from the page.
   if (support.name === "braille") return settings?.name !== "braille" || settings.deliveryMode !== "embossed";
   return false;
 }
@@ -107,8 +131,11 @@ const FOLLOWS_RECORDING: ReadonlySet<SupportName> = new Set(["sign-language", "a
 
 /**
  * Makes the media of a card follow the recording of its element, when it is the same recording in another form (sign
- * language, audio description) and the element has one. The sign language video of a listening task then plays, pauses and
- * stops with the recording, so that `max-plays` and the pauses of the item hold for it too.
+ * language, audio description) and the element has one.
+ *
+ * @remarks
+ * The sign language video of a listening task then plays, pauses and stops with the recording, so that `max-plays` and
+ * the pauses of the item hold for it too.
  */
 function followRecording(support: SupportView, element: Element, card: Element): () => void {
   const recording = FOLLOWS_RECORDING.has(support.name) ? recordingOf(element, card) : undefined;
@@ -140,9 +167,12 @@ function showAlongside({ messages, element, support, content }: CardContext): ()
 }
 
 /**
- * Shows a card in place of the content. A picture or media is hidden and the card stands after it; the face of a choice,
- * else the element, gets the card for its content. A control cannot give its place to a card, so its card comes beside
- * it. Returns the function that restores the content.
+ * Shows a card in place of the content.
+ *
+ * @remarks
+ * A picture or media is hidden and the card stands after it; the face of a choice, else the element, gets the card for
+ * its content. A control cannot give its place to a card, so its card comes beside it. Returns the function that
+ * restores the content.
  */
 function showInstead(context: CardContext): () => void {
   const { element, content } = context;
@@ -209,6 +239,8 @@ const SHOW: Readonly<Record<CardKind, (context: CardContext) => () => void>> = {
 /**
  * Shows the card of a support on an element, the way the support asks for.
  *
+ * @param kind - How the card shows.
+ * @param context - What the card needs.
  * @returns A function that takes the card away and gives the element back as it was.
  */
 export function showCard(kind: CardKind, context: CardContext): () => void {

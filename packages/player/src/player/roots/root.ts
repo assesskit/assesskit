@@ -9,9 +9,9 @@ import {
   createBodyRenderer,
   scaleDeclaredSizes,
 } from "../content/index.js";
-import { readRenderOptions } from "../content/options.js";
-import { html } from "../dom.js";
+import { readRenderOptions } from "../content/internal.js";
 import { showFeedbackDialog } from "../feedback/index.js";
+import { html } from "../internal.js";
 import type { MathTypesetter } from "../math/index.js";
 import { buildContent } from "./build.js";
 import { checkContent, type RootContent } from "./content.js";
@@ -23,12 +23,18 @@ export interface ContentRootOptions extends Omit<BodyRendererOptions, "base" | "
   /** The fetch that loads item stylesheets from the URLs that `assets` gives. */
   readonly fetch: StylesheetFetch;
   /**
-   * The stylesheet of the player, built from `player.css` (see the styling guide). Every root adopts it before the
-   * stylesheets of the item, and a root that lives as long as the player keeps it, so that WebKit applies a change of the
-   * viewport to the media queries of every root.
+   * The stylesheet of the player, built from `player.css` (see the styling guide).
+   *
+   * @remarks
+   * Every root adopts it before the stylesheets of the item, and a root that lives as long as the player keeps it, so
+   * that WebKit applies a change of the viewport to the media queries of every root.
    */
   readonly stylesheet: CSSStyleSheet;
-  /** Typesets the MathML of the root with MathJax. Default: none, so that MathML Core renders the expressions. */
+  /**
+   * Typesets the MathML of the root with MathJax.
+   *
+   * @defaultValue None, so that MathML Core renders the expressions
+   */
   readonly typesetter?: MathTypesetter;
 }
 
@@ -38,31 +44,42 @@ export interface ContentRoot {
   readonly root: ShadowRoot;
   /**
    * The positioned element that holds the content and stays when the content is replaced, for what lies over the item,
-   * such as the tools. Its content is the item, so a tool that reads the text of the item reads it here.
+   * such as the tools.
+   *
+   * @remarks
+   * Its content is the item, so a tool that reads the text of the item reads it here.
    */
   readonly stage: HTMLElement;
   /**
-   * Shows content in place of what the root showed. The DOM is built before the promise settles; the promise settles
-   * when the item's stylesheets are adopted and the expressions are typeset.
+   * Shows content in place of what the root showed.
    *
+   * @remarks
+   * The DOM is built before the promise settles; the promise settles when the item's stylesheets are adopted and the
+   * expressions are typeset.
+   *
+   * @param content - What to show.
+   * @returns A promise that resolves when the content is complete.
    * @throws `DataError` when `content` is not valid.
    * @throws `AssesskitError` when a stylesheet cannot be fetched or MathJax cannot be loaded; the content is shown, the
    * stylesheets that loaded are adopted, and the expressions stay MathML.
    */
   show(content: RootContent): Promise<void>;
   /**
-   * Renders the card that the catalogs of the shown content have for a support (BPIG §3.7.10).
+   * Renders the card that the catalogs of the shown content have for a support.
    *
    * @param idref - The `data-catalog-idref` of the element that the candidate asks about.
    * @param support - The support that the candidate turned on.
-   * @param language - The language of the candidate's PNP. Default: none, so that the card gives its default entry.
+   * @param language - The language of the candidate's PNP; without it the card gives its default entry.
    * @returns The content, or `undefined` when no catalog has the id or no card fits.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, catalogs and cards}
    */
   card(idref: string, support: SupportName, language?: string): DocumentFragment | undefined;
   /**
-   * Sets the factor for the pixel sizes of media, which the magnification of non-text content gives, and applies it to the
-   * content that is shown and to the cards drawn later. The content is not drawn again, so the focus, the caret and the
-   * responses stay.
+   * Sets the factor for the pixel sizes of media, which the magnification of non-text content gives.
+   *
+   * @remarks
+   * It applies to the content that is shown and to the cards drawn later. The content is not drawn again, so the focus, the
+   * caret and the responses stay.
    *
    * @param scale - A positive number: 1 is the size the author gave, 2 is twice that.
    * @throws `DataError` when `scale` is not a positive number.
@@ -71,6 +88,8 @@ export interface ContentRoot {
   /**
    * Shows modal feedback in a dialog and resolves when the candidate closes it.
    *
+   * @param feedback - The feedback to show, in order.
+   * @returns A promise that resolves when the candidate has closed the dialog.
    * @throws `DataError` when `feedback` is not an array.
    */
   showFeedback(feedback: readonly ModalFeedback[]): Promise<void>;
@@ -92,9 +111,11 @@ const ROOT_OPTION_NAMES = [
 ];
 
 /**
- * Creates a content root in a host element: one open shadow root per item together with its stimuli (the player design
- * §2.5). Item stylesheets and the markup of the item stay inside it, and neither leaks into nor is restyled by the page.
- * The host is contained by `player.css` (`contain: layout paint`, `isolation: isolate`), so that fixed-position item CSS
+ * Creates a content root in a host element: one open shadow root per item together with its stimuli.
+ *
+ * @remarks
+ * Item stylesheets and the markup of the item stay inside it, and neither leaks into nor is restyled by the page. The
+ * host is contained by `player.css` (`contain: layout paint`, `isolation: isolate`), so that fixed-position item CSS
  * cannot cover the chrome and a modal dialog is not clipped, because the top layer is outside it.
  *
  * The root builds the DOM with the renderer (`createBodyRenderer`): it refuses what the renderer refuses, loads each item
@@ -103,8 +124,9 @@ const ROOT_OPTION_NAMES = [
  *
  * @param host - An element in the page that has no shadow root.
  * @param options - See {@link ContentRootOptions}.
- * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or an option is not of
- * its type.
+ * @returns The content root.
+ * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or an option is not of its
+ * type.
  */
 export function createContentRoot(host: HTMLElement, options: ContentRootOptions): ContentRoot {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);

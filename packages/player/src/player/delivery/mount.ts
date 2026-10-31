@@ -4,13 +4,13 @@ import type { SupportName } from "@assesskit/runtime/pnp";
 import type { Value } from "@assesskit/runtime/values";
 import { AccessError } from "../../errors.js";
 import { selectMessages } from "../../messages/index.js";
-import { html } from "../dom.js";
 import {
   createInteractionRenderers,
   END_ATTEMPT_EVENT,
   InteractionElement,
   RESPONSE_EVENT,
 } from "../elements/index.js";
+import { html } from "../internal.js";
 import { createLtiSlot } from "../lti-frame/index.js";
 import { createMathTypesetter } from "../math/index.js";
 import { createContentRoot } from "../roots/index.js";
@@ -40,23 +40,28 @@ const signature = (value: unknown): string =>
 const itemId = (key: ItemKey | undefined): string => (key === undefined ? "" : `${key.ref} ${key.instance}`);
 
 /**
- * Mounts the player on a session (the player design §2.5): the chrome and the content of the view the session client holds,
- * following it as it changes. The chrome is the navigation map, the timers with their warnings, the actions with their
- * confirmations, the comment box, the attempts, the panel of the supports that are options, and a status line that tells
- * what the engine refused (T54 to T64). The content is a content root, which takes the supports that are on; portable
- * custom interactions run in their frames. The player decides nothing of QTI: it
- * sends the actions that the engine lists and shows what the engine answers.
+ * Mounts the player on a session: the chrome and the content of the view the session client holds, following it as it
+ * changes.
  *
- * - **Status messages** go to `role="status"` regions and never move the focus (WCAG 4.1.3).
- * - **Focus** moves to the heading of the item when the item changes, and when the control that had it is gone (WCAG 2.4.3).
- * - **Confirmations** are modal dialogs that start on the answer that goes back (WCAG 3.3.4).
- * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being stored.
+ * @remarks
+ * The chrome is the navigation map, the timers with their warnings, the actions with their confirmations, the comment box,
+ * the attempts, the panel of the supports that are options, and a status line that tells what the engine refused. The
+ * content is a content root, which takes the supports that are on; portable custom interactions run in their frames. The
+ * player decides nothing of QTI: it sends the actions that the engine lists and shows what the engine answers.
+ *
+ * - **Status messages** go to `role="status"` regions and never move the focus.
+ * - **Focus** moves to the heading of the item when the item changes, and when the control that had it is gone.
+ * - **Confirmations** are modal dialogs that start on the answer that goes back.
+ * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being
+ *   stored.
  *
  * @param host - An element that has no shadow root. The player attaches one and draws in it. The frames of an LTI item are
  * children of `host`, which the shadow root shows through a slot.
  * @param options - See {@link DeliveryOptions}.
  * @returns The mounted player.
  * @throws `DataError` when `host` or an option is not of its type.
+ * @see {@link https://www.w3.org/TR/WCAG22/#status-messages | WCAG 2.2, status messages}
+ * @see {@link https://www.w3.org/TR/WCAG22/#focus-order | WCAG 2.2, focus order}
  */
 export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Mounted {
   checkDeliveryOptions(host, options);
@@ -157,7 +162,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     fileUrl: (file) => files.url(file),
     ...(mathjax === undefined ? {} : { typesetter: createMathTypesetter(mathjax) }),
   });
-  /** Returns the interaction elements of the content now shown. */
+  /** Returns the interaction elements of the content that is shown. */
   const interactionElements = (): InteractionElement[] =>
     [...content.root.querySelectorAll("*")].filter((element) => element instanceof InteractionElement);
 
@@ -253,10 +258,12 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   };
 
   /**
-   * Gives the interaction elements of the content what the view says: the descriptor, whether the candidate can respond,
-   * and, when the content was just drawn or the item is not interacting (review, solution), the response. While the
-   * candidate interacts the element holds the response: a view that answers an earlier request must not take back what
-   * was typed since.
+   * Gives the interaction elements of the content what the view says: the descriptor, whether the candidate can
+   * respond, and, when the content was just drawn or the item is not interacting (review, solution), the response.
+   *
+   * @remarks
+   * While the candidate interacts the element holds the response: a view that answers an earlier request must not take
+   * back what was typed since.
    */
   const bindInteractions = (item: CandidateItem, drawn: boolean): void => {
     const interacting = item.status === "interacting";

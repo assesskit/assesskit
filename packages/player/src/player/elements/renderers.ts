@@ -2,7 +2,6 @@ import type { Interaction } from "@assesskit/runtime/asi";
 import { DataError } from "@assesskit/runtime/errors";
 import { describe } from "../../checks.js";
 import type { BodyRenderer, InteractionRenderer, InteractionRenderers } from "../content/index.js";
-import { renderMedia } from "../media/media.js";
 import { renderAssociate } from "./associate.js";
 import { renderChoice } from "./choice.js";
 import { renderCustom } from "./custom.js";
@@ -18,6 +17,7 @@ import { renderHotspot } from "./hotspot.js";
 import { renderHotText } from "./hottext.js";
 import { renderInlineChoice } from "./inline-choice.js";
 import { renderMatch } from "./match.js";
+import { renderMedia } from "./media-interaction.js";
 import { type InteractionOptions, type InteractionSettings, readInteractionOptions } from "./options.js";
 import { renderOrder } from "./order.js";
 import { renderPositionObject } from "./position-object.js";
@@ -55,10 +55,14 @@ function forKind<TKind extends Interaction["kind"]>(
 
 /**
  * Creates the renderers of the interactions, to pass as the `interactions` option of the content root. It defines the
- * elements first. The renderers draw the content and the controls of the interaction; the host gives each element its
- * descriptor, its value and whether it is disabled, and listens for the responses ([InteractionElement]).
+ * elements first.
+ *
+ * @remarks
+ * The renderers draw the content and the controls of the interaction; the host gives each element its descriptor, its
+ * value and whether it is disabled, and listens for the responses ({@link InteractionElement}).
  *
  * @param options - See {@link InteractionOptions}.
+ * @returns The renderers by kind.
  * @throws `DataError` when an option is not of its type.
  */
 export function createInteractionRenderers(options: InteractionOptions): InteractionRenderers {

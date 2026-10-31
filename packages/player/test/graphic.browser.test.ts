@@ -2,7 +2,7 @@ import { container, single } from "@assesskit/runtime/values";
 import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { pointsOf } from "../src/player/elements/values.js";
+import { pointsOf } from "../src/player/elements/internal.js";
 import { colorAt, type Graphic, outlined, picture, settle, show } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
@@ -81,7 +81,7 @@ describe("hotspot", () => {
       declare("single", "identifier"),
     );
     const box = (identifier: string) => inLayer(shown, area(shown, identifier));
-    // INFO §7.9: a circle is its center and radius, a rectangle its corners, an ellipse its center and radii.
+    // A circle is its center and radius, a rectangle its corners, an ellipse its center and radii.
     expect(box("A")).toMatchObject({ x: 20, y: 30, width: 40, height: 40 });
     expect(box("B")).toMatchObject({ x: 100, y: 20, width: 60, height: 60 });
     expect(box("D")).toMatchObject({ x: 120, y: 70, width: 60, height: 20 });
@@ -401,7 +401,7 @@ describe("graphic associate", () => {
     expect(shown.values).toEqual([]);
   });
 
-  it("offers no hotspot beyond its match-max or the maximum of the question (INFO §5.7.9, §5.59.2)", async () => {
+  it("offers no hotspot beyond its match-max or the maximum of the question", async () => {
     const shown = await show(ASSOCIATE('max-associations="3"'), declare("multiple", "pair"));
     expect(unavailable(shown)).toEqual([]);
     await choose(shown, "A");
@@ -490,7 +490,7 @@ describe("graphic gap match", () => {
     expect(token(shown, "X").getAttribute("aria-pressed")).toBe("true");
     expect(interaction.hasAttribute("data-ak-placing")).toBe(true);
     await userEvent.click(drop(shown, "H1"));
-    // The choices are the source of each directed pair and the gaps the target (INFO §2.4.3.4).
+    // The choices are the source of each directed pair and the gaps the target.
     expect(shown.values).toEqual([container("multiple", "directedPair", [["X", "H1"]])]);
     expect(interaction.hasAttribute("data-ak-placing")).toBe(false);
     expect(within(area(shown, "H1"), ".ak-chip-button").textContent).toBe("ex");
@@ -617,7 +617,7 @@ describe("position object", () => {
     expect(announced(shown)).toBe(EN_MESSAGES.graphicPlaced);
   });
 
-  it("puts the center-point of the object on the point (INFO §5.107.1)", async () => {
+  it("puts the center-point of the object on the point", async () => {
     const shown = await show(POSITION('max-choices="1" center-point="0 0"'), declare("single", "point", "R0"));
     await userEvent.click(hand(shown));
     await clickImage(shown, 120, 40);

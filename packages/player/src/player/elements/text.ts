@@ -12,7 +12,7 @@ import type { Messages } from "../../messages/index.js";
 import { InteractionElement, sameValue } from "./element.js";
 import { primitivesOf } from "./values.js";
 
-/** The number base of a text that the item does not give a base for (INFO §5.162.2). */
+/** The number base of a text that the item does not give a base for. */
 const DECIMAL = 10;
 
 /** What is wrong with a text that should be a number: it is none, or it has a fraction where a whole number is needed. */
@@ -36,6 +36,7 @@ export interface TextField {
 
 /** The field of an `input` or a `textarea`. A locked field is read-only, so that it keeps the focus and can be read. */
 export class ControlField implements TextField {
+  /** The control that the candidate types in. */
   readonly control: HTMLInputElement | HTMLTextAreaElement;
 
   /** @param control - The control that the candidate types in. */
@@ -43,24 +44,36 @@ export class ControlField implements TextField {
     this.control = control;
   }
 
+  /** The text in the control. */
   get text(): string {
     return this.control.value;
   }
 
+  /**
+   * Replaces the text in the control.
+   *
+   * @param text - The text.
+   */
   set text(text: string) {
     this.control.value = text;
   }
 
+  /** Whether the control is read-only. */
   get locked(): boolean {
     return this.control.readOnly;
   }
 
+  /**
+   * Makes the control read-only, or writable.
+   *
+   * @param locked - `true` to make it read-only.
+   */
   set locked(locked: boolean) {
     this.control.readOnly = locked;
   }
 }
 
-/** Reads a text for a base type: a string as it is, a number from the runtime's numeric record (INFO §2.4.2.2). */
+/** Reads a text for a base type: a string as it is, a number from the runtime's numeric record. */
 function primitiveOf(baseType: BaseType, text: string, base: number): { primitive?: Primitive; problem?: TextProblem } {
   if (baseType !== "integer" && baseType !== "float") return text === "" ? {} : { primitive: text };
   if (text.trim() === "") return {};
@@ -72,8 +85,12 @@ function primitiveOf(baseType: BaseType, text: string, base: number): { primitiv
 
 /**
  * Returns the response for the texts that the candidate typed, as the declaration of the response variable asks: the
- * strings, the numbers that they read as, or the record of the runtime's `numericRecord` (INFO §2.4.2.2, §2.4.2.3). Texts that
- * are empty are NULL.
+ * strings, the numbers that they read as, or the record of the runtime's `numericRecord`.
+ *
+ * @remarks
+ * Texts that are empty are NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, text}
  */
 function responseOfTexts(descriptor: InteractionDescriptor, texts: readonly string[]): TextResponse {
   const cardinality = descriptor.declaration?.cardinality ?? "single";
@@ -99,7 +116,9 @@ const textOfPrimitive = (primitive: Primitive, base: number): string =>
 
 /**
  * Returns the texts to show for a response: those of its strings or numbers, or the text as typed where the item keeps it
- * in a second variable (INFO §5.162.3), which wins over the number it was read as.
+ * in a second variable, which wins over the number it was read as.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, text}
  */
 function textsOfResponse(descriptor: InteractionDescriptor, value: Value | null, typed: Value | null): string[] {
   const base = descriptor.constraints.base ?? DECIMAL;
@@ -114,6 +133,8 @@ function textsOfResponse(descriptor: InteractionDescriptor, value: Value | null,
 
 /**
  * The element of an interaction whose response is the text that the candidate types: a text entry or an extended text.
+ *
+ * @remarks
  * It also keeps the text as typed, for the item that binds a number and wants the text too (`string-identifier`).
  */
 export abstract class TextElement extends InteractionElement {
@@ -125,6 +146,7 @@ export abstract class TextElement extends InteractionElement {
   }
 
   /**
+   *
    * @throws `DataError` when the value is neither NULL nor a value of the runtime.
    */
   set typed(typed: Value | null) {

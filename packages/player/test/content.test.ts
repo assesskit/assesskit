@@ -2,11 +2,18 @@ import { DataError } from "@assesskit/runtime/errors";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
-import { scaleSize } from "../src/player/content/attributes.js";
-import { canAnimate } from "../src/player/content/embed.js";
-import { elementName, isHtmlName } from "../src/player/content/html-elements.js";
 import { createBodyRenderer } from "../src/player/content/index.js";
-import { isRasterDataUrl, readOrigins, resolveSrcset, resolveUrl, type UrlPolicy } from "../src/player/content/urls.js";
+import {
+  canAnimate,
+  elementName,
+  isHtmlName,
+  isRasterDataUrl,
+  readOrigins,
+  resolveSrcset,
+  resolveUrl,
+  scaleSize,
+  type UrlPolicy,
+} from "../src/player/content/internal.js";
 
 /** Passes input as JSON delivers it, which TypeScript does not check. */
 const json = (text: string): unknown => JSON.parse(text);

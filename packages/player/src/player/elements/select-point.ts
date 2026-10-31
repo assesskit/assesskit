@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Point } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { enablePicker } from "./graphic/picker.js";
 import { createStage } from "./graphic/stage.js";
@@ -12,12 +12,17 @@ import { nameByPrompt, type RenderedPrompt, renderPrompt } from "./parts.js";
 import { pointsOf, responseOf } from "./values.js";
 
 /**
- * The element of `qti-select-point-interaction` (INFO §5.128): the candidate marks points on an image. The areas that the
- * response may be scored against are never drawn: only the points the candidate marked show (INFO §2.4.3.5). A click on the
- * image marks a point; with the keyboard a crosshair moves over the image and Enter marks it. A marked point is a button
- * that takes the point away. With a maximum of one point, marking another moves it.
+ * The element of `qti-select-point-interaction`: the candidate marks points on an image.
+ *
+ * @remarks
+ * The areas that the response may be scored against are never drawn: only the points the candidate marked show. A click
+ * on the image marks a point; with the keyboard a crosshair moves over the image and Enter marks it. A marked point is
+ * a button that takes the point away. With a maximum of one point, marking another moves it.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, select point interaction}
  */
 export class SelectPointInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "select-point-interaction";
   #prompt: RenderedPrompt | undefined;
   #surface: HTMLElement | undefined;
@@ -35,7 +40,12 @@ export class SelectPointInteractionElement extends InteractionElement {
     });
   }
 
-  /** Fills the element with the prompt, the image with its surface and crosshair, the instructions and the notes. */
+  /**
+   * Fills the element with the prompt, the image with its surface and crosshair, the instructions and the notes.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: SelectPointInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     const { element: stageElement, stage } = createStage(node.image, renderer);
@@ -104,7 +114,14 @@ export class SelectPointInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-select-point-interaction`. */
+/**
+ * Renders a `qti-select-point-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderSelectPoint(node: SelectPointInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(
     SelectPointInteractionElement,

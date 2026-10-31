@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
 import { describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
-import { HTML_ELEMENT_NAMES } from "../src/player/content/html-elements.js";
+import { HTML_ELEMENT_NAMES } from "../src/player/content/internal.js";
 
 /** The names of the elements that a schema declares, anywhere in it. */
 function declaredElements(schema: XmlElement): string[] {

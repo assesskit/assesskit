@@ -1,8 +1,7 @@
 import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { followPlayback } from "../src/player/media/companion.js";
-import { Playback, type PlaybackNotice } from "../src/player/media/playback.js";
+import { followPlayback, Playback, type PlaybackNotice } from "../src/player/media/index.js";
 import { audioPlaysToEnd } from "./audio.js";
 import { ASSETS, mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";

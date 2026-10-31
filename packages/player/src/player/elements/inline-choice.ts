@@ -2,7 +2,7 @@ import type { InlineChoiceInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { Notes } from "./notes.js";
 import { nameOf } from "./parts.js";
@@ -15,17 +15,27 @@ interface MenuChoice {
 }
 
 /**
- * The element of `qti-inline-choice-interaction` (INFO §5.74): a menu inside a sentence, so that the candidate reads
- * the choice in its context. The menu starts with an entry that is no choice, whose text is `data-prompt`; choosing it
- * gives NULL.
+ * The element of `qti-inline-choice-interaction`: a menu inside a sentence, so that the candidate reads the choice in
+ * its context.
+ *
+ * @remarks
+ * The menu starts with an entry that is no choice, whose text is `data-prompt`; choosing it gives NULL.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, inline choice interaction}
  */
 export class InlineChoiceInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "inline-choice-interaction";
   readonly #menu = html("select");
   #choices: readonly MenuChoice[] = [];
   #prompt: string | undefined;
 
-  /** Fills the element with the label and the menu of the node. */
+  /**
+   * Fills the element with the label and the menu of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: InlineChoiceInteraction, renderer: BodyRenderer): void {
     this.#choices = node.inlineChoices.map((choice) => ({
       identifier: choice.identifier,
@@ -35,7 +45,7 @@ export class InlineChoiceInteractionElement extends InteractionElement {
     this.custom = { min: node.dataMinSelectionsMessage };
     const label = node.labelElement;
     if (label !== undefined) {
-      // The label of the choice is the visible name of the menu (INFO §5.74.6).
+      // The label of the choice is the visible name of the menu.
       const element = renderer.element("qti-label", label, renderer.nodes(label.children));
       element.id = element.id || uniqueId("ak-label");
       this.#menu.setAttribute("aria-labelledby", element.id);
@@ -72,7 +82,14 @@ export class InlineChoiceInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-inline-choice-interaction`. */
+/**
+ * Renders a `qti-inline-choice-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderInlineChoice(node: InlineChoiceInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(
     InlineChoiceInteractionElement,

@@ -1,4 +1,4 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { ToolContext } from "./context.js";
 
 /** The panel of an open tool, in the tray. */
@@ -16,8 +16,10 @@ export interface Panel {
 /**
  * Appends a panel to the tray: a group named after the tool, with a heading and a button that closes it.
  *
+ * @param context - What the tool needs from the mount.
  * @param title - The name of the tool.
  * @param close - Called when the candidate presses the button.
+ * @returns The panel.
  */
 export function createPanel({ messages, tray }: ToolContext, title: string, close: () => void): Panel {
   const heading = html("h3", { tabindex: "-1" }, title);

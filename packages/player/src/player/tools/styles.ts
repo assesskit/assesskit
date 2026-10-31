@@ -1,9 +1,14 @@
-import { createStyleAdopter } from "../adopt.js";
+import { createStyleAdopter } from "../internal.js";
 
 /**
- * The look of a button of the tools. Text and background always come from the pair `CanvasText` and `Canvas`, or from a
- * mix of the two. `ButtonText` and `ButtonFace` are no pair: in a dark color scheme the WebKit of Linux gives white text on a
- * light gray face, 1.8:1 (WCAG 1.4.3), so the controls do not use them, and neither do the fields.
+ * The look of a button of the tools.
+ *
+ * @remarks
+ * Text and background always come from the pair `CanvasText` and `Canvas`, or from a mix of the two. `ButtonText` and
+ * `ButtonFace` are no pair: in a dark color scheme the WebKit of Linux gives white text on a light gray face, with a
+ * contrast ratio of 1.8:1, so the controls do not use them, and neither do the fields.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#contrast-minimum | WCAG 2.2, contrast minimum}
  */
 const BUTTON_CSS = `display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
   box-sizing: border-box; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.75rem; font: inherit;
@@ -11,9 +16,14 @@ const BUTTON_CSS = `display: inline-flex; align-items: center; justify-content: 
   border-radius: 0.375rem; cursor: pointer;`;
 
 /**
- * The stylesheet of the toolbar and the panels, which live in the chrome. The tools use the system colors, so that they
- * follow the color scheme and the forced colors of the browser, and sizes in `rem`, so that they follow the text size.
- * Every control is at least 2.75rem, more than the 24 CSS pixels of WCAG 2.5.8.
+ * The stylesheet of the toolbar and the panels, which live in the chrome.
+ *
+ * @remarks
+ * The tools use the system colors, so that they follow the color scheme and the forced colors of the browser, and sizes in
+ * `rem`, so that they follow the text size. Every control is at least 2.75rem, more than the 24 CSS pixels of the target
+ * size criterion.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#target-size-minimum | WCAG 2.2, target size}
  */
 const TOOLS_CSS = `
 .ak-tools { display: grid; gap: 0.75rem; color: CanvasText; background: Canvas; }
@@ -56,10 +66,12 @@ const TOOLS_CSS = `
 `;
 
 /**
- * The stylesheet of what the tools put over the item: the layer with the rule and the protractor, the line reader and the
- * masks of the answers. It is adopted into the root that holds the item, so every rule names a class of the tools, which the
- * content does not use, and the classes the interactions share with the chrome, such as `ak-surface`, are reached
- * only inside the layer.
+ * The stylesheet of what the tools put over the item: the layer with the rule and the protractor, the line reader and
+ * the masks of the answers.
+ *
+ * @remarks
+ * It is adopted into the root that holds the item, so every rule names a class of the tools, which the content does not
+ * use, and the classes the interactions share with the chrome, such as `ak-surface`, are reached only inside the layer.
  */
 const STAGE_CSS = `
 .ak-tool-layer [hidden], .ak-mask [hidden] { display: none !important; }
@@ -86,15 +98,17 @@ qti-choice-interaction[data-ak-masked] qti-simple-choice { display: none !import
 `;
 
 /**
- * Adopts the stylesheet of the toolbar and the panels into the document or shadow root that holds `node`.
+ * Adopts the stylesheet of the toolbar and the panels into the document or shadow root that holds a node.
  *
- * @returns a function that releases it; the root drops the stylesheet when no mount uses it any more.
+ * @param node - The node.
+ * @returns A function that releases it; the root drops the stylesheet when no mount uses it any more.
  */
 export const adoptToolStyles = createStyleAdopter(TOOLS_CSS);
 
 /**
- * Adopts the stylesheet of what lies over the item into the document or shadow root that holds `node`.
+ * Adopts the stylesheet of what lies over the item into the document or shadow root that holds a node.
  *
- * @returns a function that releases it; the root drops the stylesheet when no mount uses it any more.
+ * @param node - The node.
+ * @returns A function that releases it; the root drops the stylesheet when no mount uses it any more.
  */
 export const adoptStageStyles = createStyleAdopter(STAGE_CSS);

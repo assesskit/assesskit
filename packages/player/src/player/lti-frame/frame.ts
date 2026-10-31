@@ -4,9 +4,12 @@ import { checkLtiFrame, LTI_STORAGE_FRAME, LTI_TOOL_FRAME, type LtiFrame } from 
 import { answerCapabilities } from "./capabilities.js";
 
 /**
- * The name of the slot that shows the frame of the tool. The frames are children of the host element and not of its shadow
- * root: a window finds a frame by name, as `window.frames["lti-storage"]` does, only among the frames of its own document
- * tree, and the tool and the storage page find each other that way.
+ * The name of the slot that shows the frame of the tool.
+ *
+ * @remarks
+ * The frames are children of the host element and not of its shadow root: a window finds a frame by name, as
+ * `window.frames["lti-storage"]` does, only among the frames of its own document tree, and the tool and the storage page
+ * find each other that way.
  */
 export const LTI_SLOT = "ak-lti";
 
@@ -27,9 +30,12 @@ export interface LtiFrameHandle {
 }
 
 /**
- * The permissions of the frame of the tool. `allow-same-origin` keeps the origin of the tool, so that it has its own cookies and
- * storage and can read its own responses; that is safe only because `mountLtiFrame` refuses a tool that runs from the origin of
- * the player or of the assets, where the tool would have the player's own origin.
+ * The permissions of the frame of the tool.
+ *
+ * @remarks
+ * `allow-same-origin` keeps the origin of the tool, so that it has its own cookies and storage and can read its own
+ * responses; that is safe only because `mountLtiFrame` refuses a tool that runs from the origin of the player or of the
+ * assets, where the tool would have the player's own origin.
  */
 const TOOL_SANDBOX = "allow-scripts allow-forms allow-same-origin";
 
@@ -47,19 +53,22 @@ function refuseOrigins(url: string, refused: readonly string[], what: string): v
 }
 
 /**
- * Shows the tool of an LTI item in a frame that is appended to `parent`, with the platform's storage page in a hidden frame
- * beside it.
+ * Shows the tool of an LTI item in a frame that is appended to a parent, with the platform's storage page in a hidden
+ * frame beside it.
  *
+ * @remarks
  * The frame of the tool is sandboxed with `allow-scripts allow-forms allow-same-origin`, takes its `allow` list from the
- * registration and sends no referrer. It starts when the storage page has loaded, so that the first message of the tool's login
- * finds the page listening. The tool keeps the `state` and the `nonce` of its login in the storage page, which answers only
- * the frame of the tool. The player itself answers the capabilities request of the tool.
+ * registration and sends no referrer. It starts when the storage page has loaded, so that the first message of the tool's
+ * login finds the page listening. The tool keeps the `state` and the `nonce` of its login in the storage page, which
+ * answers only the frame of the tool. The player itself answers the capabilities request of the tool.
  *
- * @param parent - The element that gets the frames: the host element of the player, whose shadow root has the slot `LTI_SLOT`,
- * and not an element inside a shadow root.
+ * @param parent - The element that gets the frames: the host element of the player, whose shadow root has the slot
+ * `LTI_SLOT`, and not an element inside a shadow root.
  * @param launch - Where the tool's login and the storage page are, from the host's route.
  * @param options - See {@link LtiFrameOptions}.
+ * @returns The handle that removes the frames.
  * @throws `DataError` when `launch` is not a frame of an LTI item, or its URLs are on a refused origin.
+ * @see {@link https://www.imsglobal.org/spec/lti/v1p3/ | LTI 1.3}
  */
 export function mountLtiFrame(parent: HTMLElement, launch: LtiFrame, options: LtiFrameOptions): LtiFrameHandle {
   checkLtiFrame(launch);

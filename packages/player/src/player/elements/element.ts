@@ -4,8 +4,8 @@ import { checkResponse, type InteractionDescriptor, type InteractionKind } from 
 import { matchValues, normalizeValue, type Value } from "@assesskit/runtime/values";
 import { checkBoolean, describe, isRecord } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
+import { checkMessages } from "../../messages/internal.js";
 import type { BodyRenderer } from "../content/index.js";
-import { checkMessages } from "../content/options.js";
 import { type CustomMessages, instructionText, violationText } from "./hints.js";
 import type { Notes } from "./notes.js";
 
@@ -43,25 +43,36 @@ function sameData(a: unknown, b: unknown): boolean {
   );
 }
 
-/** Returns whether two responses are the same value, as `qti-match` reads them (INFO §2.11.3.28); NULL is the same as NULL. */
+/**
+ * Returns whether two responses are the same value, as `qti-match` reads them; NULL is the same as NULL.
+ *
+ * @param a - The first response.
+ * @param b - The second response.
+ * @returns `true` when they match.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, match}
+ */
 export const sameValue = (a: Value | null, b: Value | null): boolean =>
   a === null || b === null ? a === b : matchValues(a, b);
 
 /**
- * The element of an interaction: what the player gives the content root for `qti-…-interaction`. The host sets four
- * properties on it and listens for one event.
+ * The element of an interaction: what the player gives the content root for `qti-…-interaction`.
  *
- * | Property     | Meaning                                                                                                  |
- * | ------------ | -------------------------------------------------------------------------------------------------------- |
- * | `descriptor` | The `InteractionDescriptor` of the runtime. Until it is set the element shows the content and no controls.      |
- * | `value`      | The response, `null` for NULL. The element shows it and keeps what the candidate gives in place of it.   |
- * | `disabled`   | Whether the candidate cannot respond, as in review. Default: `false`.                              |
- * | `messages`   | The text of the interface; the renderer sets it.                                                         |
+ * @remarks
+ * The host sets four properties on it and listens for one event.
  *
- * The element dispatches {@link ResponseEvent}s when the candidate changes the response. It decides nothing of QTI: the runtime's
- * `checkResponse` says whether the response is valid, and the element says what is wrong in words (WCAG 3.3.1).
- * Setting a property to what it holds does nothing, so that a host that sets every property on each view leaves the
- * candidate's focus and caret where they are.
+ * | Property     | Meaning                                                                                                      |
+ * | ------------ | ------------------------------------------------------------------------------------------------------------ |
+ * | `descriptor` | The `InteractionDescriptor` of the runtime. Until it is set the element shows the content and no controls.   |
+ * | `value`      | The response, `null` for NULL. The element shows it and keeps what the candidate gives in place of it.       |
+ * | `disabled`   | Whether the candidate cannot respond, as in review. It is `false` at first.                                  |
+ * | `messages`   | The text of the interface; the renderer sets it.                                                             |
+ *
+ * The element dispatches {@link ResponseEvent}s when the candidate changes the response. It decides nothing of QTI: the
+ * runtime's `checkResponse` says whether the response is valid, and the element says what is wrong in words. Setting a
+ * property to what it holds does nothing, so that a host that sets every property on each view leaves the candidate's
+ * focus and caret where they are.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#error-identification | WCAG 2.2, error identification}
  */
 export abstract class InteractionElement extends HTMLElement {
   /** The kind of interaction the element is for, such as `choice-interaction`. */
@@ -86,6 +97,9 @@ export abstract class InteractionElement extends HTMLElement {
   }
 
   /**
+   * Sets the descriptor of the interaction, which builds the controls.
+   *
+   * @param descriptor - The descriptor of the runtime for this kind of interaction and this response variable.
    * @throws `DataError` when the value is not a descriptor of this kind of interaction and this response variable.
    */
   set descriptor(descriptor: InteractionDescriptor) {
@@ -107,6 +121,9 @@ export abstract class InteractionElement extends HTMLElement {
   }
 
   /**
+   * Sets the response that the element shows.
+   *
+   * @param value - The response, or `null` for NULL.
    * @throws `DataError` when the value is neither NULL nor a value of the runtime.
    */
   set value(value: Value | null) {
@@ -122,6 +139,9 @@ export abstract class InteractionElement extends HTMLElement {
   }
 
   /**
+   * Sets whether the candidate cannot respond.
+   *
+   * @param disabled - `true` where the candidate cannot respond.
    * @throws `DataError` when the value is not a boolean.
    */
   set disabled(disabled: boolean) {
@@ -137,6 +157,9 @@ export abstract class InteractionElement extends HTMLElement {
   }
 
   /**
+   * Sets the text of the interface and builds the controls again.
+   *
+   * @param messages - The messages.
    * @throws `DataError` when the value is not the messages of the interface.
    */
   set messages(messages: Messages) {
@@ -146,27 +169,58 @@ export abstract class InteractionElement extends HTMLElement {
   }
 
   /**
-   * Builds, or builds again, the controls: the descriptor or the messages are new. The content that the node gave stays.
+   * Builds, or builds again, the controls: the descriptor or the messages are new.
+   *
+   * @remarks
+   * The content that the node gave stays.
+   *
+   * @param descriptor - The descriptor.
+   * @param messages - The messages.
    */
   protected abstract configure(descriptor: InteractionDescriptor, messages: Messages): void;
 
-  /** Shows the response and whether the candidate can respond. */
+  /**
+   * Shows the response and whether the candidate can respond.
+   *
+   * @param descriptor - The descriptor.
+   * @param messages - The messages.
+   */
   protected abstract sync(descriptor: InteractionDescriptor, messages: Messages): void;
 
   /**
-   * Resolves when the response is final, which is at once unless the element has work that its response waits for, such as
-   * a drawing that is being stored. The host waits for it before it submits.
+   * Resolves when the response is final, which is at once unless the element has work that its response waits for, such
+   * as a drawing that is being stored.
+   *
+   * @remarks
+   * The host waits for it before it submits.
+   *
+   * @returns A promise that resolves when the response is final.
    */
   settled(): Promise<void> {
     return Promise.resolve();
   }
 
-  /** Returns the elements that say they are invalid and are described by the limits and the hints. Default: the element. */
+  /**
+   * Returns the elements that say they are invalid and are described by the limits and the hints.
+   *
+   * @remarks
+   * The element itself is the default.
+   *
+   * @returns The elements.
+   */
   protected controls(): readonly Element[] {
     return [this];
   }
 
-  /** Returns hints of the element's own, besides those of the runtime's rules. Default: none. */
+  /**
+   * Returns hints of the element's own, besides those of the runtime's rules.
+   *
+   * @remarks
+   * None is the default.
+   *
+   * @param _messages - The messages.
+   * @returns The hints.
+   */
   protected extraHints(_messages: Messages): readonly string[] {
     return [];
   }
@@ -174,7 +228,8 @@ export abstract class InteractionElement extends HTMLElement {
   /**
    * Gives a response: the element keeps it as its value and tells the host with a {@link ResponseEvent}.
    *
-   * @param responseIdentifier - The variable that changed. Default: that of the interaction.
+   * @param value - The response.
+   * @param responseIdentifier - The variable that changed; that of the interaction without it.
    */
   protected respond(value: Value | null, responseIdentifier = this.responseIdentifier): void {
     if (responseIdentifier === this.responseIdentifier) {
@@ -199,7 +254,11 @@ export abstract class InteractionElement extends HTMLElement {
     this.#report(descriptor, messages);
   }
 
-  /** Tells the candidate what to change: a response that is not valid gets its hints, tied to the controls (WCAG 3.3.1). */
+  /**
+   * Tells the candidate what to change: a response that is not valid gets its hints, tied to the controls.
+   *
+   * @see {@link https://www.w3.org/TR/WCAG22/#error-identification | WCAG 2.2, error identification}
+   */
   #report(descriptor: InteractionDescriptor, messages: Messages): void {
     const notes = this.notes;
     if (notes === undefined) return;
@@ -223,8 +282,16 @@ export abstract class InteractionElement extends HTMLElement {
 
 /**
  * Creates the element of an interaction with the attributes the player keeps, its response variable and the messages.
+ *
+ * @remarks
  * The renderer of a kind fills it with the content of its node.
  *
+ * @param type - The class of the element.
+ * @param name - The name that the class is defined under.
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
  * @throws `AssesskitError` when `name` is not defined as the element class, which `defineElements` does.
  */
 export function createInteraction<TElement extends InteractionElement>(

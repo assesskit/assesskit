@@ -3,7 +3,7 @@ import type { View } from "@assesskit/runtime/content";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { describe } from "../../checks.js";
 import { checkSubmission, type Submission } from "../../protocol/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { type ContentRoot, createContentRoot } from "../roots/index.js";
 import { buildSubmission } from "./build.js";
 import { readSubmissionOptions, type SubmissionOptions, type SubmissionSettings } from "./options.js";
@@ -12,11 +12,14 @@ import { submissionStyleSheet } from "./styles.js";
 /** A submission on show. */
 export interface MountedSubmission {
   /**
-   * Shows another submission in place of the one on show, as `mountSubmission` shows the first. When it throws, the
-   * display shows what it showed before.
+   * Shows another submission in place of the one on show, as `mountSubmission` shows the first.
    *
-   * @throws `DataError` when `submission` is not a submission, and a `DataError` of the runtime when a value of it is not a wire
-   * value.
+   * @remarks
+   * When it throws, the display shows what it showed before.
+   *
+   * @param submission - The submission to show.
+   * @throws `DataError` when `submission` is not a submission, and a `DataError` of the runtime when a value of it is not a
+   * wire value.
    */
   update(submission: Submission): void;
   /** Takes the display and its content roots down. The shadow root of the host stays, empty. */
@@ -48,7 +51,7 @@ function contentIn(
     });
     roots.push(root);
     root.show({ body: { nodes, base } }).catch((error: unknown) => {
-      // A MathJax that cannot load leaves the expressions as MathML, which the browser renders (the player design §2.5): the
+      // A MathJax that cannot load leaves the expressions as MathML, which the browser renders: the
       // display is whole. Anything else is a defect and surfaces.
       if (error instanceof DataError || !(error instanceof AssesskitError)) throw error;
     });
@@ -57,16 +60,18 @@ function contentIn(
 }
 
 /**
- * Shows a submission read-only to a rater (the player design §2.9, T112): the outcome and who scores it, the rubric, and for
- * each item the outcome covers its body as the candidate saw it, the responses the outcome rates, the correct responses and
- * the template values. The display lives in a shadow root of `host`; each body and rubric is drawn by a content root in
- * it, with the renderer of the player. The rating form and the rating workflow are the host's.
+ * Shows a submission read-only to a rater: the outcome and who scores it, the rubric, and for each item the outcome
+ * covers its body as the candidate saw it, the responses the outcome rates, the correct responses and the template values.
  *
- * A submission holds the correct responses, so show it only on a page that authorized raters reach.
+ * @remarks
+ * The display lives in a shadow root of `host`; each body and rubric is drawn by a content root in it, with the renderer of
+ * the player. The rating form and the rating workflow are the host's. A submission holds the correct responses, so show it
+ * only on a page that authorized raters reach.
  *
  * @param host - An element in the page that has no shadow root.
  * @param submission - What `toSubmission` returned, as JSON parsed it.
  * @param options - See {@link SubmissionOptions}.
+ * @returns The handle that shows another submission and takes the display down.
  * @throws `DataError` when `host` is not an element that can have a shadow root and has none, an option is not of its
  * type, or `submission` is not a submission, and a `DataError` of the runtime when a value of it is not a wire value.
  */

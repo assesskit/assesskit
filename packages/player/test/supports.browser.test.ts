@@ -534,7 +534,7 @@ describe("mountContentSupports", () => {
       }
     });
 
-    it("shows the cards of a custom support (BPIG §5.4) on request, under its local name", async () => {
+    it("shows the cards of a custom support on request, under its local name", async () => {
       const { root, supports } = await openSupported();
       supports.update([onSupport("ext:kxz-illustrated-glossary")]);
       const { trigger, popup } = popupOn(root.root, "#photo", "kxz-illustrated-glossary");
@@ -1028,7 +1028,7 @@ describe("mountSpoken", () => {
       pitch: 0.4,
       volume: 0.8,
     });
-    // data-qti-suppress-tts keeps the passage away from the voice (VOCAB §1.1.1.3).
+    // data-qti-suppress-tts keeps the passage away from the voice.
     expect(voice.requests[0]?.text).not.toContain("Not for the voice.");
   });
 

@@ -1,4 +1,8 @@
-/** A choice that the candidate puts in places, and how many times it may be put (a `match-max`, INFO §5.131.6). */
+/**
+ * A choice that the candidate puts in places, and how many times it may be put (a `match-max`).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, match max}
+ */
 export interface BoardSource {
   /** The identifier of the choice. */
   readonly id: string;
@@ -19,8 +23,11 @@ export type Assignment = readonly [place: string, source: string];
 
 /**
  * Which choices are in which places: the state of the board that an order, an association, a match and a gap match are
- * drawn on. It knows the capacity of each place and how often each choice may be used, and nothing of the kinds of
- * interaction that map it to a response.
+ * drawn on.
+ *
+ * @remarks
+ * It knows the capacity of each place and how often each choice may be used, and nothing of the kinds of interaction
+ * that map it to a response.
  */
 export class Board {
   readonly #sources: ReadonlyMap<string, BoardSource>;
@@ -28,6 +35,7 @@ export class Board {
   readonly #occupants: Map<string, string[]>;
 
   /**
+   *
    * @param sources - The choices that can be put in places.
    * @param places - The places, in the order the response lists them.
    */
@@ -37,33 +45,58 @@ export class Board {
     this.#occupants = new Map([...this.#places.keys()].map((id) => [id, []]));
   }
 
-  /** Returns the choices in a place, in the order they were put there. */
+  /**
+   * Returns the choices in a place, in the order they were put there.
+   *
+   * @param place - The identifier of the place.
+   * @returns The identifiers of the choices.
+   */
   occupants(place: string): readonly string[] {
     return this.#occupants.get(place) ?? [];
   }
 
-  /** Returns how many places hold a choice. */
+  /**
+   * Returns how many places hold a choice.
+   *
+   * @param source - The identifier of the choice.
+   * @returns The number of places.
+   */
   uses(source: string): number {
     let count = 0;
     for (const occupants of this.#occupants.values()) count += occupants.filter((id) => id === source).length;
     return count;
   }
 
-  /** Returns how many more times a choice may be put in a place. */
+  /**
+   * Returns how many more times a choice may be put in a place.
+   *
+   * @param source - The identifier of the choice.
+   * @returns The number of uses left.
+   */
   remaining(source: string): number {
     return (this.#sources.get(source)?.limit ?? 0) - this.uses(source);
   }
 
-  /** Returns whether a place holds as many choices as it can. */
+  /**
+   * Returns whether a place holds as many choices as it can.
+   *
+   * @param place - The identifier of the place.
+   * @returns `true` when the place is full.
+   */
   isFull(place: string): boolean {
     return this.occupants(place).length >= (this.#places.get(place)?.capacity ?? 0);
   }
 
   /**
-   * Puts a choice in a place. A choice that comes from another place moves; a choice from the pool needs a use left. A
-   * place that is full gives up its first choice, which goes back to the pool.
+   * Puts a choice in a place.
    *
-   * @param from - The place the choice leaves. Default: none, so that the choice comes from the pool.
+   * @remarks
+   * A choice that comes from another place moves; a choice from the pool needs a use left. A place that is full gives up its
+   * first choice, which goes back to the pool.
+   *
+   * @param source - The identifier of the choice.
+   * @param place - The identifier of the place.
+   * @param from - The place the choice leaves; without it the choice comes from the pool.
    * @returns Whether the choice was put in the place.
    */
   put(source: string, place: string, from?: string): boolean {
@@ -76,7 +109,13 @@ export class Board {
     return true;
   }
 
-  /** Takes a choice out of a place; returns whether it was there. */
+  /**
+   * Takes a choice out of a place.
+   *
+   * @param source - The identifier of the choice.
+   * @param place - The identifier of the place.
+   * @returns Whether it was there.
+   */
   take(source: string, place: string): boolean {
     const occupants = this.#occupants.get(place);
     const index = occupants?.indexOf(source) ?? -1;
@@ -86,8 +125,12 @@ export class Board {
   }
 
   /**
-   * Replaces the state with the given assignments, in order. An assignment of an unknown place or choice, or past what
-   * the place or the choice allows, is left out.
+   * Replaces the state with the given assignments, in order.
+   *
+   * @remarks
+   * An assignment of an unknown place or choice, or past what the place or the choice allows, is left out.
+   *
+   * @param assignments - The choices in places.
    */
   load(assignments: Iterable<Assignment>): void {
     for (const occupants of this.#occupants.values()) occupants.length = 0;
@@ -96,7 +139,11 @@ export class Board {
     }
   }
 
-  /** Returns every choice in a place, by place in the order of the places. */
+  /**
+   * Returns every choice in a place, by place in the order of the places.
+   *
+   * @returns The assignments.
+   */
   assignments(): readonly Assignment[] {
     return [...this.#occupants].flatMap(([place, occupants]) => occupants.map((source): Assignment => [place, source]));
   }

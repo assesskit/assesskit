@@ -1,7 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { answerCapabilities } from "../src/player/lti-frame/capabilities.js";
+import { answerCapabilities } from "../src/player/lti-frame/internal.js";
 
 describe("answerCapabilities", () => {
   it("answers a capabilities request as LTI Client Side postMessages 0.1 example 4.1.6.3 does, naming the frame of the storage page", () => {

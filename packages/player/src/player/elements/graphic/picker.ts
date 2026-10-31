@@ -4,7 +4,10 @@ import { stageOf } from "./stage.js";
 
 /**
  * How far an arrow key moves the crosshair: a twentieth of the smaller side of the image, so that a key press is a step
- * the candidate can see whatever the size of the image. Shift moves it by one unit of the image.
+ * the candidate can see whatever the size of the image.
+ *
+ * @remarks
+ * Shift moves it by one unit of the image.
  */
 const COARSE_DIVISOR = 20;
 const FINE_STEP = 1;
@@ -19,17 +22,32 @@ const ARROWS: ReadonlyMap<string, readonly [number, number]> = new Map([
 
 /** What a picker asks of the element it serves. */
 export interface Picker {
-  /** Whether the candidate can pick a point now. */
+  /**
+   * Returns whether the candidate can pick a point.
+   *
+   * @returns `true` when a point can be picked.
+   */
   active(): boolean;
-  /** Takes the point that the candidate picked. */
+  /**
+   * Takes the point that the candidate picked.
+   *
+   * @param point - The point.
+   */
   pick(point: Point): void;
 }
 
 /**
- * Lets the candidate pick a point of an image with one pointer or the keyboard (WCAG 2.2, 2.1.1, 2.5.1): a click on the
- * `.ak-surface` of the host picks the point under it, and with the focus on the surface a crosshair shows where the
- * arrow keys have moved to and Enter or Space picks that point. The crosshair is the `.ak-crosshair` of the host; it
- * shows while the surface has the focus.
+ * Lets the candidate pick a point of an image with one pointer or the keyboard.
+ *
+ * @remarks
+ * A click on the `.ak-surface` of the host picks the point under it, and with the focus on the surface a crosshair shows
+ * where the arrow keys have moved to and Enter or Space picks that point. The crosshair is the `.ak-crosshair` of the
+ * host; it shows while the surface has the focus.
+ *
+ * @param host - The element that holds the surface and the crosshair.
+ * @param picker - What the picker asks of the element it serves.
+ * @see {@link https://www.w3.org/TR/WCAG22/#keyboard | WCAG 2.2, keyboard}
+ * @see {@link https://www.w3.org/TR/WCAG22/#pointer-gestures | WCAG 2.2, pointer gestures}
  */
 export function enablePicker(host: HTMLElement, picker: Picker): void {
   let cursor: Point | undefined;

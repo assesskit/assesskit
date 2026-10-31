@@ -20,9 +20,17 @@ function altOf(node: ModelNode): string | undefined {
 }
 
 /**
- * Renders a `qti-object`, which embeds a file, by its `type` (the player design §3, T6). The fallback content of the object
- * is its text alternative, and the `alt` that some authors add overrides it. The parameters are for plug-ins, which
- * the player does not run, so they are not drawn. A file that the URL policy refuses leaves the fallback content.
+ * Renders a `qti-object`, which embeds a file, by its `type`.
+ *
+ * @remarks
+ * The fallback content of the object is its text alternative, and the `alt` that some authors add overrides it. The
+ * parameters are for plug-ins, which the player does not run, so they are not drawn. A file that the URL policy refuses
+ * leaves the fallback content.
+ *
+ * @param node - The `qti-object` node.
+ * @param context - The context of the rendering.
+ * @returns The DOM nodes that stand for the object.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, object}
  */
 export function renderObject(node: ModelNode, context: RenderContext): Node[] {
   const content = context.nodes(childNodes(node));

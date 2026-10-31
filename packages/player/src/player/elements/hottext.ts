@@ -10,13 +10,24 @@ import { SelectionElement } from "./selection.js";
 const isHotText = (node: { readonly kind: string }): node is HotText => node.kind === "hottext";
 
 /**
- * The element of `qti-hottext-interaction` (INFO §5.66): runs of text in a passage that the candidate selects. The text
- * of each hot text is the face of its control.
+ * The element of `qti-hottext-interaction`: runs of text in a passage that the candidate selects.
+ *
+ * @remarks
+ * The text of each hot text is the face of its control.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, hottext interaction}
  */
 export class HotTextInteractionElement extends SelectionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "hottext-interaction";
 
-  /** Fills the element with the prompt and the passage of the node, and pairs the hot texts with their identifiers. */
+  /**
+   * Fills the element with the prompt and the passage of the node, and pairs the hot texts with their identifiers.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   * @throws `AssesskitError` when the renderer drew a different number of hot texts than the model has.
+   */
   build(node: HotTextInteraction, renderer: BodyRenderer): void {
     this.prompt = renderPrompt(node.prompt, renderer);
     const passage = renderer.nodes(node.children);
@@ -39,7 +50,14 @@ export class HotTextInteractionElement extends SelectionElement {
   }
 }
 
-/** Renders a `qti-hottext-interaction`. */
+/**
+ * Renders a `qti-hottext-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderHotText(node: HotTextInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(HotTextInteractionElement, "qti-hottext-interaction", node, renderer, messages);
   element.build(node, renderer);

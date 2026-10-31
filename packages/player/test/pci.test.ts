@@ -5,16 +5,20 @@ import { container, single, type Value, type ValueDeclaration } from "@assesskit
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { checkVariable, createResponseDecoder, encodeVariable, type PciFiles } from "../src/player/pci/files.js";
-import { pciModules } from "../src/player/pci/modules.js";
-import { checkPciFrameOptions, describeFrame, type PciFrameOptions } from "../src/player/pci/options.js";
+import type { PciFiles, PciFrameOptions } from "../src/player/pci/index.js";
 import {
   buildFrameCsp,
+  checkPciFrameOptions,
+  checkVariable,
+  createResponseDecoder,
+  describeFrame,
+  encodeVariable,
   isRequestedStatus,
   type PciFrameMessage,
+  pciModules,
   readFrameMessage,
   toJson,
-} from "../src/player/pci/protocol.js";
+} from "../src/player/pci/internal.js";
 
 /** Matches the `DataError` of the player and the one of the runtime, which are two classes with one name. */
 const DATA_ERROR = expect.objectContaining({ name: "DataError" });
@@ -55,7 +59,7 @@ const assets = (path: string): string => `${GATE}${path}`;
 const INTEGER: ValueDeclaration = { cardinality: "single", baseType: "integer" };
 const FILE: ValueDeclaration = { cardinality: "single", baseType: "file" };
 
-/** The bytes of the text "pleasure.", and the base64 of them that BPIG App. C.1 gives in its example of a file. */
+/** The bytes of the text "pleasure.", and the base64 of them that the best practices guide gives in its example of a file. */
 const PLEASURE = { bytes: new TextEncoder().encode("pleasure."), base64: "cGxlYXN1cmUu" };
 
 /** A host that keeps files in memory: the references are `file-1`, `file-2` and so on, and the calls are recorded. */
@@ -89,7 +93,7 @@ describe("checkVariable", () => {
 });
 
 describe("encodeVariable", () => {
-  it("writes a value as the JSON of BPIG App. C.1 to C.3", async () => {
+  it("writes a value as the JSON of the portable custom interaction binding", async () => {
     const { files } = memoryFiles();
     expect(await encodeVariable({ value: single("integer", 3), declaration: INTEGER }, files)).toEqual({
       base: { integer: 3 },
@@ -240,7 +244,7 @@ describe("createResponseDecoder", () => {
 });
 
 describe("pciModules", () => {
-  it("locates the module of the module attribute and its dependencies under the asset prefix (BPIG §3.7.12.4)", () => {
+  it("locates the module of the module attribute and its dependencies under the asset prefix", () => {
     const primary = resolution({ exampleLikertScale: "modules/likert", handlebars: "modules/lib/handlebars.min" }, 15);
     expect(pciModules(interactionOf('module="exampleLikertScale"'), { primary }, assets)).toEqual({
       baseUrl: `${GATE}modules/`,
@@ -544,7 +548,7 @@ describe("describeFrame", () => {
 });
 
 describe("isRequestedStatus", () => {
-  it("accepts the statuses that BPIG §3.7.12.7.2 lists for ondone and no other", () => {
+  it("accepts the statuses that the best practices guide lists for ondone and no other", () => {
     for (const status of ["interacting", "closed", "solution", "review"]) expect(isRequestedStatus(status)).toBe(true);
     for (const status of ["suspended", "", "Closed", json("null"), json("1")])
       expect(isRequestedStatus(status)).toBe(false);

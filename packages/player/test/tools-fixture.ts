@@ -1,6 +1,6 @@
 import { ASI_NAMESPACE, type CompanionMaterialsInfo, readAsi } from "@assesskit/runtime/asi";
 
-/** The rule of BPIG §3.7.8.2, with the element names of the schema (`qti-rule-system-si`). */
+/** The rule of the best practices guide, with the element names of the schema (`qti-rule-system-si`). */
 export const RULE_XML = `<qti-rule>
   <qti-description>A metric ruler with increments on one side of the rule.</qti-description>
   <qti-rule-system-si>
@@ -13,7 +13,7 @@ export const RULE_XML = `<qti-rule>
 /** The description of {@link RULE_XML}. */
 export const RULE_DESCRIPTION = "A metric ruler with increments on one side of the rule.";
 
-/** The protractor of BPIG §3.7.8.3. */
+/** The protractor of the best practices guide. */
 export const PROTRACTOR_XML = `<qti-protractor>
   <qti-description>A floating, transparent protractor that can be moved over the angles in the item.</qti-description>
   <qti-increment-us>
@@ -29,7 +29,7 @@ export const PROTRACTOR_DESCRIPTION =
 /** Escapes text for XML. */
 const escaped = (text: string): string => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
-/** Builds a `qti-calculator` (BPIG §3.7.8.1), with the file of the calculator when the item gives one (INFO §5.24.3). */
+/** Builds a `qti-calculator`, with the file of the calculator when the item gives one. */
 export const calculatorXml = (
   type: string,
   description: string,
@@ -76,7 +76,7 @@ export function protractorXml(
   );
 }
 
-/** Builds a `qti-digital-material` (BPIG §3.7.8.4). */
+/** Builds a `qti-digital-material`. */
 export function digitalXml(
   href: string,
   attributes: { label?: string; mimeType?: string; icon?: string } = {},

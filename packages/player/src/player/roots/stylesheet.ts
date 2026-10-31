@@ -1,12 +1,14 @@
 import { AssesskitError } from "@assesskit/runtime/errors";
-import { isRasterDataUrl } from "../content/urls.js";
+import { isRasterDataUrl } from "../content/internal.js";
 
 /**
- * The rules an item stylesheet may keep. Every other at-rule is dropped: `@import` would fetch a sheet that the player has
- * not looked at, `@property` and `@scope` can name resources or reach outside the root, and `@font-face` and `@page` have
- * declarations that Firefox does not let a script change, so that a URL in them could be neither rewritten nor removed
- * (the player design §3). A font face declared in a shadow root does not apply in every engine either: the host declares the
- * fonts of its packages in the page.
+ * The rules an item stylesheet may keep.
+ *
+ * @remarks
+ * Every other at-rule is dropped: `@import` would fetch a sheet that the player has not looked at, `@property` and
+ * `@scope` can name resources or reach outside the root, and `@font-face` and `@page` have declarations that Firefox does
+ * not let a script change, so that a URL in them could be neither rewritten nor removed. A font face declared in a shadow
+ * root does not apply in every engine either: the host declares the fonts of its packages in the page.
  */
 const KEPT_RULES: readonly (abstract new () => CSSRule)[] = [
   CSSStyleRule,
@@ -38,7 +40,11 @@ export interface StylesheetResponse {
   readonly ok: boolean;
   /** The HTTP status. */
   readonly status: number;
-  /** Returns the body as text. */
+  /**
+   * Returns the body as text.
+   *
+   * @returns The text.
+   */
   text(): Promise<string>;
 }
 
@@ -70,8 +76,11 @@ function resolveStyleUrl(reference: string, { url, origins }: StylesheetPolicy):
 
 /**
  * Returns the value of a declaration with each `url()` written as an absolute URL, or `undefined` when the value loads
- * what the policy does not allow. The URLs are resolved here, against the URL of the stylesheet, because a constructed
- * sheet resolves them against the document in Chromium, whatever its `baseURL` says.
+ * what the policy does not allow.
+ *
+ * @remarks
+ * The URLs are resolved here, against the URL of the stylesheet, because a constructed sheet resolves them against the
+ * document in Chromium, whatever its `baseURL` says.
  */
 function rewriteValue(value: string, policy: StylesheetPolicy): string | undefined {
   const resolved = [...value.matchAll(SERIALIZED_URL)].map(([, reference]) =>
@@ -125,18 +134,21 @@ function cleanRules(parent: RuleParent, policy: StylesheetPolicy): void {
 
 /**
  * Builds the constructed stylesheet of an item stylesheet, and removes from it what a content root must not take from an
- * item (the player design §3):
+ * item.
  *
- * - `@import`, which a constructed sheet ignores, and every at-rule besides the usual ones;
- * - rules whose selector names `:host` or `::slotted`, which would restyle the root's host and so escape its containment;
- * - declarations with a `url()` outside the sheet's own origin and the allowed ones, and with the other functions that
- *   load a resource (`image-set()`, `cross-fade()` and the like).
+ * @remarks
+ * - `@import`, which a constructed sheet ignores, and every at-rule besides the usual ones, go.
+ * - Rules whose selector names `:host` or `::slotted` go, because they would restyle the root's host and so escape its
+ *   containment.
+ * - Declarations with a `url()` outside the sheet's own origin and the allowed ones go, and so do those with the other
+ *   functions that load a resource (`image-set()`, `cross-fade()` and the like).
  *
  * The work is done on the parsed rules, which the browser has normalized, so CSS escapes cannot hide a function. Relative
  * `url()`s are written as absolute URLs resolved against the URL of the stylesheet.
  *
  * @param text - The CSS.
  * @param policy - See {@link StylesheetPolicy}.
+ * @returns The sheet.
  */
 export function sanitizeStylesheet(text: string, policy: StylesheetPolicy): CSSStyleSheet {
   const sheet = new CSSStyleSheet();
@@ -146,9 +158,14 @@ export function sanitizeStylesheet(text: string, policy: StylesheetPolicy): CSSS
 }
 
 /**
- * Fetches an item stylesheet and sanitizes it. The request carries no credentials and no referrer: the gate's URL holds
- * the token.
+ * Fetches an item stylesheet and sanitizes it.
  *
+ * @remarks
+ * The request carries no credentials and no referrer: the gate's URL holds the token.
+ *
+ * @param policy - See {@link StylesheetPolicy}.
+ * @param fetcher - The fetch to load it with.
+ * @returns The sheet.
  * @throws `AssesskitError` when the stylesheet cannot be fetched.
  */
 export async function loadStylesheet(policy: StylesheetPolicy, fetcher: StylesheetFetch): Promise<CSSStyleSheet> {

@@ -7,9 +7,13 @@ import type { UrlPolicy } from "./urls.js";
 /** The means to render content with the rules of the player, which an interaction renderer uses for the content of its interaction. */
 export interface BodyRenderer {
   /**
-   * Renders the nodes of content, in order: text, HTML elements, QTI elements, MathML, SSML and interactions. What the
-   * policy of the renderer refuses is left out, with the nodes below it.
+   * Renders the nodes of content, in order: text, HTML elements, QTI elements, MathML, SSML and interactions.
    *
+   * @remarks
+   * What the policy of the renderer refuses is left out, with the nodes below it.
+   *
+   * @param nodes - The nodes to render.
+   * @returns The DOM nodes, in order.
    * @throws `DataError` when a node is not an object with a `kind`.
    */
   nodes(nodes: readonly ModelNode[]): Node[];
@@ -21,6 +25,7 @@ export interface BodyRenderer {
    * @param name - The name of the element, such as `qti-choice-interaction`.
    * @param node - The node whose attributes the element gets.
    * @param children - The nodes to put in it.
+   * @returns The element.
    */
   element(name: string, node: ModelNode, children: readonly Node[]): Element;
 }
@@ -49,6 +54,11 @@ export interface RenderContext extends BodyRenderer {
   readonly fileUrl: ((file: FileValue) => string) | undefined;
   /** The renderers of interactions. */
   readonly interactions: InteractionRenderers;
-  /** Returns the context for content whose references start at another base, such as that of an element with `xml:base`. */
+  /**
+   * Returns the context for content whose references start at another base, such as that of an element with `xml:base`.
+   *
+   * @param base - The path in the package that the references of the content start at.
+   * @returns The context of the same rendering with that base.
+   */
   scope(base: string): RenderContext;
 }

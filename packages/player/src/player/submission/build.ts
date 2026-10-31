@@ -9,16 +9,28 @@ import type {
   SubmissionValue,
   SubmissionVariable,
 } from "../../protocol/index.js";
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 import { type ValueContext, valueNode } from "./value.js";
 
 /** What the display shows content with: the places for it, and the settings of the display. */
 export interface DisplayContext extends ValueContext {
   /** The language of the interface. */
   readonly language: string;
-  /** Creates a content root of the given view in a new element, shows the nodes in it, and returns the element. */
+  /**
+   * Creates a content root of the given view in a new element, shows the nodes in it, and returns the element.
+   *
+   * @param nodes - The nodes to show.
+   * @param view - The view whose rubric blocks stay.
+   * @param base - The path in the package of the document the nodes come from.
+   * @returns The element that holds the content root.
+   */
   content(nodes: readonly BodyNode[], view: View, base: string): HTMLElement;
-  /** Returns the path in the package of the document of an item instance. */
+  /**
+   * Returns the path in the package of the document of an item instance.
+   *
+   * @param item - The item instance.
+   * @returns The path.
+   */
   itemPath(item: ItemKey): string;
 }
 
@@ -26,7 +38,11 @@ export interface DisplayContext extends ValueContext {
 const fact = (name: string, ...value: (Node | string)[]): HTMLElement =>
   html("div", {}, html("dt", {}, name), html("dd", {}, ...value));
 
-/** Builds a time in epoch milliseconds as a `time` element with the datestamp of the runtime's reports (RFC 3339, UTC). */
+/**
+ * Builds a time in epoch milliseconds as a `time` element with the datestamp of the runtime's reports, in UTC.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc3339 | RFC 3339, date and time on the Internet}
+ */
 function timeNode(instant: number): HTMLElement {
   const datestamp = new Date(instant).toISOString();
   return html("time", { datetime: datestamp }, datestamp);
@@ -151,8 +167,14 @@ const sameKey = (a: ItemKey, b: ItemKey): boolean => a.ref === b.ref && a.instan
 
 /**
  * Builds the display of a submission, read-only: the facts of the request, the rubric for the scorer, and each covered
- * item with its responses in the order of the covers. Content goes through `context.content`.
+ * item with its responses in the order of the covers.
  *
+ * @remarks
+ * Content goes through `context.content`.
+ *
+ * @param submission - The submission.
+ * @param context - What the display shows content with.
+ * @returns The display.
  * @throws `DataError` of the runtime when a value of the submission is not a wire value.
  */
 export function buildSubmission(submission: Submission, context: DisplayContext): HTMLElement {

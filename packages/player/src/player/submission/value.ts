@@ -6,8 +6,8 @@ import {
   type Value,
 } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import { essence } from "../content/embed.js";
-import { html } from "../dom.js";
+import { essence } from "../content/internal.js";
+import { html, isFileValue } from "../internal.js";
 
 /** What the display of a value needs besides the value. */
 export interface ValueContext {
@@ -17,14 +17,12 @@ export interface ValueContext {
   readonly fileUrl: ((file: FileValue) => string) | undefined;
 }
 
-/** Returns the file value that a primitive is, or `undefined`. */
-const fileOf = (primitive: Primitive): FileValue | undefined =>
-  typeof primitive === "object" && "reference" in primitive ? primitive : undefined;
-
 /**
- * Builds how a file that the candidate submitted shows. An image is an `img`, audio and video play with controls, and
- * anything else is a link that opens in a tab of its own. A file is never framed: the candidate chose its bytes and its
- * media type.
+ * Builds how a file that the candidate submitted shows.
+ *
+ * @remarks
+ * An image is an `img`, audio and video play with controls, and anything else is a link that opens in a tab of its own.
+ * A file is never framed: the candidate chose its bytes and its media type.
  */
 function fileNode(file: FileValue, context: ValueContext): Node {
   const { messages, fileUrl } = context;
@@ -41,12 +39,15 @@ function fileNode(file: FileValue, context: ValueContext): Node {
 }
 
 /**
- * Builds a primitive. A string keeps its line breaks and takes the direction of its text; the other base types show in
- * their lexical form (INFO §8.13).
+ * Builds a primitive.
+ *
+ * @remarks
+ * A string keeps its line breaks and takes the direction of its text; the other base types show in their lexical form.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/bind/ | QTI 3.0 ASI XML Binding, base types}
  */
 function primitiveNode(value: SingleValue, primitive: Primitive, context: ValueContext): Node {
-  const file = fileOf(primitive);
-  if (file !== undefined) return fileNode(file, context);
+  if (isFileValue(primitive)) return fileNode(primitive, context);
   if (typeof primitive === "string" && value.baseType === "string") {
     return html("span", { class: "ak-submission-text", dir: "auto" }, primitive);
   }
@@ -82,6 +83,8 @@ function recordNode(value: Extract<Value, { readonly cardinality: "record" }>, c
  *
  * @param value - The value, or `null` for NULL.
  * @param none - The text that stands for NULL.
+ * @param context - What the display of a value needs.
+ * @returns The element.
  */
 export function valueNode(value: Value | null, none: string, context: ValueContext): HTMLElement {
   const content: Node =

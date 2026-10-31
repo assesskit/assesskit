@@ -1,4 +1,4 @@
-import { svg } from "../dom.js";
+import { svg } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import type { RuleSpec } from "./model.js";
 import { formatNumber } from "./numbers.js";
@@ -23,8 +23,15 @@ const UNIT_BASELINE = 8;
 const LEAST_WIDTH = 100;
 
 /**
- * Opens a rule (INFO §5.126): a bar as long as `minimumLength` in the unit of the major increment, with ticks at the
- * increments and the numbers at the major ticks, in the unit of the major increment.
+ * Opens a rule: a bar as long as `minimumLength` in the unit of the major increment, with ticks at the increments and the
+ * numbers at the major ticks, in the unit of the major increment.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param rule - What the item asks for.
+ * @param description - What the author says the rule offers, or `null`.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rule}
  */
 export function openRuler(
   context: ToolContext,

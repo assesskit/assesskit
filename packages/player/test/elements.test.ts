@@ -9,11 +9,17 @@ import { container, single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { Board } from "../src/player/elements/board/model.js";
-import { instructionText, violationText } from "../src/player/elements/hints.js";
-import { readInteractionOptions } from "../src/player/elements/options.js";
-import { cardinalityOf, pairsOf, responseOf, stringsOf } from "../src/player/elements/values.js";
-import { readMediaSettings } from "../src/player/media/settings.js";
+import {
+  Board,
+  cardinalityOf,
+  instructionText,
+  pairsOf,
+  readInteractionOptions,
+  responseOf,
+  stringsOf,
+  violationText,
+} from "../src/player/elements/internal.js";
+import { readMediaSettings } from "../src/player/media/index.js";
 
 /** Reads an item and returns the descriptors of its interactions. */
 function descriptorsOf(declarations: string, body: string): readonly InteractionDescriptor[] {
@@ -110,7 +116,7 @@ describe("hints", () => {
     expect(violationText("required", descriptor, EN_MESSAGES, custom)).toBe(EN_MESSAGES.hintRequired);
   });
 
-  it("counts the choices that an order puts in places, all of them unless min-choices says otherwise (INFO §5.97.2)", () => {
+  it("counts the choices that an order puts in places, all of them unless min-choices says otherwise", () => {
     const [order] = descriptorsOf(
       `<qti-response-declaration identifier="R" cardinality="ordered" base-type="identifier"/>`,
       `<qti-order-interaction response-identifier="R"><qti-simple-choice identifier="A">a</qti-simple-choice><qti-simple-choice identifier="B">b</qti-simple-choice><qti-simple-choice identifier="C">c</qti-simple-choice></qti-order-interaction>`,

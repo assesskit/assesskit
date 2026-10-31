@@ -11,18 +11,28 @@ export type RecordingMethod =
 
 /** A recording that is under way. */
 export interface Recording {
-  /** Ends the recording and returns what was recorded. */
+  /**
+   * Ends the recording and returns what was recorded.
+   *
+   * @returns The recording as a file.
+   */
   stop(): Promise<Blob>;
 }
 
-/** Returns a MIME type without its parameters, in lower case (RFC 2045 §5.1). */
+/**
+ * Returns a MIME type without its parameters, in lower case.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc2045#section-5.1 | RFC 2045, the Content-Type header field}
+ */
 const essenceOf = (mimeType: string): string => (mimeType.split(";")[0] ?? "").trim().toLowerCase();
 
 /**
- * Chooses how to record for the types that an interaction accepts (the player design §2.5). The recorder of the browser
- * records in the first accepted audio type that it supports; chosen first, because it is the browser's own encoder.
- * Otherwise an interaction that accepts WAV gets a recording of 16-bit PCM through an audio worklet. Any other
- * interaction gets none: an MP3 encoder would need a dependency.
+ * Chooses how to record for the types that an interaction accepts.
+ *
+ * @remarks
+ * The recorder of the browser records in the first accepted audio type that it supports; chosen first, because it is the
+ * browser's own encoder. Otherwise an interaction that accepts WAV gets a recording of 16-bit PCM through an audio
+ * worklet. Any other interaction gets none: an MP3 encoder would need a dependency.
  *
  * @param accepted - The MIME types that the interaction accepts; `undefined` for any, which names no audio type.
  * @returns The method, or `undefined` when the browser cannot record in an accepted type.
@@ -80,7 +90,10 @@ async function recordWav(stream: MediaStream, workletUrl: string, mimeType: stri
 /**
  * Starts recording a stream of the microphone.
  *
+ * @param stream - The stream.
+ * @param method - How to record, from {@link chooseRecording}.
  * @param workletUrl - The URL of `recorder-worklet.js`, which a WAV recording loads.
+ * @returns The recording under way.
  */
 export function startRecording(stream: MediaStream, method: RecordingMethod, workletUrl: string): Promise<Recording> {
   return method.kind === "recorder"

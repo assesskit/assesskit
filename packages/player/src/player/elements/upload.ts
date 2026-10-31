@@ -1,16 +1,16 @@
 import type { UploadInteraction } from "@assesskit/runtime/asi";
 import { checkResponse, type InteractionDescriptor } from "@assesskit/runtime/interactions";
-import { type FileValue, type Primitive, single } from "@assesskit/runtime/values";
+import { type FileValue, single } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, uniqueId } from "../dom.js";
-import { chooseRecording, type Recording, type RecordingMethod, startRecording } from "../recording/recorder.js";
+import { html, uniqueId } from "../internal.js";
+import { chooseRecording, type Recording, type RecordingMethod, startRecording } from "../recording/index.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { violationText } from "./hints.js";
 import { Notes } from "./notes.js";
 import type { InteractionFiles } from "./options.js";
 import { nameByPrompt, type RenderedPrompt, renderPrompt } from "./parts.js";
-import { primitivesOf } from "./values.js";
+import { fileOf } from "./values.js";
 
 /** The extension of a file name for each type that a recording is made in. */
 const EXTENSIONS: ReadonlyMap<string, string> = new Map([
@@ -22,7 +22,7 @@ const EXTENSIONS: ReadonlyMap<string, string> = new Map([
   ["audio/x-wav", "wav"],
 ]);
 
-/** The type of a file that the browser gives no type for: arbitrary binary data (RFC 2046 §4.5.1). */
+/** The type of a file that the browser gives no type for: arbitrary binary data. */
 const UNKNOWN_TYPE = "application/octet-stream";
 
 /** The reference that a file has while the runtime checks its type: the host has not given one yet. */
@@ -43,19 +43,19 @@ function stopTracks(stream: MediaStream): void {
   for (const track of stream.getTracks()) track.stop();
 }
 
-/** Returns the file that a value holds, or `undefined`. */
-function fileOf(value: Primitive | undefined): FileValue | undefined {
-  return typeof value === "object" && !Array.isArray(value) && "reference" in value ? value : undefined;
-}
-
 /**
- * The element of `qti-upload-interaction` (INFO §5.165): the candidate sends a file, or, where the interaction accepts an
- * audio type that the browser can record, makes a recording, and the response is the file, which the host keeps (the runtime
- * D7). A file of a type that the interaction does not accept is not sent; the element says which types it accepts. The
- * microphone is asked for only when the candidate presses Record, and a visible indicator shows while it records (the player
- * design §3).
+ * The element of `qti-upload-interaction`: the candidate sends a file, or, where the interaction accepts an audio type that
+ * the browser can record, makes a recording.
+ *
+ * @remarks
+ * The response is the file, which the host keeps. A file of a type that the interaction does not accept is not sent; the
+ * element says which types it accepts. The microphone is asked for only when the candidate presses Record, and a visible
+ * indicator shows while it records.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, upload interaction}
  */
 export class UploadInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "upload-interaction";
   readonly #status = html("div", { class: "ak-upload-status", role: "status" });
   readonly #stored = html("div", { class: "ak-stored" });
@@ -72,7 +72,13 @@ export class UploadInteractionElement extends InteractionElement {
   #shown: FileValue | undefined;
   #stale = true;
 
-  /** Fills the element with the prompt of the node; the controls come when the descriptor is known. */
+  /**
+   * Fills the element with the prompt of the node; the controls come when the descriptor is known.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   * @param services - Where the file is stored, and how the browser records.
+   */
   build(node: UploadInteraction, renderer: BodyRenderer, services: UploadServices): void {
     this.#services = services;
     this.#prompt = renderPrompt(node.prompt, renderer);
@@ -117,7 +123,7 @@ export class UploadInteractionElement extends InteractionElement {
   }
 
   protected override sync(_descriptor: InteractionDescriptor, messages: Messages): void {
-    const file = fileOf(primitivesOf(this.value)[0]);
+    const file = fileOf(this.value);
     const locked = this.disabled || this.#busy;
     if (this.#input) this.#input.disabled = locked || this.#recording !== undefined;
     if (this.#record) this.#record.disabled = locked || this.#recording !== undefined;
@@ -247,7 +253,15 @@ export class UploadInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-upload-interaction`. */
+/**
+ * Renders a `qti-upload-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @param services - Where the file is stored, and how the browser records.
+ * @returns The element.
+ */
 export function renderUpload(
   node: UploadInteraction,
   renderer: BodyRenderer,

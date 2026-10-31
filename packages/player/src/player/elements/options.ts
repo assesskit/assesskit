@@ -11,13 +11,25 @@ import {
   isRecord,
 } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
+import { checkMessages } from "../../messages/internal.js";
 
-/** Where uploads, recordings and drawings are kept: the host's storage, which values refer to (the runtime D7). */
+/** Where uploads, recordings and drawings are kept: the host's storage, which values refer to. */
 export interface InteractionFiles {
-  /** Stores the bytes and returns the reference that the response holds. */
+  /**
+   * Stores the bytes and returns the reference that the response holds.
+   *
+   * @param bytes - The bytes.
+   * @param mimeType - Their media type.
+   * @param fileName - The name of the file, if it has one.
+   * @returns The file value.
+   */
   upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
-  /** Returns the URL to play or show a stored file from. */
+  /**
+   * Returns the URL to play or show a stored file from.
+   *
+   * @param file - The file value.
+   * @returns The URL.
+   */
   url(file: FileValue): string;
 }
 
@@ -30,8 +42,10 @@ export interface CustomInteractionState {
 }
 
 /**
- * Mounts a custom interaction (`qti-custom-interaction`, deprecated in favor of the portable custom interaction): it
- * draws into `host`, calls `set` with the response the candidate gives, and returns the function that takes it away.
+ * Mounts a custom interaction (`qti-custom-interaction`, deprecated in favor of the portable custom interaction): it draws
+ * into `host`, calls `set` with the response the candidate gives, and returns the function that takes it away.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, custom interaction}
  */
 export type CustomInteractionHook = (
   interaction: CustomInteraction,
@@ -47,23 +61,38 @@ export interface InteractionOptions {
   /** Where uploads and recordings are kept. */
   readonly files: InteractionFiles;
   /**
-   * The base URL of the static files of the player on the asset origin, ending in `/`: `recorder-worklet.js` is under it.
+   * The base URL of the static files of the player on the asset origin, ending in `/`: `recorder-worklet.js` is under
+   * it.
+   *
+   * @remarks
    * The page's policy must allow that origin in `script-src`, which governs worklets.
    */
   readonly staticUrl: string;
-  /** Whether an upload of audio offers a recording. Default: `true`. */
+  /**
+   * Whether an upload of audio offers a recording.
+   *
+   * @defaultValue `true`
+   */
   readonly record?: boolean;
-  /** Mounts custom interactions. Default: none, so that a custom interaction says it is not supported. */
+  /**
+   * Mounts custom interactions.
+   *
+   * @defaultValue None, so that a custom interaction says it is not supported
+   */
   readonly customInteraction?: CustomInteractionHook;
 }
 
-/** The options, checked and with their defaults. */
+/** The options of the renderers, checked and with their defaults. */
 export interface InteractionSettings {
+  /** The text of the interface. */
   readonly messages: Messages;
+  /** Where uploads and recordings are kept. */
   readonly files: InteractionFiles;
   /** The URL of the recording worklet. */
   readonly workletUrl: string;
+  /** Whether an upload of audio offers a recording. */
   readonly record: boolean;
+  /** The hook that mounts custom interactions, when the host gave one. */
   readonly customInteraction: CustomInteractionHook | undefined;
 }
 
@@ -131,6 +160,8 @@ function checkedHook(hook: (...args: never[]) => unknown): CustomInteractionHook
 /**
  * Checks the options of the renderers and fills in their defaults.
  *
+ * @param options - The options.
+ * @returns The settings.
  * @throws `DataError` when an option is not of its type.
  */
 export function readInteractionOptions(options: unknown): InteractionSettings {

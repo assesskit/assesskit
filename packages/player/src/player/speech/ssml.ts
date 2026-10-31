@@ -1,12 +1,14 @@
 import { buildElement, serializeXml, type XmlElement, type XmlNode } from "@assesskit/runtime/xml";
+import { SSML_NAMESPACE } from "../internal.js";
 
-/** The namespace of SSML 1.1 (SSML 1.1 §3.1.1), which the ASI schema accepts in flow content. */
-export const SSML_NAMESPACE = "http://www.w3.org/2001/10/synthesis";
-
-/** The value of the `version` attribute of the `speak` element (SSML 1.1 §3.1.1). */
+/**
+ * The value of the `version` attribute of the `speak` element.
+ *
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_speak | SSML 1.1, the speak element}
+ */
 const SSML_VERSION = "1.1";
 
-/** What a request carries of an SSML element: the attributes that SSML 1.1 §3 defines for it, and how its content is read. */
+/** What a request carries of an SSML element: the attributes that SSML 1.1 defines for it, and how its content is read. */
 interface SsmlRule {
   /** The attributes that are copied from the content, by local name. */
   readonly attributes: readonly string[];
@@ -17,8 +19,13 @@ interface SsmlRule {
 }
 
 /**
- * The elements of the ASI schema's SSML (INFO §2.13.2, M2 to M13) with their attributes (SSML 1.1 §3.1 to §3.3), except
- * `speak`, which the request makes itself. `phoneme`, `say-as` and `sub` hold text (SSML 1.1 §3.1.10, §3.1.9, §3.1.11).
+ * The elements of the ASI schema's SSML with their attributes, except `speak`, which the request makes itself.
+ *
+ * @remarks
+ * `phoneme`, `say-as` and `sub` hold text.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, SSML in content}
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/ | SSML 1.1}
  */
 const SSML_RULES: ReadonlyMap<string, SsmlRule> = new Map([
   [
@@ -72,9 +79,12 @@ export interface SsmlPart {
 }
 
 /**
- * Reads an SSML element of the content: its name, the attributes that SSML 1.1 defines for it and how its content is
- * read. Returns `undefined` for an element that a request does not carry: one outside the SSML namespace, `speak`, which
- * the request makes, any name that is not one of the schema's, and an element that lacks an attribute it needs.
+ * Reads an SSML element of the content: its name, the attributes that SSML 1.1 defines for it and how its content is read.
+ *
+ * @param element - The element.
+ * @returns The part, or `undefined` for an element that a request does not carry: one outside the SSML namespace,
+ * `speak`, which the request makes, any name that is not one of the schema's, and an element that lacks an attribute it
+ * needs.
  */
 export function readSsmlElement(element: Element): SsmlPart | undefined {
   const rule = element.namespaceURI === SSML_NAMESPACE ? SSML_RULES.get(element.localName) : undefined;
@@ -88,7 +98,11 @@ export function readSsmlElement(element: Element): SsmlPart | undefined {
   return { name: element.localName, attributes, content: rule.content };
 }
 
-/** Returns whether XML 1.0 allows a character, by its code point (XML 1.0 §2.2). */
+/**
+ * Returns whether XML 1.0 allows a character, by its code point.
+ *
+ * @see {@link https://www.w3.org/TR/xml/#charsets | XML 1.0, characters}
+ */
 function isXmlCharacter(code: number): boolean {
   return (
     code === 0x9 ||
@@ -100,14 +114,26 @@ function isXmlCharacter(code: number): boolean {
   );
 }
 
-/** Removes the characters that XML 1.0 does not allow, which content may hold and a document cannot. */
+/**
+ * Removes the characters that XML 1.0 does not allow, which content may hold and a document cannot.
+ *
+ * @param text - The text.
+ * @returns The text without those characters.
+ */
 export function xmlSafe(text: string): string {
   let safe = "";
   for (const character of text) if (isXmlCharacter(character.codePointAt(0) ?? 0)) safe += character;
   return safe;
 }
 
-/** Builds an SSML element of the request, without the characters in its text and attributes that XML 1.0 does not allow. */
+/**
+ * Builds an SSML element of the request, without the characters in its text and attributes that XML 1.0 does not allow.
+ *
+ * @param name - The local name of the element.
+ * @param attributes - The attributes; one with the value `undefined` is left out.
+ * @param children - The children in order.
+ * @returns The element, in the SSML namespace.
+ */
 export function ssmlElement(
   name: string,
   attributes: Readonly<Record<string, string | undefined>>,
@@ -125,17 +151,27 @@ export function ssmlElement(
 }
 
 /**
- * Writes the SSML 1.1 document of a request: a `speak` element in the language of the content that holds the nodes
- * (SSML 1.1 §3.1.1).
+ * Writes the SSML 1.1 document of a request: a `speak` element in the language of the content that holds the nodes.
+ *
+ * @param nodes - The nodes of the document.
+ * @param language - The language of the content, a BCP 47 tag.
+ * @returns The document as XML text.
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_speak | SSML 1.1, the speak element}
  */
 export function speakDocument(nodes: readonly XmlNode[], language: string): string {
   return serializeXml(ssmlElement("speak", { version: SSML_VERSION, "xml:lang": language }, nodes));
 }
 
 /**
- * Returns the text that a voice without SSML says for SSML nodes: the alias of a `sub` in place of its content
- * (SSML 1.1 §3.1.11), the fallback content of an `audio`, no text for a `mark`, a space for a `break`, and a line for
- * each paragraph.
+ * Returns the text that a voice without SSML says for SSML nodes.
+ *
+ * @remarks
+ * The alias of a `sub` stands in place of its content, the fallback content of an `audio` is said, a `mark` has no text,
+ * a `break` is a space, and each paragraph is a line.
+ *
+ * @param nodes - The nodes.
+ * @returns The text.
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_sub | SSML 1.1, sub}
  */
 export function plainText(nodes: readonly XmlNode[]): string {
   return nodes

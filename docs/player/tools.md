@@ -4,17 +4,27 @@ The tools of an item are what the item's companion materials ask the player to p
 puts on the screen: a rule, a protractor, calculators, digital and physical materials, a line reader, answer masking and
 the tools that the host provides, such as a dictionary. `mountTools` of `@assesskit/player/player` shows them.
 
-| Tool                                                                                                         | Comes from                                            | Built in |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | -------- |
-| Rule                                                                                                         | `qti-rule` (INFO §5.126)                              | yes      |
-| Protractor                                                                                                   | `qti-protractor` (INFO §5.110)                        | yes      |
-| Basic and standard calculators                                                                               | `qti-calculator` (INFO §5.24), `calculator-on-screen` | yes      |
-| Scientific and graphing calculators                                                                          | the same                                              | host     |
-| Digital material                                                                                             | `qti-digital-material` (INFO §5.80)                   | a viewer |
-| Physical material                                                                                            | `qti-physical-material` (INFO §5.33)                  | a notice |
-| Line reader                                                                                                  | `line-reader` ([CERT] A-27)                           | yes      |
-| Answer masking                                                                                               | `answer-masking` (BPIG §5.2.9.4)                      | yes      |
-| Dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction, spell checker | `*-on-screen` supports                                | host     |
+```mermaid
+flowchart LR
+  companion["Companion materials of the item:<br/>rule, protractor, calculators, materials"] --> resolve["Tools in force"]
+  supports["Supports of the profile:<br/>line reader, masking, calculators, host tools"] --> resolve
+  resolve --> toolbar["Toolbar: a button for each tool"]
+  toolbar --> panel["Panel of the open tool"]
+  resolve --> layer["Layer over the item:<br/>rule, protractor, line reader, masks"]
+  toolbar -- "an option" --> action["support action"]
+```
+
+| Tool                                                                                                         | Comes from                               | Built in |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | -------- |
+| Rule                                                                                                         | `qti-rule`                               | yes      |
+| Protractor                                                                                                   | `qti-protractor`                         | yes      |
+| Basic and standard calculators                                                                               | `qti-calculator`, `calculator-on-screen` | yes      |
+| Scientific and graphing calculators                                                                          | the same                                 | host     |
+| Digital material                                                                                             | `qti-digital-material`                   | a viewer |
+| Physical material                                                                                            | `qti-physical-material`                  | a notice |
+| Line reader                                                                                                  | `line-reader`                            | yes      |
+| Answer masking                                                                                               | `answer-masking`                         | yes      |
+| Dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction, spell checker | `*-on-screen` supports                   | host     |
 
 ## In the player
 
@@ -33,14 +43,15 @@ the panels have another, adopted into the chrome, so that their classes do not r
 ## Mounting
 
 ```ts
-import { readAsi } from "@assesskit/runtime/asi";
 import { selectMessages } from "@assesskit/player";
 import { mountTools } from "@assesskit/player/player";
 
-declare const toolbar: HTMLElement; // in the page
-declare const item: HTMLElement; // the rendered item; its position is not static
-declare const itemXml: string; // the qti-assessment-item that the item shows
+const toolbar = document.createElement("div");
+const item = document.createElement("div");
+item.style.position = "relative";
+document.body.append(toolbar, item);
 
+const requests = [];
 const tools = mountTools(toolbar, {
   messages: selectMessages("en"),
   language: "en",
@@ -52,17 +63,11 @@ const tools = mountTools(toolbar, {
       return () => host.replaceChildren();
     },
   },
-  onSupport: (name, active) => {
-    // Send the `support` action, then show the next view.
-    console.log(name, active);
-  },
+  onSupport: (name, active) => requests.push([name, active]),
 });
 
-const document = readAsi(itemXml);
-if (document.kind !== "item") throw new Error("The document is not an item.");
-
 tools.update({
-  companion: document.item.companionMaterials ?? null,
+  companion: null,
   supports: [
     {
       name: "line-reader",
@@ -72,7 +77,9 @@ tools.update({
     },
   ],
 });
-
+toolbar.querySelector("button")?.textContent; // => "Line reader"
+toolbar.querySelector("button")?.click();
+requests; // => [["line-reader", true]]
 tools.destroy();
 ```
 
@@ -107,8 +114,8 @@ panel is taken down.
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `companion`           | The `CompanionMaterialsInfo` of the runtime's `asi` module, which `readAsi` gives as `item.companionMaterials`, or `null`                                                                                                                                                                                                           |
 | `supports[].name`     | The support. Those that put a tool on the screen are `line-reader`, `answer-masking`, `calculator-on-screen`, `dictionary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen` and `spell-checker-on-screen` |
-| `supports[].state`    | `prohibited`, `active`, `option` or `assigned` (BPIG §5.3), the `SupportState` of the runtime's `pnp` module                                                                                                                                                                                                                        |
-| `supports[].active`   | Whether the tool is on now                                                                                                                                                                                                                                                                                                          |
+| `supports[].state`    | `prohibited`, `active`, `option` or `assigned`, the `SupportState` of the runtime's `pnp` module                                                                                                                                                                                                                                    |
+| `supports[].active`   | Whether the tool is on                                                                                                                                                                                                                                                                                                              |
 | `supports[].settings` | The settings of the profile: `highlightColor` (`#RGB` or `#RRGGBB`) of `line-reader`, default the player's own; `calculatorType` of `calculator-on-screen`, a calculator type or an extension term, default `basic`                                                                                                                 |
 
 The tools read these parts of the companion materials; the runtime keeps a decimal as the text that the document has, and the player
@@ -124,23 +131,23 @@ reads it as a number.
 
 `update` checks the parts it reads, and throws `DataError` for a model of another shape, such as one that a plain JavaScript
 or JSON caller builds by hand. Units of length are `Millimeter`, `Centimeter`, `Meter`, `Kilometer`, `Inch`, `Foot`, `Yard`
-and `Mile` (INFO §8.28, §8.40); units of angle are `Radian`, `Degree`, `Minute` and `Second` (INFO §8.27, §8.39).
+and `Mile`; units of angle are `Radian`, `Degree`, `Minute` and `Second`.
 
 ## Tools in force
 
 - The item's rules, protractors, calculators and digital materials are in force, and the physical materials are listed.
 - Each support of the profile that is not `prohibited` puts its tool in force, whatever the item asks for: a candidate with
-  `calculator-on-screen` has a calculator when the item has none ([CERT] A-12).
+  `calculator-on-screen` has a calculator when the item has none.
 - A calculator that the item and the profile both name is one tool. The profile's `calculator-on-screen` without a type
   asks for a basic calculator, and with an extension term for no calculator that the player knows.
 - A prohibited `calculator-on-screen` removes the item's calculators too: the profile says that the candidate may not use
-  one (BPIG §5.2.9). A prohibited `line-reader`, `answer-masking` or other support removes that tool.
+  one. A prohibited `line-reader`, `answer-masking` or other support removes that tool.
 - The toolbar lists the item's tools in the order rule, protractor, calculator, digital material, then the profile's tools.
   Tools of one name are numbered: Ruler 1, Ruler 2.
 
 A tool whose support is an `option` follows the `active` flag of the input, never the candidate's own request: pressing its
 button calls `onSupport(name, !active)`, and the tool opens or closes when the next input says so. The focus then moves into
-a tool that the candidate opened. The runtime turns only an option on and off (BPIG §5.3, `support-not-available`), so a tool whose
+a tool that the candidate opened. The runtime turns only an option on and off, so a tool whose
 support is `active` or `assigned` is open at first when its `active` flag is on, and then the candidate opens and closes it
 like a tool that only the item asks for, which opens and closes at once.
 
@@ -185,14 +192,14 @@ pointer events and lets the text show through. An item without text has no band;
 ### Answer masking
 
 The choices of every `qti-choice-interaction` in the stage are hidden, visually and to assistive technology, and a mask in
-their place says so and has a button that shows them (BPIG §5.2.9.4). The mask covers an interaction that the renderer adds
+their place says so and has a button that shows them. The mask covers an interaction that the renderer adds
 later and comes back if the renderer removes it. The button stays, to hide the choices again; the focus stays on it. The
 support's `active` flag turns masking on for the item and off again.
 
 ### Calculators
 
 The basic calculator has the digits, the decimal point, the four operations, equals and clear. The standard calculator adds
-memory (MC, MR, M+, M−), percent, square root and change of sign (BPIG §3.7.8.1). Operations run as they are entered, from
+memory (MC, MR, M+, M−), percent, square root and change of sign. Operations run as they are entered, from
 left to right, so 2 + 3 × 4 = gives 20. Results are rounded to 12 significant digits, and at most 12 digits can be typed.
 
 | Key    | Result                                                                                                       |
@@ -216,7 +223,7 @@ except that Enter presses a focused button:
 | Escape or Delete | clear              |
 
 The item can say where a calculator is available: `qti-calculator-info` names a file of the package, which is content for
-the candidate (INFO §5.24.3, §5.80). The panel of a built-in calculator shows that file below the keys, in the viewer of
+the candidate. The panel of a built-in calculator shows that file below the keys, in the viewer of
 the digital materials, and the panel of a host's tool that has no function shows it below the notice. The tool that the
 host builds gets it in `options.file`. The `description` of the calculator is shown above the keys.
 
@@ -268,10 +275,54 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 
 ## Reading of the specifications
 
-- A rule is exactly `minimumLength` long, in the unit of the major increment (INFO §5.127.1).
+- A rule is exactly `minimumLength` long, in the unit of the major increment.
 - The numbers of a rule and a protractor are in the unit of the major increment; the unit symbols are not translated.
 - A protractor measures 180 degrees.
-- `qti-calculator-info` is content for the candidate: INFO §5.24.3 says that the calculator is available at the location it names, and §5.80 that the file is information "to be made available to the learner". The player builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
-- Only `qti-choice-interaction` is masked: BPIG §5.2.9.4 requires masks for choice interactions only.
-- A digital material that is an LTI resource (BPIG §6.2.9.9) is a file here; the LTI launch belongs to the platform role.
+- `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
+- Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only.
+- A digital material that is an LTI resource is a file here; the LTI launch belongs to the platform role.
 - The display of a calculator uses a decimal point in every language.
+
+## Files
+
+Each file of `src/player/tools/` holds one concept.
+
+| File                   | Concept                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `answer-masking.ts`    | Answer masking                                                                |
+| `calculator-engine.ts` | The state and the keys of the calculators                                     |
+| `calculator.ts`        | The panel of the basic and standard calculators                               |
+| `check-input.ts`       | The check of the input of the tools                                           |
+| `context.ts`           | What a tool needs from the mount                                              |
+| `digital.ts`           | A digital material                                                            |
+| `file-viewer.ts`       | Showing a file of the package                                                 |
+| `index.ts`             | The public API                                                                |
+| `internal.ts`          | Helpers that other folders and tests share, which the package does not export |
+| `line-reader.ts`       | The line reader                                                               |
+| `model.ts`             | The model of the tools in force                                               |
+| `mount.ts`             | `mountTools`                                                                  |
+| `names.ts`             | The names of the tools                                                        |
+| `numbers.ts`           | Numbers on a display                                                          |
+| `open.ts`              | Opening a tool                                                                |
+| `package-path.ts`      | Package paths and absolute URLs                                               |
+| `panel.ts`             | The panel of an open tool                                                     |
+| `placed-tool.ts`       | A tool that the candidate places over the item                                |
+| `protractor.ts`        | The protractor                                                                |
+| `resolve.ts`           | The tools in force for an item and a candidate                                |
+| `ruler.ts`             | The rule                                                                      |
+| `scale.ts`             | The scales of the rule and the protractor                                     |
+| `slot.ts`              | A tool that the host provides                                                 |
+| `styles.ts`            | The stylesheets of the toolbar and the stage                                  |
+
+## References
+
+| Specification                                                                                    | Topics                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   | calculator info, calculator type, companion materials info, digital material, protractor, rule, rule system, units of angle, units of length |
+| [CSS Values and Units 4](https://www.w3.org/TR/css-values-4/#absolute-lengths)                   | absolute lengths                                                                                                                             |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | answer masking, calculators, support states, tools                                                                                           |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum)                             | focus not obscured                                                                                                                           |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#dragging-movements)                                     | dragging movements                                                                                                                           |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#contrast-minimum)                                       | contrast minimum                                                                                                                             |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                                    | target size                                                                                                                                  |
+| [QTI 3.0 Conformance and Certification](https://www.imsglobal.org/spec/qti/v3p0/cert/)           | calculator, line reader                                                                                                                      |

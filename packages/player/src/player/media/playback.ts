@@ -3,11 +3,19 @@ export type PlaybackNotice = "no-pauses" | "no-plays" | "resumes" | "starts-soon
 
 /** What the player of a media interaction asks of its element. */
 export interface PlaybackHost {
-  /** Returns how many times the recording was played: the response the element holds. */
+  /**
+   * Returns how many times the recording was played: the response the element holds.
+   *
+   * @returns The count.
+   */
   plays(): number;
   /** Says that a new play started, which the element gives as the new count. */
   started(): void;
-  /** Says what the candidate is waiting for, or that nothing is pending. */
+  /**
+   * Says what the candidate is waiting for, or that nothing is pending.
+   *
+   * @param notice - What the candidate waits for, or `undefined` when nothing is pending.
+   */
   notify(notice: PlaybackNotice | undefined): void;
   /** Says that the state of the player changed. */
   changed(): void;
@@ -15,9 +23,18 @@ export interface PlaybackHost {
 
 /** The rules that the item and the interaction give a player. */
 export interface PlaybackRules {
-  /** Returns the most plays, from `max-plays` (INFO §5.92.3); `undefined` for no limit. */
+  /**
+   * Returns the most plays, from `max-plays`.
+   *
+   * @returns The limit, or `undefined` for no limit.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, media interaction}
+   */
   maxPlays(): number | undefined;
-  /** Whether the recording plays again when it ends, subject to `max-plays` (INFO §5.92.4). */
+  /**
+   * Whether the recording plays again when it ends, subject to `max-plays`.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, media interaction}
+   */
   readonly loop: boolean;
   /** The seconds to wait after the candidate presses play. */
   readonly pauseDelay: number | undefined;
@@ -28,11 +45,17 @@ export interface PlaybackRules {
 }
 
 /**
- * The rules of playing a recording in a media interaction (INFO §5.92, VOCAB §1.2.11). A play starts when playback begins
- * from the start, and not when it resumes after a pause; it is counted at the start, as the response says how many times
- * the candidate "experienced" the recording, and the count is the element's response, never the player's own. The
- * recording cannot be played more than `max-plays` times. The player also keeps the pause attributes: a delay before
- * playback starts or resumes, a duration after which a pause ends by itself, and a number of pauses for one play.
+ * The rules of playing a recording in a media interaction.
+ *
+ * @remarks
+ * A play starts when playback begins from the start, and not when it resumes after a pause; it is counted at the start,
+ * as the response says how many times the candidate "experienced" the recording, and the count is the element's
+ * response, never the player's own. The recording cannot be played more than `max-plays` times. The player also keeps the
+ * pause attributes: a delay before playback starts or resumes, a duration after which a pause ends by itself, and a
+ * number of pauses for one play.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, media interaction}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, media player}
  */
 export class Playback {
   readonly #media: HTMLMediaElement;
@@ -44,6 +67,7 @@ export class Playback {
   #timer: ReturnType<typeof setTimeout> | undefined;
 
   /**
+   *
    * @param media - The audio or video element, without the controls of the browser.
    * @param rules - The rules of the item.
    * @param host - The element that holds the count.
@@ -144,9 +168,11 @@ export class Playback {
   }
 
   /**
-   * Whether the next play begins a new one: the last play ended. WebKit reports `ended` while `paused` is still false,
-   * and sends the `pause` and `ended` events after, when a busy page may take seconds to get to them; a candidate who
-   * presses play in between has begun a new play.
+   * Whether the next play begins a new one: the last play ended.
+   *
+   * @remarks
+   * WebKit reports `ended` while `paused` is still false, and sends the `pause` and `ended` events after, when a busy
+   * page may take seconds to get to them; a candidate who presses play in between has begun a new play.
    */
   get #atStart(): boolean {
     return this.#fresh || this.#media.ended;

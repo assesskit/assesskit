@@ -4,33 +4,78 @@
 around it. It follows a session client ([client](client.md)) and never knows whether the engine runs on a server or on the
 device. It decides nothing of QTI: it sends the actions that the view lists and shows what the engine answers.
 
+```mermaid
+flowchart TD
+  client["SessionClient<br/>view and dispatch"] --> shell["mountDelivery"]
+  shell --> chrome["Chrome: navigation, timers,<br/>actions, comment box, status"]
+  shell --> root["Content root<br/>rubric, stimuli, item, feedback"]
+  root --> elements["Interaction elements"]
+  root --> pci["PCI frames"]
+  shell --> tools["Tools and their toolbar"]
+  shell --> supports["Supports: look, panel,<br/>cards, reading aloud"]
+  shell --> lti["LTI slot"]
+```
+
+An answer travels from the candidate to the engine and back as a new view:
+
+```mermaid
+sequenceDiagram
+  participant C as Candidate
+  participant E as Interaction element
+  participant P as mountDelivery
+  participant S as SessionClient
+  C->>E: chooses or types
+  E->>P: ak-response event
+  P->>S: dispatch set-responses
+  S-->>P: new view
+  P->>E: view, drawn again only when it differs
+```
+
+The sample mounts the player on a preview of one item, which the device runs:
+
 ```ts
-import { createRemoteSession } from "@assesskit/player/client";
+import { readAsi } from "@assesskit/runtime/asi";
+import { createLocalSession } from "@assesskit/player/client";
 import { mountDelivery } from "@assesskit/player/player";
 import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
 
+const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="q1" title="Question" adaptive="false" time-dependent="false">
+  <qti-item-body><p>Hello</p></qti-item-body>
+</qti-assessment-item>`);
+if (parsed.kind !== "item") throw new Error("The document is not an item.");
+
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: parsed.item, base: "items/q1.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, state) => void saved.set(session, state),
+  },
+  session: "preview-1",
+  seed: 1,
+  assets: (path) => `/package/${path}`,
+});
+
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(css);
-
-const initial = await (await fetch("/exam/view", { method: "POST" })).json(); // a ViewEnvelope from SessionHost.view
-const client = createRemoteSession(async (envelope) => {
-  const response = await fetch("/exam/handle", { method: "POST", body: JSON.stringify(envelope) });
-  if (!response.ok) throw new Error(`The host answered ${response.status}.`);
-  return response.json();
-}, initial);
-
-const mounted = mountDelivery(document.querySelector("#player") as HTMLElement, {
+const host = document.createElement("div");
+document.body.append(host);
+const mounted = mountDelivery(host, {
   client,
   files: {
-    upload: async (bytes, mimeType) => (await fetch("/exam/upload", { method: "POST", body: bytes })).json(),
-    read: async (file) => new Uint8Array(await (await fetch(`/exam/files/${file.reference}`)).arrayBuffer()),
-    url: (file) => `/exam/files/${file.reference}`,
+    upload: async (bytes, mimeType) => ({ reference: "f1", mimeType }),
+    read: async () => new Uint8Array(),
+    url: (file) => `/files/${file.reference}`,
   },
   staticUrl: "https://assets.example/static/",
   stylesheet,
   fetch: (url, init) => fetch(url, init),
   language: "id",
 });
+await mounted.settled();
+host.shadowRoot.querySelector(".ak-heading")?.textContent; // => "Question"
+mounted.destroy();
 ```
 
 ## Options
@@ -38,7 +83,7 @@ const mounted = mountDelivery(document.querySelector("#player") as HTMLElement, 
 | Option       | Type                                | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `client`     | `SessionClient`                     | The session the player shows, sends its actions to, and resolves package paths through.                                                                                                                                                                                                                                                                                                                                                              |
-| `files`      | `MountFiles`                        | The host's storage of files: `upload`, `read` and `url`. A file value is a reference to it everywhere (the runtime D7).                                                                                                                                                                                                                                                                                                                              |
+| `files`      | `MountFiles`                        | The host's storage of files: `upload`, `read` and `url`. A file value is a reference to it everywhere.                                                                                                                                                                                                                                                                                                                                               |
 | `staticUrl`  | `string`                            | The base URL of the player's static files, ending in `/`: `pci-frame/frame.html` and `player.css` are under it.                                                                                                                                                                                                                                                                                                                                      |
 | `stylesheet` | `CSSStyleSheet`                     | The stylesheet of the content, built from `player.css` ([styling](styling.md)).                                                                                                                                                                                                                                                                                                                                                                      |
 | `fetch`      | `StylesheetFetch`                   | Loads item stylesheets and the module resolution files of portable custom interactions from the gate. `fetch` of the page fits.                                                                                                                                                                                                                                                                                                                      |
@@ -74,10 +119,10 @@ It returns a `Mounted`:
 | Timer warnings        | A status message 300 and 60 seconds before a limit, with the time left in words of the interface's language, and one when the time is over (WCAG 2.2.1). A page that loads inside the last minutes announces the time left.                                                                  | T57 |
 | Review and solution   | Buttons to review a closed item and to show its solution, when the item allows them. The state of the item shows in the map.                                                                                                                                                                 | T58 |
 | Comment box           | A labelled field and a button where the item allows a comment. A new comment replaces the one before.                                                                                                                                                                                        | T59 |
-| Time-dependent notice | A note on an item whose task depends on time (BPIG §4.3).                                                                                                                                                                                                                                    | T60 |
+| Time-dependent notice | A note on an item whose task depends on time.                                                                                                                                                                                                                                                | T60 |
 | Suspension            | A note that the test is paused, and no action but the one the view lists. In an exam only the proctor suspends and resumes ([server](server.md#the-proctor)).                                                                                                                                | T61 |
 | Attempts              | The attempts used and, for an item with a limit, the attempts left.                                                                                                                                                                                                                          | T62 |
-| Rubric                | The candidate rubric of the test, its part and its sections, in the content of every item (INFO §2.10).                                                                                                                                                                                      | T64 |
+| Rubric                | The candidate rubric of the test, its part and its sections, in the content of every item.                                                                                                                                                                                                   | T64 |
 | Supports              | The panel of the supports, with a button for each option and the state of the others, and what the supports that are on change: the look, the size of media, the cards, the reading aloud and the notice of the variant ([supports](supports.md#in-the-player)).                             | T75 |
 | Tools                 | The tools that the item and the profile put in force: a toolbar, the panels of the open tools, and the rule, protractor, line reader and masks over the item ([tools](tools.md#in-the-player)).                                                                                              | T63 |
 
@@ -96,7 +141,7 @@ once, through `hooks.ltiLogin(item)`, where `item` is the `ItemKey`. The host's 
 | The item is open                                                                                                              | Shows the storage page in a hidden frame named `lti-storage`, and the tool in a frame named `lti-tool` once the storage page has loaded |
 | A later view of the same item                                                                                                 | Leaves the frames as they are, and does not ask the host again                                                                          |
 | The candidate leaves the item                                                                                                 | Removes both frames. Coming back asks the host again and launches the tool again                                                        |
-| The item is closed, in review or in solution                                                                                  | Shows the note "The tool for this question is no longer open." in place of the tool                                                     |
+| The item is closed, in review or in solution                                                                                  | Shows the note `ltiClosed` of the catalog in place of the tool                                                                          |
 | There is no `ltiLogin`, the hook fails, or its answer is not a frame, or a URL is on the origin of the page or of `staticUrl` | Shows "The tool for this question could not be started." as an alert. A failure is also reported with `reportError`                     |
 
 The frame of the tool has `sandbox="allow-scripts allow-forms allow-same-origin"`, `referrerpolicy="no-referrer"`, the `allow`
@@ -108,7 +153,7 @@ that ([the storage page](lti-platform.md#the-storage-page)). A page has one play
 
 ## Refusals and status messages
 
-The engine refuses a well-formed action that the rules do not allow, and leaves the state unchanged (the runtime E4). The player
+The engine refuses a well-formed action that the rules do not allow, and leaves the state unchanged. The player
 says why, in the language of the interface, in a polite live region with `role="status"` that never takes the focus
 (WCAG 4.1.3). The catalog has a message for each `RefusalCode`, and a test fails when the runtime adds a code that has none.
 
@@ -155,16 +200,47 @@ gate, mounts the frame with the response, the state `getState` gave before, the 
 of the item, and stores each response it gives with its state in `set-responses`, so that the interaction restores on any
 device. A `done` event is a response; the candidate decides when to submit.
 
-## Interfaces
+## Files
 
-```ts
-interface MountFiles {
-  upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
-  read(file: FileValue): Promise<Uint8Array>;
-  url(file: FileValue): string;
-}
-```
+Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 
-`url` is synchronous. In an exam the URL comes from the host's server (`AssetGate.signFile`), whose tokens last five
-minutes ([asset gate](asset-gate.md#files-of-the-candidate)), so a host that needs one for playback asks for it before it
-shows the file.
+| File                        | Concept                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `delivery/actions.ts`       | The buttons of a view, and the confirmations                                  |
+| `delivery/announcer.ts`     | The live region for status messages                                           |
+| `delivery/comment.ts`       | The comment box                                                               |
+| `delivery/confirm.ts`       | The confirmation dialog                                                       |
+| `delivery/content.ts`       | What the content root shows for a view                                        |
+| `delivery/duration.ts`      | Times left as a clock and in words                                            |
+| `delivery/index.ts`         | The public API                                                                |
+| `delivery/internal.ts`      | Helpers that other folders and tests share, which the package does not export |
+| `delivery/lexicons.ts`      | Loading the pronunciation lexicons of an item                                 |
+| `delivery/mount.ts`         | `mountDelivery`                                                               |
+| `delivery/navigation.ts`    | The navigation map                                                            |
+| `delivery/options.ts`       | The options of `mountDelivery`, checked                                       |
+| `delivery/pci.ts`           | The host of the portable custom interactions of a view                        |
+| `delivery/refusals.ts`      | The message of each refusal code                                              |
+| `delivery/styles.ts`        | The stylesheet of the chrome                                                  |
+| `delivery/supports.ts`      | The supports in the chrome and the content                                    |
+| `delivery/timers.ts`        | The timers and their warnings                                                 |
+| `delivery/tools.ts`         | The tools in the chrome                                                       |
+| `lti-frame/capabilities.ts` | The answer to the capabilities request of a tool                              |
+| `lti-frame/frame.ts`        | The frames of a tool and its storage page                                     |
+| `lti-frame/index.ts`        | The public API                                                                |
+| `lti-frame/internal.ts`     | Helpers that other folders and tests share, which the package does not export |
+| `lti-frame/slot.ts`         | The slot of the tool of an LTI item                                           |
+
+## References
+
+| Specification                                                                                    | Topics                            |
+| ------------------------------------------------------------------------------------------------ | --------------------------------- |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#error-prevention-legal-financial-data)                  | error prevention                  |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#focus-order)                                            | focus order                       |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#timing-adjustable)                                      | timing adjustable                 |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pause-stop-hide)                                        | pause, stop, hide                 |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#status-messages)                                        | status messages                   |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                                    | target size                       |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   | candidate comment, modal feedback |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | portable custom interactions      |
+| [LTI 1.3](https://www.imsglobal.org/spec/lti/v1p3/)                                              |                                   |
+| [LTI Client Side postMessages 0.1](https://www.imsglobal.org/spec/lti-cs-pm/v0p1)                |                                   |

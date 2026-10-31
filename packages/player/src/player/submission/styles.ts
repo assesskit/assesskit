@@ -1,10 +1,12 @@
 /**
- * The stylesheet of the display of a submission. The colors, borders and focus come from the custom properties of
- * `player.css`, which the display adopts first, so that the themes and the PNP presentation reach it. Sizes are in `rem`
- * and the layout wraps, so that it follows the text size and a narrow screen without a media query.
+ * The stylesheet of the display of a submission.
  *
- * A content root sets the tokens again on its own host, which would give an item the light theme in a display that has
- * another. The rule of the display wins over the root's `:host`, and takes the tokens that the theme sets from the display.
+ * @remarks
+ * The colors, borders and focus come from the custom properties of `player.css`, which the display adopts first, so that
+ * the themes and the PNP presentation reach it. Sizes are in `rem` and the layout wraps, so that it follows the text size
+ * and a narrow screen without a media query. A content root sets the tokens again on its own host, which would give an item
+ * the light theme in a display that has another. The rule of the display wins over the root's `:host`, and takes the tokens
+ * that the theme sets from the display.
  */
 const SUBMISSION_CSS = `
 .ak-submission { display: grid; gap: 1.5rem; }
@@ -32,7 +34,11 @@ const SUBMISSION_CSS = `
 .ak-submission audio { display: block; inline-size: min(100%, 24rem); }
 `;
 
-/** Builds the stylesheet of a display; each display has one of its own, as each content root does. */
+/**
+ * Builds the stylesheet of a display; each display has one of its own, as each content root does.
+ *
+ * @returns The sheet.
+ */
 export function submissionStyleSheet(): CSSStyleSheet {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(SUBMISSION_CSS);

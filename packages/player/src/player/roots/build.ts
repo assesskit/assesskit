@@ -1,12 +1,19 @@
 import type { TestFeedback } from "@assesskit/runtime/asi";
 import type { Messages } from "../../messages/index.js";
 import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
 import { renderFeedback } from "../feedback/index.js";
+import { html } from "../internal.js";
 import type { ContentPart, RootContent } from "./content.js";
 import { hazardNotice, remainingHazards } from "./hazards.js";
 
-/** Builds the region of the test feedback, which a screen reader finds by its name. */
+/**
+ * Builds the region of the test feedback, which a screen reader finds by its name.
+ *
+ * @param feedback - The test feedback to show.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The region.
+ */
 function feedbackRegion(feedback: readonly TestFeedback[], renderer: BodyRenderer, messages: Messages): HTMLElement {
   return html(
     "section",
@@ -25,8 +32,14 @@ export interface BuiltContent {
 
 /**
  * Builds the DOM of a root's content, in the order the candidate meets it: the notice of the hazards that remain, the
- * rubric, the stimuli beside the item, and the test feedback. Each part is rendered from its own base, so that its
- * relative references resolve against its own document.
+ * rubric, the stimuli beside the item, and the test feedback.
+ *
+ * @remarks
+ * Each part is rendered from its own base, so that its relative references resolve against its own document.
+ *
+ * @param content - What the root shows.
+ * @param options - The options of the renderer, but for what each content brings.
+ * @returns The container and the renderer of the item.
  */
 export function buildContent(
   content: RootContent,

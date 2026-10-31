@@ -1,10 +1,10 @@
 import type { DrawingInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
-import type { FileValue, Point } from "@assesskit/runtime/values";
+import type { Point } from "@assesskit/runtime/values";
 import { single } from "@assesskit/runtime/values";
 import { EN_MESSAGES, type Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import {
   FREEHAND_TOOLS,
@@ -20,6 +20,7 @@ import { createStage, stageOf } from "./graphic/stage.js";
 import { Notes } from "./notes.js";
 import type { InteractionFiles } from "./options.js";
 import { nameByPrompt, renderPrompt } from "./parts.js";
+import { fileOf } from "./values.js";
 
 /** The tools in the order of the toolbar, with the message that names each. */
 const TOOLS: readonly { readonly tool: Tool; readonly name: keyof Messages }[] = [
@@ -70,27 +71,28 @@ const isMessage = (name: string | undefined): name is keyof Messages =>
 /** Returns whether a tool is one that takes two points. */
 const isShape = (tool: Tool): tool is Shape["tool"] => tool === "line" || tool === "rectangle" || tool === "ellipse";
 
-/** Returns the file of a response, or `undefined` when it has none. */
-function fileOf(response: InteractionElement["value"]): FileValue | undefined {
-  return response?.cardinality === "single" && typeof response.value === "object" && "reference" in response.value
-    ? response.value
-    : undefined;
-}
-
 /**
- * The element of `qti-drawing-interaction` (INFO §5.44): the candidate draws on an image, and the response is a file with
- * the picture and the drawing in the media type of the image. The host stores the file (`InteractionFiles.upload`); the
- * response refers to it (the runtime D7), and `settled` resolves once the latest drawing is stored.
+ * The element of `qti-drawing-interaction`: the candidate draws on an image, and the response is a file with the picture
+ * and the drawing in the media type of the image.
  *
- * - **Pointer:** the pen and the eraser follow the pointer, a path that only a pointer can give. The line, the rectangle and
- *   the ellipse are placed by two clicks, and the fill by one, which is the single-pointer way to draw (WCAG 2.2, 2.5.1).
+ * @remarks
+ * The host stores the file (`InteractionFiles.upload`); the response refers to it, and `settled` resolves once the latest
+ * drawing is stored.
+ *
+ * - **Pointer:** the pen and the eraser follow the pointer, a path that only a pointer can give. The line, the rectangle
+ *   and the ellipse are placed by two clicks, and the fill by one, which is the single-pointer way to draw.
  * - **Keyboard:** with one of those tools the image takes the focus, a crosshair moves with the arrow keys, and Enter or
- *   Space picks the point (WCAG 2.2, 2.1.1).
+ *   Space picks the point.
  *
  * Undo goes back one drawing action, and Clear back to the image the question gave. A response that the player gives is
  * shown as the picture to draw on.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, drawing interaction}
+ * @see {@link https://www.w3.org/TR/WCAG22/#pointer-gestures | WCAG 2.2, pointer gestures}
+ * @see {@link https://www.w3.org/TR/WCAG22/#keyboard | WCAG 2.2, keyboard}
  */
 export class DrawingInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "drawing-interaction";
   /** The host's storage of drawings. */
   #files: InteractionFiles | undefined;
@@ -167,6 +169,11 @@ export class DrawingInteractionElement extends InteractionElement {
     );
   }
 
+  /**
+   * Resolves when the drawing has been stored, which the response waits for.
+   *
+   * @returns A promise that resolves when nothing is being stored.
+   */
   override settled(): Promise<void> {
     return this.#pending;
   }
@@ -487,8 +494,15 @@ export class DrawingInteractionElement extends InteractionElement {
   }
 
   /**
-   * Fills the element with the prompt, the toolbar, the image with the canvas that lies over it, the instructions and the
-   * notes. The picture is stored through `files`, in the media type of the image.
+   * Fills the element with the prompt, the toolbar, the image with the canvas that lies over it, the instructions and
+   * the notes.
+   *
+   * @remarks
+   * The picture is stored through `files`, in the media type of the image.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   * @param files - Where the picture is stored.
    */
   build(node: DrawingInteraction, renderer: BodyRenderer, files: InteractionFiles): void {
     this.#files = files;
@@ -546,7 +560,15 @@ function control(name: keyof Messages, data: Readonly<Record<string, string>>): 
   return html("button", { type: "button", "data-name": name, ...data });
 }
 
-/** Renders a `qti-drawing-interaction`. */
+/**
+ * Renders a `qti-drawing-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @param files - Where the picture is stored.
+ * @returns The element.
+ */
 export function renderDrawing(
   node: DrawingInteraction,
   renderer: BodyRenderer,

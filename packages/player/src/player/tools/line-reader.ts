@@ -1,4 +1,4 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { createPanel } from "./panel.js";
 
@@ -12,8 +12,11 @@ interface Line {
 }
 
 /**
- * Finds the lines of text in the stage, from the rectangles that its text nodes occupy. Rectangles that share a stretch
- * of height are one line, so that a superscript or a formula does not make a line of its own.
+ * Finds the lines of text in the stage, from the rectangles that its text nodes occupy.
+ *
+ * @remarks
+ * Rectangles that share a stretch of height are one line, so that a superscript or a formula does not make a line of
+ * its own.
  */
 function textLines(stage: HTMLElement, layer: HTMLElement): readonly Line[] {
   const rects: DOMRect[] = [];
@@ -49,11 +52,18 @@ function nearestLine(lines: readonly Line[], top: number): number {
 }
 
 /**
- * Opens the line reader ([CERT] A-27): a band of the color of the profile over one line of the item's text at a time. The
- * band moves line by line with the arrow keys on it, Home and End, and the buttons of its panel. It lets all the text
- * show through and takes no pointer events, so that it hides no element that has the focus (WCAG 2.4.11).
+ * Opens the line reader: a band of the color of the profile over one line of the item's text at a time.
  *
+ * @remarks
+ * The band moves line by line with the arrow keys on it, Home and End, and the buttons of its panel. It lets all the text
+ * show through and takes no pointer events, so that it hides no element that has the focus.
+ *
+ * @param context - What the tool needs from the mount.
  * @param highlightColor - The color as `#RGB` or `#RRGGBB`, or `null` for the stylesheet's own.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/cert/ | QTI 3.0 Conformance and Certification, line reader}
+ * @see {@link https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum | WCAG 2.2, focus not obscured}
  */
 export function openLineReader(context: ToolContext, highlightColor: string | null, close: () => void): OpenTool {
   const { messages, stage, layer } = context;

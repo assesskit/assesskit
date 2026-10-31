@@ -1,10 +1,15 @@
-import { lazyStyleSheet } from "../adopt.js";
+import { lazyStyleSheet } from "../internal.js";
 
 /**
- * The stylesheet of the chrome. Like the tools it uses the system colors, so that the chrome follows the color scheme and
- * the forced colors of the browser, and sizes in `rem`, so that it follows the text size. Every control is at least 2.75rem
- * high and wide, more than the 24 CSS pixels of WCAG 2.5.8. Nothing relies on color alone: the current question has a
- * heavier border and a mark, and every state is written.
+ * The stylesheet of the chrome.
+ *
+ * @remarks
+ * Like the tools it uses the system colors, so that the chrome follows the color scheme and the forced colors of the
+ * browser, and sizes in `rem`, so that it follows the text size. Every control is at least 2.75rem high and wide, more
+ * than the 24 CSS pixels of the target size criterion. Nothing relies on color alone: the current question has a heavier
+ * border and a mark, and every state is written.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#target-size-minimum | WCAG 2.2, target size}
  */
 const CHROME_CSS = `
 :host { display: block; color: CanvasText; background: Canvas; }
@@ -47,5 +52,9 @@ const CHROME_CSS = `
 .ak-confirm::backdrop { background: color-mix(in srgb, CanvasText 55%, transparent); }
 `;
 
-/** Returns the stylesheet of the chrome, the same one for every mount. */
+/**
+ * Returns the stylesheet of the chrome, the same one for every mount.
+ *
+ * @returns The sheet.
+ */
 export const chromeStyles = lazyStyleSheet(CHROME_CSS);

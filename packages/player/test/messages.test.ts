@@ -1,7 +1,9 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { describe, expect, it } from "vitest";
+import messagesGuide from "../../../docs/player/messages.md?raw";
 import { EN_MESSAGES, ID_MESSAGES, type Messages, selectMessages } from "../src/index.js";
 import { fuzzJson } from "./fuzz.js";
+import { runGuideSamples } from "./guide-samples.js";
 
 /** Passes overrides to `selectMessages` as JSON delivers them, which TypeScript does not check. */
 const select = (language: string, overrides: unknown = {}): Messages =>
@@ -112,5 +114,13 @@ describe("selectMessages", () => {
       (overrides) => selectMessages("id", overrides as Record<string, Partial<Messages>>),
       [{}, { id: { toolRule: "Penggaris" }, "id-ID": {} }],
     );
+  });
+});
+
+describe("the guide", () => {
+  it("shows the results that its samples give", async () => {
+    expect(
+      await runGuideSamples(messagesGuide, { "@assesskit/player": await import("../src/index.js") }),
+    ).toBeGreaterThan(0);
   });
 });

@@ -726,7 +726,7 @@ describe("answer masking", () => {
   const choices = (scene: Scene): HTMLElement[] => [...scene.stage.querySelectorAll<HTMLElement>("qti-simple-choice")];
   const isHidden = (element: HTMLElement): boolean => getComputedStyle(element).display === "none";
 
-  it("hides the choices of a choice interaction, visually and to assistive technology, with a mask in their place (BPIG §5.2.9.4)", () => {
+  it("hides the choices of a choice interaction, visually and to assistive technology, with a mask in their place", () => {
     const scene = createScene();
     scene.show(masking(true));
     expect(choices(scene)).toHaveLength(2);
@@ -911,7 +911,7 @@ describe("the calculators", () => {
     expect(display(panelId)).toBe("Galat");
   });
 
-  it("opens the standard calculator with the memory, percent, square root and sign of BPIG §3.7.8.1", async () => {
+  it("opens the standard calculator with the memory, percent, square root and sign that the best practices guide lists", async () => {
     const scene = createScene();
     scene.show(calculators("standard"));
     await userEvent.click(toolbarButton(scene, "Standard calculator"));

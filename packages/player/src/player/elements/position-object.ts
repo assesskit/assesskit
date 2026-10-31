@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Point } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { enableDragging } from "./graphic/drag.js";
 import { enablePicker } from "./graphic/picker.js";
@@ -16,17 +16,23 @@ import { pointsOf, responseOf } from "./values.js";
 const PLACING = "data-ak-placing";
 
 /**
- * The element of `qti-position-object-interaction` (INFO §5.107): the candidate positions an image on the stage, and the
- * response is where the center point of the image lies. The areas that score the response are never drawn.
+ * The element of `qti-position-object-interaction`: the candidate positions an image on the stage, and the response is
+ * where the center point of the image lies.
+ *
+ * @remarks
+ * The areas that score the response are never drawn.
  *
  * - **Pointer:** drag the object from the tray onto the image with a mouse or a pen, or choose the object and click or tap
  *   the image. A placed object drags to a new place, and choosing it takes it away.
  * - **Keyboard:** choose the object, which moves the focus to the image with a crosshair; the arrow keys move it, and Enter
  *   or Space places the object there. Escape gives the object up.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, position object interaction}
  */
 export class PositionObjectInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "position-object-interaction";
-  /** The point of the object that lies on the response point, from the top left of the object (INFO §5.107.1). */
+  /** The point of the object that lies on the response point, from the top left of the object. */
   #center: readonly number[] = [];
   #hand: HTMLButtonElement | undefined;
   #layer: HTMLElement | undefined;
@@ -57,7 +63,12 @@ export class PositionObjectInteractionElement extends InteractionElement {
     this.addEventListener("load", () => this.refresh(), true);
   }
 
-  /** Fills the element with the layer that lies over the image of the stage, the tray with the object, and the notes. */
+  /**
+   * Fills the element with the layer that lies over the image of the stage, the tray with the object, and the notes.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: PositionObjectInteraction, renderer: BodyRenderer): void {
     this.#center = node.centerPoint ?? [];
     this.#layer = html(
@@ -189,7 +200,14 @@ export class PositionObjectInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-position-object-interaction` for the stage that the renderer draws around it. */
+/**
+ * Renders a `qti-position-object-interaction` for the stage that the renderer draws around it.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderPositionObject(
   node: PositionObjectInteraction,
   renderer: BodyRenderer,

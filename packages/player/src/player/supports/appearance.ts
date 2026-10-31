@@ -1,12 +1,16 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { FontFace, GenericFontFace, SupportName, Zoom } from "@assesskit/runtime/pnp";
+import type { Presentation } from "../presentation/index.js";
 import { activeSupport, checkSupportViews } from "./check.js";
-import type { Presentation } from "./presentation.js";
 
-/** The font size that scales to 1: the default of `font-size` in the PNP schema, in points (PNP XSD `TextAppearance`). */
+/** The font size that scales to 1: the default of `font-size` in the PNP schema, in points. */
 const BASE_FONT_SIZE = 12;
 
-/** The zoom of a magnification that names no amount: 200 percent, the enlargement that WCAG 1.4.4 asks the text to survive. */
+/**
+ * The zoom of a magnification that names no amount: 200 percent, the enlargement that the text has to survive.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#resize-text | WCAG 2.2, resize text}
+ */
 const DEFAULT_ZOOM = 2;
 
 /** The generic font families as CSS spells them. */
@@ -41,7 +45,11 @@ function amountOf(zoom: Zoom | undefined): number {
   return amount !== undefined && amount > 0 ? amount : DEFAULT_ZOOM;
 }
 
-/** Returns the zoom of text and of non-text content that a magnification asks for (BPIG §5.2.9.6). */
+/**
+ * Returns the zoom of text and of non-text content that a magnification asks for.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, magnification}
+ */
 function zoomsOf(support: SupportView): { readonly text: number; readonly nonText: number } {
   const settings = support.settings?.name === "magnification" ? support.settings : undefined;
   if (settings === undefined || (settings.text === undefined && settings.nonText === undefined)) {
@@ -56,7 +64,7 @@ function zoomsOf(support: SupportView): { readonly text: number; readonly nonTex
 
 /** The settings of text appearance that are a number written as a CSS number, with the unit of its property. */
 const SPACINGS = [
-  // BPIG §5.2.9.7.6–7: the line height multiplies the base, and the line spacing adds to it, in ems.
+  // The line height multiplies the base, and the line spacing adds to it, in ems.
   ["lineHeight", "--ak-line-height", ""],
   ["lineSpacing", "--ak-line-spacing", ""],
   ["letterSpacing", "--ak-letter-spacing", "em"],
@@ -116,12 +124,17 @@ const APPLIERS: ReadonlyMap<SupportName, Applier> = new Map<SupportName, Applier
 ]);
 
 /**
- * Builds the look that the supports that are on ask for (BPIG §5.2.9): the theme of high contrast and of inverted
- * polarity, the colors, size, face and spacing of text appearance, the zoom of text, the single column and keyword
- * emphasis. The zoom of non-text content is {@link mediaScaleOf}.
+ * Builds the look that the supports that are on ask for.
+ *
+ * @remarks
+ * The look has the theme of high contrast and of inverted polarity, the colors, size, face and spacing of text
+ * appearance, the zoom of text, the single column and keyword emphasis. The zoom of non-text content is
+ * {@link mediaScaleOf}.
  *
  * @param supports - The supports of the view; those that are off or change nothing of the look are ignored.
+ * @returns The presentation.
  * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, display supports}
  */
 export function presentationOf(supports: readonly SupportView[]): Presentation {
   checkSupportViews(supports, "The list of supports");
@@ -134,10 +147,13 @@ export function presentationOf(supports: readonly SupportView[]): Presentation {
 }
 
 /**
- * Returns the factor for the pixel sizes of media that the magnification of non-text content asks for (BPIG §5.2.9.6):
- * the `mediaScale` option of a content root. It is 1 when no magnification is on.
+ * Returns the factor for the pixel sizes of media that the magnification of non-text content asks for: the `mediaScale`
+ * option of a content root.
  *
+ * @param supports - The supports of the view.
+ * @returns The factor; 1 when no magnification is on.
  * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, magnification}
  */
 export function mediaScaleOf(supports: readonly SupportView[]): number {
   checkSupportViews(supports, "The list of supports");

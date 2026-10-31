@@ -1,6 +1,6 @@
 import type { CalculatorInfo } from "@assesskit/runtime/asi";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import {
   BASIC_KEYS,
   type CalculatorKey,
@@ -60,10 +60,20 @@ const KEYS_OF: Readonly<Record<BuiltInCalculator, ReadonlySet<CalculatorKey>>> =
 const COLUMNS = 4;
 
 /**
- * Opens the basic or the standard calculator (BPIG §3.7.8.1; the player design D1). The candidate operates it with the
- * buttons or by typing: digits, the decimal point, the four operations, `=` or Enter, `%`, and Escape or Delete to clear.
- * Typing works while the focus is anywhere in the calculator, but Enter still presses the focused button. The file of
- * the calculator that the item gives, if any, is shown below the keys.
+ * Opens the basic or the standard calculator.
+ *
+ * @remarks
+ * The candidate operates it with the buttons or by typing: digits, the decimal point, the four operations, `=` or Enter,
+ * `%`, and Escape or Delete to clear. Typing works while the focus is anywhere in the calculator, but Enter still presses
+ * the focused button. The file of the calculator that the item gives, if any, is shown below the keys.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param type - The calculator to build.
+ * @param description - What the author says the calculator offers, or `null`.
+ * @param file - The file that the item gives for the calculator, or `null`.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, calculators}
  */
 export function openCalculator(
   context: ToolContext,
@@ -111,7 +121,7 @@ export function openCalculator(
       html("div", { class: "ak-screen" }, memory, display),
       keypad,
     ),
-    // The calculator is available at the location of its file (INFO §5.24.3); the viewer shows it without running it.
+    // The calculator is available at the location of its file with the viewer, which shows it without running it.
     ...(file === null
       ? []
       : [html("div", { role: "group", "aria-label": materialName(file) }, viewFile(context, file))]),

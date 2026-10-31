@@ -1,19 +1,32 @@
 import type { TimerView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { Announcer } from "./announcer.js";
 import { clockText, spokenText } from "./duration.js";
 
-/** The seconds before a limit at which the candidate is told how much time is left (WCAG 2.2.1, the player design §2.7). */
+/**
+ * The seconds before a limit at which the candidate is told how much time is left.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#timing-adjustable | WCAG 2.2, timing adjustable}
+ */
 const TIMER_WARNINGS: readonly number[] = [300, 60];
 
 /** The timers of the view, with the means to hide them and to announce the warnings. */
 export interface TimerBar {
   /** The region of the timers, hidden while the view has none. */
   readonly element: HTMLElement;
-  /** Shows the timers of a new view. */
+  /**
+   * Shows the timers of a new view.
+   *
+   * @param timers - The timers of the view.
+   * @param age - The age of the view in milliseconds.
+   */
   update(timers: readonly TimerView[], age: number): void;
-  /** Counts the timers down to the age of the view, in milliseconds, and announces a warning or the end of a limit. */
+  /**
+   * Counts the timers down to the age of the view, in milliseconds, and announces a warning or the end of a limit.
+   *
+   * @param age - The age of the view in milliseconds.
+   */
   tick(age: number): void;
 }
 
@@ -33,15 +46,20 @@ interface Row {
 }
 
 /**
- * Creates the timers (T57). Each shows the time left to its maximum, and the time before the candidate may leave when the
- * scope has a minimum, counted down from the moment the view was made. A limit that passed and still takes answers says
- * so (D9). The candidate can hide the timers (WCAG 2.2.2). The time left is not a live region: a screen reader would
- * read it each second. Instead the status region announces it 300 and 60 seconds before a limit, and says when
- * the time is over (WCAG 2.2.1).
+ * Creates the timers.
+ *
+ * @remarks
+ * Each shows the time left to its maximum, and the time before the candidate may leave when the scope has a minimum,
+ * counted down from the moment the view was made. A limit that passed and still takes answers says so. The candidate can
+ * hide the timers. The time left is not a live region: a screen reader would read it each second. Instead the status
+ * region announces it 300 and 60 seconds before a limit, and says when the time is over.
  *
  * @param messages - The text of the interface.
  * @param language - The language of the interface, for the spoken time.
  * @param announcer - The region that announces the warnings.
+ * @returns The timer bar.
+ * @see {@link https://www.w3.org/TR/WCAG22/#timing-adjustable | WCAG 2.2, timing adjustable}
+ * @see {@link https://www.w3.org/TR/WCAG22/#pause-stop-hide | WCAG 2.2, pause, stop, hide}
  */
 export function createTimerBar(messages: Messages, language: string, announcer: Announcer): TimerBar {
   const list = html("ul", { class: "ak-timer-list" });

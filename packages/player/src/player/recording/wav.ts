@@ -1,4 +1,4 @@
-/** The size of the header of a WAV file of PCM samples (RIFF, `fmt ` and `data` chunk headers). */
+/** The size of the header of a WAV file of PCM samples: the RIFF, `fmt ` and `data` chunk headers. */
 const HEADER_BYTES = 44;
 const BYTES_PER_SAMPLE = 2;
 const PCM = 1;
@@ -14,11 +14,15 @@ function writeTag(view: DataView, offset: number, tag: string): void {
 }
 
 /**
- * Encodes samples of one channel as a WAV file of 16-bit PCM (RIFF WAVE; Microsoft and IBM Multimedia Programming
- * Interface and Data Specifications 1.0, "Waveform Audio File Format"). A sample outside −1 to 1 is clipped.
+ * Encodes samples of one channel as a WAV file of 16-bit PCM.
+ *
+ * @remarks
+ * A sample outside -1 to 1 is clipped.
  *
  * @param blocks - The samples, in blocks, as the audio worklet delivers them.
  * @param sampleRate - The frames in a second.
+ * @returns The file.
+ * @see {@link https://www.aelius.com/njh/wavemetatools/doc/riffmci.pdf | Multimedia Programming Interface and Data Specifications 1.0, Waveform Audio File Format}
  */
 export function encodeWav(blocks: readonly Float32Array[], sampleRate: number): Uint8Array<ArrayBuffer> {
   const frames = blocks.reduce((total, block) => total + block.length, 0);

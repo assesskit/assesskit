@@ -154,7 +154,7 @@ describe("applyReadingType", () => {
 
 describe("buildSpeechRequest", () => {
   describe("namespaced SSML", () => {
-    // The example of BPIG §5.2.1.8, "Item Example with Inline Pronunciation Using Namespaced SSML".
+    // The example of the best practices guide, "Item Example with Inline Pronunciation Using Namespaced SSML".
     const freud =
       '<qti-prompt>Sigmund <ssml:sub alias="Froyd">Freud</ssml:sub> and Carl <ssml:sub alias="young">Jung</ssml:sub> both belong to the <ssml:sub alias="sigh-co-analytical">psychoanalytical</ssml:sub> school of psychology.</qti-prompt>';
 
@@ -179,7 +179,7 @@ describe("buildSpeechRequest", () => {
       );
     });
 
-    it("speaks every element of the ASI schema with its attributes (SSML 1.1 §3)", () => {
+    it("speaks every element of the ASI schema with its attributes", () => {
       const request = read(
         mountContent(
           '<ssml:p><ssml:s>First <ssml:emphasis level="strong">sentence</ssml:emphasis>.</ssml:s><ssml:break strength="weak"/><ssml:s>Second<ssml:mark name="m1"/> <ssml:prosody rate="slow" pitch="+2st">slow</ssml:prosody> and <ssml:voice gender="female">voiced</ssml:voice> in <ssml:say-as interpret-as="characters">ABC</ssml:say-as> and <ssml:phoneme alphabet="ipa" ph="ˈrɛdɪŋ">Reading</ssml:phoneme>.</ssml:s></ssml:p><ssml:audio src="https://a.example/beep.mp3">Beep.</ssml:audio>',
@@ -214,12 +214,12 @@ describe("buildSpeechRequest", () => {
   });
 
   describe("data-ssml", () => {
-    // The example of BPIG §5.2.1.8, "Item Example with Inline SSML Pronunciation using JSON markup".
+    // The example of the best practices guide, "Item Example with Inline SSML Pronunciation using JSON markup".
     const freud = `<qti-prompt>Sigmund <span data-ssml='{"sub":{"alias":"Froyd"}}'>Freud</span> and Carl <span data-ssml='{"sub":{"alias":"young"}}'>Jung</span> both belong to the <span data-ssml='{"emphasis":{"level":"strong"}}'>
       <span data-ssml='{"sub":{"alias":"sigh-co-analytical"}}'>psychoanalytical
       </span></span> school of psychology.</qti-prompt>`;
 
-    it("speaks the functions of data-ssml: the BPIG example", () => {
+    it("speaks the functions of data-ssml: the example of the best practices guide", () => {
       const request = read(mountContent(freud));
       expect(inner(request)).toBe(
         '<p>Sigmund <sub alias="Froyd">Freud</sub> and Carl <sub alias="young">Jung</sub> both belong to the <emphasis level="strong"><sub alias="sigh-co-analytical">psychoanalytical</sub></emphasis> school of psychology.</p>',
@@ -229,7 +229,7 @@ describe("buildSpeechRequest", () => {
       );
     });
 
-    it("speaks the examples of DSSML §4.1.3", () => {
+    it("speaks the examples of data-ssml", () => {
       const request = read(
         mountContent(
           `<p>Please select the choice which is the base 10 equivalent to <span data-ssml='{"say-as":{"interpret-as":"characters"}}'>10111</span></p>` +
@@ -316,7 +316,7 @@ describe("buildSpeechRequest", () => {
   });
 
   describe("suppression and what is read", () => {
-    // The example of BPIG §5.2.1.9: "Text-to-Speech Suppression".
+    // The example of the best practices guide: "Text-to-Speech Suppression".
     const figure =
       '<p>Below is a figure with <span class="inline-math" data-qti-suppress-tts="computer-read-aloud">12</span> boxes.</p>' +
       '<div><img alt="Figure showing Rectangle ABCD divided into 12 equal area boxes. 4 of the boxes are shaded."/> <span data-qti-suppress-tts="screen-reader">Point A</span> <span data-qti-suppress-tts="screen-reader">Point B</span> ' +
@@ -341,7 +341,7 @@ describe("buildSpeechRequest", () => {
       expect(built(range, { settings: READ_ALOUD, messages: EN_MESSAGES, language: "en" })).toBeUndefined();
     });
 
-    it("reads the content of the example of VOCAB §1.1.6.1: the visually hidden words, and not the aria-hidden ones", () => {
+    it("reads the content of the shared vocabulary example: the visually hidden words, and not the aria-hidden ones", () => {
       const request = read(
         mountContent(
           '<p>Jane paid <span class="qti-visually-hidden">25 dollars</span> <span aria-hidden="true">$25.00</span> for the taxi fare.</p>',
@@ -509,7 +509,7 @@ describe("buildSpeechRequest", () => {
       );
     });
 
-    it("says the text of a link in another voice for different-voice (SSML 1.1 §3.2.1)", () => {
+    it("says the text of a link in another voice for different-voice", () => {
       const request = read(mountContent(link), { linkIndication: "different-voice" });
       expect(inner(request)).toBe('<p>See <voice variant="2">the guide</voice> now.</p>');
       expect(textOf(request)).toBe("See the guide now.");
@@ -686,7 +686,7 @@ describe("echoTyping", () => {
     return requests.map((request) => request.text);
   }
 
-  it("says each character as it is typed, and the word for a space, under characters (BPIG §5.2.1.3)", async () => {
+  it("says each character as it is typed, and the word for a space, under characters", async () => {
     expect(await typed("characters", "ab c")).toEqual(["a", "b", "space", "c"]);
   });
 

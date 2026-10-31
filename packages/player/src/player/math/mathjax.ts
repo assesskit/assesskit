@@ -1,22 +1,19 @@
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { checkString, describe } from "../../checks.js";
-
-/** The namespace of MathML (MathML 3 §2.1.1). */
-const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
+import { MATHML_NAMESPACE } from "../internal.js";
 
 /**
- * The elements of elementary math (MathML 3 §3.6), which MathJax 4 does not implement: it replaces an expression that
- * has one by a "Math input error" and drops the content.
+ * The elements of elementary math, which MathJax 4 does not implement: it replaces an expression that has one by a "Math
+ * input error" and drops the content.
+ *
+ * @see {@link https://www.w3.org/TR/MathML3/chapter3.html#presm.elementary | MathML 3, elementary math}
  */
 const ELEMENTARY_MATH = "mstack, mlongdiv, msgroup, msrow, mscarries, mscarry, msline";
 
 /** The place of the fonts relative to the component: npm lays `@mathjax/mathjax-newcm-font` beside `mathjax`. */
 const FONTS_PATH = "../@mathjax";
 
-/**
- * The priority of the render action that leaves out expressions with elementary math: after `find` (10) and before
- * `compile` (20) (MathJax `MathItem.STATE`).
- */
+/** The priority of the render action that leaves out expressions with elementary math: after `find` (10) and before `compile` (20) in MathJax. */
 const SKIP_PRIORITY = 15;
 
 /** The parts of a MathJax math item that the render action reads: the node it was found in, none for a converted one. */
@@ -161,14 +158,16 @@ function mathBelow(root: Element | ShadowRoot): Element[] {
 /** Typesets the MathML of content roots with MathJax, which it loads from a URL when the first expression needs it. */
 export interface MathTypesetter {
   /**
-   * Typesets the MathML expressions below `root` in place, with the styles in the root when it is a shadow root. MathJax
-   * is requested only when there is an expression; when there is none, nothing is loaded and the promise resolves.
-   * An expression with elementary math (`mstack`, `mlongdiv` and the elements that go with them) stays MathML, which
-   * the browser renders as MathML Core. When MathJax cannot be loaded the expressions stay MathML too, and the
-   * promise rejects.
+   * Typesets the MathML expressions below `root` in place, with the styles in the root when it is a shadow root.
    *
-   * @param root - A content root, or an element of one. A shadow root is typeset through its child elements, because
-   * MathJax takes elements.
+   * @remarks
+   * MathJax is requested only when there is an expression; when there is none, nothing is loaded and the promise resolves.
+   * An expression with elementary math (`mstack`, `mlongdiv` and the elements that go with them) stays MathML, which the
+   * browser renders as MathML Core. When MathJax cannot be loaded the expressions stay MathML too, and the promise rejects.
+   *
+   * @param root - A content root, or an element of one. A shadow root is typeset through its child elements, because MathJax
+   * takes elements.
+   * @returns A promise that resolves when the expressions are typeset.
    * @throws `DataError` when `root` is not an element or a shadow root.
    * @throws `AssesskitError` when MathJax cannot be loaded or the script is not MathJax 4.
    */
@@ -176,12 +175,15 @@ export interface MathTypesetter {
 }
 
 /**
- * Creates a typesetter that loads MathJax 4 from a URL, once. The host serves MathJax; the player bundles none. The URL is
- * that of the `mml-chtml.js` component, and the font package `@mathjax/mathjax-newcm-font` is served at `../@mathjax`
- * relative to it, as npm lays out `mathjax` and `@mathjax` side by side. MathJax is a global of the page, so a page
- * uses one URL.
+ * Creates a typesetter that loads MathJax 4 from a URL, once.
+ *
+ * @remarks
+ * The host serves MathJax; the player bundles none. The URL is that of the `mml-chtml.js` component, and the font package
+ * `@mathjax/mathjax-newcm-font` is served at `../@mathjax` relative to it, as npm lays out `mathjax` and `@mathjax` side by
+ * side. MathJax is a global of the page, so a page uses one URL.
  *
  * @param url - The absolute `http` or `https` URL of `mml-chtml.js`.
+ * @returns The typesetter.
  * @throws `DataError` when `url` is not such a URL, or the page already loaded MathJax from another URL.
  */
 export function createMathTypesetter(url: string): MathTypesetter {

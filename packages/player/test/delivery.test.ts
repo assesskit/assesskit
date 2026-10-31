@@ -2,9 +2,13 @@ import { type CandidateView, createEngine } from "@assesskit/runtime/delivery";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { confirmationText, planActions } from "../src/player/delivery/actions.js";
-import { clockText, spokenText } from "../src/player/delivery/duration.js";
-import { REFUSAL_MESSAGES } from "../src/player/delivery/refusals.js";
+import {
+  clockText,
+  confirmationText,
+  planActions,
+  REFUSAL_MESSAGES,
+  spokenText,
+} from "../src/player/delivery/internal.js";
 import { REFUSAL_CODES } from "../src/protocol/index.js";
 import { examDefinition, examFiles, packageOf } from "./exam-fixture.js";
 

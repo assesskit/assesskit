@@ -1,7 +1,7 @@
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { type Assignment, Board, type BoardPlace, type BoardSource } from "./board/model.js";
 import { type BoardSlot, type BoardToken, BoardView } from "./board/view.js";
 import { InteractionElement, sameValue } from "./element.js";
@@ -21,7 +21,13 @@ export interface BoardLayout {
   readonly pool: Element;
 }
 
-/** Returns the choices as tokens of the pool, each with a name that a person who cannot see it can read. */
+/**
+ * Returns the choices as tokens of the pool, each with a name that a person who cannot see it can read.
+ *
+ * @param choices - The built choices.
+ * @param messages - The interface messages.
+ * @returns The tokens.
+ */
 export function tokensOf(choices: readonly BuiltChoice[], messages: Messages): BoardToken[] {
   return choices.map((choice, index) => ({
     id: choice.id,
@@ -32,13 +38,25 @@ export function tokensOf(choices: readonly BuiltChoice[], messages: Messages): B
   }));
 }
 
-/** Returns how many times each choice can be put in a place: its `match-max`, or no limit when it has none (INFO §5.131.6). */
+/**
+ * Returns how many times each choice can be put in a place: its `match-max`, or no limit when it has none.
+ *
+ * @param descriptor - The descriptor of the interaction.
+ * @returns A function from the identifier of a choice to its limit.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, match max}
+ */
 export function limitsOf(descriptor: InteractionDescriptor): (identifier: string) => number {
   const limits = new Map(descriptor.choices.map(({ identifier, matchMax }) => [identifier, matchMax]));
   return (identifier) => limits.get(identifier) ?? Number.POSITIVE_INFINITY;
 }
 
-/** Returns the area of the pool: the choices that are not placed, in a group that a screen reader names. */
+/**
+ * Returns the area of the pool: the choices that are not placed, in a group that a screen reader names.
+ *
+ * @param choices - The built choices.
+ * @param messages - The interface messages.
+ * @returns The area.
+ */
 export function poolOf(choices: readonly BuiltChoice[], messages: Messages): HTMLElement {
   return html(
     "div",
@@ -49,8 +67,11 @@ export function poolOf(choices: readonly BuiltChoice[], messages: Messages): HTM
 
 /**
  * The element of an interaction in which the candidate puts choices in places: an order, an association, a match or a
- * gap match. It keeps a {@link Board} and draws it with a {@link BoardView}; each kind says how the board is laid out and
- * how it maps to the response.
+ * gap match.
+ *
+ * @remarks
+ * It keeps a {@link Board} and draws it with a {@link BoardView}; each kind says how the board is laid out and how it
+ * maps to the response.
  */
 export abstract class BoardElement extends InteractionElement {
   #board: Board | undefined;

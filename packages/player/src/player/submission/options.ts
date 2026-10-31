@@ -4,7 +4,7 @@ import type { FileValue } from "@assesskit/runtime/values";
 import { checkFunction, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
 import { type Messages, selectMessages } from "../../messages/index.js";
 import type { InteractionRenderers } from "../content/index.js";
-import { readRenderOptions } from "../content/options.js";
+import { readRenderOptions } from "../content/internal.js";
 import type { MountFiles, MountOptions } from "../delivery/index.js";
 import { createMathTypesetter, type MathTypesetter } from "../math/index.js";
 
@@ -12,8 +12,11 @@ import { createMathTypesetter, type MathTypesetter } from "../math/index.js";
 export type SubmissionFiles = Pick<MountFiles, "url">;
 
 /**
- * The options of {@link mountSubmission}. `stylesheet`, `language`, `messages`, `origins` and `mathjax` mean what they do
- * for the player, so a host passes the same values to both.
+ * The options of {@link mountSubmission}.
+ *
+ * @remarks
+ * `stylesheet`, `language`, `messages`, `origins` and `mathjax` mean what they do for the player, so a host passes the
+ * same values to both.
  */
 export interface SubmissionOptions
   extends Pick<MountOptions, "stylesheet" | "language" | "messages" | "origins" | "mathjax"> {
@@ -22,13 +25,23 @@ export interface SubmissionOptions
    * items and the rubric.
    */
   readonly assets: (path: string) => string;
-  /** The files of the host. Default: none, so that a file shows as its name. */
+  /**
+   * The files of the host.
+   *
+   * @defaultValue None, so that a file shows as its name
+   */
   readonly files?: SubmissionFiles;
-  /** The renderers of interactions by kind. Default: none, so that each interaction is a placeholder. */
+  /**
+   * The renderers of interactions by kind.
+   *
+   * @defaultValue An empty map, so that each interaction is a placeholder
+   */
   readonly interactions?: InteractionRenderers;
   /**
    * Returns the path in the package of the document of an item instance, such as `items/q1/item.xml`, against which the
-   * relative references of its content resolve. Default: every item starts at `""`, the root of the package.
+   * relative references of its content resolve.
+   *
+   * @defaultValue Every item starts at `""`, the root of the package
    */
   readonly itemPath?: (item: ItemKey) => string;
 }
@@ -85,6 +98,8 @@ function returningHttpUrl(url: (file: FileValue) => unknown): (file: FileValue) 
 /**
  * Checks the options of a display and fills in their defaults.
  *
+ * @param options - The options.
+ * @returns The settings.
  * @throws `DataError` when an option is not of its type.
  */
 export function readSubmissionOptions(options: unknown): SubmissionSettings {

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { encodeWav } from "../src/player/recording/wav.js";
+import { encodeWav } from "../src/player/recording/index.js";
 
 /** Reads the 16-bit samples that follow the 44-byte header. */
 function samplesOf(bytes: Uint8Array): number[] {

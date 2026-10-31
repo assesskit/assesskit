@@ -1,7 +1,6 @@
 import { type ContentVariables, VIEWS, type View } from "@assesskit/runtime/content";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
-import * as v from "valibot";
 import {
   checkChoice,
   checkFunction,
@@ -10,10 +9,9 @@ import {
   checkRecord,
   checkString,
   describe,
-  looseRecord,
-  parseWith,
 } from "../../checks.js";
-import { EN_MESSAGES, type Messages } from "../../messages/index.js";
+import type { Messages } from "../../messages/index.js";
+import { checkMessages } from "../../messages/internal.js";
 import type { InteractionRenderers } from "./context.js";
 import { readOrigins } from "./urls.js";
 
@@ -22,28 +20,60 @@ export interface BodyRendererOptions {
   /** The text of the interface. */
   readonly messages: Messages;
   /**
-   * Turns the path of a file in the package into the URL to load it from; the session client's `assets` fits. Every
-   * reference of content to a package file goes through it.
+   * Turns the path of a file in the package into the URL to load it from; the session client's `assets` fits.
+   *
+   * @remarks
+   * Every reference of content to a package file goes through it.
    */
   readonly assets: (path: string) => string;
   /**
    * The path in the package of the document the content comes from, such as `items/q1/item.xml`: relative references
-   * resolve against it. Default: `""`, so that references are paths from the root of the package.
+   * resolve against it.
+   *
+   * @defaultValue `""`, so that references are paths from the root of the package
    */
   readonly base?: string;
-  /** The origins besides the package's that content may reference, such as `https://media.example`. Default: none. */
+  /**
+   * The origins besides the package's that content may reference, such as `https://media.example`.
+   *
+   * @defaultValue `[]`
+   */
   readonly origins?: readonly string[];
-  /** The renderers of interactions by `kind`; an interaction without one is drawn as a placeholder. Default: none. */
+  /**
+   * The renderers of interactions by `kind`; an interaction without one is drawn as a placeholder.
+   *
+   * @defaultValue An empty map
+   */
   readonly interactions?: InteractionRenderers;
-  /** The view whose rubric blocks stay. Default: `candidate`. */
+  /**
+   * The view whose rubric blocks stay.
+   *
+   * @defaultValue `"candidate"`
+   */
   readonly view?: View;
-  /** Whether media and animation are withheld because a hazard remains. Default: `false`. */
+  /**
+   * Whether media and animation are withheld because a hazard remains.
+   *
+   * @defaultValue `false`
+   */
   readonly withholdMedia?: boolean;
-  /** The factor for the pixel sizes of media, which the magnification of non-text content sets. Default: `1`. */
+  /**
+   * The factor for the pixel sizes of media, which the magnification of non-text content sets.
+   *
+   * @defaultValue `1`
+   */
   readonly mediaScale?: number;
-  /** The variables that printed variables still in the content read. Default: none, so that they print nothing. */
+  /**
+   * The variables that printed variables still in the content read.
+   *
+   * @defaultValue None, so that a printed variable prints nothing
+   */
   readonly variables?: ContentVariables;
-  /** Returns the URL of a file value, such as an upload to review. Default: none, so that a file prints as its name. */
+  /**
+   * Returns the URL of a file value, such as an upload to review.
+   *
+   * @defaultValue None, so that a file prints as its name
+   */
   readonly fileUrl?: (file: FileValue) => string;
 }
 
@@ -84,13 +114,6 @@ const OPTION_NAMES = [
   "fileUrl",
 ];
 
-const messagesSchema = looseRecord(Object.fromEntries(Object.keys(EN_MESSAGES).map((key) => [key, v.string()])));
-
-/** Checks that a value is the messages of the interface: an object with a string for every message of the catalog. */
-export function checkMessages(messages: unknown): asserts messages is Messages {
-  parseWith(messagesSchema, messages, "The option messages");
-}
-
 function checkInteractions(interactions: unknown): asserts interactions is InteractionRenderers {
   if (!(interactions instanceof Map)) {
     throw new DataError(
@@ -126,6 +149,8 @@ function returningUrl<TArgs extends readonly unknown[]>(
 /**
  * Checks the options of a renderer and fills in their defaults.
  *
+ * @param options - The options.
+ * @returns The settings.
  * @throws `DataError` when an option is not of its type.
  */
 export function readRenderOptions(options: unknown): RenderSettings {

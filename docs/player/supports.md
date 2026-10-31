@@ -1,8 +1,20 @@
 # Supports
 
 A candidate's personal needs and preferences (PNP) arrive in the runtime's view as `SupportView`s: a `name`, a `state`, whether
-the support is `active`, and the `settings` of the profile ([BPIG] §5). The player applies each support that is on. It does not
+the support is `active`, and the `settings` of the profile. The player applies each support that is on. It does not
 decide which candidate has which support, and it does not choose the variant: the runtime does both, and the player shows the result.
+
+```mermaid
+flowchart LR
+  view["view.supports"] --> look["presentationOf, mediaScaleOf<br/>applyPresentation"]
+  view --> panel["mountSupportPanel<br/>buttons for the options"]
+  view --> content["mountContentSupports<br/>cards, tracks, alternative text"]
+  view --> spoken["mountSpoken<br/>reading aloud"]
+  view --> variant["mountVariantNotice"]
+  view --> tools["mountTools<br/>tools of the supports"]
+  panel -- "support action" --> engine["Session client and runtime"]
+  engine --> view
+```
 
 | Part                                  | What it does                                                                                 |
 | ------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -19,39 +31,31 @@ view, and sends the `support` action when a part asks for one ([in the player](#
 
 ```ts
 import { selectMessages } from "@assesskit/player";
-import {
-  applyPresentation,
-  createContentRoot,
-  mountContentSupports,
-  mountSupportPanel,
-  presentationOf,
-} from "@assesskit/player/player";
-import type { SupportView } from "@assesskit/runtime/delivery";
+import { applyPresentation, mountSupportPanel, presentationOf } from "@assesskit/player/player";
 
-declare const chrome: HTMLElement; // in the page
-declare const host: HTMLElement; // the host of the content root
-declare const root: ReturnType<typeof createContentRoot>;
-declare function send(action: { type: "support"; name: string; active: boolean }): void;
-
-const messages = selectMessages("en");
-const panel = mountSupportPanel(chrome, {
-  messages,
-  onSupport: (name, active) => send({ type: "support", name, active }),
-});
-const content = mountContentSupports(root, { messages });
-
-// For every view, after `root.show(...)` has settled:
-function apply(supports: readonly SupportView[]): void {
-  applyPresentation(host, presentationOf(supports));
-  panel.update(supports);
-  content.update(supports);
-}
-
-presentationOf([
+const supports = [
   { name: "high-contrast", state: "option", active: true },
   { name: "magnification", state: "active", active: true },
-]);
-// attributes: Map { "data-ak-contrast" => "high" }, properties: Map { "--ak-text-zoom" => "2" }
+];
+
+const chrome = document.createElement("div");
+document.body.append(chrome);
+const requests = [];
+const panel = mountSupportPanel(chrome, {
+  messages: selectMessages("en"),
+  onSupport: (name, active) => requests.push([name, active]),
+});
+panel.update(supports);
+chrome.querySelector("button")?.getAttribute("aria-pressed"); // => "true"
+chrome.querySelector("button")?.click();
+requests; // => [["high-contrast", false]]
+
+const host = document.createElement("div");
+const look = presentationOf(supports);
+look.attributes; // => new Map([["data-ak-contrast", "high"]])
+look.properties; // => new Map([["--ak-text-zoom", "2"]])
+applyPresentation(host, look);
+host.getAttribute("data-ak-contrast"); // => "high"
 ```
 
 ## In the player
@@ -88,7 +92,7 @@ itself.
 ## The support action
 
 The runtime turns a support on or off for the `support` action `{ type: "support", name, active }`, and only when the support's
-state is `option` (BPIG §5.3). It refuses the action for a prohibited support, one that is on from the start and one that
+state is `option`. It refuses the action for a prohibited support, one that is on from the start and one that
 is assigned with `support-not-available`, and records the supports that were on for the item in the results (E28).
 
 - The panel and the tools ask; they never decide. A button shows the `active` flag of the last input, and it calls
@@ -126,7 +130,7 @@ a magnification.
 | A magnification without a positive `zoomAmount`                   | 200 percent, the enlargement that WCAG 1.4.4 asks the text to survive                                               |
 | `fontSize`                                                        | Points, with 12 as 1: the PNP schema gives 12 as the default size and no unit; a size of 0 or less asks for nothing |
 | `letterSpacing` and `wordSpacing`                                 | Ems: the schema gives a float and no unit                                                                           |
-| `lineHeight` and `lineSpacing`                                    | A multiple of the base height of 1.5, and ems added to it (BPIG §5.2.9.7.6–7, as `player.css` reads them)           |
+| `lineHeight` and `lineSpacing`                                    | A multiple of the base height of 1.5, and ems added to it                                                           |
 | A font name                                                       | Quoted as a CSS string, with the backslash and the quote escaped and control characters turned into spaces          |
 
 ## The panel
@@ -142,11 +146,11 @@ document or shadow root of `host`.
 | `onSupport` | `(name: SupportName, active: boolean) => void` | Called when the candidate asks to turn a support on or off.        |
 
 `update(supports)` shows the buttons and the lines for the supports of the view, in their order, and keeps the focus on the
-button that has it. A prohibited support is not shown. A custom support (BPIG §5.4) is named by the local name of its element. `destroy()` takes the panel away.
+button that has it. A prohibited support is not shown. A custom support is named by the local name of its element. `destroy()` takes the panel away.
 
 ## Cards
 
-A catalog gives the content of a support for an element that names it with `data-catalog-idref` (BPIG §3.7.10). A `qti-card`
+A catalog gives the content of a support for an element that names it with `data-catalog-idref`. A `qti-card`
 names one of 15 supports or an extension (the `support` of the schema). `mountContentSupports(root, options)` shows the
 cards of the supports that are on, with `ContentRoot.card`; the card is chosen by the language of the support.
 
@@ -157,19 +161,19 @@ cards of the supports that are on, with `ContentRoot.card`; the card is chosen b
 `update(supports)` replaces what an earlier call applied. Call it after `show` of the root settles, and again when the
 supports change. `destroy()` gives the content back as the root drew it.
 
-| Support                                                               | The card shows                                                                                         | Row |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --- |
-| `glossary-on-screen`                                                  | in a popup, on request                                                                                 | T76 |
-| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 | T77 |
-| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 | T78 |
+| Support                                                               | The card shows                                                                                         |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `glossary-on-screen`                                                  | in a popup, on request                                                                                 |
+| `keyword-translation`                                                 | in a popup, on request, in the language of the support                                                 |
+| `linguistic-guidance`, `additional-directions`, `keyboard-directions` | in a popup, on request                                                                                 |
 | A custom support (`ext:`)                                             | in a popup, on request                                                                                 |     |
-| `high-contrast`                                                       | in place of the content                                                                                | T79 |
-| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                | T80 |
-| `sign-language`                                                       | beside the content, the entry of the language of the support                                           | T81 |
-| `audio-description`, `transcript`                                     | beside the content                                                                                     | T82 |
-| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   | T84 |
-| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links | T83 |
-| `tactile`                                                             | beside the content; its files are links                                                                | T83 |
+| `high-contrast`                                                       | in place of the content                                                                                |
+| `simplified-graphics`, `simplified-language-portions`                 | in place of the content                                                                                |
+| `sign-language`                                                       | beside the content, the entry of the language of the support                                           |
+| `audio-description`, `transcript`                                     | beside the content                                                                                     |
+| `long-description`                                                    | beside the content; visually hidden unless `hideVisually` is `false`                                   |
+| `braille`                                                             | beside the content; the text is visually hidden unless the delivery is `embossed`, the files are links |
+| `tactile`                                                             | beside the content; its files are links                                                                |
 | `spoken`                                                              | not shown: a card for the voice of a host                                                              |     |
 
 The language of a card is that of `keyword-translation` or `sign-language` for their own cards, else that of the
@@ -185,11 +189,11 @@ element that holds a control and has no face keeps its content, and its card com
 
 Two supports without a card also change the content:
 
-| Support             | Effect                                                                                                          | Row |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- | --- |
-| `captions`          | The `captions` and `subtitles` text tracks of `audio` and `video` are `showing`; they get their mode back later | T82 |
-| `audio-description` | The `descriptions` text tracks are `showing`; the browser decides how it presents their cues                    | T82 |
-| `alternative-text`  | The `alt` of each image stands after it as text; an empty `alt`, which marks decoration, gets nothing           | T84 |
+| Support             | Effect                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `captions`          | The `captions` and `subtitles` text tracks of `audio` and `video` are `showing`; they get their mode back later |
+| `audio-description` | The `descriptions` text tracks are `showing`; the browser decides how it presents their cues                    |
+| `alternative-text`  | The `alt` of each image stands after it as text; an empty `alt`, which marks decoration, gets nothing           |
 
 ### Media
 
@@ -250,7 +254,7 @@ the root, and stops when the support goes.
 
 ## The variant
 
-`mountVariantNotice(host, options)` shows which version of a question the runtime delivered (`CandidateItem.variant`, B100). The runtime
+`mountVariantNotice(host, options)` shows which version of a question the runtime delivered (`CandidateItem.variant`). The runtime
 chooses it at the first presentation, from the hazards the candidate avoids and the language of the `item-translation`
 support, and fixes it for the session. The player shows the choice and decides nothing.
 
@@ -267,22 +271,61 @@ variant without a language says that an adapted version is shown. `undefined`, t
 
 ## Input requirements
 
-`input-requirements` asks for full keyboard control or full mouse control (BPIG §5.2). Every control of these parts works
+`input-requirements` asks for full keyboard control or full mouse control. Every control of these parts works
 with the keyboard alone and with the pointer alone, so the support changes nothing: buttons are buttons, the popup opens on
 hover and on focus, and Escape has the Close button as its pointer equivalent.
 
 ## Where the sources differ
 
-| Case                                                              | Reading                                                                               |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| The design lists `captions` and `alternative-text` with the cards | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt` |
-| BPIG leaves the presentation of a card to the platform            | The table above                                                                       |
-| `item-translation` has a language but no card                     | Its language chooses the entry of the cards of supports that have none of their own   |
-| The PNP schema gives no unit for sizes and spacing                | Points over 12 for the font size, ems for the spacing                                 |
+| Case                                                                       | Reading                                                                               |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| The design lists `captions` and `alternative-text` with the cards          | The schema gives a `qti-card` no such `support`; they act on text tracks and on `alt` |
+| The best practices guide leaves the presentation of a card to the platform | The table above                                                                       |
+| `item-translation` has a language but no card                              | Its language chooses the entry of the cards of supports that have none of their own   |
+| The PNP schema gives no unit for sizes and spacing                         | Points over 12 for the font size, ems for the spacing                                 |
 
 ## Evidence
 
 `pnpm test:browser` mounts every part in Chromium, Firefox and WebKit, runs axe at WCAG 2.2 A and AA on each of them
 (popups open, in the themes), presses real keys and pointer buttons, and drives them with the runtime's engine: a click on the
 panel sends the `support` action, and the next view applies the support. The popup tests cover the three conditions of
-1.4.13. A running frame of a portable custom interaction takes a new look (`pci` in `player.browser.test.ts`).
+1.4.13. A running frame of a portable custom interaction takes a new look (`pci` in `pci.browser.test.ts`).
+
+## Files
+
+Each file of `src/player/supports/`, `src/player/presentation/` holds one concept.
+
+| File                           | Concept                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `supports/appearance.ts`       | The look and the media scale of the supports                                  |
+| `supports/cards.ts`            | Showing the cards of the supports                                             |
+| `supports/check.ts`            | The check of the supports of a view                                           |
+| `supports/content.ts`          | `mountContentSupports`                                                        |
+| `supports/index.ts`            | The public API                                                                |
+| `supports/internal.ts`         | Helpers that other folders and tests share, which the package does not export |
+| `supports/media.ts`            | Text tracks and alternative text                                              |
+| `supports/names.ts`            | The name of a support                                                         |
+| `supports/panel.ts`            | `mountSupportPanel`                                                           |
+| `supports/popup.ts`            | The popup of a card                                                           |
+| `supports/spoken.ts`           | `mountSpoken`                                                                 |
+| `supports/styles.ts`           | The stylesheet of the parts in the chrome                                     |
+| `supports/variant.ts`          | `mountVariantNotice`                                                          |
+| `presentation/index.ts`        | The public API                                                                |
+| `presentation/internal.ts`     | Helpers that other folders and tests share, which the package does not export |
+| `presentation/presentation.ts` | The presentation of the supports, its check and its application               |
+
+## References
+
+| Specification                                                                                    | Topics                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#resize-text)                                            | resize text                                                                                                                                        |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | catalogs and cards, custom supports, display supports, magnification, personal needs and preferences, reading type, support states, text to speech |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#language-of-parts)                                      | language of parts                                                                                                                                  |
+| [ECMA-402](https://tc39.es/ecma402/#intl-displaynames-objects)                                   | Intl.DisplayNames                                                                                                                                  |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                                    | target size                                                                                                                                        |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#content-on-hover-or-focus)                              | content on hover or focus                                                                                                                          |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   | card                                                                                                                                               |
+| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)           | visually hidden                                                                                                                                    |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/media.html#attr-track-kind)               | the kind of a track                                                                                                                                |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#captions-prerecorded)                                   | captions                                                                                                                                           |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#audio-description-prerecorded)                          | audio description                                                                                                                                  |

@@ -1,7 +1,11 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 
-/** The elements that answer masking covers: the choices of a choice interaction (BPIG §5.2.9.4). */
+/**
+ * The elements that answer masking covers: the choices of a choice interaction.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, answer masking}
+ */
 const INTERACTION = "qti-choice-interaction";
 const CHOICE = "qti-simple-choice";
 
@@ -17,10 +21,16 @@ interface Mask {
 }
 
 /**
- * Turns answer masking on (BPIG §5.2.9.4): the choices of every choice interaction in the stage are hidden, visually and
- * to assistive technology, and a mask in their place says so and has a button that shows them. The mask covers an
- * interaction that the renderer adds later, too. It stays as a button that hides the choices again, so that the focus
- * stays where it was when the candidate shows them.
+ * Turns answer masking on: the choices of every choice interaction in the stage are hidden, visually and to assistive
+ * technology, and a mask in their place says so and has a button that shows them.
+ *
+ * @remarks
+ * The mask covers an interaction that the renderer adds later, too. It stays as a button that hides the choices again, so
+ * that the focus stays where it was when the candidate shows them.
+ *
+ * @param context - What the tool needs from the mount.
+ * @returns The open tool.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, answer masking}
  */
 export function openAnswerMasking({ messages, stage }: ToolContext): OpenTool {
   const masks = new Map<Element, Mask>();

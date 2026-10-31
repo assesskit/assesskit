@@ -1,4 +1,4 @@
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { createPanel } from "./panel.js";
 
@@ -55,7 +55,11 @@ function clamp(value: number, least: number, greatest: number): number {
   return Math.min(Math.max(value, least), greatest);
 }
 
-/** Whether the tool lies over every sampled point of an element, which is then hidden by it (WCAG 2.4.11). */
+/**
+ * Returns whether the tool lies over every sampled point of an element, which is then hidden by it.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum | WCAG 2.2, focus not obscured}
+ */
 function hides(tool: HTMLElement, element: Element): boolean {
   const rect = element.getBoundingClientRect();
   const root = element.getRootNode();
@@ -71,10 +75,19 @@ function hides(tool: HTMLElement, element: Element): boolean {
 }
 
 /**
- * Opens a tool that the candidate places over the item (the rule and the protractor). The tool moves and turns by
- * dragging, by the arrow keys and Page Up and Page Down on the tool, and by the buttons and the angle field of its panel,
- * so that no movement needs a drag (WCAG 2.5.7). It moves out of the way of an element that takes the focus and that it
- * would hide (WCAG 2.4.11).
+ * Opens a tool that the candidate places over the item (the rule and the protractor).
+ *
+ * @remarks
+ * The tool moves and turns by dragging, by the arrow keys and Page Up and Page Down on the tool, and by the buttons and
+ * the angle field of its panel, so that no movement needs a drag. It moves out of the way of an element that takes the
+ * focus and that it would hide.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param spec - The drawing and its size.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
+ * @see {@link https://www.w3.org/TR/WCAG22/#dragging-movements | WCAG 2.2, dragging movements}
+ * @see {@link https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum | WCAG 2.2, focus not obscured}
  */
 export function openPlacedTool(context: ToolContext, spec: PlacedToolSpec, close: () => void): OpenTool {
   const { messages, stage, layer } = context;

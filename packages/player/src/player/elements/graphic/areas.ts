@@ -2,7 +2,7 @@ import type { AssociableHotspot, HotspotChoice } from "@assesskit/runtime/asi";
 import { AssesskitError } from "@assesskit/runtime/errors";
 import type { Point } from "@assesskit/runtime/values";
 import type { BodyRenderer } from "../../content/index.js";
-import { html, svg } from "../../dom.js";
+import { html, svg } from "../../internal.js";
 import { type Box, parseArea } from "./geometry.js";
 import type { Stage } from "./stage.js";
 
@@ -16,9 +16,12 @@ const AREA_ELEMENTS = {
 } as const;
 
 /**
- * Returns the SVG that draws a polygon in the box that holds it, scaled with the box and with a line that keeps its width.
- * The halo under the line keeps the outline in sight on any image (WCAG 2.2, 1.4.11), as the border and the outline of the
- * other shapes do.
+ * Draws a polygon in the box that holds it, scaled with the box and with a line that keeps its width.
+ *
+ * @remarks
+ * The halo under the line keeps the outline in sight on any image, as the border and the outline of the other shapes do.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#non-text-contrast | WCAG 2.2, non-text contrast}
  */
 function drawOutline(outline: SVGSVGElement, corners: readonly Point[], box: Box): void {
   const points = corners.map(([x, y]) => `${x - box.x},${y - box.y}`).join(" ");
@@ -33,21 +36,30 @@ export interface Area {
   readonly element: HTMLElement;
   /**
    * The content of the face: the label of the hotspot for a screen reader, which the author gave, and the outline of a
-   * polygon. The face is what the candidate sees of the hotspot, and its text names the control.
+   * polygon.
+   *
+   * @remarks
+   * The face is what the candidate sees of the hotspot, and its text names the control.
    */
   readonly content: readonly Node[];
 }
 
 /**
- * Builds the element of a hotspot or an associable hotspot over an image. The stylesheet places and sizes it in the layer
- * of the stage from the box of the shape, which this sets as custom properties in the units of the image; a polygon draws its
- * outline as SVG in the face, because a border cannot follow it. The control and the face are the interaction's to add.
+ * Builds the element of a hotspot or an associable hotspot over an image.
  *
+ * @remarks
+ * The stylesheet places and sizes it in the layer of the stage from the box of the shape, which this sets as custom
+ * properties in the units of the image; a polygon draws its outline as SVG in the face, because a border cannot follow it.
+ * The control and the face are the interaction's to add.
+ *
+ * @param node - The hotspot or associable hotspot.
+ * @param context - The renderer and the stage of the interaction.
+ * @returns The area.
  * @throws `DataError` when the coordinates do not fit the shape.
  * @throws `AssesskitError` when the renderer builds the element as something other than an HTML element.
  */
 export function createArea(node: AreaNode, context: { readonly renderer: BodyRenderer; readonly stage: Stage }): Area {
-  // A percentage needs the size of the image, so the syntax is checked against any size now, and the box later.
+  // A percentage needs the size of the image, so the syntax is checked against any size here, and the box later.
   parseArea(node.shape, node.coords, { width: 1, height: 1 });
   const element = context.renderer.element(AREA_ELEMENTS[node.kind], node, []);
   if (!(element instanceof HTMLElement)) throw new AssesskitError("The renderer built a hotspot as a foreign element.");
@@ -70,7 +82,12 @@ export function createArea(node: AreaNode, context: { readonly renderer: BodyRen
   return { element, content: [...label, ...(outline === undefined ? [] : [outline])] };
 }
 
-/** Returns the box of an area in the units of the image, as {@link createArea} set it, or `undefined` while the size of the image is unknown. */
+/**
+ * Returns the box of an area in the units of the image, as {@link createArea} set it.
+ *
+ * @param area - The element of the area.
+ * @returns The box, or `undefined` while the size of the image is unknown.
+ */
 export function boxOf(area: HTMLElement): Box | undefined {
   const [x, y, width, height] = ["x", "y", "w", "h"].map((name) =>
     Number.parseFloat(area.style.getPropertyValue(`--ak-${name}`)),

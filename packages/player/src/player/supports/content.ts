@@ -2,8 +2,8 @@ import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { checkProperties, checkRecord, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
-import { showTracks } from "../media/tracks.js";
+import { checkMessages } from "../../messages/internal.js";
+import { showTracks } from "../media/index.js";
 import type { ContentRoot } from "../roots/index.js";
 import { CARD_KIND_ORDER, cardKindOf, showCard } from "./cards.js";
 import { activeSupport, checkSupportViews } from "./check.js";
@@ -18,9 +18,12 @@ export interface ContentSupportsOptions {
 /** The supports that change the content of a content root: cards, text tracks and the alternative text of images. */
 export interface ContentSupports {
   /**
-   * Applies the supports that are on to the content the root shows now, in place of what an earlier call applied. Call
-   * it after `show` of the root resolves, and again when the supports change.
+   * Applies the supports that are on to the content that the root shows, in place of what an earlier call applied.
    *
+   * @remarks
+   * Call it after `show` of the root resolves, and again when the supports change.
+   *
+   * @param supports - The supports of the view.
    * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
    */
   update(supports: readonly SupportView[]): void;
@@ -29,8 +32,8 @@ export interface ContentSupports {
 }
 
 /**
- * Returns the language of the cards of a support: its own for a translation or sign language (PNP XSD `LanguageModeDType`),
- * else that of the translation of the question when that is on, else none, which gives the default entry.
+ * Returns the language of the cards of a support: its own for a translation or sign language, else that of the
+ * translation of the question when that is on, else none, which gives the default entry.
  */
 function languageFor(supports: readonly SupportView[], { settings }: SupportView): string | undefined {
   if (settings?.name === "keyword-translation" || settings?.name === "sign-language") return settings.language;
@@ -49,17 +52,22 @@ function checkRoot(root: unknown, options: unknown): asserts options is ContentS
 }
 
 /**
- * Mounts the supports that change the content of a content root (BPIG §3.7.10, the player design §2.7). For each element that
- * asks for a card with `data-catalog-idref`, and each support that is on and has a card there, it shows the card the way
- * the support asks for: the glossary, the translation of keywords, the guidance and the directions in a popup that opens
- * on request and meets WCAG 1.4.13; high contrast and the simplified graphics and language in place of the content; sign
- * language, audio description, captions, transcript, alternative text, long description, braille and tactile beside it.
- * It also shows the caption and description tracks of the media, and the `alt` of images as text when the alternative
- * text is on. The card is chosen by `ContentRoot.card`, in the language of the support.
+ * Mounts the supports that change the content of a content root.
+ *
+ * @remarks
+ * For each element that asks for a card with `data-catalog-idref`, and each support that is on and has a card there, it
+ * shows the card the way the support asks for: the glossary, the translation of keywords, the guidance and the directions
+ * in a popup that opens on request and stays until dismissed; high contrast and the simplified graphics and language in
+ * place of the content; sign language, audio description, captions, transcript, alternative text, long description,
+ * braille and tactile beside it. It also shows the caption and description tracks of the media, and the `alt` of images
+ * as text when the alternative text is on. The card is chosen by `ContentRoot.card`, in the language of the support.
  *
  * @param root - The content root whose content the supports change.
  * @param options - See {@link ContentSupportsOptions}.
+ * @returns The handle that applies the supports and takes them away.
  * @throws `DataError` when `root` or an option is not valid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, catalogs and cards}
+ * @see {@link https://www.w3.org/TR/WCAG22/#content-on-hover-or-focus | WCAG 2.2, content on hover or focus}
  */
 export function mountContentSupports(root: ContentRoot, options: ContentSupportsOptions): ContentSupports {
   checkRoot(root, options);

@@ -1,8 +1,12 @@
 import type { HazardExposure, PnpHazardTerm } from "@assesskit/runtime/content";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 
-/** The message that names each hazard of a PNP (BPIG §5.2.5). */
+/**
+ * The message that names each hazard of a PNP.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, hazards}
+ */
 const HAZARD_NAMES: Readonly<Record<PnpHazardTerm, keyof Messages>> = {
   flashing: "hazardFlashing",
   sound: "hazardSound",
@@ -11,14 +15,25 @@ const HAZARD_NAMES: Readonly<Record<PnpHazardTerm, keyof Messages>> = {
 };
 
 /**
- * Returns the hazards that remain: those of the delivered content that the candidate avoids. The runtime chooses the variant
- * without them where it can (B100), and flags `avoided` the ones it could not leave out.
+ * Returns the hazards that remain: those of the delivered content that the candidate avoids.
+ *
+ * @remarks
+ * The runtime chooses the variant without them where it can, and flags `avoided` the ones it could not leave out.
+ *
+ * @param hazards - The hazards of the delivered content.
+ * @returns The terms of the hazards that remain.
  */
 export function remainingHazards(hazards: readonly HazardExposure[]): readonly PnpHazardTerm[] {
   return hazards.filter(({ avoided }) => avoided).map(({ hazard }) => hazard);
 }
 
-/** Builds the notice that names the hazards that remain, which the player shows in place of the media it withholds (T95). */
+/**
+ * Builds the notice that names the hazards that remain, which the player shows in place of the media it withholds.
+ *
+ * @param hazards - The hazards that remain.
+ * @param messages - The interface messages.
+ * @returns The notice.
+ */
 export function hazardNotice(hazards: readonly PnpHazardTerm[], messages: Messages): HTMLElement {
   const names = hazards.map((hazard) => messages[HAZARD_NAMES[hazard]]);
   return html(

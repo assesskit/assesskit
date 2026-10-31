@@ -12,20 +12,37 @@ import {
 } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
-import { readOrigins } from "../content/urls.js";
+import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
 import type { LtiLogin } from "../lti-frame/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { SpeechHook } from "../speech/index.js";
 import { SLOT_TOOLS, type ToolSlots } from "../tools/index.js";
 
-/** The host's storage of files, which interactions and the review of an upload use: file values are references to it (the runtime D7). */
+/** The host's storage of files, which interactions and the review of an upload use: file values are references to it. */
 export interface MountFiles {
-  /** Sends the bytes of an upload, a recording or a drawing to the host and resolves with the file value that refers to them. */
+  /**
+   * Sends the bytes of an upload, a recording or a drawing to the host and resolves with the file value that refers to them.
+   *
+   * @param bytes - The bytes.
+   * @param mimeType - Their media type.
+   * @param fileName - The name of the file, if it has one.
+   * @returns The file value.
+   */
   upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
-  /** Reads the bytes of a stored file, for a portable custom interaction. */
+  /**
+   * Reads the bytes of a stored file, for a portable custom interaction.
+   *
+   * @param file - The file value.
+   * @returns The bytes.
+   */
   read(file: FileValue): Promise<Uint8Array>;
-  /** Returns the URL that plays a stored file back, such as a recording in review: a URL of the gate with a short-lived token. */
+  /**
+   * Returns the URL that plays a stored file back, such as a recording in review: a URL of the gate with a short-lived token.
+   *
+   * @param file - The file value.
+   * @returns The URL.
+   */
   url(file: FileValue): string;
 }
 
@@ -39,21 +56,56 @@ export interface MountOptions {
   readonly stylesheet: CSSStyleSheet;
   /** Loads item stylesheets and module resolution files from the gate; `fetch` of the page fits. */
   readonly fetch: StylesheetFetch;
-  /** The language of the interface, a BCP 47 tag, which chooses the catalog of messages. Default: `"en"`. */
+  /**
+   * The language of the interface, a BCP 47 tag, which chooses the catalog of messages.
+   *
+   * @defaultValue `"en"`
+   */
   readonly language?: string;
-  /** Messages that replace the shipped ones, by language tag; a catalog may leave messages out. Default: none. */
+  /**
+   * Messages that replace the shipped ones, by language tag; a catalog may leave messages out.
+   *
+   * @defaultValue None
+   */
   readonly messages?: Readonly<Record<string, Partial<Messages>>>;
-  /** The origins besides the package's that content and portable custom interactions may load from. Default: none. */
+  /**
+   * The origins besides the package's that content and portable custom interactions may load from.
+   *
+   * @defaultValue `[]`
+   */
   readonly origins?: readonly string[];
-  /** The URL of MathJax 4's `mml-chtml` component on the host's asset origin. Default: none, so that the browser renders MathML. */
+  /**
+   * The URL of MathJax 4's `mml-chtml` component on the host's asset origin.
+   *
+   * @defaultValue None, so that the browser renders MathML
+   */
   readonly mathjax?: string;
-  /** Whether the player draws the navigation, timers, actions and comment box. A host that draws its own sets `false`. Default: `true`. */
+  /**
+   * Whether the player draws the navigation, timers, actions and comment box.
+   *
+   * @remarks
+   * A host that draws its own sets `false`.
+   *
+   * @defaultValue `true`
+   */
   readonly chrome?: boolean;
-  /** Hooks of the host. Default: none. */
+  /**
+   * Hooks of the host.
+   *
+   * @defaultValue None
+   */
   readonly hooks?: {
-    /** Mounts custom interactions (`qti-custom-interaction`). Default: none, so that a custom interaction says it is not supported. */
+    /**
+     * Mounts custom interactions (`qti-custom-interaction`).
+     *
+     * @defaultValue None, so that a custom interaction says it is not supported
+     */
     readonly customInteraction?: CustomInteractionHook;
-    /** Whether an upload of audio offers a recording. Default: `true`. */
+    /**
+     * Whether an upload of audio offers a recording.
+     *
+     * @defaultValue `true`
+     */
     readonly record?: boolean;
     /**
      * The voice that reads aloud for the candidates whose supports ask for it.
@@ -65,14 +117,17 @@ export interface MountOptions {
      * Starts the login of the tool of an LTI item: the host's authenticated route answers with the frame of the item (see
      * `ltiPlatformFrame`).
      *
-     * @defaultValue none, so that an LTI item says that its tool is not available
+     * @defaultValue None, so that an LTI item says that its tool is not available
      */
     readonly ltiLogin?: LtiLogin;
     /**
      * The tools that the host provides, by name: the scientific and graphing calculators, the dictionary and the other
-     * tools of the supports. A tool without a function says that it is not available.
+     * tools of the supports.
      *
-     * @defaultValue No tools.
+     * @remarks
+     * A tool without a function says that it is not available.
+     *
+     * @defaultValue No tools
      */
     readonly tools?: ToolSlots;
   };
@@ -86,12 +141,24 @@ export interface DeliveryOptions extends MountOptions {
 
 /** A player that is mounted. */
 export interface Mounted {
-  /** Shows a view in place of the one before. A mount with a session client follows the client by itself. */
+  /**
+   * Shows a view in place of the one before.
+   *
+   * @remarks
+   * A mount with a session client follows the client by itself.
+   *
+   * @param view - The view.
+   */
   update(view: CandidateView): void;
   /**
    * Resolves when the interactions of the item shown have handed over what the candidate gave, such as a drawing that is
-   * still being stored. The player waits for it before an action that submits or leaves the item; a host that draws its own
-   * actions (`chrome: false`) waits for it before it sends them.
+   * still being stored.
+   *
+   * @remarks
+   * The player waits for it before an action that submits or leaves the item; a host that draws its own actions
+   * (`chrome: false`) waits for it before it sends them.
+   *
+   * @returns A promise that resolves when the interactions are settled.
    */
   settled(): Promise<void>;
   /** Takes the content, the timers and the listeners away. The host element keeps its shadow root, so mount into a new element. */
@@ -139,7 +206,10 @@ function checkHooks(hooks: unknown): void {
 /**
  * Checks the options of `mountDelivery`.
  *
- * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its type.
+ * @param host - The host element.
+ * @param options - The options.
+ * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
+ * type.
  */
 export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);

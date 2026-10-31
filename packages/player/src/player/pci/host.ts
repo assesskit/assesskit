@@ -1,22 +1,22 @@
 import { DataError } from "@assesskit/runtime/errors";
 import { checkString, describe } from "../../checks.js";
-import { checkPresentation, type Presentation } from "../supports/presentation.js";
+import type { Presentation } from "../presentation/index.js";
+import { checkPresentation } from "../presentation/internal.js";
+import { checkPciFrameOptions } from "./check-options.js";
+import { describeFrame } from "./describe-frame.js";
 import { createResponseDecoder } from "./files.js";
-import { checkPciFrameOptions, describeFrame, type PciEvent, type PciFrameOptions } from "./options.js";
-import {
-  type PciCommand,
-  type PciFrameMessage,
-  type PciValidityMethod,
-  type PciValidityResult,
-  readFrameMessage,
-} from "./protocol.js";
+import type { PciEvent, PciFrameOptions } from "./options.js";
+import type { PciCommand, PciFrameMessage, PciValidityMethod, PciValidityResult } from "./protocol.js";
+import { readFrameMessage } from "./read-message.js";
 
 /** The least height of a frame in CSS pixels, so that an interaction that reports no height stays in view. */
 export const MIN_PCI_HEIGHT = 48;
 
 /**
- * The greatest height of a frame in CSS pixels, a bound against a layout that grows with its own frame. Taller content
- * scrolls inside the frame.
+ * The greatest height of a frame in CSS pixels, a bound against a layout that grows with its own frame.
+ *
+ * @remarks
+ * Taller content scrolls inside the frame.
  */
 export const MAX_PCI_HEIGHT = 4096;
 
@@ -31,32 +31,52 @@ export interface PciFrame {
   /** The `iframe` element, which `mountPciFrame` appended to its parent. */
   readonly element: HTMLIFrameElement;
   /**
-   * Asks the interaction whether its response is valid ([BPIG] §3.7.12.7.3).
+   * Asks the interaction whether its response is valid.
    *
-   * @returns the verdict, or `undefined` when the interaction gives none, is not running, or does not answer in time.
+   * @returns The verdict, or `undefined` when the interaction gives none, is not running, or does not answer in time.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, validity of a portable custom interaction}
    */
   checkValidity(): Promise<boolean | undefined>;
-  /** Like {@link PciFrame.checkValidity}, and the interaction also shows the candidate what is invalid. */
+  /**
+   * Like {@link PciFrame.checkValidity}, and the interaction also shows the candidate what is invalid.
+   *
+   * @returns The verdict, or `undefined` when the interaction gives none, is not running, or does not answer in time.
+   */
   reportValidity(): Promise<boolean | undefined>;
   /**
-   * Sets the custom validity message of the interaction; the empty string clears it. Rejects with `DataError` when
-   * `message` is not a string.
+   * Sets the custom validity message of the interaction; the empty string clears it.
+   *
+   * @param message - The message.
+   * @returns A promise that rejects with `DataError` when `message` is not a string.
    */
   setCustomValidity(message: string): Promise<void>;
-  /** Reads the custom validity message of the interaction, or `undefined` when it gives none. */
+  /**
+   * Reads the custom validity message of the interaction.
+   *
+   * @returns The message, or `undefined` when the interaction gives none.
+   */
   getCustomValidity(): Promise<string | undefined>;
   /**
-   * Sets the look that the candidate's supports ask for on the `html` element of the frame, in place of the earlier one,
-   * so that a setting that changes while the interaction runs reaches it. A look set before the frame starts is the one
+   * Sets the look that the candidate's supports ask for on the `html` element of the frame, in place of the earlier one.
+   *
+   * @remarks
+   * A setting that changes while the interaction runs reaches the interaction. A look set before the frame starts is the one
    * it starts with.
    *
+   * @param presentation - The look.
    * @throws `DataError` when `presentation` is not one.
    */
   setPresentation(presentation: Presentation): void;
   /**
-   * Hands over the final response and state as a `completed` event, lets the interaction call `oncompleted`, and
-   * removes the frame ([BPIG] §3.7.12.7.4). It waits at most two seconds for a frozen module, and it resolves when every
-   * event has been delivered. Calling it again returns the same promise.
+   * Hands over the final response and state as a `completed` event, lets the interaction call `oncompleted`, and removes the
+   * frame.
+   *
+   * @remarks
+   * It waits at most two seconds for a frozen module, and it resolves when every event has been delivered. Calling it again
+   * returns the same promise.
+   *
+   * @returns A promise that resolves when the frame is gone.
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
    */
   destroy(): Promise<void>;
 }
@@ -82,23 +102,26 @@ function createFrameElement(staticUrl: string, title: string): HTMLIFrameElement
 }
 
 /**
- * Mounts a portable custom interaction in a sandboxed frame ([BPIG] §3.7.12) and appends the frame to `parent`.
+ * Mounts a portable custom interaction in a sandboxed frame and appends the frame to a parent.
  *
+ * @remarks
  * The frame is an `iframe` with `sandbox="allow-scripts"` and no `allow-same-origin`, so it has an opaque origin, and its
  * document is `pci-frame/frame.html` under `staticUrl`. The player writes the variables bound to the interaction as the
- * JSON of BPIG App. C, reading the bytes of the files among them first, and sends them with the configuration once the
+ * JSON of the binding, reading the bytes of the files among them first, and sends them with the configuration once the
  * frame says it runs. The frame restricts itself with a content security policy, loads `player.css` and the stylesheets,
  * builds the markup, loads the modules with RequireJS and creates the interaction.
  *
  * What the interaction does arrives as {@link PciEvent}s, in order. Messages from the frame are untrusted and dropped
- * unless they come from its window and have the shape of a message that the frame sends; a response that is not the JSON
- * of a value of the declaration of the response variable is dropped too, and the files of a response are stored through
- * the host before the event is delivered.
+ * unless they come from its window and have the shape of a message that the frame sends; a response that is not the JSON of
+ * a value of the declaration of the response variable is dropped too, and the files of a response are stored through the
+ * host before the event is delivered.
  *
  * @param parent - The element that gets the frame.
  * @param options - See {@link PciFrameOptions}.
+ * @returns The frame and the means to drive it.
  * @throws `DataError` when `parent` is not an element, an option is not valid, or the interaction names no module to load
  * or a module has no location.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
 export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): PciFrame {
   if (!(parent instanceof HTMLElement))

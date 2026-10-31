@@ -3,8 +3,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { checkFunction, checkProperties, checkRecord, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
-import { html } from "../dom.js";
+import { checkMessages } from "../../messages/internal.js";
+import { html } from "../internal.js";
 import { checkSupportViews } from "./check.js";
 import { supportLabel } from "./names.js";
 import { adoptSupportStyles } from "./styles.js";
@@ -14,8 +14,10 @@ export interface SupportPanelOptions {
   /** The text of the interface. */
   readonly messages: Messages;
   /**
-   * Called when the candidate asks to turn a support on or off: the host sends `{ type: "support", name, active }`. The
-   * button follows the `active` flag of the next input, not the request, so a refusal leaves it as it was.
+   * Called when the candidate asks to turn a support on or off: the host sends `{ type: "support", name, active }`.
+   *
+   * @remarks
+   * The button follows the `active` flag of the next input, not the request, so a refusal leaves it as it was.
    */
   readonly onSupport: (name: SupportName, active: boolean) => void;
 }
@@ -23,11 +25,15 @@ export interface SupportPanelOptions {
 /** The panel of the supports of the candidate: the ones that can be turned on and off, and the state of the others. */
 export interface SupportPanel {
   /**
-   * Shows a button for each support of the list whose state is `option` and that the toolbar of the tools does not
-   * turn on and off, pressed when the support is on. A support that is on from the start or assigned has no button,
-   * because the runtime refuses the action for them (`support-not-available`); it is listed with its state, such as "Additional
-   * testing time: on". A prohibited support is not listed.
+   * Shows a button for each support of the list whose state is `option` and that the toolbar of the tools does not turn
+   * on and off, pressed when the support is on.
    *
+   * @remarks
+   * A support that is on from the start or assigned has no button, because the runtime refuses the action for them
+   * (`support-not-available`); it is listed with its state, such as "Additional testing time: on". A prohibited support
+   * is not listed.
+   *
+   * @param supports - The supports of the view.
    * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
    */
   update(supports: readonly SupportView[]): void;
@@ -55,13 +61,17 @@ function checkPanelOptions(host: unknown, options: unknown): asserts options is 
 }
 
 /**
- * Mounts the panel of the supports of the candidate (the player design §2.7, BPIG §5.3.1). The panel is a region with a toggle
- * button for each support that can be turned on and off, named after the support, and a line with the state of each support
- * that cannot. It sends no action itself: `onSupport` gets the request.
+ * Mounts the panel of the supports of the candidate.
+ *
+ * @remarks
+ * The panel is a region with a toggle button for each support that can be turned on and off, named after the support, and
+ * a line with the state of each support that cannot. It sends no action itself: `onSupport` gets the request.
  *
  * @param host - The element that gets the panel, in a document or a shadow root.
  * @param options - See {@link SupportPanelOptions}.
+ * @returns The handle that updates the panel and takes it away.
  * @throws `DataError` when `host` or an option is not valid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, personal needs and preferences}
  */
 export function mountSupportPanel(host: HTMLElement, options: SupportPanelOptions): SupportPanel {
   checkPanelOptions(host, options);

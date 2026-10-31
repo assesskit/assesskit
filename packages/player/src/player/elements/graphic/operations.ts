@@ -3,7 +3,11 @@ import type { Point } from "@assesskit/runtime/values";
 /** The tools of the drawing interaction. The pen and the eraser follow the pointer; the others take points that the candidate picks. */
 export type Tool = "pen" | "eraser" | "line" | "rectangle" | "ellipse" | "fill";
 
-/** The tools that follow a path of the pointer, which only a pointer can give (WCAG 2.2, 2.1.1 exempts such functions). */
+/**
+ * The tools that follow a path of the pointer, which only a pointer can give.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#keyboard | WCAG 2.2, keyboard, which exempts such functions}
+ */
 export const FREEHAND_TOOLS: ReadonlySet<Tool> = new Set<Tool>(["pen", "eraser"]);
 
 /** A stroke of the pen or the eraser: the points of the path, in the units of the image. */
@@ -43,21 +47,30 @@ export type Operation = Stroke | Shape | Fill;
 
 /** A horizontal run of pixels, from `x0` to `x1` on the row `y`, ends included. */
 export interface Run {
+  /** The first column of the run. */
   readonly x0: number;
+  /** The last column of the run. */
   readonly x1: number;
+  /** The row of the run. */
   readonly y: number;
 }
 
 /** The pixels of a picture, as `ImageData` has them: four bytes for each, red, green, blue and alpha. */
 export interface Pixels {
+  /** The width in pixels. */
   readonly width: number;
+  /** The height in pixels. */
   readonly height: number;
+  /** The bytes of the pixels, row by row. */
   readonly data: ArrayLike<number>;
 }
 
 /**
  * How far a pixel may differ from the one the fill starts at and still be filled: the sum of the differences of its
- * red, green, blue and alpha values. It lets the fill cover the soft edge of a line without crossing it.
+ * red, green, blue and alpha values.
+ *
+ * @remarks
+ * It lets the fill cover the soft edge of a line without crossing it.
  */
 const FILL_TOLERANCE = 160;
 
@@ -87,7 +100,13 @@ function seedsOnRow(open: (x: number, y: number) => boolean, row: number, x0: nu
   return seeds;
 }
 
-/** Returns the runs of pixels that a fill from a point covers: the pixels that join it and are close to its color. */
+/**
+ * Returns the runs of pixels that a fill from a point covers: the pixels that join it and are close to its color.
+ *
+ * @param pixels - The picture.
+ * @param start - The point the fill starts at.
+ * @returns The runs.
+ */
 export function fillRuns(pixels: Pixels, start: Point): Run[] {
   const { width, height } = pixels;
   const [startX, startY] = start;
@@ -139,7 +158,14 @@ function traceShape(context: CanvasRenderingContext2D, { tool, from, to }: Shape
   }
 }
 
-/** Paints a pen stroke, an erasure or a shape on a canvas. `scale` is the pixels of the canvas for one unit of the image. */
+/**
+ * Paints a pen stroke, an erasure or a shape on a canvas.
+ *
+ * @param context - The context of the canvas.
+ * @param operation - What to paint.
+ * @param scale - The pixels of the canvas for one unit of the image.
+ * @param lineWidth - The width of the line, in pixels of the canvas.
+ */
 export function paint(
   context: CanvasRenderingContext2D,
   operation: Stroke | Shape,

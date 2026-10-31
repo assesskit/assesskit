@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 import type { Assignment, Board } from "./board/model.js";
 import { BoardElement, type BoardLayout, limitsOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
@@ -18,21 +18,33 @@ interface MatchSet {
 }
 
 /**
- * The element of `qti-match-interaction` (INFO §5.89): the candidate matches the choices of the first set with those of
- * the second, and not within a set. Each choice takes as many matches as its `match-max` allows (INFO §5.131.6). The
- * response is the directed pairs from the first set to the second.
+ * The element of `qti-match-interaction`: the candidate matches the choices of the first set with those of the second,
+ * and not within a set.
+ *
+ * @remarks
+ * Each choice takes as many matches as its `match-max` allows. The response is the directed pairs from the first set to
+ * the second.
  *
  * A match is drawn as a board, the choices of the first set in the pool and those of the second as the places that take
- * them, or, with the class `qti-match-tabular`, as a table with a checkbox for each match (VOCAB §1.2.8.2).
+ * them, or, with the class `qti-match-tabular`, as a table with a checkbox for each match.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, match interaction}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, match interaction}
  */
 export class MatchInteractionElement extends BoardElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "match-interaction";
   readonly #sets: MatchSet[] = [];
   #prompt: RenderedPrompt | undefined;
   #header: string | undefined;
   #cells: HTMLInputElement[] = [];
 
-  /** Fills the element with the prompt and the two sets of the node. */
+  /**
+   * Fills the element with the prompt and the two sets of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: MatchInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     for (const set of node.simpleMatchSets) {
@@ -159,7 +171,14 @@ export class MatchInteractionElement extends BoardElement {
   }
 }
 
-/** Renders a `qti-match-interaction`. */
+/**
+ * Renders a `qti-match-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderMatch(node: MatchInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(MatchInteractionElement, "qti-match-interaction", node, renderer, messages);
   element.build(node, renderer);

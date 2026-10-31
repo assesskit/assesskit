@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { Assignment, Board } from "./board/model.js";
 import { BoardElement, type BoardLayout, limitsOf, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
@@ -21,13 +21,19 @@ interface ImageGap {
 }
 
 /**
- * The element of `qti-graphic-gap-match-interaction` (INFO §5.60): the candidate puts choices from a list into gaps of an
- * image, and the response pairs each choice, the source, with its gap, the target. A gap can take several choices, as far
- * as its `match-max` allows, and a choice several gaps, as far as its own. It works on a board like the other interactions
- * that put choices in places: the candidate picks a choice up and chooses the gap, with a click, a tap or the keyboard, and
- * a mouse or a pen can drag it, so that no one has to drag (WCAG 2.2, 2.1.1, 2.5.7).
+ * The element of `qti-graphic-gap-match-interaction`: the candidate puts choices from a list into gaps of an image, and
+ * the response pairs each choice, the source, with its gap, the target.
+ *
+ * @remarks
+ * A gap can take several choices, as far as its `match-max` allows, and a choice several gaps, as far as its own. It
+ * works on a board like the other interactions that put choices in places: the candidate picks a choice up and chooses
+ * the gap, with a click, a tap or the keyboard, and a mouse or a pen can drag it, so that no one has to drag (WCAG 2.2,
+ * 2.1.1, 2.5.7).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, graphic gap match interaction}
  */
 export class GraphicGapMatchInteractionElement extends BoardElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "graphic-gap-match-interaction";
   readonly #choices: BuiltChoice[] = [];
   readonly #gaps: ImageGap[] = [];
@@ -36,7 +42,12 @@ export class GraphicGapMatchInteractionElement extends BoardElement {
   /** The choices that the author named with `object-label`, by identifier. */
   readonly #labels = new Map<string, string>();
 
-  /** Fills the element with the prompt, the choices and the image with its gaps. */
+  /**
+   * Fills the element with the prompt, the choices and the image with its gaps.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: GraphicGapMatchInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     for (const choice of node.choices) {
@@ -93,7 +104,14 @@ export class GraphicGapMatchInteractionElement extends BoardElement {
   }
 }
 
-/** Renders a `qti-graphic-gap-match-interaction`. */
+/**
+ * Renders a `qti-graphic-gap-match-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderGraphicGapMatch(
   node: GraphicGapMatchInteraction,
   renderer: BodyRenderer,

@@ -12,7 +12,7 @@ import { axeViolations } from "./renderer-fixture.js";
 
 const { asset } = inject("fixtures");
 
-/** The kinds of interaction that TB8 draws. */
+/** The kinds of interaction that work on an image. */
 const GRAPHIC: ReadonlySet<InteractionKind> = new Set([
   "hotspot-interaction",
   "select-point-interaction",

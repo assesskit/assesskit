@@ -1,21 +1,33 @@
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html, uniqueId } from "../dom.js";
+import { html, uniqueId } from "../internal.js";
 
-/** The comment box of the item presented (T59, INFO §7.19.5). */
+/**
+ * The comment box of the item presented.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, candidate comment}
+ */
 export interface CommentBox {
   /** The form, hidden while the view does not allow a comment. */
   readonly element: HTMLFormElement;
-  /** Shows or hides the box for a view; it keeps what the candidate typed while the item stays the same. */
+  /**
+   * Shows or hides the box for a view; it keeps what the candidate typed while the item stays the same.
+   *
+   * @param view - The view.
+   */
   update(view: CandidateView): void;
 }
 
 /**
- * Creates the comment box: a labelled field and a button that sends the text. It is built once and only shown or hidden,
- * so that a new view does not take away what the candidate is typing. A new comment replaces the one before.
+ * Creates the comment box: a labelled field and a button that sends the text.
+ *
+ * @remarks
+ * It is built once and only shown or hidden, so that a new view does not take away what the candidate is typing. A new
+ * comment replaces the one before.
  *
  * @param messages - The text of the interface.
  * @param save - Called with the text when the candidate presses the button.
+ * @returns The comment box.
  */
 export function createCommentBox(messages: Messages, save: (text: string) => void): CommentBox {
   const field = html("textarea", { id: uniqueId("ak-comment"), rows: "4" });

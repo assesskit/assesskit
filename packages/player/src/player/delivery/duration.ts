@@ -3,7 +3,13 @@ const SECONDS_PER_HOUR = 3600;
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
-/** Writes a time left as a clock, `4:05` or `1:02:03`; a part of a second counts as the whole second, so 0 means the time is over. */
+/**
+ * Writes a time left as a clock, `4:05` or `1:02:03`; a part of a second counts as the whole second, so 0 means the time
+ * is over.
+ *
+ * @param milliseconds - The time left.
+ * @returns The clock text.
+ */
 export function clockText(milliseconds: number): string {
   const total = Math.ceil(milliseconds / 1000);
   const hours = Math.floor(total / SECONDS_PER_HOUR);
@@ -22,7 +28,13 @@ function unitFormatter(language: string, unit: "hour" | "minute" | "second"): In
   }
 }
 
-/** Writes a time left in words in the language, such as "3 minutes 20 seconds", for a screen reader to speak. */
+/**
+ * Writes a time left in words in the language, such as "3 minutes 20 seconds", for a screen reader to speak.
+ *
+ * @param milliseconds - The time left.
+ * @param language - The language of the interface, a BCP 47 tag.
+ * @returns The text.
+ */
 export function spokenText(milliseconds: number, language: string): string {
   const total = Math.ceil(milliseconds / 1000);
   const parts = [

@@ -1,10 +1,28 @@
 # Portable custom interactions
 
-A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface
-([BPIG] §3.7.12). The code is the package author's, so it runs where it can do no harm. `mountPciFrame` puts each
+A portable custom interaction (PCI) is code that an item brings with it: an AMD module that builds its own interface. The code is the package author's, so it runs where it can do no harm. `mountPciFrame` puts each
 interaction in a frame of its own, loads its modules with RequireJS, and passes what it does to the player as events.
 The interaction, the module resolution and the JSON of its variables are the runtime's (`@assesskit/runtime/pci`); the frame is
 the player's.
+
+```mermaid
+sequenceDiagram
+  participant P as Player
+  participant F as Frame, sandboxed
+  participant I as Interaction
+  P->>F: mountPciFrame appends the iframe
+  F->>P: loaded
+  P->>F: start: markup, modules, variables, state, status
+  F->>I: loads the modules with RequireJS, creates the interaction
+  I->>F: onready
+  F->>P: ready
+  I->>F: qti-interaction-changed
+  F->>P: changed: response and state
+  I->>F: ondone
+  F->>P: done with the status asked for
+  P->>F: complete, on destroy
+  F->>P: completed: final response and state
+```
 
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
@@ -29,6 +47,7 @@ if (interaction?.kind !== "portable-custom-interaction") throw new Error("The it
 // The host reads the file at moduleConfigurationPaths(interaction).primary from the package.
 const primary = parseModuleResolution('{"waitSeconds": 60, "paths": {"tap": "modules/tap"}}');
 
+const events = [];
 const host = document.createElement("div");
 document.body.append(host);
 
@@ -48,10 +67,13 @@ const frame = mountPciFrame(host, {
     read: async () => new Uint8Array(),
     upload: async (_bytes, mimeType) => ({ reference: "file-1", mimeType }),
   },
-  onEvent: (event) => console.log(event.type),
+  onEvent: (event) => events.push(event.type),
 });
 
+frame.element.getAttribute("sandbox"); // => "allow-scripts"
+frame.element.title; // => "Tap each picture to reveal it."
 await frame.destroy();
+frame.element.isConnected; // => false
 ```
 
 ## Serving the frame
@@ -110,8 +132,8 @@ variable. The value is checked against the declaration when the frame is mounted
 
 ## Variables and files
 
-The variables travel as the plain JSON of [BPIG] App. C.1 to C.3, which `encodePciValue` and `decodePciValue` of the runtime
-write and read: `{ "base": ... }`, `{ "list": ... }` and `{ "record": ... }`, with `null` inside for NULL. A file is
+The variables travel as the plain JSON of the portable custom interaction binding, which `encodePciValue` and `decodePciValue` of the runtime
+write and read: `{ "base":... }`, `{ "list":... }` and `{ "record":... }`, with `null` inside for NULL. A file is
 `{ "data", "mime", "name" }` with the bytes in `data` as base64. A file value only refers to its bytes, and the callbacks
 of the runtime's codec are synchronous, so the host's storage, which is not, is used in two steps:
 
@@ -127,12 +149,12 @@ of the runtime's codec are synchronous, so the host's storage, which is not, is 
 Promise<FileValue> }`.
 
 A response is untrusted until `decodePciValue` has read it. JSON that is not a value of the declaration of the response
-variable, or a file whose data is not canonical base64 (RFC 4648 §4), is dropped: the player delivers no event for it, and stores nothing. The
+variable, or a file whose data is not canonical base64, is dropped: the player delivers no event for it, and stores nothing. The
 events keep the order in which the frame sent them, although storing files takes time.
 
 ## Loading
 
-The modules come from `resolvePciModules` of the runtime ([BPIG] §3.7.12.2 to §3.7.12.4). The player requires the module of the
+The modules come from `resolvePciModules` of the runtime. The player requires the module of the
 `module` attribute or, when there is none, those of `qti-interaction-modules`. It gives RequireJS a location for each
 module that the interaction or the configuration files name, the primary location first and the fallback after it:
 
@@ -144,7 +166,7 @@ module that the interaction or the configuration files name, the primary locatio
 
 `waitSeconds` is that of the primary configuration, 7 when there is none, and 0 waits for ever. A location that answers
 with an error, or does not answer within `waitSeconds`, makes RequireJS try the next one of the module. A dependency such
-as `define(["./renderer"], ...)` has the name `renderer` in the module's directory, which RequireJS resolves against
+as `define(["./renderer"],...)` has the name `renderer` in the module's directory, which RequireJS resolves against
 `baseUrl`. `baseUrl` is the directory of the first package location of the first module to load, under its asset prefix,
 or the directory of the primary configuration file when every location has a protocol. So dependencies, and the `url()` of
 stylesheets that they add, stay under the prefix that the asset gate signed for the interaction.
@@ -157,8 +179,7 @@ and the modules registered exactly one, that one serves the interaction: the `pc
 `urn-fdc-hmhco.com-pci-tapToReveal` for a module that registers `urn:fdc:hmhco.com:pci:tapToReveal`. With several factories
 and none matching, the failure is `register`.
 
-The communication bridge `qtiCustomInteractionContext` is the AMD module of that name and the property of `window`
-([BPIG] §3.7.12.7). A module calls its `register`; once the modules have loaded and the stylesheets have loaded or
+The communication bridge `qtiCustomInteractionContext` is the AMD module of that name and the property of `window`. A module calls its `register`; once the modules have loaded and the stylesheets have loaded or
 failed, the frame calls the registered factory with `getInstance(dom, configuration, state)`:
 
 | Argument or property                                  | Value                                                                                             |
@@ -215,9 +236,9 @@ answer within two seconds. `destroy` waits at most two seconds for a frozen modu
 called again.
 
 Before it removes the frame, `destroy` has the frame call `getResponse()` and `getState()`, send them, and then call
-`oncompleted()` ([BPIG] §3.7.12.7.4), so a listener flushes the final response before the module cleans up. It resolves
+`oncompleted()`, so a listener flushes the final response before the module cleans up. It resolves
 when every event, the `completed` one included, has been delivered. An interaction
-that is to see new markup or a new status is mounted again with the saved state ([BPIG] §3.7.12).
+that is to see new markup or a new status is mounted again with the saved state.
 
 ## The frame and its limits
 
@@ -269,3 +290,28 @@ that is not absolute `http` or `https`, a base URL that does not end in `/`, an 
 and a port, an interaction that names no module to load, and a module without a location. The runtime's `DataError` passes
 through unchanged. A message from the frame that fails its check, and a response that is not a value of its declaration,
 are dropped, not thrown. An error of the host's storage goes to `reportError`.
+
+## Files
+
+Each file of `src/player/pci/` holds one concept.
+
+| File                | Concept                                                                       |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `check-options.ts`  | The check of the options of a frame                                           |
+| `csp.ts`            | The content security policy of a frame                                        |
+| `describe-frame.ts` | The title of a frame and the message that starts it                           |
+| `files.ts`          | Variables and files: encoding and decoding                                    |
+| `host.ts`           | `mountPciFrame`                                                               |
+| `index.ts`          | The public API                                                                |
+| `internal.ts`       | Helpers that other folders and tests share, which the package does not export |
+| `modules.ts`        | Locating the modules of an interaction                                        |
+| `options.ts`        | The events and the options of a frame                                         |
+| `protocol.ts`       | The messages between the player and the frame                                 |
+| `read-message.ts`   | Reading a message of the frame                                                |
+
+## References
+
+| Specification                                                                                    | Topics                                                                                     |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | module resolution, portable custom interactions, validity of a portable custom interaction |
+| [Content Security Policy Level 3](https://www.w3.org/TR/CSP3/)                                   |                                                                                            |

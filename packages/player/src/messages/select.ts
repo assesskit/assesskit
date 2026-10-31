@@ -19,15 +19,20 @@ const overridesSchema = mapSchema(
 );
 
 /**
- * Selects the messages for the language of the interface: the English messages, replaced by the shipped catalog of the
- * language, if there is one, and then by the overrides for the language and for the tag in full, which is more specific.
- * A language without a catalog gets English, so every key always has a message.
+ * Selects the messages for the language of the interface.
+ *
+ * @remarks
+ * The result is the English messages, replaced by the shipped catalog of the language if there is one, and then by the
+ * overrides for the language and for the tag in full, which is more specific. A language without a catalog gets English,
+ * so every key has a message.
  *
  * @param language - A BCP 47 language tag, such as `id` or `id-ID`. Case is ignored.
- * @param overrides - Messages that replace the shipped ones, by language tag; a catalog may leave messages out.
- * Default: none.
+ * @param overrides - Messages that replace the shipped ones, by language tag; a catalog may leave messages out. Without
+ * them the shipped messages stand.
+ * @returns The messages.
  * @throws `DataError` when `language` is not a string, `overrides` is not an object of objects, a catalog has a key that is
  * not a message key, or a message is not a string.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc5646 | RFC 5646, tags for identifying languages}
  */
 export function selectMessages(
   language: string,

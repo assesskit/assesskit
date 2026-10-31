@@ -1,7 +1,10 @@
 /**
  * The program that runs in the audio worklet of a WAV recording: it passes the samples that reach it to the page, in
- * blocks of 128 frames, mixed down to one channel. `pnpm build` bundles it into the classic script
- * `recorder-worklet.js`, which the page loads from `MountOptions.staticUrl`.
+ * blocks of 128 frames, mixed down to one channel.
+ *
+ * @remarks
+ * `pnpm build` bundles it into the classic script `recorder-worklet.js`, which the page loads from
+ * `MountOptions.staticUrl`.
  */
 import { RECORDER_PROCESSOR } from "../names.js";
 

@@ -1,12 +1,16 @@
 /**
- * The program that runs inside the frame of a portable custom interaction. It restricts the frame, builds its document,
- * loads the modules with RequireJS and provides the communication bridge `qtiCustomInteractionContext` ([BPIG]
- * §3.7.12.7), and it reports to the player with messages. `pnpm build` bundles it with its imports into the classic
- * script `bridge.js`, because a module script of an opaque origin needs CORS headers on the static files.
+ * The program that runs inside the frame of a portable custom interaction.
+ *
+ * @remarks
+ * It restricts the frame, builds its document, loads the modules with RequireJS and provides the communication bridge
+ * `qtiCustomInteractionContext`, and it reports to the player with messages. `pnpm build` bundles it with its imports into
+ * the classic script `bridge.js`, because a module script of an opaque origin needs CORS headers on the static files.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
-import { applyPresentation } from "../../supports/presentation.js";
+import { applyPresentation } from "../../presentation/index.js";
+import { buildFrameCsp } from "../csp.js";
 import {
-  buildFrameCsp,
   isRequestedStatus,
   type PciCommand,
   type PciFailure,
@@ -38,10 +42,14 @@ declare global {
 /** The element that holds the markup, as the interaction is in the item. */
 const INTERACTION = "qti-portable-custom-interaction";
 
-/** The event that an interaction fires when its response changes ([BPIG] §3.7.12.7.5). */
+/**
+ * The event that an interaction fires when its response changes.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
+ */
 const CHANGED = "qti-interaction-changed";
 
-/** The registered factories, by `typeIdentifier` ([BPIG] §3.7.12.7). */
+/** The registered factories, by `typeIdentifier`. */
 const factories = new Map<string, unknown>();
 
 let started = false;
@@ -154,9 +162,12 @@ function onChanged(event: Event): void {
 }
 
 /**
- * Returns the key of the factory for an interaction: its type identifier ([BPIG] §3.7.12.7), or else the one factory that
- * the modules registered. The 1EdTech examples need the second: the item of `pci-simple` names
- * `urn-fdc-hmhco.com-pci-tapToReveal` for a module that registers `urn:fdc:hmhco.com:pci:tapToReveal`.
+ * Returns the key of the factory for an interaction: its type identifier, or else the one factory that the modules
+ * registered.
+ *
+ * @remarks
+ * The 1EdTech examples need the second: the item of `pci-simple` names `urn-fdc-hmhco.com-pci-tapToReveal` for a module
+ * that registers `urn:fdc:hmhco.com:pci:tapToReveal`.
  */
 function factoryKey(typeIdentifier: string): string | undefined {
   if (factories.has(typeIdentifier)) return typeIdentifier;

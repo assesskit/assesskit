@@ -1,14 +1,20 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { ToolContext, ToolFile } from "./context.js";
 import type { FileMaterial } from "./model.js";
 import { materialName } from "./names.js";
 import { isAbsoluteUrl } from "./package-path.js";
 
 /**
- * Shows a file of the package in the way its media type allows without running anything of it: an image, audio or
- * video in the element that plays it, a page in a frame with an empty `sandbox`, and any other file as a link that opens
- * in a tab of its own (the player design §3). A path with a scheme is not a package path and is not loaded; the viewer says
+ * Shows a file of the package in the way its media type allows without running anything of it.
+ *
+ * @remarks
+ * An image, audio or video goes in the element that plays it, a page in a frame with an empty `sandbox`, and any other file
+ * is a link that opens in a tab of its own. A path with a scheme is not a package path and is not loaded; the viewer says
  * that the file is not available.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param file - The file.
+ * @returns The element.
  */
 export function viewFile({ messages, assets }: ToolContext, file: FileMaterial): HTMLElement {
   const path = file.fileHref.value;
@@ -25,7 +31,13 @@ export function viewFile({ messages, assets }: ToolContext, file: FileMaterial):
   return html("div", { class: "ak-viewer" }, content);
 }
 
-/** Describes the file of a calculator for the tool of the host, or returns `null` when the path is not a package path. */
+/**
+ * Describes the file of a calculator for the tool of the host.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param file - The file, or `null` when the item gives none.
+ * @returns The description, or `null` when there is no file or its path is not a package path.
+ */
 export function toolFile({ assets }: ToolContext, file: FileMaterial | null): ToolFile | null {
   if (file === null || isAbsoluteUrl(file.fileHref.value)) return null;
   return { url: assets(file.fileHref.value), mimeType: file.mimeType ?? null, label: file.label ?? null };

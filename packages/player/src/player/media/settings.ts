@@ -1,23 +1,35 @@
 import type { MediaInteraction } from "@assesskit/runtime/asi";
 
-/** The controls that an item can ask for besides playing and pausing (VOCAB §1.2.11.1). */
+/**
+ * The controls that an item can ask for besides playing and pausing.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, media player controls}
+ */
 type MediaControl = "audioDescription" | "captions" | "rewind";
 
 /** What the item asks of the player of a media interaction. */
 export interface MediaSettings {
   /** The controls besides play and pause. `default` and no attribute give all of them; `none` gives none. */
   readonly controls: ReadonlySet<MediaControl>;
-  /** The seconds that playback waits after the candidate presses play (VOCAB §1.2.11.2). */
+  /** The seconds that playback waits after the candidate presses play. */
   readonly pauseDelay?: number;
-  /** The seconds that a pause lasts before playback continues by itself (VOCAB §1.2.11.3). */
+  /** The seconds that a pause lasts before playback continues by itself. */
   readonly pauseDuration?: number;
-  /** The most times the candidate can pause during one play (VOCAB §1.2.11.4). */
+  /** The most times the candidate can pause during one play. */
   readonly pauseCount?: number;
 }
 
 const ALL_CONTROLS: ReadonlySet<MediaControl> = new Set(["rewind", "captions", "audioDescription"]);
 
-/** The VOCAB spells the attributes without `data-`, and its examples and the rest of its vocabulary with it: both are read (§1.2.11.2–4). */
+/**
+ * The names of the attributes of the media player, in both spellings.
+ *
+ * @remarks
+ * The vocabulary spells the attributes without `data-`, and its examples and the rest of its vocabulary with it, so both
+ * are read.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, media player}
+ */
 const PREFIXES = ["data-qti-media-player-", "qti-media-player-"];
 
 /** Returns the value of an attribute of the vocabulary in either spelling, or `undefined`. */
@@ -32,7 +44,7 @@ function secondsOf(text: string | undefined): number | undefined {
   return text !== undefined && text.trim() !== "" && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
-/** Reads the controls that the item asks for: the words of `data-qti-media-player-controls` (VOCAB §1.2.11.1). */
+/** Reads the controls that the item asks for: the words of `data-qti-media-player-controls`. */
 function controlsOf(text: string | undefined): ReadonlySet<MediaControl> {
   if (text === undefined) return ALL_CONTROLS;
   const words = text.split(/[\s,]+/u);
@@ -40,7 +52,13 @@ function controlsOf(text: string | undefined): ReadonlySet<MediaControl> {
   return new Set([...ALL_CONTROLS].filter((control) => words.includes(control)));
 }
 
-/** Reads what the item asks of the player, in both spellings of the vocabulary. */
+/**
+ * Reads what the item asks of the player, in both spellings of the vocabulary.
+ *
+ * @param node - The media interaction.
+ * @returns The settings.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, media player}
+ */
 export function readMediaSettings(node: MediaInteraction): MediaSettings {
   const count = secondsOf(attributeOf(node, "pause-count"));
   const pauseDelay = secondsOf(attributeOf(node, "pause-delay"));

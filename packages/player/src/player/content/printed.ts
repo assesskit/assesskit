@@ -1,11 +1,15 @@
 import type { PrintedVariable } from "@assesskit/runtime/asi";
 import { formatPrintedVariable } from "@assesskit/runtime/content";
-import type { FileValue, Primitive, Value } from "@assesskit/runtime/values";
-import { html } from "../dom.js";
+import type { Value } from "@assesskit/runtime/values";
+import { html, isFileValue } from "../internal.js";
 import type { RenderContext } from "./context.js";
 import { resolveUrl } from "./urls.js";
 
-/** Returns the value that a printed variable prints: an outcome, else a template variable (INFO §7.30.6). */
+/**
+ * Returns the value that a printed variable prints: an outcome, else a template variable.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, printed variable}
+ */
 function variableValue(identifier: string, context: RenderContext): Value | null {
   const variables = context.variables;
   if (variables === undefined) return null;
@@ -14,19 +18,23 @@ function variableValue(identifier: string, context: RenderContext): Value | null
     : (variables.templates.get(identifier) ?? null);
 }
 
-/** Returns the file value that a primitive is, or `undefined`. */
-const fileOf = (primitive: Primitive): FileValue | undefined =>
-  typeof primitive === "object" && "reference" in primitive ? primitive : undefined;
-
 /** Builds the link that opens a URL in a tab of its own, with the text that the runtime formatted. */
 function link(href: string, text: string): HTMLElement {
   return html("a", { href, target: "_blank", rel: "noopener noreferrer" }, text);
 }
 
 /**
- * Renders a `qti-printed-variable` that content still holds: the runtime formats the text of the variable's value (INFO §7.30),
- * and the value of a `uri` or a `file` is a link to it, which opens in a tab of its own. Without variables a printed
- * variable prints nothing, as a NULL value does. Content that `resolveContent` of the runtime has resolved holds the text itself.
+ * Renders a `qti-printed-variable` that content still holds.
+ *
+ * @remarks
+ * The runtime formats the text of the variable's value, and the value of a `uri` or a `file` is a link to it, which opens
+ * in a tab of its own. Without variables a printed variable prints nothing, as a NULL value does. Content that
+ * `resolveContent` of the runtime has resolved holds the text itself.
+ *
+ * @param node - The printed variable.
+ * @param context - The context of the rendering.
+ * @returns The element.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, printed variable}
  */
 export function renderPrinted(node: PrintedVariable, context: RenderContext): Element {
   const element = context.element("qti-printed-variable", node, []);
@@ -38,8 +46,8 @@ export function renderPrinted(node: PrintedVariable, context: RenderContext): El
     const href = resolveUrl(value.value, context.urls, "navigate");
     element.append(href === undefined ? text : link(href, text));
   } else if (value?.cardinality === "single" && value.baseType === "file") {
-    const file = fileOf(value.value);
-    element.append(file === undefined || fileUrl === undefined ? text : link(fileUrl(file), text));
+    const file = value.value;
+    element.append(!isFileValue(file) || fileUrl === undefined ? text : link(fileUrl(file), text));
   } else {
     element.append(text);
   }

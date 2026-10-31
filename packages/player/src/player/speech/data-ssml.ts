@@ -6,9 +6,15 @@ import { ssmlElement } from "./ssml.js";
 type Values = readonly string[] | true;
 
 /**
- * The functions of `data-ssml` and the properties of each, with the values they may have (DSSML §2.4, §3.4.5). A value of
- * `true` is any string. `emphasis` is not in DSSML, but the example of BPIG §5.2.1.8 uses it with the `level` of SSML 1.1
- * §3.2.1; `prosody` has `rate` only.
+ * The functions of `data-ssml` and the properties of each, with the values they may have. A value of `true` is any
+ * string.
+ *
+ * @remarks
+ * `emphasis` is not in the specification of `data-ssml`, but the example of the best practices guide uses it with the
+ * `level` of SSML 1.1; `prosody` has `rate` only.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html | Support for SSML using the data-ssml property}
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_emphasis | SSML 1.1, emphasis}
  */
 const FUNCTIONS: ReadonlyMap<string, ReadonlyMap<string, Values>> = new Map<string, ReadonlyMap<string, Values>>([
   [
@@ -35,32 +41,51 @@ const FUNCTIONS: ReadonlyMap<string, ReadonlyMap<string, Values>> = new Map<stri
   ["sub", new Map<string, Values>([["alias", true]])],
 ]);
 
-/** The properties each function needs (DSSML §3.4.5: `ph`, `interpret-as` and `alias`). */
+/**
+ * The property that each function needs.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html | Support for SSML using the data-ssml property}
+ */
 const REQUIRED: ReadonlyMap<string, string> = new Map([
   ["phoneme", "ph"],
   ["say-as", "interpret-as"],
   ["sub", "alias"],
 ]);
 
-/** The labels of a speaking rate (SSML 1.1 §3.2.4). */
+/**
+ * The labels of a speaking rate.
+ *
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_prosody | SSML 1.1, prosody}
+ */
 const RATE_LABELS: readonly string[] = ["x-slow", "slow", "medium", "fast", "x-fast", "default"];
 
-/** A rate as a percentage, with or without a sign (SSML 1.1 §3.2.4). */
+/**
+ * A rate as a percentage, with or without a sign.
+ *
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_prosody | SSML 1.1, prosody}
+ */
 const RATE_PERCENT = /^[+-]?\d+(?:\.\d+)?%$/u;
 
-/** The functions that hold text only (SSML 1.1 §3.1.9, §3.1.10, §3.1.11). */
+/**
+ * The functions that hold text only.
+ *
+ * @see {@link https://www.w3.org/TR/speech-synthesis11/#edef_phoneme | SSML 1.1, phoneme, say-as and sub}
+ */
 const TEXT_FUNCTIONS: ReadonlySet<string> = new Set(["phoneme", "say-as", "sub"]);
 
 /**
  * The functions of `data-ssml` from the outermost to the innermost, so that a value with several nests the same way
- * whatever its order. `break` is empty and comes before the content.
+ * whatever its order.
+ *
+ * @remarks
+ * `break` is empty and comes before the content.
  */
 const NESTING: readonly string[] = ["prosody", "emphasis", "say-as", "phoneme", "sub"];
 
 /** The functions of one `data-ssml` value that are valid, by name, each with its properties. */
 export type DataSsml = ReadonlyMap<string, Readonly<Record<string, string>>>;
 
-/** Returns whether a rate is a label or a percentage of SSML 1.1 §3.2.4. */
+/** Returns whether a rate is a label or a percentage of SSML 1.1. */
 const isRate = (rate: string | undefined): boolean =>
   rate !== undefined && (RATE_LABELS.includes(rate) || RATE_PERCENT.test(rate));
 
@@ -90,9 +115,15 @@ function readFunction(name: string, value: unknown): Record<string, string> | un
 
 /**
  * Reads the value of a `data-ssml` attribute: a JSON object with the functions `break`, `emphasis`, `phoneme`, `prosody`,
- * `say-as` and `sub` (DSSML §3.1). Content must not hold what DSSML does not define (DSSML §4.2), so a value that is not
- * JSON, not an object, or has an unknown function, property or value has no effect: `undefined`, and the element is read
- * as it is.
+ * `say-as` and `sub`.
+ *
+ * @remarks
+ * Content must not hold what the specification does not define, so a value that is not JSON, not an object, or has an
+ * unknown function, property or value has no effect, and the element is read as it is.
+ *
+ * @param value - The text of the attribute.
+ * @returns The functions, or `undefined` when the value has no effect.
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html | Support for SSML using the data-ssml property}
  */
 export function readDataSsml(value: string): DataSsml | undefined {
   let parsed: unknown;
@@ -117,6 +148,7 @@ export function readDataSsml(value: string): DataSsml | undefined {
  * @param data - The functions that {@link readDataSsml} read.
  * @param text - The text of the element, for the functions that hold text only (`phoneme`, `say-as` and `sub`).
  * @param content - The content as it is read, for the others.
+ * @returns The nodes that say the content, wrapped in the SSML elements of the functions.
  */
 export function applyDataSsml(data: DataSsml, text: string, content: readonly XmlNode[]): readonly XmlNode[] {
   let nodes: readonly XmlNode[] = content;

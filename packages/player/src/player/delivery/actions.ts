@@ -1,7 +1,11 @@
 import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
 
-/** What the candidate must confirm before the action (WCAG 3.3.4). */
+/**
+ * What the candidate must confirm before the action.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#error-prevention-legal-financial-data | WCAG 2.2, error prevention}
+ */
 export type Confirmation = "submit" | "end-part" | "end-test";
 
 /** The group of the actions a button belongs to. */
@@ -15,9 +19,17 @@ export interface PlannedAction {
   readonly label: keyof Messages;
   /** The action it sends. */
   readonly action: CandidateAction;
-  /** What the candidate confirms first. Default: nothing. */
+  /**
+   * What the candidate confirms first.
+   *
+   * @defaultValue Nothing
+   */
   readonly confirm?: Confirmation;
-  /** Whether the button cannot be pressed. Default: `false`. */
+  /**
+   * Whether the button cannot be pressed.
+   *
+   * @defaultValue `false`
+   */
   readonly disabled?: boolean;
   /** The group of the button. */
   readonly group: ActionGroup;
@@ -98,14 +110,20 @@ function sessionActions(view: CandidateView): PlannedAction[] {
 }
 
 /**
- * Plans the buttons of a view (T55): one for each type of action that `view.actions` lists and that a button can send. The
- * list is the engine's allowance, which the session host has already narrowed by its client-action policy, so a button
- * for `suspend` exists only where the host lets the candidate pause (F-M3). `set-responses` and `end-attempt` have no
+ * Plans the buttons of a view: one for each type of action that `view.actions` lists and that a button can send.
+ *
+ * @remarks
+ * The list is the engine's allowance, which the session host has already narrowed by its client-action policy, so a
+ * button for `suspend` exists only where the host lets the candidate pause. `set-responses` and `end-attempt` have no
  * button here: the interactions send them, and `comment` and `support` have controls of their own.
  *
- * Moving back is offered only in a nonlinear part, and moving on stops at the last item of a nonlinear part. Submitting in
- * a linear part, and ending a part or the test, ask the candidate to confirm (WCAG 3.3.4); in a nonlinear part the
- * candidate can review before submitting.
+ * Moving back is offered only in a nonlinear part, and moving on stops at the last item of a nonlinear part. Submitting
+ * in a linear part, and ending a part or the test, ask the candidate to confirm; in a nonlinear part the candidate can
+ * review before submitting.
+ *
+ * @param view - The view.
+ * @returns The buttons, in the order of the chrome.
+ * @see {@link https://www.w3.org/TR/WCAG22/#error-prevention-legal-financial-data | WCAG 2.2, error prevention}
  */
 export function planActions(view: CandidateView): readonly PlannedAction[] {
   const linear = view.part?.navigationMode === "linear";
@@ -113,9 +131,15 @@ export function planActions(view: CandidateView): readonly PlannedAction[] {
 }
 
 /**
- * Returns the sentences of the question that asks the candidate to confirm an action (WCAG 3.3.4): what the action does,
- * for a part that submits all its answers at its end that they go together (B27), and how many questions have an attempt
- * open and so are not submitted yet (T56).
+ * Returns the sentences of the question that asks the candidate to confirm an action: what the action does, for a part
+ * that submits all its answers at its end that they go together, and how many questions have an attempt open and so are
+ * not submitted yet.
+ *
+ * @param kind - What is confirmed.
+ * @param view - The view.
+ * @param messages - The interface messages.
+ * @returns The sentences, one paragraph each.
+ * @see {@link https://www.w3.org/TR/WCAG22/#error-prevention-legal-financial-data | WCAG 2.2, error prevention}
  */
 export function confirmationText(kind: Confirmation, view: CandidateView, messages: Messages): readonly string[] {
   if (kind === "submit") return [messages.confirmSubmit];

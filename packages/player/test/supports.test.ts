@@ -5,12 +5,10 @@ import { readPnp, SUPPORT_NAMES, type SupportName, type SupportSetting } from "@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
-import { mediaScaleOf, presentationOf } from "../src/player/supports/appearance.js";
-import { cardKindOf } from "../src/player/supports/cards.js";
-import { checkSupportViews } from "../src/player/supports/check.js";
-import { supportLabel } from "../src/player/supports/names.js";
-import { checkPresentation } from "../src/player/supports/presentation.js";
-import { TOOL_SUPPORT_NAMES } from "../src/player/tools/model.js";
+import { checkPresentation } from "../src/player/presentation/internal.js";
+import { mediaScaleOf, presentationOf } from "../src/player/supports/index.js";
+import { cardKindOf, checkSupportViews, supportLabel } from "../src/player/supports/internal.js";
+import { TOOL_SUPPORT_NAMES } from "../src/player/tools/index.js";
 import { fuzzJson } from "./fuzz.js";
 import { onSupport, supportView } from "./supports-fixture.js";
 
@@ -371,7 +369,7 @@ describe("names", () => {
     expect([...unnamed].sort()).toEqual([...TOOL_SUPPORT_NAMES].sort());
   });
 
-  it("names a support in the language of the interface, and a custom one by its local name (BPIG §5.4)", () => {
+  it("names a support in the language of the interface, and a custom one by its local name", () => {
     expect(supportLabel("high-contrast", EN_MESSAGES)).toBe("High contrast");
     expect(supportLabel("high-contrast", ID_MESSAGES)).toBe("Kontras tinggi");
     expect(supportLabel("ext:kxztesting-illustrated-glossary-on-screen", EN_MESSAGES)).toBe(

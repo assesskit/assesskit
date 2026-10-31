@@ -4,7 +4,7 @@ import { afterEach, describe, expect, inject, it } from "vitest";
 import { page } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
 import { type ContentRootOptions, createContentRoot, createMathTypesetter } from "../src/player/index.js";
-import { sanitizeStylesheet } from "../src/player/roots/stylesheet.js";
+import { sanitizeStylesheet } from "../src/player/roots/internal.js";
 import { computed, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { axeViolations, ITEM_PATH, itemBody } from "./renderer-fixture.js";
 

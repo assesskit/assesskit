@@ -1,14 +1,22 @@
 # Speech
 
 A candidate whose spoken support has the reading type `computer-read-aloud` hears the content read by a voice that the
-player controls ([BPIG] §5.2.1). A candidate with the reading type `screen-reader` reads the page with their own screen
+player controls. A candidate with the reading type `screen-reader` reads the page with their own screen
 reader, which reads the DOM with its ARIA, labels and visually hidden text. This guide covers the first: the request the
 player makes for a voice, the voices, and the typing echo. It also covers what the player does to the DOM for the
 second.
 
+```mermaid
+flowchart LR
+  range["Range of the content"] --> skip["Leaves out hidden and suppressed content,<br/>and what the restrictions say"]
+  skip --> read["Reads SSML, data-ssml, lexicons,<br/>alt text and typed values"]
+  read --> request["SpeechRequest<br/>ssml, text, lang, rate, pitch, volume"]
+  request --> hook["SpeechHook<br/>the host's voice or webSpeech()"]
+```
+
 ```ts
 import { EN_MESSAGES } from "@assesskit/player";
-import { buildSpeechRequest, parseLexicon, webSpeech } from "@assesskit/player/player";
+import { buildSpeechRequest, parseLexicon } from "@assesskit/player/player";
 
 const host = document.createElement("div");
 const root = host.attachShadow({ mode: "open" });
@@ -26,11 +34,14 @@ const request = buildSpeechRequest(range, {
   language: "en",
   lexicons: [lexicon],
 });
-request?.text; // "Sigmund Froyd works at the World Wide Web Consortium."
-request?.ssml; // <speak version="1.1" xml:lang="en" xmlns="http://www.w3.org/2001/10/synthesis"><p>Sigmund <sub alias="Froyd">Freud</sub> works at the <sub alias="World Wide Web Consortium">W3C</sub>.</p></speak>
-request?.rate; // 240
+request?.text; // => "Sigmund Froyd works at the World Wide Web Consortium."
+request?.ssml; // => `<?xml version="1.0" encoding="UTF-8"?>\n<speak version="1.1" xml:lang="en" xmlns="http://www.w3.org/2001/10/synthesis"><p>Sigmund <sub alias="Froyd">Freud</sub> works at the <sub alias="World Wide Web Consortium">W3C</sub>.</p></speak>`
+request?.rate; // => 240
 
-if (request) await webSpeech().speak(request);
+const spoken = [];
+const voice = { speak: async (said) => void spoken.push(said.text), stop: () => undefined };
+await voice.speak(request);
+spoken; // => ["Sigmund Froyd works at the World Wide Web Consortium."]
 ```
 
 ## The request
@@ -55,9 +66,9 @@ the runtime's `Spoken` that decide the reading, all optional: `readingType`, `re
 | `ssml`                | The content as an SSML 1.1 document, valid against the SSML 1.1 schema, with one `p` for each paragraph                                  |
 | `text`                | The content as plain text for a voice that ignores SSML: `sub` aliases and lexicon aliases replace the text, one line for each paragraph |
 | `lang`                | The language of the first text read, from `lang` or `xml:lang`, else the option `language`                                               |
-| `rate`                | Words per minute (BPIG §5.2.1.4); absent when the support sets none                                                                      |
-| `pitch`               | From 0 to 1 (BPIG §5.2.1.5); absent when the support sets none                                                                           |
-| `volume`              | From 0 to 1 (BPIG §5.2.1.6); absent when the support sets none                                                                           |
+| `rate`                | Words per minute; absent when the support sets none                                                                                      |
+| `pitch`               | From 0 to 1; absent when the support sets none                                                                                           |
+| `volume`              | From 0 to 1; absent when the support sets none                                                                                           |
 
 The request is `undefined` for a candidate whose reading type is `screen-reader`, which is also the default when the
 support names none, because the screen reader reads the page. It is `undefined` for `word-by-word` when the range holds
@@ -68,38 +79,38 @@ more than one word.
 The reading follows the DOM, so it reads what the renderer made. The renderer builds every element with its namespace
 (`createElementNS`): SSML in the SSML namespace, MathML in the MathML namespace.
 
-| Content                                                       | Read                                                                                                                       |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Text                                                          | With white space reduced to a space, and the lexicons applied                                                              |
-| `hidden`, `aria-hidden="true"`, `qti-hidden`, `display: none` | Left out, with everything in it                                                                                            |
-| `qti-visually-hidden`                                         | Read: it is there for assistive technology (VOCAB §1.1.6.1)                                                                |
-| `data-qti-suppress-tts` of `computer-read-aloud` or `all`     | Left out. `screen-reader` is left out of the accessibility tree, below (VOCAB §1.1.1.3)                                    |
-| `data-qti-a11y-content-role="screen-reader-orientation"`      | Left out: it is guidance for screen reader users, which a candidate who looks at the screen does not need (VOCAB §1.1.1.5) |
-| `data-qti-a11y-content-role="long-description"`               | Read where it stands, unless `data-qti-suppress-tts` suppresses it, as BPIG §5.2.1.9 does                                  |
-| `img`                                                         | The `alt` text, which BPIG §5.1.1 says read aloud candidates get                                                           |
-| Text `input` and `textarea`                                   | The value the candidate typed (BPIG §5.2.1.1)                                                                              |
-| `math`                                                        | Its `alttext`, else its text. After MathJax, the speech of its `mjx-speech` ([mathematics](math.md))                       |
-| `br`                                                          | A pause: `break`                                                                                                           |
-| Other HTML elements that are not inline                       | A paragraph of their own; inline elements and the elements of other namespaces sit in the line                             |
+| Content                                                       | Read                                                                                                      |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Text                                                          | With white space reduced to a space, and the lexicons applied                                             |
+| `hidden`, `aria-hidden="true"`, `qti-hidden`, `display: none` | Left out, with everything in it                                                                           |
+| `qti-visually-hidden`                                         | Read: it is there for assistive technology                                                                |
+| `data-qti-suppress-tts` of `computer-read-aloud` or `all`     | Left out. `screen-reader` is left out of the accessibility tree, below                                    |
+| `data-qti-a11y-content-role="screen-reader-orientation"`      | Left out: it is guidance for screen reader users, which a candidate who looks at the screen does not need |
+| `data-qti-a11y-content-role="long-description"`               | Read where it stands, unless `data-qti-suppress-tts` suppresses it, as the best practices guide does      |
+| `img`                                                         | The `alt` text, which the best practices guide says read aloud candidates get                             |
+| Text `input` and `textarea`                                   | The value the candidate typed                                                                             |
+| `math`                                                        | Its `alttext`, else its text. After MathJax, the speech of its `mjx-speech` ([mathematics](math.md))      |
+| `br`                                                          | A pause: `break`                                                                                          |
+| Other HTML elements that are not inline                       | A paragraph of their own; inline elements and the elements of other namespaces sit in the line            |
 
 Characters that XML 1.0 does not allow are left out.
 
 ### SSML
 
-An element of the ASI schema's SSML ([INFO] §2.13.2) keeps its meaning and its attributes (SSML 1.1 §3): `audio`,
+An element of the ASI schema's SSML keeps its meaning and its attributes: `audio`,
 `break`, `emphasis`, `mark`, `p`, `phoneme`, `prosody`, `s`, `say-as`, `sub` and `voice`. The text of the element is
 read as the text. An element is dropped and its text kept when it lacks an attribute it needs, as `sub` lacks `alias`,
 and an attribute that SSML does not define is dropped. An `audio` keeps its `src` only when it is an `http` or `https`
-URL, which the renderer resolved to the asset origin; otherwise the voice says the fallback content (SSML 1.1 §3.3.1).
+URL, which the renderer resolved to the asset origin; otherwise the voice says the fallback content.
 The elements that hold text only, `phoneme`, `say-as` and `sub`, take the text of everything inside. The SSML is not
 displayed: the elements are inline, and only their text shows.
 
 ### `data-ssml`
 
-The attribute holds JSON with the functions `break`, `phoneme`, `prosody`, `say-as` and `sub` ([DSSML] §2). Content must
-not hold what DSSML does not define (DSSML §4.2), so a value that is not valid JSON, has an unknown function, property
+The attribute holds JSON with the functions `break`, `phoneme`, `prosody`, `say-as` and `sub`. Content must
+not hold what `data-ssml` does not define, so a value that is not valid JSON, has an unknown function, property
 or value, or lacks a needed property has no effect, and the element is read as it is. `emphasis` with the `level` of
-SSML 1.1 is accepted too, because the example of BPIG §5.2.1.8 uses it. A `prosody` rate is one of SSML 1.1 §3.2.4: a
+SSML 1.1 is accepted too, because the example of the best practices guide uses it. A `prosody` rate is one of SSML 1.1: a
 label or a percentage.
 
 Several functions in one value nest in a fixed order, from the outside: `prosody`, `emphasis`, `say-as`, `phoneme`,
@@ -109,9 +120,8 @@ an element reads its text.
 
 ### Lexicons
 
-`parseLexicon(source)` reads a PLS 1.0 document: the package resource of type `pls` that an item depends on ([BPIG]
-§5.2.1.8). It throws `DataError` when the document is not a lexicon with `version="1.0"`, an `alphabet` and an
-`xml:lang`. The entries follow PLS 1.0 §4: every grapheme of a lexeme gets its pronunciation, which is the first with
+`parseLexicon(source)` reads a PLS 1.0 document: the package resource of type `pls` that an item depends on. It throws `DataError` when the document is not a lexicon with `version="1.0"`, an `alphabet` and an
+`xml:lang`. The entries follow PLS 1.0: every grapheme of a lexeme gets its pronunciation, which is the first with
 `prefer="true"`, else the first in document order, taking the lexemes of the same grapheme together. A lexeme with a
 `role` is left out, because roles select a pronunciation by part of speech, which the player does not know.
 
@@ -132,7 +142,7 @@ PLS document, and gives the others to reading aloud in the order of the dependen
 
 ## Restriction types
 
-The restriction types of the support apply together ([BPIG] §5.2.1.2). A term the player does not know, such as
+The restriction types of the support apply together. A term the player does not know, such as
 `ext:iowa-reading`, has no effect.
 
 | Term                       | Effect                                                                                                                                 |
@@ -145,12 +155,12 @@ The restriction types of the support apply together ([BPIG] §5.2.1.2). A term t
 
 ## Link indication
 
-| Term              | Effect                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `speak-link`      | The word `link` (the message `speechLink`) comes before the text of a link                                          |
-| `different-voice` | The text of a link is in a `voice` with `variant="2"` (SSML 1.1 §3.2.1). A voice without SSML says it as other text |
-| `sound-effect`    | Like `speak-link`: the player has no sound to play, and the link is still marked                                    |
-| `none`            | No indication                                                                                                       |
+| Term              | Effect                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| `speak-link`      | The word `link` (the message `speechLink`) comes before the text of a link                        |
+| `different-voice` | The text of a link is in a `voice` with `variant="2"`. A voice without SSML says it as other text |
+| `sound-effect`    | Like `speak-link`: the player has no sound to play, and the link is still marked                  |
+| `none`            | No indication                                                                                     |
 
 A link is an `a` with an `href`.
 
@@ -178,7 +188,7 @@ the language of parts are lost with `webSpeech()`; use a host voice for full fid
 ## Typing echo
 
 `echoTyping(field, options)` says what the candidate types in a text input or a text area, as the support's `typingEcho`
-says ([BPIG] §5.2.1.3), and returns a function that stops it.
+says, and returns a function that stops it.
 
 | `echo`                 | The voice says                                                                            |
 | ---------------------- | ----------------------------------------------------------------------------------------- |
@@ -194,7 +204,7 @@ throws `DataError` when the field is not an `input` or a `textarea` or an option
 ## The accessible structure
 
 `applyReadingType(root, readingType)` sets `aria-hidden="true"` where the reading type of the support asks the content
-to be out of the accessibility tree that a screen reader reads ([BPIG] §5.2.1.9, [VOCAB] §1.1.1.3, §1.1.1.5):
+to be out of the accessibility tree that a screen reader reads:
 
 | Reading type          | Hidden                                                            |
 | --------------------- | ----------------------------------------------------------------- |
@@ -205,3 +215,51 @@ to be out of the accessibility tree that a screen reader reads ([BPIG] §5.2.1.9
 It removes what an earlier call set and nothing else: an `aria-hidden` of the content stays. Call it again when the
 support changes or the content is replaced. It throws `DataError` for a value that is neither a reading type nor
 `undefined`.
+
+## Files
+
+Each file of `src/player/speech/` holds one concept.
+
+| File                | Concept                                                                       |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `block-elements.ts` | Which elements are paragraphs, and which are expressions                      |
+| `checks.ts`         | The checks of rates, pitches and terms                                        |
+| `data-ssml.ts`      | The `data-ssml` attribute                                                     |
+| `index.ts`          | The public API                                                                |
+| `internal.ts`       | Helpers that other folders and tests share, which the package does not export |
+| `language.ts`       | The language of a node                                                        |
+| `lexicon.ts`        | Pronunciation lexicons: reading and checking                                  |
+| `options.ts`        | The options of `buildSpeechRequest`                                           |
+| `paragraphs.ts`     | Paragraphs of SSML nodes                                                      |
+| `pronounce.ts`      | Looking up words in lexicons                                                  |
+| `reader.ts`         | Reading a range into SSML                                                     |
+| `reading-type.ts`   | The reading type and the accessible structure                                 |
+| `reading.ts`        | `buildSpeechRequest`                                                          |
+| `request.ts`        | The request and the voice                                                     |
+| `settings.ts`       | The settings of the spoken support                                            |
+| `ssml.ts`           | SSML elements and documents                                                   |
+| `typing-echo.ts`    | The typing echo                                                               |
+| `web-speech.ts`     | The voice of the browser                                                      |
+
+## References
+
+| Specification                                                                                                                                                        | Topics                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [Pronunciation Lexicon Specification 1.0](https://www.w3.org/TR/pronunciation-lexicon/)                                                                              | matching, phoneme and alias, the lexicon element, the phoneme and alias elements                                        |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)                                                                     | pitch and volume, reading type, speech rate, speech rate, pitch and volume, spoken support, text to speech, typing echo |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/dom.html#the-lang-and-xml:lang-attributes)                                                                    | the lang attribute                                                                                                      |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-rate)                                                                       | rate                                                                                                                    |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisutterance-pitch)                                                                      | pitch                                                                                                                   |
+| [Web Speech API](https://webaudio.github.io/web-speech-api/#speechsynthesiserrorevent)                                                                               | error events                                                                                                            |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_voice)                                                                                                     | voice                                                                                                                   |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_audio)                                                                                                     | audio                                                                                                                   |
+| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)                                                                               | text to speech suppression                                                                                              |
+| [Support for SSML using the data-ssml property](https://www.imsglobal.org/sites/default/files/spec/qti/v3/data-ssml_infobind/imsqtiv3p0_datassml_v1p0_InfoBind.html) |                                                                                                                         |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_emphasis)                                                                                                  | emphasis                                                                                                                |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_prosody)                                                                                                   | prosody                                                                                                                 |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_phoneme)                                                                                                   | phoneme, say-as and sub                                                                                                 |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_speak)                                                                                                     | the speak element                                                                                                       |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                                                                                       | SSML in content, inline content                                                                                         |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/)                                                                                                                |                                                                                                                         |
+| [XML 1.0](https://www.w3.org/TR/xml/#charsets)                                                                                                                       | characters                                                                                                              |
+| [SSML 1.1](https://www.w3.org/TR/speech-synthesis11/#edef_sub)                                                                                                       | sub                                                                                                                     |

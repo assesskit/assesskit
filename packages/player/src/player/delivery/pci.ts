@@ -5,7 +5,7 @@ import { moduleConfigurationPaths, type PciModuleConfiguration, parseModuleResol
 import type { Value, ValueDeclaration } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer, InteractionRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import {
   mountPciFrame,
   type PciFiles,
@@ -43,16 +43,27 @@ export interface PciContext {
 export interface PciHost {
   /** Draws a `qti-portable-custom-interaction` as a container whose frame starts when its configuration is loaded. */
   readonly render: InteractionRenderer;
-  /** Sets the look that the candidate's supports ask for in the frames that run and in those that start later. Default: none. */
+  /**
+   * Sets the look that the candidate's supports ask for in the frames that run and in those that start later.
+   *
+   * @param presentation - The look.
+   */
   setPresentation(presentation: Presentation): void;
-  /** Closes the frames: each one hands over its final response and state first. Called before the content changes. */
+  /**
+   * Closes the frames: each one hands over its final response and state first.
+   *
+   * @remarks
+   * Called before the content changes.
+   *
+   * @returns A promise that resolves when the frames are closed.
+   */
   reset(): Promise<void>;
 }
 
 const isPortable = (interaction: Interaction): interaction is PortableCustomInteraction =>
   interaction.kind === "portable-custom-interaction";
 
-/** The variable that a template or context value is for the interaction. NULL has no base type of its own, so a string stands in. */
+/** Returns the variable that a template or context value is for the interaction. NULL has no base type of its own, so a string stands in. */
 function variableOf(value: Value | null): PciVariable {
   const declaration: ValueDeclaration =
     value === null
@@ -95,14 +106,18 @@ function promptOf(interaction: PortableCustomInteraction, renderer: BodyRenderer
 }
 
 /**
- * Creates the host of the portable custom interactions of the content (the player design §2.6, T49 to T53). The renderer it
- * gives the content root draws each interaction as a container, loads the module resolution files through the gate and
- * mounts the frame of TB4 in it with the state of the session: the response, the state `getState` gave before, the
+ * Creates the host of the portable custom interactions of the content.
+ *
+ * @remarks
+ * The renderer it gives the content root draws each interaction as a container, loads the module resolution files through
+ * the gate and mounts the frame in it with the state of the session: the response, the state `getState` gave before, the
  * template and context values, and the status of the item. What the interaction does reaches the player as `respond`: a
  * `changed` or `completed` event is a response with its state, which the session stores so that the interaction restores
  * on any device. A `done` event is a response too; it does not submit, since the candidate decides that.
  *
  * @param context - See {@link PciContext}.
+ * @returns The host.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, portable custom interactions}
  */
 export function createPciHost(context: PciContext): PciHost {
   let frames: Promise<PciFrame | undefined>[] = [];

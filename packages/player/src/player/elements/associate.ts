@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Pair, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { Assignment, Board } from "./board/model.js";
 import { BoardElement, type BoardLayout, limitsOf, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
@@ -15,17 +15,27 @@ import { pairsOf, responseOf } from "./values.js";
 const ENDS = [0, 1] as const;
 
 /**
- * The element of `qti-associate-interaction` (INFO §5.8): the candidate makes pairs of choices, each in a box with two
- * places. A pair counts once both its places are filled, and a choice can be in as many pairs as its `match-max` allows
- * (INFO §5.131.6). The boxes are as many as `max-associations`, or as the choices when it is unlimited.
+ * The element of `qti-associate-interaction`: the candidate makes pairs of choices, each in a box with two places.
+ *
+ * @remarks
+ * A pair counts once both its places are filled, and a choice can be in as many pairs as its `match-max` allows. The
+ * boxes are as many as `max-associations`, or as the choices when it is unlimited.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, associate interaction}
  */
 export class AssociateInteractionElement extends BoardElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "associate-interaction";
   readonly #choices: BuiltChoice[] = [];
   #prompt: RenderedPrompt | undefined;
   #boxes = 0;
 
-  /** Fills the element with the prompt and the choices of the node. */
+  /**
+   * Fills the element with the prompt and the choices of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: AssociateInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     for (const choice of node.simpleAssociableChoices) {
@@ -92,7 +102,14 @@ export class AssociateInteractionElement extends BoardElement {
   }
 }
 
-/** Renders a `qti-associate-interaction`. */
+/**
+ * Renders a `qti-associate-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderAssociate(node: AssociateInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(AssociateInteractionElement, "qti-associate-interaction", node, renderer, messages);
   element.build(node, renderer);

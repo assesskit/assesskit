@@ -1,11 +1,16 @@
-import { createStyleAdopter } from "../adopt.js";
+import { createStyleAdopter } from "../internal.js";
 
 /**
  * The stylesheet of the parts of the supports that live in the chrome: the panel of options, the controls of reading
- * aloud and the notice of the variant. It uses the system colors, so that it follows the color scheme and the forced
- * colors of the browser, and sizes in `rem`, so that it follows the text size. Every control is at least 2.75rem, more
- * than the 24 CSS pixels of WCAG 2.5.8. Text and background come from the pair `CanvasText` and `Canvas`, never from
- * `ButtonText` and `ButtonFace`, which are no pair in every engine.
+ * aloud and the notice of the variant.
+ *
+ * @remarks
+ * It uses the system colors, so that it follows the color scheme and the forced colors of the browser, and sizes in
+ * `rem`, so that it follows the text size. Every control is at least 2.75rem, more than the 24 CSS pixels of the target
+ * size criterion. Text and background come from the pair `CanvasText` and `Canvas`, never from `ButtonText` and
+ * `ButtonFace`, which are no pair in every engine.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#target-size-minimum | WCAG 2.2, target size}
  */
 const SUPPORTS_CSS = `
 .ak-supports, .ak-read-aloud, .ak-variant { color: CanvasText; background: Canvas; }
@@ -27,8 +32,9 @@ const SUPPORTS_CSS = `
 `;
 
 /**
- * Adopts the stylesheet of the supports into the document or shadow root that holds `node`.
+ * Adopts the stylesheet of the supports into the document or shadow root that holds a node.
  *
- * @returns a function that releases it; the root drops the stylesheet when no component uses it any more.
+ * @param node - The node.
+ * @returns A function that releases it; the root drops the stylesheet when no component uses it any more.
  */
 export const adoptSupportStyles = createStyleAdopter(SUPPORTS_CSS);

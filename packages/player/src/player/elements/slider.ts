@@ -3,19 +3,21 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import { single } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { Notes } from "./notes.js";
 import { nameByPrompt, renderPrompt } from "./parts.js";
 import { primitivesOf } from "./values.js";
 
 /**
- * The steps of a slider on an approximately continuous scale, which INFO §5.134.3 leaves to the engine: a float without
- * `step` moves in a hundredth of its range.
+ * The steps of a slider on an approximately continuous scale, which the specification leaves to the engine: a float
+ * without `step` moves in a hundredth of its range.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, slider interaction}
  */
 const CONTINUOUS_STEPS = 100;
 
-/** The most steps that get a label of their own: more would not fit in a line (INFO §5.134.4 allows the request to be declined). */
+/** The most steps that get a label of their own: more would not fit in a line. */
 const MAX_STEP_LABELS = 50;
 
 /** The steps a page key moves, as a share of the steps of the slider (WAI-ARIA Authoring Practices, Slider). */
@@ -44,12 +46,17 @@ function snap(scale: Scale, value: number): number {
 }
 
 /**
- * The element of `qti-slider-interaction` (INFO §5.134): a thumb on a scale between two bounds. The slider has no
- * position until the candidate moves it or the variable has a default (INFO §5.134): until then the thumb is an empty
- * mark and the slider reads out that no value is chosen. A click or tap on the scale, the arrow, page, Home and End keys,
- * and a drag move the thumb; none needs a drag (WCAG 2.5.7).
+ * The element of `qti-slider-interaction`: a thumb on a scale between two bounds.
+ *
+ * @remarks
+ * The slider has no position until the candidate moves it or the variable has a default: until then the thumb is an
+ * empty mark and the slider reads out that no value is chosen. A click or tap on the scale, the arrow, page, Home and
+ * End keys, and a drag move the thumb; none needs a drag (WCAG 2.5.7).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, slider interaction}
  */
 export class SliderInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "slider-interaction";
   readonly #thumb = html("div", { class: "ak-slider-thumb", role: "slider", tabindex: "0" });
   readonly #track = html("div", { class: "ak-slider-track" }, this.#thumb);
@@ -57,7 +64,12 @@ export class SliderInteractionElement extends InteractionElement {
   #node: SliderInteraction | undefined;
   #scale: Scale | undefined;
 
-  /** Fills the element with the prompt and the scale of the node. */
+  /**
+   * Fills the element with the prompt and the scale of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: SliderInteraction, renderer: BodyRenderer): void {
     this.#node = node;
     const prompt = renderPrompt(node.prompt, renderer);
@@ -90,7 +102,7 @@ export class SliderInteractionElement extends InteractionElement {
     const vertical = node.orientation === "vertical";
     const reversed = node.reverse === true;
     // The first end of the scale is at the left of a horizontal slider and at the top of a vertical one, which has its
-    // upper bound there unless the item reverses it (INFO §5.134.5, §5.134.6).
+    // upper bound there unless the item reverses it.
     const startsAtLower = vertical === reversed;
     const [first, second] = startsAtLower ? [scale.lower, scale.upper] : [scale.upper, scale.lower];
     this.#widget.replaceChildren(
@@ -157,7 +169,7 @@ export class SliderInteractionElement extends InteractionElement {
     const scale = this.#scale;
     if (scale === undefined) return;
     const [value] = primitivesOf(this.value);
-    // Without a value the keys move from the lower bound (INFO §5.134).
+    // Without a value the keys move from the lower bound.
     const current = typeof value === "number" ? value : scale.lower;
     const target = new Map<string, number>([
       ["ArrowRight", current + scale.step],
@@ -194,7 +206,14 @@ export class SliderInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-slider-interaction`. */
+/**
+ * Renders a `qti-slider-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderSlider(node: SliderInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(SliderInteractionElement, "qti-slider-interaction", node, renderer, messages);
   element.build(node, renderer);

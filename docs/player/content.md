@@ -5,6 +5,17 @@ MathML and SSML kept as XML. `createBodyRenderer` of `@assesskit/player/player` 
 `createContentRoot` shows an item with its stimuli in a shadow root of its own. They draw what the runtime's engine resolved
 (feedback, template content, printed values and hidden choices, `resolveContent` of the runtime); they decide nothing of QTI.
 
+```mermaid
+flowchart LR
+  nodes["Typed content<br/>from the runtime's asi"] --> policy["URL policy and<br/>attribute allowlist"]
+  policy --> renderer["BodyRenderer<br/>createElementNS, never innerHTML"]
+  renderer --> body["DOM of the item,<br/>its stimuli and its feedback"]
+  interactions["Interaction renderers<br/>by kind"] --> renderer
+  sheets["Item stylesheets<br/>sanitized"] --> root
+  body --> root["ContentRoot<br/>open shadow root with player.css"]
+  root --> math["MathJax, when<br/>the page has it"]
+```
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { selectMessages } from "@assesskit/player";
@@ -32,9 +43,7 @@ const root = createContentRoot(host, {
 });
 await root.show({ body: { nodes: parsed.item.body.children, base: "items/map/item.xml" } });
 
-root.root.querySelector(".ak-body")?.innerHTML;
-// <p lang="en">Look at <img src="https://assets.example/g/token/items/map/images/map.png" alt="A map" width="120"> and
-// <a href="https://assets.example/g/token/items/map/files/data.pdf" target="_blank" rel="noopener noreferrer">the data</a>.</p>
+root.root.querySelector(".ak-body")?.innerHTML; // => '<p lang="en">Look at <img src="https://assets.example/g/token/items/map/images/map.png" alt="A map" width="120" data-ak-width="120"> and <a href="https://assets.example/g/token/items/map/files/data.pdf" target="_blank" rel="noopener noreferrer">the data</a>.</p>'
 ```
 
 The `onclick` is not in the DOM: the renderer keeps the attributes of [Attributes](#attributes) and no other.
@@ -99,7 +108,7 @@ root adopts the stylesheets of the next item.
 
 ### The media scale
 
-The magnification of non-text content (BPIG 5.2.9.7) multiplies the pixel sizes that the author gave to images, video, objects
+The magnification of non-text content multiplies the pixel sizes that the author gave to images, video, objects
 and other elements with a `width` or `height` in pixels. The renderer keeps the size of the author in `data-ak-width` and
 `data-ak-height`, and `root.setMediaScale(scale)` sets the attributes again from it: two changes do not compound, and
 `1` gives the author's size back. The content is not drawn again, so the focus, the caret and the responses stay. A card drawn
@@ -164,9 +173,9 @@ The renderer builds the attributes from the typed node, never from markup, and k
 | Attributes                                                                                                                            | On                                         |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | `id`, `class`, `dir`, `role`, every `aria-*`, `data-catalog-idref`, `data-qti-suppress-tts`, `data-ssml`                              | Every element                              |
-| `lang`, from `xml:lang` or `lang`; `xml:lang` wins where both are given (HTML Standard §3.2.6.2)                                      | Every element                              |
+| `lang`, from `xml:lang` or `lang`; `xml:lang` wins where both are given                                                               | Every element                              |
 | `data-*` with letters, digits, `_`, `.` and `-`, such as `data-selected_color`                                                        | Every element                              |
-| `aria-X` from `data-qti-aria-X`, unless the element has `aria-X` ([VOCAB] §1.1.1.4)                                                   | Every element                              |
+| `aria-X` from `data-qti-aria-X`, unless the element has `aria-X`                                                                      | Every element                              |
 | `href`, `type`, `src`, `srcset`, `sizes`, `media`, `poster`, `preload`, `loop`, `muted`, `width`, `height`, `alt`, `longdesc`, `cite` | HTML elements that the schema gives them   |
 | `controls`, `default`, `open`, read by their presence: `false` leaves them off                                                        | `audio`, `video`, `track`, `details`       |
 | `span`, `headers`, `scope`, `abbr`, `axis`, `rowspan`, `colspan`, `align`, `valign`, `summary`, `title`, `srclang`, `kind`, `label`   | `col`, `td`, `th`, `table`, `bdo`, `track` |
@@ -189,9 +198,9 @@ rest). An attribute whose name the DOM would refuse is dropped; it does not thro
 | `#id`                                                                | Kept for a link, which the root follows; refused for a resource.                                                          |
 
 An element with `xml:base` starts the references below it, its own attributes included, at that base resolved against its
-parent's (XML Base §4.2); a base that leaves the package changes nothing. The browser's own URL parser tells the scheme and the
+parent's (as XML Base resolves it); a base that leaves the package changes nothing. The browser's own URL parser tells the scheme and the
 host, so the policy and the page read a reference alike. A refused
-reference leaves the attribute off. An `srcset` is parsed as HTML Standard §4.8.4.3.1 reads it, a comma in a URL included;
+reference leaves the attribute off. An `srcset` is parsed as the HTML Standard reads it, a comma in a URL included;
 a candidate with a refused URL or a descriptor that is not a width or a density is left out.
 
 ### Embedded files
@@ -239,20 +248,23 @@ variant without the hazard where it can; the notice is the fallback for a hazard
 ## Interactions
 
 An interaction is drawn by the renderer registered for its kind in the `interactions` map, and as a placeholder when there is
-none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of twenty-one kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element:
+none. `createInteractionRenderers` ([interactions](interactions.md)) gives the renderers of twenty-one kinds. A renderer gets the interaction and the `BodyRenderer`, and returns the element; the sample registers one, and renders an `img`
+with the URL policy of the options:
 
 ```ts
-import type { InteractionRenderers } from "@assesskit/player/player";
+import { selectMessages } from "@assesskit/player";
+import { createBodyRenderer } from "@assesskit/player/player";
 
-const interactions: InteractionRenderers = new Map([
-  [
-    "choice-interaction",
-    (interaction, body) =>
-      body.element("qti-choice-interaction", interaction, [
-        ...body.nodes(interaction.kind === "choice-interaction" ? (interaction.prompt?.children ?? []) : []),
-      ]),
-  ],
-]);
+const body = createBodyRenderer({
+  messages: selectMessages("en"),
+  assets: (path) => `https://assets.example/${path}`,
+  base: "items/a/item.xml",
+  interactions: new Map([
+    ["choice-interaction", (interaction, renderer) => renderer.element("qti-choice-interaction", interaction, [])],
+  ]),
+});
+const [image] = body.nodes([{ kind: "img", src: "map.png", alt: "A map" }]);
+image.outerHTML; // => '<img src="https://assets.example/items/a/map.png" alt="A map">'
 ```
 
 `body.element` sets the attributes the player keeps, and `body.nodes` renders the content of a prompt or a choice with the
@@ -297,17 +309,66 @@ Test feedback is a field of `show`: the entries from the runtime's `visibleTestF
 
 ## Where the sources differ
 
-| Case                                                                        | Reading                                                                                                                    |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| The design adopts item sheets with the constructed sheet's `baseURL`        | Chromium ignores it for `url()`; the sanitizer writes the URLs as absolute ones.                                           |
-| The design has `style` in no list, and the schema lets any element carry it | `style` is not kept. A class of the shared vocabulary does what an author needs, and an inline style could cover the page. |
-| T24 puts test feedback in the chrome (TB9)                                  | The root draws the entries it is given; the chrome decides when.                                                           |
-| T7 opens package files "in a viewer"                                        | A link opens the file in a tab of its own. The tools' viewer shows the files of companion materials.                       |
-| T19 draws file and uri values "as controls"                                 | Links, from the `variables` option; the runtime's `resolveContent` leaves only text, which is drawn as it is.              |
-| The parameters of an `object`                                               | Not drawn: they are for plug-ins. The runtime has already put the values of `param-variable` in them.                      |
+| Case                                                              | Reading                                                                                                                    |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| A constructed sheet has a `baseURL` for the `url()`s of its rules | Chromium ignores it for `url()`; the sanitizer writes the URLs as absolute ones.                                           |
+| The schema lets any element carry `style`                         | `style` is not kept. A class of the shared vocabulary does what an author needs, and an inline style could cover the page. |
+| Test feedback belongs to the chrome of a test                     | The root draws the entries it is given; the chrome decides when.                                                           |
+| Package files open "in a viewer"                                  | A link opens the file in a tab of its own. The tools' viewer shows the files of companion materials.                       |
+| File and uri values are drawn "as controls"                       | Links, from the `variables` option; the runtime's `resolveContent` leaves only text, which is drawn as it is.              |
+| The parameters of an `object`                                     | Not drawn: they are for plug-ins. The runtime has already put the values of `param-variable` in them.                      |
 
 ## Evidence
 
 `pnpm test:browser` renders every body and stimulus of the 1EdTech examples in Chromium, Firefox and WebKit and compares the
 HTML elements with the XML, runs axe at WCAG 2.2 A and AA on the rendered content, tries hostile markup, nodes no reader
 would give and hostile stylesheets, and checks that the browser asks no other origin. It needs `pnpm corpus`.
+
+## Files
+
+Each file of `src/player/content/`, `src/player/roots/`, `src/player/catalogs/`, `src/player/feedback/` holds one concept.
+
+| File                       | Concept                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `content/attributes.ts`    | The attributes of an element that the player keeps, and the sizes of media    |
+| `content/context.ts`       | The renderer that interaction renderers use, and the context of one rendering |
+| `content/embed.ts`         | Embedding a file by its media type                                            |
+| `content/foreign.ts`       | MathML, SSML and CML kept as XML, drawn with their namespaces                 |
+| `content/html-elements.ts` | The HTML elements of the schema, and the name of an element in the DOM        |
+| `content/index.ts`         | The public API                                                                |
+| `content/internal.ts`      | Helpers that other folders and tests share, which the package does not export |
+| `content/media.ts`         | The `audio`, `video` and `img` elements                                       |
+| `content/nodes.ts`         | Rendering the nodes of content                                                |
+| `content/object.ts`        | The `qti-object` element                                                      |
+| `content/options.ts`       | The options of the renderer, checked, with their defaults                     |
+| `content/printed.ts`       | The printed variable                                                          |
+| `content/renderer.ts`      | `createBodyRenderer`                                                          |
+| `content/srcset.ts`        | The candidates of a `srcset`                                                  |
+| `content/urls.ts`          | The URL policy for the references of content                                  |
+| `roots/build.ts`           | The DOM of the content of a root, in reading order                            |
+| `roots/content.ts`         | What a root shows, and its check                                              |
+| `roots/hazards.ts`         | The hazards that remain, and their notice                                     |
+| `roots/index.ts`           | The public API                                                                |
+| `roots/internal.ts`        | Helpers that other folders and tests share, which the package does not export |
+| `roots/links.ts`           | Links to an `id` inside a shadow root                                         |
+| `roots/root.ts`            | `createContentRoot`                                                           |
+| `roots/stylesheet.ts`      | Item stylesheets: fetching and sanitizing                                     |
+| `catalogs/cards.ts`        | The card of a catalog for a support                                           |
+| `catalogs/index.ts`        | The public API                                                                |
+| `feedback/dialog.ts`       | Modal feedback in a dialog                                                    |
+| `feedback/index.ts`        | The public API                                                                |
+| `feedback/render.ts`       | Modal and test feedback as elements                                           |
+
+## References
+
+| Specification                                                                                    | Topics                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [RFC 6761](https://www.rfc-editor.org/rfc/rfc6761#section-6.4)                                   | the invalid domain                                                                                                                         |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                   | HTML elements, coordinates, feedback, global attributes, inline choice interaction, modal feedback, object, printed variable, rubric block |
+| [XML Base](https://www.w3.org/TR/xmlbase/)                                                       | resolving relative references                                                                                                              |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#audio-control)                                          | audio control                                                                                                                              |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | catalogs, catalogs and cards, hazards, magnification                                                                                       |
+| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)           | ARIA attributes                                                                                                                            |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pause-stop-hide)                                        | pause, stop, hide                                                                                                                          |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/images.html#srcset-attribute)             | the srcset attribute                                                                                                                       |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/images.html#parsing-a-srcset-attribute)   | parsing a srcset attribute                                                                                                                 |

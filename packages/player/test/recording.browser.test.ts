@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { chooseRecording, startRecording } from "../src/player/recording/recorder.js";
+import { chooseRecording, startRecording } from "../src/player/recording/index.js";
 import { audioContextRuns } from "./audio.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 

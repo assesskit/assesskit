@@ -1,18 +1,36 @@
-import { DRAG_THRESHOLD } from "../board/view.js";
+import { DRAG_THRESHOLD } from "../pointer.js";
 
 /** What a drag asks of the element it serves. */
 export interface Dragging {
-  /** Returns the element that a press on `target` drags, or `undefined` when `target` is no source or the candidate cannot answer. */
+  /**
+   * Returns the element that a press on `target` drags.
+   *
+   * @param target - The element that was pressed.
+   * @returns The source, or `undefined` when `target` is no source or the candidate cannot answer.
+   */
   source(target: Element): HTMLElement | undefined;
-  /** Takes the end of a drag: the source, and where the pointer was released. */
+  /**
+   * Takes the end of a drag.
+   *
+   * @param source - The source that was dragged.
+   * @param clientX - The horizontal position where the pointer was released.
+   * @param clientY - The vertical position where the pointer was released.
+   */
   drop(source: HTMLElement, clientX: number, clientY: number): void;
 }
 
 /**
- * Lets the candidate drag the sources of the host with a mouse or a pen (WCAG 2.2, 2.5.7 asks for another way, which the
- * host gives): a press on a source that moves more than a few pixels carries the source with the pointer, and the release
- * calls `drop`. The drag can be aborted before the release with Escape, which WCAG 2.2, 2.5.2 asks for. A press that does
- * not move stays a click, and the click that ends a drag is not delivered.
+ * Lets the candidate drag the sources of the host with a mouse or a pen.
+ *
+ * @remarks
+ * A press on a source that moves more than a few pixels carries the source with the pointer, and the release calls `drop`.
+ * The drag can be aborted before the release with Escape. A press that does not move stays a click, and the click that
+ * ends a drag is not delivered. The criterion for dragging movements asks for another way, which the host gives.
+ *
+ * @param host - The element that holds the sources.
+ * @param dragging - What the drag asks of the element it serves.
+ * @see {@link https://www.w3.org/TR/WCAG22/#dragging-movements | WCAG 2.2, dragging movements}
+ * @see {@link https://www.w3.org/TR/WCAG22/#pointer-cancellation | WCAG 2.2, pointer cancellation}
  */
 export function enableDragging(host: HTMLElement, dragging: Dragging): void {
   let press:

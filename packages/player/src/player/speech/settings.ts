@@ -9,8 +9,12 @@ import { checkArray, checkRecord } from "../../checks.js";
 import { checkSpeechRate, checkTerm, checkUnitInterval } from "./checks.js";
 
 /**
- * What the candidate's spoken support asks for: the fields of the runtime's `Spoken` that decide how content is read
- * (BPIG §5.2.1). A `Spoken` is accepted as it is.
+ * What the candidate's spoken support asks for: the fields of the runtime's `Spoken` that decide how content is read.
+ *
+ * @remarks
+ * A `Spoken` is accepted as it is.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, spoken support}
  */
 export type SpeechSettings = Partial<
   Pick<Spoken, "readingType" | "restrictionTypes" | "speechRate" | "pitch" | "volume" | "linkIndication" | "typingEcho">
@@ -26,9 +30,12 @@ function checkRestrictionType(type: unknown): void {
 }
 
 /**
- * Checks the settings of a spoken support, as a host passes them from JavaScript or JSON. Absent fields are accepted;
- * `null` is not.
+ * Checks the settings of a spoken support, as a host passes them from JavaScript or JSON.
  *
+ * @remarks
+ * Absent fields are accepted; `null` is not.
+ *
+ * @param settings - The value to check.
  * @throws `DataError` when a field has a value outside the PNP vocabulary or range.
  */
 export function checkSpeechSettings(settings: unknown): asserts settings is SpeechSettings {
@@ -44,7 +51,12 @@ export function checkSpeechSettings(settings: unknown): asserts settings is Spee
   if (typingEcho !== undefined) checkTerm(typingEcho, PNP_TYPING_ECHOES, "The typing echo");
 }
 
-/** Returns the restriction types of settings that were checked. Default: none. */
+/**
+ * Returns the restriction types of settings that were checked.
+ *
+ * @param settings - The checked settings.
+ * @returns The restriction types; none when the settings have none.
+ */
 export function restrictionsOf(settings: SpeechSettings): ReadonlySet<string> {
   return new Set(settings.restrictionTypes ?? []);
 }

@@ -8,7 +8,14 @@ import { openProtractor } from "./protractor.js";
 import { openRuler } from "./ruler.js";
 import { openSlot } from "./slot.js";
 
-/** Opens a tool: its panel in the tray and whatever it puts over the item. `close` is called when the candidate closes its panel. */
+/**
+ * Opens a tool: its panel in the tray and whatever it puts over the item.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param entry - The tool in force.
+ * @param close - Called when the candidate closes its panel.
+ * @returns The open tool.
+ */
 export function openTool(context: ToolContext, { spec, description, file }: ToolEntry, close: () => void): OpenTool {
   switch (spec.kind) {
     case "rule":

@@ -1,17 +1,14 @@
 import { XML_NAMESPACE, type XmlElement, type XmlNode } from "@assesskit/runtime/xml";
-import { SSML_NAMESPACE } from "../speech/ssml.js";
+import { CML_NAMESPACE, MATHML_NAMESPACE, SSML_NAMESPACE } from "../internal.js";
 import { resolveUrl, type UrlPolicy, type UrlUse } from "./urls.js";
 
-/** The namespace of MathML (MathML 3 §2.1.1). */
-const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
-
-/** The namespace of Chemical Markup Language, which BPIG §5.2.1.2 names as one way to mark chemical equations. */
-const CML_NAMESPACE = "http://www.xml-cml.org/schema";
-
 /**
- * The namespaces of the elements that the model keeps as XML and that the player draws (the player design §3): MathML for the
- * typesetter and the screen reader, SSML for the speech model, and CML. Elements of any other namespace, such as
- * `xi:include`, HTML in a MathML annotation and SVG, are left out with what they hold.
+ * The namespaces of the elements that the model keeps as XML and that the player draws: MathML for the typesetter and
+ * the screen reader, SSML for the speech model, and CML.
+ *
+ * @remarks
+ * Elements of any other namespace, such as `xi:include`, HTML in a MathML annotation and SVG, are left out with what
+ * they hold.
  */
 const FOREIGN_NAMESPACES: ReadonlySet<string> = new Set([MATHML_NAMESPACE, SSML_NAMESPACE, CML_NAMESPACE]);
 
@@ -48,7 +45,11 @@ function renderForeignNode(node: XmlNode, urls: UrlPolicy): Node | undefined {
 
 /**
  * Builds the DOM for an element that the model keeps as XML, with `createElementNS`, so that the typesetter and the speech
- * model find MathML and SSML by namespace. Returns `undefined` for an element of a namespace the player does not draw.
+ * model find MathML and SSML by namespace.
+ *
+ * @param source - The element.
+ * @param urls - The URL policy, for the references of links, audio and lexicons.
+ * @returns The element, or `undefined` for one of a namespace that the player does not draw.
  */
 export function renderForeign(source: XmlElement, urls: UrlPolicy): Element | undefined {
   if (!(FOREIGN_NAMESPACES.has(source.namespace) && SAFE_NAME.test(source.name))) return undefined;

@@ -7,32 +7,72 @@ import { checkArray, checkBoolean, checkChoice, checkProperties, checkRecord, ch
 export interface ContentPart {
   /** The nodes of the content, such as the children of an item body. */
   readonly nodes: readonly BodyNode[];
-  /** The path in the package of the document the nodes come from. Default: `""`, the root of the package. */
+  /**
+   * The path in the package of the document the nodes come from.
+   *
+   * @defaultValue `""`, the root of the package
+   */
   readonly base?: string;
 }
 
 /** What a content root shows: an item with the stimuli it shares, the rubric and feedback around them, and what they need. */
 export interface RootContent {
-  /** The rubric of the test, its part and its sections for the view, which comes before the stimuli. Default: none. */
+  /**
+   * The rubric of the test, its part and its sections for the view, which comes before the stimuli.
+   *
+   * @defaultValue None
+   */
   readonly rubric?: ContentPart;
-  /** The stimuli that the item shares, beside the item and in order. Default: none. */
+  /**
+   * The stimuli that the item shares, beside the item and in order.
+   *
+   * @defaultValue `[]`
+   */
   readonly stimuli?: readonly ContentPart[];
-  /** The body of the item. Default: none. */
+  /**
+   * The body of the item.
+   *
+   * @defaultValue None
+   */
   readonly body?: ContentPart;
-  /** The test feedback that is shown, after the item. Default: none. */
+  /**
+   * The test feedback that is shown, after the item.
+   *
+   * @defaultValue `[]`
+   */
   readonly testFeedback?: readonly TestFeedback[];
-  /** The paths in the package of the stylesheets of the item. Default: none. */
+  /**
+   * The paths in the package of the stylesheets of the item.
+   *
+   * @defaultValue `[]`
+   */
   readonly stylesheets?: readonly string[];
-  /** The catalogs of the item, whose cards {@link ContentRoot.card} renders. Default: none. */
+  /**
+   * The catalogs of the item, whose cards {@link ContentRoot.card} renders.
+   *
+   * @defaultValue `[]`
+   */
   readonly catalogs?: readonly Catalog[];
   /**
-   * The hazards of the delivered content with whether the candidate avoids them. Those avoided make the root withhold
-   * media and animation, and say so. Default: none.
+   * The hazards of the delivered content with whether the candidate avoids them.
+   *
+   * @remarks
+   * Those avoided make the root withhold media and animation, and say so.
+   *
+   * @defaultValue `[]`
    */
   readonly hazards?: readonly HazardExposure[];
-  /** The language of the content, a BCP 47 tag, such as the language of the delivered variant. Default: that of the host. */
+  /**
+   * The language of the content, a BCP 47 tag, such as the language of the delivered variant.
+   *
+   * @defaultValue That of the host
+   */
   readonly language?: string;
-  /** The variables that printed variables still in the content read. Default: none. */
+  /**
+   * The variables that printed variables still in the content read.
+   *
+   * @defaultValue None
+   */
   readonly variables?: ContentVariables;
 }
 
@@ -51,6 +91,7 @@ const CONTENT_NAMES = [
 /**
  * Checks the content of a root.
  *
+ * @param content - The value to check.
  * @throws `DataError` when it, a part, or a list of it is not of its type.
  */
 export function checkContent(content: unknown): asserts content is RootContent {

@@ -1,6 +1,6 @@
 import type { CalculatorInfo } from "@assesskit/runtime/asi";
 import { checkFunction } from "../../checks.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { toolFile, viewFile } from "./file-viewer.js";
 import type { SlotTool } from "./model.js";
@@ -8,10 +8,17 @@ import { toolName } from "./names.js";
 import { createPanel } from "./panel.js";
 
 /**
- * Opens a tool that the host provides (the player design §2.8): its panel holds the element that the host's function builds
- * in, and the function gets the file of a calculator that the item gives. Without such a function, the panel says that
- * the tool is not available and shows the file, if there is one.
+ * Opens a tool that the host provides: its panel holds the element that the host's function builds in, and the function
+ * gets the file of a calculator that the item gives.
  *
+ * @remarks
+ * Without such a function, the panel says that the tool is not available and shows the file, if there is one.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param tool - The tool.
+ * @param file - The file that the item gives for a calculator, or `null`.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
  * @throws `DataError` when the host's function does not return a function; the panel is gone then.
  */
 export function openSlot(

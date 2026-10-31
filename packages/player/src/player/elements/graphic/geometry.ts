@@ -2,7 +2,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { Point } from "@assesskit/runtime/values";
 import { describe } from "../../../checks.js";
 
-/** The shapes of an area (INFO §8.29). */
+/** The shapes of an area. */
 export type AreaShape = "circle" | "default" | "ellipse" | "poly" | "rect";
 
 /** The size of an image in its own units, the pixels of the author: the unit of every coordinate and every point. */
@@ -31,7 +31,7 @@ export interface Area {
   readonly corners: readonly Point[];
 }
 
-/** How many coordinates each shape takes; a polygon takes three corners or more (INFO §7.9, the `Coords` type). */
+/** How many coordinates each shape takes; a polygon takes three corners or more. */
 const COORDINATE_COUNTS: ReadonlyMap<AreaShape, (count: number) => boolean> = new Map<
   AreaShape,
   (count: number) => boolean
@@ -43,7 +43,7 @@ const COORDINATE_COUNTS: ReadonlyMap<AreaShape, (count: number) => boolean> = ne
   ["rect", (count) => count === 4],
 ]);
 
-/** A length of the `Coords` type: a number of pixels, or a percentage of the image (INFO §7.9). */
+/** A length of the `Coords` type: a number of pixels, or a percentage of the image. */
 const LENGTH = /^(\d+)(%?)$/u;
 
 /** Reads one length of the coordinates; a percentage is of `whole`, the dimension the coordinate runs along. */
@@ -55,11 +55,18 @@ function lengthOf(token: string, whole: number): number | undefined {
 }
 
 /**
- * Reads the coordinates of an area against the size of its image (INFO §7.9). A coordinate along the width is a percentage
- * of the width, one along the height of the height, and the radius of a circle of the smaller of the two. `default`
- * is the whole image, and it takes no coordinates. A polygon closes itself.
+ * Reads the coordinates of an area against the size of its image.
  *
+ * @remarks
+ * A coordinate along the width is a percentage of the width, one along the height of the height, and the radius of a
+ * circle of the smaller of the two. `default` is the whole image, and it takes no coordinates. A polygon closes itself.
+ *
+ * @param shape - The shape.
+ * @param coords - The coordinates as the item writes them.
+ * @param size - The size of the image.
+ * @returns The area.
  * @throws `DataError` when a coordinate is not a length or the count does not fit the shape.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, geometry}
  */
 export function parseArea(shape: AreaShape, coords: string, size: Size): Area {
   const { width, height } = size;
@@ -103,19 +110,38 @@ export function parseArea(shape: AreaShape, coords: string, size: Size): Area {
   }
 }
 
-/** Returns the point at the center of a box, in the units of the image. */
+/**
+ * Returns the point at the center of a box, in the units of the image.
+ *
+ * @param box - The box.
+ * @returns The center.
+ */
 export function centerOf(box: Box): Point {
   return [box.x + box.width / 2, box.y + box.height / 2];
 }
 
-/** Returns a point limited to the image, with whole numbers, as the base type `point` has them (INFO §8.13). */
+/**
+ * Returns a point limited to the image, with whole numbers, as the base type `point` has them.
+ *
+ * @param point - The point.
+ * @param size - The size of the image.
+ * @returns The point inside the image.
+ */
 export function clampPoint([x, y]: Point, size: Size): Point {
   return [Math.min(size.width, Math.max(0, Math.round(x))), Math.min(size.height, Math.max(0, Math.round(y)))];
 }
 
 /**
- * Returns the point of the image at a position on the screen: `rect` is where the image is drawn, and the point is
- * measured in the units of the author whatever the scale of the drawing.
+ * Returns the point of the image at a position on the screen.
+ *
+ * @remarks
+ * The point is measured in the units of the author whatever the scale of the drawing.
+ *
+ * @param rect - Where the image is drawn.
+ * @param size - The size of the image.
+ * @param clientX - The horizontal position on the screen.
+ * @param clientY - The vertical position on the screen.
+ * @returns The point.
  */
 export function pointAt(rect: Box, size: Size, clientX: number, clientY: number): Point {
   const x = ((clientX - rect.x) / rect.width) * size.width;

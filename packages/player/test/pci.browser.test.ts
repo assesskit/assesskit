@@ -288,7 +288,7 @@ describe("mountPciFrame", () => {
         filesPci(files, single("file", { reference: "stored-1", mimeType: "text/plain", fileName: "helloworld.txt" })),
       );
       await ready(result);
-      // The data is the base64 of "pleasure." that BPIG App. C.1 shows.
+      // The data is the base64 of "pleasure." that the best practices guide shows.
       expect(probeOf(result.probes, "instance")).toMatchObject({
         boundTo: { base: { file: { data: "cGxlYXN1cmUu", mime: "text/plain", name: "helloworld.txt" } } },
       });

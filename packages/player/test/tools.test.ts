@@ -3,36 +3,32 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { CalculatorType, SupportName, SupportState } from "@assesskit/runtime/pnp";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import type { ToolsInput } from "../src/player/tools/index.js";
 import {
+  ANGLE_UNITS,
   BASIC_KEYS,
   type CalculatorKey,
   type CalculatorState,
+  CSS_PX_PER_MM,
+  checkToolsInput,
   DIGIT_KEYS,
+  degrees,
+  formatNumber,
   INITIAL_STATE,
   KEYBOARD_KEYS,
-  press,
-  STANDARD_ONLY_KEYS,
-} from "../src/player/tools/calculator-engine.js";
-import { checkToolsInput } from "../src/player/tools/check-input.js";
-import {
-  ANGLE_UNITS,
   LENGTH_UNITS,
-  type ProtractorSpec,
-  type RuleSpec,
-  type ToolsInput,
-} from "../src/player/tools/model.js";
-import { formatNumber } from "../src/player/tools/numbers.js";
-import { resolveTools } from "../src/player/tools/resolve.js";
-import {
-  CSS_PX_PER_MM,
-  degrees,
   MIN_LABEL_PX,
   MIN_TICK_PX,
   millimeters,
+  type ProtractorSpec,
+  press,
   protractorScale,
+  type RuleSpec,
+  resolveTools,
   ruleScale,
+  STANDARD_ONLY_KEYS,
   unitSymbol,
-} from "../src/player/tools/scale.js";
+} from "../src/player/tools/internal.js";
 import { fuzzJson } from "./fuzz.js";
 import { supportView } from "./supports-fixture.js";
 import {
@@ -106,7 +102,7 @@ describe("calculator-engine", () => {
     expect(shows("0.123456789012345")).toBe("0.12345678901");
   });
 
-  it("adds, subtracts, multiplies and divides: the four operations of the basic calculator (BPIG §3.7.8.1)", () => {
+  it("adds, subtracts, multiplies and divides: the four operations of the basic calculator", () => {
     expect(shows("2+3=")).toBe("5");
     expect(shows("9-12=")).toBe("-3");
     expect(shows("6*7=")).toBe("42");
@@ -189,7 +185,7 @@ describe("calculator-engine", () => {
     expect(type("5m1/0=").memory).toBe(5);
   });
 
-  it("has the keys of the basic calculator in the standard one, which adds the others (BPIG §3.7.8.1)", () => {
+  it("has the keys of the basic calculator in the standard one, which adds the others", () => {
     expect([...BASIC_KEYS].sort()).toEqual(
       [..."0123456789", "decimal", "add", "subtract", "multiply", "divide", "equals", "clear"].sort(),
     );
@@ -311,7 +307,7 @@ describe("check-input", () => {
     ],
   };
 
-  it("accepts the companion materials of BPIG §3.7.8 as the runtime reads them, and the supports of the profile", () => {
+  it("accepts the companion materials of the best practices guide as the runtime reads them, and the supports of the profile", () => {
     expect(() => checkToolsInput(valid)).not.toThrow();
     expect(() => checkToolsInput(json(valid))).not.toThrow();
     expect(() => checkToolsInput({ companion: null, supports: [] })).not.toThrow();
@@ -331,7 +327,7 @@ describe("check-input", () => {
     rejects({ companion: 1, supports: [] }, "The tools input is invalid at companion: expected an object, found 1.");
   });
 
-  it("rejects a material that is not what INFO §5.24 to §5.80 define", () => {
+  it("rejects a material that is not what the information model defines", () => {
     /** Checks a JSON copy of the companion materials of an item in which the value at `path` is replaced; `undefined` removes it. */
     const rejects = (
       items: Parameters<typeof companion>[0],
@@ -549,7 +545,7 @@ describe("resolve", () => {
     expect(set.physical).toEqual(["Supply scissors."]);
   });
 
-  it("reads the rule of BPIG §3.7.8.2 and the protractor of BPIG §3.7.8.3 as numbers in their units", () => {
+  it("reads the rule and the protractor of the best practices guide as numbers in their units", () => {
     const [rule, protractor] = resolveTools({
       companion: companion({ rules: [RULE_XML], protractors: [PROTRACTOR_XML] }),
       supports: [],
@@ -611,7 +607,7 @@ describe("resolve", () => {
     expect(resolveTools({ companion: companion({ rules: [RULE_XML, RULE_XML] }), supports: [] }).tools).toHaveLength(1);
   });
 
-  it("builds in the basic and standard calculators and leaves the others to the host (the player design D1)", () => {
+  it("builds in the basic and standard calculators and leaves the others to the host", () => {
     const kinds = (types: readonly string[]) =>
       resolveTools({
         companion: companion({ calculators: types.map((type) => calculatorXml(type, type)) }),
@@ -654,7 +650,7 @@ describe("resolve", () => {
     ]);
   });
 
-  it("puts the calculator of the profile on the screen when the item has none, whatever the test says ([CERT] A-12)", () => {
+  it("puts the calculator of the profile on the screen when the item has none, whatever the test says", () => {
     const set = resolveTools({
       companion: companion(),
       supports: [
@@ -706,7 +702,7 @@ describe("resolve", () => {
     expect(set.tools.map(({ spec }) => spec.kind)).toEqual(["rule"]);
   });
 
-  it("keeps the file of a calculator with the calculator, as the runtime reads it (INFO §5.24.3)", () => {
+  it("keeps the file of a calculator with the calculator, as the runtime reads it", () => {
     const set = resolveTools({
       companion: companion({
         calculators: [
@@ -795,7 +791,7 @@ describe("resolve", () => {
 });
 
 describe("scale", () => {
-  it("converts the units of INFO §8.27, §8.28, §8.39 and §8.40", () => {
+  it("converts the SI and US units of length and angle", () => {
     expect(millimeters("Millimeter")).toBe(1);
     expect(millimeters("Centimeter")).toBe(10);
     expect(millimeters("Meter")).toBe(1000);
@@ -816,7 +812,7 @@ describe("scale", () => {
     expect(unitSymbol("Radian")).toBe("rad");
   });
 
-  it("lays out the rule of BPIG §3.7.8.2: ten meters, a tick every half meter and a number every meter", () => {
+  it("lays out the rule of the best practices guide: ten meters, a tick every half meter and a number every meter", () => {
     const scale = ruleScale(RULE_SPEC, 600);
     expect(scale.lengthPx).toBeCloseTo(600, 9);
     expect(scale.unit).toBe("Meter");
@@ -882,7 +878,7 @@ describe("scale", () => {
     expect(labelled[0]?.at).toBe(0);
   });
 
-  it("lays out the protractor of BPIG §3.7.8.3: a tick every degree and a number every five", () => {
+  it("lays out the protractor of the best practices guide: a tick every degree and a number every five", () => {
     const { ticks, unit, unitDegrees } = protractorScale(PROTRACTOR_SPEC, 200);
     expect(unit).toBe("Degree");
     expect(unitDegrees).toBe(1);

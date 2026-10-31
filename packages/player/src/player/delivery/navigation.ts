@@ -1,7 +1,8 @@
 import type { CandidateView, ItemKey, NavigationEntry } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 
+/** The message that names each status of an item session. */
 const STATUS_MESSAGES = {
   initial: "statusInitial",
   interacting: "statusInteracting",
@@ -45,10 +46,16 @@ function itemEntry(
 }
 
 /**
- * Builds the navigation map of a view (T54): the visible sections and the item instances of the test part, in the order of
- * presentation, from the engine's map. A linear part lists the items presented so far, and only the reachable ones can
- * be chosen, so that the map moves forward only where the part does. It is a landmark named for the questions.
+ * Builds the navigation map of a view: the visible sections and the item instances of the test part, in the order of
+ * presentation, from the engine's map.
  *
+ * @remarks
+ * A linear part lists the items presented so far, and only the reachable ones can be chosen, so that the map moves
+ * forward only where the part does. It is a landmark named for the questions.
+ *
+ * @param view - The view.
+ * @param messages - The interface messages.
+ * @param move - Called with the item that the candidate chooses.
  * @returns The `nav` element, or `undefined` when the test part has fewer than two items to choose among.
  */
 export function renderNavigation(

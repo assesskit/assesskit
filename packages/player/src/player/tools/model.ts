@@ -7,7 +7,11 @@ import type {
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { SupportName } from "@assesskit/runtime/pnp";
 
-/** The calculator types of QTI (INFO §8.15), as the runtime's `qti-calculator-type` has them. */
+/**
+ * The calculator types of QTI, as the runtime's `qti-calculator-type` has them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, calculator type}
+ */
 export const CALCULATOR_TYPES = [
   "basic",
   "standard",
@@ -18,25 +22,41 @@ export const CALCULATOR_TYPES = [
 /** A type of calculator that an item asks for. */
 export type CalculatorType = (typeof CALCULATOR_TYPES)[number];
 
-/** The types of calculator that the player builds in: the host provides the others (the player design D1). */
+/** The types of calculator that the player builds in: the host provides the others. */
 export type BuiltInCalculator = Extract<CalculatorType, "basic" | "standard">;
 
-/** A file of the package that the item offers to the candidate: a digital material, or the file of a calculator (INFO §5.80). */
+/**
+ * A file of the package that the item offers to the candidate: a digital material, or the file of a calculator.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, digital material}
+ */
 export type FileMaterial = DigitalMaterial | CalculatorInfo;
 
-/** The units of length of a rule: SI (INFO §8.28) and US (INFO §8.40), spelled as the schema spells them. */
+/**
+ * The units of length of a rule: SI and US, spelled as the schema spells them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, units of length}
+ */
 export const LENGTH_UNITS = ["Millimeter", "Centimeter", "Meter", "Kilometer", "Inch", "Foot", "Yard", "Mile"] as const;
 
 /** A unit of length. */
 export type LengthUnit = (typeof LENGTH_UNITS)[number];
 
-/** The units of angle of a protractor: SI (INFO §8.27) and US (INFO §8.39), spelled as the schema spells them. */
+/**
+ * The units of angle of a protractor: SI and US, spelled as the schema spells them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, units of angle}
+ */
 export const ANGLE_UNITS = ["Radian", "Degree", "Minute", "Second"] as const;
 
 /** A unit of angle. */
 export type AngleUnit = (typeof ANGLE_UNITS)[number];
 
-/** A step of a rule: a length in a unit (INFO §7.35, §7.42). */
+/**
+ * A step of a rule: a length in a unit.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rule system}
+ */
 export interface LengthIncrement {
   /** The length, in `unit`. */
   readonly value: number;
@@ -44,7 +64,11 @@ export interface LengthIncrement {
   readonly unit: LengthUnit;
 }
 
-/** A step of a protractor: an angle in a unit (INFO §7.31, §7.32). */
+/**
+ * A step of a protractor: an angle in a unit.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, protractor}
+ */
 export interface AngleIncrement {
   /** The angle, in `unit`. */
   readonly value: number;
@@ -52,25 +76,45 @@ export interface AngleIncrement {
   readonly unit: AngleUnit;
 }
 
-/** What a rule of the item asks for (INFO §5.126, §5.127, §5.164), with the lengths as numbers. */
+/**
+ * What a rule of the item asks for, with the lengths as numbers.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rule}
+ */
 export interface RuleSpec {
   /** The least length of the rule, in the unit of `majorIncrement`. */
   readonly minimumLength: number;
-  /** The distance between the minor ticks. Default: no minor ticks. */
+  /**
+   * The distance between the minor ticks.
+   *
+   * @defaultValue No minor ticks
+   */
   readonly minorIncrement?: LengthIncrement;
   /** The distance between the major ticks, which carry the numbers. */
   readonly majorIncrement: LengthIncrement;
 }
 
-/** What a protractor of the item asks for (INFO §5.110, §5.70, §5.71), with the angles as numbers. */
+/**
+ * What a protractor of the item asks for, with the angles as numbers.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, protractor}
+ */
 export interface ProtractorSpec {
-  /** The angle between the minor ticks. Default: no minor ticks. */
+  /**
+   * The angle between the minor ticks.
+   *
+   * @defaultValue No minor ticks
+   */
   readonly minorIncrement?: AngleIncrement;
   /** The angle between the major ticks, which carry the numbers. */
   readonly majorIncrement: AngleIncrement;
 }
 
-/** The supports of a candidate's profile that put a tool on the screen (BPIG §5.2.9). */
+/**
+ * The supports of a candidate's profile that put a tool on the screen.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, tools}
+ */
 export const TOOL_SUPPORT_NAMES = [
   "line-reader",
   "answer-masking",
@@ -90,13 +134,17 @@ export type ToolSupportName = (typeof TOOL_SUPPORT_NAMES)[number];
 
 /** What decides the tools in force for an item: its companion materials and the candidate's supports. */
 export interface ToolsInput {
-  /** The companion materials of the item (INFO §5.33) as the runtime reads them, or `null` for an item without them. */
+  /**
+   * The companion materials of the item as the runtime reads them, or `null` for an item without them.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, companion materials info}
+   */
   readonly companion: CompanionMaterialsInfo | null;
   /** The supports of the view; those that put no tool on the screen are ignored. */
   readonly supports: readonly SupportView[];
 }
 
-/** The tools that the host provides in place of built-in ones (the player design §2.8), by name. */
+/** The tools that the host provides in place of built-in ones, by name. */
 export const SLOT_TOOLS = [
   "scientific-calculator",
   "graphing-calculator",
@@ -131,11 +179,18 @@ export interface ToolEntry {
   readonly spec: ToolSpec;
   /** What the author says the tool offers, or `null`. */
   readonly description: string | null;
-  /** The file at which the item says that a calculator is available (INFO §5.24.3), or `null`. */
+  /**
+   * The file at which the item says that a calculator is available, or `null`.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, calculator info}
+   */
   readonly file: CalculatorInfo | null;
   /**
-   * The support that puts the tool on the screen, or `null` for a tool that only the item asks for. The tool follows its
-   * `active` flag when its state is `option`, because only an option can be turned on and off with a `support` action.
+   * The support that puts the tool on the screen, or `null` for a tool that only the item asks for.
+   *
+   * @remarks
+   * The tool follows its `active` flag when its state is `option`, because only an option can be turned on and off with
+   * a `support` action.
    */
   readonly support: SupportView | null;
 }

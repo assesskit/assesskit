@@ -18,7 +18,7 @@ const WORD_CHARACTER = /^[\p{L}\p{M}\p{N}]$/u;
 export interface TypingEchoOptions {
   /** The voice that speaks. */
   readonly hook: SpeechHook;
-  /** What is repeated while the candidate types (BPIG §5.2.1.3). */
+  /** What is repeated while the candidate types. */
   readonly echo: TypingEcho;
   /** The text of the interface: the word for a space. */
   readonly messages: Pick<Messages, "typingSpace">;
@@ -54,15 +54,19 @@ function echoed(echo: TypingEcho, typed: string, word: string | undefined, space
 }
 
 /**
- * Repeats what the candidate types in a text field, as the typing echo of the support says (BPIG §5.2.1.3). `characters`
- * says each character as it is typed, with the word for a space. `words` says each word when a character that is not
- * part of a word ends it. `characters-and-words` says each character, and the word instead of the character that ends
- * it. `none` says nothing. Only typed characters are echoed, not deleted or pasted text, and not a prediction that the
- * keyboard inserts as several characters.
+ * Repeats what the candidate types in a text field, as the typing echo of the support says.
+ *
+ * @remarks
+ * `characters` says each character as it is typed, with the word for a space. `words` says each word when a character that
+ * is not part of a word ends it. `characters-and-words` says each character, and the word instead of the character that
+ * ends it. `none` says nothing. Only typed characters are echoed, not deleted or pasted text, and not a prediction that
+ * the keyboard inserts as several characters.
  *
  * @param field - A text input or a text area.
+ * @param options - See {@link TypingEchoOptions}.
  * @returns A function that stops the echo.
  * @throws `DataError` when the field is not a text input or a text area, or an option is not valid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, typing echo}
  */
 export function echoTyping(field: HTMLInputElement | HTMLTextAreaElement, options: TypingEchoOptions): () => void {
   if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {

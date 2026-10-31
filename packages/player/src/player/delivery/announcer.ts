@@ -1,23 +1,35 @@
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 
-/** How long an announcement waits after the region is cleared, so that a screen reader reads a text again that it read before. */
+/** How long an announcement waits after the region is cleared, in milliseconds, so that a screen reader reads a text again that it read before. */
 const ANNOUNCE_DELAY_MS = 50;
 
-/** A live region that announces status messages without moving the focus (WCAG 4.1.3). */
+/**
+ * A live region that announces status messages without moving the focus.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#status-messages | WCAG 2.2, status messages}
+ */
 export interface Announcer {
   /** The region, which holds the text of the latest message in view. */
   readonly element: HTMLElement;
-  /** Replaces the message in the region. */
+  /**
+   * Replaces the message in the region.
+   *
+   * @param text - The message.
+   */
   say(text: string): void;
   /** Takes the pending announcement away. */
   stop(): void;
 }
 
 /**
- * Creates a polite live region with `role="status"`. Its text is visible, so that the candidate who does not use a
- * screen reader reads it too (WCAG 4.1.3).
+ * Creates a polite live region with `role="status"`.
+ *
+ * @remarks
+ * Its text is visible, so that the candidate who does not use a screen reader reads it too.
  *
  * @param className - The class of the region.
+ * @returns The announcer.
+ * @see {@link https://www.w3.org/TR/WCAG22/#status-messages | WCAG 2.2, status messages}
  */
 export function createAnnouncer(className: string): Announcer {
   const element = html("div", { class: className, role: "status", "aria-live": "polite", "aria-atomic": "true" });

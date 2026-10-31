@@ -8,6 +8,21 @@ drawing ([graphics](graphics.md)). The other kinds are drawn by other renderers 
 renderers draw the content and the controls. They decide nothing of QTI: the runtime's `interactions` gives the descriptors and the
 validity of a response, and the host gives each element its descriptor, its value and whether it is disabled.
 
+```mermaid
+sequenceDiagram
+  participant H as Host
+  participant R as Renderer of a kind
+  participant E as Interaction element
+  participant C as Candidate
+  R->>E: draws the prompt, the choices and the node's content
+  H->>E: descriptor, value, disabled
+  E->>E: builds the controls and the limits
+  C->>E: responds
+  E->>E: checks the response with the runtime's checkResponse
+  E->>H: ak-response with the new value
+  H->>E: value of the next view, ignored while it equals the element's own
+```
+
 ```ts
 import { readAsi } from "@assesskit/runtime/asi";
 import { describeInteractions } from "@assesskit/runtime/interactions";
@@ -59,10 +74,12 @@ for (const element of root.root.querySelectorAll("*")) {
   if (element instanceof InteractionElement && descriptor !== undefined) element.descriptor = descriptor;
 }
 
-root.root.addEventListener("ak-response", (event) => {
-  event.detail.responseIdentifier; // "RESPONSE"
-  event.detail.value; // { cardinality: "multiple", baseType: "identifier", values: ["B"] } after Lyon is selected
-});
+const responses = [];
+root.root.addEventListener("ak-response", (event) => responses.push(event.detail));
+root.root.querySelectorAll('input[type="checkbox"]')[1].click();
+responses.length; // => 1
+responses[0].responseIdentifier; // => "RESPONSE"
+responses[0].value.values; // => ["B"]
 ```
 
 ## Options
@@ -111,29 +128,29 @@ the item's rules; the runtime's `checkResponse` does, and the element says what 
 The choices keep the order of the node, which is the order of the view: the runtime shuffles and hides them before the node reaches
 the renderer.
 
-| Kind                | What the candidate sees                                                                                                                                                                         | The response                                                                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `choice`            | A radio button for each choice where `max-choices` is 1, else a checkbox. The control comes first and its label is the face of the choice. `orientation` and the stacking classes lay them out. | The identifiers of the selected choices in the order of the choices. The candidate starts with none selected (INFO §2.4.1.1). |
-| `hottext`           | The same controls, with the hot text as the face, inside the running text.                                                                                                                      | The same.                                                                                                                     |
-| `inline-choice`     | A menu inside the sentence. Its first entry is no choice and reads `data-prompt`; the `qti-label` names the menu.                                                                               | One identifier; the first entry gives NULL.                                                                                   |
-| `order`             | The choices in a pool, and as many numbered places as the candidate may order: all, or `max-choices`.                                                                                           | The identifiers in the order of the places, ordered; places left empty are skipped.                                           |
-| `associate`         | The choices in a pool and a box of two places for each association, as many as `max-associations`, or as the choices when it is 0.                                                              | A pair for each box whose two places are filled.                                                                              |
-| `match`             | The first set in the pool and the second as places that take them, as many as each `match-max`; with `qti-match-tabular`, a table with a checkbox where a row and a column meet.                | Directed pairs from the first set to the second.                                                                              |
-| `gap-match`         | The choices in a pool and the passage with a place in each gap. A gap holds one choice; a choice fills as many gaps as its `match-max`.                                                         | Directed pairs from the choice to the gap.                                                                                    |
-| `hotspot`           | An image with a hotspot for each choice, as a radio button or a checkbox that the shape is the face of ([graphics](graphics.md)).                                                               | The identifiers of the selected hotspots; the selected one of a radio group can be chosen again to clear it.                  |
-| `select-point`      | An image to click, or to move a crosshair over with the keys, and a button for each point marked. The areas that score the response are never drawn.                                            | The points, in the units of the image; with `max-choices` 1 a new point moves the old.                                        |
-| `graphic-order`     | The hotspots as for `hotspot`, each numbered once selected.                                                                                                                                     | The identifiers in the order selected, ordered.                                                                               |
-| `graphic-associate` | The hotspots as buttons, a line between two joined ones, and a list of the pairs with a button that removes each.                                                                               | A pair for each association.                                                                                                  |
-| `graphic-gap-match` | The choices in a pool and an image whose hotspots are gaps, on [the board](#choices-in-places).                                                                                                 | Directed pairs from the choice to the gap.                                                                                    |
-| `position-object`   | An object in a tray, to put on the image of a stage that interactions may share.                                                                                                                | The points where the center of the object lies.                                                                               |
-| `drawing`           | A toolbar and a canvas over the image ([graphics](graphics.md#drawing)).                                                                                                                        | A file value: the picture with the drawing on it.                                                                             |
-| `text-entry`        | A line in the sentence, `size` from `expected-length`, `placeholder-text`, and the keyboard of a number for an integer or float.                                                                | See [text](#text).                                                                                                            |
-| `extended-text`     | A text area, an area that keeps its spaces, or an editor; `max-strings` gives that many.                                                                                                        | See [text](#text).                                                                                                            |
-| `slider`            | A scale with a thumb, labels at its ends, and at each step when `step-label` is set and there are at most 50. `orientation` and `reverse` apply.                                                | An integer or a float on a step; NULL until the candidate chooses.                                                            |
-| `end-attempt`       | A button titled as the item says.                                                                                                                                                               | None: the engine sets the variable. The element sends `ak-end-attempt`.                                                       |
-| `media`             | [The player](#media).                                                                                                                                                                           | The number of plays, an integer.                                                                                              |
-| `upload`            | [The picker and the recorder](#upload-and-recording).                                                                                                                                           | A file value that the host's storage gave.                                                                                    |
-| `custom`            | What the host's hook draws, or a notice that the kind is not supported.                                                                                                                         | What the hook gives.                                                                                                          |
+| Kind                | What the candidate sees                                                                                                                                                                         | The response                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `choice`            | A radio button for each choice where `max-choices` is 1, else a checkbox. The control comes first and its label is the face of the choice. `orientation` and the stacking classes lay them out. | The identifiers of the selected choices in the order of the choices. The candidate starts with none selected. |
+| `hottext`           | The same controls, with the hot text as the face, inside the running text.                                                                                                                      | The same.                                                                                                     |
+| `inline-choice`     | A menu inside the sentence. Its first entry is no choice and reads `data-prompt`; the `qti-label` names the menu.                                                                               | One identifier; the first entry gives NULL.                                                                   |
+| `order`             | The choices in a pool, and as many numbered places as the candidate may order: all, or `max-choices`.                                                                                           | The identifiers in the order of the places, ordered; places left empty are skipped.                           |
+| `associate`         | The choices in a pool and a box of two places for each association, as many as `max-associations`, or as the choices when it is 0.                                                              | A pair for each box whose two places are filled.                                                              |
+| `match`             | The first set in the pool and the second as places that take them, as many as each `match-max`; with `qti-match-tabular`, a table with a checkbox where a row and a column meet.                | Directed pairs from the first set to the second.                                                              |
+| `gap-match`         | The choices in a pool and the passage with a place in each gap. A gap holds one choice; a choice fills as many gaps as its `match-max`.                                                         | Directed pairs from the choice to the gap.                                                                    |
+| `hotspot`           | An image with a hotspot for each choice, as a radio button or a checkbox that the shape is the face of ([graphics](graphics.md)).                                                               | The identifiers of the selected hotspots; the selected one of a radio group can be chosen again to clear it.  |
+| `select-point`      | An image to click, or to move a crosshair over with the keys, and a button for each point marked. The areas that score the response are never drawn.                                            | The points, in the units of the image; with `max-choices` 1 a new point moves the old.                        |
+| `graphic-order`     | The hotspots as for `hotspot`, each numbered once selected.                                                                                                                                     | The identifiers in the order selected, ordered.                                                               |
+| `graphic-associate` | The hotspots as buttons, a line between two joined ones, and a list of the pairs with a button that removes each.                                                                               | A pair for each association.                                                                                  |
+| `graphic-gap-match` | The choices in a pool and an image whose hotspots are gaps, on [the board](#choices-in-places).                                                                                                 | Directed pairs from the choice to the gap.                                                                    |
+| `position-object`   | An object in a tray, to put on the image of a stage that interactions may share.                                                                                                                | The points where the center of the object lies.                                                               |
+| `drawing`           | A toolbar and a canvas over the image ([graphics](graphics.md#drawing)).                                                                                                                        | A file value: the picture with the drawing on it.                                                             |
+| `text-entry`        | A line in the sentence, `size` from `expected-length`, `placeholder-text`, and the keyboard of a number for an integer or float.                                                                | See [text](#text).                                                                                            |
+| `extended-text`     | A text area, an area that keeps its spaces, or an editor; `max-strings` gives that many.                                                                                                        | See [text](#text).                                                                                            |
+| `slider`            | A scale with a thumb, labels at its ends, and at each step when `step-label` is set and there are at most 50. `orientation` and `reverse` apply.                                                | An integer or a float on a step; NULL until the candidate chooses.                                            |
+| `end-attempt`       | A button titled as the item says.                                                                                                                                                               | None: the engine sets the variable. The element sends `ak-end-attempt`.                                       |
+| `media`             | [The player](#media).                                                                                                                                                                           | The number of plays, an integer.                                                                              |
+| `upload`            | [The picker and the recorder](#upload-and-recording).                                                                                                                                           | A file value that the host's storage gave.                                                                    |
+| `custom`            | What the host's hook draws, or a notice that the kind is not supported.                                                                                                                         | What the hook gives.                                                                                          |
 
 A single value is given where the variable is declared `single` and one value is chosen; otherwise a container is given
 (`multiple`, or `ordered` for an order). No values are NULL.
@@ -175,7 +192,7 @@ the speech guide ([speech](speech.md)) apply. A locked field is read-only, not d
 that has only `p`, `br`, `strong`, `em`, `u`, `ul`, `ol`, `li`, `sub` and `sup`, without attributes. Any other element is
 replaced by its text and a `script` or `style` is dropped, so that pasted markup carries nothing else; a paste is plain text.
 `qti-counter-up` and `qti-counter-down` with `expected-length` show the characters typed, or left, counted as code points;
-in XHTML only the text counts (VOCAB §1.2.3.2). `expected-length` is a hint and never a limit.
+in XHTML only the text counts. `expected-length` is a hint and never a limit.
 
 ### Media
 
@@ -190,9 +207,9 @@ or stop would break WCAG 1.4.2. Captions and audio description appear when the r
 | The count      | It is the response that the host restored, never the element's own state, so a reload cannot reset it. A play that a reload interrupts counts, and the next starts from the start.         |
 | `max-plays`    | A recording that has been played that often cannot start again; the status says "No plays left." A play that has begun runs to its end. `loop` plays again by itself while plays are left. |
 | `autostart`    | Tries to start once, while the count is 0. A browser may refuse without a gesture; the controls stay.                                                                                      |
-| Pause delay    | `data-qti-media-player-pause-delay` or `qti-media-player-pause-delay`, in seconds: playback waits after the candidate presses play, at the start and after a pause (VOCAB §1.2.11.2).      |
-| Pause duration | `…-pause-duration`: a pause ends by itself after that many seconds (VOCAB §1.2.11.3).                                                                                                      |
-| Pause count    | `…-pause-count`: the most pauses in one play; then pause says so and playback goes on (VOCAB §1.2.11.4). The count starts again with each play.                                            |
+| Pause delay    | `data-qti-media-player-pause-delay` or `qti-media-player-pause-delay`, in seconds: playback waits after the candidate presses play, at the start and after a pause.                        |
+| Pause duration | `…-pause-duration`: a pause ends by itself after that many seconds.                                                                                                                        |
+| Pause count    | `…-pause-count`: the most pauses in one play; then pause says so and playback goes on. The count starts again with each play.                                                              |
 
 A value of a pause attribute that is not a number above 0 is ignored. A pause by the keys of the system is not limited, because
 the player cannot stop it. `coords` is not read: the player does not place the recording.
@@ -225,16 +242,25 @@ the page and has its descriptor:
 
 ```ts
 import { single } from "@assesskit/runtime/values";
-import type { CustomInteractionHook } from "@assesskit/player/player";
 
-const hook: CustomInteractionHook = (interaction, host, set, state) => {
+const hook = (interaction, host, set, state) => {
   const button = document.createElement("button");
   button.textContent = state.disabled ? "Closed" : "Say hello";
   button.addEventListener("click", () => set(single("string", "hello")));
   host.append(button);
   return () => button.remove();
 };
+
+const host = document.createElement("div");
+const given = [];
+const stop = hook(undefined, host, (value) => given.push(value), { value: null, disabled: false });
+host.querySelector("button").click();
+given; // => [{ cardinality: "single", baseType: "string", value: "hello" }]
+stop();
+host.querySelector("button"); // => null
 ```
+
+Pass the hook as the `customInteraction` option of `createInteractionRenderers`.
 
 `state` holds the response and `disabled` at that moment; the hook does not hear of later changes of the host. `set` checks the
 value, and ignores it while the candidate cannot respond. The function that the hook returns runs when the element
@@ -295,7 +321,7 @@ path (WCAG 2.5.1, 2.5.7).
 | A limit is not enforced by the controls                                                           | A response over `max-choices` is given and said to be invalid, as QTI's `attempted` is; the engine refuses to submit it where the item validates responses.                                                   |
 | `data-qti-media-player-controls` has no value for the play button                                 | Play and pause are always there. A recording that cannot be started breaks the item, and one that cannot be stopped breaks WCAG 1.4.2.                                                                        |
 | The pause count is "during playback"                                                              | It counts the pauses of one play.                                                                                                                                                                             |
-| The custom interaction hook has no value in the design                                            | The hook is given `state` as a fourth argument, so that a reload can restore what the candidate gave.                                                                                                         |
+| The custom interaction hook has no value in the specification                                     | The hook is given `state` as a fourth argument, so that a reload can restore what the candidate gave.                                                                                                         |
 | `qti-gap-match-interaction` gaps and hot texts lose their identifiers in the renderer of content  | The element pairs the drawn elements with the nodes of the model in document order, which the renderer keeps.                                                                                                 |
 
 ## Evidence
@@ -307,3 +333,57 @@ records a tone through the microphone's place. `pnpm test:corpus` also renders e
 interaction of these kinds, answers each one, and checks that no response breaks its binding, that axe finds nothing, and
 that the page logs no error. The pinned old engines render and answer a choice, an order, a slider and a text entry, and load
 the recording worklet (`pnpm compat:engines`).
+
+## Files
+
+Each file of `src/player/elements/`, `src/player/media/`, `src/player/recording/` holds one concept.
+
+| File                             | Concept                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| `elements/board-element.ts`      | The element of an interaction on a board                                      |
+| `elements/define.ts`             | `defineElements`                                                              |
+| `elements/editor.ts`             | The XHTML field of an extended text                                           |
+| `elements/element.ts`            | `InteractionElement`, the base of every interaction element                   |
+| `elements/end-attempt.ts`        | The end attempt element and its event                                         |
+| `elements/hints.ts`              | The hints and limits in words                                                 |
+| `elements/index.ts`              | The public API                                                                |
+| `elements/internal.ts`           | Helpers that other folders and tests share, which the package does not export |
+| `elements/notes.ts`              | The limits, hints and announcements of an interaction                         |
+| `elements/options.ts`            | The options of the renderers, checked                                         |
+| `elements/parts.ts`              | The parts that interactions share: prompt, choices, orientation               |
+| `elements/pointer.ts`            | The distance of a drag                                                        |
+| `elements/renderers.ts`          | `createInteractionRenderers`                                                  |
+| `elements/selection.ts`          | The element of a choice-based interaction                                     |
+| `elements/text.ts`               | The text fields of the text interactions                                      |
+| `elements/upload.ts`             | The upload element and its recording                                          |
+| `elements/values.ts`             | Reading and building responses                                                |
+| `media/companion.ts`             | A recording that follows another                                              |
+| `media/index.ts`                 | The public API                                                                |
+| `media/playback.ts`              | The rules of playing a recording                                              |
+| `media/settings.ts`              | What an item asks of the player                                               |
+| `media/tracks.ts`                | Text tracks                                                                   |
+| `recording/index.ts`             | The public API                                                                |
+| `recording/names.ts`             | The name of the recorder processor                                            |
+| `recording/recorder.ts`          | Recording the microphone                                                      |
+| `recording/wav.ts`               | The WAV encoder                                                               |
+| `the other files of `elements/`` | The element of each kind of interaction, with its renderer                    |
+
+## References
+
+| Specification                                                                                                            | Topics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [QTI 3.0 ASI Information Model](https://www.imsglobal.org/spec/qti/v3p0/info/)                                           | associate interaction, cardinality, choice interaction, custom interaction, drawing interaction, end attempt interaction, extended text interaction, gap match interaction, geometry, graphic associate interaction, graphic gap match interaction, graphic order interaction, hotspot interaction, hottext interaction, inline choice interaction, interactions, match, match interaction, match max, media interaction, order interaction, position object interaction, select point interaction, slider interaction, text, text entry interaction, upload interaction |
+| [QTI 3 Standardized Shared Vocabulary](https://www.imsglobal.org/spec/qti/v3p0/vocab/)                                   | choices container width, extended text interaction, match interaction, media interaction, media player, media player controls, orientation                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#labels-or-instructions)                                                         | labels or instructions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#non-text-content)                                                               | non-text content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#name-role-value)                                                                | name, role, value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#error-identification)                                                           | error identification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-gestures)                                                               | pointer gestures                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#keyboard)                                                                       | keyboard, keyboard, which exempts such functions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#target-size-minimum)                                                            | target size                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#dragging-movements)                                                             | dragging movements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#pointer-cancellation)                                                           | pointer cancellation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#non-text-contrast)                                                              | non-text contrast                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [HTML Standard](https://html.spec.whatwg.org/multipage/media.html#attr-track-kind)                                       | the kind of a track                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| [Multimedia Programming Interface and Data Specifications 1.0](https://www.aelius.com/njh/wavemetatools/doc/riffmci.pdf) | Waveform Audio File Format                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| [RFC 2045](https://www.rfc-editor.org/rfc/rfc2045#section-5.1)                                                           | the Content-Type header field                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

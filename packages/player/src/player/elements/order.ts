@@ -3,7 +3,7 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import type { Assignment, Board } from "./board/model.js";
 import { BoardElement, type BoardLayout, poolOf, tokensOf } from "./board-element.js";
 import { createInteraction } from "./element.js";
@@ -19,17 +19,28 @@ import {
 import { responseOf, stringsOf } from "./values.js";
 
 /**
- * The element of `qti-order-interaction` (INFO §5.97): the candidate puts the choices in order in numbered places, or, with
- * `min-choices`, only some of them. The places are as many as the choices the candidate may order. A restored response
- * puts the choices in the places in its order, which overrides the initial order of the choices (INFO §2.4.1.2).
+ * The element of `qti-order-interaction`: the candidate puts the choices in order in numbered places, or, with
+ * `min-choices`, only some of them.
+ *
+ * @remarks
+ * The places are as many as the choices the candidate may order. A restored response puts the choices in the places in
+ * its order, which overrides the initial order of the choices.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, order interaction}
  */
 export class OrderInteractionElement extends BoardElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "order-interaction";
   readonly #choices: BuiltChoice[] = [];
   #prompt: RenderedPrompt | undefined;
   #places: readonly string[] = [];
 
-  /** Fills the element with the prompt and the choices of the node. */
+  /**
+   * Fills the element with the prompt and the choices of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: OrderInteraction, renderer: BodyRenderer): void {
     this.#prompt = renderPrompt(node.prompt, renderer);
     for (const choice of node.simpleChoices) {
@@ -81,7 +92,14 @@ export class OrderInteractionElement extends BoardElement {
   }
 }
 
-/** Renders a `qti-order-interaction`. */
+/**
+ * Renders a `qti-order-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderOrder(node: OrderInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(OrderInteractionElement, "qti-order-interaction", node, renderer, messages);
   element.build(node, renderer);

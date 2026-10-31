@@ -2,8 +2,11 @@ import { DataError } from "@assesskit/runtime/errors";
 import { checkRecord, describe } from "../../checks.js";
 
 /**
- * The look that a candidate's supports ask for, as the attributes and the custom properties that `player.css` reads
- * (see the styling guide). `presentationOf` builds it. Both maps hold only what the supports set; a name that is absent has its default.
+ * The look that a candidate's supports ask for, as the attributes and the custom properties that `player.css` reads.
+ *
+ * @remarks
+ * `presentationOf` builds it. Both maps hold only what the supports set; a name that is absent has its default. The
+ * styling guide lists the names.
  */
 export interface Presentation {
   /** The attributes `data-ak-*`, by name; a flag has the value `""`. */
@@ -39,6 +42,7 @@ const PRESENTATION_PROPERTIES = [
  * Checks a presentation, as a host passes it from JavaScript: two maps, with the names that {@link presentationOf} can
  * set and text for values.
  *
+ * @param value - The value to check.
  * @param label - Names the presentation in the error message, such as `The option presentation`.
  * @throws `DataError` when it is not one.
  */
@@ -66,9 +70,13 @@ export function checkPresentation(value: unknown, label: string): asserts value 
 
 /**
  * Sets a presentation on an element and takes off what an earlier one set: the host of a content root, or the `html`
- * element of a frame. Only the names of {@link presentationOf} are touched, so the other attributes and properties of
- * the element stay.
+ * element of a frame.
  *
+ * @remarks
+ * Only the names of {@link presentationOf} are touched, so the other attributes and properties of the element stay.
+ *
+ * @param target - The element.
+ * @param presentation - The presentation.
  * @throws `DataError` when `target` is not an element or `presentation` is not valid.
  */
 export function applyPresentation(target: HTMLElement, presentation: Presentation): void {

@@ -4,8 +4,13 @@ import type { ViewDocuments } from "../../protocol/index.js";
 import type { RootContent } from "../roots/index.js";
 
 /**
- * The body of feedback made of resolved nodes. The nodes come from the feedback the engine resolved, whose schema holds
- * the flow content of feedback and no interaction (INFO §5.93); the type of the view says only that they are content.
+ * Makes the body of feedback of resolved nodes.
+ *
+ * @remarks
+ * The nodes come from the feedback the engine resolved, whose schema holds the flow content of feedback and no
+ * interaction; the type of the view says only that they are content.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, modal feedback}
  */
 function feedbackBody<TBody extends ModalFeedback["contentBody"] | TestFeedback["contentBody"]>(
   nodes: readonly BodyNode[],
@@ -27,7 +32,12 @@ function testFeedbackOf(nodes: readonly BodyNode[], status: CandidateView["statu
   };
 }
 
-/** Wraps resolved nodes as the modal feedback a content root shows in a dialog. */
+/**
+ * Wraps resolved nodes as the modal feedback a content root shows in a dialog.
+ *
+ * @param nodes - The resolved nodes.
+ * @returns The feedback.
+ */
 export function modalFeedbackOf(nodes: readonly BodyNode[]): ModalFeedback {
   return {
     kind: "modal-feedback",
@@ -41,8 +51,15 @@ export function modalFeedbackOf(nodes: readonly BodyNode[]): ModalFeedback {
 }
 
 /**
- * Builds what a content root shows for a view (the player design §2.5): the rubric and the test feedback against the test's
- * document, and the item with its stimuli against theirs. Nothing is decided here; the engine resolved the content.
+ * Builds what a content root shows for a view: the rubric and the test feedback against the test's document, and the
+ * item with its stimuli against theirs.
+ *
+ * @remarks
+ * Nothing is decided here; the engine resolved the content.
+ *
+ * @param view - The view.
+ * @param documents - The paths of the documents of the view.
+ * @returns The content.
  */
 export function rootContentOf(view: CandidateView, documents: ViewDocuments): RootContent {
   const { current } = view;

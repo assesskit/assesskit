@@ -2,7 +2,7 @@ import type { ExtendedTextInteraction } from "@assesskit/runtime/asi";
 import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { EditorField } from "./editor.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
@@ -47,19 +47,31 @@ function editorSource(messages: Messages, label: string): Source {
 }
 
 /**
- * The element of `qti-extended-text-interaction` (INFO §5.48): an area for a longer text, or several texts, when the
- * response is a container of strings. The format says how the text is typed: `plain` in a text area, `preformatted` in
- * one that keeps its spaces, `xhtml` in an editor that writes a few elements of XHTML. The classes `qti-counter-up` and
- * `qti-counter-down` show how many characters the candidate typed, or has left, of `expected-length` (VOCAB §1.2.3.2).
+ * The element of `qti-extended-text-interaction`: an area for a longer text, or several texts, when the response is a
+ * container of strings.
+ *
+ * @remarks
+ * The format says how the text is typed: `plain` in a text area, `preformatted` in one that keeps its spaces, `xhtml`
+ * in an editor that writes a few elements of XHTML. The classes `qti-counter-up` and `qti-counter-down` show how many
+ * characters the candidate typed, or has left, of `expected-length`.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, extended text interaction}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, extended text interaction}
  */
 export class ExtendedTextInteractionElement extends TextElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "extended-text-interaction";
   readonly #entries: Entry[] = [];
   readonly #fields = html("div", { class: "ak-fields" });
   #node: ExtendedTextInteraction | undefined;
   #prompt: RenderedPrompt | undefined;
 
-  /** Fills the element with the prompt of the node; the fields come when the descriptor is known. */
+  /**
+   * Fills the element with the prompt of the node; the fields come when the descriptor is known.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: ExtendedTextInteraction, renderer: BodyRenderer): void {
     this.#node = node;
     this.#prompt = renderPrompt(node.prompt, renderer);
@@ -71,7 +83,7 @@ export class ExtendedTextInteractionElement extends TextElement {
   protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {
     const node = this.#node;
     if (node === undefined) return;
-    // INFO §5.48.6: a container takes up to max-strings separate texts, each in a field of its own.
+    // A container takes up to max-strings separate texts, each in a field of its own.
     const cardinality = cardinalityOf(descriptor);
     const many = cardinality === "multiple" || cardinality === "ordered";
     const count = many ? (descriptor.constraints.maxStrings ?? 1) : 1;
@@ -128,7 +140,14 @@ export class ExtendedTextInteractionElement extends TextElement {
   }
 }
 
-/** Renders a `qti-extended-text-interaction`. */
+/**
+ * Renders a `qti-extended-text-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderExtendedText(node: ExtendedTextInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(
     ExtendedTextInteractionElement,

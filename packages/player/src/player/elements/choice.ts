@@ -7,17 +7,27 @@ import { Notes } from "./notes.js";
 import { applyOrientation, renderPrompt } from "./parts.js";
 import { SelectionElement } from "./selection.js";
 
-/** The class of the shared vocabulary that stacks the choices in N columns (VOCAB §1.2.1.5). */
+/** The class of the shared vocabulary that stacks the choices in N columns. */
 const STACKING = /(?:^|\s)qti-choices-stacking-(\d)(?:\s|$)/u;
 
 /**
- * The element of `qti-choice-interaction` (INFO §5.30). The choices keep the order of the node, which the view gave. The
- * candidate starts with none selected (INFO §2.4.1.1).
+ * The element of `qti-choice-interaction`.
+ *
+ * @remarks
+ * The choices keep the order of the node, which the view gave. The candidate starts with none selected.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, choice interaction}
  */
 export class ChoiceInteractionElement extends SelectionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "choice-interaction";
 
-  /** Fills the element with the prompt and the choices of the node. */
+  /**
+   * Fills the element with the prompt and the choices of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: ChoiceInteraction, renderer: BodyRenderer): void {
     this.prompt = renderPrompt(node.prompt, renderer);
     for (const choice of node.simpleChoices) {
@@ -46,7 +56,14 @@ export class ChoiceInteractionElement extends SelectionElement {
   }
 }
 
-/** Renders a `qti-choice-interaction`. */
+/**
+ * Renders a `qti-choice-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderChoice(node: ChoiceInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(ChoiceInteractionElement, "qti-choice-interaction", node, renderer, messages);
   element.build(node, renderer);

@@ -3,14 +3,22 @@ import type { InteractionDescriptor } from "@assesskit/runtime/interactions";
 import { single } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
-import { createInteraction, InteractionElement } from "../elements/element.js";
-import { Notes } from "../elements/notes.js";
-import { elementsNamed, nameByPrompt, renderPrompt } from "../elements/parts.js";
-import { primitivesOf } from "../elements/values.js";
-import { Playback, type PlaybackNotice, type PlaybackRules } from "./playback.js";
-import { type MediaSettings, readMediaSettings } from "./settings.js";
-import { CAPTION_KINDS, DESCRIPTION_KINDS, isShowing, tracksOf } from "./tracks.js";
+import { html } from "../internal.js";
+import {
+  CAPTION_KINDS,
+  DESCRIPTION_KINDS,
+  isShowing,
+  type MediaSettings,
+  Playback,
+  type PlaybackNotice,
+  type PlaybackRules,
+  readMediaSettings,
+  tracksOf,
+} from "../media/index.js";
+import { createInteraction, InteractionElement } from "./element.js";
+import { Notes } from "./notes.js";
+import { elementsNamed, nameByPrompt, renderPrompt } from "./parts.js";
+import { primitivesOf } from "./values.js";
 
 const SECONDS_PER_MINUTE = 60;
 
@@ -33,16 +41,22 @@ interface Bar {
 }
 
 /**
- * The element of `qti-media-interaction` (INFO §5.92): an audio or video object that the candidate plays, and the number
- * of times they did is the response (an integer). The element draws the controls itself, so that the rules can hold:
- * play and pause, and, as the item asks (VOCAB §1.2.11.1), going back to the start, captions and audio description. The
- * recording stops at `max-plays`, and the count is the response that the host restored, never the element's own. The pause
- * attributes of the item (VOCAB §1.2.11.2–4) are kept ({@link Playback}).
+ * The element of `qti-media-interaction`: an audio or video object that the candidate plays, and the number of times
+ * they did is the response (an integer).
+ *
+ * @remarks
+ * The element draws the controls itself, so that the rules can hold: play and pause, and, as the item asks, going back
+ * to the start, captions and audio description. The recording stops at `max-plays`, and the count is the response that
+ * the host restored, never the element's own. The pause attributes of the item are kept ({@link Playback}).
  *
  * A recording that starts by itself (`autostart`) starts only while the candidate has played it no time, and, as
  * browsers allow, without a gesture; the controls stay, so that the candidate can pause it (WCAG 1.4.2).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, media interaction}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, media interaction}
  */
 export class MediaInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "media-interaction";
   #node: MediaInteraction | undefined;
   #media: HTMLMediaElement | undefined;
@@ -52,7 +66,12 @@ export class MediaInteractionElement extends InteractionElement {
   #started = false;
   #notice: PlaybackNotice | undefined;
 
-  /** Fills the element with the prompt and the recording of the node. */
+  /**
+   * Fills the element with the prompt and the recording of the node.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: MediaInteraction, renderer: BodyRenderer): void {
     this.#node = node;
     const prompt = renderPrompt(node.prompt, renderer);
@@ -197,7 +216,14 @@ export class MediaInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-media-interaction`. */
+/**
+ * Renders a `qti-media-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderMedia(node: MediaInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(MediaInteractionElement, "qti-media-interaction", node, renderer, messages);
   element.build(node, renderer);

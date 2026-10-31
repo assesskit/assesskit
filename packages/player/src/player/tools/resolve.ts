@@ -15,7 +15,11 @@ import {
   type ToolsInput,
 } from "./model.js";
 
-/** The tools that the host provides, by the support that asks for them (BPIG §5.2.9). */
+/**
+ * The tools that the host provides, by the support that asks for them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, tools}
+ */
 const SLOT_OF_SUPPORT: ReadonlyMap<SupportName, SlotTool> = new Map([
   ["dictionary-on-screen", "dictionary"],
   ["thesaurus-on-screen", "thesaurus"],
@@ -27,14 +31,18 @@ const SLOT_OF_SUPPORT: ReadonlyMap<SupportName, SlotTool> = new Map([
   ["spell-checker-on-screen", "spell-checker"],
 ]);
 
-/** The calculator type of a profile that names none: the plainest, since the profile asks for any calculator (CERT A-12). */
+/**
+ * The calculator type of a profile that names none: the plainest, since the profile asks for any calculator.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/cert/ | QTI 3.0 Conformance and Certification, calculator}
+ */
 const DEFAULT_CALCULATOR_TYPE: CalculatorType = "basic";
 
 function isCalculatorType(value: string): value is CalculatorType {
   return CALCULATOR_TYPES.some((type) => type === value);
 }
 
-/** The tool for a calculator type: the built-in basic and standard calculators, and a slot for the others (the player design D1). */
+/** Returns the tool for a calculator type: the built-in basic and standard calculators, and a slot for the others. */
 function calculatorSpec(type: CalculatorType): ToolSpec {
   return type === "basic" || type === "standard"
     ? { kind: "calculator", type }
@@ -111,12 +119,16 @@ function addSupport(add: Add, support: SupportView): void {
 }
 
 /**
- * Resolves the tools in force for an item and a candidate (the player design §2.8, [CERT] A-12): the item's companion
- * materials, plus the tools that the candidate's supports ask for, minus the prohibited supports. A calculator that both
- * name is one tool. A prohibited `calculator-on-screen` removes the item's calculators too, since the profile says that
- * the candidate may not use one (BPIG §5.2.9).
+ * Resolves the tools in force for an item and a candidate: the item's companion materials, plus the tools that the
+ * candidate's supports ask for, minus the prohibited supports.
+ *
+ * @remarks
+ * A calculator that both name is one tool. A prohibited `calculator-on-screen` removes the item's calculators too, since
+ * the profile says that the candidate may not use one.
  *
  * @param input - Checked by `checkToolsInput`.
+ * @returns The tools in force.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, tools}
  */
 export function resolveTools({ companion, supports }: ToolsInput): ToolSet {
   const tools = new Map<string, ToolEntry>();

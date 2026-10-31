@@ -1,17 +1,23 @@
 import type { GraphicOrderInteraction } from "@assesskit/runtime/asi";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { createInteraction } from "./element.js";
 import { AreaSelectionElement } from "./hotspot.js";
 import { responseOf, stringsOf } from "./values.js";
 
 /**
- * The element of `qti-graphic-order-interaction` (INFO §5.61): the candidate puts the hotspots in order by selecting them
- * one after the other, and selecting one again takes it out of the order. Each selected hotspot shows its place in the
- * order as a number that is also in its name, so that no state relies on color (WCAG 2.2, 1.4.1).
+ * The element of `qti-graphic-order-interaction`: the candidate puts the hotspots in order by selecting them one after
+ * the other, and selecting one again takes it out of the order.
+ *
+ * @remarks
+ * Each selected hotspot shows its place in the order as a number that is also in its name, so that no state relies on
+ * color (WCAG 2.2, 1.4.1).
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, graphic order interaction}
  */
 export class GraphicOrderInteractionElement extends AreaSelectionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "graphic-order-interaction";
 
   protected override extras(): readonly Node[] {
@@ -48,7 +54,14 @@ export class GraphicOrderInteractionElement extends AreaSelectionElement {
   }
 }
 
-/** Renders a `qti-graphic-order-interaction`. */
+/**
+ * Renders a `qti-graphic-order-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderGraphicOrder(node: GraphicOrderInteraction, renderer: BodyRenderer, messages: Messages): Element {
   const element = createInteraction(
     GraphicOrderInteractionElement,

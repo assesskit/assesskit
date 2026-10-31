@@ -20,10 +20,14 @@ import {
   strictRecord,
 } from "../../checks.js";
 
-/** The states of a support for a candidate (BPIG §5.3), as the runtime's `resolveSupports` gives them. */
+/**
+ * The states of a support for a candidate, as the runtime's `resolveSupports` gives them.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, support states}
+ */
 const SUPPORT_STATES = ["prohibited", "active", "option", "assigned"] as const satisfies readonly SupportState[];
 
-/** The colors of the profile are `#RGB` or `#RRGGBB` (PNP XSD `HexDType`). */
+/** The colors of the profile are `#RGB` or `#RRGGBB`, as `HexDType` of the PNP schema has them. */
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/iu;
 
 const colorSchema = v.pipe(
@@ -110,9 +114,10 @@ const supportViewSchema = v.pipe(
 );
 
 /**
- * Checks the supports of a view, as a host passes them from JavaScript or JSON: the runtime's `SupportView`s, with the settings
- * that the player reads.
+ * Checks the supports of a view, as a host passes them from JavaScript or JSON: the runtime's `SupportView`s, with the
+ * settings that the player reads.
  *
+ * @param value - The value to check.
  * @param label - Names the list in the error message, such as `The option supports`.
  * @throws `DataError` when the list is not an array, a support has the wrong type, an unknown property, a name that is
  * not a support, or settings that are not those of its support or are out of range.
@@ -121,7 +126,13 @@ export function checkSupportViews(value: unknown, label: string): asserts value 
   parseWith(v.array(supportViewSchema), value, label);
 }
 
-/** Returns the support of the list with the name when it is on, else `undefined`. */
+/**
+ * Returns the support of the list with a name when it is on.
+ *
+ * @param supports - The supports of the view.
+ * @param name - The name of the support.
+ * @returns The support, or `undefined` when it is absent or off.
+ */
 export function activeSupport(supports: readonly SupportView[], name: SupportName): SupportView | undefined {
   return supports.find((support) => support.name === name && support.active);
 }

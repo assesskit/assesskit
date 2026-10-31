@@ -1,7 +1,39 @@
 # Messages
 
 The interface text is a catalog of plain strings, one per function of the interface, so that the same function has the
-same name everywhere (WCAG 3.2.4). The player ships English and Indonesian.
+same name everywhere. The player ships English and Indonesian, and a host replaces any message or adds a language.
+
+```mermaid
+flowchart LR
+  en["EN_MESSAGES<br/>every key"] --> shipped["Shipped catalog<br/>of the language"]
+  shipped --> language["Overrides for the language<br/>such as id"]
+  language --> tag["Overrides for the tag in full<br/>such as id-ID"]
+  tag --> result["Messages<br/>every key has a message"]
+```
+
+## Choosing a catalog
+
+`selectMessages(language, overrides)` returns the messages for the language of the interface. Each step of the diagram
+replaces the keys that it has; a language without a catalog gets English.
+
+| Parameter   | Type                                | Meaning                                                                                                                            |
+| ----------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `language`  | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                                            |
+| `overrides` | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag; a catalog may have only some keys. Without it the shipped messages stand. |
+
+```ts
+import { selectMessages } from "@assesskit/player";
+
+selectMessages("id-ID").toolRule; // => "Penggaris"
+selectMessages("jv").toolRule; // => "Ruler"
+selectMessages("id", { id: { toolRule: "Mistar" } }).toolRule; // => "Mistar"
+selectMessages("id-ID", { id: { toolRule: "Rule 1" }, "id-ID": { toolRule: "Rule 2" } }).toolRule; // => "Rule 2"
+```
+
+`selectMessages` throws `DataError` when `language` is not a string, `overrides` is not an object of objects, a catalog
+has a key that is not a message key, or a message is not a string.
+
+## The catalog
 
 | Key                            | English                                                                                                                                                                                                                                                                              | Indonesian                                                                                                                                                                                                                                                                                          |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -308,31 +340,29 @@ same name everywhere (WCAG 3.2.4). The player ships English and Indonesian.
 `Messages` is the type of a catalog, `EN_MESSAGES` and `ID_MESSAGES` are the shipped ones, and a catalog for another
 language has the same keys.
 
-## Choosing a catalog
-
-`selectMessages(language, overrides)` returns the messages for the language of the interface.
-
-| Parameter   | Type                                | Meaning                                                                                                    |
-| ----------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `language`  | `string`                            | A BCP 47 tag, such as `id` or `id-ID`. Case is ignored.                                                    |
-| `overrides` | `Record<string, Partial<Messages>>` | Messages that replace the shipped ones, by language tag; a catalog may have only some keys. Default: `{}`. |
-
-The result starts as the English messages. The shipped catalog of the language replaces them, then the overrides for the
-language, then the overrides for the tag in full. A language without a catalog gets English, so every key has a message.
-
-```ts
-import { selectMessages } from "@assesskit/player";
-
-selectMessages("id-ID").toolRule; // "Penggaris"
-selectMessages("jv").toolRule; // "Ruler"
-selectMessages("id", { id: { toolRule: "Mistar" } }).toolRule; // "Mistar"
-```
-
-`selectMessages` throws `DataError` when `language` is not a string, `overrides` is not an object of objects, a catalog
-has a key that is not a message key, or a message is not a string.
-
 ## Adding a message
 
 A message is a property of `Messages` with a TSDoc comment, and a string in both `en.ts` and `id.ts`; the type checker
 refuses a catalog that lacks one. Its text names a function of the interface, never a shape, color or position alone
 (WCAG 1.3.3), and no two keys of a catalog have the same text.
+
+## Files
+
+Each file of `src/messages/` holds one concept.
+
+| File          | Concept                                                                       |
+| ------------- | ----------------------------------------------------------------------------- |
+| `messages.ts` | The `Messages` type, a property for each message of the interface             |
+| `en.ts`       | The English catalog                                                           |
+| `id.ts`       | The Indonesian catalog                                                        |
+| `select.ts`   | `selectMessages`                                                              |
+| `check.ts`    | The check of a catalog that a host passes                                     |
+| `internal.ts` | Helpers that other folders and tests share, which the package does not export |
+| `index.ts`    | The public API                                                                |
+
+## References
+
+| Specification                                                       | Topics                         |
+| ------------------------------------------------------------------- | ------------------------------ |
+| [RFC 5646](https://www.rfc-editor.org/rfc/rfc5646)                  | Tags for identifying languages |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/#consistent-identification) | Consistent identification      |

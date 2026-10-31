@@ -12,6 +12,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { resolveReference } from "@assesskit/runtime/package";
 import type { XmlElement } from "@assesskit/runtime/xml";
 import { checkArray, describe } from "../../checks.js";
+import { XHTML_NAMESPACE } from "../internal.js";
 import { setAttributes } from "./attributes.js";
 import type { RenderContext } from "./context.js";
 import { renderForeign } from "./foreign.js";
@@ -20,18 +21,20 @@ import { renderImage, renderPlayer } from "./media.js";
 import { renderObject } from "./object.js";
 import { renderPrinted } from "./printed.js";
 
-const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
-
 /** A `kind` that is the name of an element: lower case letters, digits and hyphens. */
 const KIND = /^[a-z][a-z0-9-]*$/u;
 
 /**
  * The nodes that the player draws nowhere in the flow of content: stylesheets, which the content root loads from the paths
- * it is given, the catalogs, whose cards the candidate asks for (T17), and the parameters of an object.
+ * it is given, the catalogs, whose cards the candidate asks for, and the parameters of an object.
  */
 const NOT_DRAWN: ReadonlySet<string> = new Set(["stylesheet", "catalog-info", "param"]);
 
-/** The terms of `use` that a rubric block can have; an `ext:` term is an extension that the player ignores (INFO §9.3.6). */
+/**
+ * The terms of `use` that a rubric block can have; an `ext:` term is an extension that the player ignores.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rubric block}
+ */
 const RUBRIC_USES: ReadonlySet<string> = new Set(["instructions", "scoring", "navigation"]);
 
 const isInteraction = (node: ModelNode): node is Interaction => node.kind.endsWith("-interaction");
@@ -48,7 +51,15 @@ function isXmlElement(node: ModelNode): node is XmlElement {
   );
 }
 
-/** Builds the element for a node: see {@link BodyRenderer.element}. */
+/**
+ * Builds the element for a node: see {@link BodyRenderer.element}.
+ *
+ * @param name - The name of the element.
+ * @param node - The node whose attributes the element gets.
+ * @param children - The nodes to put in it.
+ * @param context - The context of the rendering.
+ * @returns The element.
+ */
 export function buildElement(
   name: string,
   node: ModelNode,
@@ -61,7 +72,7 @@ export function buildElement(
   return element;
 }
 
-/** Marks the links the player draws: they open in a tab of its own and give the page no reference (T7). */
+/** Marks the links the player draws: they open in a tab of its own and give the page no reference. */
 function openAway(element: Element): void {
   const href = element.getAttribute("href");
   if (href === null || href.startsWith("#")) return;
@@ -69,7 +80,7 @@ function openAway(element: Element): void {
   element.setAttribute("rel", "noopener noreferrer");
 }
 
-/** Renders a rubric block for the view of the renderer, or nothing when its `view` does not list it (INFO §2.8.6). */
+/** Renders a rubric block for the view of the renderer, or nothing when its `view` does not list it. */
 function renderRubric(node: RubricBlock | TestRubricBlock, context: RenderContext): Node[] {
   if (rubricBlocksFor([node], context.view).length === 0) return [];
   const element = context.element("qti-rubric-block", node, context.nodes(childNodes(node)));
@@ -78,8 +89,13 @@ function renderRubric(node: RubricBlock | TestRubricBlock, context: RenderContex
 }
 
 /**
- * Renders the content of an interaction that has no renderer. The `label` that an interaction holds is the `qti-label` of
- * an inline choice (INFO §5.82), not the HTML element of that name, which only flow content holds.
+ * Renders the content of an interaction that has no renderer.
+ *
+ * @remarks
+ * The `label` that an interaction holds is the `qti-label` of an inline choice, not the HTML element of that name,
+ * which only flow content holds.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, inline choice interaction}
  */
 function renderPlaceholderContent(node: Interaction, context: RenderContext): Node[] {
   return childNodes(node).flatMap((child) =>
@@ -99,8 +115,13 @@ function renderInteraction(node: Interaction, context: RenderContext): Node[] {
 }
 
 /**
- * Returns the context for an element and what it holds: the references below an element with `xml:base` start at that base,
- * resolved against the base of its parent (XML Base §4.2). A base outside the package changes nothing.
+ * Returns the context for an element and what it holds: the references below an element with `xml:base` start at that
+ * base, resolved against the base of its parent.
+ *
+ * @remarks
+ * A base outside the package changes nothing.
+ *
+ * @see {@link https://www.w3.org/TR/xmlbase/ | XML Base, resolving relative references}
  */
 function scopeOf(node: ModelNode, context: RenderContext): RenderContext {
   const xmlBase: unknown = Reflect.get(node, "xmlBase");
@@ -147,7 +168,14 @@ function renderNode(node: unknown, context: RenderContext): Node[] {
   return renderElementNode(node, context);
 }
 
-/** Renders nodes: see {@link BodyRenderer.nodes}. */
+/**
+ * Renders nodes: see {@link BodyRenderer.nodes}.
+ *
+ * @param nodes - The nodes to render.
+ * @param context - The context of the rendering.
+ * @returns The DOM nodes, in order.
+ * @throws `DataError` when `nodes` is not an array or a node is not an object with a `kind`.
+ */
 export function renderNodes(nodes: readonly unknown[], context: RenderContext): Node[] {
   checkArray(nodes, "The nodes of content must be an array");
   return nodes.flatMap((node) => renderNode(node, context));

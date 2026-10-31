@@ -10,8 +10,8 @@ import {
   describe,
 } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
-import { html } from "../dom.js";
+import { checkMessages } from "../../messages/internal.js";
+import { html } from "../internal.js";
 import type { ContentRoot } from "../roots/index.js";
 import {
   applyReadingType,
@@ -22,8 +22,7 @@ import {
   type SpeechRequest,
   type SpeechSettings,
 } from "../speech/index.js";
-import { checkLexicons } from "../speech/lexicon.js";
-import { checkSpeechSettings } from "../speech/settings.js";
+import { checkLexicons, checkSpeechSettings } from "../speech/internal.js";
 import { activeSupport, checkSupportViews } from "./check.js";
 import { adoptSupportStyles } from "./styles.js";
 
@@ -35,26 +34,33 @@ export interface SpokenOptions {
   readonly language: string;
   /** The voice that reads: the host's text-to-speech, or `webSpeech()`. */
   readonly voice: SpeechHook;
-  /** The pronunciation lexicons of the item, in order of preference; `setLexicons` replaces them. Default: none. */
+  /**
+   * The pronunciation lexicons of the item, in order of preference; `setLexicons` replaces them.
+   *
+   * @defaultValue `[]`
+   */
   readonly lexicons?: readonly Lexicon[];
 }
 
 /** The reading aloud of a content root. */
 export interface Spoken {
   /**
-   * Applies the spoken support to the content the root shows now, in place of what an earlier call applied. Call it
-   * after `show` of the root resolves, and again when the supports change.
+   * Applies the spoken support to the content that the root shows, in place of what an earlier call applied.
    *
-   * For the reading type `screen-reader`, which is also the default, the content leaves the accessible structure where
-   * `data-qti-suppress-tts` asks, and the candidate's screen reader reads the page. For `computer-read-aloud` it also
-   * shows the controls that read the content with the voice and echoes what the candidate types, as the support asks.
+   * @remarks
+   * Call it after `show` of the root resolves, and again when the supports change. For the reading type `screen-reader`,
+   * which is also the default, the content leaves the accessible structure where `data-qti-suppress-tts` asks, and the
+   * candidate's screen reader reads the page. For `computer-read-aloud` it also shows the controls that read the content
+   * with the voice and echoes what the candidate types, as the support asks.
    *
+   * @param supports - The supports of the view.
    * @throws `DataError` when `supports` is not a list of the runtime's `SupportView`s.
    */
   update(supports: readonly SupportView[]): void;
   /**
    * Replaces the pronunciation lexicons that the next reading uses, in order of preference, such as those of the next item.
    *
+   * @param lexicons - The lexicons, in order of preference.
    * @throws `DataError` when `lexicons` is not a list of lexicons that `parseLexicon` made.
    */
   setLexicons(lexicons: readonly Lexicon[]): void;
@@ -91,9 +97,12 @@ function readableWords(content: Node, read: (range: Range) => SpeechRequest | un
 
 /**
  * Reads the spoken support of the list: its settings with the reading type, which is `screen-reader` when the support
- * names none (BPIG §5.2.1.1), or `undefined` when the support is off.
+ * names none.
  *
+ * @param supports - The supports of the view.
+ * @returns The settings, or `undefined` when the support is off.
  * @throws `DataError` when the settings are out of the range of reading aloud, such as a pitch above 1.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, reading type}
  */
 function spokenOf(
   supports: readonly SupportView[],
@@ -126,15 +135,19 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
 }
 
 /**
- * Mounts the reading aloud of a content root (the player design §2.7, BPIG §5.2.1). The controls go into `host`: a button that
- * reads the content, one that stops the voice, and, when the restriction type is `word-by-word`, buttons that read the
- * word before and the word after the one read last. The candidate chooses the word with them, because a selection inside
- * a shadow root cannot be read in every browser.
+ * Mounts the reading aloud of a content root.
+ *
+ * @remarks
+ * The controls go into `host`: a button that reads the content, one that stops the voice, and, when the restriction type
+ * is `word-by-word`, buttons that read the word before and the word after the one read last. The candidate chooses the
+ * word with them, because a selection inside a shadow root cannot be read in every browser.
  *
  * @param host - The element that gets the controls, in a document or a shadow root.
  * @param root - The content root whose content is read.
  * @param options - See {@link SpokenOptions}.
+ * @returns The handle that applies the support and takes the controls away.
  * @throws `DataError` when `host`, `root` or an option is not valid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, text to speech}
  */
 export function mountSpoken(host: HTMLElement, root: ContentRoot, options: SpokenOptions): Spoken {
   checkSpokenOptions(host, root, options);

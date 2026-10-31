@@ -1,6 +1,10 @@
 import type { AngleUnit, LengthUnit, ProtractorSpec, RuleSpec } from "./model.js";
 
-/** CSS pixels in a millimeter: a CSS inch is 96 pixels (CSS Values 4 §6.2) and an inch is 25.4 millimeters. */
+/**
+ * CSS pixels in a millimeter: a CSS inch is 96 pixels and an inch is 25.4 millimeters.
+ *
+ * @see {@link https://www.w3.org/TR/css-values-4/#absolute-lengths | CSS Values and Units 4, absolute lengths}
+ */
 export const CSS_PX_PER_MM = 96 / 25.4;
 
 /** The least distance between two ticks in CSS pixels; ticks closer than this are left out, so that a scale stays readable. */
@@ -12,7 +16,13 @@ export const MIN_LABEL_PX = 32;
 /** The least relative distance of a position from a major tick for it to be a tick of its own, which absorbs the error of floating point. */
 const COINCIDENCE = 1e-9;
 
-/** Returns the millimeters in a unit of length (INFO §8.28, §8.40). */
+/**
+ * Returns the millimeters in a unit of length.
+ *
+ * @param unit - The unit.
+ * @returns The millimeters.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, units of length}
+ */
 export function millimeters(unit: LengthUnit): number {
   switch (unit) {
     case "Millimeter":
@@ -34,7 +44,13 @@ export function millimeters(unit: LengthUnit): number {
   }
 }
 
-/** Returns the degrees in a unit of angle (INFO §8.27, §8.39): a minute is a sixtieth of a degree and a second a sixtieth of a minute. */
+/**
+ * Returns the degrees in a unit of angle: a minute is a sixtieth of a degree and a second a sixtieth of a minute.
+ *
+ * @param unit - The unit.
+ * @returns The degrees.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, units of angle}
+ */
 export function degrees(unit: AngleUnit): number {
   switch (unit) {
     case "Radian":
@@ -48,7 +64,12 @@ export function degrees(unit: AngleUnit): number {
   }
 }
 
-/** Returns the symbol that names a unit on a scale. */
+/**
+ * Returns the symbol that names a unit on a scale.
+ *
+ * @param unit - The unit.
+ * @returns The symbol.
+ */
 export function unitSymbol(unit: LengthUnit | AngleUnit): string {
   switch (unit) {
     case "Millimeter":
@@ -101,9 +122,12 @@ interface ScaleLayout {
 }
 
 /**
- * Lays out the ticks of a scale. Ticks closer than {@link MIN_TICK_PX} are left out and so are numbers closer than
- * {@link MIN_LABEL_PX}, which bounds the work by the length of the scale in pixels whatever the increments are: an item
- * can ask for a step of a millionth of the length.
+ * Lays out the ticks of a scale.
+ *
+ * @remarks
+ * Ticks closer than {@link MIN_TICK_PX} are left out and so are numbers closer than {@link MIN_LABEL_PX}, which bounds the
+ * work by the length of the scale in pixels whatever the increments are: an item can ask for a step of a millionth of the
+ * length.
  */
 function scaleTicks({ extent, pxPerUnit, majorStep, minorStep }: ScaleLayout): readonly Tick[] {
   const majorPx = majorStep * pxPerUnit;
@@ -141,8 +165,13 @@ export interface RuleScale {
 }
 
 /**
- * Lays out a rule (INFO §5.126, §5.127, §5.164): it is as long as `minimumLength` in the unit of the major increment, at
- * the size of a CSS millimeter, or smaller, with the same proportions, when it would not fit in `availablePx`.
+ * Lays out a rule: it is as long as `minimumLength` in the unit of the major increment, at the size of a CSS millimeter,
+ * or smaller, with the same proportions, when it would not fit in the available width.
+ *
+ * @param rule - What the item asks for.
+ * @param availablePx - The width that is available, in CSS pixels.
+ * @returns The layout.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, rule}
  */
 export function ruleScale({ minimumLength, minorIncrement, majorIncrement }: RuleSpec, availablePx: number): RuleScale {
   const unitMm = millimeters(majorIncrement.unit);
@@ -162,7 +191,11 @@ export function ruleScale({ minimumLength, minorIncrement, majorIncrement }: Rul
   };
 }
 
-/** The angle a protractor measures, in degrees (INFO §5.110). */
+/**
+ * The angle a protractor measures, in degrees.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, protractor}
+ */
 export const PROTRACTOR_EXTENT = 180;
 
 /** A protractor laid out for a radius. */
@@ -175,7 +208,14 @@ export interface ProtractorScale {
   readonly ticks: readonly Tick[];
 }
 
-/** Lays out a protractor (INFO §5.110, §5.70, §5.71): a half circle of `radiusPx` with ticks along its arc. */
+/**
+ * Lays out a protractor: a half circle with ticks along its arc.
+ *
+ * @param protractor - What the item asks for.
+ * @param radiusPx - The radius, in CSS pixels.
+ * @returns The layout.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, protractor}
+ */
 export function protractorScale({ minorIncrement, majorIncrement }: ProtractorSpec, radiusPx: number): ProtractorScale {
   const unitDegrees = degrees(majorIncrement.unit);
   return {

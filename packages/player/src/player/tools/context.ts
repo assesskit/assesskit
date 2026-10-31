@@ -1,7 +1,11 @@
 import type { Messages } from "../../messages/index.js";
 import type { SlotTool } from "./model.js";
 
-/** The file at which an item says that a calculator is available (INFO §5.24.3). */
+/**
+ * The file at which an item says that a calculator is available.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, calculator info}
+ */
 export interface ToolFile {
   /** The URL to load the file from, which `assets` made of its path in the package. */
   readonly url: string;
@@ -22,8 +26,10 @@ export interface ToolOptions {
 }
 
 /**
- * The tools that the host provides, by name. A function builds the tool in `host` and returns the function that takes
- * it down again (the player design §2.8).
+ * The tools that the host provides, by name.
+ *
+ * @remarks
+ * A function builds the tool in `host` and returns the function that takes it down again.
  */
 export type ToolSlots = Partial<Record<SlotTool, (host: HTMLElement, options: ToolOptions) => () => void>>;
 

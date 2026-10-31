@@ -4,10 +4,10 @@
  * It styles a content root: the shadow root of an item, which adopts it, and the document of a PCI frame, which loads it.
  * docs/styling.md lists the markup it expects and the properties and attributes the player sets.
  *
- * Sources: [VOCAB] QTI 3 Standardized Shared Vocabulary and CSS Classes, [BPIG] QTI 3 Best Practices and Implementation
- * Guide (App. B, §5). The stylesheet stays inside the browser baseline (docs/baseline.md): flat selectors, no :has().
- * !important appears in the utility classes of [VOCAB] §2.3 and §2.4 and in the PNP rules that must win over the item's
- * own styles; Biome's noImportantStyles is off for stylesheets.
+ * Sources: the QTI 3 Standardized Shared Vocabulary and CSS Classes, and the QTI 3 Best Practices and Implementation Guide.
+ * The stylesheet stays inside the browser baseline (docs/baseline.md): flat selectors, no :has(). !important appears in
+ * the margin and padding utility classes of the vocabulary and in the PNP rules that must win over the item's own
+ * styles; Biome's noImportantStyles is off for stylesheets.
  */
 
 /* 1. Tokens. A theme sets the palette; the other colors derive from it, so that a color the player sets on the host
@@ -33,12 +33,12 @@
   --ak-target-size: 24px;
   --ak-gutter: 1rem;
 
-  /* The line height as a number, so that line counts in ems follow it. BPIG §5.2.9.7.6–7: the PNP line height
+  /* The line height as a number, so that line counts in ems follow it. The PNP line height
      multiplies the base, and the line spacing adds to it. */
   --ak-leading: calc(1.5 * var(--ak-line-height, 1) + var(--ak-line-spacing, 0));
 }
 
-/* 2. Themes: invert display polarity and high contrast (BPIG §5.2.9.1). Each pair of text and background has at least
+/* 2. Themes: invert display polarity and high contrast (display supports of the best practices guide). Each pair of text and background has at least
    7:1, and the accent at least 4.5:1 against the background. */
 
 :root[data-ak-polarity="inverted"],
@@ -72,7 +72,7 @@
 }
 
 /* 3. The content root. Paint containment clips at the border box, so the padding keeps the focus ring of an item at the
-   edge inside it. The text settings are the PNP text appearance and magnification (BPIG §5.2.9.6–7); rem keeps a
+   edge inside it. The text settings are the PNP text appearance and magnification; rem keeps a
    root in a root from compounding them. */
 
 :root,
@@ -161,10 +161,10 @@
   border-color: var(--ak-invalid);
 }
 
-/* 5. Shared vocabulary, [VOCAB] §1.1 and §2. */
+/* 5. Shared vocabulary: the classes of the standardized vocabulary for content, and its utility classes. */
 
-/* §1.1.1, §1.1.6.1, §2.1: hidden to everyone, and hidden to the eye only. A control that a vocabulary class hides keeps
-   its place in the accessibility tree and in the tab order (§1.2.1.7). */
+/* Hidden to everyone, and hidden to the eye only. A control that a vocabulary class hides keeps its place in the
+   accessibility tree and in the tab order. */
 
 .qti-hidden {
   display: none;
@@ -186,7 +186,7 @@ qti-associable-hotspot > .ak-control,
   white-space: nowrap;
 }
 
-/* §1.1.1.1: the emphasis shows only to a candidate with the keyword-emphasis support, and does not rely on color. */
+/* The emphasis shows only to a candidate with the keyword-emphasis support, and does not rely on color. */
 :root[data-ak-keyword-emphasis] .qti-keyword-emphasis,
 :host([data-ak-keyword-emphasis]) .qti-keyword-emphasis {
   border-radius: 0.125em;
@@ -194,7 +194,7 @@ qti-associable-hotspot > .ak-control,
   font-weight: 700;
 }
 
-/* §1.1.2, §2.12 */
+/* Text style, borders and wells. */
 
 .qti-underline {
   text-decoration: underline;
@@ -218,8 +218,8 @@ qti-associable-hotspot > .ak-control,
   background-color: var(--ak-surface);
 }
 
-/* §1.1.3 and §2.11: a row of twelve columns. A column spans N of them, and an offset starts after N. §2.11's pixel
-   widths and Bootstrap 2 containers are replaced by a grid of fractions, which reflows (see 8). */
+/* A row of twelve columns. A column spans N of them, and an offset starts after N. The pixel widths and Bootstrap 2
+   containers of the vocabulary are replaced by a grid of fractions, which reflows (see 8). */
 
 .qti-layout-row {
   display: grid;
@@ -319,7 +319,7 @@ qti-associable-hotspot > .ak-control,
   grid-column-start: 12;
 }
 
-/* §1.1.4, §2.5, §2.6 */
+/* Horizontal and vertical alignment. */
 
 .qti-align-left {
   text-align: left;
@@ -349,7 +349,7 @@ qti-associable-hotspot > .ak-control,
   vertical-align: bottom;
 }
 
-/* §2.1, §2.2 */
+/* Display and visibility utility classes. */
 
 .qti-display-inline {
   display: inline;
@@ -415,7 +415,8 @@ qti-associable-hotspot > .ak-control,
   flex-grow: 0;
 }
 
-/* §2.3 and §2.4: "s" and "e" are the start and the end of the line, which the sample defines for left-to-right text. */
+/* The utility classes of margin and padding: "s" and "e" are the start and the end of the line, which the sample defines for
+   left-to-right text. */
 
 .qti-margin-0 {
   margin: 0 !important;
@@ -718,7 +719,7 @@ qti-associable-hotspot > .ak-control,
   padding-inline-end: 3rem !important;
 }
 
-/* §2.7 and §2.8. A width counts the padding and the border, and never exceeds the root, so that a wide class does not
+/* Width and height utility classes. A width counts the padding and the border, and never exceeds the root, so that a wide class does not
    overflow a narrow screen (WCAG 1.4.10). */
 
 .qti-height-0 {
@@ -1075,7 +1076,7 @@ qti-associable-hotspot > .ak-control,
   max-inline-size: 100%;
 }
 
-/* §1.1.4.4 and §2.9 */
+/* Text indent. */
 
 .qti-text-indent-0 {
   text-indent: 0px;
@@ -1138,7 +1139,7 @@ qti-associable-hotspot > .ak-control,
   text-indent: 8rem;
 }
 
-/* §1.1.7 and §2.10. The sample lacks kannada, katakana and katakana-iroha, which §1.1.7 has, and §1.1.7 lacks
+/* List styles. The sample lacks kannada, katakana and katakana-iroha, which the list of classes has, and the list lacks
    ethiopic-halehame*, hangul, hangul-consonant and urdu, which the sample has. */
 
 .qti-list-style-type-none {
@@ -1310,8 +1311,8 @@ qti-associable-hotspot > .ak-control,
   list-style-type: urdu;
 }
 
-/* §1.1.5 and §2.13–2.16: vertical writing. §1.1.5.1 names the horizontal class vertical-tb, §2.13 horizontal-tb; both
-   set the browser default. */
+/* Vertical writing. The list of classes names the horizontal class vertical-tb, the sample horizontal-tb; both set the
+   browser default. */
 
 .qti-writing-mode-vertical-rl {
   writing-mode: vertical-rl;
@@ -1364,7 +1365,7 @@ qti-associable-hotspot > .ak-control,
   text-combine-upright: all;
 }
 
-/* 6. Interaction classes, [VOCAB] §1.2 and [BPIG] App. B.1. The stylesheet reads the QTI element names and the parts
+/* 6. Interaction classes of the vocabulary and of the best practices guide. The stylesheet reads the QTI element names and the parts
    of docs/styling.md. */
 
 :where(
@@ -1389,8 +1390,8 @@ qti-associable-hotspot > .ak-control,
   max-inline-size: 100%;
 }
 
-/* The label of a choice or of an order target is the counter of its group, shown before the text (§1.2.1.1–3,
-   §1.2.9.1–2). Without a class there is no label. */
+/* The label of a choice or of an order target is the counter of its group, shown before the text. Without a class there
+   is no label. */
 
 .qti-labels-decimal {
   --ak-label-style: decimal;
@@ -1426,8 +1427,7 @@ qti-associable-hotspot > .ak-control,
   margin-inline-end: 0.5ch;
 }
 
-/* 6.1 Choice, §1.2.1. A grid of N columns, read across (§1.2.1.6, the Z); a horizontal row wraps after five choices
-   (§1.2.1.4). A vertical stack of several columns reads down each column (the reverse N), which needs the number of
+/* 6.1 Choice. A grid of N columns, read across (the Z); a horizontal row wraps after five choices. A vertical stack of several columns reads down each column (the reverse N), which needs the number of
    rows: the player sets --ak-rows, since CSS cannot count the choices. */
 
 qti-choice-interaction {
@@ -1500,7 +1500,7 @@ qti-choice-interaction.qti-orientation-horizontal:not([class*="qti-choices-stack
   border-radius: 0.25rem;
 }
 
-/* §1.2.1.7 and §1.2.6.1: the text of a choice or of a hot text is the control, seen. Hidden is visually hidden: the
+/* The text of a choice or of a hot text is the control, seen. Hidden is visually hidden: the
    control stays in the tab order, and its face shows the focus. */
 
 .qti-input-control-hidden :is(qti-simple-choice, qti-hottext) > .ak-face {
@@ -1531,7 +1531,7 @@ qti-associable-hotspot > .ak-control:focus-visible + .ak-face,
   outline-offset: var(--ak-focus-offset);
 }
 
-/* §1.2.1.9, §1.2.2.3, §1.2.3.4, §1.2.7.3: vertical writing of choice, text entry, extended text and inline choice. A
+/* Vertical writing of choice, text entry, extended text and inline choice. A
    choice's label stands upright. */
 
 .qti-writing-orientation-vertical-rl {
@@ -1551,7 +1551,7 @@ qti-associable-hotspot > .ak-control:focus-visible + .ak-face,
   text-orientation: upright;
 }
 
-/* 6.2 Text entry, inline choice and gap: at least N characters wide, §1.2.2.1, §1.2.4.3, §1.2.7.1. */
+/* 6.2 Text entry, inline choice and gap: at least N characters wide. */
 
 .qti-input-width-1 {
   --ak-input-chars: 1;
@@ -1628,7 +1628,7 @@ qti-gap {
   vertical-align: middle;
 }
 
-/* 6.3 Extended text: the height in lines, §1.2.3.1. The block size is the width of the lines in vertical writing. */
+/* 6.3 Extended text: the height in lines. The block size is the width of the lines in vertical writing. */
 
 .qti-height-lines-3 {
   --ak-input-lines: 3;
@@ -1650,8 +1650,7 @@ qti-extended-text-interaction :is(textarea, [role="textbox"]) {
   min-block-size: calc(var(--ak-input-lines) * var(--ak-leading) * 1em + 0.5em);
 }
 
-/* 6.4 Match, gap match, graphic gap match and order: where the choices stand against the targets (§1.2.8.1, §1.2.4.1,
-   §1.2.10.1, §1.2.9.3), and the order's own direction (§1.2.9). The choices come first in the markup, for a screen
+/* 6.4 Match, gap match, graphic gap match and order: where the choices stand against the targets, and the order's own direction. The choices come first in the markup, for a screen
    reader; only the eye sees them elsewhere. The player gives the two sets of a match the classes of the two
    containers. */
 
@@ -1729,7 +1728,7 @@ qti-order-interaction:not(.qti-orientation-horizontal) :is(.ak-choices, .ak-targ
   counter-increment: ak-label;
 }
 
-/* §1.2.8.2: a match as a table, the choices of the first set as rows. A hidden header row stays for a screen reader. */
+/* A match as a table, the choices of the first set as rows. A hidden header row stays for a screen reader. */
 
 .qti-match-tabular table {
   border-collapse: collapse;
@@ -1749,8 +1748,7 @@ qti-order-interaction:not(.qti-orientation-horizontal) :is(.ak-choices, .ak-targ
   block-size: 1px;
 }
 
-/* 6.5 Selections on graphics and in text: hotspot and graphic gap match themes (§1.2.5.1, §1.2.10.3) and hot text
-   (§1.2.6.3). A selection is a line and a fill: the light theme suits a dark image, the dark theme a light one. An
+/* 6.5 Selections on graphics and in text: hotspot and graphic gap match themes and hot text. A selection is a line and a fill: the light theme suits a dark image, the dark theme a light one. An
    unselected hidden choice shows when it has focus or is selected; in a graphic gap match also while the candidate
    places a choice (the player sets data-ak-placing). */
 
@@ -1818,7 +1816,7 @@ qti-hottext > .ak-face {
 
 /* 6.6 The content of a root, which the renderer builds: the notice of a hazard, the rubric, the stimuli beside the item,
    feedback and the dialog of modal feedback. The elements of QTI that hold blocks are blocks; a stimulus stands beside
-   the item when the viewport is wide, as in BPIG §3.7.7, and folds above it otherwise (WCAG 1.4.10). */
+   the item when the viewport is wide, as the best practices guide shows, and folds above it otherwise (WCAG 1.4.10). */
 
 :where(
   qti-rubric-block,
@@ -2055,7 +2053,7 @@ qti-simple-associable-choice.ak-target {
 }
 
 /* The slider is a track and a thumb. The thumb is as large as the smallest target (WCAG 2.5.8). Until the candidate
-   chooses a value it is an empty mark, so that it claims no value (INFO §5.134). */
+   chooses a value it is an empty mark, so that it claims no value. */
 
 .ak-slider {
   display: flex;
@@ -2620,8 +2618,7 @@ qti-associable-hotspot .ak-chip img {
   font-size: 0.875em;
 }
 
-/* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping (BPIG §5.2.9.7.9,
-   §5.2.9.7.11). The other settings are properties of 1 to 3. */
+/* 7. The PNP presentation that rewrites the content: a uniform font size and wrapping. The other settings are properties of 1 to 3. */
 
 :root[data-ak-uniform-font] *,
 :host([data-ak-uniform-font]) * {
@@ -2639,7 +2636,7 @@ qti-associable-hotspot .ak-chip img {
   white-space: pre-wrap !important;
 }
 
-/* 8. Folding. Below 48rem, about the 767px of §2.11, and for a candidate who wants a single column (BPIG §5.2.9.5),
+/* 8. Folding. Below 48rem, about the 767px of the vocabulary's mobile breakpoint, and for a candidate who wants a single column,
    the rows, the stacks and the containers become one column. */
 
 @media (max-width: 48rem) {
@@ -2702,7 +2699,7 @@ qti-associable-hotspot .ak-chip img {
   --ak-targets-area: 3 / 1;
 }
 
-/* 9. The cards of the supports (the player design §2.7, BPIG §3.7.10). A card stands beside the content in a group, or in a
+/* 9. The cards of the supports. A card stands beside the content in a group, or in a
    popup that its button opens. The host of the root clips at its border box, so script places the popup inside it, against
    the button, and the popup touches the button: the pointer can go onto it (WCAG 1.4.13). */
 

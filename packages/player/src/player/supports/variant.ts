@@ -2,8 +2,8 @@ import type { VariantView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { checkNonEmptyString, checkProperties, checkRecord, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
-import { html } from "../dom.js";
+import { checkMessages } from "../../messages/internal.js";
+import { html } from "../internal.js";
 import { adoptSupportStyles } from "./styles.js";
 
 /** The options of {@link mountVariantNotice}. */
@@ -17,11 +17,15 @@ export interface VariantNoticeOptions {
 /** The notice of the variant of a question that is shown. */
 export interface VariantNotice {
   /**
-   * Shows the variant that the runtime delivered, or nothing when the question itself is delivered. A variant with a language
-   * is announced by the name of its language, which stands in the language it names (WCAG 3.1.2); one without says only
-   * that an adapted version is shown.
+   * Shows the variant that the runtime delivered, or nothing when the question itself is delivered.
    *
+   * @remarks
+   * A variant with a language is announced by the name of its language, which stands in the language it names; one without
+   * says only that an adapted version is shown.
+   *
+   * @param variant - The variant of the item, or `undefined` for the question itself.
    * @throws `DataError` when `variant` is neither `undefined` nor a variant of the runtime's view.
+   * @see {@link https://www.w3.org/TR/WCAG22/#language-of-parts | WCAG 2.2, language of parts}
    */
   update(variant: VariantView | undefined): void;
   /** Takes the notice away. */
@@ -29,8 +33,9 @@ export interface VariantNotice {
 }
 
 /**
- * Returns the name of a language in a language of the interface, or the tag when the browser has no name for it (ECMA-402
- * `Intl.DisplayNames`).
+ * Returns the name of a language in a language of the interface, or the tag when the browser has no name for it.
+ *
+ * @see {@link https://tc39.es/ecma402/#intl-displaynames-objects | ECMA-402, Intl.DisplayNames}
  */
 function languageName(tag: string, interfaceLanguage: string): string {
   try {
@@ -53,12 +58,15 @@ function checkVariantOptions(host: unknown, options: unknown): asserts options i
 }
 
 /**
- * Mounts the notice of the variant of a question (the player design §5.6, T74). The runtime chooses the variant at the first
- * presentation, from the candidate's hazards and translation, and fixes it for the session (B100); the notice only says
- * which one the candidate has, from `CandidateItem.variant`.
+ * Mounts the notice of the variant of a question.
+ *
+ * @remarks
+ * The runtime chooses the variant at the first presentation, from the candidate's hazards and translation, and fixes it
+ * for the session; the notice only says which one the candidate has, from `CandidateItem.variant`.
  *
  * @param host - The element that gets the notice, in a document or a shadow root.
  * @param options - See {@link VariantNoticeOptions}.
+ * @returns The handle that updates the notice and takes it away.
  * @throws `DataError` when `host` or an option is not valid.
  */
 export function mountVariantNotice(host: HTMLElement, options: VariantNoticeOptions): VariantNotice {

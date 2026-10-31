@@ -2,8 +2,10 @@ import type { RefusalCode } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
 
 /**
- * The message for every refusal code of the runtime's engine (T55). It is a record over the whole type, so that a code that
- * the runtime adds fails the type check until its message exists.
+ * The message for every refusal code of the runtime's engine.
+ *
+ * @remarks
+ * It is a record over the whole type, so that a code that the runtime adds fails the type check until its message exists.
  */
 export const REFUSAL_MESSAGES: Readonly<Record<RefusalCode, keyof Messages>> = {
   "attempts-exhausted": "refusalAttemptsExhausted",

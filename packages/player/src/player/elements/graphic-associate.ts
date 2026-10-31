@@ -3,7 +3,7 @@ import { checkResponse, type InteractionDescriptor, type ResponseViolation } fro
 import type { Pair } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import type { BodyRenderer } from "../content/index.js";
-import { html, svg, uniqueId } from "../dom.js";
+import { html, svg, uniqueId } from "../internal.js";
 import { createInteraction, InteractionElement } from "./element.js";
 import { boxOf, createArea } from "./graphic/areas.js";
 import { centerOf } from "./graphic/geometry.js";
@@ -15,7 +15,7 @@ import { pairsOf, responseOf } from "./values.js";
 /** The separator of the two ends of an association in text. */
 const JOIN = " – ";
 
-/** The rules that make a pair impossible, as against the incomplete response that more pairs repair (INFO §5.7, §5.59). */
+/** The rules that make a pair impossible, as against the incomplete response that more pairs repair. */
 const IMPOSSIBLE: ReadonlySet<ResponseViolation> = new Set([
   "binding",
   "match-group",
@@ -33,14 +33,19 @@ interface PairHotspot {
 }
 
 /**
- * The element of `qti-graphic-associate-interaction` (INFO §5.59): the candidate joins hotspots of an image in pairs. No
- * gesture along a path is needed (WCAG 2.2, 2.5.1): the candidate chooses one hotspot, which stays pressed, and then the
- * hotspot to join it with; choosing the pressed one again lets it go. Each association is a line between the hotspots and
- * an entry of a list below the image with a button that removes it, so that a screen reader and the keyboard have the same
- * information as the drawing. A hotspot that the runtime's rules leave no pair for, such as one used as often as its `match-max`
- * allows, is unavailable.
+ * The element of `qti-graphic-associate-interaction`: the candidate joins hotspots of an image in pairs.
+ *
+ * @remarks
+ * No gesture along a path is needed (WCAG 2.2, 2.5.1): the candidate chooses one hotspot, which stays pressed, and then
+ * the hotspot to join it with; choosing the pressed one again lets it go. Each association is a line between the
+ * hotspots and an entry of a list below the image with a button that removes it, so that a screen reader and the
+ * keyboard have the same information as the drawing. A hotspot that the runtime's rules leave no pair for, such as one
+ * used as often as its `match-max` allows, is unavailable.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, graphic associate interaction}
  */
 export class GraphicAssociateInteractionElement extends InteractionElement {
+  /** The kind of interaction that the element is for. */
   override readonly kind = "graphic-associate-interaction";
   readonly #hotspots: PairHotspot[] = [];
   readonly #links = svg("svg", {
@@ -64,7 +69,12 @@ export class GraphicAssociateInteractionElement extends InteractionElement {
     });
   }
 
-  /** Fills the element with the prompt, the image with its hotspots and lines, the instructions, the list of pairs and the notes. */
+  /**
+   * Fills the element with the prompt, the image with its hotspots and lines, the instructions, the list of pairs and the notes.
+   *
+   * @param node - The interaction.
+   * @param renderer - The renderer of content.
+   */
   build(node: GraphicAssociateInteraction, renderer: BodyRenderer): void {
     const prompt: RenderedPrompt | undefined = renderPrompt(node.prompt, renderer);
     const { element: stageElement, stage } = createStage(node.image, renderer);
@@ -228,7 +238,14 @@ export class GraphicAssociateInteractionElement extends InteractionElement {
   }
 }
 
-/** Renders a `qti-graphic-associate-interaction`. */
+/**
+ * Renders a `qti-graphic-associate-interaction`.
+ *
+ * @param node - The interaction.
+ * @param renderer - The renderer of content.
+ * @param messages - The interface messages.
+ * @returns The element.
+ */
 export function renderGraphicAssociate(
   node: GraphicAssociateInteraction,
   renderer: BodyRenderer,

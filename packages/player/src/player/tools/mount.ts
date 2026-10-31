@@ -3,8 +3,8 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { checkFunction, checkProperties, checkRecord, checkString, describe } from "../../checks.js";
 import type { Messages } from "../../messages/index.js";
-import { checkMessages } from "../content/options.js";
-import { deepActiveElement, html } from "../dom.js";
+import { checkMessages } from "../../messages/internal.js";
+import { deepActiveElement, html } from "../internal.js";
 import { checkToolsInput } from "./check-input.js";
 import type { OpenTool, ToolContext, ToolSlots } from "./context.js";
 import { SLOT_TOOLS, type ToolEntry, type ToolsInput } from "./model.js";
@@ -21,18 +21,27 @@ export interface ToolsOptions {
   /** The language of the interface, a BCP 47 tag, which the tools of the host get. */
   readonly language: string;
   /**
-   * The element that holds the rendered item, in the document or in a shadow root. It must be positioned (a `position`
-   * other than `static`): the rule, the protractor and the line reader lie over it in a layer that the mount appends to
-   * it, the line reader follows its text and answer masking covers its choice interactions.
+   * The element that holds the rendered item, in the document or in a shadow root.
+   *
+   * @remarks
+   * It must be positioned (a `position` other than `static`): the rule, the protractor and the line reader lie over it
+   * in a layer that the mount appends to it, the line reader follows its text and answer masking covers its choice
+   * interactions.
    */
   readonly stage: HTMLElement;
   /** Turns the path of a file in the package into the URL to load it from. */
   readonly assets: (path: string) => string;
-  /** The tools that the host provides. Default: none. */
+  /**
+   * The tools that the host provides.
+   *
+   * @defaultValue None
+   */
   readonly slots?: ToolSlots;
   /**
-   * Called when the candidate turns on or off a tool that a support of the profile puts on the screen. The tool follows
-   * the `active` flag of the next input, not the candidate's request.
+   * Called when the candidate turns on or off a tool that a support of the profile puts on the screen.
+   *
+   * @remarks
+   * The tool follows the `active` flag of the next input, not the candidate's request.
    */
   readonly onSupport: (name: SupportName, active: boolean) => void;
 }
@@ -40,9 +49,12 @@ export interface ToolsOptions {
 /** The tools of an item and a candidate, mounted. */
 export interface Tools {
   /**
-   * Shows the tools in force for an item and the candidate: a button for each in the toolbar, and the open ones. Tools
-   * that stay in force stay open, and the others go.
+   * Shows the tools in force for an item and the candidate: a button for each in the toolbar, and the open ones.
    *
+   * @remarks
+   * Tools that stay in force stay open, and the others go.
+   *
+   * @param input - The companion materials of the item and the supports of the candidate.
    * @throws `DataError` when `input` is not valid, or a function of `slots` returns something other than a function; a
    * function of `slots` that throws makes it throw the same error.
    */
@@ -86,8 +98,10 @@ function checkToolsOptions(host: unknown, options: unknown): asserts options is 
 }
 
 /**
- * Returns the support that a `support` action turns on and off for the tool: only an option can be (BPIG §5.3), and
- * the runtime refuses the action for any other state.
+ * Returns the support that a `support` action turns on and off for the tool: only an option can be, and the runtime
+ * refuses the action for any other state.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, support states}
  */
 function turnable({ support }: ToolEntry): SupportView | null {
   return support?.state === "option" ? support : null;
@@ -106,14 +120,20 @@ function buttonNames(entries: readonly ToolEntry[], messages: Messages): readonl
 }
 
 /**
- * Mounts the tools of an item (the player design §2.8; INFO §5.33, BPIG §3.7.8 and §5.2.9). The toolbar goes into `host` with
- * the physical materials and the panels of the open tools; the tools that overlay the item go into a layer over the stage.
- * The tools are the rule, the protractor, the basic and standard calculators, the line reader, answer masking and the
- * digital materials, and the tools of the host in their slots. Every tool works by keyboard and without dragging.
+ * Mounts the tools of an item.
+ *
+ * @remarks
+ * The toolbar goes into `host` with the physical materials and the panels of the open tools; the tools that overlay the
+ * item go into a layer over the stage. The tools are the rule, the protractor, the basic and standard calculators, the line
+ * reader, answer masking and the digital materials, and the tools of the host in their slots. Every tool works by keyboard
+ * and without dragging.
  *
  * @param host - The element that gets the toolbar, in a document or a shadow root.
  * @param options - See {@link ToolsOptions}.
+ * @returns The tools.
  * @throws `DataError` when `host` or an option is not valid.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, companion materials info}
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, tools}
  */
 export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
   checkToolsOptions(host, options);

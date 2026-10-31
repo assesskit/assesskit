@@ -1,4 +1,4 @@
-import { deepActiveElement } from "../dom.js";
+import { deepActiveElement } from "../internal.js";
 
 /** The parts of a popup that {@link attachPopup} wires. */
 export interface PopupParts {
@@ -16,8 +16,12 @@ export interface PopupParts {
 
 /**
  * Places a popup against the anchor and inside a boundary: against the lower edge of the anchor, or against the upper
- * edge when there is less room below than above, and shifted so that it does not leave the boundary. It touches the
- * anchor, so that the pointer can go from the trigger to the popup without leaving both (WCAG 1.4.13, hoverable).
+ * edge when there is less room below than above, and shifted so that it does not leave the boundary.
+ *
+ * @remarks
+ * It touches the anchor, so that the pointer can go from the trigger to the popup without leaving both.
+ *
+ * @see {@link https://www.w3.org/TR/WCAG22/#content-on-hover-or-focus | WCAG 2.2, content on hover or focus}
  */
 function place({ anchor, popup, boundary }: Pick<PopupParts, "anchor" | "popup" | "boundary">): void {
   popup.style.maxWidth = "";
@@ -37,13 +41,18 @@ function place({ anchor, popup, boundary }: Pick<PopupParts, "anchor" | "popup" 
 }
 
 /**
- * Makes a popup that meets WCAG 1.4.13 (content on hover or focus). It shows while the pointer is over the trigger or
- * the popup, while the focus is in either, and after the trigger is pressed. It is dismissible: Escape, whatever has the
- * focus or the pointer, and the Close button hide it without moving either; it shows again when the pointer and the
- * focus have left and come back. It is hoverable: the pointer may go onto it. It is persistent: it stays until the
- * pointer and the focus have left, or the candidate dismisses it, and a press of the trigger keeps it until then.
+ * Makes a popup that meets the criterion for content on hover or focus.
  *
+ * @remarks
+ * It shows while the pointer is over the trigger or the popup, while the focus is in either, and after the trigger is
+ * pressed. It is dismissible: Escape, whatever has the focus or the pointer, and the Close button hide it without moving
+ * either; it shows again when the pointer and the focus have left and come back. It is hoverable: the pointer may go onto
+ * it. It is persistent: it stays until the pointer and the focus have left, or the candidate dismisses it, and a press of
+ * the trigger keeps it until then.
+ *
+ * @param parts - The elements to wire.
  * @returns A function that takes the listeners away.
+ * @see {@link https://www.w3.org/TR/WCAG22/#content-on-hover-or-focus | WCAG 2.2, content on hover or focus}
  */
 export function attachPopup(parts: PopupParts): () => void {
   const { anchor, trigger, popup, close } = parts;

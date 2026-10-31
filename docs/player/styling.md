@@ -1,8 +1,18 @@
 # Styling
 
-`@assesskit/player/player.css` is the stylesheet of a content root: the base look, the QTI 3 shared vocabulary of
-[VOCAB] §1 and §2, the interaction classes of [BPIG] App. B, and the presentation that a candidate's PNP asks for. It is
+`@assesskit/player/player.css` is the stylesheet of a content root: the base look, the QTI 3 shared vocabulary and its CSS
+classes, the interaction classes of the best practices guide, and the presentation that a candidate's PNP asks for. It is
 one file, without `@import`, so that a constructed stylesheet can hold it.
+
+```mermaid
+flowchart TD
+  tokens["Tokens: palette and sizes"] --> themes["Themes: light, dark,<br/>high contrast, inverted"]
+  themes --> base["Base look of the content root"]
+  base --> vocabulary["Classes of the shared vocabulary"]
+  vocabulary --> interactions["Classes of the interactions"]
+  interactions --> pnp["PNP presentation:<br/>attributes and custom properties"]
+  pnp --> folding["Folding below 48rem<br/>or for a single column"]
+```
 
 | Context                     | How the stylesheet is used                                      |
 | --------------------------- | --------------------------------------------------------------- |
@@ -18,6 +28,8 @@ const root = host.attachShadow({ mode: "open" });
 const sheet = new CSSStyleSheet();
 sheet.replaceSync(css);
 root.adoptedStyleSheets = [sheet];
+root.adoptedStyleSheets.length; // => 1
+sheet.cssRules.length > 100; // => true
 ```
 
 A content root has `contain: layout paint` and `isolation: isolate`, so fixed-position item CSS cannot cover the chrome.
@@ -168,21 +180,21 @@ eye. A hot text, a hotspot and a choice use the state of the control: `:checked`
 
 ## The vocabulary
 
-| Group                                               | Classes                                                                                                                             | Source                                 |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Accessibility                                       | `qti-hidden`, `qti-visually-hidden`, `qti-keyword-emphasis`                                                                         | §1.1.1, §2.1                           |
-| Text, boxes, alignment                              | `qti-underline`, `qti-italic`, `qti-bordered`, `qti-well`, `qti-align-*`, `qti-valign-*`                                            | §1.1.2–4, §2.12                        |
-| Layout                                              | `qti-layout-row`, `qti-layout-col1` to `12`, `qti-layout-offset1` to `11`                                                           | §1.1.3, §2.11                          |
-| Display, flex, spacing, size, indent                | `qti-display-*`, `qti-flex-*`, `qti-margin-*`, `qti-padding-*`, `qti-height-*`, `qti-width-*`, `qti-fullwidth`, `qti-text-indent-*` | §2.1–2.9                               |
-| Lists                                               | `qti-list-style-type-*`                                                                                                             | §1.1.7, §2.10                          |
-| Vertical writing                                    | `qti-writing-mode-*`, `qti-float-*`, `qti-text-orientation-upright`, `qti-text-combine-upright-all`                                 | §1.1.5, §2.13–2.16                     |
-| Choice                                              | `qti-labels-*`, `qti-labels-suffix-*`, `qti-orientation-*`, `qti-choices-stacking-1` to `5`, `qti-input-control-hidden`             | §1.2.1                                 |
-| Text entry, inline choice, gap                      | `qti-input-width-1` to `72`                                                                                                         | §1.2.2, §1.2.4, §1.2.7                 |
-| Extended text                                       | `qti-height-lines-3`, `-6`, `-15`                                                                                                   | §1.2.3                                 |
-| Vertical choice, text, extended text, inline choice | `qti-writing-orientation-vertical-rl`, `-lr`, `qti-labels-cjk-ideographic`                                                          | §1.2.1.9, §1.2.2.3, §1.2.3.4, §1.2.7.3 |
-| Match, gap match, graphic gap match, order          | `qti-choices-top`, `-bottom`, `-left`, `-right`; `qti-match-tabular`, `qti-header-hidden`                                           | §1.2.4, §1.2.8–10                      |
-| Order targets                                       | `qti-labels-*` and `qti-labels-suffix-*` on `qti-order-interaction`                                                                 | §1.2.9.1–2                             |
-| Hotspot, graphic gap match, hot text                | `qti-selections-light`, `-dark`, `qti-unselected-hidden`, `qti-input-control-hidden`                                                | §1.2.5, §1.2.6, §1.2.10                |
+| Group                                               | Classes                                                                                                                             |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Accessibility                                       | `qti-hidden`, `qti-visually-hidden`, `qti-keyword-emphasis`                                                                         |
+| Text, boxes, alignment                              | `qti-underline`, `qti-italic`, `qti-bordered`, `qti-well`, `qti-align-*`, `qti-valign-*`                                            |
+| Layout                                              | `qti-layout-row`, `qti-layout-col1` to `12`, `qti-layout-offset1` to `11`                                                           |
+| Display, flex, spacing, size, indent                | `qti-display-*`, `qti-flex-*`, `qti-margin-*`, `qti-padding-*`, `qti-height-*`, `qti-width-*`, `qti-fullwidth`, `qti-text-indent-*` |
+| Lists                                               | `qti-list-style-type-*`                                                                                                             |
+| Vertical writing                                    | `qti-writing-mode-*`, `qti-float-*`, `qti-text-orientation-upright`, `qti-text-combine-upright-all`                                 |
+| Choice                                              | `qti-labels-*`, `qti-labels-suffix-*`, `qti-orientation-*`, `qti-choices-stacking-1` to `5`, `qti-input-control-hidden`             |
+| Text entry, inline choice, gap                      | `qti-input-width-1` to `72`                                                                                                         |
+| Extended text                                       | `qti-height-lines-3`, `-6`, `-15`                                                                                                   |
+| Vertical choice, text, extended text, inline choice | `qti-writing-orientation-vertical-rl`, `-lr`, `qti-labels-cjk-ideographic`                                                          |
+| Match, gap match, graphic gap match, order          | `qti-choices-top`, `-bottom`, `-left`, `-right`; `qti-match-tabular`, `qti-header-hidden`                                           |
+| Order targets                                       | `qti-labels-*` and `qti-labels-suffix-*` on `qti-order-interaction`                                                                 |
+| Hotspot, graphic gap match, hot text                | `qti-selections-light`, `-dark`, `qti-unselected-hidden`, `qti-input-control-hidden`                                                |
 
 The messages (`data-max-selections-message`, `data-patternmask-message`, `data-prompt`, `data-first-column-header`), the
 counters (`qti-counter-up` and `-down`) and the media attributes are behavior of the elements, so the stylesheet does not
@@ -190,21 +202,21 @@ read them.
 
 ## Where the sources differ
 
-| Case                                                                                                                                                                  | Reading                                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| §1.1.5.1 names `qti-writing-mode-vertical-tb`, §2.13 `qti-writing-mode-horizontal-tb`                                                                                 | Both set `horizontal-tb`                                                                      |
-| §1.1.7 lists `kannada`, `katakana` and `katakana-iroha`, §2.10 lacks them; §2.10 has `ethiopic-halehame*`, `hangul`, `hangul-consonant` and `urdu`, §1.1.7 lacks them | Every name of both is a class                                                                 |
-| `qti-input-width-40` is in the summary tables and §1.2.4.3, not in §1.2.2.1                                                                                           | A class of every interaction                                                                  |
-| `qti-gap-placement` is in the summary tables, with no definition                                                                                                      | Not styled                                                                                    |
-| §2.11 has pixel widths, `.container` and `.container-fluid` (Bootstrap 2)                                                                                             | A twelve-column grid of fractions with a gutter; the containers are not vocabulary            |
-| §2.3 and §2.4 define `s` and `e` as left and right for left-to-right text                                                                                             | Logical: the start and the end of the line                                                    |
-| §1.2.8.2: `qti-header-hidden` does not display the header row                                                                                                         | The row is visually hidden and stays for a screen reader ([VOCAB] §1.2.8.2 warns of the loss) |
-| §1.2.6.3: `qti-unselected-hidden` on a hot text shows "no buttons"                                                                                                    | It hides the controls too                                                                     |
-| §1.2.5.1, §1.2.10.3: hidden selections show on focus; a graphic gap match also while placing                                                                          | `:focus-visible`, `:checked` and `data-ak-placing`                                            |
-| `qti-labels-*` without a class                                                                                                                                        | No label: BPIG leaves the default to the platform                                             |
+| Case                                                                                                                                                                                           | Reading                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| The list of classes names `qti-writing-mode-vertical-tb`, the sample `qti-writing-mode-horizontal-tb`                                                                                          | Both set `horizontal-tb`                                                           |
+| The list of classes has `kannada`, `katakana` and `katakana-iroha`, which the sample lacks; the sample has `ethiopic-halehame*`, `hangul`, `hangul-consonant` and `urdu`, which the list lacks | Every name of both is a class                                                      |
+| `qti-input-width-40` is in the summary tables and the inline choice, not in the text entry                                                                                                     | A class of every interaction                                                       |
+| `qti-gap-placement` is in the summary tables, with no definition                                                                                                                               | Not styled                                                                         |
+| The sample has pixel widths, `.container` and `.container-fluid` (Bootstrap 2)                                                                                                                 | A twelve-column grid of fractions with a gutter; the containers are not vocabulary |
+| The margin and padding classes define `s` and `e` as left and right for left-to-right text                                                                                                     | Logical: the start and the end of the line                                         |
+| `qti-header-hidden` does not display the header row                                                                                                                                            | The row is visually hidden and stays for a screen reader                           |
+| `qti-unselected-hidden` on a hot text shows "no buttons"                                                                                                                                       | It hides the controls too                                                          |
+| Hidden selections show on focus; a graphic gap match also while placing                                                                                                                        | `:focus-visible`, `:checked` and `data-ak-placing`                                 |
+| `qti-labels-*` without a class                                                                                                                                                                 | No label: the best practices guide leaves the default to the platform              |
 
-Below 48rem, about the 767px of §2.11, and for a candidate who wants a single column, rows, stacks and containers become
-one column. A horizontal stack folds the same way, for BPIG §3.2.1 advises vertical choices where a row would leave the
+Below 48rem, about the 767px of the sample's mobile breakpoint, and for a candidate who wants a single column, rows, stacks and containers become
+one column. A horizontal stack folds the same way, for the best practices guide advises vertical choices where a row would leave the
 viewport.
 
 ## Evidence
@@ -213,3 +225,21 @@ viewport.
 1.4.1, 1.4.3, 1.4.4, 1.4.10, 1.4.11, 1.4.12, 2.4.7, 2.4.11 (the sticky chrome) and 2.5.8 in every theme. Run
 `pnpm exec playwright install` first. `pnpm compat:engines` loads the stylesheet in Chromium 111, Firefox 115 and WebKit
 16.4.
+
+## Files
+
+| File                              | Concept                                                                                                                            |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/player/player.css`      | The stylesheet of a content root: tokens, themes, the shared vocabulary, the interaction classes, the presentation and the folding |
+| `src/player/delivery/styles.ts`   | The stylesheet of the chrome, which uses the system colors                                                                         |
+| `src/player/tools/styles.ts`      | The stylesheets of the toolbar, the panels and what lies over the item                                                             |
+| `src/player/supports/styles.ts`   | The stylesheet of the panel of supports, reading aloud and the notice of the variant                                               |
+| `src/player/submission/styles.ts` | The stylesheet of the display of a submission                                                                                      |
+
+## References
+
+| Specification                                                                                          | Topics                                                        |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| [QTI 3 Standardized Shared Vocabulary and CSS Classes](https://www.imsglobal.org/spec/qti/v3p0/vocab/) | The classes of the vocabulary and the interaction classes     |
+| [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/)       | Display supports, magnification and the layout of choices     |
+| [WCAG 2.2](https://www.w3.org/TR/WCAG22/)                                                              | Contrast, text spacing, reflow, focus appearance, target size |

@@ -6,12 +6,14 @@ import { LTI_STORAGE_FRAME } from "../../protocol/index.js";
 const CAPABILITIES_SUBJECT = "lti.capabilities";
 
 /**
- * Reads a request for the capabilities of the platform: an object with the subject `lti.capabilities` and a `message_id`.
- * Returns the answer to post, or `undefined` for any other message.
+ * Reads a request for the capabilities of the platform and builds the answer.
  *
- * The platform supports the capabilities request itself, which the player answers, and the two messages of the storage, which
- * the frame of the storage page answers and `frame` says so.
+ * @remarks
+ * The platform supports the capabilities request itself, which the player answers, and the two messages of the storage,
+ * which the frame of the storage page answers.
  *
+ * @param data - The data of a message: an object with the subject `lti.capabilities` and a `message_id`.
+ * @returns The answer to post, or `undefined` for any other message.
  * @see {@link https://www.imsglobal.org/spec/lti-cs-pm/v0p1 | LTI Client Side postMessages 0.1}
  */
 export function answerCapabilities(data: unknown): Record<string, unknown> | undefined {

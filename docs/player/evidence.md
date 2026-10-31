@@ -11,7 +11,7 @@ What must be covered is derived from the specifications and from the runtime, no
 | The HTML elements of the ASI schema                                         | `html-elements.xsd.test.ts` (`pnpm test:xsd`): the elements that the content renderer draws as HTML are those that the schema declares without `qti-`                    |
 | The interaction types of the QTI metadata vocabulary                        | `elements.browser.test.ts`: `createInteractionRenderers` has a renderer for each but the portable custom interaction, which its own host draws                           |
 | The descriptors of the runtime for the interactions of the 1EdTech examples | `elements.browser.corpus.test.ts`: every item of the examples that has an interaction is drawn as its descriptors say, answered, and checked with axe                    |
-| The items, stimuli and packages of the 1EdTech examples                     | `content.corpus.browser.test.ts`, `graphic.browser.corpus.test.ts`, `player.browser.corpus.test.ts` and `server.corpus.test.ts`                                          |
+| The items, stimuli and packages of the 1EdTech examples                     | `content.corpus.browser.test.ts`, `graphic.browser.corpus.test.ts`, `pci.browser.corpus.test.ts` and `server.corpus.test.ts`                                             |
 | WCAG 2.2 at levels A and AA                                                 | axe-core with the rules of both levels, scripted keyboard use, and the checks of the success criteria that a rule cannot decide; a test says in its title what it checks |
 
 ## Tests in a browser
@@ -71,7 +71,7 @@ The browser tests of the supports (`supports.browser.test.ts`) read the catalogs
 content root and mount each part on it. They run axe-core with the same rules, press real keys and pointer buttons (a
 test sets the focus and presses the key, because Safari does not Tab to a button), and drive the parts with the runtime's engine,
 so that the `support` action, its refusals and the next view are the runtime's. A running frame of a portable custom interaction
-takes a new look in `player.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
+takes a new look in `pci.browser.test.ts`; the command `frameTheme` reads what applies inside a frame of an opaque
 origin.
 
 The LTI tests run the frames of an LTI item against a second set of servers, which `fixtures/lti-setup.ts` starts: a platform

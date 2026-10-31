@@ -16,17 +16,25 @@ export interface LexiconsContext {
 export interface Lexicons {
   /**
    * Loads the lexicons at the given paths, which the documents of a view name, and hands them over once they are loaded.
+   *
+   * @remarks
    * The same paths as the last call change nothing, and a lexicon is read once. A lexicon that is missing or is not a PLS
    * document is left out, so that reading aloud goes on without it.
+   *
+   * @param paths - The paths in the package of the lexicons, in the order of the dependencies.
    */
   follow(paths: readonly string[]): void;
 }
 
 /**
- * Creates the loader of the pronunciation lexicons that reading aloud uses (the guide to speech). The lexicons are files of
- * the package, loaded through the gate like the module resolution files of a portable custom interaction.
+ * Creates the loader of the pronunciation lexicons that reading aloud uses.
+ *
+ * @remarks
+ * The lexicons are files of the package, loaded through the gate like the module resolution files of a portable custom
+ * interaction.
  *
  * @param context - See {@link LexiconsContext}.
+ * @returns The loader.
  */
 export function createLexicons(context: LexiconsContext): Lexicons {
   const { fetch, assets, apply } = context;

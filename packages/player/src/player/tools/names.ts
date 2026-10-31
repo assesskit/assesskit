@@ -15,12 +15,23 @@ const SLOT_NAMES: Readonly<Record<SlotTool, keyof Messages>> = {
   "spell-checker": "toolSpellChecker",
 };
 
-/** Returns the name of a digital material: its label, or the name of its file. */
+/**
+ * Returns the name of a digital material: its label, or the name of its file.
+ *
+ * @param material - The material.
+ * @returns The name.
+ */
 export function materialName({ label, fileHref }: FileMaterial): string {
   return label ?? fileHref.value.split("/").at(-1) ?? fileHref.value;
 }
 
-/** Returns the name of a tool in the language of the interface. */
+/**
+ * Returns the name of a tool in the language of the interface.
+ *
+ * @param spec - The tool.
+ * @param messages - The interface messages.
+ * @returns The name.
+ */
 export function toolName(spec: ToolSpec, messages: Messages): string {
   switch (spec.kind) {
     case "rule":

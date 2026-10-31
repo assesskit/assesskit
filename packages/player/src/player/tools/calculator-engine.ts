@@ -3,7 +3,11 @@ import { DISPLAY_DIGITS, formatNumber, roundForDisplay } from "./numbers.js";
 /** The keys of the digits. */
 export const DIGIT_KEYS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
-/** The keys of the basic calculator: the digits, the decimal point, the four operations, equals and clear (BPIG §3.7.8.1). */
+/**
+ * The keys of the basic calculator: the digits, the decimal point, the four operations, equals and clear.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, calculators}
+ */
 export const BASIC_KEYS = [
   ...DIGIT_KEYS,
   "decimal",
@@ -15,7 +19,11 @@ export const BASIC_KEYS = [
   "clear",
 ] as const;
 
-/** The keys that the standard calculator adds: square root, percent, change of sign and the memory (BPIG §3.7.8.1). */
+/**
+ * The keys that the standard calculator adds: square root, percent, change of sign and the memory.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/impl/ | QTI 3.0 Best Practices and Implementation Guide, calculators}
+ */
 export const STANDARD_ONLY_KEYS = [
   "square-root",
   "percent",
@@ -154,8 +162,15 @@ function pressMemory(state: CalculatorState, key: "memory-add" | "memory-subtrac
 }
 
 /**
- * Presses a key. Operations run as they are entered, from left to right, as on a desktop calculator, so 2 + 3 × 4 = is
- * 20. Results are rounded to 12 significant digits. After an error only `clear` has an effect, and it keeps the memory.
+ * Presses a key.
+ *
+ * @remarks
+ * Operations run as they are entered, from left to right, as on a desktop calculator, so 2 + 3 × 4 = is 20. Results are
+ * rounded to 12 significant digits. After an error only `clear` has an effect, and it keeps the memory.
+ *
+ * @param state - The calculator before the key.
+ * @param key - The key.
+ * @returns The calculator after the key.
  */
 export function press(state: CalculatorState, key: CalculatorKey): CalculatorState {
   if (key === "clear") return { ...INITIAL_STATE, memory: state.memory };

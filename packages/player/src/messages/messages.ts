@@ -1,6 +1,9 @@
 /**
- * The text of the player's interface in one language. Every key is one function of the interface, so the same function
- * has the same name everywhere (WCAG 3.2.4). A message is plain text: nothing in it is markup.
+ * The text of the player's interface in one language.
+ *
+ * @remarks
+ * Every key is one function of the interface, so the same function has the same name everywhere (WCAG 3.2.4). A message
+ * is plain text: nothing in it is markup.
  */
 export interface Messages {
   /** The title of the frame of a portable custom interaction that has no prompt to take it from. */
@@ -597,7 +600,7 @@ export interface Messages {
   readonly variantAdapted: string;
   /** The notice that the tool of a question that is a link to a tool could not be started. */
   readonly ltiUnavailable: string;
-  /** The notice that the tool of a question is no longer open, which a review shows in place of the tool. */
+  /** The notice that the tool of a question is closed, which a review shows in place of the tool. */
   readonly ltiClosed: string;
   /** The title of the hidden frame that keeps what the tool of a question stores for its login. */
   readonly ltiStorageFrame: string;

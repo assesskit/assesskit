@@ -1,4 +1,4 @@
-import { svg } from "../dom.js";
+import { svg } from "../internal.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import type { ProtractorSpec } from "./model.js";
 import { formatNumber } from "./numbers.js";
@@ -32,9 +32,19 @@ const NUMBER_DROP = 4;
 const radians = (degrees: number): number => (degrees * Math.PI) / 180;
 
 /**
- * Opens a protractor (INFO §5.110): a half circle that measures 180 degrees, with ticks at the increments along the arc
- * and the numbers at the major ticks, in the unit of the major increment, from the right end on the outer ring and from
- * the left end on the inner ring. It turns about the center of its base line.
+ * Opens a protractor: a half circle that measures 180 degrees, with ticks at the increments along the arc and the
+ * numbers at the major ticks, in the unit of the major increment, from the right end on the outer ring and from the
+ * left end on the inner ring.
+ *
+ * @remarks
+ * It turns about the center of its base line.
+ *
+ * @param context - What the tool needs from the mount.
+ * @param protractor - What the item asks for.
+ * @param description - What the author says the protractor offers, or `null`.
+ * @param close - Called when the candidate closes the panel.
+ * @returns The open tool.
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, protractor}
  */
 export function openProtractor(
   context: ToolContext,

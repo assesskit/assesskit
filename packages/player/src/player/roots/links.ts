@@ -1,7 +1,13 @@
 /**
- * Makes the links to an `id` in the root work inside the shadow root. The browser looks for the target of `#note` in the
- * document, which does not see into a shadow root, so a click would only change the address of the page. The handler
- * moves the focus to the element instead, which scrolls it into view and tells a screen reader where it went.
+ * Makes the links to an `id` in the root work inside the shadow root.
+ *
+ * @remarks
+ * The browser looks for the target of `#note` in the document, which does not see into a shadow root, so a click would
+ * only change the address of the page. The handler moves the focus to the element instead, which scrolls it into view and
+ * tells a screen reader where it went.
+ *
+ * @param root - The shadow root.
+ * @returns A function that takes the handler away.
  */
 export function followFragmentLinks(root: ShadowRoot): () => void {
   const onClick = (event: Event): void => {

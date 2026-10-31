@@ -1,10 +1,8 @@
 import type { Messages } from "../../../messages/index.js";
-import { html } from "../../dom.js";
+import { html } from "../../internal.js";
 import type { Notes } from "../notes.js";
+import { DRAG_THRESHOLD } from "../pointer.js";
 import type { Board } from "./model.js";
-
-/** The distance in pixels that a pointer moves before a press becomes a drag. */
-export const DRAG_THRESHOLD = 4;
 
 /** A choice of the pool: the element that stands in the pool, what it shows, and its name for a person who cannot see it. */
 export interface BoardToken {
@@ -68,9 +66,12 @@ interface Press {
 
 /**
  * The controls of a board: a token in the pool for each choice, a chip for each choice in a place, and a button in each
- * place that has room. The candidate picks a choice up and chooses where to put it, with a click, a tap or the keyboard;
- * a mouse or a pen can also drag it, so that no one has to drag (WCAG 2.1.1, 2.5.7). Escape lets go of a choice, and the
- * button of a chip takes it out of its place. The view draws what the board holds and says what happened in the notes.
+ * place that has room.
+ *
+ * @remarks
+ * The candidate picks a choice up and chooses where to put it, with a click, a tap or the keyboard; a mouse or a pen
+ * can also drag it, so that no one has to drag (WCAG 2.1.1, 2.5.7). Escape lets go of a choice, and the button of a
+ * chip takes it out of its place. The view draws what the board holds and says what happened in the notes.
  */
 export class BoardView {
   readonly #options: BoardViewOptions;
@@ -100,7 +101,11 @@ export class BoardView {
     this.render();
   };
 
-  /** Locks the controls for a candidate who cannot respond, or unlocks them. */
+  /**
+   * Locks the controls for a candidate who cannot respond, or unlocks them.
+   *
+   * @param disabled - `true` to lock the controls.
+   */
   lock(disabled: boolean): void {
     if (this.#disabled === disabled) return;
     this.#disabled = disabled;
@@ -111,7 +116,7 @@ export class BoardView {
   /** Draws the board as the state holds it. */
   render(): void {
     const { board, tokens, slots, messages, root } = this.#options;
-    // The stylesheet shows the gaps of an image while the candidate has a choice in hand (VOCAB §1.2.10.3).
+    // The stylesheet shows the gaps of an image while the candidate has a choice in hand.
     root.toggleAttribute("data-ak-placing", this.#held !== undefined);
     this.#buttons.clear();
     this.#drops.clear();

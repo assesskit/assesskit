@@ -1,7 +1,7 @@
 import type { CandidateItem, ItemKey } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
 import type { LtiFrame } from "../../protocol/index.js";
-import { html } from "../dom.js";
+import { html } from "../internal.js";
 import { LTI_SLOT, type LtiFrameHandle, mountLtiFrame } from "./frame.js";
 
 /** The hook of the host that starts the login of the tool of an item: its route answers with the frame of the item. */
@@ -36,9 +36,14 @@ function shownKey(item: CandidateItem | undefined): string | undefined {
 }
 
 /**
- * Creates the slot that shows the tool of an LTI item (`CandidateItem.lti`) while the item is open. The tool is launched
- * once for an open item and stays across the views that follow; a new item or a closed one takes it away. The slot decides
- * nothing of QTI: it shows a tool where the view says there is one.
+ * Creates the slot that shows the tool of an LTI item (`CandidateItem.lti`) while the item is open.
+ *
+ * @remarks
+ * The tool is launched once for an open item and stays across the views that follow; a new item or a closed one takes it
+ * away. The slot decides nothing of QTI: it shows a tool where the view says there is one.
+ *
+ * @param options - See {@link LtiSlotOptions}.
+ * @returns The slot.
  */
 export function createLtiSlot(options: LtiSlotOptions): LtiSlot {
   const { messages, login, refused, host } = options;

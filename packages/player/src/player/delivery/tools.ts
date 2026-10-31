@@ -24,9 +24,14 @@ export interface DeliveryToolsContext {
 /** The tools of the item presented and the candidate's profile, mounted in the chrome. */
 export interface DeliveryTools {
   /**
-   * Shows the tools that the item and the profile of a view put in force. A tool that stays in force stays open where the
-   * candidate put it, and the others go; with no item presented there are no tools. Call it once the content of the view
-   * is shown. A view with the same item and the same supports as the last one changes nothing.
+   * Shows the tools that the item and the profile of a view put in force.
+   *
+   * @remarks
+   * A tool that stays in force stays open where the candidate put it, and the others go; with no item presented there are no
+   * tools. Call it once the content of the view is shown. A view with the same item and the same supports as the last one
+   * changes nothing.
+   *
+   * @param view - The view.
    */
   update(view: CandidateView): void;
   /** Takes the tools down. */
@@ -34,11 +39,15 @@ export interface DeliveryTools {
 }
 
 /**
- * Mounts the tools of the shell (the guide to tools): the companion materials of the item presented, which the runtime reads, and the
- * supports of the view. The tools that a support of the profile turns on and off ask for the `support` action through
- * `request`; the others open and close at once.
+ * Mounts the tools of the shell: the companion materials of the item presented, which the runtime reads, and the supports
+ * of the view.
+ *
+ * @remarks
+ * The tools that a support of the profile turns on and off ask for the `support` action through `request`; the others open
+ * and close at once.
  *
  * @param context - See {@link DeliveryToolsContext}.
+ * @returns The tools.
  */
 export function mountDeliveryTools(context: DeliveryToolsContext): DeliveryTools {
   const { messages, language, slot, stage, assets, slots, request } = context;

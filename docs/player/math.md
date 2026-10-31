@@ -1,10 +1,21 @@
 # Mathematics
 
-QTI 3 writes mathematics as MathML ([INFO] §2.3.3). Every baseline browser renders MathML Core by itself. The player
+QTI 3 writes mathematics as MathML. Every baseline browser renders MathML Core by itself. The player
 typesets it with [MathJax](https://www.mathjax.org) 4 when the host gives it the URL of MathJax, which gives the page
 one look in all browsers, the layout of MathML that the browsers lack, and the speech and braille that MathJax's Speech
 Rule Engine (SRE) makes. The player does not bundle MathJax. It loads MathJax from that URL, once, and only for content that
 has an expression.
+
+```mermaid
+flowchart LR
+  root["Root with MathML"] --> has{"An expression?"}
+  has -- no --> none["Nothing is loaded"]
+  has -- yes --> elementary{"Elementary math?<br/>mstack, mlongdiv, ..."}
+  elementary -- yes --> core["Stays MathML,<br/>drawn by the browser"]
+  elementary -- no --> load["Load MathJax once<br/>from the URL"]
+  load --> typeset["Typeset in place,<br/>with speech and braille"]
+  typeset --> styles["Adopt the styles of the output<br/>into the shadow root"]
+```
 
 ```ts
 import { createMathTypesetter } from "@assesskit/player/player";
@@ -17,8 +28,8 @@ root.innerHTML = `<p>Half of x is <math xmlns="http://www.w3.org/1998/Math/MathM
 document.body.append(host);
 
 await typesetter.typeset(root);
-root.querySelector("mjx-speech")?.getAttribute("aria-label"); // "x over 2, math"
-root.querySelector("mjx-speech")?.getAttribute("aria-braillelabel"); // "⠹⠭⠌⠆⠼"
+root.querySelector("mjx-speech")?.getAttribute("aria-label"); // => "x over 2, math"
+root.querySelector("mjx-speech")?.getAttribute("aria-braillelabel"); // => "⠹⠭⠌⠆⠼"
 ```
 
 ## Serving MathJax
@@ -74,7 +85,7 @@ final for the page: later calls reject without another request.
   constructed stylesheet with the same rules into the root and replaces it after every typesetting, because MathJax adds
   the rule of a character when the character is first used. It adds the rules with `insertRule`, which its element's
   `textContent` does not show, so `typeset` reads them from the sheet.
-- **Elementary math stays MathML.** MathJax 4 does not implement the elements of elementary math (MathML 3 §3.6): `mstack`,
+- **Elementary math stays MathML.** MathJax 4 does not implement the elements of elementary math: `mstack`,
   `mlongdiv`, `msgroup`, `msrow`, `mscarries`, `mscarry` and `msline`. It would replace the whole expression by a "Math
   input error". `typeset` leaves an expression that has one of them alone, with a render action of MathJax that removes
   it from the expressions found, and the browser renders it as MathML Core. The content stays in the document for a screen
@@ -101,3 +112,18 @@ decides: the labels are the `aria-braillelabel` attributes of the `mjx-speech` e
 An expression becomes a `mjx-container` that takes the keyboard focus, with the visual output hidden from the
 accessibility tree (`aria-hidden`) and an `mjx-speech` element of `role="img"` that names it. axe-core at WCAG 2.2 A and
 AA reports no violation for it in a shadow root.
+
+## Files
+
+Each file of `src/player/math/` holds one concept.
+
+| File         | Concept                                           |
+| ------------ | ------------------------------------------------- |
+| `index.ts`   | The public API                                    |
+| `mathjax.ts` | `createMathTypesetter` and the loading of MathJax |
+
+## References
+
+| Specification                                                            | Topics          |
+| ------------------------------------------------------------------------ | --------------- |
+| [MathML 3](https://www.w3.org/TR/MathML3/chapter3.html#presm.elementary) | elementary math |

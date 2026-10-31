@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { looseRecord, nonEmptyStringSchema, parseWith, positiveSchema, strictRecord } from "../../checks.js";
-import { checkSupportViews } from "../supports/check.js";
+import { checkSupportViews } from "../supports/internal.js";
 import { ANGLE_UNITS, CALCULATOR_TYPES, LENGTH_UNITS, type ToolsInput } from "./model.js";
 
 const optionalString = v.optional(v.string());
@@ -68,7 +68,9 @@ const toolsInputSchema = strictRecord({ companion: v.nullable(companionSchema), 
 /**
  * Checks the input of the tools: the companion materials of an item, or `null`, and the supports of the candidate.
  *
- * @throws `DataError` when the input, a material or a support has the wrong type, an unknown property or a value out of range.
+ * @param value - The value to check.
+ * @throws `DataError` when the input, a material or a support has the wrong type, an unknown property or a value out of
+ * range.
  */
 export function checkToolsInput(value: unknown): asserts value is ToolsInput {
   const { supports } = parseWith(toolsInputSchema, value, "The tools input");

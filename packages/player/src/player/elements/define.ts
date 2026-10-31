@@ -1,5 +1,4 @@
 import { AssesskitError } from "@assesskit/runtime/errors";
-import { MediaInteractionElement } from "../media/media.js";
 import { AssociateInteractionElement } from "./associate.js";
 import { ChoiceInteractionElement } from "./choice.js";
 import { CustomInteractionElement } from "./custom.js";
@@ -14,6 +13,7 @@ import { HotspotInteractionElement } from "./hotspot.js";
 import { HotTextInteractionElement } from "./hottext.js";
 import { InlineChoiceInteractionElement } from "./inline-choice.js";
 import { MatchInteractionElement } from "./match.js";
+import { MediaInteractionElement } from "./media-interaction.js";
 import { OrderInteractionElement } from "./order.js";
 import { PositionObjectInteractionElement } from "./position-object.js";
 import { SelectPointInteractionElement } from "./select-point.js";
@@ -47,7 +47,10 @@ const ELEMENTS: ReadonlyMap<string, CustomElementConstructor> = new Map<string, 
 ]);
 
 /**
- * Defines the custom elements of the interactions, once for the page. Calling it again does nothing.
+ * Defines the custom elements of the interactions, once for the page.
+ *
+ * @remarks
+ * Calling it again does nothing.
  *
  * @throws `AssesskitError` when another class is defined under the name of an interaction.
  */
