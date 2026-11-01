@@ -29,8 +29,9 @@ Node.js 22.18+ and pnpm 12 are required. One command sets the repository up, and
 pnpm install
 ```
 
-`examples/player/cat-with-measurekit` needs measurekit beside this repository, in `../measurekit` and built with `pnpm install && pnpm build`
-there, until measurekit is on npm. CI checks it out at the commit of `scripts/measurekit.lock.json`.
+`examples/player/cat-with-measurekit` needs measurekit and `examples/player/lms-integration` needs interopkit beside this repository, in
+`../measurekit` and `../interopkit`, each built with `pnpm install && pnpm build` there, until both are on npm. CI checks them out at
+the commits of `scripts/measurekit.lock.json` and `scripts/interopkit.lock.json`.
 
 [AGENTS.md](AGENTS.md) lists the commands and the conventions for layout, naming, code, docs and tests;
 [architecture.md](docs/runtime/architecture.md) states the design principles.

@@ -76,24 +76,29 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
-      # examples/player/cat-with-measurekit links measurekit from the folder beside this repository, until measurekit is on npm.
-      # The only job that reads the example is this one, so the others do not check measurekit out. The deploy key is read-only.
-      - name: Check out measurekit beside this repository, at the commit of scripts/measurekit.lock.json, and build it
+      # examples/player/cat-with-measurekit and examples/player/lms-integration link measurekit and interopkit from the folders beside
+      # this repository, until both are on npm. The test job is the only one that reads the examples, so the others check out
+      # neither. Each deploy key is read-only, and each library is built before pnpm resolves the link.
+      - name: Check out measurekit and interopkit beside this repository, at the commits of their lock files, and build them
         env:
           MEASUREKIT_DEPLOY_KEY: ${{ secrets.MEASUREKIT_DEPLOY_KEY }}
+          INTEROPKIT_DEPLOY_KEY: ${{ secrets.INTEROPKIT_DEPLOY_KEY }}
         run: |
-          repository=$(node -p "JSON.parse(fs.readFileSync('scripts/measurekit.lock.json', 'utf8')).repository")
-          commit=$(node -p "JSON.parse(fs.readFileSync('scripts/measurekit.lock.json', 'utf8')).commit")
-          key="$RUNNER_TEMP/measurekit-key"
-          (umask 077 && printf '%s\n' "$MEASUREKIT_DEPLOY_KEY" > "$key")
-          git init --quiet ../measurekit
-          git -C ../measurekit -c "core.sshCommand=ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
-            fetch --quiet --depth 1 "git@github.com:$repository.git" "$commit"
-          git -C ../measurekit checkout --quiet FETCH_HEAD
-          rm "$key"
-          cd ../measurekit
-          pnpm install --frozen-lockfile
-          pnpm --filter @measurekit/psychometrics... build
+          checkout() {
+            name="$1"
+            key="$RUNNER_TEMP/$name-key"
+            repository=$(node -p "JSON.parse(fs.readFileSync('scripts/$name.lock.json', 'utf8')).repository")
+            commit=$(node -p "JSON.parse(fs.readFileSync('scripts/$name.lock.json', 'utf8')).commit")
+            (umask 077 && printf '%s\n' "$2" > "$key")
+            git init --quiet "../$name"
+            git -C "../$name" -c "core.sshCommand=ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+              fetch --quiet --depth 1 "git@github.com:$repository.git" "$commit"
+            git -C "../$name" checkout --quiet FETCH_HEAD
+            rm "$key"
+            (cd "../$name" && pnpm install --frozen-lockfile && pnpm build)
+          }
+          checkout measurekit "$MEASUREKIT_DEPLOY_KEY"
+          checkout interopkit "$INTEROPKIT_DEPLOY_KEY"
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # The coverage floors (vitest.config.ts) are checked once, on the oldest supported Node.js.

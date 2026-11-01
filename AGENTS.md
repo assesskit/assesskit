@@ -124,8 +124,9 @@ Biome enforces, folder by folder.
 - The player gets `AssesskitError` and `DataError` from `@assesskit/runtime/errors` and its checks from
   `@assesskit/runtime/checks`, never from the root of the runtime, which loads every module.
 - `Date.now` appears only in `packages/player/src/client/clock.ts` and `packages/player/src/server/clock.ts`.
-- `examples/player/cat-with-measurekit` links `@measurekit/psychometrics` from `../measurekit` until measurekit is on npm; CI checks
-  it out at the commit of `scripts/measurekit.lock.json`, so that file changes with the measurekit that the example needs.
+- `examples/player/cat-with-measurekit` links measurekit from `../measurekit` and `examples/player/lms-integration` links interopkit
+  from `../interopkit`, until both are on npm; CI checks them out at the commits of `scripts/measurekit.lock.json` and
+  `scripts/interopkit.lock.json`, which change with the library that the example needs.
 - The JSON of the bodies of the CAT REST binding is written once, in `packages/player/src/cat-rest/binding.ts`, and the client
   and the handler both use it.
 
