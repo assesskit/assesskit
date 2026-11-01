@@ -33,8 +33,9 @@ sessions outside the time. The ratio compares the fastest samples of a run, and 
 and its ratio. `pnpm bench` runs the rows.
 
 A ratio budget is the measured ratio with headroom for the noise of a shared host, so that a slowdown of the runtime by half
-again fails the gate. The budgets of 1.5 and 4.5 also allow for work that the runtime does and Longsight does not; the rows
-of the start and of a submission have no such work to name. What each side does besides the work in the table:
+again fails the gate. The rows of parsing, of a submission and of a test also allow for work that the runtime does and
+Longsight does not, which the list below names; the rows of the start have no such work to name. What each side does besides
+the work in the table:
 
 - **Reading (parse, item end to end; budget 1.5).** The runtime reads every attribute value against the type of the ASI schema, refuses a DOCTYPE and enforces limits
   on size, depth and nodes. Longsight collects diagnostics and validates in a separate call that the row does not make.
