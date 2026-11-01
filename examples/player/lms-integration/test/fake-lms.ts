@@ -3,6 +3,7 @@
 import type { Fetch } from "@interopkit/core";
 import { expect } from "vitest";
 import { type FakePlatform, ISSUER } from "./fake-platform.ts";
+import { textOf } from "./fixture.ts";
 
 export const LINE_ITEM_URL = `${ISSUER}/2344/lineitems/1234/lineitem`;
 const LINE_ITEM_TYPE = "application/vnd.ims.lis.v2.lineitem+json";
@@ -75,7 +76,7 @@ export class FakeLms {
     expect(init.method).toBe("POST");
     expect(init.headers["content-type"]).toBe(SCORE_TYPE);
     if (!this.authorized(init)) return new Response("", { status: 401 });
-    const score: ReceivedScore = JSON.parse(init.body ?? "");
+    const score: ReceivedScore = JSON.parse(textOf(init.body));
     this.received.push(score);
     if (this.scoreStatus !== undefined) return new Response("no", { status: this.scoreStatus });
     expect(score.userId, "the userId").toBe(SUBJECT);

@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: the names of LTI messages are snake_case.
-import type { HttpRequest } from "@interopkit/tool-integration";
+import type { HttpRequest } from "@interopkit/core/http";
 import { vi } from "vitest";
 
 /** The fixed time of the tests of LTI: 2023-11-14T22:13:20Z. */
@@ -85,9 +85,17 @@ export async function verifyToken(token: string, key: KeyPair): Promise<boolean>
   );
 }
 
-/** Builds a request. */
-export function request(init: Partial<HttpRequest> & { readonly url: string }): HttpRequest {
-  return { method: "GET", headers: {}, body: "", ...init };
+/** Builds a request; a body given as text is encoded as UTF-8, the bytes that a host reads from the request it received. */
+export function request(
+  init: Partial<Omit<HttpRequest, "body">> & { readonly url: string; readonly body?: string },
+): HttpRequest {
+  const { body = "", ...rest } = init;
+  return { method: "GET", headers: {}, ...rest, body: encoder.encode(body) };
+}
+
+/** The text of a body that a fake `fetch` receives or that a platform answers with: a string, or UTF-8 bytes. */
+export function textOf(body: string | Uint8Array | undefined): string {
+  return typeof body === "string" ? body : new TextDecoder().decode(body);
 }
 
 /** Decodes the text of an HTML attribute value. */

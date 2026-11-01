@@ -10,7 +10,8 @@ import { actionToJson, type CandidateAction, type ItemKey } from "@assesskit/run
 import { type LtiLink, readLtiLink } from "@assesskit/runtime/package";
 import { single } from "@assesskit/runtime/values";
 import type { Fetch } from "@interopkit/core";
-import { createJwksCache, type HttpResponse } from "@interopkit/tool-integration";
+import type { HttpResponse } from "@interopkit/core/http";
+import { createJwksCache } from "@interopkit/tool-integration";
 import {
   agsScores,
   ltiPlatformAuthorize,
@@ -48,7 +49,7 @@ import {
   tokenRequest,
   toolRegistration,
 } from "./fake-tool.ts";
-import { createClock, generateKeyPair, request, unescapeHtml } from "./fixture.ts";
+import { createClock, generateKeyPair, request, textOf, unescapeHtml } from "./fixture.ts";
 
 /**
  * Two LTI relationships around one exam. A learning platform launches the exam as a tool, and the exam's results go back to its
@@ -117,7 +118,7 @@ function fakeEndpoint(): FakeEndpoint {
     envelopes,
     fetch: async (url, init) => {
       if (url !== CALIPER_ENDPOINT) return new Response("", { status: 404 });
-      envelopes.push(JSON.parse(init.body ?? ""));
+      envelopes.push(JSON.parse(textOf(init.body)));
       return new Response("", { status: 200 });
     },
   };
@@ -230,7 +231,7 @@ export type Rig = Awaited<ReturnType<typeof rig>>;
 /** Reads the form that the platform's page posts to the tool. */
 function readPost(response: HttpResponse): Delivered {
   const inputs = new Map<string, string>();
-  for (const [, name = "", value = ""] of response.body.matchAll(
+  for (const [, name = "", value = ""] of textOf(response.body).matchAll(
     /<input type="hidden" name="([^"]*)" value="([^"]*)">/gu,
   )) {
     inputs.set(name, unescapeHtml(value));
@@ -250,9 +251,9 @@ export async function launchTool(ctx: Rig, item: ItemKey): Promise<LaunchedTool>
   const initiation = readInitiation(frame.url);
   const parameters = authenticationParameters(initiation);
   const page = await ltiPlatformAuthorize(authenticationRequest(endpoints.authorization, parameters), ctx.authorize);
-  if (page.status !== 200) throw new Error(`The platform refused the authentication request: ${page.body}`);
+  if (page.status !== 200) throw new Error(`The platform refused the authentication request: ${textOf(page.body)}`);
   const delivered = readPost(page);
-  const keys: KeySet = JSON.parse((await platformJwks(ctx.login)).body);
+  const keys: KeySet = JSON.parse(textOf((await platformJwks(ctx.login)).body));
   const claims = await acceptIdToken(delivered.idToken, keys, {
     issuer: PLATFORM_ISSUER,
     nonce: parameters.get("nonce") ?? "",
@@ -261,8 +262,8 @@ export async function launchTool(ctx: Rig, item: ItemKey): Promise<LaunchedTool>
   const ags = agsClaim(claims);
   const assertion = await clientAssertion(toolKeys, endpoints.token, ctx.clock);
   const granted = await platformToken(tokenRequest(endpoints.token, assertion, SCORE_SCOPE), ctx.token);
-  if (granted.status !== 200) throw new Error(`The platform refused the token request: ${granted.body}`);
-  const accessToken = JSON.parse(granted.body).access_token as string;
+  if (granted.status !== 200) throw new Error(`The platform refused the token request: ${textOf(granted.body)}`);
+  const accessToken = JSON.parse(textOf(granted.body)).access_token as string;
   return {
     storageTarget: initiation.storageTarget,
     post: (body) =>

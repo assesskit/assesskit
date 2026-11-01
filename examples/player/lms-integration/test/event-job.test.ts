@@ -2,6 +2,7 @@ import { single } from "@assesskit/runtime/values";
 import { type Fetch, ServiceError } from "@interopkit/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type EventJobOptions, runEventJob } from "../src/index.ts";
+import { textOf } from "./fixture.ts";
 import { CANDIDATE, DRAW, openDrawing, PARTIES, type Rig, rig } from "./rig.ts";
 
 afterEach(() => vi.useRealTimers());
@@ -51,7 +52,7 @@ describe("runEventJob", () => {
     let down = true;
     const fetch: Fetch = async (url, init) => {
       attempts.push(
-        JSON.parse(init.body ?? "")
+        JSON.parse(textOf(init.body))
           .data.map((event: { id: string }) => event.id)
           .join(),
       );
