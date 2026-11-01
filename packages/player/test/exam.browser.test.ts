@@ -5,7 +5,7 @@ import { commands } from "vitest/browser";
 import { createRemoteSession, type Transport } from "../src/client/index.js";
 import { AccessError, ServiceError } from "../src/index.js";
 import { mountDelivery } from "../src/player/index.js";
-import type { SessionClient, ViewEnvelope } from "../src/protocol/index.js";
+import { isViewRequest, type SessionClient, type ViewEnvelope } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { waitFor } from "./wait.js";
 
@@ -211,14 +211,19 @@ describe("exam mode over HTTP", () => {
 });
 
 /** Mounts the player over the exam server, as a host's page does. */
-async function mountExam(session: string, principal = "alice", extra: { readonly resumeCheckMs?: number } = {}) {
+async function mountExam(
+  session: string,
+  principal = "alice",
+  extra: { readonly resumeCheckMs?: number; readonly wrap?: (inner: Transport) => Transport } = {},
+) {
+  const { wrap = (inner: Transport) => inner, ...mountOptions } = extra;
   const who = candidate(session, principal);
   const initial = await start(who);
-  const client: SessionClient = createRemoteSession(who.transport(), initial);
+  const client: SessionClient = createRemoteSession(wrap(who.transport()), initial);
   const host = document.createElement("div");
   document.body.append(host);
   hosts.push(host);
-  mountDelivery(host, {
+  const mounted = mountDelivery(host, {
     client,
     files: {
       upload: async () => ({ reference: "f", mimeType: "x" }),
@@ -230,9 +235,9 @@ async function mountExam(session: string, principal = "alice", extra: { readonly
     staticUrl: `${inject("fixtures").asset}/static/`,
     stylesheet: player,
     fetch: (url, init) => fetch(url, init),
-    ...extra,
+    ...mountOptions,
   });
-  return { who, client, ui: host.shadowRoot as ShadowRoot, host };
+  return { who, client, ui: host.shadowRoot as ShadowRoot, host, mounted };
 }
 
 describe("the player over the exam server", () => {
@@ -289,6 +294,31 @@ describe("the player over the exam server", () => {
     await waitFor(() => expect(ui.querySelector(".ak-notice")).toBeNull());
     expect(check?.closest<HTMLElement>(".ak-resume")?.hidden).toBe(true);
     expect(ui.querySelectorAll(".ak-actions button").length).toBeGreaterThan(0);
+  });
+
+  it("ends the check for the resume of a paused test when the player is destroyed", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    let hold = false;
+    const wrap = (inner: Transport): Transport => {
+      return (request, options) => {
+        if (!hold || !isViewRequest(request)) return inner(request, options);
+        signals.push(options?.signal);
+        return new Promise<never>((_, reject) =>
+          options?.signal?.addEventListener("abort", () => reject(options.signal?.reason)),
+        );
+      };
+    };
+    const { who, ui, mounted } = await mountExam(fresh(), "alice", { resumeCheckMs: 0, wrap });
+    await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
+    await who.post("proctor", { type: "suspend" });
+    [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question")?.click();
+    await waitFor(() => expect(ui.querySelector(".ak-notice")?.textContent).toContain("The test is paused"));
+    hold = true;
+    ui.querySelector<HTMLButtonElement>(".ak-resume button")?.click();
+    await waitFor(() => expect(signals).toHaveLength(1));
+    expect(signals[0]?.aborted).toBe(false);
+    mounted.destroy();
+    expect(signals[0]?.aborted).toBe(true);
   });
 
   it("continues by itself at the interval after the proctor resumed the test", async () => {

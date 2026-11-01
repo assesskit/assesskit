@@ -69,7 +69,7 @@ export function createResumeWatch(context: ResumeContext): ResumeWatch {
     if (checking || state.destroyed) return;
     checking = true;
     try {
-      const view = await client.refresh();
+      const view = await client.refresh({ signal: state.stop.signal });
       if (asked && !state.destroyed && waitsForOthers(view)) status.say(messages.stillSuspended);
     } catch {
       if (asked && !state.destroyed) status.say(messages.checkFailed);
