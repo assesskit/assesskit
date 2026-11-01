@@ -45,54 +45,54 @@ sequenceDiagram
   Host-->>Client: viewToJson(view)
 ```
 
-| Function or type                                               | Does                                                                                           |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                           | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.       |
-| `stamp(state, action, now)`                                    | The action with `at` = max(`now`, the time of the latest step).                                |
-| `viewToJson(view)`, `viewFromJson(json)`                       | The JSON form of a `CandidateView`, and the view of a JSON form.                               |
-| `actionToJson(action)`, `parseCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.             |
-| `CandidateView`, `CandidateItem`, `NavigationEntry`, …         | What the candidate sees: the item, the navigation map, timers, actions and supports.           |
-| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                        | The limits of `parseCandidateAction`.                                                          |
-| `serializeState(state)`, `deserializeState(text)`              | The JSON text of a state, and the state of a text, with the version of the format.             |
-| `DeliveryState`, `Step`, `Deadline`                            | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
-| `CandidateAction`, `HostAction`, `Action`                      | The actions of the candidate and the host, with their time.                                    |
-| `DeliveryDefinition`, `EngineOptions`, `StartOptions`          | What the engine delivers, its options, and the options of a session.                           |
-| `drainCat(engine, state, port, now, options?)`                 | Makes the waiting requests of CAT engines through a `CatPort` and applies each answer.         |
-| `sendCatRequest(port, request, options?)`                      | Makes one CAT request through a `CatPort` and returns the answer for a `cat-response` action.  |
-| `DrainCatOptions`, `SendCatRequestOptions`                     | The options of `drainCat` and `sendCatRequest`: `signal`.                                      |
-| `PendingWork`, `ScoringRequest`, `CatRequest`                  | What the engine waits on the host for: scores and answers of CAT engines.                      |
-| `ScorerView`, `ScorerItem`                                     | What a scorer needs to rate a request, correct responses included.                             |
-| `CatSession`, `CatSectionRef`                                  | The session of an adaptive section in a state, and where its CAT engine is.                    |
-| `resolveStructure(test, base, resolvers)`                      | The `TestStructure`: parts, sections and item references, section references replaced.         |
-| `planTest(structure, options)`                                 | A `TestPlan`: the sections and item instances of one session.                                  |
-| `planItems(plan, part?)`                                       | The item instances of a plan, or of one test part, in order of presentation.                   |
-| `nextItem(structure, plan, from, rules)`                       | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
-| `previousItem(structure, plan, from)`                          | The item before `from`, in a nonlinear part.                                                   |
-| `sessionControl(item)`                                         | The item session control of an item reference after inheritance.                               |
-| `timeLimits(node, extra?)`                                     | The time limits of the test, a part, a section or an item reference, with extra time.          |
-| `additionalTestingTime(profile)`                               | The extra testing time of a PNP.                                                               |
-| `ancestry(node)`, `partOf(node)`                               | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
-| `ItemKey`                                                      | An item instance: the identifier of the item reference and the instance, from 1.               |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …                 | The plan: plain data, identifiers and numbers only.                                            |
-| `TestNode`, `PartNode`, `SectionNode`, …                       | The nodes of the structure, with their models and the path of the document that holds them.    |
-| `RuleContext`                                                  | What pre-conditions and branch rules read.                                                     |
-| `EffectiveSessionControl`, `EffectiveTimeLimits`               | The results of `sessionControl` and `timeLimits`.                                              |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`             | The limit on the size of a plan, and the options of `planTest`.                                |
-| `startItemSession(key, at, context, options?)`                 | A new item session in the state `initial`, after template processing.                          |
-| `presentItem(session, at, context)`                            | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
-| `suspendItem(session, at)`                                     | Suspends an interacting session, as when the candidate moves to another item.                  |
-| `closeItem(session, at, context)`                              | Closes the session, ending an open attempt with its drafts.                                    |
-| `applyItemAction(session, action, context)`                    | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
-| `itemFeedback(session, item, control)`                         | The outcomes that decide the feedback shown in the state of the session.                       |
-| `itemResponses(session)`                                       | The responses the item shows: drafts, submitted responses, or the solution.                    |
-| `resultStatus(session, item)`                                  | The session status of Results Reporting.                                                       |
-| `readItemVariables(item, result)`                              | The variables that response processing starts from, read from a stored result of one instance. |
-| `readTestInputs(structure, result, items, options?)`           | The outcomes and the scope that outcome processing takes, read from a stored report.           |
-| `TestInputs`, `ReadTestInputsOptions`                          | What `readTestInputs` returns, and its option `variables`.                                     |
-| `standaloneSessionControl(control?)`                           | The item session control of an item delivered alone.                                           |
-| `ItemSession`, `ItemSessionStatus`                             | The state of an item session: plain data with its variables, drafts and attempts.              |
-| `ItemSessionContext`, `ItemAction`, `ItemStep`                 | What a step reads besides the session, the actions of the candidate, and the result of a step. |
-| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                   | Why a step is refused, and what an accepted step reports.                                      |
+| Function or type                                               | Does                                                                                                 |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `createEngine(definition, options?)`                           | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.             |
+| `stamp(state, action, now)`                                    | The action with `at` = max(`now`, the time of the latest step).                                      |
+| `viewToJson(view)`, `viewFromJson(json)`                       | The JSON form of a `CandidateView`, and the view of a JSON form.                                     |
+| `actionToJson(action)`, `parseCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.                   |
+| `CandidateView`, `CandidateItem`, `NavigationEntry`, …         | What the candidate sees: the item, the navigation map, timers, actions and supports.                 |
+| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                        | The limits of `parseCandidateAction`.                                                                |
+| `serializeState(state)`, `deserializeState(text)`              | The JSON text of a state, and the state of a text, with the version of the format.                   |
+| `DeliveryState`, `Step`, `Deadline`                            | A candidate session as plain data, the result of a step, a time limit as an absolute time.           |
+| `CandidateAction`, `HostAction`, `Action`                      | The actions of the candidate and the host, with their time.                                          |
+| `DeliveryDefinition`, `EngineOptions`, `StartOptions`          | What the engine delivers, its options, and the options of a session.                                 |
+| `drainCat(engine, state, port, now, options?)`                 | Makes the waiting requests of CAT engines through a `CatSessionPort` and applies each answer.        |
+| `sendCatRequest(port, request, options?)`                      | Makes one CAT request through a `CatSessionPort` and returns the answer for a `cat-response` action. |
+| `DrainCatOptions`, `SendCatRequestOptions`                     | The options of `drainCat` and `sendCatRequest`: `signal`.                                            |
+| `PendingWork`, `ScoringRequest`, `CatRequest`                  | What the engine waits on the host for: scores and answers of CAT engines.                            |
+| `ScorerView`, `ScorerItem`                                     | What a scorer needs to rate a request, correct responses included.                                   |
+| `CatSession`, `CatSectionRef`                                  | The session of an adaptive section in a state, and where its CAT engine is.                          |
+| `resolveStructure(test, base, resolvers)`                      | The `TestStructure`: parts, sections and item references, section references replaced.               |
+| `planTest(structure, options)`                                 | A `TestPlan`: the sections and item instances of one session.                                        |
+| `planItems(plan, part?)`                                       | The item instances of a plan, or of one test part, in order of presentation.                         |
+| `nextItem(structure, plan, from, rules)`                       | The item to present after `from`, or the first item; pre-conditions and branch rules apply.          |
+| `previousItem(structure, plan, from)`                          | The item before `from`, in a nonlinear part.                                                         |
+| `sessionControl(item)`                                         | The item session control of an item reference after inheritance.                                     |
+| `timeLimits(node, extra?)`                                     | The time limits of the test, a part, a section or an item reference, with extra time.                |
+| `additionalTestingTime(profile)`                               | The extra testing time of a PNP.                                                                     |
+| `ancestry(node)`, `partOf(node)`                               | The nodes that enclose a node, outermost first; the test part of a section or item reference.        |
+| `ItemKey`                                                      | An item instance: the identifier of the item reference and the instance, from 1.                     |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …                 | The plan: plain data, identifiers and numbers only.                                                  |
+| `TestNode`, `PartNode`, `SectionNode`, …                       | The nodes of the structure, with their models and the path of the document that holds them.          |
+| `RuleContext`                                                  | What pre-conditions and branch rules read.                                                           |
+| `EffectiveSessionControl`, `EffectiveTimeLimits`               | The results of `sessionControl` and `timeLimits`.                                                    |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`             | The limit on the size of a plan, and the options of `planTest`.                                      |
+| `startItemSession(key, at, context, options?)`                 | A new item session in the state `initial`, after template processing.                                |
+| `presentItem(session, at, context)`                            | Presents the item: the first time it starts the first attempt; a suspended session resumes.          |
+| `suspendItem(session, at)`                                     | Suspends an interacting session, as when the candidate moves to another item.                        |
+| `closeItem(session, at, context)`                              | Closes the session, ending an open attempt with its drafts.                                          |
+| `applyItemAction(session, action, context)`                    | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.           |
+| `itemFeedback(session, item, control)`                         | The outcomes that decide the feedback shown in the state of the session.                             |
+| `itemResponses(session)`                                       | The responses the item shows: drafts, submitted responses, or the solution.                          |
+| `resultStatus(session, item)`                                  | The session status of Results Reporting.                                                             |
+| `readItemVariables(item, result)`                              | The variables that response processing starts from, read from a stored result of one instance.       |
+| `readTestInputs(structure, result, items, options?)`           | The outcomes and the scope that outcome processing takes, read from a stored report.                 |
+| `TestInputs`, `ReadTestInputsOptions`                          | What `readTestInputs` returns, and its option `variables`.                                           |
+| `standaloneSessionControl(control?)`                           | The item session control of an item delivered alone.                                                 |
+| `ItemSession`, `ItemSessionStatus`                             | The state of an item session: plain data with its variables, drafts and attempts.                    |
+| `ItemSessionContext`, `ItemAction`, `ItemStep`                 | What a step reads besides the session, the actions of the candidate, and the result of a step.       |
+| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                   | Why a step is refused, and what an accepted step reports.                                            |
 
 ## Engine
 

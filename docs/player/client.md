@@ -101,7 +101,7 @@ const client = await createLocalSession({
   definition: { kind: "item", item: document.item, base: "items/q1.xml" }, // one item alone
   store: {
     load: async (session) => saved.get(session),
-    save: async (session, state) => void saved.set(session, state),
+    save: async (session, { state }) => void saved.set(session, state),
   },
   session: "preview-1",
   seed: 1,
@@ -115,21 +115,21 @@ client.view.current?.title; // => "Question"
 the definition, or the session cannot start, and it rejects with `signal.reason` when the `signal` aborts before the load or the
 first save. A session that was saved stays, and a new call resumes it.
 
-| Option       | Type                                  | Meaning                                                                                                                                                                                                |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone, for practice or for a page of many items.                                                                                                                   |
-| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                                                          |
-| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                                                      |
-| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.                                                                                                     |
-| `session`    | `string`                              | The identifier of the session in the store.                                                                                                                                                            |
-| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                                                |
-| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                                                  |
-| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                           |
-| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                              |
-| `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.        |
-| `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts. |
-| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `createRestCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                          |
-| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                  |
+| Option       | Type                                  | Meaning                                                                                                                                                                                                                                                            |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone, for practice or for a page of many items.                                                                                                                                                                               |
+| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                                                                                                                      |
+| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                                                                                                                  |
+| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call. `save` takes `{ state, events }` in one write: the state, and the events of the step that made it, so that a store keeps a log with no event without its state. |
+| `session`    | `string`                              | The identifier of the session in the store.                                                                                                                                                                                                                        |
+| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                                                                                                            |
+| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                                                                                                              |
+| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                                                                                       |
+| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                                                                                          |
+| `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.                                                                    |
+| `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts.                                                             |
+| `cat`        | `CatSessionPort`                      | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `createRestCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                                                                                      |
+| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                                                                              |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
@@ -226,7 +226,7 @@ const client = await createLocalSession({
   definition: { kind: "item", item: document.item, base: "items/essay.xml" },
   store: {
     load: async (session) => saved.get(session),
-    save: async (session, state) => void saved.set(session, state),
+    save: async (session, { state }) => void saved.set(session, state),
   },
   session: "practice-1",
   seed: 1,

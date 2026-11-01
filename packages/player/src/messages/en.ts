@@ -137,6 +137,7 @@ export const EN_MESSAGES: Messages = {
   answerLabel: "Answer",
   counterCharacters: "characters",
   counterLeft: "characters left",
+  counterWords: "words",
   editorToolbar: "Formatting",
   editorBold: "Bold",
   editorItalic: "Italic",

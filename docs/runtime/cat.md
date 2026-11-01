@@ -31,21 +31,23 @@ sequenceDiagram
 | `assessmentResultToJson(result)`, `assessmentResultFromJson(json)` | Write and read an assessment result in the JSON of the public binding                      |
 | `itemStageFromJson(json, noun)`                                    | Reads an item stage of the binding                                                         |
 
-| Type                                                                                             | Is                                                          |
-| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `CatPort`                                                                                        | The six requests of a CAT engine, which the host implements |
-| `SectionData`, `ItemStage`, `PriorDataEntry`                                                     | The data types of CAT                                       |
-| `CreateSectionResponse`, `GetSectionResponse`                                                    | The answers to Create Section and Get Section               |
-| `CreateSessionRequest`, `CreateSessionResponse`, `SubmitResultsRequest`, `SubmitResultsResponse` | The bodies and answers of Create Session and Submit Results |
-| `CatResponse`                                                                                    | What the host answers to a request of the delivery engine   |
-| `SectionFiles`, `CatPoolItem`, `CatMetadataFile`, `CatMetadataOptions`                           | The arguments of `sectionData` and `catMetadata`            |
-| `CatMetadata`, `CatItemMetadata`, `CatExternalMetadata`                                          | The metadata JSON                                           |
+| Type                                                                                             | Is                                                                                   |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `CatPort`                                                                                        | The six requests of a CAT engine, which the host implements                          |
+| `CatSessionPort`                                                                                 | The three requests that a session makes: Create Session, Submit Results, End Session |
+| `SectionData`, `ItemStage`, `PriorDataEntry`                                                     | The data types of CAT                                                                |
+| `CreateSectionResponse`, `GetSectionResponse`                                                    | The answers to Create Section and Get Section                                        |
+| `CreateSessionRequest`, `CreateSessionResponse`, `SubmitResultsRequest`, `SubmitResultsResponse` | The bodies and answers of Create Session and Submit Results                          |
+| `CatResponse`                                                                                    | What the host answers to a request of the delivery engine                            |
+| `SectionFiles`, `CatPoolItem`, `CatMetadataFile`, `CatMetadataOptions`                           | The arguments of `sectionData` and `catMetadata`                                     |
+| `CatMetadata`, `CatItemMetadata`, `CatExternalMetadata`                                          | The metadata JSON                                                                    |
 
 ## The port
 
 `CatPort` has one method for each endpoint of CAT. Every method takes `prefix` first: the URL prefix that `qti-adaptive-engine-ref`
 gives. A document names the prefix, so the host checks it against the engines it trusts before it sends a candidate's results
-there.
+there. `CatSessionPort` is the three methods of the delivery of a session, `createSession`, `submitResults` and `endSession`: `drainCat`,
+`sendCatRequest` and the option `cat` of the player take it, so that a port without the deployment of sections serves.
 
 | Method                                                                 | Request                                | Made by                       |
 | ---------------------------------------------------------------------- | -------------------------------------- | ----------------------------- |

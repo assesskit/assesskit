@@ -20,11 +20,14 @@ export interface SupplyScores {
   readonly scorer: Scorer;
 }
 
+/** What a score is checked against and sent for: the id of the request, the outcome and its declaration. */
+type ScoringTarget = Pick<ScoringRequest, "id" | "outcome" | "declaration">;
+
 /** The score of a supply as a caller gives it: a value, a number, a string or a boolean for a single outcome, or NULL. */
 export type ScoreInput = Value | number | string | boolean | null;
 
 /** Returns the value as the declaration holds it, or `undefined` when it does not fit: an integer fits a float or duration outcome. */
-function fitted(value: Value, request: ScoringRequest): Value | undefined {
+function fitted(value: Value, request: ScoringTarget): Value | undefined {
   const { cardinality, baseType } = request.declaration;
   if (value.cardinality !== cardinality) return undefined;
   if (value.cardinality === "record") return value;
@@ -36,7 +39,7 @@ function fitted(value: Value, request: ScoringRequest): Value | undefined {
  * Returns the typed value of a score: a plain number, string or boolean becomes a single value of the outcome's base type;
  * anything else is checked as a value. The empty string is NULL.
  */
-function typedScore(request: ScoringRequest, score: ScoreInput): Value | null {
+function typedScore(request: ScoringTarget, score: ScoreInput): Value | null {
   if (score === null) return null;
   const { declaration, outcome } = request;
   if (typeof score === "object") {
@@ -66,14 +69,19 @@ function typedScore(request: ScoringRequest, score: ScoreInput): Value | null {
  * The engine accepts the action while the request exists, also after the test ended, and a second one for the same
  * request replaces the first and reports `scores-replaced`. The host stamps the action with `at` before it applies it.
  *
- * @param request - The scoring request, such as one of `Engine.pending(state).scoring`.
+ * @param request - The scoring request, such as one of `Engine.pending(state).scoring`. Only its `id`, `outcome` and
+ * `declaration` are read, so a rater's page that holds a `Submission` passes `{ id: submission.request, outcome, declaration }`.
  * @param score - The value of the outcome; NULL when the scorer gives none.
  * @param scorer - Who scored it: `human` or `externalMachine`.
  * @returns The action.
  * @throws `DataError` when `request` is not a scoring request, `scorer` is not a scorer, or the score does not fit the
  * declaration of the outcome, and a `DataError` of the runtime when the score is not a value of its base type.
  */
-export function toSupplyScores(request: ScoringRequest, score: ScoreInput, scorer: Scorer): SupplyScores {
+export function toSupplyScores(
+  request: Pick<ScoringRequest, "id" | "outcome" | "declaration">,
+  score: ScoreInput,
+  scorer: Scorer,
+): SupplyScores {
   checkRecord(request, "The request must be an object");
   checkNonEmptyString(request.id, "The id of the request");
   checkNonEmptyString(request.outcome, "The outcome of the request");

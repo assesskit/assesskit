@@ -1,4 +1,4 @@
-import type { CandidateAction, CandidateView } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView, DeliveryEvent } from "@assesskit/runtime/delivery";
 import { single } from "@assesskit/runtime/values";
 import type { createLocalSession, LocalStore } from "../src/client/index.js";
 import type { SessionCallOptions } from "../src/protocol/index.js";
@@ -27,6 +27,8 @@ export const statusOfQ1 = (view: CandidateView): string | undefined => {
 export interface TestLocalStore extends LocalStore {
   /** The states that were saved, by session, in order. */
   readonly saved: Map<string, string[]>;
+  /** The events saved with each of those states, by session, in order. */
+  readonly savedEvents: Map<string, (readonly DeliveryEvent[])[]>;
   /** The options of each call of `load` and of `save`, in order. */
   readonly received: {
     readonly load: (SessionCallOptions | undefined)[];
@@ -39,11 +41,13 @@ export interface TestLocalStore extends LocalStore {
 /** Creates a store in memory. */
 export function localStore(): TestLocalStore {
   const saved = new Map<string, string[]>();
+  const savedEvents = new Map<string, (readonly DeliveryEvent[])[]>();
   const received: TestLocalStore["received"] = { load: [], save: [] };
   let failures = 0;
   let failure = new Error("The disk is full.");
   return {
     saved,
+    savedEvents,
     received,
     failNext: (times, error = new Error("The disk is full.")) => {
       failures = times;
@@ -53,13 +57,14 @@ export function localStore(): TestLocalStore {
       received.load.push(options);
       return saved.get(session)?.at(-1);
     },
-    save: async (session, state, options) => {
+    save: async (session, { state, events }, options) => {
       received.save.push(options);
       if (failures > 0) {
         failures -= 1;
         throw failure;
       }
       saved.set(session, [...(saved.get(session) ?? []), state]);
+      savedEvents.set(session, [...(savedEvents.get(session) ?? []), events]);
     },
   };
 }

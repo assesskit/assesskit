@@ -88,7 +88,7 @@ async function shell(
       definition,
       store: {
         load: async (session) => saved.get(session),
-        save: async (session, state) => void saved.set(session, state),
+        save: async (session, { state }) => void saved.set(session, state),
       },
       session: "practice-1",
       seed: 1,
@@ -1650,6 +1650,58 @@ describe("pronunciation lexicons in the player", () => {
       buttonNamed(s.ui, "Read aloud").click();
       expect(requests.at(-1)?.text).toContain("Look at the W3C and");
     });
+  });
+});
+
+describe("the spell check of the browser", () => {
+  /** An item whose one task is a text to write. */
+  const WritingItem = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="q1" title="Item q1" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+</qti-assessment-item>`;
+  const files = { ...examFiles(), "items/q1/item.xml": WritingItem };
+  const profile = (sets: string): string =>
+    `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><spell-checker-on-screen/>${sets}</access-for-all-pnp>`;
+  const spellcheck = (s: Shell): Promise<string | null | undefined> =>
+    waitFor(() => {
+      const area = contentOf(s.ui).querySelector("textarea");
+      expect(area).not.toBeNull();
+      return area?.getAttribute("spellcheck");
+    });
+
+  it("is off while the candidate writes, and when the support of the spell checker is not on", async () => {
+    const plain = await shell({ files });
+    expect(await spellcheck(plain)).toBe("false");
+    const off = await shell({
+      files,
+      profile: profile("<activate-as-option-set><spell-checker-on-screen/></activate-as-option-set>"),
+    });
+    expect(await spellcheck(off)).toBe("false");
+  });
+
+  it("is on while the support is on, from the start or after the candidate turns it on, and off again when it is turned off", async () => {
+    const started = await shell({
+      files,
+      profile: profile("<activate-at-initialization-set><spell-checker-on-screen/></activate-at-initialization-set>"),
+    });
+    expect(await spellcheck(started)).toBe("true");
+    const option = await shell({
+      files,
+      profile: profile("<activate-as-option-set><spell-checker-on-screen/></activate-as-option-set>"),
+    });
+    expect(await spellcheck(option)).toBe("false");
+    const turn = (active: boolean) =>
+      option.client.dispatch({ type: "support", name: "spell-checker-on-screen", active });
+    expect((await turn(true)).refusal).toBeUndefined();
+    await waitFor(() =>
+      expect(contentOf(option.ui).querySelector("textarea")?.getAttribute("spellcheck")).toBe("true"),
+    );
+    expect((await turn(false)).refusal).toBeUndefined();
+    await waitFor(() =>
+      expect(contentOf(option.ui).querySelector("textarea")?.getAttribute("spellcheck")).toBe("false"),
+    );
   });
 });
 

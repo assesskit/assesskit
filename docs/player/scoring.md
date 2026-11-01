@@ -147,11 +147,11 @@ shown.
 
 `toSupplyScores(request, score, scorer)` builds the `supply-scores` action for one request and one value.
 
-| Argument  | Type                                           | Meaning                                                                                                                                 |
-| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `request` | The runtime's `ScoringRequest`                 | A request of `Engine.pending(state).scoring`                                                                                            |
-| `score`   | `Value`, `number`, `string`, `boolean`, `null` | A value of the runtime, or a plain value for a single outcome, which becomes a single value of the outcome's base type; `null` for NULL |
-| `scorer`  | `"human"` or `"externalMachine"`               | Who scored it                                                                                                                           |
+| Argument  | Type                                                       | Meaning                                                                                                                                   |
+| --------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `request` | `Pick<ScoringRequest, "id" \| "outcome" \| "declaration">` | A request of `Engine.pending(state).scoring`, or from a rater's page `{ id: submission.request, outcome, declaration }` of a `Submission` |
+| `score`   | `Value`, `number`, `string`, `boolean`, `null`             | A value of the runtime, or a plain value for a single outcome, which becomes a single value of the outcome's base type; `null` for NULL   |
+| `scorer`  | `"human"` or `"externalMachine"`                           | Who scored it                                                                                                                             |
 
 The value is checked against the declaration of the request, as the engine does (`score-type-mismatch`): the cardinality
 and the base type must be the outcome's. An integer fits a float or duration outcome and is promoted. NULL fits, and so does

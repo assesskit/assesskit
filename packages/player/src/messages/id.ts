@@ -137,6 +137,7 @@ export const ID_MESSAGES: Messages = {
   answerLabel: "Jawaban",
   counterCharacters: "karakter",
   counterLeft: "karakter tersisa",
+  counterWords: "kata",
   editorToolbar: "Pemformatan",
   editorBold: "Tebal",
   editorItalic: "Miring",

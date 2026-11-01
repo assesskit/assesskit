@@ -52,7 +52,7 @@ export async function startHints(itemXml: string, control?: ItemSessionControl):
     engine: { eventOutcomes: true },
     store: {
       load: async (session) => saved.get(session),
-      save: async (session, state) => void saved.set(session, state),
+      save: async (session, { state }) => void saved.set(session, state),
     },
     session: "hints-1",
     seed: 1,

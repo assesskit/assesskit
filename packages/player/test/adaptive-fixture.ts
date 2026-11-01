@@ -1,5 +1,5 @@
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
-import type { CatPort } from "@assesskit/runtime/cat";
+import type { CatSessionPort } from "@assesskit/runtime/cat";
 import { createEngine, type DeliveryDefinition, type Engine } from "@assesskit/runtime/delivery";
 import { examDefinition, packageOf } from "./exam-fixture.js";
 
@@ -117,8 +117,8 @@ export function adaptiveEngine(files: Readonly<Record<string, string>>): Engine 
 
 type Method = "createSession" | "submitResults" | "endSession";
 
-/** A port that answers from a script, records its calls and can be made to fail. */
-export interface ScriptedPort extends CatPort {
+/** A port that answers from a script, records its calls and can be made to fail. It has the three methods of a session and no deployment of sections. */
+export interface ScriptedPort extends CatSessionPort {
   /** The methods that were called, in order. */
   readonly calls: Method[];
   /** Makes the next calls of a method reject. */
@@ -146,7 +146,6 @@ export function scriptedPort(
       throw new Error("The CAT engine is down.");
     }
   };
-  const unused = () => Promise.reject(new Error("The session does not deploy sections."));
   return {
     calls,
     fail: (method, times = 1) => void failures.set(method, times),
@@ -155,9 +154,6 @@ export function scriptedPort(
       holds.set(method, new Promise<void>((resolve) => (release = resolve)));
       return release;
     },
-    createSection: unused,
-    getSection: unused,
-    endSection: unused,
     createSession: async () => {
       await call("createSession");
       return { sessionIdentifier: "session-1", nextItems: { itemIdentifiers: [...first], stageLength: first.length } };

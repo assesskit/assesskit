@@ -1,4 +1,4 @@
-import type { CatPort, CatResponse } from "../cat/index.js";
+import type { CatResponse, CatSessionPort } from "../cat/index.js";
 import {
   checkAbortSignal,
   checkChoice,
@@ -26,7 +26,7 @@ const REQUEST_KINDS = [
 ] as const satisfies readonly CatRequest["kind"][];
 
 /** Checks that the port has a method that the delivery calls. */
-function checkMethod(port: CatPort, method: (typeof SESSION_METHODS)[number]): void {
+function checkMethod(port: CatSessionPort, method: (typeof SESSION_METHODS)[number]): void {
   checkFunction(port[method], `The port must have a function ${method}`);
 }
 
@@ -39,7 +39,7 @@ function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
 }
 
 /** Calls the method of the port that the request needs. */
-async function call(port: CatPort, request: CatRequest): Promise<CatResponse> {
+async function call(port: CatSessionPort, request: CatRequest): Promise<CatResponse> {
   switch (request.kind) {
     case "create-session":
       checkMethod(port, "createSession");
@@ -88,11 +88,11 @@ export interface SendCatRequestOptions {
  * @throws `signal.reason` when the signal aborts before the answer arrives.
  */
 export async function sendCatRequest(
-  port: CatPort,
+  port: CatSessionPort,
   request: CatRequest,
   options: SendCatRequestOptions = {},
 ): Promise<CatResponse> {
-  checkRecord(port, "The port must be an object with the methods of CatPort");
+  checkRecord(port, "The port must be an object with the methods of CatSessionPort");
   checkRecord(request, "The request must be a CAT request from Engine.pending");
   checkChoice(request.kind, "The kind of the request", REQUEST_KINDS);
   const signal = readSignal(options);
@@ -137,13 +137,13 @@ export interface DrainCatOptions {
 export async function drainCat(
   engine: Engine,
   state: DeliveryState,
-  port: CatPort,
+  port: CatSessionPort,
   now: () => number,
   options: DrainCatOptions = {},
 ): Promise<DeliveryState> {
   checkRecord(engine, "The engine must be an object from createEngine");
   checkState(state);
-  checkRecord(port, "The port must be an object with the methods of CatPort");
+  checkRecord(port, "The port must be an object with the methods of CatSessionPort");
   for (const method of SESSION_METHODS) checkMethod(port, method);
   checkFunction(now, "The clock now must be a function that returns epoch milliseconds");
   const signal = readSignal(options);

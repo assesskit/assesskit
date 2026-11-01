@@ -1,5 +1,5 @@
 import type { AssessmentItem } from "@assesskit/runtime/asi";
-import type { CatPort } from "@assesskit/runtime/cat";
+import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkFunction,
@@ -52,6 +52,14 @@ import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";
 import { MAX_TIMER_DELAY_MS } from "./timer-delay.js";
 
+/** What a {@link LocalStore} saves for a step: the state, and the events of the step. */
+export interface LocalSave {
+  /** The state as the runtime's `serializeState` writes it. */
+  readonly state: string;
+  /** The events of the step that made the state: those of `Engine.apply`, none for the step that starts the session. */
+  readonly events: readonly DeliveryEvent[];
+}
+
 /** The storage of a session on the device, such as IndexedDB: the state as the runtime's `serializeState` writes it. */
 export interface LocalStore {
   /**
@@ -63,14 +71,15 @@ export interface LocalStore {
    */
   load(session: string, options?: SessionCallOptions): Promise<string | undefined>;
   /**
-   * Saves the state of a session in place of the one before. It rejects only when the state was not saved, so that the
-   * session applies a step only when this resolved.
+   * Saves the state of a session in place of the one before, with the events of the step that made it, in one write. It
+   * rejects only when the state was not saved, so that the session applies a step only when this resolved, and then no
+   * event is stored without its state.
    *
    * @param session - The identifier of the session.
-   * @param state - The state as `serializeState` writes it.
+   * @param record - The state as `serializeState` writes it, and the events of the step.
    * @param options - See {@link SessionCallOptions}. A store may ignore them.
    */
-  save(session: string, state: string, options?: SessionCallOptions): Promise<void>;
+  save(session: string, record: LocalSave, options?: SessionCallOptions): Promise<void>;
 }
 
 /**
@@ -140,7 +149,7 @@ export interface LocalSessionOptions extends SessionCallOptions {
    *
    * @defaultValue none, so that the host answers with `cat-response` actions itself
    */
-  readonly cat?: CatPort;
+  readonly cat?: CatSessionPort;
 }
 
 // The engine reads the definition, the engine options, the start options and the seed with their own checks.
@@ -157,7 +166,7 @@ const optionsSchema = v.strictObject({
   onError: v.optional(functionSchema<(error: unknown) => void>()),
   maxIdle: v.optional(v.unknown()),
   signal: v.optional(v.unknown()),
-  cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
+  cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
 
 /** Returns the paths of the stimuli an item names, resolved against its document. */
@@ -266,7 +275,11 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
     const step = engine.start({ ...options.start, seed, at: now() });
     if (!step.ok) throw new DataError(`The session cannot start: ${step.refusal.message}`);
     creating?.throwIfAborted();
-    await store.save(session, delivery.serializeState(step.state), { signal: creating });
+    await store.save(
+      session,
+      { state: delivery.serializeState(step.state), events: step.events },
+      { signal: creating },
+    );
     state = step.state;
   } else {
     state = delivery.deserializeState(saved);
@@ -325,7 +338,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       if (taken === undefined) return { step: { ok: true, state, events: [] }, view: latest.view };
       const { step } = taken;
       if (step.ok) {
-        await store.save(session, delivery.serializeState(step.state), { signal });
+        await store.save(session, { state: delivery.serializeState(step.state), events: step.events }, { signal });
         state = step.state;
       }
       look();

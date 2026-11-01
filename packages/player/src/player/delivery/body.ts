@@ -5,6 +5,7 @@ import {
   InteractionElement,
   RESPONSE_EVENT,
 } from "../elements/index.js";
+import { ExtendedTextInteractionElement } from "../elements/internal.js";
 import { createMathTypesetter } from "../math/index.js";
 import { type ContentRoot, createContentRoot } from "../roots/index.js";
 import { modalFeedbackOf, rootContentOf } from "./content.js";
@@ -82,6 +83,15 @@ function bindInteractions(elements: readonly InteractionElement[], item: Candida
     element.disabled = !interacting;
     if (drawn || !interacting) element.value = item.responses.get(element.responseIdentifier) ?? null;
   }
+}
+
+/** The support that turns the spell check of the browser on while a candidate writes. */
+const SPELL_CHECKER = "spell-checker-on-screen";
+
+/** Turns the spell check of the texts to write on while the support of the spell checker is on, and off otherwise. */
+function checkSpelling(elements: readonly InteractionElement[], view: CandidateView): void {
+  const on = view.supports.some(({ name, active }) => name === SPELL_CHECKER && active);
+  for (const element of elements) if (element instanceof ExtendedTextInteractionElement) element.spellChecked = on;
 }
 
 /** Creates the host of the portable custom interactions, which report to the sender. */
@@ -180,7 +190,11 @@ export function createBody(context: BodyContext): Body {
       }
       // The player may have been destroyed while the content was drawn.
       if (state.destroyed) return undefined;
-      if (current !== undefined) bindInteractions(interactionElements(), current, drawn);
+      if (current !== undefined) {
+        const elements = interactionElements();
+        bindInteractions(elements, current, drawn);
+        checkSpelling(elements, view);
+      }
       return drawn;
     },
     showModal: async (view) => {

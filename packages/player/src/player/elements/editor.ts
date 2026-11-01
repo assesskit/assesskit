@@ -1,6 +1,6 @@
 import type { Messages } from "../../messages/index.js";
 import { html, XHTML_NAMESPACE } from "../internal.js";
-import type { TextField } from "./text.js";
+import { NO_ASSISTANCE, type TextField } from "./text.js";
 
 /**
  * The elements that an answer in XHTML keeps, by the name they are written with: the markup that the editor offers and
@@ -66,6 +66,17 @@ function keptText(node: Node): string {
   if (node instanceof Text) return node.data;
   if (!(node instanceof Element) || DROPPED.has(node.localName)) return "";
   return [...node.childNodes].map(keptText).join("");
+}
+
+/** The elements that begin or end a line or a block of text, which separate the words on either side of them. */
+const BREAKS: ReadonlySet<string> = new Set([...BLOCKS, "br", "li"]);
+
+/** Returns the text of a node that the answer keeps, with a space where a line or a block begins or ends, so that its words can be counted. */
+function spacedText(node: Node): string {
+  if (node instanceof Text) return node.data;
+  if (!(node instanceof Element) || DROPPED.has(node.localName)) return "";
+  const inner = [...node.childNodes].map(spacedText).join("");
+  return BREAKS.has(node.localName) ? ` ${inner} ` : inner;
 }
 
 /**
@@ -144,6 +155,7 @@ export class EditorField implements TextField {
       role: "textbox",
       "aria-multiline": "true",
       "aria-label": label,
+      ...NO_ASSISTANCE,
     });
     const buttons = COMMANDS.map(([key, command]) => {
       const button = html("button", { type: "button" }, messages[key]);
@@ -167,6 +179,11 @@ export class EditorField implements TextField {
   /** The characters the candidate typed: those of the text, not of the markup. */
   get typedText(): string {
     return keptText(this.area);
+  }
+
+  /** The text the candidate typed with a space where a line or a block ends, which counting its words reads. */
+  get spacedText(): string {
+    return spacedText(this.area);
   }
 
   /** The text of the field as XHTML. */

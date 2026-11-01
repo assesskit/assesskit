@@ -426,6 +426,16 @@ describe("toSupplyScores", () => {
     expect(toSupplyScores(request, value, "externalMachine").scorer).toBe("externalMachine");
   });
 
+  it("reads the id, the outcome and the declaration only, so that the three fields of a submission are enough", () => {
+    const engine = itemEngine(essay("e"));
+    const { state } = essayView();
+    const submission = toSubmission(engine.scorerView(state, request.id));
+    const { outcome, declaration } = submission;
+    expect(toSupplyScores({ id: submission.request, outcome, declaration }, 7.5, "human")).toEqual(
+      toSupplyScores(request, 7.5, "human"),
+    );
+  });
+
   it("takes a number as a single value of the base type of the outcome", () => {
     expect(toSupplyScores(request, 7.5, "human").value).toEqual(single("float", 7.5));
     expect(toSupplyScores(request, 0, "human").value).toEqual(single("float", 0));

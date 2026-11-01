@@ -1532,7 +1532,7 @@ describe("sendCatRequest", () => {
       "The option signal must be an AbortSignal, found an object.",
     );
     await expect(sendCatRequest(JSON.parse("null"), request)).rejects.toThrow(
-      "The port must be an object with the methods of CatPort, found null.",
+      "The port must be an object with the methods of CatSessionPort, found null.",
     );
     await expect(sendCatRequest(fakePort([]), JSON.parse("null"))).rejects.toThrow(
       "The request must be a CAT request from Engine.pending, found null.",
@@ -1683,7 +1683,7 @@ describe("drainCat", () => {
     await expect(drainCat(JSON.parse("null"), state, port, clock())).rejects.toThrow(DataError);
     await expect(drainCat(engine, JSON.parse("{}"), port, clock())).rejects.toThrow(DataError);
     await expect(drainCat(engine, state, JSON.parse("null"), clock())).rejects.toThrow(
-      "The port must be an object with the methods of CatPort, found null.",
+      "The port must be an object with the methods of CatSessionPort, found null.",
     );
     await expect(drainCat(engine, state, JSON.parse("{}"), clock())).rejects.toThrow(
       "The port must have a function createSession, found undefined.",

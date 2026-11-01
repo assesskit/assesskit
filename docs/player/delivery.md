@@ -51,7 +51,7 @@ const client = await createLocalSession({
   definition: { kind: "item", item: parsed.item, base: "items/q1.xml" },
   store: {
     load: async (session) => saved.get(session),
-    save: async (session, state) => void saved.set(session, state),
+    save: async (session, { state }) => void saved.set(session, state),
   },
   session: "preview-1",
   seed: 1,
@@ -201,7 +201,7 @@ const client = await createLocalSession({
   definition: { kind: "item", item: parsed.item, base: "items/q1.xml" },
   store: {
     load: async (session) => saved.get(session),
-    save: async (session, state) => void saved.set(session, state),
+    save: async (session, { state }) => void saved.set(session, state),
   },
   session: "lesson-1-q1",
   seed: 1,

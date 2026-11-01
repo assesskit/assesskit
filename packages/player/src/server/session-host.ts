@@ -1,4 +1,4 @@
-import type { CatPort } from "@assesskit/runtime/cat";
+import type { CatSessionPort } from "@assesskit/runtime/cat";
 import type { ActionLimits, Engine, StartOptions } from "@assesskit/runtime/delivery";
 import type { QtiPackage } from "@assesskit/runtime/package";
 import type {
@@ -73,7 +73,7 @@ export interface SessionHostOptions {
    *
    * @defaultValue none, so that the host answers with `cat-response` actions itself
    */
-  readonly cat?: CatPort;
+  readonly cat?: CatSessionPort;
 }
 
 /** The server side of a delivery session in exam mode. */

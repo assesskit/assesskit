@@ -26,6 +26,17 @@ interface TextResponse {
   readonly problem?: TextProblem;
 }
 
+/**
+ * The attributes that keep the browser from helping a candidate in an exam: no spell check, correction, capital letter or
+ * completion. The support `spell-checker-on-screen` turns the spell check on.
+ */
+export const NO_ASSISTANCE: Readonly<Record<string, string>> = {
+  spellcheck: "false",
+  autocorrect: "off",
+  autocapitalize: "off",
+  autocomplete: "off",
+};
+
 /** A field in which the candidate types a text. */
 export interface TextField {
   /** The text in the field. */

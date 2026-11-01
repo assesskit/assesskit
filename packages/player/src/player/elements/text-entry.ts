@@ -5,7 +5,7 @@ import type { BodyRenderer } from "../content/index.js";
 import { html } from "../internal.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
-import { ControlField, TextElement, type TextField } from "./text.js";
+import { ControlField, NO_ASSISTANCE, TextElement, type TextField } from "./text.js";
 
 /** The `inputmode` that brings up the right keyboard for the base type of the response. */
 const INPUT_MODES: ReadonlyMap<string, string> = new Map([
@@ -25,7 +25,7 @@ const INPUT_MODES: ReadonlyMap<string, string> = new Map([
 export class TextEntryInteractionElement extends TextElement {
   /** The kind of interaction that the element is for. */
   override readonly kind = "text-entry-interaction";
-  readonly #input = html("input", { type: "text", autocomplete: "off", spellcheck: "false" });
+  readonly #input = html("input", { type: "text", ...NO_ASSISTANCE });
   readonly #field = new ControlField(this.#input);
   #label: string | undefined;
 

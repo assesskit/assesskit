@@ -1,4 +1,4 @@
-import type { CatPort } from "@assesskit/runtime/cat";
+import type { CatSessionPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkChoice,
@@ -91,7 +91,7 @@ const hostOptionsSchema = v.strictObject({
   maxIdle: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
   forward: v.optional(v.strictObject({ log: functionSchema<StepSink>() })),
-  cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
+  cat: v.optional(methodsSchema<CatSessionPort>("createSession", "submitResults", "endSession")),
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
@@ -357,7 +357,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     });
 
   /** What the answer loop of a session uses: the pending requests, the port, and the saved `cat-response` action. */
-  const answererOf = (session: string, port: CatPort): CatAnswerer => ({
+  const answererOf = (session: string, port: CatSessionPort): CatAnswerer => ({
     waiting: async () => engine.pending(await stateOf(session, undefined)).cat,
     ask: (request) => sendCatRequest(port, request),
     answer: (request, response) =>

@@ -7,18 +7,25 @@ import { EditorField } from "./editor.js";
 import { createInteraction } from "./element.js";
 import { Notes } from "./notes.js";
 import { nameByPrompt, type RenderedPrompt, renderPrompt } from "./parts.js";
-import { ControlField, TextElement, type TextField } from "./text.js";
+import { ControlField, NO_ASSISTANCE, TextElement, type TextField } from "./text.js";
 import { cardinalityOf } from "./values.js";
 
 /** The characters of a text, counted as code points, so that a character of several code units counts once. */
 const codePoints = (text: string): number => [...text].length;
 
-/** Where the candidate types one text: the field, the control that has the focus, and how many characters it holds. */
+/**
+ * The words of a text: the runs of characters that are not white space. A text in a script that puts no space between words,
+ * such as Chinese or Japanese, has one word for each run of characters, so its items count characters.
+ */
+const wordsIn = (text: string): number => text.split(/\s+/u).filter((word) => word !== "").length;
+
+/** Where the candidate types one text: the field, the control that has the focus, and how many characters and words it holds. */
 interface Source {
   readonly field: TextField;
   readonly control: HTMLElement;
   readonly element: HTMLElement;
   characters(): number;
+  words(): number;
 }
 
 /** One text of the interaction, with the counter of its characters when the item asks for one. */
@@ -28,11 +35,17 @@ interface Entry extends Source {
 
 /** Makes the text area of a plain or preformatted text. */
 function areaSource(node: ExtendedTextInteraction, label: string): Source {
-  const area = html("textarea", { "aria-label": label });
+  const area = html("textarea", { "aria-label": label, ...NO_ASSISTANCE });
   if (node.placeholderText !== undefined) area.placeholder = node.placeholderText;
   if (node.expectedLines) area.rows = node.expectedLines;
   if (node.format === "preformatted") area.classList.add("ak-preformatted");
-  return { field: new ControlField(area), control: area, element: area, characters: () => codePoints(area.value) };
+  return {
+    field: new ControlField(area),
+    control: area,
+    element: area,
+    characters: () => codePoints(area.value),
+    words: () => wordsIn(area.value),
+  };
 }
 
 /** Makes the editor of a text in XHTML. */
@@ -43,6 +56,7 @@ function editorSource(messages: Messages, label: string): Source {
     control: editor.area,
     element: editor.element,
     characters: () => codePoints(editor.typedText),
+    words: () => wordsIn(editor.spacedText),
   };
 }
 
@@ -53,7 +67,11 @@ function editorSource(messages: Messages, label: string): Source {
  * @remarks
  * The format says how the text is typed: `plain` in a text area, `preformatted` in one that keeps its spaces, `xhtml`
  * in an editor that writes a few elements of XHTML. The classes `qti-counter-up` and `qti-counter-down` show how many
- * characters the candidate typed, or has left, of `expected-length`.
+ * characters the candidate typed, or has left, of `expected-length`, which counts characters as QTI defines it. The
+ * attribute `data-ak-count="words"` shows the words typed instead, with no expected length.
+ *
+ * The text areas and the editor ask the browser for no spell check, correction, capital letters or completion, as the text
+ * entry does; the property `spellChecked` turns the spell check on, for a candidate whose support asks for it.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, extended text interaction}
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/vocab/ | QTI 3 Standardized Shared Vocabulary, extended text interaction}
@@ -65,6 +83,7 @@ export class ExtendedTextInteractionElement extends TextElement {
   readonly #fields = html("div", { class: "ak-fields" });
   #node: ExtendedTextInteraction | undefined;
   #prompt: RenderedPrompt | undefined;
+  #spellChecked = false;
 
   /**
    * Fills the element with the prompt of the node; the fields come when the descriptor is known.
@@ -78,6 +97,21 @@ export class ExtendedTextInteractionElement extends TextElement {
     this.custom = { pattern: node.dataPatternmaskMessage };
     this.notes = new Notes();
     this.append(...(this.#prompt === undefined ? [] : [this.#prompt.element]), this.#fields, this.notes.element);
+  }
+
+  /** Whether the browser checks the spelling of the texts, which only the support `spell-checker-on-screen` turns on. */
+  get spellChecked(): boolean {
+    return this.#spellChecked;
+  }
+
+  /**
+   * Turns the spell check of the browser on or off for every text of the interaction.
+   *
+   * @param on - `true` to check the spelling.
+   */
+  set spellChecked(on: boolean) {
+    this.#spellChecked = on;
+    for (const { control } of this.#entries) control.setAttribute("spellcheck", String(on));
   }
 
   protected override configure(descriptor: InteractionDescriptor, messages: Messages): void {
@@ -105,10 +139,9 @@ export class ExtendedTextInteractionElement extends TextElement {
   #entry(node: ExtendedTextInteraction, messages: Messages, label: string): Entry {
     const source = node.format === "xhtml" ? editorSource(messages, label) : areaSource(node, label);
     const direction = this.classList.contains("qti-counter-up") || this.classList.contains("qti-counter-down");
-    const entry: Entry = {
-      ...source,
-      counter: direction && node.expectedLength ? html("div", { class: "ak-counter" }) : undefined,
-    };
+    const counted = this.getAttribute("data-ak-count") === "words" || (direction && node.expectedLength);
+    const entry: Entry = { ...source, counter: counted ? html("div", { class: "ak-counter" }) : undefined };
+    if (this.#spellChecked) entry.control.setAttribute("spellcheck", "true");
     entry.control.addEventListener("input", () => {
       this.typedIn();
       this.#count(entry, messages);
@@ -116,10 +149,15 @@ export class ExtendedTextInteractionElement extends TextElement {
     return entry;
   }
 
-  /** Shows the characters typed (`qti-counter-up`) or left (`qti-counter-down`) of the expected length. */
-  #count({ counter, characters }: Entry, messages: Messages): void {
+  /** Shows the words typed (`data-ak-count="words"`), or the characters typed (`qti-counter-up`) or left (`qti-counter-down`) of the expected length. */
+  #count({ counter, characters, words }: Entry, messages: Messages): void {
+    if (counter === undefined) return;
+    if (this.getAttribute("data-ak-count") === "words") {
+      counter.textContent = `${words()} ${messages.counterWords}`;
+      return;
+    }
     const expected = this.#node?.expectedLength;
-    if (counter === undefined || !expected) return;
+    if (!expected) return;
     const typed = characters();
     counter.textContent = this.classList.contains("qti-counter-up")
       ? `${typed} / ${expected} ${messages.counterCharacters}`

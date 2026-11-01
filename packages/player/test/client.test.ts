@@ -493,6 +493,29 @@ describe("saving before applying", () => {
     client.close();
   });
 
+  it("saves the events of a step in the same write as its state, and nothing of a step whose save fails", async () => {
+    const { client, store, write } = await essaySession();
+    const steps: (readonly DeliveryEvent[])[] = [];
+    client.host.subscribeSteps((events) => steps.push(events));
+    const lengths = (): number[] => [
+      store.saved.get("practice-1")?.length ?? -1,
+      store.savedEvents.get("practice-1")?.length ?? -1,
+    ];
+    expect(lengths()[0]).toBe(lengths()[1]);
+    await write();
+    expect(lengths()[0]).toBe(lengths()[1]);
+    expect(steps).toHaveLength(1);
+    expect(steps[0]?.length).toBeGreaterThan(0);
+    expect(store.savedEvents.get("practice-1")?.at(-1)).toEqual(steps[0]);
+
+    const saved = lengths();
+    store.failNext(1);
+    await expect(client.dispatch({ type: "suspend" })).rejects.toThrow("The disk is full.");
+    expect(lengths()).toEqual(saved);
+    expect(steps).toHaveLength(1);
+    client.close();
+  });
+
   it("leaves the state as it was when the save of a host action fails", async () => {
     const { client, store, write, submit } = await essaySession();
     await write();
@@ -718,9 +741,9 @@ describe("signals", () => {
     });
     const held: LocalStore = {
       load: base.load,
-      save: async (session, state, callOptions) => {
+      save: async (session, record, callOptions) => {
         if (holding) await gate;
-        return base.save(session, state, callOptions);
+        return base.save(session, record, callOptions);
       },
     };
     const { client } = await essaySession({ store: held });
@@ -797,8 +820,8 @@ describe("signals", () => {
     let aborting = false;
     const aborts: LocalStore = {
       load: store.load,
-      save: async (session, state, callOptions) => {
-        await store.save(session, state, callOptions);
+      save: async (session, record, callOptions) => {
+        await store.save(session, record, callOptions);
         if (aborting) controller.abort();
       },
     };

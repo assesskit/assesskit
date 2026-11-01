@@ -96,3 +96,14 @@ export interface CatPort {
    */
   endSection(prefix: string, sectionIdentifier: string): Promise<void>;
 }
+
+/**
+ * The three requests of a CAT engine that the delivery of a session makes: Create Session, Submit Results and End Session.
+ *
+ * @remarks
+ * A host that delivers sessions needs these and not the deployment of sections, so it can pass a port that has no
+ * `createSection`, `getSection` or `endSection`, such as the client of an engine that someone else deployed.
+ *
+ * @see {@link https://www.imsglobal.org/spec/cat/v1p0/impl/ | 1EdTech Computer Adaptive Testing 1.0, requests}
+ */
+export type CatSessionPort = Pick<CatPort, "createSession" | "submitResults" | "endSession">;

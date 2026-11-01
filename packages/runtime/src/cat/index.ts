@@ -28,7 +28,7 @@ export type {
   SubmitResultsRequest,
   SubmitResultsResponse,
 } from "./model.js";
-export type { CatPort } from "./port.js";
+export type { CatPort, CatSessionPort } from "./port.js";
 export { assessmentResultFromJson } from "./result-json-read.js";
 export { assessmentResultToJson } from "./result-json-write.js";
 export { type SectionFiles, sectionData } from "./section-data.js";

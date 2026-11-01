@@ -101,7 +101,8 @@ sequenceDiagram
 
 A session host and a local session take the port as the option `cat`, and then answer their own CAT requests, so that no host
 code drains them. A server passes any `CatPort`, such as `createRestCatPort`; a page passes its own in-browser port, never
-`createRestCatPort`.
+`createRestCatPort`. The option is a `CatSessionPort`, the three methods that a session calls (`createSession`, `submitResults` and
+`endSession`), so that the client of an engine that someone else deployed needs no `createSection`, `getSection` or `endSection`.
 
 ```mermaid
 sequenceDiagram

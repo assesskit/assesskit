@@ -10,6 +10,7 @@ export { BROWSER_CLOCK } from "./clock.js";
 export {
   createLocalSession,
   type LocalHostSession,
+  type LocalSave,
   type LocalSession,
   type LocalSessionOptions,
   type LocalStore,

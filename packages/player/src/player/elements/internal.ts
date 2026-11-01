@@ -4,6 +4,7 @@
  * @module
  */
 export { Board } from "./board/model.js";
+export { ExtendedTextInteractionElement } from "./extended-text.js";
 export { centerOf, clampPoint, parseArea, pointAt } from "./graphic/geometry.js";
 export { fillRuns, type Pixels } from "./graphic/operations.js";
 export { instructionText, violationText } from "./hints.js";

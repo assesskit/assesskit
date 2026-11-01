@@ -6,7 +6,7 @@ import { container, type FileValue, single, type Value } from "@assesskit/runtim
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES, selectMessages } from "../src/index.js";
-import { readRecordAttributes } from "../src/player/elements/internal.js";
+import { ExtendedTextInteractionElement, readRecordAttributes } from "../src/player/elements/internal.js";
 import {
   createContentRoot,
   createInteractionRenderers,
@@ -726,6 +726,61 @@ describe("extended text", () => {
     expect(down.find(".ak-counter").textContent).toBe("15 characters left");
     const none = mountScene(declare("single", "string"), Body('expected-length="20"'));
     expect(none.root.querySelector(".ak-counter")).toBeNull();
+  });
+
+  it("counts the words typed with data-ak-count, in every format, as the runs of characters that are not white space", async () => {
+    const wordsIn = (text: string): number => text.split(/\s+/u).filter((word) => word !== "").length;
+    const typed = "  one  two\nthree\tfour ";
+    for (const attributes of ['data-ak-count="words"', 'data-ak-count="words" format="preformatted"']) {
+      const scene = mountScene(declare("single", "string"), Body(attributes));
+      await userEvent.fill(scene.find("textarea"), typed);
+      expect(scene.find(".ak-counter").textContent).toBe(`${wordsIn(typed)} words`);
+    }
+    const editor = mountScene(declare("single", "string"), Body('data-ak-count="words" format="xhtml"'));
+    editor.find("[role=textbox]").innerHTML =
+      "<p>one  two</p><p>three</p>four<br>five<ul><li>six</li><li>seven</li></ul>";
+    editor.find("[role=textbox]").dispatchEvent(new InputEvent("input", { bubbles: true }));
+    expect(editor.find(".ak-counter").textContent).toBe(`${wordsIn("one two three four five six seven")} words`);
+    // The words need neither a counter class nor an expected length, and an expected length stays in characters.
+    const sized = mountScene(
+      declare("single", "string"),
+      Body('data-ak-count="words" class="qti-counter-up" expected-length="20"'),
+    );
+    await userEvent.fill(sized.find("textarea"), "two words");
+    expect(sized.find(".ak-counter").textContent).toBe("2 words");
+    const indonesian = mountScene(declare("single", "string"), Body('data-ak-count="words"'), {
+      options: { messages: ID_MESSAGES },
+    });
+    await userEvent.fill(indonesian.find("textarea"), "dua kata");
+    expect(indonesian.find(".ak-counter").textContent).toBe("2 kata");
+    const characters = mountScene(declare("single", "string"), Body('data-ak-count="characters"'));
+    expect(characters.root.querySelector(".ak-counter")).toBeNull();
+  });
+
+  it("asks the browser for no spell check, correction, capital letters or completion, and for the spell check when it is turned on", () => {
+    const off = { spellcheck: "false", autocorrect: "off", autocapitalize: "off", autocomplete: "off" };
+    const attributesOf = (element: Element): Record<string, string | null> =>
+      Object.fromEntries(Object.keys(off).map((name) => [name, element.getAttribute(name)]));
+    for (const attributes of ["", 'format="xhtml"']) {
+      const scene = mountScene(declare("single", "string"), Body(attributes));
+      const control = scene.find(attributes === "" ? "textarea" : "[role=textbox]");
+      expect(attributesOf(control)).toEqual(off);
+      const interaction = scene.interaction();
+      if (!(interaction instanceof ExtendedTextInteractionElement)) throw new Error("Not an extended text.");
+      expect(interaction.spellChecked).toBe(false);
+      interaction.spellChecked = true;
+      expect(control.getAttribute("spellcheck")).toBe("true");
+      // The texts that the interaction draws again keep the setting.
+      interaction.messages = ID_MESSAGES;
+      expect(scene.find(attributes === "" ? "textarea" : "[role=textbox]").getAttribute("spellcheck")).toBe("true");
+      interaction.spellChecked = false;
+      expect(scene.find(attributes === "" ? "textarea" : "[role=textbox]").getAttribute("spellcheck")).toBe("false");
+    }
+    const entry = mountScene(
+      declare("single", "string"),
+      '<p><qti-text-entry-interaction response-identifier="R"/></p>',
+    );
+    expect(attributesOf(entry.find("input"))).toEqual(off);
   });
 
   it("takes up to max-strings separate texts in a container, leaving out the empty ones", async () => {

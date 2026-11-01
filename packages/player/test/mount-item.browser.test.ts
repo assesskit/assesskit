@@ -98,7 +98,7 @@ async function embed(
     definition: { kind: "item", item: parsed.item, base: `items/${id}.xml` },
     store: {
       load: async (session) => saved.get(session),
-      save: async (session, state) => void saved.set(session, state),
+      save: async (session, { state }) => void saved.set(session, state),
     },
     session: id,
     seed: 1,

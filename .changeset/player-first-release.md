@@ -38,3 +38,8 @@ A recording names its file as it starts, and its bytes follow: `MountFiles` has 
 that stops the recording leaves the answer in the results while the bytes arrive. The attributes `data-ak-record-start`,
 `data-ak-record-limit` and `data-ak-record-once` of `qti-upload-interaction` start a recording by itself after a countdown, limit it to
 at most `MAX_RECORDING_SECONDS`, and allow one recording only.
+
+`LocalStore.save` takes `{ state, events }`: the state and the events of the step that made it, in one write. `toSupplyScores` reads only the `id`,
+`outcome` and `declaration` of its request, so that a rater's page passes the fields of a `Submission`. The option `cat` of a session host and of a local session is a
+`CatSessionPort`. `data-ak-count="words"` on an extended text shows the words typed, with the message `counterWords`; the text areas and the editor ask the browser for no
+spell check, correction, capital letters or completion, and the support `spell-checker-on-screen` turns the spell check on.

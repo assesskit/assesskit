@@ -40,7 +40,7 @@ function memoryStore(): LocalStore {
   const saved = new Map<string, string>();
   return {
     load: async (session) => saved.get(session),
-    save: async (session, state) => void saved.set(session, state),
+    save: async (session, { state }) => void saved.set(session, state),
   };
 }
 

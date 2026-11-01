@@ -31,3 +31,6 @@ record whose count differs from the entries is a `ReadError`. A document that de
 `runResponseProcessing` and `runOutcomeProcessing`, so that a host can score a fixed item again; the guide has the recipe. For that, a
 report lists every instance of the plan: those not presented follow the others with the status `initial`, and the report of a session
 writes the correct response of a variable whose key template processing set.
+
+`CatSessionPort` is the three requests that a session makes (Create Session, Submit Results, End Session), the type that `drainCat` and `sendCatRequest`
+take, so that a port without the deployment of sections serves.

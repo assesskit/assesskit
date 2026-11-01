@@ -266,6 +266,8 @@ export interface Messages {
   readonly counterCharacters: string;
   /** The words after the number of characters that remain of the expected number. */
   readonly counterLeft: string;
+  /** The word after the number of words typed, which `data-ak-count="words"` shows. */
+  readonly counterWords: string;
   /** The name of the group of buttons that format the text of an answer. */
   readonly editorToolbar: string;
   /** The name of the button that makes the selected text bold. */
