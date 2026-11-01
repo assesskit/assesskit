@@ -9,5 +9,11 @@
 
 export type { CatFetch, CatFetchRequest, CatFetchResponse, OAuthClientCredentials } from "./rest-client.js";
 export { type CatAuthenticate, type CatRestHandlerOptions, createCatRestHandler } from "./rest-handler.js";
-export { createRestCatPort, type RestCatPortOptions } from "./rest-port.js";
+export {
+  type CatEngine,
+  type CatEngineResolver,
+  type CatEngines,
+  createRestCatPort,
+  type RestCatPortOptions,
+} from "./rest-port.js";
 export type { CatOperation } from "./route.js";

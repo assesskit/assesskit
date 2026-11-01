@@ -112,6 +112,9 @@ if (import.meta.main) {
   const port = measurekitCatPort({ sections: memoryStore(), seeds: () => 42 });
   console.log((await administer(port, answersEasyItems)).join(", "));
   // The same section over the REST binding: the client of the player, the engine server, and the engine behind it.
-  const client = createRestCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
+  const client = createRestCatPort({
+    fetch: fetchFrom(demoServer()),
+    engines: new Map([[PREFIX, { endpoint: PREFIX, credentials: DEMO_CREDENTIALS }]]),
+  });
   console.log((await administer(client, answersEasyItems)).join(", "));
 }

@@ -64,27 +64,26 @@ export const oauthCredentialsSchema: Schema<OAuthClientCredentials> = v.strictOb
   scope: nonEmptyStringSchema,
 });
 
-/** A client of a REST service that authorizes with OAuth 2.0 client credentials. */
+/** A client of REST services that authorize with OAuth 2.0 client credentials. */
 export interface RestClient {
   /**
-   * Sends a request with the bearer token and returns the JSON of the answer, or `undefined` for an answer without a body.
-   * A `401` makes the client ask for a new token and send the request once more.
+   * Sends a request with the bearer token of the credentials and returns the JSON of the answer, or `undefined` for an answer
+   * without a body. A `401` makes the client ask for a new token and send the request once more.
    *
+   * @param credentials - The credentials of the service: the client keeps one token for each token URL, client and scope.
    * @param method - The HTTP method.
    * @param url - The URL.
    * @param body - The JSON body; none for a request without one.
    * @returns The parsed JSON of the answer.
    * @throws `ServiceError` when the service answers with another status than 2xx after that, or with a body that is not JSON.
    */
-  send(method: string, url: string, body?: unknown): Promise<unknown>;
+  send(credentials: OAuthClientCredentials, method: string, url: string, body?: unknown): Promise<unknown>;
 }
 
 /** The options of {@link createRestClient}. */
 export interface RestClientOptions {
   /** Sends the requests. */
   readonly fetch: CatFetch;
-  /** Asks for the bearer token. */
-  readonly credentials: OAuthClientCredentials;
   /** The milliseconds after which a request, the token request included, is aborted. */
   readonly timeoutMs: number;
 }
@@ -120,22 +119,23 @@ function refuseRedirect(response: CatFetchResponse, what: string): void {
 }
 
 /**
- * Creates the client of a REST service.
+ * Creates the client of REST services.
  *
  * @remarks
- * It keeps the bearer token it was given, so that a run of requests asks once. It keeps no clock, so it learns that a
- * token expired from the service's `401`, not from `expires_in`.
+ * It keeps the bearer token of each token URL, client and scope, so that a run of requests asks once, and the requests that
+ * need a token at the same time share one request for it. It keeps no clock, so it learns that a token expired from the
+ * service's `401`, not from `expires_in`; the new token is asked for with the credentials of the call that met the `401`,
+ * so that a secret that was replaced is used.
  *
- * @param options - The `fetch` function, the credentials and the timeout.
+ * @param options - The `fetch` function and the timeout.
  * @returns The client.
  */
-export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOptions): RestClient {
-  const { tokenUrl, clientId, clientSecret, scope } = credentials;
-  // The form-encoded identifier and secret are ASCII (RFC 6749 section 2.3.1), so their UTF-8 bytes are their characters.
-  const basic = encodeBase64(new TextEncoder().encode(`${formEncode(clientId)}:${formEncode(clientSecret)}`));
-  let token: Promise<string> | undefined;
+export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestClient {
+  const tokens = new Map<string, Promise<string>>();
 
-  const requestToken = async (): Promise<string> => {
+  const requestToken = async ({ tokenUrl, clientId, clientSecret, scope }: OAuthClientCredentials): Promise<string> => {
+    // The form-encoded identifier and secret are ASCII (RFC 6749 section 2.3.1), so their UTF-8 bytes are their characters.
+    const basic = encodeBase64(new TextEncoder().encode(`${formEncode(clientId)}:${formEncode(clientSecret)}`));
     const response = await fetch(tokenUrl, {
       method: "POST",
       headers: {
@@ -167,19 +167,33 @@ export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOp
     return grant.access_token;
   };
 
-  const bearer = (): Promise<string> => {
-    token ??= requestToken().catch((error: unknown) => {
-      token = undefined;
-      throw error;
-    });
+  const bearer = (credentials: OAuthClientCredentials): Promise<string> => {
+    const key = JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]);
+    let token = tokens.get(key);
+    if (token === undefined) {
+      token = requestToken(credentials).catch((error: unknown) => {
+        tokens.delete(key);
+        throw error;
+      });
+      tokens.set(key, token);
+    }
     return token;
   };
 
-  const attempt = async (method: string, url: string, body: string | undefined): Promise<CatFetchResponse> => {
+  const forget = (credentials: OAuthClientCredentials): void => {
+    tokens.delete(JSON.stringify([credentials.tokenUrl, credentials.clientId, credentials.scope]));
+  };
+
+  const attempt = async (
+    credentials: OAuthClientCredentials,
+    method: string,
+    url: string,
+    body: string | undefined,
+  ): Promise<CatFetchResponse> => {
     const response = await fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${await bearer()}`,
+        Authorization: `Bearer ${await bearer(credentials)}`,
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
@@ -192,12 +206,12 @@ export function createRestClient({ fetch, credentials, timeoutMs }: RestClientOp
   };
 
   return {
-    async send(method, url, body) {
+    async send(credentials, method, url, body) {
       const text = body === undefined ? undefined : JSON.stringify(body);
-      let response = await attempt(method, url, text);
+      let response = await attempt(credentials, method, url, text);
       if (response.status === 401) {
-        token = undefined;
-        response = await attempt(method, url, text);
+        forget(credentials);
+        response = await attempt(credentials, method, url, text);
       }
       const answer = await response.text();
       const what = `The CAT engine at ${url}`;

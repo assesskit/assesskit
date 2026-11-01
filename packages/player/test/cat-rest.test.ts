@@ -16,6 +16,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   type CatAuthenticate,
+  type CatEngine,
   type CatFetch,
   type CatFetchRequest,
   type CatOperation,
@@ -97,6 +98,24 @@ const engineCalls = (calls: readonly Call[]): Call[] => calls.filter(({ url }) =
 
 const bodyOf = (call: Call | undefined): unknown => JSON.parse(call?.request.body ?? "null");
 
+/** The options of a port for the one engine whose reference is its endpoint, which is the usual case. */
+interface OneEngine {
+  readonly fetch: CatFetch;
+  readonly endpoint: string;
+  readonly credentials: OAuthClientCredentials;
+  readonly timeoutMs?: number;
+  readonly sharePnp?: boolean;
+}
+
+/** Returns a port for one engine that a package names by its endpoint. */
+function onePort({ fetch: send, endpoint, credentials, timeoutMs, sharePnp }: OneEngine): CatPort {
+  return createRestCatPort({
+    fetch: send,
+    engines: new Map([[endpoint, { endpoint, credentials, ...(sharePnp === undefined ? {} : { sharePnp }) }]]),
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
+  });
+}
+
 describe("createRestCatPort", () => {
   const sectionData: SectionData = { sectionConfiguration: "e30=", qtiUsagedata: "PD94", qtiMetadata: "bWV0YQ==" };
 
@@ -105,7 +124,7 @@ describe("createRestCatPort", () => {
       status: 200,
       body: { sectionData: {}, items: {}, section: { sectionConfiguration: "e30=" } },
     }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     await port.getSection(PREFIX, "sec1");
     const [token, get] = service.calls;
     expect(token?.url).toBe(TOKEN_URL);
@@ -133,7 +152,7 @@ describe("createRestCatPort", () => {
     };
     const answers = [{ status: 302 }, { status: 307 }, { status: 0, type: "opaqueredirect" }];
     for (const answer of answers) {
-      const atToken = createRestCatPort({
+      const atToken = onePort({
         fetch: redirect(TOKEN_URL, answer),
         endpoint: PREFIX,
         credentials: CREDENTIALS,
@@ -143,7 +162,7 @@ describe("createRestCatPort", () => {
         status: answer.status,
         message: expect.stringContaining(`The token endpoint ${TOKEN_URL} answered with a redirect`),
       });
-      const atEngine = createRestCatPort({
+      const atEngine = onePort({
         fetch: redirect(`${PREFIX}/sections/sec1`, answer),
         endpoint: PREFIX,
         credentials: CREDENTIALS,
@@ -154,7 +173,7 @@ describe("createRestCatPort", () => {
 
   it("creates a section: POST /sections with the configuration and usage data of SectionDType, and returns the identifier", async () => {
     const service = fakeService(() => ({ status: 201, body: { sectionIdentifier: "sec1" } }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     expect(await port.createSection(PREFIX, sectionData)).toEqual({ sectionIdentifier: "sec1" });
     const [call] = engineCalls(service.calls);
     expect(call?.url).toBe(`${PREFIX}/sections`);
@@ -166,7 +185,7 @@ describe("createRestCatPort", () => {
 
   it("sends a section without usage data as the configuration alone, never a shape the binding lacks", async () => {
     const service = fakeService(() => ({ status: 201, body: { sectionIdentifier: "sec1" } }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     await port.createSection(PREFIX, { sectionConfiguration: "e30=", qtiMetadata: "bWV0YQ==" });
     expect(bodyOf(engineCalls(service.calls)[0])).toEqual({ sectionConfiguration: "e30=" });
   });
@@ -179,7 +198,7 @@ describe("createRestCatPort", () => {
         section: { sectionConfiguration: "e30=", qtiUsagedata: "PD94" },
       },
     }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: `${PREFIX}/`, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: `${PREFIX}/`, credentials: CREDENTIALS });
     expect(await port.getSection(PREFIX, "sec 1")).toEqual({
       sectionData: { sectionConfiguration: "e30=", qtiUsagedata: "PD94" },
       items: { itemIdentifiers: ["i1", "i2"], stageLength: null },
@@ -192,7 +211,7 @@ describe("createRestCatPort", () => {
 
   it("reads a Get Section answer without items as an empty pool, because the binding's item set cannot be empty", async () => {
     const service = fakeService(() => ({ status: 200, body: { section: { sectionConfiguration: "e30=" } } }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     expect(await port.getSection(PREFIX, "sec1")).toEqual({
       sectionData: { sectionConfiguration: "e30=" },
       items: { itemIdentifiers: [], stageLength: 0 },
@@ -224,7 +243,7 @@ describe("createRestCatPort", () => {
     ];
     for (const sharePnp of [undefined, false, true]) {
       const service = fakeService(() => reply);
-      const port = createRestCatPort({
+      const port = onePort({
         fetch: service.fetch,
         endpoint: PREFIX,
         credentials: CREDENTIALS,
@@ -247,7 +266,7 @@ describe("createRestCatPort", () => {
 
   it("reads a Create Session answer without a stage as the end of the session, and needs the identifier", async () => {
     const answer = (body: unknown): Promise<unknown> =>
-      createRestCatPort({
+      onePort({
         fetch: fakeService(() => ({ status: 201, body })).fetch,
         endpoint: PREFIX,
         credentials: CREDENTIALS,
@@ -287,7 +306,7 @@ describe("createRestCatPort", () => {
         },
       },
     }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     const answered = await port.submitResults(PREFIX, "sec1", "s1", { assessmentResult: RESULT, sessionState: "st1" });
     const [call] = engineCalls(service.calls);
     expect(call?.url).toBe(`${PREFIX}/sections/sec1/sessions/s1/results`);
@@ -319,7 +338,7 @@ describe("createRestCatPort", () => {
 
   it("reads an answer without next items and without a state as the end of the session", async () => {
     const service = fakeService(() => ({ status: 201, body: {} }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     const answered = await port.submitResults(PREFIX, "sec1", "s1", { assessmentResult: RESULT });
     expect(answered).toEqual({});
     expect(isSessionEnd(answered.nextItems)).toBe(true);
@@ -328,7 +347,7 @@ describe("createRestCatPort", () => {
 
   it("ends a session and a section: DELETE, with an answer without a body", async () => {
     const service = fakeService(() => ({ status: 204 }));
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
     await expect(port.endSession(PREFIX, "sec1", "s1")).resolves.toBeUndefined();
     await expect(port.endSection(PREFIX, "sec1")).resolves.toBeUndefined();
     expect(engineCalls(service.calls).map(({ url, request }) => `${request.method} ${url}`)).toEqual([
@@ -346,7 +365,7 @@ describe("createRestCatPort", () => {
       status,
       text: async () => JSON.stringify(body),
     });
-    const port = createRestCatPort({
+    const port = onePort({
       endpoint: PREFIX,
       credentials: CREDENTIALS,
       async fetch(url, request) {
@@ -376,7 +395,7 @@ describe("createRestCatPort", () => {
 
   it("fails with a ServiceError that carries the status and the body of the answer", async () => {
     const status = { imsx_codeMajor: "failure", imsx_severity: "error", imsx_description: "Unknown Object" };
-    const port = createRestCatPort({
+    const port = onePort({
       fetch: fakeService(() => ({ status: 404, body: status })).fetch,
       endpoint: PREFIX,
       credentials: CREDENTIALS,
@@ -390,13 +409,13 @@ describe("createRestCatPort", () => {
   });
 
   it("fails with a ServiceError for a 401 after the new token, for a body that is not JSON and for a bad token answer", async () => {
-    const denied = createRestCatPort({
+    const denied = onePort({
       fetch: fakeService(() => ({ status: 401, body: {} })).fetch,
       endpoint: PREFIX,
       credentials: CREDENTIALS,
     });
     await expect(denied.endSection(PREFIX, "sec1")).rejects.toMatchObject({ status: 401 });
-    const html = createRestCatPort({
+    const html = onePort({
       fetch: fakeService(() => ({ status: 200, body: "<html>" })).fetch,
       endpoint: PREFIX,
       credentials: CREDENTIALS,
@@ -405,7 +424,7 @@ describe("createRestCatPort", () => {
 
     const badToken = async (reply: Reply): Promise<unknown> => {
       const calls: Call[] = [];
-      const port = createRestCatPort({
+      const port = onePort({
         endpoint: PREFIX,
         credentials: CREDENTIALS,
         async fetch(url, request) {
@@ -427,7 +446,7 @@ describe("createRestCatPort", () => {
 
   it("asks for a token again after a failed token request, and passes on the error of fetch", async () => {
     let attempts = 0;
-    const port = createRestCatPort({
+    const port = onePort({
       endpoint: PREFIX,
       credentials: CREDENTIALS,
       async fetch(url) {
@@ -449,7 +468,7 @@ describe("createRestCatPort", () => {
   });
 
   it("aborts a request that takes longer than timeoutMs", async () => {
-    const port = createRestCatPort({
+    const port = onePort({
       endpoint: PREFIX,
       credentials: CREDENTIALS,
       timeoutMs: 20,
@@ -461,10 +480,11 @@ describe("createRestCatPort", () => {
     await expect(port.endSection(PREFIX, "sec1")).rejects.toMatchObject({ name: "TimeoutError" });
   });
 
-  it("sends nothing to another engine than the endpoint, and nothing over http", async () => {
+  it("sends nothing to a reference that the host did not configure, and nothing over http", async () => {
     const service = fakeService();
-    const port = createRestCatPort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
-    const message = `The prefix "https://evil.example/ims/cat/v1p0" is not the engine "${PREFIX}" that this port serves; the port sends nothing to another engine.`;
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const message =
+      'The reference "https://evil.example/ims/cat/v1p0" is not an engine that the host configured; the port sends nothing to another engine.';
     for (const call of [
       () => port.createSection("https://evil.example/ims/cat/v1p0", sectionData),
       () => port.getSection("https://evil.example/ims/cat/v1p0", "sec1"),
@@ -476,33 +496,174 @@ describe("createRestCatPort", () => {
       expect(await rejection(call())).toBe(message);
     }
     expect(service.calls).toEqual([]);
+    const engine = { endpoint: PREFIX, credentials: CREDENTIALS };
     expect(() =>
       createRestCatPort({
         fetch: service.fetch,
-        endpoint: "http://cat.example/ims/cat/v1p0",
-        credentials: CREDENTIALS,
+        engines: new Map([[PREFIX, { ...engine, endpoint: "http://cat.example/ims/cat/v1p0" }]]),
       }),
     ).toThrow(
       new DataError(
-        'The options object is invalid at endpoint: expected an absolute https URL, found "http://cat.example/ims/cat/v1p0".',
+        `The engine of the reference "${PREFIX}" is invalid at endpoint: expected an absolute https URL, found "http://cat.example/ims/cat/v1p0".`,
       ),
     );
     expect(() =>
       createRestCatPort({
         fetch: service.fetch,
-        endpoint: PREFIX,
-        credentials: { ...CREDENTIALS, tokenUrl: "http://auth.example/token" },
+        engines: new Map([
+          [PREFIX, { ...engine, credentials: { ...CREDENTIALS, tokenUrl: "http://auth.example/token" } }],
+        ]),
       }),
-    ).toThrow(/^The options object is invalid at credentials\.tokenUrl: expected an absolute https URL/);
+    ).toThrow(/^The engine of the reference .* is invalid at credentials\.tokenUrl: expected an absolute https URL/);
   });
 
   it("takes the global fetch as it is", () => {
-    expect(() => createRestCatPort({ fetch, endpoint: PREFIX, credentials: CREDENTIALS })).not.toThrow();
+    expect(() => onePort({ fetch, endpoint: PREFIX, credentials: CREDENTIALS })).not.toThrow();
+  });
+
+  it("serves the engine that a package names at another address than the platform reaches, as a gateway does", async () => {
+    const service = fakeService(() => ({ status: 200, body: { sectionIdentifier: "sec1" } }));
+    const reference = "https://engine.example/ims/cat/v1p0";
+    const upstream = "https://gateway.internal/engines/a/ims/cat/v1p0";
+    const port = createRestCatPort({
+      fetch: service.fetch,
+      engines: new Map([[`${reference}/`, { endpoint: `${upstream}/`, credentials: CREDENTIALS }]]),
+    });
+    expect(await port.createSection(reference, sectionData)).toEqual({ sectionIdentifier: "sec1" });
+    expect(await port.createSection(`${reference}//`, sectionData)).toEqual({ sectionIdentifier: "sec1" });
+    expect(engineCalls(service.calls).map(({ url }) => url)).toEqual([`${upstream}/sections`, `${upstream}/sections`]);
+    expect(await rejection(port.createSection(upstream, sectionData))).toMatch(
+      /is not an engine that the host configured/,
+    );
+  });
+
+  it("asks a function for the engine of a reference, and refuses when it answers nothing or something malformed", async () => {
+    const service = fakeService(() => ({ status: 200, body: { sectionIdentifier: "sec1" } }));
+    const asked: string[] = [];
+    const port = createRestCatPort({
+      fetch: service.fetch,
+      engines: async (reference) => {
+        asked.push(reference);
+        if (reference === "https://known.example/ims/cat/v1p0") return { endpoint: PREFIX, credentials: CREDENTIALS };
+        if (reference === "https://broken.example/ims/cat/v1p0") return json("5");
+        return undefined;
+      },
+    });
+    expect(await port.createSection("https://known.example/ims/cat/v1p0/", sectionData)).toEqual({
+      sectionIdentifier: "sec1",
+    });
+    expect(asked).toEqual(["https://known.example/ims/cat/v1p0"]);
+    expect(await rejection(port.createSection("https://other.example/ims/cat/v1p0", sectionData))).toMatch(
+      /is not an engine that the host configured/,
+    );
+    expect(await rejection(port.createSection("https://broken.example/ims/cat/v1p0", sectionData))).toMatch(
+      /^The engine of the reference "https:\/\/broken\.example\/ims\/cat\/v1p0" is invalid: expected an object/,
+    );
+    expect(engineCalls(service.calls)).toHaveLength(1);
+    const failing = createRestCatPort({
+      fetch: service.fetch,
+      engines: () => {
+        throw new Error("The registry is down.");
+      },
+    });
+    await expect(failing.getSection(PREFIX, "sec1")).rejects.toThrow("The registry is down.");
+  });
+
+  /** A fetch that issues numbered tokens, refuses the revoked ones with 401, and records the token requests and the calls. */
+  function tokenService() {
+    const tokenRequests: { readonly url: string; readonly authorization: string | undefined }[] = [];
+    const engineRequests: { readonly url: string; readonly authorization: string | undefined }[] = [];
+    const revoked = new Set<string>();
+    let issued = 0;
+    const send: CatFetch = async (url, request) => {
+      if (url.startsWith("https://auth.")) {
+        tokenRequests.push({ url, authorization: request.headers.Authorization });
+        const body = JSON.stringify({ access_token: `tok${++issued}`, token_type: "bearer" });
+        return { ok: true, status: 200, text: async () => body };
+      }
+      engineRequests.push({ url, authorization: request.headers.Authorization });
+      const refused = revoked.has(request.headers.Authorization?.slice("Bearer ".length) ?? "");
+      return { ok: !refused, status: refused ? 401 : 200, text: async () => "{}" };
+    };
+    return { send, tokenRequests, engineRequests, revoked };
+  }
+
+  it("keeps the token of each engine apart", async () => {
+    const service = tokenService();
+    const engine = (name: string): CatEngine => ({
+      endpoint: `https://${name}.example/ims/cat/v1p0`,
+      credentials: { ...CREDENTIALS, tokenUrl: `https://auth.${name}.example/token`, clientId: name },
+    });
+    const port = createRestCatPort({
+      fetch: service.send,
+      engines: new Map([
+        ["https://a.example/ims/cat/v1p0", engine("a")],
+        ["https://b.example/ims/cat/v1p0", engine("b")],
+      ]),
+    });
+    await port.endSection("https://a.example/ims/cat/v1p0", "s1");
+    await port.endSection("https://b.example/ims/cat/v1p0", "s1");
+    await port.endSection("https://a.example/ims/cat/v1p0", "s2");
+    expect(service.tokenRequests.map(({ url }) => url)).toEqual([
+      "https://auth.a.example/token",
+      "https://auth.b.example/token",
+    ]);
+    expect(service.engineRequests.map(({ authorization }) => authorization)).toEqual([
+      "Bearer tok1",
+      "Bearer tok2",
+      "Bearer tok1",
+    ]);
+  });
+
+  it("asks for a new token with the credentials that the host holds when the engine answers 401", async () => {
+    const service = tokenService();
+    let secret = "first";
+    const reference = "https://a.example/ims/cat/v1p0";
+    const port = createRestCatPort({
+      fetch: service.send,
+      engines: () => ({ endpoint: reference, credentials: { ...CREDENTIALS, clientSecret: secret } }),
+    });
+    await port.endSection(reference, "s1");
+    service.revoked.add("tok1");
+    secret = "second";
+    await port.endSection(reference, "s2");
+    const basic = (client: string, password: string): string => `Basic ${btoa(`${client}:${password}`)}`;
+    expect(service.tokenRequests.map(({ authorization }) => authorization)).toEqual([
+      basic("player", "first"),
+      basic("player", "second"),
+    ]);
+    expect(service.engineRequests.map(({ authorization }) => authorization)).toEqual([
+      "Bearer tok1",
+      "Bearer tok1",
+      "Bearer tok2",
+    ]);
+  });
+
+  it("sends the personal needs and preferences only to the engines that are set to receive them", async () => {
+    const service = fakeService(() => ({
+      status: 201,
+      body: { sessionIdentifier: "x", nextItems: { itemIdentifiers: ["i1"] } },
+    }));
+    const shared = "https://shared.example/ims/cat/v1p0";
+    const kept = "https://kept.example/ims/cat/v1p0";
+    const port = createRestCatPort({
+      fetch: service.fetch,
+      engines: new Map([
+        [shared, { endpoint: shared, credentials: CREDENTIALS, sharePnp: true }],
+        [kept, { endpoint: kept, credentials: CREDENTIALS }],
+      ]),
+    });
+    await port.createSession(shared, "sec1", { personalNeedsAndPreferences: PNP });
+    await port.createSession(kept, "sec1", { personalNeedsAndPreferences: PNP });
+    const [first, second] = engineCalls(service.calls);
+    expect(bodyOf(first)).toEqual({ personalNeedsAndPreferences: PNP });
+    expect(bodyOf(second)).toEqual({});
   });
 
   it("checks its options and its requests", async () => {
     const service = fakeService();
-    const options = { fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS };
+    const engine = { endpoint: PREFIX, credentials: CREDENTIALS };
+    const options = { fetch: service.fetch, engines: new Map([[PREFIX, engine]]) };
     const port = createRestCatPort(options);
     expect(() => createRestCatPort(json("null"))).toThrow(
       new DataError("The options object is invalid: expected an object, found null."),
@@ -510,32 +671,47 @@ describe("createRestCatPort", () => {
     expect(() => createRestCatPort({ ...options, fetch: json("5") })).toThrow(
       /^The options object is invalid at fetch: expected a function/,
     );
-    expect(() => createRestCatPort({ ...options, endpoint: json("5") })).toThrow(
-      /^The options object is invalid at endpoint: expected a string/,
+    expect(() => createRestCatPort({ ...options, engines: json("5") })).toThrow(
+      /^The options object is invalid at engines: /,
     );
-    expect(() => createRestCatPort({ ...options, credentials: json("null") })).toThrow(
-      /^The options object is invalid at credentials: expected an object/,
+    expect(() => createRestCatPort({ ...options, engines: json("{}") })).toThrow(
+      /^The options object is invalid at engines: /,
     );
+    const one =
+      (value: unknown): (() => unknown) =>
+      () =>
+        createRestCatPort({ ...options, engines: new Map([[PREFIX, value as typeof engine]]) });
+    expect(one(json("null"))).toThrow(/^The engine of the reference .* is invalid: expected an object/);
+    expect(one({ ...engine, endpoint: json("5") })).toThrow(/is invalid at endpoint: expected a string/);
+    expect(one({ ...engine, credentials: json("null") })).toThrow(/is invalid at credentials: expected an object/);
     for (const property of ["clientId", "clientSecret", "scope"]) {
-      expect(
-        () => createRestCatPort({ ...options, credentials: { ...CREDENTIALS, [property]: "" } }),
-        property,
-      ).toThrow(
+      expect(one({ ...engine, credentials: { ...CREDENTIALS, [property]: "" } }), property).toThrow(
         new DataError(
-          `The options object is invalid at credentials.${property}: expected a length of at least 1, found 0.`,
+          `The engine of the reference "${PREFIX}" is invalid at credentials.${property}: expected a length of at least 1, found 0.`,
         ),
       );
     }
-    expect(() => createRestCatPort({ ...options, credentials: { ...CREDENTIALS, extra: 1 } as never })).toThrow(
-      DataError,
+    expect(one({ ...engine, credentials: { ...CREDENTIALS, extra: 1 } })).toThrow(DataError);
+    expect(one({ ...engine, sharePnp: json('"yes"') })).toThrow(
+      /is invalid at sharePnp: expected true or false, found "yes"/,
     );
+    expect(one({ ...engine, speed: 1 })).toThrow(/unexpected property "speed"/);
+    expect(() => createRestCatPort({ ...options, engines: new Map([["", engine]]) })).toThrow(
+      /^A reference of the option engines must be a non-empty string/,
+    );
+    expect(() =>
+      createRestCatPort({
+        ...options,
+        engines: new Map([
+          [PREFIX, engine],
+          [`${PREFIX}/`, engine],
+        ]),
+      }),
+    ).toThrow(/has the reference .* twice/);
     expect(() => createRestCatPort({ ...options, timeoutMs: 0 })).toThrow(
       new DataError("The options object is invalid at timeoutMs: expected a positive number, found 0."),
     );
     expect(() => createRestCatPort({ ...options, timeoutMs: json("null") })).toThrow(DataError);
-    expect(() => createRestCatPort({ ...options, sharePnp: json('"yes"') })).toThrow(
-      new DataError('The options object is invalid at sharePnp: expected true or false, found "yes".'),
-    );
     expect(() => createRestCatPort({ ...options, speed: 1 } as never)).toThrow(
       /^The options object is invalid: unexpected property "speed"/,
     );
@@ -569,7 +745,7 @@ describe("createRestCatPort", () => {
 
   it("accepts the qtiMetadata object of Get Section, the binding's QTI metadata record, and does not return it as section data", async () => {
     const answer = (section: unknown): Promise<unknown> =>
-      createRestCatPort({
+      onePort({
         fetch: fakeService(() => ({ status: 200, body: { items: { itemIdentifiers: ["i1"] }, section } })).fetch,
         endpoint: PREFIX,
         credentials: CREDENTIALS,
@@ -1410,7 +1586,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
     const handler = createCatRestHandler(engine, {
       authenticate: (request) => request.headers.get("authorization") === `Bearer ${tokens.current}`,
     });
-    const client = createRestCatPort({
+    const client = onePort({
       fetch: wire(handler, tokens),
       endpoint: ENDPOINT,
       credentials: CREDENTIALS,
@@ -1522,7 +1698,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
     });
     const tokens = { current: BEARER, issued: 0 };
     const handler = createCatRestHandler(engine, { authenticate: () => true });
-    const client = createRestCatPort({ fetch: wire(handler, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
+    const client = onePort({ fetch: wire(handler, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
     const session = await client.createSession(ENDPOINT, "sec1", {});
     expect(session.sessionIdentifier).toBe("s9");
     expect(isSessionEnd(session.nextItems)).toBe(true);
@@ -1569,7 +1745,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
 
     // A client whose token the server never accepts gets the 401 as a ServiceError after one repeat.
     const rejecting = createCatRestHandler(fakeEngine().port, { authenticate: () => false });
-    const refused = createRestCatPort({ fetch: wire(rejecting, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
+    const refused = onePort({ fetch: wire(rejecting, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
     await expect(refused.getSection(ENDPOINT, "sec1")).rejects.toMatchObject({ name: "ServiceError", status: 401 });
     expect(tokens.issued).toBe(4);
   });
