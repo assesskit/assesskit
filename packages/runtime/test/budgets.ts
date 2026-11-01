@@ -41,8 +41,8 @@ export const LONGSIGHT_BUDGETS = {
   submit: { time: 3, ratio: 2 },
   /** Reading each item, starting its session and scoring its correct responses. */
   score: { time: 90, ratio: 1.5 },
-  /** Submitting the 51st item of a test of 100 items, with the sum of the scores of the items answered. */
-  testSubmit: { time: 0.09, ratio: 4.5 },
+  /** Submitting the 51st item of a test of 100 items 100 times, with the sum of the scores of the items answered. */
+  testSubmit: { time: 10, ratio: 4.5 },
 } as const;
 
 /** The budget of one row against Longsight. */

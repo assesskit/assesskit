@@ -243,6 +243,8 @@ test("takes an item from its document to its score as fast as Longsight", async 
 const TEST_SECTIONS = 10;
 const TEST_ITEMS_PER_SECTION = 10;
 const ANSWERED_BEFORE = 50;
+/** The submissions in a sample of that row: one takes about 20 microseconds, and a sample of milliseconds is long enough to time. */
+const SUBMITS_PER_SAMPLE = 100;
 
 test("processes the outcomes of a test on a submission as fast as Longsight", async ({ annotate, bench }) => {
   const itemRefs = Array.from({ length: TEST_SECTIONS }, (_, place) =>
@@ -285,14 +287,21 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
   }
   const before = oracle.value;
   const item = parseQtiXml(CHOICE_ITEM).document ?? fail("Longsight does not accept the item.");
-  let session: QtiItemSession = createItemSession(item);
+  let sessions: QtiItemSession[] = [];
   const prepare = () => {
-    session = createItemSession(item);
-    session.respond("RESPONSE", "B");
+    sessions = Array.from({ length: SUBMITS_PER_SAMPLE }, () => {
+      const session = createItemSession(item);
+      session.respond("RESPONSE", "B");
+      return session;
+    });
   };
   prepare();
-  const checked = submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
+  const checked = submitQtiTestAnswer(test, before, {
+    itemRef: ref,
+    score: Number(sessions[0]?.score().outcomes.SCORE),
+  });
   expect(checked.ok && checked.value.outcomes.TOTAL).toBe(ANSWERED_BEFORE + 1);
+  prepare();
 
   await compareRow(
     { annotate, bench },
@@ -300,10 +309,12 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
       name: "submit an item of a test",
       budget: LONGSIGHT_BUDGETS.testSubmit,
       runtime: () => {
-        engine.apply(drafted, submission);
+        for (let submit = 0; submit < SUBMITS_PER_SAMPLE; submit++) engine.apply(drafted, submission);
       },
       longsight: () => {
-        submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
+        for (const session of sessions) {
+          submitQtiTestAnswer(test, before, { itemRef: ref, score: Number(session.score().outcomes.SCORE) });
+        }
       },
       prepareLongsight: prepare,
     },
