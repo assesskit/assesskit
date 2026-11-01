@@ -98,12 +98,13 @@ flowchart LR
 
 ## Why `cat-rest` is in the player
 
-`cat-rest` implements `CatPort`, the port of the runtime, for the adaptive sections that QTI 3.0 defines: `qti-adaptive-selection`
-names a CAT engine, and the 1EdTech CAT 1.0 REST binding is the service of that engine. It is part of QTI, the domain of this
-family. LTI and Caliper are other standards, which interopkit implements. The subpath stays on servers because it holds the
-OAuth client secret, and a host that wants a CAT engine without the rest of the player imports only
-`@assesskit/player/cat-rest`, which loads the runtime and no code that draws a page. A package of its own would add a release and
-a boundary for one subpath.
+`cat-rest` holds the two sides of the 1EdTech CAT 1.0 REST binding: `restCatPort`, which implements `CatPort`, the port of the
+runtime, over a remote engine, and `catRestHandler`, which serves the binding in front of any `CatPort`. QTI 3.0 defines the
+adaptive sections that use them: `qti-adaptive-selection` names a CAT engine, and the binding is the service of that engine. It
+is part of QTI, the domain of this family. LTI and Caliper are other standards, which interopkit implements. The subpath stays
+on servers because `restCatPort` holds the OAuth client secret and `catRestHandler` serves answer keys, and a host that wants a
+CAT engine or its client without the rest of the player imports only `@assesskit/player/cat-rest`, which loads the runtime and
+no code that draws a page. A package of its own would add a release and a boundary for one subpath.
 
 ## Subpaths
 
