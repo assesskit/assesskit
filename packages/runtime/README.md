@@ -227,6 +227,18 @@ not throw: it returns `Issue`s, each with the specification reference that defin
 
 The runtime does not read QTI 2.x content.
 
+## Stored states
+
+| Rule                             | Meaning                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upgrading                        | A 1.x release reads every state that an earlier 1.x release wrote. `STATE_VERSION` changes only when a field changes meaning, which is a major release. |
+| A state of a later version       | Refused with a `DataError`; keep the text.                                                                                                              |
+| Rolling back                     | Not supported within a major version: a release drops the keys it does not know, so a state saved by an older one loses newer fields.                   |
+| Recovering a state               | Replay the actions from the seed.                                                                                                                       |
+| Content edited since the session | Name the content to `createEngine` as `contentVersion`; the engine then refuses a state that another version started.                                   |
+
+[Delivery](https://github.com/assesskit/assesskit/blob/main/docs/runtime/delivery.md#state-across-releases) has the details.
+
 ## What is supported
 
 The runtime is not certified by 1EdTech. [Supported](https://github.com/assesskit/assesskit/blob/main/docs/runtime/supported.md) says what it reads, writes, validates and runs,

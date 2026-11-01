@@ -1,4 +1,4 @@
-import { checkArray, checkChoice, checkFinite, checkRecord, describe } from "../checks.js";
+import { checkArray, checkChoice, checkFinite, checkRecord, checkString, describe } from "../checks.js";
 import type { PnpHazardTerm } from "../content/index.js";
 import { DataError } from "../errors.js";
 import type { SupportName, SupportSetting, SupportState, TestingTime } from "../pnp/index.js";
@@ -13,7 +13,14 @@ import { type ItemKey, sameKey, type TestPlan } from "./plan.js";
 import type { Refusal } from "./refusal.js";
 import type { ScoringRequest } from "./scoring.js";
 
-/** The version of the format of {@link DeliveryState}, which `deserializeState` reads. */
+/**
+ * The version of the format of {@link DeliveryState}, which `deserializeState` reads.
+ *
+ * @remarks
+ * A 1.x release reads the state of every earlier 1.x release. The version changes only when a field changes meaning; a
+ * new optional field leaves it, and a state without the field means the behavior before the field. A state of a later
+ * version is refused.
+ */
 export const STATE_VERSION = 1;
 
 /**
@@ -114,6 +121,11 @@ export interface CandidateNeeds {
 export interface DeliveryState {
   /** The version of the format. */
   readonly version: 1;
+  /**
+   * The version of the content that the session started on, as `EngineOptions.contentVersion` names it; absent when the
+   * engine named none.
+   */
+  readonly contentVersion?: string;
   /** Whether the candidate session runs, is suspended, or has ended. */
   readonly status: DeliveryStatus;
   /** The time of the latest step, in epoch milliseconds: an action stamped earlier is refused. */
@@ -192,6 +204,7 @@ export function checkState(state: DeliveryState): void {
   if (input.version !== STATE_VERSION) {
     throw new DataError(`The state must have the version ${STATE_VERSION}, found ${describe(input.version)}.`);
   }
+  if (state.contentVersion !== undefined) checkString(state.contentVersion, "The contentVersion of the state");
   checkChoice(state.status, "The status of the state", DELIVERY_STATUSES);
   checkFinite(state.at, "The at of the state");
   checkArray(state.random, "The random of the state must be an array of four integers");

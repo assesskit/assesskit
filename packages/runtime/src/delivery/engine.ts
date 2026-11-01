@@ -97,7 +97,8 @@ export interface Engine {
    * host's `supply-scores` and `cat-response` are accepted in any state, also when the session is suspended or has
    * ended, as long as the request they answer exists.
    *
-   * @throws `DataError` when the state or the action is not one.
+   * @throws `DataError` when the state or the action is not one, or the state started on another content version than
+   * the engine's.
    */
   apply(state: DeliveryState, action: Action): Step;
   /**
@@ -252,6 +253,23 @@ function checkContextValues(course: Course, values: ReadonlyMap<string, Value | 
   }
 }
 
+/**
+ * Checks a state, and that the content version of the engine, when it names one, is the one the state started on. A
+ * state that names none passes, as it started before the option existed or on an engine that named none.
+ *
+ * @throws `DataError` when the state is not one, or another content version started it.
+ */
+function checkEngineState(course: Course, state: DeliveryState): void {
+  checkState(state);
+  const { contentVersion } = course;
+  if (contentVersion === undefined || state.contentVersion === undefined || state.contentVersion === contentVersion) {
+    return;
+  }
+  throw new DataError(
+    `The state started on the content version ${describe(state.contentVersion)}, and this engine delivers the content version ${describe(contentVersion)}. Apply the state on the engine of its version.`,
+  );
+}
+
 function start(course: Course, options: StartOptions): Step {
   checkOptions(options);
   const {
@@ -276,6 +294,7 @@ function start(course: Course, options: StartOptions): Step {
   const plan = planTest(structure, { random, limits });
   const state: DeliveryState = {
     version: STATE_VERSION,
+    ...(course.contentVersion === undefined ? {} : { contentVersion: course.contentVersion }),
     status: "in-progress",
     at,
     random: random.state(),
@@ -317,32 +336,32 @@ export function createEngine(definition: DeliveryDefinition, options: EngineOpti
   return {
     start: (startOptions) => start(course, startOptions),
     apply: (state, action) => {
-      checkState(state);
+      checkEngineState(course, state);
       checkAction(action);
       const step = new SessionStep(course, state);
       const refused = step.apply(action);
       return refused === undefined ? step.done() : { ok: false, refusal: refused };
     },
     deadlines: (state) => {
-      checkState(state);
+      checkEngineState(course, state);
       return deadlinesOf(course, state);
     },
     view: (state, now) => {
-      checkState(state);
+      checkEngineState(course, state);
       checkFinite(now, "The time now");
       return candidateView(course, state, now);
     },
     pending: (state) => {
-      checkState(state);
+      checkEngineState(course, state);
       return pendingWork(course, state);
     },
     scorerView: (state, requestId) => {
-      checkState(state);
+      checkEngineState(course, state);
       checkString(requestId, "The request");
       return scorerViewOf(course, state, requestId);
     },
     results: (state) => {
-      checkState(state);
+      checkEngineState(course, state);
       return assembleResults(course, state);
     },
   };

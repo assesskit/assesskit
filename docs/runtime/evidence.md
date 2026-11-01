@@ -240,3 +240,12 @@ file, build it byte by byte (`test/zip-builder.ts`): their expected result is th
 
 The scripts use a fixed seed for their random samples and write the same files every time. Run them from the repository root
 and commit the result.
+
+### States of earlier releases
+
+`packages/runtime/test/fixtures/state-1.json` is the one fixture that no script writes: the first release wrote it, for the
+format version 1 and the `englishBasicLevelV2` example, and nothing writes it again. It holds the actions, a state suspended
+in the middle of the test and the state at its end. `delivery.corpus.test.ts` reads both, goes on from the first with the
+remaining actions, and compares every step with a replay from the seed ([State across
+releases](delivery.md#state-across-releases)). A format version that changes the meaning of a field adds a file of its own and
+keeps this one.

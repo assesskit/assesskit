@@ -47,7 +47,8 @@ function itemToJson(item: DeliveredItem): unknown {
  * entries, so that an identifier such as `__proto__` stays data.
  *
  * @remarks
- * File values are references. The text carries the version of the format, which `deserializeState` checks.
+ * File values are references. The text carries the version of the format, which `deserializeState` checks, and the
+ * version of the content when the engine named one.
  *
  * @param state - The state.
  * @returns The JSON text.
@@ -56,9 +57,10 @@ function itemToJson(item: DeliveredItem): unknown {
  */
 export function serializeState(state: DeliveryState): string {
   checkState(state);
-  const { current } = state;
+  const { current, contentVersion } = state;
   return JSON.stringify({
     version: state.version,
+    ...(contentVersion === undefined ? {} : { contentVersion }),
     status: state.status,
     at: state.at,
     random: state.random,
@@ -131,6 +133,7 @@ const needsSchema: Schema<CandidateNeeds> = v.object({
 // The version comes first, so that a state of another format is refused for its version, whatever else it holds.
 const stateSchema: Schema<DeliveryState> = v.object({
   version: v.literal(STATE_VERSION),
+  contentVersion: v.optional(v.string()),
   status: v.picklist(DELIVERY_STATUSES),
   at: finiteSchema,
   random: v.pipe(
@@ -155,7 +158,8 @@ const stateSchema: Schema<DeliveryState> = v.object({
  * Reads a state that {@link serializeState} wrote, checking it deeply: its version, and the type of every field.
  *
  * @remarks
- * A state of another version of the format is refused, as the runtime reads only its own.
+ * A state of a later version of the format is refused. A key that this version does not know is dropped, so that a
+ * state read and written again loses the fields of a later minor release.
  *
  * @param text - The JSON text that `serializeState` wrote.
  * @returns The state.

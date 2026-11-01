@@ -9,6 +9,7 @@ import {
 } from "../asi/index.js";
 import {
   checkFunction,
+  checkNonEmptyString,
   checkOptions,
   checkPositiveInteger,
   checkRecord,
@@ -113,6 +114,13 @@ export interface EngineOptions {
    * @defaultValue none
    */
   readonly limits?: Partial<ProcessingLimits & PlanLimits>;
+  /**
+   * The version of the content, as the host names it, such as a hash of the package. A session keeps it, and the engine
+   * refuses a state that another version started.
+   *
+   * @defaultValue none, so that the engine checks no state and starts sessions that name no version
+   */
+  readonly contentVersion?: string;
 }
 
 /** A stimulus that an item names, with the path of its document. */
@@ -175,6 +183,8 @@ export interface Course {
   readonly resolveTemplate: ((uri: string) => ResponseProcessing | undefined) | undefined;
   /** The limits of processing and planning. */
   readonly limits: ProcessingLimits & PlanLimits;
+  /** The version of the content that the host names; `undefined` when it names none. */
+  readonly contentVersion: string | undefined;
   /** The CAT engine of each adaptive section of the test, by the identifier of the section. */
   readonly catSections: ReadonlyMap<string, CatSectionRef>;
   /** The covers of the externally scored outcomes of the test, by outcome identifier. */
@@ -222,12 +232,16 @@ export function itemContextValues(
 const TEST_KIND = "assessment-test";
 
 /** Checks the options of `createEngine` and applies their defaults. */
-function checkEngineOptions(options: EngineOptions): Pick<Course, "customOperators" | "resolveTemplate" | "limits"> {
+function checkEngineOptions(
+  options: EngineOptions,
+): Pick<Course, "customOperators" | "resolveTemplate" | "limits" | "contentVersion"> {
   checkOptions(options);
   const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions(options);
   const { maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes } = options.limits ?? {};
   checkPositiveInteger(maxPlanNodes, "The limit maxPlanNodes");
-  return { customOperators, resolveTemplate, limits: { ...processing, maxPlanNodes } };
+  const { contentVersion } = options;
+  if (contentVersion !== undefined) checkNonEmptyString(contentVersion, "The option contentVersion");
+  return { customOperators, resolveTemplate, limits: { ...processing, maxPlanNodes }, contentVersion };
 }
 
 /**
@@ -330,7 +344,7 @@ function itemRefsOf(structure: TestStructure): ItemRefNode[] {
 function courseOf(
   structure: TestStructure,
   items: ReadonlyMap<string, CourseItem>,
-  options: Pick<Course, "customOperators" | "resolveTemplate" | "limits">,
+  options: Pick<Course, "customOperators" | "resolveTemplate" | "limits" | "contentVersion">,
   adaptive: Pick<Course, "catSections" | "standalone">,
 ): Course {
   const test = structure.test.model;

@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCorpus } from "../../../scripts/corpus.js";
 import {
+  type Action,
   type AssessmentItem,
   type AssessmentTest,
   applyItemAction,
@@ -12,6 +13,7 @@ import {
   createItemVariables,
   createRandom,
   type DeliveryState,
+  deserializeState,
   type Engine,
   type ItemAction,
   type ItemKey,
@@ -22,12 +24,14 @@ import {
   itemFeedback,
   nextItem,
   packageResolvers,
+  parseCandidateAction,
   planItems,
   planTest,
   presentItem,
   readAsi,
   resolveStructure,
   resultStatus,
+  serializeState,
   sessionControl,
   single,
   standaloneSessionControl,
@@ -43,6 +47,7 @@ import {
 } from "../src/index.js";
 import { readPackageFile } from "../src/node/index.js";
 import { exampleItems } from "./corpus-items.js";
+import written from "./fixtures/state-1.json" with { type: "json" };
 
 const examples = join(requireCorpus(resolve(import.meta.dirname, "../../..")), "qti-examples/qtiv3-examples");
 
@@ -377,24 +382,24 @@ describe("the tests of the examples", () => {
   });
 });
 
-describe("the engine on the examples", () => {
-  /** The engine of a test of a package of the examples, with the item that each item reference names. */
-  async function deliveryOf(directory: string, path: string) {
-    const pkg = await readPackageFile(join(examples, "packaging", directory));
-    const document = pkg.document(path);
-    if (document.kind !== "test") throw new Error(`${path} is not a test.`);
-    const resolvers = packageResolvers(pkg);
-    const engine = createEngine({ kind: "test", test: document.test, base: path, resolvers });
-    const items = new Map<string, AssessmentItem>();
-    const structure = resolveStructure(document.test, path, resolvers);
-    for (const key of planItems(planTest(structure, { random: createRandom(1) }))) {
-      const node = structure.itemRef(key.ref);
-      const resolved = node === undefined ? undefined : resolvers.items(node.model.href, node.base).deliverable;
-      if (resolved?.kind === "qti") items.set(key.ref, resolved.item);
-    }
-    return { engine, items };
+/** The engine of a test of a package of the examples, with the item that each item reference names. */
+async function deliveryOf(directory: string, path: string) {
+  const pkg = await readPackageFile(join(examples, "packaging", directory));
+  const document = pkg.document(path);
+  if (document.kind !== "test") throw new Error(`${path} is not a test.`);
+  const resolvers = packageResolvers(pkg);
+  const engine = createEngine({ kind: "test", test: document.test, base: path, resolvers });
+  const items = new Map<string, AssessmentItem>();
+  const structure = resolveStructure(document.test, path, resolvers);
+  for (const key of planItems(planTest(structure, { random: createRandom(1) }))) {
+    const node = structure.itemRef(key.ref);
+    const resolved = node === undefined ? undefined : resolvers.items(node.model.href, node.base).deliverable;
+    if (resolved?.kind === "qti") items.set(key.ref, resolved.item);
   }
+  return { engine, items };
+}
 
+describe("the engine on the examples", () => {
   /** Plays a test to its end: each item presented gets its correct responses, and is submitted in an individual part. */
   function answerAll(engine: Engine, items: ReadonlyMap<string, AssessmentItem>, individual: boolean): DeliveryState {
     const started = engine.start({ seed: 1, at: 0 });
@@ -528,4 +533,47 @@ describe("the engine on the examples", () => {
       }
     },
   );
+});
+
+// The file holds states that the first release wrote in the format version 1, and is never written again. Every later
+// 1.x release reads it, goes on from it, and reaches what a replay from the seed reaches. A change of the meaning of a
+// field makes a new format version, which adds a file of its own and keeps this one.
+describe("a state that an earlier release wrote", () => {
+  const actions: readonly Action[] = written.actions.map(({ at, action }) => ({ ...parseCandidateAction(action), at }));
+
+  /** The engine of the test, and the states that replaying the actions from the seed reaches, the first before any. */
+  async function replay() {
+    const { engine } = await deliveryOf(written.package, written.test);
+    const started = engine.start({ seed: written.seed, at: written.at });
+    if (!started.ok) throw new Error(started.refusal.message);
+    const states = [started.state];
+    for (const action of actions) {
+      const step = engine.apply(states[states.length - 1] ?? started.state, action);
+      if (!step.ok) throw new Error(`${action.type} was refused: ${step.refusal.message}`);
+      states.push(step.state);
+    }
+    return { engine, states };
+  }
+
+  it("reads as the replay of its actions reaches it, and is written back as it was", async () => {
+    const { states } = await replay();
+    const read = deserializeState(written.suspended);
+    expect(read.status).toBe("suspended");
+    expect(read).toEqual(states[written.suspendedAfter]);
+    expect(serializeState(read)).toBe(written.suspended);
+    expect(deserializeState(written.ended)).toEqual(states[actions.length]);
+  });
+
+  it("goes on, action by action, through the states of the replay to the end of the test", async () => {
+    const { engine, states } = await replay();
+    let state = deserializeState(written.suspended);
+    for (const [index, action] of actions.slice(written.suspendedAfter).entries()) {
+      const step = engine.apply(state, action);
+      if (!step.ok) throw new Error(`${action.type} was refused: ${step.refusal.message}`);
+      state = step.state;
+      expect(state).toEqual(states[written.suspendedAfter + index + 1]);
+    }
+    expect(state.status).toBe("ended");
+    expect(engine.results(state)).toEqual(engine.results(deserializeState(written.ended)));
+  });
 });

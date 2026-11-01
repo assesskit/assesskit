@@ -663,6 +663,15 @@ describe("creating an engine", () => {
     expect(() => createEngine({ kind: "item", item: json("[]"), base: "i.xml" })).toThrow(
       "The item must be an object of the model of qti-assessment-item, found an array.",
     );
+    for (const [given, found] of [
+      ["null", "null"],
+      ["5", "5"],
+      ['""', '""'],
+    ] as const) {
+      expect(() =>
+        createEngine({ kind: "test", test, base: "t.xml", resolvers }, { contentVersion: json(given) }),
+      ).toThrow(`The option contentVersion must be a non-empty string, found ${found}.`);
+    }
   });
 });
 
@@ -4142,6 +4151,70 @@ describe("time stamps", () => {
     expect(() => stamp(state, json("null"), 1)).toThrow("The action must be an object with a type, found null.");
     expect(() => stamp(state, { type: "time" }, json('"1"'))).toThrow(
       'The time now must be a finite number, found "1".',
+    );
+  });
+});
+
+describe("the content version of a state", () => {
+  const content = testPart("P", section("S", refs("a", "b")), "nonlinear");
+  const named = engineOf(content, {}, { contentVersion: "form-2025-03" });
+  const unnamed = engineOf(content);
+  const mismatch =
+    'The state started on the content version "form-2025-03", and this engine delivers the content version "form-2025-04". Apply the state on the engine of its version.';
+
+  it("is kept by the state from the start, and written and read as JSON", () => {
+    const { state } = begun(named);
+    expect(state.contentVersion).toBe("form-2025-03");
+    const later = played(named, state, answer("a", "A", 1), on("submit", "a", 2)).state;
+    expect(later.contentVersion).toBe("form-2025-03");
+    const text = serializeState(later);
+    expect(JSON.parse(text).contentVersion).toBe("form-2025-03");
+    expect(deserializeState(text)).toEqual(later);
+  });
+
+  it("leaves no trace in a state of an engine that names none", () => {
+    const { state } = begun(unnamed);
+    expect("contentVersion" in state).toBe(false);
+    expect("contentVersion" in JSON.parse(serializeState(state))).toBe(false);
+  });
+
+  it("refuses a state of another content version in every call that reads the state, and leaves it as it was", () => {
+    const other = engineOf(content, {}, { contentVersion: "form-2025-04" });
+    const { state } = begun(named);
+    const before = serializeState(state);
+    for (const call of [
+      () => other.apply(state, { type: "time", at: 1 }),
+      () => other.view(state, 1),
+      () => other.deadlines(state),
+      () => other.pending(state),
+      () => other.scorerView(state, "request"),
+      () => other.results(state),
+    ]) {
+      expect(call).toThrow(mismatch);
+      expect(call).toThrow(DataError);
+    }
+    expect(serializeState(state)).toBe(before);
+  });
+
+  it("passes a state that names no version, and a state on an engine that names none", () => {
+    const early = begun(unnamed).state;
+    expect(named.apply(early, { type: "time", at: 1 }).ok).toBe(true);
+    expect(named.view(early, 1)).toEqual(unnamed.view(early, 1));
+    const tagged = begun(named).state;
+    expect(unnamed.apply(tagged, { type: "time", at: 1 }).ok).toBe(true);
+    expect(unnamed.results(tagged)).toEqual(named.results(tagged));
+  });
+
+  it("refuses a content version that is not a string in a state", () => {
+    const written = JSON.parse(serializeState(begun(named).state));
+    expect(() => deserializeState(JSON.stringify({ ...written, contentVersion: 5 }))).toThrow(
+      "The state is invalid at contentVersion: expected a string, found 5.",
+    );
+    expect(() => serializeState({ ...begun(named).state, contentVersion: json("5") })).toThrow(
+      "The contentVersion of the state must be a string, found 5.",
+    );
+    expect(() => named.view({ ...begun(named).state, contentVersion: json("null") }, 1)).toThrow(
+      "The contentVersion of the state must be a string, found null.",
     );
   });
 });
