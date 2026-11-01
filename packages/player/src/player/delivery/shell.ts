@@ -19,6 +19,8 @@ export interface ShellParts {
   readonly lti: HTMLElement;
   /** The form of the comment. */
   readonly comment: HTMLElement;
+  /** The button that checks whether a paused test continues. */
+  readonly resume: HTMLElement;
 }
 
 /** The elements of the player, which the parts of the chrome and the content fill. */
@@ -70,6 +72,7 @@ export function createShell(parts: ShellParts): Shell {
       { class: "ak-main" },
       heading,
       notices,
+      parts.resume,
       supportsSlot,
       toolsSlot,
       contentHost,

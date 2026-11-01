@@ -130,7 +130,7 @@ records.get("s1").version; // => 1
 | `start(caller, options)`             | Starts the session at the time of the clock, binds it to `caller.principal`, stores the record, schedules the deadlines, gives the events to the log and answers with the first envelope, `seq` 0. `options` are those of `Engine.start` but the time, and `signal`, which does not reach the engine. |
 | `check(caller, options?)`            | Throws `AccessError` (`not-bound`) unless the session is bound to the caller's principal. A session that does not exist is the same error, so that the answer does not tell which sessions exist.                                                                                                     |
 | `view(caller, options?)`             | The current view as an envelope, with fresh tokens and the `seq` of the latest request answered. A page that reloads, or that the proctor acted on, mounts from it.                                                                                                                                   |
-| `handle(caller, envelope, options?)` | Answers a request of the client, as below.                                                                                                                                                                                                                                                            |
+| `handle(caller, envelope, options?)` | Answers a request of the client, as below. A view request, `{ "type": "view" }`, is answered as `view` answers, and applies and saves nothing.                                                                                                                                                        |
 | `proctor(session, action, options?)` | Applies `suspend`, `resume`, `end-part` or `end-test` on the host's authority and answers with a `HostStep`.                                                                                                                                                                                          |
 | `session(session)`                   | The host side of the session, a `HostSession` ([protocol](protocol.md#the-host-session)): `apply`, `pending`, `scorerView` and `results`, as below.                                                                                                                                                   |
 
@@ -208,6 +208,26 @@ A break, a pause and the end of a part are the proctor's, through `proctor(sessi
 action as the host and saves it; a refusal of the engine, such as `suspend` on an ended test, is `HostStep.refusal` and
 saves nothing. The candidate learns of it with the next request: the engine refuses the action as `suspended`, the
 envelope carries the suspended view, and `view(caller)` gives it after a reload.
+
+A paused candidate has no action to send, so the page learns of the resume only by asking. `SessionClient.refresh` sends a
+view request through the route that carries the actions, so that route needs nothing besides `handle`. The player asks while
+the view is suspended and lists no `resume`: on a button, when the page becomes visible, and every `resumeCheckMs`
+([delivery](delivery.md#options)).
+
+```mermaid
+sequenceDiagram
+  participant P as Proctor
+  participant H as Session host
+  participant C as Candidate page
+  P->>H: proctor(suspend)
+  C->>H: an action
+  H-->>C: refused as suspended, with the suspended view
+  Note over C: no action is listed, so the page waits
+  P->>H: proctor(resume)
+  C->>H: refresh: { type: view }
+  H-->>C: the view, in progress
+  Note over C: the actions come back
+```
 
 ### Time
 

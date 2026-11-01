@@ -410,6 +410,12 @@ export interface Messages {
   readonly timerExpired: string;
   /** The notice of a test that is paused. */
   readonly testSuspended: string;
+  /** The button of a paused test that asks the host whether the test continues. */
+  readonly checkAgain: string;
+  /** The status after a check that finds the test still paused. */
+  readonly stillSuspended: string;
+  /** The status after a check that could not reach the host. */
+  readonly checkFailed: string;
   /** The notice of a test that has ended. */
   readonly testEnded: string;
   /** The notice of a test that waits for its next question. */

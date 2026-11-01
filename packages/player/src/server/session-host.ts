@@ -118,8 +118,13 @@ export interface SessionHost {
    * view. A refusal of the engine is in the envelope. When another request saved first, it is handled again, up to
    * {@link MAX_SAVE_RETRIES} times.
    *
+   * @remarks
+   * A `ViewRequest` of `@assesskit/player/protocol` (`{ "type": "view" }`) applies nothing and saves nothing: it is answered as {@link SessionHost.view}
+   * answers, so that a client with no action to send, a candidate whom a proctor paused, learns the latest view through the
+   * route that carries its actions.
+   *
    * @param caller - The session and the authenticated principal.
-   * @param envelope - The request as it arrived, parsed from JSON.
+   * @param envelope - The request as it arrived, parsed from JSON: an `ActionEnvelope` or a `ViewRequest`, both of `@assesskit/player/protocol`.
    * @param options - See {@link SessionCallOptions}.
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.

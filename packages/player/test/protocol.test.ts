@@ -30,8 +30,10 @@ import {
   checkRefusal,
   checkSubmission,
   checkViewEnvelope,
+  checkViewRequest,
   type HostStep,
   isOfficialResult,
+  isViewRequest,
   LTI_STORAGE_FRAME,
   LTI_TOOL_FRAME,
   REFUSAL_CODES,
@@ -130,6 +132,29 @@ describe("checkActionEnvelope", () => {
     expect(() => checkActionEnvelope(json('{"seq":1}'))).toThrow(
       new DataError('An action envelope is invalid: missing the property "action".'),
     );
+  });
+});
+
+describe("checkViewRequest", () => {
+  it("accepts a request of the type view", () => {
+    expect(() => checkViewRequest(json('{"type":"view"}'))).not.toThrow();
+    expect(isViewRequest(json('{"type":"view"}'))).toBe(true);
+  });
+
+  it("tells a request that claims to be a view request from an action envelope and from what is not an object", () => {
+    for (const text of ['{"seq":1,"action":{}}', '{"type":"move"}', "null", "[]", '"view"', "5"]) {
+      expect(isViewRequest(json(text)), text).toBe(false);
+    }
+    expect(isViewRequest(json('{"type":"view","seq":1}'))).toBe(true);
+  });
+
+  it("rejects what holds more than the type, or another type", () => {
+    expect(() => checkViewRequest(json('{"type":"view","seq":1}'))).toThrow(
+      new DataError('A view request is invalid: unexpected property "seq".'),
+    );
+    expect(() => checkViewRequest(json('{"type":"move"}'))).toThrow(/^A view request is invalid at type: expected /);
+    expect(() => checkViewRequest(json("{}"))).toThrow('A view request is invalid: missing the property "type".');
+    expect(() => checkViewRequest(json("null"))).toThrow(/^A view request is invalid: expected an object, found /);
   });
 });
 

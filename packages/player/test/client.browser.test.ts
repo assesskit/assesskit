@@ -4,7 +4,7 @@ import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createLocalSession, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
 import { ServiceError } from "../src/index.js";
-import type { ActionEnvelope, SessionCallOptions } from "../src/protocol/index.js";
+import type { ActionEnvelope, SessionCallOptions, ViewRequest } from "../src/protocol/index.js";
 import { untilAborted } from "../src/protocol/internal.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, Q1, SECOND, statusOfQ1 } from "./local-fixture.js";
@@ -20,19 +20,22 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** What the client sends through the transport; a view request has neither a sequence number nor an action. */
+type Sent = ActionEnvelope | (ViewRequest & { readonly seq?: undefined; readonly action?: undefined });
+
 /** A remote session over a session host in the page, with the wire in between: every envelope goes through JSON. */
 async function remote(
   options: {
     readonly files?: Readonly<Record<string, string | Uint8Array>>;
-    readonly fail?: (envelope: ActionEnvelope, call: number) => "before" | "after" | undefined;
+    readonly fail?: (envelope: Sent, call: number) => "before" | "after" | undefined;
     /** Holds the transport before it sends the envelope, until the promise settles or the signal of the call aborts. */
-    readonly wait?: (envelope: ActionEnvelope, call: number) => Promise<void> | undefined;
+    readonly wait?: (envelope: Sent, call: number) => Promise<void> | undefined;
   } = {},
 ) {
   const setup = await examHost({}, options.files, inject("fixtures").asset);
-  const calls: ActionEnvelope[] = [];
+  const calls: Sent[] = [];
   const signals: (AbortSignal | undefined)[] = [];
-  const transport = async (envelope: ActionEnvelope, callOptions?: SessionCallOptions) => {
+  const transport = async (envelope: Sent, callOptions?: SessionCallOptions) => {
     calls.push(envelope);
     signals.push(callOptions?.signal);
     const waiting = options.wait?.(envelope, calls.length);
@@ -49,8 +52,8 @@ async function remote(
   return { ...setup, client, calls, signals, transport, initial };
 }
 
-const typesOf = (calls: readonly ActionEnvelope[]): string[] =>
-  calls.map(({ action }) => (action as { type: string }).type);
+const typesOf = (calls: readonly Sent[]): string[] =>
+  calls.map((sent) => (sent.action === undefined ? "view" : (sent.action as { type: string }).type));
 
 describe("createRemoteSession", () => {
   it("shows the first view, resolves paths through the signed prefixes and reads the documents of the content", async () => {
@@ -99,7 +102,7 @@ describe("createRemoteSession", () => {
     await vi.advanceTimersByTimeAsync(1);
     const [one, two] = await Promise.all([first, second]);
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.seq).toBe(1);
+    expect(calls[0]).toMatchObject({ seq: 1 });
     expect(one).toBe(two);
     expect(one.view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "B"));
     client.close();
@@ -262,7 +265,10 @@ describe("createRemoteSession", () => {
 
   it("fails when the host answers another sequence number", async () => {
     const { initial } = await remote();
-    const client = createRemoteSession(async (envelope) => ({ ...initial, seq: envelope.seq + 1 }), initial);
+    const client = createRemoteSession(
+      async (request) => ({ ...initial, seq: "seq" in request ? request.seq + 1 : initial.seq }),
+      initial,
+    );
     await expect(client.dispatch({ type: "move", to: "next" })).rejects.toThrow(
       new DataError("The host answered the sequence number 2 to the request 1."),
     );
@@ -475,5 +481,85 @@ describe("createLocalSession", () => {
     await expect(client.dispatch(JSON.parse('{"type":"nope"}'))).rejects.toThrow("The type of the action");
     client.close();
     await expect(client.dispatch({ type: "move", to: "next" })).rejects.toThrow("The session client is closed.");
+  });
+});
+
+describe("refresh of a remote session", () => {
+  const Next = { type: "move", to: "next" } as const;
+
+  it("learns that the proctor resumed a test whose view lists no action to continue", async () => {
+    const { client, host, calls } = await remote();
+    const seen: string[] = [];
+    client.subscribe((view) => void seen.push(view.status));
+    await host.proctor(ALICE.session, { type: "suspend" });
+    const refused = await client.dispatch(Next);
+    expect(refused.refusal?.code).toBe("suspended");
+    expect(client.view.status).toBe("suspended");
+    expect(client.view.actions).toEqual([]);
+    await host.proctor(ALICE.session, { type: "resume" });
+    // Nothing tells the client: its view is the one of the last answer.
+    expect(client.view.status).toBe("suspended");
+    const view = await client.refresh();
+    expect(view.status).toBe("in-progress");
+    expect(client.view).toBe(view);
+    expect(view.actions).toContain("move");
+    expect(seen).toEqual(["suspended", "in-progress"]);
+    expect(typesOf(calls)).toEqual(["move", "view"]);
+    client.close();
+  });
+
+  it("changes nothing at the host, and the next action goes on from the sequence number of the host", async () => {
+    const { client, host, store, calls } = await remote();
+    await host.proctor(ALICE.session, { type: "suspend" });
+    await client.dispatch(Next);
+    const saved = store.records.get(ALICE.session)?.version;
+    expect((await client.refresh()).status).toBe("suspended");
+    expect((await client.refresh()).status).toBe("suspended");
+    expect(store.records.get(ALICE.session)?.version).toBe(saved);
+    await host.proctor(ALICE.session, { type: "resume" });
+    expect((await client.refresh()).status).toBe("in-progress");
+    const moved = await client.dispatch(Next);
+    expect(moved.refusal).toBeUndefined();
+    expect(calls.at(-1)).toMatchObject({ seq: 2 });
+    client.close();
+  });
+
+  it("follows a client that another page moved on, so that the next action is not stale", async () => {
+    const { client, host, calls } = await remote();
+    await host.handle(ALICE, JSON.parse(JSON.stringify({ seq: 1, action: { type: "move", to: "next" } })));
+    await client.refresh();
+    expect(client.view.current?.key.ref).toBe("q2");
+    const moved = await client.dispatch({ type: "move", to: "next" });
+    expect(moved.refusal).toBeUndefined();
+    expect(calls.at(-1)).toMatchObject({ seq: 2 });
+    client.close();
+  });
+
+  it("sends the responses that the client holds first", async () => {
+    const { client, calls } = await remote();
+    void client.dispatch(answer("A"));
+    const view = await client.refresh();
+    expect(view.current?.responses.get("RESPONSE")).toEqual(single("identifier", "A"));
+    expect(typesOf(calls)).toEqual(["set-responses", "view"]);
+    client.close();
+  });
+
+  it("sends a request that got no answer again before it asks, and does not leave a view request in doubt", async () => {
+    const { client, calls } = await remote({ fail: (_sent, call) => (call === 1 ? "after" : undefined) });
+    await expect(client.dispatch(Next)).rejects.toThrow(ServiceError);
+    const view = await client.refresh();
+    expect(view.current?.key.ref).toBe("q2");
+    expect(typesOf(calls)).toEqual(["move", "move", "view"]);
+    client.close();
+  });
+
+  it("sends nothing for a signal that aborted, rejects a closed client, and refuses options of another type", async () => {
+    const { client, calls } = await remote();
+    const reason = new Error("The caller left.");
+    await expect(client.refresh({ signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
+    expect(calls).toEqual([]);
+    await expect(client.refresh(JSON.parse("5"))).rejects.toThrow(DataError);
+    client.close();
+    await expect(client.refresh()).rejects.toThrow("The session client is closed.");
   });
 });

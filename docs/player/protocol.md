@@ -122,6 +122,7 @@ by which the storage page and the tool look each other up.
 | `age()`                      | The milliseconds since the view was built or received, on the client's clock.                                                     |
 | `assets(path)`               | The URL of a path of the package: the base URL of the longest asset prefix of the latest view that holds the path, plus the path. |
 | `dispatch(action, options?)` | Sends an action and resolves with `{ view, refusal? }`: the view after it, or the view as it was with the refusal of the engine.  |
+| `refresh(options?)`          | Asks the session for its latest view and resolves with it, for a candidate who waits for someone else to act.                     |
 | `subscribe(listener)`        | Calls the listener with every new view, and returns the function that removes it.                                                 |
 | `close()`                    | Stops the timers and the listeners of the client.                                                                                 |
 

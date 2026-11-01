@@ -426,6 +426,15 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       rejectStranded(failure);
       return { view: latest.view, ...(step.ok ? {} : { refusal: step.refusal }) };
     },
+    refresh: async (options) => {
+      checkCallOptions(options);
+      if (closed) throw new DataError("The session client is closed.");
+      return enqueue(() => {
+        look();
+        notifyListeners(listeners, latest.view);
+        return latest.view;
+      }, options?.signal);
+    },
     subscribe: (listener) => {
       checkFunction(listener, "The listener must be a function");
       listeners.add(listener);

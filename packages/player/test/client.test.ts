@@ -1,4 +1,4 @@
-import type { CandidateAction, DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
+import type { CandidateAction, CandidateView, DeliveryEvent, HostAction } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
@@ -328,6 +328,38 @@ describe("the host side of a local session", () => {
     expect(() => client.host.subscribeSteps(() => undefined)).toThrow(new DataError("The session client is closed."));
     expect((await client.host.pending()).scoring).toEqual([]);
     expect(await statuses(client)).toEqual(["pendingSubmission"]);
+  });
+});
+
+describe("refresh of a local session", () => {
+  it("builds the view of the state at the time of the call and calls the listeners with it", async () => {
+    const { options, clock } = localOptions();
+    const client = await createLocalSession(options);
+    const seen: CandidateView[] = [];
+    client.subscribe((view) => void seen.push(view));
+    clock.advance(4 * SECOND);
+    expect(client.age()).toBe(4 * SECOND);
+    const view = await client.refresh();
+    expect(client.view).toBe(view);
+    expect(seen).toEqual([view]);
+    expect(client.age()).toBe(0);
+    client.close();
+  });
+
+  it("waits for the actions before it, and rejects a closed client, an aborted signal and options of another type", async () => {
+    const { options, store } = localOptions();
+    const client = await createLocalSession(options);
+    const saved = store.saved.get("practice-1")?.length;
+    const moving = client.dispatch({ type: "move", to: "next" });
+    const refreshed = client.refresh();
+    expect((await refreshed).current?.key.ref).toBe("q2");
+    await moving;
+    expect(store.saved.get("practice-1")?.length).toBe((saved ?? 0) + 1);
+    const reason = new Error("The caller left.");
+    await expect(client.refresh({ signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
+    await expect(client.refresh(JSON.parse("5"))).rejects.toThrow(DataError);
+    client.close();
+    await expect(client.refresh()).rejects.toThrow("The session client is closed.");
   });
 });
 

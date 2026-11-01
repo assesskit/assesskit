@@ -13,6 +13,7 @@ import {
   type SessionClient,
   type ViewDocuments,
   type ViewEnvelope,
+  type ViewRequest,
 } from "../protocol/index.js";
 import { checkCallOptions, clockSchema, untilAborted } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
@@ -27,12 +28,13 @@ export const AUTOSAVE_MS = 1000;
 export const FLUSH_BEFORE_DEADLINE_MS = 10_000;
 
 /**
- * Sends an envelope to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example.
+ * Sends a request to the session host and resolves with its answer: a `fetch` of the host's endpoint, for example. The
+ * request is an action envelope or, for {@link SessionClient.refresh}, a view request; the host's `handle` reads both.
  *
- * @remarks The client passes the signal of the call that sends the envelope, so that the transport can stop waiting for the
+ * @remarks The client passes the signal of the call that sends the request, so that the transport can stop waiting for the
  * answer. A transport that cannot may ignore it.
  */
-export type Transport = (envelope: ActionEnvelope, options?: SessionCallOptions) => Promise<ViewEnvelope>;
+export type Transport = (request: ActionEnvelope | ViewRequest, options?: SessionCallOptions) => Promise<ViewEnvelope>;
 
 /** The options of {@link createRemoteSession}. */
 export interface RemoteSessionOptions {
@@ -84,8 +86,10 @@ const isRejection = (error: unknown): boolean => error instanceof DataError || e
  *   other action, when the page is hidden, and {@link FLUSH_BEFORE_DEADLINE_MS} before the nearest timer reaches 0. At 0 the
  *   client sends them once more, or an empty `set-responses` if it holds none, to learn from the host whether the time-out
  *   happened.
+ * - **Refresh.** {@link SessionClient.refresh} sends the held responses, then a view request, which the host answers as
+ *   `SessionHost.view` does and which changes nothing there. The client goes on from the sequence number of the answer.
  *
- * @param transport - Sends an envelope to the host.
+ * @param transport - Sends a request to the host.
  * @param initial - The envelope that `SessionHost.start` or `SessionHost.view` gave. The next request has its sequence
  * number plus one.
  * @param options - See {@link RemoteSessionOptions}.
@@ -164,28 +168,49 @@ export function createRemoteSession(
     }
   };
 
+  /** Sends the request that got no answer again, before the next request. */
+  const settleDoubt = async (signal: AbortSignal | undefined): Promise<void> => {
+    const again = inDoubt;
+    if (again === undefined) return;
+    inDoubt = undefined;
+    try {
+      accept(await deliver(again, signal));
+    } catch (error) {
+      // A request that the host rejected is gone; one that got no answer again blocks the next.
+      if (!isRejection(error)) throw error;
+    }
+  };
+
   const exchange = async (action: CandidateAction, signal: AbortSignal | undefined): Promise<DispatchResult> => {
     signal?.throwIfAborted();
-    const again = inDoubt;
-    if (again !== undefined) {
-      inDoubt = undefined;
-      try {
-        accept(await deliver(again, signal));
-      } catch (error) {
-        // A request that the host rejected is gone; one that got no answer again blocks the next.
-        if (!isRejection(error)) throw error;
-      }
-    }
+    await settleDoubt(signal);
     sequence += 1;
     return accept(await deliver({ seq: sequence, action: actionToJson(action) }, signal));
   };
 
-  /** Sends one action after the ones before it. */
-  const send = (action: CandidateAction, signal?: AbortSignal): Promise<DispatchResult> => {
-    const result = queue.then(() => exchange(action, signal));
+  /**
+   * Asks the host for its view, and goes on from the sequence number it has. A view changes nothing at the host, so a
+   * request that got no answer is not in doubt.
+   */
+  const look = async (signal: AbortSignal | undefined): Promise<void> => {
+    signal?.throwIfAborted();
+    await settleDoubt(signal);
+    const reply = await transport({ type: "view" }, { signal });
+    checkViewEnvelope(reply);
+    sequence = reply.seq;
+    accept(reply);
+  };
+
+  /** Runs one task after the ones before it. */
+  const inOrder = <T>(task: () => Promise<T>): Promise<T> => {
+    const result = queue.then(task);
     queue = result.catch(() => undefined);
     return result;
   };
+
+  /** Sends one action after the ones before it. */
+  const send = (action: CandidateAction, signal?: AbortSignal): Promise<DispatchResult> =>
+    inOrder(() => exchange(action, signal));
 
   /** Sends the responses that the client holds, and answers the callers that waited for them. */
   const flush = (): Promise<DispatchResult | undefined> => {
@@ -256,6 +281,15 @@ export function createRemoteSession(
       signal?.throwIfAborted();
       await flush();
       return send(action, signal);
+    },
+    refresh: async (options) => {
+      checkCallOptions(options);
+      if (closed) throw new DataError("The session client is closed.");
+      const signal = options?.signal;
+      signal?.throwIfAborted();
+      await flush();
+      await inOrder(() => look(signal));
+      return latest.view;
     },
     subscribe: (listener) => {
       checkFunction(listener, "The listener must be a function");

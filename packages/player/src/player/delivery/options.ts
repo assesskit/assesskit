@@ -2,6 +2,7 @@ import {
   checkBoolean,
   checkFunction,
   checkNonEmptyString,
+  checkNonNegativeInteger,
   checkProperties,
   checkRecord,
   checkString,
@@ -137,6 +138,18 @@ export interface MountOptions {
 export interface DeliveryOptions extends MountOptions {
   /** The session: the player shows its view, sends its actions, and resolves package paths through it. */
   readonly client: SessionClient;
+  /**
+   * How often in milliseconds the player asks the session whether a paused test continues, for as long as the candidate has
+   * no action to continue it.
+   *
+   * @remarks
+   * A proctor pauses a test and resumes it; the candidate has no action, so the client learns of the resume only when it
+   * asks (`SessionClient.refresh`). The player also asks when the page becomes visible and on a button. A remote client
+   * sends one request for each check, so a host with many paused candidates sets a longer time, or 0 for none.
+   *
+   * @defaultValue `30000`
+   */
+  readonly resumeCheckMs?: number;
 }
 
 /** What `mountItem` needs: the options of `mountDelivery` without the chrome, the tools and the login of an LTI item. */
@@ -223,7 +236,11 @@ function checkDeliveryHooks(hooks: unknown): void {
 }
 
 /** The options that `mountDelivery` and `mountItem` share, with the two that differ not yet checked. */
-type SharedOptions = Omit<ItemMountOptions, "hooks"> & { readonly hooks?: unknown; readonly chrome?: unknown };
+type SharedOptions = Omit<ItemMountOptions, "hooks"> & {
+  readonly hooks?: unknown;
+  readonly chrome?: unknown;
+  readonly resumeCheckMs?: unknown;
+};
 
 /** Checks the host and the options that `mountDelivery` and `mountItem` share. */
 function checkSharedOptions(
@@ -252,7 +269,7 @@ function checkSharedOptions(
   if (options.origins !== undefined) readOrigins(options.origins);
   if (options.mathjax !== undefined) checkString(options.mathjax, "The option mathjax");
   checkRecord(options.client, "The option client must be a session client");
-  for (const name of ["age", "assets", "dispatch", "subscribe", "close"]) {
+  for (const name of ["age", "assets", "dispatch", "refresh", "subscribe", "close"]) {
     checkFunction(options.client[name], `The function ${name} of the option client must be a function`);
   }
 }
@@ -266,8 +283,11 @@ function checkSharedOptions(
  * type.
  */
 export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
-  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome"]);
+  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome", "resumeCheckMs"]);
   if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
+  if (options.resumeCheckMs !== undefined) {
+    checkNonNegativeInteger(options.resumeCheckMs, "The option resumeCheckMs");
+  }
   if (options.hooks !== undefined) checkDeliveryHooks(options.hooks);
 }
 

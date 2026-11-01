@@ -132,7 +132,7 @@ const STYLE = ".note { color: #123456; }\n";
 export const HIDDEN_KEY_FILE = "items/q1/notes.xml";
 
 /** A page of the package that a link of the content could open: it tells its opener that its script ran. */
-export const HOSTILE_PAGE = '<!doctype html><title>Page</title><script>parent.postMessage("script-ran", "*")</script>';
+const HOSTILE_PAGE = '<!doctype html><title>Page</title><script>parent.postMessage("script-ran", "*")</script>';
 
 /** The files of the fixture package: a test of three items in a nonlinear part, an image, a stylesheet and a key that hides as web content. */
 export function examFiles(

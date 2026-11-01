@@ -6,6 +6,7 @@ import { createBody } from "./body.js";
 import { createChrome } from "./chrome.js";
 import { createCommentBox } from "./comment.js";
 import { checkDeliveryOptions, type DeliveryOptions, type Mounted } from "./options.js";
+import { createResumeWatch } from "./resume.js";
 import { createSender } from "./sender.js";
 import { resolveSettings } from "./settings.js";
 import { createShell } from "./shell.js";
@@ -54,6 +55,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const timers = createTimerBar(messages, language, timerStatus);
   const sender = createSender({ client, messages, status, state });
   const comment = createCommentBox(messages, sender.comment);
+  const resume = createResumeWatch({ client, messages, status, state, everyMs: settings.resumeCheckMs });
   const lti = createLtiSlot({
     host,
     messages,
@@ -67,6 +69,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     status: status.element,
     lti: lti.element,
     comment: comment.element,
+    resume: resume.element,
   });
   const body = createBody({ ...settings, state, sender, host: shell.contentHost });
   shadow.append(shell.app);
@@ -75,7 +78,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     ? createChrome({ messages, shadow, shell, timers, comment, client, state, sendSettled: body.sendSettled })
     : undefined;
 
-  const update = createUpdate({ ...settings, state, shell, body, attachments, chromeView, lti });
+  const update = createUpdate({ ...settings, state, shell, body, attachments, chromeView, lti, resume });
   const unsubscribe = client.subscribe(update);
   const ticker = setInterval(() => timers.tick(client.age()), TICK_MS);
   update(client.view);
@@ -88,6 +91,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
       state.destroyed = true;
       unsubscribe();
       clearInterval(ticker);
+      resume.destroy();
       attachments.tools?.destroy();
       attachments.supports.destroy();
       status.stop();

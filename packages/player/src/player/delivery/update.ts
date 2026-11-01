@@ -22,6 +22,8 @@ export interface UpdateContext extends Pick<Settings, "client" | "messages" | "c
   readonly chromeView: Chrome | undefined;
   /** The slot of the tool of an LTI item. */
   readonly lti: { update(item: CandidateItem | undefined): void };
+  /** The check of a paused test. */
+  readonly resume: { update(view: CandidateView): void };
 }
 
 /**
@@ -35,7 +37,7 @@ export interface UpdateContext extends Pick<Settings, "client" | "messages" | "c
  * @returns The function that shows a view.
  */
 export function createUpdate(context: UpdateContext): (view: CandidateView) => void {
-  const { client, messages, chrome, state, shell, body, attachments, chromeView, lti } = context;
+  const { client, messages, chrome, state, shell, body, attachments, chromeView, lti, resume } = context;
   const { supports, tools } = attachments;
   const draw = createViewChain({ client, state, body, attachments, tools });
 
@@ -45,6 +47,7 @@ export function createUpdate(context: UpdateContext): (view: CandidateView) => v
     state.view = next;
     shell.heading.textContent = next.current?.title ?? next.test.title;
     renderNotices(shell.notices, next, messages);
+    resume.update(next);
     supports.update(next);
     lti.update(next.current);
     chromeView?.render(next);

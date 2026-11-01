@@ -119,6 +119,51 @@ describe("collectAssetPrefixes", () => {
   });
 });
 
+describe("a view request to handle", () => {
+  const View = { type: "view" } as const;
+
+  it("answers as view does, and applies and saves nothing", async () => {
+    const { host, store } = await examHost();
+    await host.start(ALICE, { seed: 1 });
+    await host.handle(ALICE, request(1, { type: "move", to: "next" }));
+    const saved = store.records.get(ALICE.session);
+    const asked = await host.handle(ALICE, View);
+    expect(asked).toEqual(await host.view(ALICE));
+    expect(asked.seq).toBe(1);
+    expect(viewOf(asked).current?.key.ref).toBe("q2");
+    expect(store.records.get(ALICE.session)).toEqual(saved);
+  });
+
+  it("gives the view of a test that the proctor paused and then resumed, to a client that has no action", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 1 });
+    await host.proctor(ALICE.session, { type: "suspend" });
+    const paused = viewOf(await host.handle(ALICE, View));
+    expect(paused.status).toBe("suspended");
+    expect(paused.actions).toEqual([]);
+    await host.proctor(ALICE.session, { type: "resume" });
+    expect(viewOf(await host.handle(ALICE, View)).status).toBe("in-progress");
+  });
+
+  it("is refused for a session that is not bound to the caller, and for a request that holds more than the type", async () => {
+    const { host } = await examHost();
+    await host.start(ALICE, { seed: 1 });
+    await expect(host.handle({ session: ALICE.session, principal: "mallory" }, View)).rejects.toThrow(AccessError);
+    await expect(host.handle(ALICE, JSON.parse('{"type":"view","seq":1}'))).rejects.toThrow(
+      'A view request is invalid: unexpected property "seq".',
+    );
+  });
+
+  it("finishes the CAT requests that wait first, as view does", async () => {
+    const files = adaptiveFiles();
+    const port = scriptedPort();
+    const { host } = await examHost({ engine: adaptiveEngine(files), cat: port }, files);
+    port.fail("createSession", 1);
+    await expect(host.start(ALICE, { seed: 7 })).rejects.toThrow(ServiceError);
+    expect(viewOf(await host.handle(ALICE, View)).current?.key).toEqual({ ref: "i1", instance: 1 });
+  });
+});
+
 describe("the asset gate", () => {
   async function gateOf(files: Readonly<Record<string, string | Uint8Array>> = examFiles()) {
     const pkg = packageOf(files);

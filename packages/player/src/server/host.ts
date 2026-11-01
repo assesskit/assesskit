@@ -37,7 +37,9 @@ import {
   checkActionEnvelope,
   checkCaller,
   checkViewEnvelope,
+  checkViewRequest,
   type HostStep,
+  isViewRequest,
   type SessionCallOptions,
   type ViewEnvelope,
 } from "../protocol/index.js";
@@ -394,6 +396,17 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     return stored.seq === answer.seq ? replay(session, stored, now) : answer;
   };
 
+  const view: SessionHost["view"] = async (caller, callOptions) => {
+    checkCallOptions(callOptions);
+    const signal = callOptions?.signal;
+    let stored = await boundTo(caller, signal);
+    if (cat !== undefined) {
+      await serve(caller.session, signal);
+      stored = (await load(caller.session, signal)) ?? stored;
+    }
+    return envelopeOf(caller.session, deserializeState(stored.state), readClock(clock), stored.seq, signal);
+  };
+
   return {
     start: async (caller, startOptions) => {
       checkCaller(caller);
@@ -425,18 +438,13 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       checkCallOptions(callOptions);
       await boundTo(caller, callOptions?.signal);
     },
-    view: async (caller, callOptions) => {
-      checkCallOptions(callOptions);
-      const signal = callOptions?.signal;
-      let stored = await boundTo(caller, signal);
-      if (cat !== undefined) {
-        await serve(caller.session, signal);
-        stored = (await load(caller.session, signal)) ?? stored;
-      }
-      return envelopeOf(caller.session, deserializeState(stored.state), readClock(clock), stored.seq, signal);
-    },
+    view,
     handle: async (caller, envelope, callOptions) => {
       checkCaller(caller);
+      if (isViewRequest(envelope)) {
+        checkViewRequest(envelope);
+        return view(caller, callOptions);
+      }
       checkActionEnvelope(envelope);
       checkCallOptions(callOptions);
       const signal = callOptions?.signal;

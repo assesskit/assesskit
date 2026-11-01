@@ -211,7 +211,7 @@ describe("exam mode over HTTP", () => {
 });
 
 /** Mounts the player over the exam server, as a host's page does. */
-async function mountExam(session: string, principal = "alice") {
+async function mountExam(session: string, principal = "alice", extra: { readonly resumeCheckMs?: number } = {}) {
   const who = candidate(session, principal);
   const initial = await start(who);
   const client: SessionClient = createRemoteSession(who.transport(), initial);
@@ -230,6 +230,7 @@ async function mountExam(session: string, principal = "alice") {
     staticUrl: `${inject("fixtures").asset}/static/`,
     stylesheet: player,
     fetch: (url, init) => fetch(url, init),
+    ...extra,
   });
   return { who, client, ui: host.shadowRoot as ShadowRoot, host };
 }
@@ -268,6 +269,38 @@ describe("the player over the exam server", () => {
     expect(second.view.current?.responses.get("PCI")).toEqual(single("integer", 1));
     expect(second.view.current?.pci.get("PCI")?.state).toBe('{"count":1}');
     second.close();
+  });
+
+  it("lets the candidate continue after the proctor resumed the test, on the button that checks", async () => {
+    const session = fresh();
+    const { who, ui } = await mountExam(session, "alice", { resumeCheckMs: 0 });
+    await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
+    const check = ui.querySelector<HTMLButtonElement>(".ak-resume button");
+    expect(check?.closest<HTMLElement>(".ak-resume")?.hidden).toBe(true);
+    await who.post("proctor", { type: "suspend" });
+    // The client learns of the pause with the next request, which the host refuses.
+    [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question")?.click();
+    await waitFor(() => expect(ui.querySelector(".ak-notice")?.textContent).toContain("The test is paused"));
+    expect(check?.closest<HTMLElement>(".ak-resume")?.hidden).toBe(false);
+    check?.click();
+    await waitFor(() => expect(ui.querySelector(".ak-status")?.textContent).toBe("The test is still paused."));
+    await who.post("proctor", { type: "resume" });
+    check?.click();
+    await waitFor(() => expect(ui.querySelector(".ak-notice")).toBeNull());
+    expect(check?.closest<HTMLElement>(".ak-resume")?.hidden).toBe(true);
+    expect(ui.querySelectorAll(".ak-actions button").length).toBeGreaterThan(0);
+  });
+
+  it("continues by itself at the interval after the proctor resumed the test", async () => {
+    const session = fresh();
+    const { who, ui } = await mountExam(session, "alice", { resumeCheckMs: 50 });
+    await waitFor(() => expect(ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
+    await who.post("proctor", { type: "suspend" });
+    [...ui.querySelectorAll("button")].find((button) => button.textContent === "Skip question")?.click();
+    await waitFor(() => expect(ui.querySelector(".ak-notice")?.textContent).toContain("The test is paused"));
+    await who.post("proctor", { type: "resume" });
+    await waitFor(() => expect(ui.querySelector(".ak-notice")).toBeNull());
+    expect(ui.querySelectorAll(".ak-actions button").length).toBeGreaterThan(0);
   });
 
   it("shows the break that the proctor made, in a candidate's page that was open before it", async () => {

@@ -1,6 +1,7 @@
 import type { Messages } from "../../messages/index.js";
 import { selectMessages } from "../../messages/index.js";
 import type { DeliveryOptions, ItemMountOptions } from "./options.js";
+import { DEFAULT_RESUME_CHECK_MS } from "./resume.js";
 
 /** The options of a player that draws content only, with their defaults applied, which its parts read. */
 export interface ItemSettings
@@ -19,6 +20,8 @@ export interface ItemSettings
 export interface Settings extends Omit<ItemSettings, "hooks"> {
   /** Whether the player draws its chrome. */
   readonly chrome: boolean;
+  /** How often a paused test is checked, in milliseconds; 0 for never. */
+  readonly resumeCheckMs: number;
   /** The hooks of the host. */
   readonly hooks: NonNullable<DeliveryOptions["hooks"]>;
 }
@@ -52,6 +55,6 @@ export function resolveItemSettings(options: ItemMountOptions): ItemSettings {
  * @returns The settings.
  */
 export function resolveSettings(options: DeliveryOptions): Settings {
-  const { chrome = true, hooks = {}, ...shared } = options;
-  return { ...resolveItemSettings(shared), chrome, hooks };
+  const { chrome = true, hooks = {}, resumeCheckMs = DEFAULT_RESUME_CHECK_MS, ...shared } = options;
+  return { ...resolveItemSettings(shared), chrome, hooks, resumeCheckMs };
 }

@@ -50,6 +50,23 @@ export interface SessionClient {
    */
   dispatch(action: CandidateAction, options?: SessionCallOptions): Promise<DispatchResult>;
   /**
+   * Asks the session for its latest view and resolves with it, for a candidate who waits for someone else to act: a proctor
+   * who pauses a test lists no action for the candidate, and a resume reaches the client only when it asks.
+   *
+   * @remarks
+   * A remote client holds no change back from the host: it sends the responses it holds, or an empty `set-responses` for the
+   * item presented, and the host answers with the view after it. The step of a paused test is refused, and the same step is
+   * applied with no effect once the test continues. A local client builds the view of the state at the time of the call.
+   * Both call the listeners with the view they get.
+   *
+   * @param options - See {@link SessionCallOptions}.
+   * @returns The latest view.
+   * @throws `DataError` when the client is closed or the host refuses the request.
+   * @throws `ServiceError` when the host cannot be reached or cannot save.
+   * @throws `signal.reason` when the signal aborts before the request starts; one in flight stays in doubt, as for `dispatch`.
+   */
+  refresh(options?: SessionCallOptions): Promise<CandidateView>;
+  /**
    * Calls the listener with every new view.
    *
    * @param listener - The function to call.
