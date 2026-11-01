@@ -32,6 +32,12 @@ const PLAYER_SOURCES = [
 const HANG_LIMIT = 60_000;
 
 /**
+ * The engines that run, from `BROWSERS` as a comma-separated list. Coverage and `check:rules` run Chromium alone, the one
+ * engine that reports coverage and the one the rule checks need; CI runs all three for the tests.
+ */
+const ENGINES = (process.env.BROWSERS ?? "chromium,firefox,webkit").split(",");
+
+/**
  * The engines of the browser tests, and the commands that they use. Vitest names the instances, so each project has its own.
  * Firefox runs one file at a time: the mouse of a page can reach another page of the same Firefox that runs at once, so
  * that the pages take each other's presses, moves and drags.
@@ -44,7 +50,7 @@ const browser = () => ({
     { browser: "chromium" as const },
     { browser: "firefox" as const, fileParallelism: false },
     { browser: "webkit" as const },
-  ],
+  ].filter(({ browser: engine }) => ENGINES.includes(engine)),
   commands: COMMANDS,
 });
 
@@ -56,6 +62,28 @@ const EXAM_SETUP = "packages/player/test/fixtures/exam-setup.ts";
 
 /** Starts the servers of the LTI browser tests: the storage page of a platform and two tools. */
 const LTI_SETUP = "packages/player/test/fixtures/lti-setup.ts";
+
+/**
+ * The coverage floors, by the folders they hold. The tests of the runtime and of the folders of the player that need no page
+ * run in Node (`pnpm test:coverage`); the folders that draw a page and the client that waits on timers run in Chromium
+ * (`pnpm test:coverage:browser`, with `COVERAGE_RUN=browser`), the one engine that reports coverage. A run holds only the
+ * floors of the folders it exercises, so a gap in the tests of one part fails its own floor and no other.
+ */
+const FLOORS: Record<string, { statements: number; branches: number; functions: number; lines: number }> =
+  process.env.COVERAGE_RUN === "browser"
+    ? {
+        "packages/player/src/player/**": { statements: 93, branches: 84, functions: 94, lines: 95 },
+        "packages/player/src/client/**": { statements: 86, branches: 71, functions: 82, lines: 90 },
+      }
+    : {
+        "packages/runtime/src/**": { statements: 96, branches: 92, functions: 97, lines: 97 },
+        "packages/player/src/{cat,cat-rest,messages,protocol,scoring,server}/**": {
+          statements: 95,
+          branches: 88,
+          functions: 96,
+          lines: 97,
+        },
+      };
 
 // biome-ignore lint/style/noDefaultExport: Vitest reads its configuration from the default export.
 export default defineConfig({
@@ -196,5 +224,11 @@ export default defineConfig({
         },
       },
     ],
+    coverage: {
+      provider: "v8",
+      include: ["packages/*/src/**/*.ts"],
+      // One floor for each part of a package, held by the run that exercises it, a little below what the tests reach.
+      thresholds: FLOORS,
+    },
   },
 });

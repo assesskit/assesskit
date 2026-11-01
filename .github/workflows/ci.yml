@@ -51,6 +51,10 @@ jobs:
       - run: pnpm knip
       - run: pnpm check:packages
       - run: pnpm check:release
+      # Packs the packages, installs them into a scratch project, imports every subpath in Node.js and type-checks them.
+      - run: pnpm check:tarballs
+      - run: pnpm check:licenses
+      - run: pnpm check:audit
       - run: pnpm compat
       - run: pnpm docs:api
       # Version and Dependabot pull requests change package files without a changeset of their own.
@@ -74,7 +78,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm test
+      # The coverage floors (vitest.config.ts) are checked once, on the oldest supported Node.js.
+      - if: matrix.node == 22
+        run: pnpm test:coverage
+      - if: matrix.node != 22
+        run: pnpm test
 
   # The benchmarks of the runtime on generated inputs and on the 1EdTech examples, which it times against Longsight qti3-core.
   # The job fails when the fastest sample of a benchmark is above its budget (docs/runtime/performance.md).
@@ -108,8 +116,25 @@ jobs:
       - run: pnpm schemas
       - run: pnpm corpus
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm test:browser
+      # Chromium runs with coverage, the one engine that reports it, and holds the floors of the folders that draw a page.
+      - run: pnpm test:coverage:browser
+      - run: BROWSERS=firefox,webkit pnpm test:browser
       - run: pnpm test:corpus --project '!runtime*'
+
+  # Removes each security rule that scripts/check-rules.ts lists from a copy of the code, and fails when its test still passes.
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The rules of the code that runs in a page are checked in Chromium.
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm check:rules
 
   # The built code of the player in the oldest browsers of its baseline, in the container images of the Playwright
   # releases that ship them (docs/player/baseline.md).
