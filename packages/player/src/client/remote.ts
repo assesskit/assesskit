@@ -1,4 +1,4 @@
-import { checkFunction, functionSchema, parseWith, recordSchema } from "@assesskit/runtime/checks";
+import { checkFunction, functionSchema, parseWith, recordSchema, untilAborted } from "@assesskit/runtime/checks";
 import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
@@ -15,7 +15,7 @@ import {
   type ViewEnvelope,
   type ViewRequest,
 } from "../protocol/index.js";
-import { checkCallOptions, clockSchema, untilAborted } from "../protocol/internal.js";
+import { checkCallOptions, clockSchema } from "../protocol/internal.js";
 import { assetResolver } from "./assets.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";

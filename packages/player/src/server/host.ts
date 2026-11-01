@@ -11,6 +11,7 @@ import {
   optional,
   parseWith,
   recordSchema,
+  untilAborted,
 } from "@assesskit/runtime/checks";
 import {
   actionToJson,
@@ -54,7 +55,6 @@ import {
   markOfficial,
   readClock,
   stepAfterIdle,
-  untilAborted,
 } from "../protocol/internal.js";
 import type { StepSink, SuppliedGrade } from "./forward.js";
 import { type AssetGate, collectAssetPrefixes, locateDocuments } from "./gate/index.js";

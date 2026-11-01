@@ -7,7 +7,6 @@ import { BROWSER_CLOCK, createLocalSession, type LocalStore } from "../src/clien
 import { assetResolver, UNSIGNED_URL } from "../src/client/internal.js";
 import { ServiceError } from "../src/index.js";
 import { isOfficialResult } from "../src/protocol/index.js";
-import { untilAborted } from "../src/protocol/internal.js";
 import {
   abandonedFiles,
   adaptiveDefinition,
@@ -23,43 +22,6 @@ import { waitFor } from "./wait.js";
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
-});
-
-describe("untilAborted", () => {
-  it("gives the promise itself when the caller has no signal", async () => {
-    const promise = Promise.resolve(7);
-    expect(untilAborted(promise, undefined)).toBe(promise);
-    await expect(untilAborted(promise, undefined)).resolves.toBe(7);
-  });
-
-  it("gives what the promise gives and leaves no listener on the signal", async () => {
-    const signal = new AbortController().signal;
-    const removed = vi.spyOn(signal, "removeEventListener");
-    await expect(untilAborted(Promise.resolve(7), signal)).resolves.toBe(7);
-    await expect(untilAborted(Promise.reject(new Error("The promise fails.")), signal)).rejects.toThrow(
-      "The promise fails.",
-    );
-    expect(removed).toHaveBeenCalledTimes(2);
-  });
-
-  it("rejects with the reason as soon as the signal aborts, and the promise goes on", async () => {
-    const controller = new AbortController();
-    let finish: (value: number) => void = () => undefined;
-    const promise = new Promise<number>((resolve) => {
-      finish = resolve;
-    });
-    const waiting = untilAborted(promise, controller.signal);
-    const reason = new Error("The caller left.");
-    controller.abort(reason);
-    await expect(waiting).rejects.toBe(reason);
-    finish(3);
-    await expect(promise).resolves.toBe(3);
-  });
-
-  it("rejects at once for a signal that has aborted", async () => {
-    const reason = new Error("Too late.");
-    await expect(untilAborted(new Promise(() => undefined), AbortSignal.abort(reason))).rejects.toBe(reason);
-  });
 });
 
 describe("assetResolver", () => {

@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   checkAbortSignal,
   checkArray,
@@ -35,6 +35,7 @@ import {
   recordSchema,
   strictRecord,
   transformWith,
+  untilAborted,
 } from "../src/checks.js";
 import { DataError } from "../src/index.js";
 
@@ -160,6 +161,43 @@ describe("checkAbortSignal", () => {
       new DataError("The option signal must be an AbortSignal, found an object."),
     );
     expect(() => checkAbortSignal(JSON.parse("null"), "The option signal")).toThrow("found null.");
+  });
+});
+
+describe("untilAborted", () => {
+  it("gives the promise itself when the caller has no signal", async () => {
+    const promise = Promise.resolve(7);
+    expect(untilAborted(promise, undefined)).toBe(promise);
+    await expect(untilAborted(promise, undefined)).resolves.toBe(7);
+  });
+
+  it("gives what the promise gives and leaves no listener on the signal", async () => {
+    const signal = new AbortController().signal;
+    const removed = vi.spyOn(signal, "removeEventListener");
+    await expect(untilAborted(Promise.resolve(7), signal)).resolves.toBe(7);
+    await expect(untilAborted(Promise.reject(new Error("The promise fails.")), signal)).rejects.toThrow(
+      "The promise fails.",
+    );
+    expect(removed).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects with the reason as soon as the signal aborts, and the promise goes on", async () => {
+    const controller = new AbortController();
+    let finish: (value: number) => void = () => undefined;
+    const promise = new Promise<number>((resolve) => {
+      finish = resolve;
+    });
+    const waiting = untilAborted(promise, controller.signal);
+    const reason = new Error("The caller left.");
+    controller.abort(reason);
+    await expect(waiting).rejects.toBe(reason);
+    finish(3);
+    await expect(promise).resolves.toBe(3);
+  });
+
+  it("rejects at once for a signal that has aborted", async () => {
+    const reason = new Error("Too late.");
+    await expect(untilAborted(new Promise(() => undefined), AbortSignal.abort(reason))).rejects.toBe(reason);
   });
 });
 

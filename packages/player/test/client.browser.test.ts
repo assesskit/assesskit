@@ -1,3 +1,4 @@
+import { untilAborted } from "@assesskit/runtime/checks";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { single } from "@assesskit/runtime/values";
@@ -5,7 +6,6 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { AUTOSAVE_MS, createLocalSession, createRemoteSession, FLUSH_BEFORE_DEADLINE_MS } from "../src/client/index.js";
 import { ServiceError } from "../src/index.js";
 import type { ActionEnvelope, SessionCallOptions, ViewRequest } from "../src/protocol/index.js";
-import { untilAborted } from "../src/protocol/internal.js";
 import { examDefinition, examFiles, examHost, packageOf } from "./exam-fixture.js";
 import { answer, localOptions, Q1, SECOND, statusOfQ1 } from "./local-fixture.js";
 import { waitFor } from "./wait.js";

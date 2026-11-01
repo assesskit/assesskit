@@ -7,6 +7,7 @@ import {
   methodsSchema,
   parseWith,
   positiveIntegerSchema,
+  untilAborted,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
@@ -14,7 +15,7 @@ import type { FileValue } from "@assesskit/runtime/values";
 import type { CryptoKey } from "jose";
 import * as v from "valibot";
 import type { SessionCallOptions } from "../../protocol/index.js";
-import { checkCallOptions, untilAborted } from "../../protocol/internal.js";
+import { checkCallOptions } from "../../protocol/internal.js";
 import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
 import { deniedPaths, isQtiData } from "./deny.js";

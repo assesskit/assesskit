@@ -10,6 +10,7 @@ import {
   optional,
   parseWith,
   recordSchema,
+  untilAborted,
 } from "@assesskit/runtime/checks";
 import type {
   CandidateAction,
@@ -46,7 +47,6 @@ import {
   createCatLoops,
   readClock,
   stepAfterIdle,
-  untilAborted,
 } from "../protocol/internal.js";
 import { BROWSER_CLOCK } from "./clock.js";
 import { notifyListeners } from "./notify.js";

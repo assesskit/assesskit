@@ -1,5 +1,13 @@
 import type { CatPort, CatResponse } from "../cat/index.js";
-import { checkAbortSignal, checkChoice, checkFunction, checkOptions, checkRecord, optional } from "../checks.js";
+import {
+  checkAbortSignal,
+  checkChoice,
+  checkFunction,
+  checkOptions,
+  checkRecord,
+  optional,
+  untilAborted,
+} from "../checks.js";
 import { DataError } from "../errors.js";
 import type { DeliveryState } from "./delivery-state.js";
 import { checkState } from "./delivery-state.js";
@@ -28,24 +36,6 @@ function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
   const { signal } = options;
   optional(signal, (value) => checkAbortSignal(value, "The option signal"));
   return signal;
-}
-
-/**
- * Ends the wait for a promise when a signal aborts: the promise goes on, and nothing waits for it any more.
- *
- * @returns The promise, or a promise that rejects with `signal.reason` as soon as the signal aborts.
- */
-function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
-  if (signal === undefined) return promise;
-  return new Promise<T>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason);
-      return;
-    }
-    const onAbort = (): void => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
-  });
 }
 
 /** Calls the method of the port that the request needs. */
