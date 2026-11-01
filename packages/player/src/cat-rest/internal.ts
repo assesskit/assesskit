@@ -3,4 +3,5 @@
  *
  * @module
  */
+export { readCreateSessionBody, readResultsBody, readSectionBody } from "./binding.js";
 export { readSectionData } from "./section-data.js";

@@ -1,3 +1,4 @@
+import { ServiceError } from "@assesskit/player";
 import type { SectionData } from "@assesskit/runtime/cat";
 import { DataError } from "@assesskit/runtime/errors";
 import { checkRecord, describe, guardSchema, isRecord, type Schema } from "./checks.ts";
@@ -92,7 +93,8 @@ function isKind<TKind extends StoredSection["kind"]>(
 /**
  * Returns the stored section of the kind that a port reads.
  *
- * @throws `DataError` when the store has no section with the identifier, or the section is of another kind.
+ * @throws `ServiceError` with the status 404 when the store has no section with the identifier, which is how an engine
+ * server reports an unknown section; `DataError` when the section is of another kind.
  */
 export async function loadSection<TKind extends StoredSection["kind"]>(
   store: SectionStore,
@@ -101,8 +103,10 @@ export async function loadSection<TKind extends StoredSection["kind"]>(
 ): Promise<Extract<StoredSection, { readonly kind: TKind }>> {
   const section = await store.get(identifier);
   if (section === undefined) {
-    throw new DataError(
+    throw new ServiceError(
       `The section store has no section ${describe(identifier)}; create it with createSection before the first session.`,
+      404,
+      "",
     );
   }
   checkRecord(section, `The section ${describe(identifier)} in the section store must be an object`);

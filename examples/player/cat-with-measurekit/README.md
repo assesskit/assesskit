@@ -1,39 +1,83 @@
 # CAT with measurekit
 
 An engine of computer adaptive testing in process, as an implementation of the runtime's `CatPort` over
-`@measurekit/psychometrics`. It shows how to plug an engine of your own into assesskit: `@assesskit/runtime` and
-`@assesskit/player` do not import measurekit, and this directory does.
+`@measurekit/psychometrics`, and a whole engine server around it: the token endpoint of OAuth 2.0 and the REST binding of CAT 1.0.
+It shows how to plug an engine of your own into assesskit: `@assesskit/runtime` and `@assesskit/player` do not import
+measurekit, and this directory does.
 
 ```mermaid
 flowchart LR
   engine["Delivery engine of @assesskit/runtime"] -->|drainCat| port{{"CatPort"}}
-  cat["measurekitCatPort"] -.->|implements| port
-  panel["measurekitPanelPort"] -.->|implements| port
+  client["restCatPort of the player"] -.->|implements| port
+  client -->|"HTTPS, bearer token"| server
+  subgraph server["engineServer: your service"]
+    token["token endpoint"]
+    handler["catRestHandler of the player"]
+  end
+  handler -->|calls| cat
+  cat["measurekitCatPort"] -.->|implements| enginePort{{"CatPort"}}
+  panel["measurekitPanelPort"] -.->|implements| enginePort
   cat -->|"adaptiveTest"| mk["@measurekit/psychometrics"]
   panel -->|"multistageTest"| mk
   cat --> store[("SectionStore: the host's database")]
   panel --> store
 ```
 
-| What                                | Where                                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------------- |
-| The scenario that creates a section | `scenario.ts`: Create Section, Create Session, then Submit Results until the end       |
-| An item-level adaptive engine       | `src/measurekit-cat-port.ts`: `measurekitCatPort`                                      |
-| A calibrated multistage engine      | `src/measurekit-panel-port.ts`: `measurekitPanelPort`                                  |
-| The section and its storage         | `src/section.ts`, `src/section-data.ts`, `src/section-store.ts`, `src/memory-store.ts` |
-| Items, responses and the session    | `src/usage.ts`, `src/pool.ts`, `src/response.ts`, `src/session-state.ts`               |
-| The tests, which CI runs            | `test/scenario.test.ts` and `test/cat-with-measurekit.test.ts`                         |
+| What                                | Where                                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| The scenario that creates a section | `scenario.ts`: Create Section, Create Session, then Submit Results until the end             |
+| An item-level adaptive engine       | `src/measurekit-cat-port.ts`: `measurekitCatPort`                                            |
+| A calibrated multistage engine      | `src/measurekit-panel-port.ts`: `measurekitPanelPort`                                        |
+| A whole engine server               | `src/engine-server.ts`: `engineServer`; `src/listen.ts`: `listen`; `src/demo-server.ts`      |
+| The section and its storage         | `src/section.ts`, `src/section-data.ts`, `src/section-store.ts`, `src/memory-store.ts`       |
+| Items, responses and the session    | `src/usage.ts`, `src/pool.ts`, `src/response.ts`, `src/session-state.ts`                     |
+| The tests, which CI runs            | `test/scenario.test.ts`, `test/engine-server.test.ts` and `test/cat-with-measurekit.test.ts` |
 
 To run the scenario, build the runtime in this repository and measurekit in its own, then start it. The scenario prints the
-items that it presented, in order:
+items that it presented, in order, first through the port in process and then through the REST binding and the engine server:
 
 ```sh
 pnpm build
 pnpm --filter @assesskit/example-cat-with-measurekit start
 ```
 
+To serve the engine on a port of this machine (8080 unless the argument says another), and ask it for a token with the client
+`demo` and the secret `demo-secret`:
+
+```sh
+pnpm --filter @assesskit/example-cat-with-measurekit serve 8080
+curl -u demo:demo-secret -d 'grant_type=client_credentials&scope=https://purl.imsglobal.org/cat/v1p0/scope/api' http://127.0.0.1:8080/oauth2/token
+```
+
 The tests run with the rest of the repository (`pnpm test`), or alone with `pnpm exec vitest run --project examples`.
 measurekit is a dependency of this example only, linked from `../measurekit` beside this repository.
+
+## engineServer
+
+`engineServer(options)` returns one function from a `Request` to a `Response`: `POST /oauth2/token` is the token endpoint, and
+every other request goes to `catRestHandler` from `@assesskit/player/cat-rest`, which calls the engine. Deno, Bun and Workers serve
+the function as it is; `listen(handler, port, host)` serves it on Node.js with `node:http`, and TLS goes in front of it.
+
+| Option         | Default  | Meaning                                                                                           |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `engine`       | required | Any `CatPort`: `measurekitCatPort`, `measurekitPanelPort` or one of your own.                     |
+| `verifyClient` | required | `(clientId, clientSecret) => boolean \| Promise<boolean>`: compares with a hash in your database. |
+| `newToken`     | required | Returns a token that cannot be guessed, such as 32 random bytes in base64url.                     |
+| `now`          | required | Returns the milliseconds since the epoch; a token expires when it passes.                         |
+| `tokenSeconds` | `3600`   | The seconds a token lives (the binding recommends 3600).                                          |
+
+| Request                                | Answer                                                                                                                                                                |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Token request with right credentials   | 200 with a bearer token and the scopes asked for                                                                                                                      |
+| Wrong or missing client credentials    | 401 `invalid_client`                                                                                                                                                  |
+| Another grant, or an unknown scope     | 400 `unsupported_grant_type` or `invalid_scope`                                                                                                                       |
+| An operation without a valid token     | 401: no token, an unknown or an expired one                                                                                                                           |
+| An operation outside the token's scope | 401, because the binding defines no 403. `.../scope/configure` allows the section operations, `.../scope/deliver` the session operations, `.../scope/api` all of them |
+| A section the store does not have      | 404, because the ports throw a `ServiceError` with the status 404                                                                                                     |
+
+The tokens are kept in memory, so one process serves them. A host with several processes keeps them in a database, or signs
+them as JWTs with a library, and answers the same `authenticate`. The OAuth server is in the example because the binding needs
+one beside the endpoints; the player does not include one.
 
 ## Sections
 
@@ -141,4 +185,5 @@ estimate. Every item of a module needs parameters in the usage data, which Creat
 | Error                     | When                                                                                                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DataError`               | An option or an argument has the wrong type, or section data or a `sessionState` is malformed.                                              |
+| `ServiceError`            | The store has no section with the identifier: status 404, which `catRestHandler` answers as Unknown Object.                                 |
 | `DataError` of measurekit | A section cannot run, such as content targets without content areas or cut points that do not match the modules. Create Section reports it. |

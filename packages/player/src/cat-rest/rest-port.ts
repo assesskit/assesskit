@@ -1,27 +1,25 @@
-import {
-  assessmentResultFromJson,
-  assessmentResultToJson,
-  type CatPort,
-  type CreateSessionRequest,
-  itemStageFromJson,
-  type SectionData,
-} from "@assesskit/runtime/cat";
+import type { CatPort } from "@assesskit/runtime/cat";
 import {
   checkNonEmptyString,
   checkString,
   describe,
   functionSchema,
-  nonEmptyStringSchema,
   parseWith,
   positiveSchema,
-  recordSchema,
-  type Schema,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import * as v from "valibot";
 import { httpsUrlSchema } from "../checks.js";
+import {
+  readCreateSectionAnswer,
+  readCreateSessionAnswer,
+  readGetSectionAnswer,
+  readSubmitResultsAnswer,
+  writeCreateSessionBody,
+  writeResultsBody,
+  writeSectionBody,
+} from "./binding.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
-import { readSectionData } from "./section-data.js";
 
 /** Options of {@link restCatPort}. */
 export interface RestCatPortOptions {
@@ -65,72 +63,6 @@ function withoutTrailingSlashes(url: string): string {
   while (end > 0 && url[end - 1] === "/") end -= 1;
   return url.slice(0, end);
 }
-
-const sessionRequestSchema: Schema<CreateSessionRequest> = v.object({
-  personalNeedsAndPreferences: v.optional(v.string()),
-  demographics: v.optional(v.string()),
-  priorData: v.optional(v.array(v.object({ name: v.string(), value: v.unknown() }))),
-});
-
-/** Returns the body of Create Session in the binding: the prior data are key and value pairs of text. */
-function sessionBody(request: CreateSessionRequest, sharePnp: boolean): unknown {
-  const { personalNeedsAndPreferences, demographics, priorData } = parseWith(
-    sessionRequestSchema,
-    request,
-    "The request to create a session",
-  );
-  return {
-    ...(sharePnp && personalNeedsAndPreferences !== undefined ? { personalNeedsAndPreferences } : {}),
-    ...(demographics === undefined ? {} : { demographics }),
-    ...(priorData === undefined
-      ? {}
-      : {
-          priorData: priorData.map((entry) => {
-            // The binding's value is text: a text stays as it is, and any other value is its JSON.
-            const value = typeof entry.value === "string" ? entry.value : JSON.stringify(entry.value);
-            if (value === undefined) {
-              throw new DataError(
-                `The value of the prior data ${describe(entry.name)} must be JSON, found ${describe(entry.value)}.`,
-              );
-            }
-            return { key: entry.name, value };
-          }),
-        }),
-  };
-}
-
-// The runtime reads the stage and the assessment result, and its errors pass through unchanged, so the schemas leave them whole.
-// The binding allows a `qtiMetadata` object in the section of a Get Section answer. It is a QTI metadata record, not the
-// metadata file that `SectionData` holds, so it is checked and not returned.
-const bindingSectionSchema: Schema<SectionData> = v.pipe(
-  v.strictObject({
-    sectionConfiguration: v.string(),
-    qtiUsagedata: v.optional(v.string()),
-    qtiMetadata: v.optional(recordSchema),
-  }),
-  v.transform(({ sectionConfiguration, qtiUsagedata }) => ({
-    sectionConfiguration,
-    ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
-  })),
-);
-
-const getSectionSchema = v.object({ section: bindingSectionSchema, items: v.optional(v.unknown()) });
-
-const createSectionSchema = v.object({ sectionIdentifier: nonEmptyStringSchema });
-
-const createSessionSchema = v.object({
-  sessionIdentifier: nonEmptyStringSchema,
-  nextItems: v.optional(v.unknown()),
-  sessionState: v.optional(v.string()),
-});
-
-const submitResultsSchema = v.object({
-  nextItems: v.optional(v.unknown()),
-  assessmentResult: v.optional(v.unknown()),
-  sessionState: v.optional(v.string()),
-});
-
-const submitRequestSchema = v.pipe(recordSchema, v.object({ sessionState: v.optional(v.string()) }));
 
 /**
  * Returns a CAT engine that speaks the REST/JSON binding of CAT 1.0 to one remote service.
@@ -181,63 +113,23 @@ export function restCatPort(options: RestCatPortOptions): CatPort {
 
   return {
     async createSection(prefix, data) {
-      // The binding's qtiMetadata is one QTI metadata record, and the metadata file is not (see the TSDoc of restCatPort).
-      const { sectionConfiguration, qtiUsagedata } = readSectionData(data);
-      const section = { sectionConfiguration, ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }) };
-      const body = await client.send("POST", url(prefix, "sections"), section);
-      return parseWith(createSectionSchema, body, "The answer to Create Section");
+      const body = await client.send("POST", url(prefix, "sections"), writeSectionBody(data));
+      return readCreateSectionAnswer(body);
     },
 
     async getSection(prefix, sectionIdentifier) {
-      const body = await client.send("GET", section(prefix, sectionIdentifier));
-      const { section: sectionData, items } = parseWith(getSectionSchema, body, "The answer to Get Section");
-      return { sectionData, items: itemStageFromJson(items, "items of the answer to Get Section") };
+      return readGetSectionAnswer(await client.send("GET", section(prefix, sectionIdentifier)));
     },
 
     async createSession(prefix, sectionIdentifier, request) {
       const target = `${section(prefix, sectionIdentifier)}/sessions`;
-      const body = await client.send("POST", target, sessionBody(request, sharePnp));
-      const { sessionIdentifier, nextItems, sessionState } = parseWith(
-        createSessionSchema,
-        body,
-        "The answer to Create Session",
-      );
-      return {
-        sessionIdentifier,
-        // The binding ends a session by sending no stage.
-        nextItems:
-          nextItems === undefined
-            ? { itemIdentifiers: [], stageLength: 0 }
-            : itemStageFromJson(nextItems, "nextItems of the answer to Create Session"),
-        ...(sessionState === undefined ? {} : { sessionState }),
-      };
+      return readCreateSessionAnswer(await client.send("POST", target, writeCreateSessionBody(request, sharePnp)));
     },
 
     async submitResults(prefix, sectionIdentifier, sessionIdentifier, request) {
-      const { sessionState } = parseWith(submitRequestSchema, request, "The request to submit results");
-      const body = {
-        assessmentResult: assessmentResultToJson(request.assessmentResult),
-        ...(sessionState === undefined ? {} : { sessionState }),
-      };
+      const body = writeResultsBody(request);
       const target = `${session(prefix, sectionIdentifier, sessionIdentifier)}/results`;
-      const answer = parseWith(
-        submitResultsSchema,
-        await client.send("POST", target, body),
-        "The answer to Submit Results",
-      );
-      const { nextItems } = answer;
-      return {
-        ...(nextItems === undefined
-          ? {}
-          : {
-              nextItems:
-                nextItems === null ? null : itemStageFromJson(nextItems, "nextItems of the answer to Submit Results"),
-            }),
-        ...(answer.assessmentResult === undefined
-          ? {}
-          : { assessmentResult: assessmentResultFromJson(answer.assessmentResult) }),
-        ...(answer.sessionState === undefined ? {} : { sessionState: answer.sessionState }),
-      };
+      return readSubmitResultsAnswer(await client.send("POST", target, body));
     },
 
     async endSession(prefix, sectionIdentifier, sessionIdentifier) {

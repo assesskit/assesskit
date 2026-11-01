@@ -160,6 +160,20 @@ it is built to send them to one place only.
   it. A page that runs an adaptive section in practice brings its own `CatPort` and deploys with `deployCatSections` of
   `@assesskit/player/cat`.
 
+`catRestHandler` is the other end: the engine side of the binding, which receives a candidate's results and answers with the
+items to present. It trusts nothing it is sent.
+
+- It serves nothing without the host's `authenticate`, which it calls with the request and the operation before it reads a
+  body, so that a caller who is not authorized costs one function call. Only the value `true` authorizes; a callback that
+  throws answers 500. The handler holds no secret and issues no token, and the host terminates TLS in front of it.
+- A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, and valid UTF-8 and
+  JSON. Each body is read with a strict schema of the binding, so an unknown property is a 400; the assessment result is read
+  by the runtime's codec.
+- An answer that the port got wrong is a 500, and the message of an error that the port threw is not shown, except that of a
+  `DataError`, `ReadError` or `SecurityError`, which says what was wrong with the data of the request. Every answer is
+  `Cache-Control: no-store`. The handler logs nothing, so a host that logs wraps the port and takes care not to log results.
+- A request that is aborted ends the wait and is not answered; the call of the port that has begun runs on.
+
 An engine that the host runs in process, behind the runtime's `CatPort`, sends nothing. The `sessionState` that it returns is kept
 in the delivery state, so keep it on the server like the seed of an exam session, and keep the engine's own store of the
 parameters of the items and the settings of the test there too.

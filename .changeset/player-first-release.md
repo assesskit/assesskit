@@ -6,7 +6,8 @@ A player for QTI 3.0 assessments in the browser, built on `@assesskit/runtime`. 
 interaction, hosts portable custom interactions in a sandboxed frame, applies personal needs and preferences, and runs a
 session with navigation, timers, review and feedback, in English and Indonesian. For exams it has the session host, the asset
 gate that serves package files, scoring for raters with an accessible rating form for a scoring rubric (`mountRatingForm`), and adaptive testing. The
-client of a remote CAT engine is the subpath `@assesskit/player/cat-rest`, which stays on servers because it holds an OAuth
+subpath `@assesskit/player/cat-rest` has both sides of the REST binding of CAT 1.0, `restCatPort` for the client of a remote
+CAT engine and `catRestHandler` for the engine side, over web `Request` and `Response`. It stays on servers, because the client holds an OAuth
 client secret. The session host and a practice session offer the host side of a session (`HostSession`) alike, through
 `session(id)` and `host`: the host supplies external scores and reads pending work, scorer views and results, and a practice
 session reports the events of each step to a listener. Session calls take an `AbortSignal`. With the option `cat`, a session host and a local session answer their own CAT

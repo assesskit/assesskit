@@ -651,7 +651,11 @@ describe("measurekitCatPort", () => {
     const submit = (request: unknown, id = section): Promise<unknown> =>
       port.submitResults(PREFIX, id, "12345", viaJson(request));
 
-    expect(await rejection(port.getSection(PREFIX, "nope"))).toMatch(/^The section store has no section "nope"/);
+    await expect(port.getSection(PREFIX, "nope")).rejects.toMatchObject({
+      name: "ServiceError",
+      status: 404,
+      message: expect.stringMatching(/^The section store has no section "nope"/),
+    });
     expect(await rejection(port.createSession(PREFIX, json("5"), {}))).toMatch(
       /^The section identifier must be a string/,
     );
