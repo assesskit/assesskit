@@ -80,7 +80,7 @@ export function processingOf(step: StepContext): ProcessingContext {
 export function itemContextOf(step: StepContext, key: ItemKey): ItemSessionContext {
   const entry = courseItem(step, key.ref);
   const item = candidateOf(entry, findDelivered(step.state, key)?.variant).item;
-  return { ...processingOf(step), item, control: entry.control };
+  return { ...processingOf(step), item, control: entry.control, eventOutcomes: step.course.eventOutcomes };
 }
 
 /** Returns what the rules of navigation read. */

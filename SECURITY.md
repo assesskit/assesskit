@@ -81,6 +81,10 @@ Points to be aware of when deploying the runtime:
   endpoints and never with an identifier that a candidate supplies. In practice the device holds the keys already, and
   `LocalSession.host` offers it by design. `supply-scores` is a host action: accept a score only from the scorer or the tool it
   belongs to.
+- **Scores in events.** The events of a step hold no score. With the engine option `eventOutcomes`, `response-processed`
+  carries the outcomes of the item, scores included, to `forward.log` of a session host and to the listeners of
+  `subscribeSteps` of a local session, and never to a candidate, who receives views. The host's log, outbox and event sinks
+  then hold scores: keep them as it keeps results. `attempt` and `duration` are always present and hold no score.
 
 ## The player: the frame of portable custom interactions
 

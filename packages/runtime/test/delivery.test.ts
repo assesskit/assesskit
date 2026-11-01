@@ -1469,6 +1469,143 @@ describe("applying actions", () => {
   });
 });
 
+describe("the events of an attempt", () => {
+  const threeAttempts = itemRef("a", '<qti-item-session-control max-attempts="3"/>');
+  const content = `${TOTAL}${testPart("P", section("S", threeAttempts), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
+  const nextAttempt = (at: number): Action => ({ type: "next-attempt", item: key("a"), at });
+
+  /** Three attempts, the second after a day that the candidate was away; the times are in milliseconds. */
+  function threeTimes(engine: Engine): Played {
+    const started = begun(engine);
+    return played(
+      engine,
+      started.state,
+      answer("a", "A", 1_000),
+      on("submit", "a", 4_000),
+      nextAttempt(5_000),
+      answer("a", "A", 6_000),
+      on("submit", "a", 9_000),
+      { type: "suspend", at: 10_000 },
+      { type: "resume", at: 86_410_000 },
+      nextAttempt(86_411_000),
+      answer("a", "B", 86_412_000),
+      on("submit", "a", 86_413_000),
+    );
+  }
+
+  const processed = (events: readonly DeliveryEvent[]): DeliveryEvent[] =>
+    events.filter(({ type }) => type === "response-processed");
+
+  it("numbers each attempt from 1 and gives the time of the item so far, leaving out the time it was suspended", () => {
+    const { events } = threeTimes(engineOf(content));
+    expect(processed(events).map(({ attempt, duration }) => [attempt, duration])).toEqual([
+      [1, 4_000],
+      [2, 9_000],
+      [3, 13_000],
+    ]);
+  });
+
+  it("holds the time of results, in seconds, after every step that processed responses", () => {
+    const engine = engineOf(content);
+    let state = begun(engine).state;
+    const actions: Action[] = [
+      answer("a", "A", 1_500),
+      on("submit", "a", 4_250),
+      nextAttempt(5_000),
+      { type: "suspend", at: 6_000 },
+      { type: "resume", at: 70_000 },
+      on("skip", "a", 70_999),
+    ];
+    for (const action of actions) {
+      const step = engine.apply(state, action);
+      if (!step.ok) return fail(`The action ${action.type} was refused: ${step.refusal.code}.`);
+      state = step.state;
+      for (const event of processed(step.events)) {
+        const result = engine.results(state).itemResults.find(({ identifier }) => identifier === "a");
+        const shown = result?.variables.find(({ identifier }) => identifier === "duration");
+        const seconds = shown?.kind === "response" ? shown.candidateResponse : null;
+        expect(seconds).toEqual(single("duration", (event.duration ?? Number.NaN) / 1_000));
+      }
+    }
+    expect(state.items[0]?.session.countedAttempts).toBe(2);
+  });
+
+  it("leaves the outcomes out unless the engine is asked for them, and then gives every outcome of the item as JSON", () => {
+    const plain = processed(threeTimes(engineOf(content)).events);
+    expect(plain.every((event) => !("outcomes" in event))).toBe(true);
+    const engine = engineOf(content, {}, { eventOutcomes: true });
+    const events = processed(threeTimes(engine).events);
+    expect(events.map((event) => Object.keys(event.outcomes ?? {}).sort())).toEqual(
+      [0, 1, 2].map(() => ["FEEDBACK", "RUNS", "SCORE", "completionStatus"]),
+    );
+    const scores = events.map((event) => event.outcomes?.SCORE);
+    const wire = (value: number) => ({ cardinality: "single", baseType: "float", value: { base: { float: value } } });
+    expect(scores).toEqual([wire(0), wire(0), wire(1)]);
+    expect(events[2]?.outcomes?.RUNS).toEqual({
+      cardinality: "single",
+      baseType: "integer",
+      value: { base: { integer: 1 } },
+    });
+    // Events are data: they survive JSON as they are, and hold nothing of the session's own objects.
+    expect(JSON.parse(JSON.stringify(events))).toEqual(events);
+  });
+
+  it("keeps an outcome named __proto__ as data", () => {
+    const named = itemOf(
+      'time-dependent="false"',
+      `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+      <qti-outcome-declaration identifier="__proto__" cardinality="single" base-type="integer">
+        <qti-default-value><qti-value>7</qti-value></qti-default-value>
+      </qti-outcome-declaration>
+      <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>`,
+    );
+    const engine = engineOf(
+      testPart("P", section("S", refs("a")), "nonlinear"),
+      { "a.xml": named },
+      { eventOutcomes: true },
+    );
+    const { events } = played(engine, begun(engine).state, answer("a", "A", 1), on("submit", "a", 2));
+    const outcomes = processed(events)[0]?.outcomes;
+    expect(Object.hasOwn(outcomes ?? {}, "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(outcomes)).toBe(Object.prototype);
+    expect(JSON.parse(JSON.stringify(outcomes))).toEqual(outcomes);
+  });
+
+  it("adds attempt and duration to the events of an item session delivered without an engine", () => {
+    const context = contextOf(counterItem(), { allowSkipping: true });
+    const session = presented(context);
+    const events = accepted(
+      act(accepted(act(session, context, respond("RESPONSE", identifier("A")), 1_000)).session, context, SUBMIT, 3_500),
+    ).events;
+    expect(processed(events).map(({ attempt, duration, outcomes }) => [attempt, duration, outcomes])).toEqual([
+      [1, 3_500, undefined],
+    ]);
+    const asked = { ...context, eventOutcomes: true };
+    const withOutcomes = accepted(
+      act(accepted(act(presented(asked), asked, respond("RESPONSE", identifier("B")), 1)).session, asked, SUBMIT, 2),
+    );
+    expect(Object.keys(processed(withOutcomes.events)[0]?.outcomes ?? {}).sort()).toEqual([
+      "FEEDBACK",
+      "RUNS",
+      "SCORE",
+      "completionStatus",
+    ]);
+  });
+
+  it("refuses an eventOutcomes option or context field that is not a boolean", () => {
+    expect(() => engineOf(content, {}, { eventOutcomes: json("1") })).toThrow(
+      "The option eventOutcomes must be a boolean, found 1.",
+    );
+    expect(() => engineOf(content, {}, { eventOutcomes: json("null") })).toThrow(
+      "The option eventOutcomes must be a boolean, found null.",
+    );
+    const context = contextOf(counterItem());
+    expect(() => startItemSession(KEY, 0, { ...context, eventOutcomes: json('"yes"') })).toThrow(
+      'The eventOutcomes of the context must be a boolean, found "yes".',
+    );
+  });
+});
+
 describe("deadlines", () => {
   it("gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(
@@ -5246,6 +5383,8 @@ describe("properties", () => {
             if (types.includes("response-processed")) {
               processed += 1;
               expect(outcome(after, "RUNS")).toEqual(integer(adaptive ? processed : 1));
+              const event = next.events.find(({ type }) => type === "response-processed");
+              expect([event?.attempt, event?.duration]).toEqual([count(after), Math.floor(after.spent)]);
             }
             if (after.status === "interacting" && maxAttempts > 0)
               expect(after.countedAttempts).toBeLessThan(maxAttempts);

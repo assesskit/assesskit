@@ -171,12 +171,13 @@ it is given, and a refusal gives no state. `apply` never throws on a state of it
 | `kind: "test"`       | `test`, `base`, `resolvers` (such as `packageResolvers(pkg)`), `catSections` (default: none)            |
 | `kind: "item"`       | `item`, `base` (the path of the item document), `control` (a `qti-item-session-control`; default: none) |
 
-| `EngineOptions`   | Default                                            | Meaning                                                                     |
-| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------------- |
-| `customOperators` | none                                               | The custom operators, by `definition`, else `class`.                        |
-| `resolveTemplate` | none                                               | The response processing of a template URI other than the six standard ones. |
-| `limits`          | `maxContainerSize`: 10,000; `maxPlanNodes`: 10,000 | The limits of processing and of the plan of a session.                      |
-| `contentVersion`  | none                                               | The version of the content, as the host names it: see [State](#state).      |
+| `EngineOptions`   | Default                                            | Meaning                                                                       |
+| ----------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `customOperators` | none                                               | The custom operators, by `definition`, else `class`.                          |
+| `resolveTemplate` | none                                               | The response processing of a template URI other than the six standard ones.   |
+| `limits`          | `maxContainerSize`: 10,000; `maxPlanNodes`: 10,000 | The limits of processing and of the plan of a session.                        |
+| `contentVersion`  | none                                               | The version of the content, as the host names it: see [State](#state).        |
+| `eventOutcomes`   | `false`                                            | `response-processed` carries the outcomes of the item: see [Events](#events). |
 
 `createEngine` runs the static gate first: `validateTest`, or `validateAsi` for an item, with the custom operators
 and the template resolver given, so that a custom operator that none serves is an error. Any issue of severity `error` is a
@@ -339,6 +340,20 @@ leaves without it.
 `late-submission`, `suspended`, `resumed`, `support-changed`, `variant-selected`, `hazard-unavoidable`, `scoring-requested`,
 `scores-applied`, `scores-replaced`, `cat-requested` and `cat-stage-added`. The TSDoc of `DeliveryEventType` gives
 the fields of each.
+
+`response-processed` says which attempt it was and what it gave, so that a host that feeds a learner model needs no `results()`
+call after each step:
+
+| Field      | Holds                                                                                                                                                    | Present                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `attempt`  | The number of the attempt, from 1, as `numAttempts` counts it                                                                                            | Always                    |
+| `duration` | The milliseconds the candidate spent in the item up to the event, over all its attempts, as `at` counts them. `results()` shows the same time in seconds | Always                    |
+| `outcomes` | The outcomes of the item after the attempt, by identifier, as JSON-safe wire values; an outcome named `__proto__` stays data                             | With `eventOutcomes` only |
+
+The time of one attempt is the `duration` of its event minus that of the previous event of the same item; the first attempt's is
+the value itself. Time that the session is suspended never runs, so a pause, or a gap that `maxIdle` counts as one, is left out.
+`attempt` and `duration` hold no score. `outcomes` does, so the events go to the host's log ([server](../player/server.md#forwarding-the-steps))
+and never to a candidate, whose view has no events.
 
 ### State
 

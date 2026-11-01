@@ -12,6 +12,7 @@ import {
 } from "../processing/index.js";
 import { initialOutcome, NOT_ATTEMPTED } from "../processing/internal.js";
 import { single, type Value } from "../values/index.js";
+import { valuesToJson } from "./entries-json.js";
 import type { DeliveryEvent } from "./events.js";
 import type { ItemSession, ItemSessionContext } from "./item-session.js";
 
@@ -178,6 +179,19 @@ export function itemEvent(
   return { type, at, item: session.key, ...(detail === undefined ? {} : { detail }) };
 }
 
+/**
+ * Returns the event that response processing ran: the number of the attempt, the time the item has had so far in
+ * milliseconds, and with `eventOutcomes` the outcomes after the attempt.
+ */
+function processedEvent(after: ItemSession, at: number, context: ItemSessionContext): DeliveryEvent {
+  return {
+    ...itemEvent(after, "response-processed", at),
+    attempt: attemptsOf(after.variables),
+    duration: Math.floor(after.spent),
+    ...(context.eventOutcomes === true ? { outcomes: Object.fromEntries(valuesToJson(after.variables.outcomes)) } : {}),
+  };
+}
+
 /** Runs response processing; a failure leaves the variables as they were given, with the message. */
 function processResponses(
   variables: ItemVariables,
@@ -248,7 +262,7 @@ export function endAttempt(
   const events = [
     itemEvent(after, "attempt-ended", at, ending.by),
     processed.failure === undefined
-      ? itemEvent(after, "response-processed", at)
+      ? processedEvent(after, at, context)
       : itemEvent(after, "processing-failed", at, processed.failure),
   ];
   return { session: closed ? { ...after, status: "closed", since: null } : after, events };

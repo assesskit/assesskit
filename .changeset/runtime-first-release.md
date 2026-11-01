@@ -14,3 +14,5 @@ The `assesskit` command validates a package or a document.
 A stored session state is read by every later 1.x release, and `STATE_VERSION` is exported from `@assesskit/runtime/delivery`.
 The option `contentVersion` of `createEngine` names the version of the content: a state keeps it, and the engine refuses a
 state that another version started.
+`response-processed` events carry the `attempt` number and the `duration` of the item so far in milliseconds, and with the
+option `eventOutcomes` of `createEngine` its outcomes, so that a host needs no `results()` call after each step.

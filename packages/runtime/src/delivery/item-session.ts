@@ -87,6 +87,12 @@ export interface ItemSessionContext extends ProcessingContext {
    * {@link standaloneSessionControl} for an item delivered alone.
    */
   readonly control: EffectiveSessionControl;
+  /**
+   * Whether `response-processed` carries the outcomes of the item after the attempt.
+   *
+   * @defaultValue `false`
+   */
+  readonly eventOutcomes?: boolean;
 }
 
 /** What a step of an item session gives: the new session and what happened, or a refusal that leaves it as it was. */
@@ -165,5 +171,6 @@ export function checkSessionContext(context: ItemSessionContext): void {
   checkRecord(input, "The context of the item session must be an object with an item, a control and a random");
   checkItem(context.item);
   checkSessionControl(context.control);
+  if (context.eventOutcomes !== undefined) checkBoolean(context.eventOutcomes, "The eventOutcomes of the context");
   checkContext(context);
 }

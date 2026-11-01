@@ -268,6 +268,12 @@ composes its event sink and its score sink in it. Both are jobs of the host: the
 any step reads `results()` and `pending()` from `session(id)`, calls `sessionScore`, and publishes. [LTI items](lti-items.md)
 shows the wiring.
 
+The events carry no score unless the host builds its engine with `eventOutcomes`: `response-processed` then holds the outcomes
+of the item after each attempt, with `attempt` and `duration`, which are always present ([events](../runtime/delivery.md#events)).
+A host that feeds a learner model reads them in the `log` and so never calls `results()` after a step. The log, its outbox and its
+sinks then hold scores, so they need the protection of the results ([SECURITY.md](../../SECURITY.md)). The events never reach a
+candidate: a candidate's answer is a view.
+
 ```mermaid
 flowchart LR
   S[Step saved] --> L[forward.log]

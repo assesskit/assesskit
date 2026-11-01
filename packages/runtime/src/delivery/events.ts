@@ -1,3 +1,4 @@
+import type { WireValue } from "../values/index.js";
 import type { ItemKey } from "./plan.js";
 
 /**
@@ -8,7 +9,7 @@ import type { ItemKey } from "./plan.js";
  * | `presented`          | presented an item to the candidate, the first time or again after its session was suspended                                                                                                         |
  * | `responses-set`      | stored responses the candidate entered                                                                                                                                                              |
  * | `attempt-ended`      | ended an attempt; `detail` says how: `submit`, `skip`, `end-attempt` or `close`                                                                                                                     |
- * | `response-processed` | ran the response processing of the attempt that ended                                                                                                                                               |
+ * | `response-processed` | ran the response processing of the attempt that ended; `attempt`, `duration` and, with `eventOutcomes`, `outcomes` say which attempt, the time so far and its outcomes                              |
  * | `processing-failed`  | had processing fail: template or response processing of `item`, or the outcome processing, a pre-condition, a branch rule or a template default of the test, `scope`; `detail` is the error message |
  * | `outcome-processed`  | ran the outcome processing of the test, `scope`, after the responses submitted in the step                                                                                                          |
  * | `moved`              | made `item` the current item                                                                                                                                                                        |
@@ -70,4 +71,18 @@ export interface DeliveryEvent {
   readonly scope?: string;
   /** More about the event, as its type says. */
   readonly detail?: string;
+  /** On `response-processed`: the number of the attempt, from 1, as `numAttempts` counts it; absent on other events. */
+  readonly attempt?: number;
+  /**
+   * On `response-processed`: the milliseconds the candidate spent in the item up to the event, over all its attempts, as
+   * `at` counts them: suspended time is left out, and the time of one attempt is the difference from the previous event of
+   * the item. `results()` shows the same time, in seconds, as the `duration` of the item. Absent on other events.
+   */
+  readonly duration?: number;
+  /**
+   * On `response-processed`, when `EngineOptions.eventOutcomes` is on: the outcomes of the item after the attempt, by
+   * identifier, as JSON-safe values; absent otherwise. It holds scores, so it goes to the host's log and never to a
+   * candidate.
+   */
+  readonly outcomes?: Readonly<Record<string, WireValue | null>>;
 }
