@@ -8,12 +8,14 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
 import { ID_MESSAGES } from "../src/index.js";
-import type { SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
+import type { MountFiles, SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
-import type { SessionClient } from "../src/protocol/index.js";
+import type { HostSession, SessionClient } from "../src/protocol/index.js";
+import { audioContextRuns, fakeMicrophone, needsAudio } from "./audio.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { picture, settle } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
@@ -61,6 +63,10 @@ async function shell(
     readonly profile?: string;
     readonly upload?: (bytes: Blob, mimeType: string) => Promise<FileValue>;
     readonly url?: (file: FileValue) => string;
+    /** Names a file whose bytes come later, as a recording does. */
+    readonly reserve?: MountFiles["reserve"];
+    /** Stores the bytes of a reserved file. */
+    readonly fill?: MountFiles["fill"];
     readonly voice?: { speak(request: SpeechRequest): Promise<void>; stop(): void };
     readonly tools?: ToolSlots;
   } = {},
@@ -74,9 +80,11 @@ async function shell(
   const profile = pnp === undefined ? {} : { pnp };
   let client: SessionClient;
   let started: unknown;
+  // The host side of the session: the practice client offers its own, an exam has the session host.
+  let hostSession: HostSession = setup.host.session(ALICE.session);
   if (options.practice === true) {
     const saved = new Map<string, string>();
-    client = await createLocalSession({
+    const local = await createLocalSession({
       definition,
       store: {
         load: async (session) => saved.get(session),
@@ -89,6 +97,8 @@ async function shell(
       assets: (path) => `${origin}${PRACTICE_PATH}${path}`,
       clock: setup.clock,
     });
+    client = local;
+    hostSession = local.host;
   } else {
     const transport: Transport = async (envelope) =>
       JSON.parse(JSON.stringify(await setup.host.handle(ALICE, JSON.parse(JSON.stringify(envelope)))));
@@ -120,6 +130,9 @@ async function shell(
       upload: options.upload ?? (async () => ({ reference: "f", mimeType: "image/png" })),
       read: async () => new Uint8Array(),
       url: options.url ?? (() => ""),
+      ...NO_RECORDING,
+      ...(options.reserve === undefined ? {} : { reserve: options.reserve }),
+      ...(options.fill === undefined ? {} : { fill: options.fill }),
     },
     staticUrl: `${origin}/static/`,
     stylesheet: player,
@@ -135,7 +148,7 @@ async function shell(
     ...(options.headingLevel === undefined ? {} : { headingLevel: options.headingLevel }),
   });
   const ui = host.shadowRoot as ShadowRoot;
-  return { ...setup, client: shown, page: host, ui, mounted, started, definition };
+  return { ...setup, client: shown, page: host, ui, mounted, started, definition, hostSession };
 }
 
 type Shell = Awaited<ReturnType<typeof shell>>;
@@ -530,6 +543,7 @@ describe("mountDelivery", () => {
         upload: async () => ({ reference: "f", mimeType: "image/png" }),
         read: async () => new Uint8Array(),
         url: () => "",
+        ...NO_RECORDING,
       },
       staticUrl: `${inject("fixtures").asset}/static/`,
       stylesheet: player,
@@ -681,6 +695,7 @@ describe("mountDelivery", () => {
       upload: async () => ({ reference: "f", mimeType: "x" }),
       read: async () => new Uint8Array(),
       url: () => "",
+      ...NO_RECORDING,
     },
     staticUrl: "https://s.example/",
     stylesheet: player,
@@ -698,6 +713,34 @@ describe("mountDelivery", () => {
     again.destroy();
   });
 
+  it("needs reserve and fill to record, and asks for neither when the recording is off", async () => {
+    const s = await shell();
+    const bare = {
+      upload: async () => ({ reference: "f", mimeType: "x" }),
+      read: async () => new Uint8Array(),
+      url: () => "",
+    };
+    const options = {
+      client: s.client,
+      staticUrl: "https://s.example/",
+      stylesheet: player,
+      fetch: async () => ({ ok: true, status: 200, text: async () => "" }),
+    };
+    const fresh = (): HTMLElement => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      hosts.push(host);
+      return host;
+    };
+    expect(() => mountDelivery(fresh(), { ...options, files: bare })).toThrow(
+      "The function reserve of the option files",
+    );
+    expect(() => mountDelivery(fresh(), { ...options, files: { ...bare, reserve: NO_RECORDING.reserve } })).toThrow(
+      "The function fill of the option files",
+    );
+    mountDelivery(fresh(), { ...options, files: bare, hooks: { record: false } }).destroy();
+  });
+
   it("checks its arguments", async () => {
     const s = await shell();
     const options = {
@@ -706,6 +749,7 @@ describe("mountDelivery", () => {
         upload: async () => ({ reference: "f", mimeType: "x" }),
         read: async () => new Uint8Array(),
         url: () => "",
+        ...NO_RECORDING,
       },
       staticUrl: "https://s.example/",
       stylesheet: player,
@@ -796,7 +840,11 @@ describe("a review after the end in the player", () => {
       [false, true],
     ]);
     const results = await s.host.session(ALICE.session).results();
-    expect(results.itemResults.map(({ identifier }) => identifier)).toEqual(["q1", "q2"]);
+    expect(results.itemResults.map(({ identifier, sessionStatus }) => [identifier, sessionStatus])).toEqual([
+      ["q1", "final"],
+      ["q2", "final"],
+      ["q3", "initial"],
+    ]);
   });
 
   it("has no accessibility violations while a question is reviewed", async () => {
@@ -1602,5 +1650,165 @@ describe("pronunciation lexicons in the player", () => {
       buttonNamed(s.ui, "Read aloud").click();
       expect(requests.at(-1)?.text).toContain("Look at the W3C and");
     });
+  });
+});
+
+describe("a recording kept at the clock", () => {
+  /** An item whose one task is a recording that starts at once, in the types that every engine records in. */
+  const RecordingItem = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="q1" title="Item q1" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="file"/>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body>
+    <qti-upload-interaction response-identifier="RESPONSE" type="audio/webm audio/ogg audio/mp4 audio/wav" data-ak-record-start="0"/>
+  </qti-item-body>
+</qti-assessment-item>`;
+  const recordingFiles = () => ({
+    ...examFiles({ limits: '<qti-time-limits max-time="30"/>' }),
+    "items/q1/item.xml": RecordingItem,
+  });
+
+  /** The host's storage of recordings: it names a file, and keeps the bytes when the test lets them arrive. */
+  function recordingStore() {
+    const reserved: FileValue[] = [];
+    const reserveSignals: (AbortSignal | undefined)[] = [];
+    const filled = new Map<string, Blob>();
+    const fillSignals: (AbortSignal | undefined)[] = [];
+    const held: (() => void)[] = [];
+    const store = {
+      holding: false,
+      reserved,
+      reserveSignals,
+      filled,
+      fillSignals,
+      waiting: () => held.length,
+      release: () => {
+        for (const go of held.splice(0)) go();
+      },
+      reserve: async (mimeType: string, fileName?: string, options?: { readonly signal?: AbortSignal }) => {
+        reserveSignals.push(options?.signal);
+        const file = {
+          reference: `recording-${reserved.length + 1}`,
+          mimeType,
+          ...(fileName === undefined ? {} : { fileName }),
+        };
+        reserved.push(file);
+        return file;
+      },
+      fill: async (file: FileValue, bytes: Blob, options?: { readonly signal?: AbortSignal }) => {
+        fillSignals.push(options?.signal);
+        if (store.holding) await new Promise<void>((go) => held.push(go));
+        filled.set(file.reference, bytes);
+      },
+    };
+    return store;
+  }
+
+  /** The file that the store named for the recording. */
+  const named = (store: { readonly reserved: readonly FileValue[] }): FileValue => {
+    const [file] = store.reserved;
+    if (file === undefined) throw new Error("The store named no file.");
+    return file;
+  };
+
+  /** The largest sample of a recording, which is above 0 for a recording of the oscillator and 0 for silence. */
+  async function loudest(bytes: Blob): Promise<number> {
+    const context = new AudioContext();
+    try {
+      const decoded = await context.decodeAudioData(await bytes.arrayBuffer());
+      let peak = 0;
+      for (const sample of decoded.getChannelData(0)) peak = Math.max(peak, Math.abs(sample));
+      return peak;
+    } finally {
+      await context.close();
+    }
+  }
+
+  /**
+   * A shell whose first item records at once, with the oscillator for a microphone, once the recording is under way and its
+   * response has reached the host: the client holds the responses of an exam for a second before it sends them.
+   */
+  async function recording(practice: boolean, context: Parameters<typeof needsAudio>[0]) {
+    await needsAudio(context, audioContextRuns());
+    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
+    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "clearTimeout", "clearInterval"] });
+    const store = recordingStore();
+    const s = await shell({ files: recordingFiles(), practice, reserve: store.reserve, fill: store.fill });
+    await vi.advanceTimersByTimeAsync(0);
+    await waitFor(() => expect(contentOf(s.ui).querySelector(".ak-recording")).not.toBeNull());
+    // Some sound is recorded before the clock runs out.
+    await real(300);
+    await vi.advanceTimersByTimeAsync(1100);
+    await real(100);
+    return { s, store };
+  }
+
+  /** The file that the first item names as its response in the results of the session. */
+  async function answerOf(s: Shell): Promise<unknown> {
+    const report = await s.hostSession.results();
+    const q1 = report.itemResults.find(({ identifier }) => identifier === "q1");
+    const response = q1?.variables.find(({ kind, identifier }) => kind === "response" && identifier === "RESPONSE");
+    return response?.kind === "response" ? response.candidateResponse : undefined;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  describe.each([
+    ["an exam", false],
+    ["practice", true],
+  ])("in %s", (_name, practice) => {
+    it("keeps the answer of a candidate who is speaking when the time for the question is over, and the sound follows", async (context) => {
+      const { s, store } = await recording(practice, context);
+      const reserved = named(store);
+      s.clock.advance(31 * SECOND);
+      await s.hostSession.apply({ type: "time" });
+      await s.client.refresh();
+      await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+      expect(await answerOf(s)).toEqual(single("file", reserved));
+      await waitFor(() => expect(store.filled.size).toBe(1));
+      expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
+    });
+
+    it("keeps the answer when the candidate goes on, which does not wait for the upload", async (context) => {
+      const { s, store } = await recording(practice, context);
+      const reserved = named(store);
+      store.holding = true;
+      buttonNamed(s.ui, "Next").click();
+      await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+      expect(store.filled.size).toBe(0);
+      buttonNamed(s.ui, "End the test").click();
+      await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+      buttonNamed(s.ui, "Yes, continue").click();
+      await waitFor(() => expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended."));
+      expect(await answerOf(s)).toEqual(single("file", reserved));
+      expect(store.filled.size).toBe(0);
+      await waitFor(() => expect(store.waiting()).toBe(1));
+      store.release();
+      await waitFor(() => expect(store.filled.size).toBe(1));
+      expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
+    });
+
+    it("stores the sound of a recording when the player is destroyed, which does not abort the store", async (context) => {
+      const { s, store } = await recording(practice, context);
+      const reserved = named(store);
+      s.mounted.destroy();
+      await waitFor(() => expect(store.filled.size).toBe(1));
+      expect(store.fillSignals).toEqual([undefined]);
+      expect(store.reserveSignals.map((signal) => signal instanceof AbortSignal)).toEqual([true]);
+      expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
+    });
+  });
+
+  it("keeps the answer when a proctor ends the test", async (context) => {
+    const { s, store } = await recording(false, context);
+    const reserved = named(store);
+    expect((await s.host.proctor(ALICE.session, { type: "end-test" })).refusal).toBeUndefined();
+    await s.client.refresh();
+    await waitFor(() => expect(store.filled.size).toBe(1));
+    expect(await answerOf(s)).toEqual(single("file", reserved));
+    expect(await loudest(store.filled.get(reserved.reference) ?? new Blob())).toBeGreaterThan(0);
   });
 });

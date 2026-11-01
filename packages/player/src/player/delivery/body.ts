@@ -115,6 +115,7 @@ function createRoot(context: BodyContext, pci: PciHost): ContentRoot {
         messages,
         files,
         staticUrl,
+        onError: context.report,
         ...(hooks.record === undefined ? {} : { record: hooks.record }),
         ...(hooks.customInteraction === undefined ? {} : { customInteraction: hooks.customInteraction }),
       }),

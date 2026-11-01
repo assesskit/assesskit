@@ -195,6 +195,13 @@ describe("bindToLifetime", () => {
           return new Uint8Array();
         },
         url: (_file: unknown) => "https://assets.example/f",
+        reserve: async (_type: string, _name?: string, options?: { readonly signal?: AbortSignal }) => {
+          received.push({ what: "reserve", signal: options?.signal });
+          return file;
+        },
+        fill: async (_file: unknown, _bytes: Blob, options?: { readonly signal?: AbortSignal }) => {
+          received.push({ what: "fill", signal: options?.signal });
+        },
       },
       report: (error: unknown) => void reports.push(error),
     };
@@ -212,6 +219,31 @@ describe("bindToLifetime", () => {
     expect(received.map(({ what }) => what)).toEqual(["fetch", "upload", "read"]);
     expect(received.every(({ signal }) => signal === state.stop.signal)).toBe(true);
     expect(bound.files.url(file)).toBe("https://assets.example/f");
+  });
+
+  it("ends the reservation of a file with the mount and leaves the store of its bytes to the caller's signal", async () => {
+    const { bound, received, state, bytes, file } = settings();
+    await bound.files.reserve("audio/webm", "recording.webm");
+    await bound.files.fill(file, bytes);
+    const own = new AbortController();
+    await bound.files.fill(file, bytes, { signal: own.signal });
+    expect(received.map(({ what, signal }) => [what, signal])).toEqual([
+      ["reserve", state.stop.signal],
+      ["fill", undefined],
+      ["fill", own.signal],
+    ]);
+  });
+
+  it("leaves out reserve and fill when the host's files have none", () => {
+    const bound = bindToLifetime(
+      {
+        fetch: () => undefined,
+        files: { upload: () => undefined, read: () => undefined, url: () => "" },
+        report: () => undefined,
+      } as never,
+      { destroyed: false, stop: new AbortController() } as never,
+    ) as { readonly files: Record<string, unknown> };
+    expect(Object.keys(bound.files)).toEqual(["upload", "read", "url"]);
   });
 
   it("keeps the signal that a call brings, and reports until the mount is destroyed", async () => {

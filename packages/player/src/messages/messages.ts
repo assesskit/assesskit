@@ -318,6 +318,12 @@ export interface Messages {
   readonly uploadFailed: string;
   /** The notice that the microphone could not be used for a recording. */
   readonly uploadNoMicrophone: string;
+  /** The status that says once that a recording starts by itself when the countdown ends. */
+  readonly uploadAutomatic: string;
+  /** The label of the clock that counts down to the start of a recording. */
+  readonly uploadStartsIn: string;
+  /** The label of the clock that counts down the time left to record. */
+  readonly uploadTimeLeft: string;
   /** The name of the button that takes the uploaded file away. */
   readonly uploadRemove: string;
   /** The notice in place of a question of a kind that the player does not run. */

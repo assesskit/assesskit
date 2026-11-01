@@ -2179,7 +2179,8 @@ qti-simple-associable-choice.ak-target {
 .ak-media-time,
 .ak-media-notice,
 .ak-file-name,
-.ak-upload-status {
+.ak-upload-status,
+.ak-upload-clock {
   color: var(--ak-muted);
 }
 

@@ -1,8 +1,8 @@
 import type { TimerView } from "@assesskit/runtime/delivery";
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { clockText, html } from "../internal.js";
 import type { Announcer } from "./announcer.js";
-import { clockText, spokenText } from "./duration.js";
+import { spokenText } from "./duration.js";
 
 /**
  * The seconds before a limit at which the candidate is told how much time is left.

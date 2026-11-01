@@ -7,4 +7,5 @@ export type {
   InteractionFiles,
   InteractionOptions,
 } from "./options.js";
+export { MAX_RECORDING_SECONDS } from "./record-attributes.js";
 export { createInteractionRenderers } from "./renderers.js";

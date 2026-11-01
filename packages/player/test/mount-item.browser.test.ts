@@ -10,6 +10,7 @@ import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examHost, fakeClock, pciFiles } from "./exam-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
 
@@ -60,6 +61,7 @@ const files = {
   upload: async () => ({ reference: "f", mimeType: "image/png" }),
   read: async () => new Uint8Array(),
   url: () => "",
+  ...NO_RECORDING,
 };
 const fetcher = async () => ({ ok: false, status: 404, text: async () => "" });
 
@@ -398,6 +400,23 @@ describe("the lifecycle of an item in a page", () => {
     expect(s.host.shadowRoot).toBe(s.ui);
     await waitFor(() => expect(choices(s.ui).length).toBeGreaterThan(0));
     again.destroy();
+  });
+
+  it("needs reserve and fill to record, and asks for neither when the recording is off", async () => {
+    const s = await embed("l1");
+    const bare = { upload: files.upload, read: files.read, url: files.url };
+    const options = { client: s.client, staticUrl: "https://s.example/", stylesheet: player, fetch: fetcher };
+    const fresh = (): HTMLElement => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      hosts.push(host);
+      return host;
+    };
+    expect(() => mountItem(fresh(), { ...options, files: bare })).toThrow("The function reserve of the option files");
+    expect(() => mountItem(fresh(), { ...options, files: { ...bare, reserve: files.reserve } })).toThrow(
+      "The function fill of the option files",
+    );
+    mountItem(fresh(), { ...options, files: bare, hooks: { record: false } }).destroy();
   });
 
   it("checks its arguments", async () => {

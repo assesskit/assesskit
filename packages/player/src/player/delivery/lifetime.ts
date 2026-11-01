@@ -4,7 +4,8 @@ import type { MountState } from "./state.js";
 
 /**
  * Ties what a mount asks of the page to the life of the mount: its fetches and the calls to the host's files end when the mount
- * is destroyed, and an error that arrives after that is not reported, since nobody is left to read it.
+ * is destroyed, except `fill`, which stores the bytes of a recording that the end of the mount stopped; and an error that
+ * arrives after that is not reported, since nobody is left to read it.
  *
  * @param settings - The settings of the mount.
  * @param state - The state of the mount, whose `stop` ends the calls and whose `destroyed` silences the reports.
@@ -12,6 +13,7 @@ import type { MountState } from "./state.js";
  */
 export function bindToLifetime<T extends ItemSettings>(settings: T, state: MountState): T {
   const { fetch, files, report } = settings;
+  const { reserve, fill } = files;
   const { signal } = state.stop;
   const within = (options: SessionCallOptions | undefined): SessionCallOptions => ({
     signal: options?.signal ?? signal,
@@ -23,6 +25,11 @@ export function bindToLifetime<T extends ItemSettings>(settings: T, state: Mount
       upload: (bytes, mimeType, fileName, options) => files.upload(bytes, mimeType, fileName, within(options)),
       read: (file, options) => files.read(file, within(options)),
       url: (file) => files.url(file),
+      ...(reserve === undefined
+        ? {}
+        : { reserve: (mimeType, fileName, options) => reserve.call(files, mimeType, fileName, within(options)) }),
+      // The bytes of a recording that the end of the mount stops still arrive: only the caller's signal ends `fill`.
+      ...(fill === undefined ? {} : { fill: (file, bytes, options) => fill.call(files, file, bytes, options) }),
     },
     report: (error) => {
       if (!state.destroyed) report(error);

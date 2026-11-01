@@ -10,6 +10,7 @@ import { mountLtiFrame } from "../src/player/lti-frame/index.js";
 import type { LtiFrame } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examHost } from "./exam-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import type { Hit } from "./fixtures/lti-server.js";
 import { ltiExamFiles } from "./lti-exam-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
@@ -251,6 +252,7 @@ describe("mountDelivery with an item that is a link to a tool", () => {
         upload: async () => ({ reference: "f", mimeType: "image/png" }),
         read: async () => new Uint8Array(),
         url: () => "",
+        ...NO_RECORDING,
       },
       staticUrl: `${asset}/static/`,
       stylesheet,

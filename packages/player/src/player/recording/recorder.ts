@@ -65,6 +65,8 @@ function recordWithRecorder(stream: MediaStream, mimeType: string): Recording {
 /** Records the samples that the worklet delivers, and writes them as a WAV file when the recording ends. */
 async function recordWav(stream: MediaStream, workletUrl: string, mimeType: string): Promise<Recording> {
   const context = new AudioContext();
+  // A browser may hold a context that no press created suspended, as at a recording that starts by itself.
+  await context.resume();
   await context.audioWorklet.addModule(workletUrl);
   const blocks: Float32Array[] = [];
   const node = new AudioWorkletNode(context, RECORDER_PROCESSOR);

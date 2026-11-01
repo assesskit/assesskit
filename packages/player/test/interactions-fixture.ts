@@ -11,6 +11,7 @@ import {
   type ResponseDetail,
 } from "../src/player/index.js";
 import { type ContentRoot, mount } from "./css-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 
 /** The asset origin, under a token of this file, serves the package files of the content tests. */
 export const ASSETS = `${inject("fixtures").asset}/content/${crypto.randomUUID()}/`;
@@ -53,6 +54,7 @@ export interface SceneOptions {
 const NO_FILES: InteractionOptions["files"] = {
   upload: () => Promise.reject(new Error("The fixture has no upload.")),
   url: () => "",
+  ...NO_RECORDING,
 };
 
 /** The URL under which the fixture serves the static files of the player. */

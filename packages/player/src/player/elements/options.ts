@@ -12,6 +12,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue, Value } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
+import type { SessionCallOptions } from "../../protocol/index.js";
 
 /** Where uploads, recordings and drawings are kept: the host's storage, which values refer to. */
 export interface InteractionFiles {
@@ -31,6 +32,25 @@ export interface InteractionFiles {
    * @returns The URL.
    */
   url(file: FileValue): string;
+  /**
+   * Names a file whose bytes come later, so that the response can refer to a recording as it starts. Required unless the
+   * option `record` is `false`.
+   *
+   * @param mimeType - Their media type.
+   * @param fileName - The name of the file, if it has one.
+   * @param options - Its `signal` aborts when the mount is destroyed.
+   * @returns The file value, which the response holds until the bytes are stored with {@link InteractionFiles.fill}.
+   */
+  reserve?(mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  /**
+   * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
+   * recording that a time limit or a destroy stops still has to arrive. Required unless the option `record` is `false`.
+   *
+   * @param file - The file value that `reserve` returned.
+   * @param bytes - The bytes.
+   * @param options - Its `signal` is the caller's alone.
+   */
+  fill?(file: FileValue, bytes: Blob, options?: SessionCallOptions): Promise<void>;
 }
 
 /** The state of a custom interaction when the hook mounts it; later changes of the host do not reach the hook. */
@@ -69,7 +89,7 @@ export interface InteractionOptions {
    */
   readonly staticUrl: string;
   /**
-   * Whether an upload of audio offers a recording.
+   * Whether an upload of audio offers a recording. With a recording, `files` needs `reserve` and `fill`.
    *
    * @defaultValue `true`
    */
@@ -80,6 +100,12 @@ export interface InteractionOptions {
    * @defaultValue None, so that a custom interaction says it is not supported
    */
   readonly customInteraction?: CustomInteractionHook;
+  /**
+   * Receives the errors that a recording can only report: the storage of its bytes failed, or the host could not name its file.
+   *
+   * @defaultValue `reportError` of the page, which raises a global `error` event
+   */
+  readonly onError?: (error: unknown) => void;
 }
 
 /** The options of the renderers, checked and with their defaults. */
@@ -94,9 +120,11 @@ export interface InteractionSettings {
   readonly record: boolean;
   /** The hook that mounts custom interactions, when the host gave one. */
   readonly customInteraction: CustomInteractionHook | undefined;
+  /** Reports an error that a recording can only report. */
+  readonly report: (error: unknown) => void;
 }
 
-const OPTION_NAMES = ["messages", "files", "staticUrl", "record", "customInteraction"];
+const OPTION_NAMES = ["messages", "files", "staticUrl", "record", "customInteraction", "onError"];
 
 /** Returns whether a value is a file value: a reference, a content type and optionally a name, all strings. */
 function isFileValue(value: unknown): value is FileValue {
@@ -109,23 +137,44 @@ function isFileValue(value: unknown): value is FileValue {
 }
 
 /** Wraps the files of the host so that what they return is checked: a file value, and a URL. */
-function checkedFiles(files: Readonly<Record<string, unknown>>): InteractionFiles {
+function checkedFiles(files: Readonly<Record<string, unknown>>, record: boolean): InteractionFiles {
   checkFunction(files.upload, "The method upload of the option files must be a function");
   checkFunction(files.url, "The method url of the option files must be a function");
-  const { upload, url } = files;
+  const { upload, url, reserve, fill } = files;
+  if (record) {
+    checkFunction(
+      reserve,
+      "The method reserve of the option files must be a function unless the option record is false",
+    );
+    checkFunction(fill, "The method fill of the option files must be a function unless the option record is false");
+  }
+  const named = async (name: string, method: unknown, args: readonly unknown[]): Promise<FileValue> => {
+    const file: unknown = await Reflect.apply(method as (...values: never[]) => unknown, files, args);
+    if (!isFileValue(file)) {
+      throw new DataError(`The method ${name} of the option files must give a file value, found ${describe(file)}.`);
+    }
+    return file;
+  };
   return {
-    upload: async (bytes, mimeType, fileName) => {
-      const file: unknown = await Reflect.apply(upload, files, [bytes, mimeType, fileName]);
-      if (!isFileValue(file)) {
-        throw new DataError(`The method upload of the option files must give a file value, found ${describe(file)}.`);
-      }
-      return file;
-    },
+    upload: (bytes, mimeType, fileName) => named("upload", upload, [bytes, mimeType, fileName]),
     url: (file) => {
       const found: unknown = Reflect.apply(url, files, [file]);
       checkString(found, "The URL that the method url of the option files returned");
       return found;
     },
+    ...(typeof reserve === "function"
+      ? {
+          reserve: (mimeType: string, fileName?: string, options?: SessionCallOptions) =>
+            named("reserve", reserve, [mimeType, fileName, options]),
+        }
+      : {}),
+    ...(typeof fill === "function"
+      ? {
+          fill: async (file: FileValue, bytes: Blob, options?: SessionCallOptions) => {
+            await Reflect.apply(fill, files, [file, bytes, options]);
+          },
+        }
+      : {}),
   };
 }
 
@@ -167,17 +216,20 @@ function checkedHook(hook: (...args: never[]) => unknown): CustomInteractionHook
 export function readInteractionOptions(options: unknown): InteractionSettings {
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", OPTION_NAMES);
-  const { messages, files, staticUrl, record = true, customInteraction } = options;
+  const { messages, files, staticUrl, record = true, customInteraction, onError } = options;
   checkMessages(messages);
   checkRecord(files, "The option files must be an object");
   checkBoolean(record, "The option record");
   if (customInteraction !== undefined)
     checkFunction(customInteraction, "The option customInteraction must be a function");
+  if (onError !== undefined) checkFunction(onError, "The option onError must be a function");
   return {
     messages,
-    files: checkedFiles(files),
+    files: checkedFiles(files, record),
     workletUrl: readWorkletUrl(staticUrl),
     record,
     customInteraction: customInteraction === undefined ? undefined : checkedHook(customInteraction),
+    report:
+      onError === undefined ? (error) => reportError(error) : (error) => Reflect.apply(onError, undefined, [error]),
   };
 }

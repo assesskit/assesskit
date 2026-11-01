@@ -1,5 +1,6 @@
 import type { Value } from "@assesskit/runtime/values";
 import type { InteractionFiles } from "../src/player/index.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
 
 /** A picture of one color as a `data:` URL, which the renderer loads as it would a file of the package. */
@@ -71,6 +72,7 @@ export function memoryFiles(upload?: InteractionFiles["upload"]): {
         return { reference: `file-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
       }),
     url: ({ reference }) => reference,
+    ...NO_RECORDING,
   };
   return { files, uploads };
 }

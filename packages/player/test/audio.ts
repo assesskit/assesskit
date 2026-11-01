@@ -68,3 +68,31 @@ export async function needsAudio(context: { skip(): never }, available: Promise<
   }
   context.skip();
 }
+
+const realSetTimeout = globalThis.setTimeout;
+
+/**
+ * A stream of an oscillator, which a test gives in place of the microphone. It needs an audio context that runs, so a test
+ * that uses it waits for {@link audioContextRuns} first. It returns once sound reaches the end of the context: a device that
+ * has just been opened takes a while to start, and a recording made before that holds a header and no sound.
+ */
+export async function fakeMicrophone(): Promise<MediaStream> {
+  const context = new AudioContext();
+  await context.resume();
+  const oscillator = context.createOscillator();
+  const destination = context.createMediaStreamDestination();
+  const analyser = context.createAnalyser();
+  oscillator.connect(destination);
+  oscillator.connect(analyser);
+  oscillator.start();
+  const samples = new Float32Array(analyser.fftSize);
+  await new Promise<void>((flowing) => {
+    const look = (): void => {
+      analyser.getFloatTimeDomainData(samples);
+      if (samples.some((sample) => sample !== 0)) flowing();
+      else realSetTimeout(look, 20);
+    };
+    look();
+  });
+  return destination.stream;
+}

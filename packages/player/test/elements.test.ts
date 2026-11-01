@@ -263,7 +263,12 @@ describe("Board", () => {
 });
 
 describe("readInteractionOptions", () => {
-  const Files = { upload: () => Promise.resolve({ reference: "r", mimeType: "image/png" }), url: () => "u" };
+  const Files = {
+    upload: () => Promise.resolve({ reference: "r", mimeType: "image/png" }),
+    url: () => "u",
+    reserve: () => Promise.resolve({ reference: "r", mimeType: "audio/webm" }),
+    fill: () => Promise.resolve(),
+  };
   const valid = (extra: object = {}): unknown => ({
     messages: EN_MESSAGES,
     files: Files,
@@ -284,14 +289,82 @@ describe("readInteractionOptions", () => {
       reference: "r",
       mimeType: "image/png",
     });
-    const bad = readInteractionOptions(valid({ files: { upload: () => Promise.resolve("r"), url: () => "u" } }));
+    const bad = readInteractionOptions(valid({ files: { ...Files, upload: () => Promise.resolve("r") } }));
     await expect(bad.files.upload(new Blob(["x"]), "image/png")).rejects.toThrow(
       new DataError('The method upload of the option files must give a file value, found "r".'),
     );
-    const noUrl = readInteractionOptions(valid({ files: { upload: Files.upload, url: () => 3 } }));
+    const noUrl = readInteractionOptions(valid({ files: { ...Files, url: () => 3 } }));
     expect(() => noUrl.files.url({ reference: "r", mimeType: "image/png" })).toThrow(
       new DataError("The URL that the method url of the option files returned must be a string, found 3."),
     );
+  });
+
+  it("names a file before its bytes come, checks the file value, and passes the options of the call on", async () => {
+    const calls: unknown[][] = [];
+    const settings = readInteractionOptions(
+      valid({
+        files: {
+          ...Files,
+          reserve: (...args: unknown[]) => {
+            calls.push(["reserve", ...args]);
+            return Promise.resolve({ reference: "r", mimeType: "audio/webm" });
+          },
+          fill: (...args: unknown[]) => {
+            calls.push(["fill", ...args]);
+            return Promise.resolve();
+          },
+        },
+      }),
+    );
+    const signal = new AbortController().signal;
+    expect(await settings.files.reserve?.("audio/webm", "recording.webm", { signal })).toEqual({
+      reference: "r",
+      mimeType: "audio/webm",
+    });
+    const bytes = new Blob(["x"]);
+    await settings.files.fill?.({ reference: "r", mimeType: "audio/webm" }, bytes, { signal });
+    expect(calls).toEqual([
+      ["reserve", "audio/webm", "recording.webm", { signal }],
+      ["fill", { reference: "r", mimeType: "audio/webm" }, bytes, { signal }],
+    ]);
+    const bad = readInteractionOptions(valid({ files: { ...Files, reserve: () => Promise.resolve(3) } }));
+    await expect(bad.files.reserve?.("audio/webm")).rejects.toThrow(
+      new DataError("The method reserve of the option files must give a file value, found 3."),
+    );
+  });
+
+  it("needs reserve and fill to record, and asks for neither when the recording is off", () => {
+    const { upload, url } = Files;
+    expect(() => readInteractionOptions(valid({ files: { upload, url } }))).toThrow(
+      new DataError(
+        "The method reserve of the option files must be a function unless the option record is false, found undefined.",
+      ),
+    );
+    expect(() => readInteractionOptions(valid({ files: { upload, url, reserve: Files.reserve } }))).toThrow(
+      /The method fill of the option files/,
+    );
+    const off = readInteractionOptions(valid({ files: { upload, url }, record: false }));
+    expect(off.files.reserve).toBeUndefined();
+    expect(off.files.fill).toBeUndefined();
+  });
+
+  it("reports an error that a recording can only report to the option onError, else to the page", () => {
+    const heard: unknown[] = [];
+    const error = new Error("The store is down.");
+    readInteractionOptions(valid({ onError: (each: unknown) => heard.push(each) })).report(error);
+    expect(heard).toEqual([error]);
+    expect(() => readInteractionOptions(valid({ onError: JSON.parse("5") }))).toThrow(
+      new DataError("The option onError must be a function, found 5."),
+    );
+    const raised: unknown[] = [];
+    const original = globalThis.reportError;
+    globalThis.reportError = (each: unknown) => void raised.push(each);
+    try {
+      readInteractionOptions(valid()).report(error);
+    } finally {
+      globalThis.reportError = original;
+    }
+    expect(raised).toEqual([error]);
   });
 
   it("checks what the hook of a custom interaction returns", () => {
@@ -315,7 +388,7 @@ describe("readInteractionOptions", () => {
     expect(() => readInteractionOptions(valid({ files: parse("null") }))).toThrow(
       new DataError("The option files must be an object, found null."),
     );
-    expect(() => readInteractionOptions(valid({ files: { upload: 1, url: () => "u" } }))).toThrow(
+    expect(() => readInteractionOptions(valid({ files: { ...Files, upload: 1 } }))).toThrow(
       new DataError("The method upload of the option files must be a function, found 1."),
     );
     expect(() => readInteractionOptions(valid({ record: parse('"yes"') }))).toThrow(

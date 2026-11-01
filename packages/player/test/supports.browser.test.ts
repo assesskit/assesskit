@@ -21,6 +21,7 @@ import {
 } from "../src/player/index.js";
 import { audioPlaysToEnd, needsAudio } from "./audio.js";
 import { computed, mount, PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 import { axeViolations, ITEM_PATH } from "./renderer-fixture.js";
 import { onSupport, supportView } from "./supports-fixture.js";
@@ -1293,7 +1294,7 @@ describe("supports and a media interaction", () => {
       stylesheet: stylesheet(PLAYER_CSS),
       interactions: createInteractionRenderers({
         messages: EN_MESSAGES,
-        files: { upload: () => Promise.reject(new Error("The test has no upload.")), url: () => "" },
+        files: { upload: () => Promise.reject(new Error("The test has no upload.")), url: () => "", ...NO_RECORDING },
         staticUrl: STATIC_URL,
       }),
     });

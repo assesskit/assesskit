@@ -52,4 +52,16 @@ describe("the vocabularies of the interactions", () => {
     }
     expect(await issuesOf(upload("image/png banana"))).not.toEqual([]);
   });
+
+  it("the data-ak-record attributes of an upload interaction: the schema accepts them, and they read and write back as they are", async () => {
+    const recording = itemOf(
+      `<qti-upload-interaction response-identifier="R" type="audio/webm audio/mp4 audio/ogg" data-ak-record-start="15" data-ak-record-limit="45" data-ak-record-once="true"/>`,
+    );
+    expect(await issuesOf(recording)).toEqual([]);
+    expect(await writtenIssues(recording)).toEqual([]);
+    const written = writeAsi(readAsi(recording));
+    for (const attribute of ['data-ak-record-start="15"', 'data-ak-record-limit="45"', 'data-ak-record-once="true"']) {
+      expect(written).toContain(attribute);
+    }
+  });
 });

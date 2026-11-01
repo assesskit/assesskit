@@ -2,10 +2,11 @@ import { readAsi } from "@assesskit/runtime/asi";
 import { DataError } from "@assesskit/runtime/errors";
 import { describeInteractions } from "@assesskit/runtime/interactions";
 import { INTERACTION_TYPES } from "@assesskit/runtime/metadata";
-import { container, single, type Value } from "@assesskit/runtime/values";
-import { describe, expect, inject, it, vi } from "vitest";
+import { container, type FileValue, single, type Value } from "@assesskit/runtime/values";
+import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES, selectMessages } from "../src/index.js";
+import { readRecordAttributes } from "../src/player/elements/internal.js";
 import {
   createContentRoot,
   createInteractionRenderers,
@@ -13,9 +14,12 @@ import {
   defineElements,
   InteractionElement,
   type InteractionFiles,
+  type InteractionOptions,
+  MAX_RECORDING_SECONDS,
 } from "../src/player/index.js";
-import { audioContextRuns, needsAudio } from "./audio.js";
+import { audioContextRuns, fakeMicrophone, needsAudio } from "./audio.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
@@ -936,30 +940,58 @@ describe("custom interaction", () => {
   });
 });
 
-/** Files of a test: they keep what is uploaded, and answer with the reference they give it. */
-function fakeFiles(): InteractionFiles & {
+/** What a test did to its files, and the means to hold the store of a recording's bytes. */
+interface FakeFiles extends InteractionFiles {
   readonly uploads: { readonly bytes: Blob; readonly mimeType: string; readonly fileName?: string }[];
-} {
-  const uploads: { readonly bytes: Blob; readonly mimeType: string; readonly fileName?: string }[] = [];
-  return {
+  /** The files that were reserved, in order. */
+  readonly reserved: FileValue[];
+  /** The bytes of reserved files that were stored, in order. */
+  readonly filled: { readonly file: FileValue; readonly bytes: Blob }[];
+  /** The calls of `fill` that are held, until `release` lets them go or `fail` rejects them. */
+  holding: boolean;
+  /** How many stores wait to be let go. */
+  waiting(): number;
+  /** Lets the held stores go. */
+  release(): void;
+}
+
+/** Files of a test: they keep what is uploaded and reserved, and answer with the reference they give it. */
+function fakeFiles(failures: { readonly reserve?: boolean; readonly fill?: boolean } = {}): FakeFiles {
+  const uploads: FakeFiles["uploads"] = [];
+  const reserved: FileValue[] = [];
+  const filled: { file: FileValue; bytes: Blob }[] = [];
+  const held: (() => void)[] = [];
+  const files: FakeFiles = {
     uploads,
+    reserved,
+    filled,
+    holding: false,
+    waiting: () => held.length,
+    release: () => {
+      for (const go of held.splice(0)) go();
+    },
     upload: async (bytes, mimeType, fileName) => {
       uploads.push({ bytes, mimeType, ...(fileName === undefined ? {} : { fileName }) });
       return { reference: `ref-${uploads.length}`, mimeType, ...(fileName === undefined ? {} : { fileName }) };
     },
     url: (file) => `https://files.example/${file.reference}`,
+    reserve: async (mimeType, fileName) => {
+      if (failures.reserve === true) throw new Error("The host is down.");
+      const file = {
+        reference: `reserved-${reserved.length + 1}`,
+        mimeType,
+        ...(fileName === undefined ? {} : { fileName }),
+      };
+      reserved.push(file);
+      return file;
+    },
+    fill: async (file, bytes) => {
+      if (files.holding) await new Promise<void>((go) => held.push(go));
+      if (failures.fill === true) throw new Error("The store is down.");
+      filled.push({ file, bytes });
+    },
   };
-}
-
-/** A stream of an oscillator, which a test gives in place of the microphone. */
-async function fakeMicrophone(): Promise<MediaStream> {
-  const context = new AudioContext();
-  await context.resume();
-  const oscillator = context.createOscillator();
-  const destination = context.createMediaStreamDestination();
-  oscillator.connect(destination);
-  oscillator.start();
-  return destination.stream;
+  return files;
 }
 
 describe("upload", () => {
@@ -1015,7 +1047,7 @@ describe("upload", () => {
 
   it("says that the file could not be uploaded when the host fails, and gives no response", async () => {
     const scene = mountScene(Declaration, Body(""), {
-      options: { files: { upload: () => Promise.reject(new Error("offline")), url: () => "" } },
+      options: { files: { upload: () => Promise.reject(new Error("offline")), url: () => "", ...NO_RECORDING } },
     });
     await userEvent.upload(scene.find("input[type=file]"), new File(["x"], "a.txt", { type: "text/plain" }));
     await waitFor(() =>
@@ -1046,7 +1078,7 @@ describe("upload", () => {
     expect(without.root.querySelector(".ak-upload button")).toBeNull();
   });
 
-  it("records in a type that the interaction accepts, and sends the recording, asking for the microphone only when pressed", async (context) => {
+  it("records in a type that the interaction accepts, naming the file as it starts and storing the bytes when it stops", async (context) => {
     // The WebKit of Playwright on Linux has no MediaRecorder.
     if (typeof MediaRecorder === "undefined") context.skip();
     await needsAudio(context, audioContextRuns());
@@ -1060,13 +1092,23 @@ describe("upload", () => {
     await waitFor(() => expect(scene.find(".ak-recording").textContent).toBe("Recording"));
     expect(microphone).toHaveBeenCalledOnce();
     expect(record?.disabled).toBe(true);
+    // The response names the reserved file at once, and the part that plays it waits for the bytes.
+    const reserved = first(files.reserved);
+    expect(["audio/webm", "audio/ogg", "audio/mp4"]).toContain(reserved.mimeType);
+    expect(reserved.fileName).toMatch(/^recording\.(webm|ogg|m4a)$/u);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", reserved) }]);
+    expect(scene.find(".ak-stored").textContent).toBe("");
     await new Promise((done) => setTimeout(done, 300));
     await userEvent.click(stop ?? scene.host);
-    await waitFor(() => expect(scene.responses).toHaveLength(1));
-    const [upload] = files.uploads;
-    expect(["audio/webm", "audio/ogg", "audio/mp4"]).toContain(upload?.mimeType);
-    expect(upload?.fileName).toMatch(/^recording\.(webm|ogg|m4a)$/u);
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+    expect(first(files.filled).file).toEqual(reserved);
+    expect(first(files.filled).bytes.size).toBeGreaterThan(0);
+    expect(files.uploads).toEqual([]);
     expect(scene.root.querySelector(".ak-recording")).toBeNull();
+    expect(scene.responses).toHaveLength(1);
+    await waitFor(() =>
+      expect(scene.find(".ak-stored audio").getAttribute("src")).toBe(`https://files.example/${reserved.reference}`),
+    );
     microphone.mockRestore();
   });
 
@@ -1075,25 +1117,359 @@ describe("upload", () => {
     const stream = context.createMediaStreamDestination().stream;
     const microphone = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
     // No worklet is served at this URL, so that a WAV recording cannot start.
+    const errors: unknown[] = [];
     const scene = mountScene(Declaration, Body('type="audio/wav"'), {
-      options: { staticUrl: `${inject("fixtures").asset}/nothing-here/` },
+      options: {
+        staticUrl: `${inject("fixtures").asset}/nothing-here/`,
+        files: fakeFiles(),
+        onError: (error) => errors.push(error),
+      },
     });
     await userEvent.click(first(scene.findAll(".ak-upload button")));
     await waitFor(() => expect(scene.find(".ak-upload-status").textContent).toBe("The microphone could not be used."));
     expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
+    expect(scene.responses).toEqual([]);
+    expect(errors).toHaveLength(1);
     microphone.mockRestore();
     await context.close();
   });
 
-  it("says that the microphone could not be used, and gives no response", async () => {
+  it("says that the microphone could not be used, reports it, and gives no response", async () => {
     const microphone = vi
       .spyOn(navigator.mediaDevices, "getUserMedia")
       .mockRejectedValue(new DOMException("denied", "NotAllowedError"));
-    const scene = mountScene(Declaration, Body('type="audio/wav"'));
+    const errors: unknown[] = [];
+    const scene = mountScene(Declaration, Body('type="audio/wav"'), {
+      options: { files: fakeFiles(), onError: (error) => errors.push(error) },
+    });
     await userEvent.click(first(scene.findAll(".ak-upload button")));
     await waitFor(() => expect(scene.find(".ak-upload-status").textContent).toBe("The microphone could not be used."));
     expect(scene.responses).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(first(scene.findAll<HTMLButtonElement>(".ak-upload button")).disabled).toBe(false);
     microphone.mockRestore();
+  });
+});
+
+describe("a recording that starts by itself and is kept", () => {
+  const Declaration = declare("single", "file");
+  /** The types that every engine records in: the types of its recorder, else WAV. */
+  const Types = "audio/webm audio/ogg audio/mp4 audio/wav";
+  const Body = (attributes: string): string =>
+    `<qti-upload-interaction response-identifier="R" type="${Types}" ${attributes}><qti-prompt>Say it.</qti-prompt></qti-upload-interaction>`;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Intervals that a test moves by hand, so that a countdown waits for it and for nothing else. */
+  function manualIntervals(): { tick(times?: number): void } {
+    const active = new Map<number, () => void>();
+    let next = 0;
+    vi.stubGlobal("setInterval", (callback: () => void) => {
+      next += 1;
+      active.set(next, callback);
+      return next;
+    });
+    vi.stubGlobal("clearInterval", (id: number) => void active.delete(id));
+    return {
+      tick: (times = 1) => {
+        for (let count = 0; count < times; count += 1) for (const callback of [...active.values()]) callback();
+      },
+    };
+  }
+
+  /** A scene that records, with the microphone an oscillator whose streams the test keeps, and the errors it reports. */
+  function open(attributes: string, files: FakeFiles = fakeFiles(), options: Partial<InteractionOptions> = {}) {
+    const intervals = manualIntervals();
+    const streams: MediaStream[] = [];
+    const microphone = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(async () => {
+      const stream = await fakeMicrophone();
+      streams.push(stream);
+      return stream;
+    });
+    const errors: unknown[] = [];
+    const scene = mountScene(Declaration, Body(attributes), {
+      options: { files, onError: (error) => errors.push(error), ...options },
+    });
+    const clock = (): string => scene.find(".ak-upload-clock").textContent ?? "";
+    const status = (): string => scene.find(".ak-upload-status").textContent ?? "";
+    const record = (): HTMLButtonElement => first(scene.findAll<HTMLButtonElement>(".ak-upload button"), 0);
+    const stop = (): HTMLButtonElement => first(scene.findAll<HTMLButtonElement>(".ak-upload button"), 1);
+    const recording = (): Promise<void> =>
+      waitFor(() => expect(scene.root.querySelector(".ak-recording")).not.toBeNull());
+    return { ...intervals, scene, files, microphone, streams, errors, clock, status, record, stop, recording };
+  }
+
+  it("reads whole seconds, caps the limit, and counts a value that is not whole as absent", () => {
+    const read = (attributes: Readonly<Record<string, string>>) => {
+      const element = document.createElement("div");
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+      return readRecordAttributes(element);
+    };
+    expect(read({})).toEqual({ start: undefined, limit: MAX_RECORDING_SECONDS, once: false });
+    expect(read({ "data-ak-record-start": "0", "data-ak-record-limit": "45", "data-ak-record-once": "true" })).toEqual({
+      start: 0,
+      limit: 45,
+      once: true,
+    });
+    expect(read({ "data-ak-record-limit": "100000" }).limit).toBe(MAX_RECORDING_SECONDS);
+    for (const text of ["", "1.5", "-1", "abc", " 3", "1e3"]) {
+      expect(read({ "data-ak-record-start": text, "data-ak-record-limit": text }), text).toMatchObject({
+        start: undefined,
+        limit: MAX_RECORDING_SECONDS,
+      });
+    }
+    expect(read({ "data-ak-record-limit": "0" }).limit).toBe(MAX_RECORDING_SECONDS);
+    for (const text of ["", "True", "yes", "1"]) expect(read({ "data-ak-record-once": text }).once, text).toBe(false);
+  });
+
+  it("prepares at the start of the countdown, shows the clock, and records by itself when it ends", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, microphone, tick, clock, status, recording } = open('data-ak-record-start="3"');
+    await waitFor(() => expect(files.reserved).toHaveLength(1));
+    await waitFor(() => expect(microphone).toHaveBeenCalledOnce());
+    expect(status()).toBe("Recording starts by itself when the countdown ends.");
+    expect(clock()).toBe("Starts in 0:03");
+    expect(scene.find(".ak-upload-clock").hasAttribute("hidden")).toBe(false);
+    expect(scene.responses).toEqual([]);
+    tick(2);
+    expect(clock()).toBe("Starts in 0:01");
+    expect(scene.responses).toEqual([]);
+    tick();
+    await recording();
+    expect(status()).toBe("Recording");
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    expect(clock()).toBe("Time left 10:00");
+    expect(files.filled).toEqual([]);
+    tick(60);
+    expect(clock()).toBe("Time left 9:00");
+  });
+
+  it("does not make the clock a live region, so that a screen reader hears the countdown once", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files } = open('data-ak-record-start="3"');
+    await waitFor(() => expect(files.reserved).toHaveLength(1));
+    expect(scene.find(".ak-upload-status").getAttribute("role")).toBe("status");
+    expect(scene.find(".ak-upload-clock").closest("[role=status], [aria-live]")).toBeNull();
+  });
+
+  it("starts at once when the start is 0, with no countdown to show", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, recording, clock } = open('data-ak-record-start="0"');
+    await recording();
+    expect(files.reserved).toHaveLength(1);
+    expect(scene.responses).toHaveLength(1);
+    expect(clock()).toBe("Time left 10:00");
+  });
+
+  it("starts early at a press of Record, and the countdown stops", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, microphone, tick, clock, record, recording } = open('data-ak-record-start="30"');
+    await waitFor(() => expect(microphone).toHaveBeenCalledOnce());
+    expect(record().disabled).toBe(false);
+    await userEvent.click(record());
+    await recording();
+    expect(scene.responses).toHaveLength(1);
+    expect(files.reserved).toHaveLength(1);
+    expect(microphone).toHaveBeenCalledOnce();
+    tick(10);
+    expect(clock()).toBe("Time left 9:50");
+  });
+
+  it("ends the recording at its limit, as Stop does, and stores the bytes", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, tick, status, recording } = open('data-ak-record-start="0" data-ak-record-limit="2"');
+    await recording();
+    tick(2);
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+    expect(first(files.filled).file).toEqual(first(files.reserved));
+    expect(status()).toBe("");
+    expect(scene.root.querySelector(".ak-recording")).toBeNull();
+    await waitFor(() => expect(scene.root.querySelector(".ak-stored audio")).not.toBeNull());
+  });
+
+  it("records again with a new reservation, and takes the recording away, unless it is once", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, record, stop, recording } = open("");
+    await userEvent.click(record());
+    await recording();
+    await userEvent.click(stop());
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+    await waitFor(() => expect(scene.root.querySelector(".ak-stored button")).not.toBeNull());
+    await userEvent.click(record());
+    await recording();
+    expect(files.reserved.map(({ reference }) => reference)).toEqual(["reserved-1", "reserved-2"]);
+    expect(scene.responses.at(-1)?.value).toEqual(single("file", first(files.reserved, 1)));
+  });
+
+  it("allows no second recording and no Remove once a recording has started, when it is once", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, record, stop, recording } = open('data-ak-record-start="0" data-ak-record-once="true"');
+    await recording();
+    await userEvent.click(stop());
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+    await waitFor(() => expect(scene.root.querySelector(".ak-stored audio")).not.toBeNull());
+    expect(scene.root.querySelector(".ak-stored button")).toBeNull();
+    expect(record().disabled).toBe(true);
+    expect(scene.find<HTMLInputElement>("input[type=file]").disabled).toBe(true);
+  });
+
+  it("keeps the part that plays the file hidden until its bytes are stored", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const files = fakeFiles();
+    files.holding = true;
+    const { scene, stop, recording } = open('data-ak-record-start="0"', files);
+    await recording();
+    expect(scene.find(".ak-stored").textContent).toBe("");
+    await userEvent.click(stop());
+    await waitFor(() => expect(files.waiting()).toBe(1));
+    expect(scene.root.querySelector(".ak-recording")).toBeNull();
+    expect(scene.find(".ak-stored").textContent).toBe("");
+    files.release();
+    await waitFor(() => expect(scene.root.querySelector(".ak-stored audio")).not.toBeNull());
+    expect(scene.find(".ak-stored").textContent).toContain("recording.");
+  });
+
+  it("settles when the recording has stopped and not when the bytes are stored, so that Next never waits for the upload", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const files = fakeFiles();
+    files.holding = true;
+    const { scene, recording } = open('data-ak-record-start="0"', files);
+    await recording();
+    await scene.interaction().settled();
+    expect(files.filled).toEqual([]);
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    files.release();
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+  });
+
+  it("ends a countdown when it settles: nothing is recorded, the microphone is let go of, and there is no response", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, streams, status } = open('data-ak-record-start="30"');
+    await waitFor(() => expect(streams).toHaveLength(1));
+    await scene.interaction().settled();
+    await waitFor(() =>
+      expect(streams.flatMap((stream) => stream.getTracks().map(({ readyState }) => readyState))).toEqual(["ended"]),
+    );
+    expect(scene.find(".ak-upload-clock").hasAttribute("hidden")).toBe(true);
+    expect(status()).toBe("");
+    expect(scene.responses).toEqual([]);
+    expect(files.filled).toEqual([]);
+    expect(files.reserved).toHaveLength(1);
+  });
+
+  it("stops and stores the recording when the interaction locks", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const { scene, files, recording } = open('data-ak-record-start="0"');
+    await recording();
+    scene.interaction().disabled = true;
+    await waitFor(() => expect(files.filled).toHaveLength(1));
+    expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+  });
+
+  it("lets go of the microphone and stores the recording when the element leaves the page, and keeps nothing of a countdown", async (context) => {
+    await needsAudio(context, audioContextRuns());
+    const recorded = open('data-ak-record-start="0"');
+    await recorded.recording();
+    recorded.scene.interaction().remove();
+    await waitFor(() => expect(recorded.files.filled).toHaveLength(1));
+    await waitFor(() =>
+      expect(recorded.streams.flatMap((stream) => stream.getTracks().map(({ readyState }) => readyState))).toEqual([
+        "ended",
+      ]),
+    );
+    const counting = open('data-ak-record-start="30"');
+    await waitFor(() => expect(counting.streams).toHaveLength(1));
+    counting.scene.interaction().remove();
+    await waitFor(() =>
+      expect(counting.streams.flatMap((stream) => stream.getTracks().map(({ readyState }) => readyState))).toEqual([
+        "ended",
+      ]),
+    );
+    expect(counting.files.filled).toEqual([]);
+    expect(counting.scene.responses).toEqual([]);
+  });
+
+  it("starts nothing when the item is shown with a response, is locked, or offers no recording", async () => {
+    const answered = open('data-ak-record-start="0"');
+    answered.scene.setValue("R", single("file", { reference: "r", mimeType: "audio/webm" }));
+    const locked = open('data-ak-record-start="0"');
+    locked.scene.interaction().disabled = true;
+    const off = open('data-ak-record-start="0"', fakeFiles(), { record: false });
+    await new Promise<void>((done) => queueMicrotask(done));
+    await new Promise<void>((done) => queueMicrotask(done));
+    for (const each of [answered, locked, off]) {
+      expect(each.files.reserved).toEqual([]);
+      expect(each.microphone).not.toHaveBeenCalled();
+      expect(each.scene.find(".ak-upload-status").textContent).toBe("");
+    }
+    expect(off.scene.root.querySelector(".ak-upload button")).toBeNull();
+  });
+
+  it("starts nothing without a start attribute, which leaves the recording to Record", async () => {
+    const { files, microphone } = open("");
+    await new Promise<void>((done) => queueMicrotask(done));
+    expect(files.reserved).toEqual([]);
+    expect(microphone).not.toHaveBeenCalled();
+  });
+
+  describe("failures", () => {
+    it("shows that the file could not be named, reports it, and starts nothing, with Record there to try again", async () => {
+      const { scene, microphone, errors, status, record } = open(
+        'data-ak-record-start="5"',
+        fakeFiles({ reserve: true }),
+      );
+      await waitFor(() => expect(status()).toBe("The file could not be uploaded. Try again."));
+      expect(errors).toHaveLength(1);
+      expect(microphone).not.toHaveBeenCalled();
+      expect(scene.responses).toEqual([]);
+      expect(record().disabled).toBe(false);
+      expect(scene.find(".ak-upload-clock").hasAttribute("hidden")).toBe(true);
+    });
+
+    it("shows that the microphone could not be used at a timed start, reports it, and gives no response", async () => {
+      const { scene, files, errors, status, record } = open('data-ak-record-start="0"');
+      vi.spyOn(navigator.mediaDevices, "getUserMedia").mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+      await waitFor(() => expect(status()).toBe("The microphone could not be used."));
+      expect(errors).toHaveLength(1);
+      expect(scene.responses).toEqual([]);
+      expect(record().disabled).toBe(false);
+      expect(files.filled).toEqual([]);
+    });
+
+    it("takes the response away and offers Record again when the bytes cannot be stored while the candidate can act", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const { scene, stop, record, status, recording } = open('data-ak-record-start="0"', fakeFiles({ fill: true }));
+      await recording();
+      await userEvent.click(stop());
+      await waitFor(() => expect(status()).toBe("The file could not be uploaded. Try again."));
+      expect(scene.responses.at(-1)?.value).toBeNull();
+      expect(record().disabled).toBe(false);
+    });
+
+    it("offers no Record when the bytes cannot be stored and the recording is once", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const { scene, stop, record, status, recording } = open(
+        'data-ak-record-start="0" data-ak-record-once="true"',
+        fakeFiles({ fill: true }),
+      );
+      await recording();
+      await userEvent.click(stop());
+      await waitFor(() => expect(status()).toBe("The file could not be uploaded. Try again."));
+      expect(scene.responses.at(-1)?.value).toBeNull();
+      expect(record().disabled).toBe(true);
+    });
+
+    it("reports that the bytes cannot be stored after the lock, and leaves the response naming the file", async (context) => {
+      await needsAudio(context, audioContextRuns());
+      const { scene, files, errors, recording } = open('data-ak-record-start="0"', fakeFiles({ fill: true }));
+      await recording();
+      scene.interaction().disabled = true;
+      await waitFor(() => expect(errors).toHaveLength(1));
+      expect(scene.responses).toEqual([{ responseIdentifier: "R", value: single("file", first(files.reserved)) }]);
+    });
   });
 });
 
@@ -1324,7 +1700,7 @@ describe("keyboard operation", () => {
 });
 
 describe("createInteractionRenderers", () => {
-  const Files = { upload: () => Promise.reject(new Error("none")), url: () => "" };
+  const Files = { upload: () => Promise.reject(new Error("none")), url: () => "", ...NO_RECORDING };
   const Static = "https://static.example/";
 
   it("gives a renderer for every interaction type of the QTI metadata vocabulary but the portable one, which the PCI host draws, and defines the elements once, however often it is called", () => {
@@ -1414,6 +1790,7 @@ describe("the example of the guide", () => {
             throw new Error("This item has no upload.");
           },
           url: () => "",
+          ...NO_RECORDING,
         },
         staticUrl: "https://assets.example/static/",
       }),

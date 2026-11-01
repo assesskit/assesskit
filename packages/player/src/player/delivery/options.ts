@@ -9,6 +9,7 @@ import {
   checkRecord,
   checkString,
   describe,
+  isRecord,
 } from "@assesskit/runtime/checks";
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
@@ -50,6 +51,27 @@ export interface MountFiles {
    * @returns The URL.
    */
   url(file: FileValue): string;
+  /**
+   * Names a file whose bytes come later, so that the response of a recording refers to it as the recording starts. Required
+   * unless `hooks.record` is `false`.
+   *
+   * @param mimeType - Their media type.
+   * @param fileName - The name of the file, if it has one.
+   * @param options - Its `signal` aborts when the mount is destroyed.
+   * @returns The file value that the response holds until the bytes are stored with `fill`. It exists before its bytes do,
+   * so a host that scores holds the request until `fill` ends or times out.
+   */
+  reserve?(mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
+  /**
+   * Stores the bytes of a reserved file, retrying as the host sees fit. The end of the mount does not abort it, because a
+   * recording that a time limit, a proctor or a destroy stops still has to arrive; the host's own timeout ends a store that
+   * hangs. Required unless `hooks.record` is `false`.
+   *
+   * @param file - The file value that `reserve` returned.
+   * @param bytes - The bytes.
+   * @param options - Its `signal` is the caller's alone.
+   */
+  fill?(file: FileValue, bytes: Blob, options?: SessionCallOptions): Promise<void>;
 }
 
 /** What the player needs of its page, whatever it shows. */
@@ -285,7 +307,8 @@ function checkSharedOptions(
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", names);
   checkRecord(options.files, "The option files must be an object");
-  for (const name of ["upload", "read", "url"]) {
+  const recording = !(isRecord(options.hooks) && options.hooks.record === false);
+  for (const name of recording ? ["upload", "read", "url", "reserve", "fill"] : ["upload", "read", "url"]) {
     checkFunction(options.files[name], `The function ${name} of the option files must be a function`);
   }
   checkString(options.staticUrl, "The option staticUrl");

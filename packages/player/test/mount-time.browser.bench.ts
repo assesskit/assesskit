@@ -5,6 +5,7 @@ import { createLocalSession, type LocalStore } from "../src/client/index.js";
 import { mountDelivery, mountItem } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { CPU_SLOWDOWN, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
 
 const player = new CSSStyleSheet();
@@ -14,6 +15,7 @@ const files = {
   upload: async () => ({ reference: "f", mimeType: "image/png" }),
   read: async () => new Uint8Array(),
   url: () => "",
+  ...NO_RECORDING,
 };
 const fetcher = async () => ({ ok: false, status: 404, text: async () => "" });
 const ignore = (): void => undefined;

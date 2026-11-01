@@ -7,6 +7,7 @@ import { AccessError, ServiceError } from "../src/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { isViewRequest, type SessionClient, type ViewEnvelope } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { waitFor } from "./wait.js";
 
 const origin = inject("exam");
@@ -229,6 +230,7 @@ async function mountExam(
       upload: async () => ({ reference: "f", mimeType: "x" }),
       read: async () => new Uint8Array(),
       url: () => "",
+      ...NO_RECORDING,
     },
     // The exam server is the asset origin of the gate, and the static files of the frame come from another here.
     origins: [origin],

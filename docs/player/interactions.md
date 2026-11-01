@@ -63,6 +63,7 @@ const root = createContentRoot(host, {
       url: () => "",
     },
     staticUrl: "https://assets.example/static/",
+    record: false,
   }),
 });
 await root.show({ body: { nodes: parsed.item.body.children, base: "items/cities/item.xml" } });
@@ -84,13 +85,14 @@ responses[0].value.values; // => ["B"]
 
 ## Options
 
-| Option              | Type                    | Meaning                                                                                                                                          |
-| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `messages`          | `Messages`              | The text of the interface, from `selectMessages`; the same as the content root's.                                                                |
-| `files`             | `InteractionFiles`      | Where uploads and recordings are kept: `upload(bytes, mimeType, fileName?)` gives the `FileValue` that the response holds, `url(file)` plays it. |
-| `staticUrl`         | `string`                | The base URL of the static files on the asset origin, ending in `/`. `recorder-worklet.js` is under it.                                          |
-| `record`            | `boolean`               | Whether an upload of audio offers a recording. Default: `true`.                                                                                  |
-| `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                                 |
+| Option              | Type                    | Meaning                                                                                                                                                                                                                                                                                                      |
+| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `messages`          | `Messages`              | The text of the interface, from `selectMessages`; the same as the content root's.                                                                                                                                                                                                                            |
+| `files`             | `InteractionFiles`      | Where uploads and recordings are kept: `upload(bytes, mimeType, fileName?)` gives the `FileValue` that the response holds, `url(file)` plays it; `reserve(mimeType, fileName?)` names the file of a recording as it starts and `fill(file, bytes)` stores its bytes, both needed unless `record` is `false`. |
+| `staticUrl`         | `string`                | The base URL of the static files on the asset origin, ending in `/`. `recorder-worklet.js` is under it.                                                                                                                                                                                                      |
+| `record`            | `boolean`               | Whether an upload of audio offers a recording. Default: `true`; then `files` needs `reserve` and `fill`.                                                                                                                                                                                                     |
+| `customInteraction` | `CustomInteractionHook` | Draws custom interactions. Default: none, so that a custom interaction says it is not supported.                                                                                                                                                                                                             |
+| `onError`           | `(error) => void`       | Receives the errors that a recording can only report: the host could not name the file or store the bytes. Default: `reportError` of the page.                                                                                                                                                               |
 
 `createInteractionRenderers` throws `DataError` for an option of another type, a `staticUrl` that is not an absolute `http`
 or `https` URL ending in `/`, and an option that is not in the table. It defines the custom elements first
@@ -229,11 +231,78 @@ A recording is offered when the item accepts an audio type that the browser can 
 | `audio/wav`, `audio/wave` or `audio/x-wav`, and no such type | 16-bit mono PCM, written as WAV, from an audio worklet. `recorder-worklet.js` under `staticUrl` is its program.                                |
 | Only other types, such as `audio/mpeg`, or any type          | None: an MP3 encoder would be a dependency.                                                                                                    |
 
-The microphone is asked for only when the candidate presses Record, and a visible indicator shows while it records. The
-recording is named `recording.` and an extension. Leaving the page, or locking the interaction, discards a recording that is
-not finished. A browser without `MediaRecorder` records WAV or nothing. The page's content security policy must allow the origin of `staticUrl` in `script-src`, which governs
-worklets; `pnpm build` writes the file to `dist/recorder-worklet.js`, and the package exports it as
-`@assesskit/player/recorder-worklet.js`. `record: false` turns the recording off.
+A recording names its file as it starts. `files.reserve(mimeType, fileName?)` gives the file value, which the response holds from then
+on, and `files.fill(file, bytes)` stores the bytes when the recording ends, however it ends. So a time limit that closes the item while
+the candidate speaks keeps the answer: the item ends with the file as its response, and the bytes follow.
+
+```mermaid
+sequenceDiagram
+  participant C as Candidate
+  participant E as Upload element
+  participant F as files (host)
+  participant H as Session
+  Note over E: Item shown, data-ak-record-start="15"
+  E->>F: reserve(mimeType, name)
+  F-->>E: FileValue
+  E->>E: microphone, countdown 15 s
+  E->>H: set-responses with the file, as recording starts
+  C->>E: speaks
+  Note over H: The clock runs out, the item closes with the file as its response
+  H-->>E: next view, the element leaves
+  E->>E: stop the recorder
+  E->>F: fill(file, bytes)
+```
+
+The reservation and the microphone are asked for when the countdown starts, or when the candidate presses Record, so that a
+refusal shows at once and the prompt of the browser stays out of the time of the response. A visible indicator and the clock show
+while it records. The recording is named `recording.` and an extension. A browser without `MediaRecorder` records WAV or nothing.
+The page's content security policy must allow the origin of `staticUrl` in `script-src`, which governs worklets; `pnpm build` writes
+the file to `dist/recorder-worklet.js`, and the package exports it as `@assesskit/player/recorder-worklet.js`. `record: false`
+turns the recording off, and then `files` needs no `reserve` and `fill`.
+
+An author asks for a timed, limited or single recording with three attributes of the interaction, which QTI has no attribute for, so
+that the runtime knows nothing of them and another player ignores them:
+
+```xml
+<qti-upload-interaction response-identifier="RESPONSE" type="audio/webm audio/mp4 audio/ogg"
+    data-ak-record-start="15" data-ak-record-limit="45" data-ak-record-once="true"/>
+```
+
+| Attribute              | Default                 | Meaning                                                                                                                                                                      |
+| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-ak-record-start` | none: Record only       | Seconds after the interaction is shown at which recording starts by itself, with a countdown. `0` starts at once. Record stays, to start earlier.                            |
+| `data-ak-record-limit` | `MAX_RECORDING_SECONDS` | The longest recording in seconds, at most `MAX_RECORDING_SECONDS` (600, which bounds memory: the WAV path holds 192 kB for each second). It ends the recording as Stop does. |
+| `data-ak-record-once`  | none                    | `true`: no second recording and no Remove once a recording has started, or when a file is there.                                                                             |
+
+A value that is not a whole number of seconds counts as absent. A blueprint's prepare and respond times are one item with
+`max-time` of their sum and the prompt on screen throughout; no item needs extra seconds for storing.
+
+| Event                                                         | Happens                                                                                                  |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Item shown with a start and no response                       | Type check, `reserve`, microphone; a countdown; the status says once that the recording starts by itself |
+| The countdown ends, or Record is pressed                      | The recording starts, the response names the file, and the clock counts down the limit                   |
+| While recording                                               | The part that plays the file and Remove stay hidden: they would show a file with no bytes                |
+| Stop, or the limit                                            | The recorder stops, `fill` stores the bytes, and the file shows                                          |
+| The interaction locks, or the element leaves the page         | The same: stop and `fill`, and the microphone is let go of. A countdown ends with nothing kept           |
+| The candidate goes on or submits                              | `settled()` waits for the recorder to stop and ends a countdown; `fill` goes on behind it                |
+| The mount is destroyed during a recording                     | The same; the end of the mount does not abort `fill`                                                     |
+| The item is shown with a response, locked, or `record: false` | Nothing starts                                                                                           |
+
+| Failure                                                 | Result                                                                                                                        |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `reserve` rejects                                       | No recording starts; the message that the file could not be uploaded; `onError`; Record stays                                 |
+| The microphone is refused at a timed start              | The message that the microphone could not be used; `onError`; no response; Record stays, as a press may grant it              |
+| `fill` rejects while the candidate can still act        | The response goes, the message shows, and Record is there unless the recording is once                                        |
+| `fill` rejects after the lock, after Next or at destroy | The response names a file with no bytes, and `onError` hears of it while the mount lives; only the host can retry             |
+| `fill` hangs                                            | Nothing waits for it: the candidate has moved on, and the host's own timeout ends it                                          |
+| Record is pressed in the last second                    | The autosave may miss the clock, and nothing is kept                                                                          |
+| The tab closes                                          | The bytes are lost, and the response names a file with none                                                                   |
+| The browser holds the audio context suspended           | The element resumes it; give the item a `MediaRecorder` type first, since only a gesture starts the WAV path in some browsers |
+
+A host that scores holds its request until `fill` ends or times out, since the response exists before its bytes do. A new
+recording takes a new reservation, and the host expires the old one. Not included: a beep at the start, which is the item's media or
+the host's; a start tied to the end of a prompt, since `data-ak-record-start` is a time; and notes during preparation, which are
+`note-taking-on-screen`.
 
 ### Custom interaction
 
@@ -316,17 +385,17 @@ path (WCAG 2.5.1, 2.5.7).
 
 An interaction never throws at the candidate: it says in words what is wrong and why ([Hints and limits](#hints-and-limits)). What a host can meet:
 
-| Error                                     | When                                                                                                                              | What to do                                                                                        |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                    | Give each element the descriptor that the runtime's `interactions` made for it                    |
-| `DataError`                               | `files.upload` gives something that is not a file value, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; fix `staticUrl`                                              |
-| `DataError`                               | A renderer is given a node of another kind, or the option `interactions` is not a `Map` from kind to function                     | Register each renderer under the kind it draws                                                    |
-| A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                          | The candidate follows the hint; the texts are in the table above                                  |
-| "This file type is not accepted"          | The file's type is not in `accept`                                                                                                | Offer the types the item lists, or change the item                                                |
-| A message that the file could not be sent | `files.upload` rejected                                                                                                           | The host's store failed: check it; no response is given, so nothing wrong is saved                |
-| A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, or the page's content security policy blocks the worklet  | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
-| A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                     | The `failed` event gives the reason; the guide's table says what each one means                   |
-| The error of `hooks.onError`              | Something failed after the mount, with no call to carry the error                                                                 | Log it; the default is `reportError` of the page                                                  |
+| Error                                     | When                                                                                                                                                                                                               | What to do                                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                                                                                                     | Give each element the descriptor that the runtime's `interactions` made for it                    |
+| `DataError`                               | `files.upload` or `files.reserve` gives something that is not a file value, `reserve` or `fill` is missing while `record` is not `false`, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; fix `staticUrl`                                              |
+| `DataError`                               | A renderer is given a node of another kind, or the option `interactions` is not a `Map` from kind to function                                                                                                      | Register each renderer under the kind it draws                                                    |
+| A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                                                                                                           | The candidate follows the hint; the texts are in the table above                                  |
+| "This file type is not accepted"          | The file's type is not in `accept`                                                                                                                                                                                 | Offer the types the item lists, or change the item                                                |
+| A message that the file could not be sent | `files.upload` rejected                                                                                                                                                                                            | The host's store failed: check it; no response is given, so nothing wrong is saved                |
+| A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, or the page's content security policy blocks the worklet                                                                                   | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
+| A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                                                                                                      | The `failed` event gives the reason; the guide's table says what each one means                   |
+| The error of `hooks.onError`              | Something failed after the mount, with no call to carry the error                                                                                                                                                  | Log it; the default is `reportError` of the page                                                  |
 
 ## Not included
 

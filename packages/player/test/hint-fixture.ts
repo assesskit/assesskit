@@ -6,6 +6,7 @@ import { createLocalSession } from "../src/client/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { fakeClock } from "./exam-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
 import { waitFor } from "./wait.js";
 
 /** A second in milliseconds. */
@@ -69,6 +70,7 @@ export async function startHints(itemXml: string, control?: ItemSessionControl):
       upload: async () => ({ reference: "f", mimeType: "image/png" }),
       read: async () => new Uint8Array(),
       url: () => "",
+      ...NO_RECORDING,
     },
     staticUrl: "https://assets.example/static/",
     stylesheet: player,

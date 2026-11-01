@@ -8,4 +8,5 @@ export { centerOf, clampPoint, parseArea, pointAt } from "./graphic/geometry.js"
 export { fillRuns, type Pixels } from "./graphic/operations.js";
 export { instructionText, violationText } from "./hints.js";
 export { readInteractionOptions } from "./options.js";
+export { readRecordAttributes } from "./record-attributes.js";
 export { cardinalityOf, pairsOf, pointsOf, responseOf, stringsOf } from "./values.js";

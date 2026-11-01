@@ -32,3 +32,9 @@ A candidate whom a proctor paused learns of the resume through `SessionClient.re
 serves the files of a package with `Content-Security-Policy: sandbox`, so that a hostile page runs no script on the asset
 origin. A mount can use the element of a destroyed mount again, importing the package where there is no document is safe, and
 `mountDelivery` holds the player in a `region` under a heading of level 2 unless `landmark` and `headingLevel` say otherwise.
+
+A recording names its file as it starts, and its bytes follow: `MountFiles` has `reserve` and `fill` (required unless `hooks.record` is
+`false`), the response holds the reserved file from the start of the recording, and a time limit, a proctor, Next or the end of the mount
+that stops the recording leaves the answer in the results while the bytes arrive. The attributes `data-ak-record-start`,
+`data-ak-record-limit` and `data-ak-record-once` of `qti-upload-interaction` start a recording by itself after a countdown, limit it to
+at most `MAX_RECORDING_SECONDS`, and allow one recording only.
