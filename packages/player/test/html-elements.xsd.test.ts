@@ -29,10 +29,9 @@ describe("html-elements", () => {
 });
 
 describe("the markup of tabs and sortable tables", () => {
-  const schemas = requireSchemas(resolve(import.meta.dirname, "../../.."));
   let set: SchemaSet;
   beforeAll(async () => {
-    set = await loadSchemaSet(schemas);
+    set = await loadSchemaSet(requireSchemas(resolve(import.meta.dirname, "../../..")));
   });
   afterAll(() => set.close());
 

@@ -148,11 +148,14 @@ export default defineConfig({
         },
       },
       {
-        // The HTML elements of the ASI schema: `pnpm schemas` downloads it.
+        // The HTML elements of the ASI schema: `pnpm schemas` downloads it. The first document that a test validates compiles the
+        // 18.8 MB schema, which takes seconds and, on a runner of CI, more than the five seconds of a test.
         resolve: { alias: RUNTIME_SOURCES },
         test: {
           name: "player-xsd",
           include: ["packages/player/test/**/*.xsd.test.ts"],
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
         },
       },
       {
