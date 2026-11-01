@@ -9,6 +9,7 @@
       "@assesskit/runtime/checks": ["../../../packages/runtime/src/checks.ts"],
       "@assesskit/runtime/errors": ["../../../packages/runtime/src/errors.ts"],
       "@assesskit/runtime/*": ["../../../packages/runtime/src/*/index.ts"],
+      "@assesskit/player": ["../../../packages/player/src/index.ts"],
       "@assesskit/player/*": ["../../../packages/player/src/*/index.ts"]
     },
     "types": ["node"]

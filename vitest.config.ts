@@ -16,8 +16,9 @@ const RUNTIME_SOURCES = [
   },
 ];
 
-/** Resolves the subpaths of the player to their sources, for the examples that use them. */
+/** Resolves the player and its subpaths to their sources, for the examples that use them. */
 const PLAYER_SOURCES = [
+  { find: /^@assesskit\/player$/, replacement: resolve(import.meta.dirname, "packages/player/src/index.ts") },
   {
     find: /^@assesskit\/player\/(.+)$/,
     replacement: resolve(import.meta.dirname, "packages/player/src/$1/index.ts"),
