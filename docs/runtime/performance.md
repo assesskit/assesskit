@@ -62,7 +62,7 @@ of the tests generate with a fixed seed. A benchmark fails when its fastest samp
 | `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                           | 18.4 ms                  | 100 ms        |
 | Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules       | 264 ms                   | 2,000 ms      |
 | `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 4.81 ms                  | 30 ms         |
-| Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 0.49 ms on a laptop      | 10 ms         |
+| Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 1.40 ms                  | 7 ms          |
 | Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
 
 The replay also checks that the replayed state equals the state of the session.
@@ -102,7 +102,7 @@ instances of the plan.
 
 ## Rescoring
 
-`readTestInputs` and `runOutcomeProcessing` on the stored report of a session of 200 items take 1.3 times the outcome step of the
-engine on the same session (`apply` of the last submission): the budget is 2. No outside library rescores a stored report, so the
+`readTestInputs` and `runOutcomeProcessing` on the stored report of a session of 200 items take 1.5 times the outcome step of the
+engine on the same session (`apply` of the last submission), 1.40 ms against 0.96 ms on the CI runner: the budget is 2. No outside library rescores a stored report, so the
 engine is the reference. Reading the report back builds the variables of each of the 200 results, which the engine keeps in its
 state, and the outcome processing is the same work over the same plan.

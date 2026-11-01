@@ -52,7 +52,7 @@ export const LONGSIGHT_BUDGETS = {
  * fastest sample may take, in milliseconds, and the most as a multiple of the fastest sample of the outcome step of the
  * engine on the same session. No outside library rescores a stored report, so the engine is the reference.
  */
-export const RESCORING_BUDGET = { time: 10, ratio: 2 } as const;
+export const RESCORING_BUDGET = { time: 7, ratio: 2 } as const;
 
 /** The budget of one row against Longsight. */
 export interface LongsightBudget {

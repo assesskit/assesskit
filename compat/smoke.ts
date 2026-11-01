@@ -477,7 +477,7 @@ const MOUNT_INTERACTIONS = `(async () => {
   const renderer = createBodyRenderer({
     messages: EN_MESSAGES,
     assets: (path) => path,
-    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/" }),
+    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/", record: false }),
   });
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(await (await fetch("/player.css")).text());
@@ -541,7 +541,7 @@ const MOUNT_GRAPHIC = `(async () => {
   const renderer = createBodyRenderer({
     messages: EN_MESSAGES,
     assets: (path) => path,
-    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/" }),
+    interactions: createInteractionRenderers({ messages: EN_MESSAGES, files, staticUrl: location.origin + "/dist/", record: false }),
   });
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(await (await fetch("/player.css")).text());
