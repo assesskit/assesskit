@@ -71,6 +71,9 @@ export async function needsAudio(context: { skip(): never }, available: Promise<
 
 const realSetTimeout = globalThis.setTimeout;
 
+/** The audio context of each stream that {@link fakeMicrophone} gave, and the time on its clock when it gave it. */
+const CLOCKS = new WeakMap<MediaStream, { readonly context: AudioContext; readonly from: number }>();
+
 /**
  * A stream of an oscillator, which a test gives in place of the microphone. It needs an audio context that runs, so a test
  * that uses it waits for {@link audioContextRuns} first. It returns once sound reaches the end of the context: a device that
@@ -94,5 +97,25 @@ export async function fakeMicrophone(): Promise<MediaStream> {
     };
     look();
   });
+  CLOCKS.set(destination.stream, { context, from: context.currentTime });
   return destination.stream;
+}
+
+/**
+ * Resolves when the sound of a stream from {@link fakeMicrophone} has played for the seconds given, by the clock of its audio
+ * context. A busy host can stall that clock, and a recording of a stream whose clock stood still holds a header and no sound.
+ *
+ * @param stream - A stream from `fakeMicrophone`.
+ * @param seconds - How long the sound has played.
+ */
+export async function heard(stream: MediaStream, seconds: number): Promise<void> {
+  const clock = CLOCKS.get(stream);
+  if (clock === undefined) throw new Error("The stream is not one from fakeMicrophone.");
+  await new Promise<void>((played) => {
+    const look = (): void => {
+      if (clock.context.currentTime - clock.from >= seconds) played();
+      else realSetTimeout(look, 20);
+    };
+    look();
+  });
 }
