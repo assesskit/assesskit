@@ -96,6 +96,15 @@ flowchart LR
 
 [LTI items](lti-items.md) shows the three steps that wire them.
 
+## Why `cat-rest` is in the player
+
+`cat-rest` implements `CatPort`, the port of the runtime, for the adaptive sections that QTI 3.0 defines: `qti-adaptive-selection`
+names a CAT engine, and the 1EdTech CAT 1.0 REST binding is the service of that engine. It is part of QTI, the domain of this
+family. LTI and Caliper are other standards, which interopkit implements. The subpath stays on servers because it holds the
+OAuth client secret, and a host that wants a CAT engine without the rest of the player imports only
+`@assesskit/player/cat-rest`, which loads the runtime and no code that draws a page. A package of its own would add a release and
+a boundary for one subpath.
+
 ## Subpaths
 
 Each subpath is a folder of `src/` with an `index.ts`, listed in `exports`. The root `.` re-exports the errors and the
@@ -123,7 +132,7 @@ those imports, so a page loads the player through a bundler, which also resolves
 
 ## TypeScript
 
-Five configurations check the package, each with the libraries of its side:
+Four configurations check the package, each with the libraries of its side:
 
 | File                    | Checks                                                                                | `lib` and types                                |
 | ----------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------- |

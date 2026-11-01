@@ -235,8 +235,8 @@ The scheduler is the host's, such as a job queue, so a restart loses no time-out
 `schedule(session, at)` for every maximum time of the new state, rounded up to a millisecond; the call is idempotent for a
 pair. The job calls `session(id).apply({ type: "time" })` when `at` arrives. The runtime applies a passed deadline on the next
 action and its view shows a time-out as applied, so a late job delays only a proactive time-out, never correctness. A `time` that
-finds nothing to apply is accepted with no events: it is saved, and the log is not called. Proctor time extensions are out of scope: the runtime has no action
-for them.
+finds nothing to apply is accepted with no events: it is saved, and the log is not called. The player offers no proctor time extension and no read of the status, the item or the time left of a session: see
+[Not included](supported.md#not-included).
 
 With `maxIdle` the host closes a gap above it as [a local session does](client.md#a-learner-who-is-away): the first request of the
 candidate or action of the host after it applies `suspend` at the latest step, `resume` now and the action, saves the three as one

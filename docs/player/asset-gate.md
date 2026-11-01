@@ -96,7 +96,10 @@ URL. Both stay under the prefix and need no signature of their own.
 
 `sign(session, prefixes, now)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
 each end in `/`, without `.`, `..`, empty segments, backslashes or control characters. The tokens last `ttlSeconds`, and the
-session host renews them with every envelope.
+session host renews them with every envelope. A client sends an envelope only when the candidate acts, so a candidate who sends
+nothing for longer than `ttlSeconds` gets `403` for what the page loads afterwards, such as a range of a long recording, a card
+of a catalog or a module that loads late. Choose `ttlSeconds` above the longest idle that a test allows, or have the page call
+`SessionClient.refresh` at an interval below it, which renews the tokens ([client](client.md)).
 
 ## Prefixes
 

@@ -6,8 +6,6 @@ LTI, a gradebook and an analytics sink plug into. The runtime owns the
 QTI semantics and the player owns the interface and the network, so the player never evaluates an expression, decides what is
 visible or valid, chooses a variant, or holds an answer key outside the runtime's solution view.
 
-The package is under development, private and not published.
-
 ```mermaid
 flowchart LR
   subgraph browser["Browser"]

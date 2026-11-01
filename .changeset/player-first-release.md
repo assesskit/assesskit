@@ -17,12 +17,18 @@ which counts a gap above it as suspended, and the host refuses it unless candida
 Chromium 111, Firefox 115 and Safari 16.4, and later versions, and is tested with axe-core
 at WCAG 2.2 levels A and AA. It is not certified by 1EdTech.
 
-LTI and Caliper are not in the player. The tool role and the platform role of LTI 1.3 with its grade services, and the Caliper 1.2
-events and sensor, are in [interopkit](https://github.com/interopkit/interopkit) as `@interopkit/tool-integration` and
-`@interopkit/learning-analytics`; the subpaths `@assesskit/player/lti` and `@assesskit/player/caliper` do not exist. The player
-keeps four ports: `LtiLogin` and the frame of an LTI item (`player`), `forward.log` and `createToolScoreIntake` with
-`ToolScoreStore` (`server`), and `sessionScore` (`scoring`). The mapping of delivery events to Caliper events, the outbox and the
-jobs that publish a grade are in the example `examples/player/lms-integration`. `forward` takes only `log`, `HostApplyOptions.scoredBy`
-is a non-empty string, and `LtiLogin` takes a `signal`. The CAT client refuses a redirect as `redirect: "manual"` with a
-`ServiceError`. The package does not depend on `uuid`.
-After the end of a test that the engine lets the candidate review, the navigation map lists the items presented and reviews the one chosen.
+LTI and Caliper are in [interopkit](https://github.com/interopkit/interopkit) as `@interopkit/tool-integration` and
+`@interopkit/learning-analytics`. The player keeps four ports: `LtiLogin` and the frame of an LTI item (`player`),
+`forward.log` and `createToolScoreIntake` with `ToolScoreStore` (`server`), and `sessionScore` (`scoring`). The mapping of
+delivery events to Caliper events, the outbox and the jobs that publish a grade are in the example
+`examples/player/lms-integration`. `forward` takes only `log`, `HostApplyOptions.scoredBy` is a non-empty string, and `LtiLogin`
+takes a `signal`. The CAT client refuses a redirect (`redirect: "manual"`) with a `ServiceError`.
+
+After the end of a test that the engine lets the candidate review, the navigation map lists the items presented and reviews the
+one chosen.
+
+A candidate whom a proctor paused learns of the resume through `SessionClient.refresh`, which sends a view request to
+`SessionHost.handle`; the player asks on a button, when the page becomes visible and every `resumeCheckMs`. The asset gate
+serves the files of a package with `Content-Security-Policy: sandbox`, so that a hostile page runs no script on the asset
+origin. A mount can use the element of a destroyed mount again, importing the package where there is no document is safe, and
+`mountDelivery` holds the player in a `region` under a heading of level 2 unless `landmark` and `headingLevel` say otherwise.
