@@ -159,8 +159,7 @@ a file when `file(path)` asks for it; a package of 10,000 items costs the manife
 The reader supports stored and deflated entries, UTF-8 names, directory entries (left out of `paths`), data descriptors, archive
 comments and ZIP64 (the ZIP64 end of central directory record and locator, and the 64-bit values in the extra field). It does not
 read archives in several parts, other compression methods, or encrypted entries. `writePackage` writes the classic format only:
-it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more, which `DEFAULT_ZIP_LIMITS` keeps far from
-reach. It writes the manifest first, then the files in the order of the map, deflated when that makes them smaller, with one fixed
+it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes the manifest first, then the files in the order of the map, deflated when that makes them smaller, with one fixed
 time stamp, so that equal input gives equal bytes.
 
 ### Security checks
@@ -171,7 +170,8 @@ time stamp, so that equal input gives equal bytes.
 | Two names for one file                | Two entries with the same normalized name (`a.xml` and `./a.xml`) reject the archive.                                                                                    | `SecurityError`, `limit` `"duplicate-path"` |
 | Symbolic links                        | An entry made on Unix or OS X (host 3 or 19) whose mode is a symbolic link rejects the archive.                                                                          | `SecurityError`, `limit` `"symlink"`        |
 | Encrypted entries                     | General purpose bit 0, 6 or 13 rejects the archive.                                                                                                                      | `SecurityError`, `limit` `"encrypted"`      |
-| Too many entries                      | The count in the end record is checked against `maxEntries` before the directory is read.                                                                                | `SecurityError`, `limit` `"maxEntries"`     |
+| Too many entries                      | The reader counts the entries of the central directory against `maxEntries` as it reads them, and a count above it in the end record fails before the directory is read. | `SecurityError`, `limit` `"maxEntries"`     |
+| A count that hides entries            | The size of the central directory ends the reading, not the count of the end record. The count must equal the entries found, modulo 65,536 in a classic record.          | `ReadError`, code `assesskit/package/zip`   |
 | Large entries and archives, zip bombs | Declared sizes in the central directory are checked against `maxEntryBytes`, `maxTotalBytes` and `maxRatio`; an entry of at most 102,400 bytes is exempt from the ratio. | `SecurityError`, `limit` the limit's name   |
 | Headers that lie                      | While an entry inflates, the output is counted in 8 KiB steps of input and stops at the size the header declares.                                                        | `SecurityError`, `limit` `"declaredBytes"`  |
 | Corrupt or mismatched data            | Each entry's local header must name the file the central directory names; the size and CRC-32 must match; truncation is detected.                                        | `ReadError`, code `assesskit/package/zip`   |
@@ -257,7 +257,7 @@ platform that launches it.
 | Reading files and directories                            | [node](node.md) reads them; `openPackage` takes any `PackageFiles`                                                                |
 | Organizations in the manifest                            | The QTI profile of content packaging prohibits them                                                                               |
 | Archives in several parts, other compression, encryption | Content packages do not use them, and encrypted entries are refused                                                               |
-| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds every package within the limits                                             |
+| ZIP64 when writing                                       | `writePackage` writes the classic format, which holds 65,534 files and 4 GiB; the reader accepts larger packages up to its limits |
 | Choosing a variant                                       | The resolvers return the variants; the delivery engine chooses                                                                    |
 | Launching an LTI tool                                    | Launching belongs to the host, through the player's `LtiLogin`; `readLtiLink` reads the document and `ltiLaunchUrl` names the URL |
 

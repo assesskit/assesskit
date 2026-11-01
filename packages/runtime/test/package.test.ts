@@ -1431,6 +1431,33 @@ describe("reading ZIP archives", () => {
     expect(securityLimit(() => readPackage(claims, { limits: { maxEntries: 1000 } }))).toBe("maxEntries");
   });
 
+  it("reads every entry of an archive whose 16-bit count wrapped, and counts them against maxEntries", () => {
+    const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
+    const entries: RawEntry[] = [manifest];
+    for (let index = 0; index < 70_000; index++) entries.push({ name: `f${index}`, method: 0 });
+    entries.push({ name: "zz-last.xml", data: bytes("<x/>"), method: 0 });
+    const wrapped = 70_002 % 65_536;
+    const zip = buildZip(entries, { declaredCount: wrapped });
+    expect(new DataView(zip.buffer).getUint16(zip.length - 12, true)).toBe(wrapped);
+    const read = readPackage(zip);
+    expect(read.paths).toHaveLength(70_002);
+    expect(read.paths).toContain("zz-last.xml");
+    expect(securityLimit(() => readPackage(zip, { limits: { maxEntries: 70_001 } }))).toBe("maxEntries");
+    expect(readPackage(zip, { limits: { maxEntries: 70_002 } }).paths).toHaveLength(70_002);
+  });
+
+  it("rejects an end record whose count differs from the entries of the central directory", () => {
+    const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
+    const named = (name: string) => ({ name: name.padEnd(30, "x"), data: bytes("x") }) satisfies RawEntry;
+    const entries = [manifest, named("a"), named("b")];
+    expect(readPackage(buildZip(entries)).paths).toHaveLength(3);
+    for (const declaredCount of [1, 2, 4]) {
+      const error = thrownAs(ReadError, () => readPackage(buildZip(entries, { declaredCount })));
+      expect(error.issues[0]?.code).toBe("assesskit/package/zip");
+      expect(error.message).toContain(`declares ${declaredCount} entries, but its central directory holds 3`);
+    }
+  });
+
   it("counts directory entries against maxEntries and the sizes of all files against maxTotalBytes", () => {
     const manifest = { name: "imsmanifest.xml", data: bytes(manifestXml(resources())) } satisfies RawEntry;
     const zip = buildZip([manifest, { name: "d/", method: 0 }, { name: "e/", method: 0 }]);

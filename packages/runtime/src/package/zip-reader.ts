@@ -23,6 +23,9 @@ const ZIP64_EXTRA_FIELD = 0x0001;
 const MARKER_16 = 0xffff;
 /** A 32-bit field holds this when the value is in the ZIP64 record or extra field. */
 const MARKER_32 = 0xffffffff;
+/** The values of the 16-bit count of the classic end record, and of the 64-bit count of the ZIP64 record. */
+const COUNT_RANGE_16 = 2 ** 16;
+const COUNT_RANGE_64 = 2 ** 64;
 const STORED = 0;
 const DEFLATED = 8;
 /** General purpose bit flags: encrypted (bit 0), strong encryption (bit 6) and encrypted central directory (bit 13) */
@@ -106,9 +109,11 @@ function findEnd(reader: Reader): number {
   throw corrupt("The data is not a ZIP archive: it has no end of central directory record.");
 }
 
-/** Where the central directory is and how many entries it has. */
+/** Where the central directory is and how many entries its end record declares. */
 interface Directory {
   readonly count: number;
+  /** The number of values of the field that holds the count: writers that predate ZIP64 let a 16-bit count wrap. */
+  readonly countRange: number;
   readonly size: number;
   readonly offset: number;
 }
@@ -120,7 +125,9 @@ function locateDirectory(reader: Reader, end: number): Directory {
   const count = reader.u16(end + 10);
   const size = reader.u32(end + 12);
   const offset = reader.u32(end + 16);
-  if (count !== MARKER_16 && size !== MARKER_32 && offset !== MARKER_32) return { count, size, offset };
+  if (count !== MARKER_16 && size !== MARKER_32 && offset !== MARKER_32) {
+    return { count, countRange: COUNT_RANGE_16, size, offset };
+  }
   const locator = end - ZIP64_LOCATOR_BYTES;
   if (locator < 0 || reader.u32(locator) !== ZIP64_LOCATOR) {
     throw corrupt("The archive needs ZIP64 values but has no ZIP64 end of central directory locator.");
@@ -136,6 +143,7 @@ function locateDirectory(reader: Reader, end: number): Directory {
   }
   return {
     count: reader.u64(record + 32),
+    countRange: COUNT_RANGE_64,
     size: reader.u64(record + 40),
     offset: reader.u64(record + 48),
   };
@@ -274,7 +282,13 @@ function checkEntry(entry: Entry, reader: Reader, limits: ZipLimits, total: numb
   }
 }
 
-/** Reads the central directory: checks every name, the entry count and the declared sizes against the limits. */
+/**
+ * Reads the central directory: checks every name, the entry count and the declared sizes against the limits.
+ *
+ * The size of the directory ends the reading, as it does in Python's `zipfile` and in `unzip`, and not the count of the end
+ * record: a 16-bit count wraps in an archive of more than 65,535 entries and is too small in a crafted one, and a reader
+ * that trusts it sees fewer files than another extractor unpacks. The count must agree with the records found.
+ */
 function readDirectory(reader: Reader, limits: ZipLimits): Map<string, Entry> {
   const end = findEnd(reader);
   const directory = locateDirectory(reader, end);
@@ -284,12 +298,16 @@ function readDirectory(reader: Reader, limits: ZipLimits): Map<string, Entry> {
     throw corrupt("The central directory of the archive extends past its end record.");
   if (directory.count * CENTRAL_HEADER_BYTES > directory.size)
     throw corrupt("The central directory is too small for the entries the archive declares.");
+  const directoryEnd = directory.offset + directory.size;
   const entries = new Map<string, Entry>();
   let position = directory.offset;
   let total = 0;
-  for (let index = 0; index < directory.count; index++) {
-    const { entry, next, name } = readEntry(reader, position, directory.offset + directory.size);
+  let records = 0;
+  while (position < directoryEnd) {
+    if (records === limits.maxEntries) throw exceeded("maxEntries", limits, "holds more entries than");
+    const { entry, next, name } = readEntry(reader, position, directoryEnd);
     position = next;
+    records++;
     if (entry === undefined) {
       checkDirectoryName(name);
       continue;
@@ -306,6 +324,11 @@ function readDirectory(reader: Reader, limits: ZipLimits): Map<string, Entry> {
     total += entry.size;
     checkEntry(entry, reader, limits, total);
     entries.set(path, entry);
+  }
+  if (records % directory.countRange !== directory.count) {
+    throw corrupt(
+      `The end record of the archive declares ${directory.count} entries, but its central directory holds ${records}.`,
+    );
   }
   return entries;
 }
