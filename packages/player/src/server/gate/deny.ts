@@ -199,13 +199,35 @@ export function deniedPaths(pkg: QtiPackage): ReadonlySet<string> {
   return denied;
 }
 
-/** The text of the start of a file, decoded by its byte order mark, else as UTF-8. */
+/** The characters that may stand before the first thing of an XML document: space, tab, line feed and carriage return. */
+const XML_SPACE = new Set([0x20, 0x09, 0x0a, 0x0d]);
+
+/** How a file is encoded as far as its first two bytes tell: a byte order mark, else a zero byte beside the first character (XML 1.0, Appendix F), else UTF-8. */
+function encodingOf(first: number | undefined, second: number | undefined): "utf-16le" | "utf-16be" | "utf-8" {
+  if (first === 0xff && second === 0xfe) return "utf-16le";
+  if (first === 0xfe && second === 0xff) return "utf-16be";
+  if (first !== undefined && first !== 0 && second === 0) return "utf-16le";
+  if (first === 0 && second !== undefined && second !== 0) return "utf-16be";
+  return "utf-8";
+}
+
+/**
+ * The text of the start of a file, decoded by its encoding, from its first character that is not white space: a file of
+ * white space and then an item is an item, however long the white space.
+ */
 function startOf(bytes: Uint8Array): string {
-  const head = bytes.subarray(0, SNIFF_BYTES);
-  const [first, second] = head;
-  if (first === 0xff && second === 0xfe) return new TextDecoder("utf-16le").decode(head);
-  if (first === 0xfe && second === 0xff) return new TextDecoder("utf-16be").decode(head);
-  return new TextDecoder().decode(head);
+  const encoding = encodingOf(bytes[0], bytes[1]);
+  const width = encoding === "utf-8" ? 1 : 2;
+  const marked = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+  let offset = encoding === "utf-8" ? (marked ? 3 : 0) : bytes[0] === 0xff || bytes[0] === 0xfe ? width : 0;
+  const unit = (at: number): number =>
+    encoding === "utf-16be"
+      ? ((bytes[at] ?? 0) << 8) | (bytes[at + 1] ?? 0)
+      : (bytes[at] ?? 0) | ((bytes[at + 1] ?? 0) << 8);
+  while (offset + width <= bytes.length && XML_SPACE.has(width === 1 ? (bytes[offset] ?? 0) : unit(offset))) {
+    offset += width;
+  }
+  return new TextDecoder(encoding).decode(bytes.subarray(offset, offset + SNIFF_BYTES));
 }
 
 /** Returns the index after the first `terminator` at or after `from`, or -1 when there is none. */

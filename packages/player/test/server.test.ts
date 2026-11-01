@@ -321,6 +321,24 @@ describe("the asset gate", () => {
       "items/q1/unlisted.xml": hidden.quotes ?? "",
       "items/q1/utf16.html": Uint8Array.from([0xff, 0xfe, ...[...utf16].flatMap((byte) => [byte, 0])]),
       "items/q1/utf16be.html": Uint8Array.from([0xfe, 0xff, ...[...utf16].flatMap((byte) => [0, byte])]),
+      // UTF-16 without a byte order mark, which XML 1.0 Appendix F tells by the zero byte beside the first character.
+      "items/q1/plain16le.txt": Uint8Array.from([...utf16].flatMap((byte) => [byte, 0])),
+      "items/q1/plain16be.txt": Uint8Array.from([...utf16].flatMap((byte) => [0, byte])),
+      // White space beyond the bytes that the sniff reads, in each encoding.
+      "items/q1/spaces.html": `${" ".repeat(5000)}<qti-assessment-item xmlns="${asi}"/>`,
+      "items/q1/bom8.txt": Uint8Array.from([
+        0xef,
+        0xbb,
+        0xbf,
+        ...new TextEncoder().encode(`${" ".repeat(5000)}<qti-assessment-item xmlns="${asi}"/>`),
+      ]),
+      "items/q1/lines.txt": `${"\r\n\t ".repeat(2000)}<qti-assessment-item xmlns="${asi}"/>`,
+      "items/q1/spaces16.txt": Uint8Array.from([
+        0xff,
+        0xfe,
+        ...[...new TextEncoder().encode(" ".repeat(5000))].flatMap((byte) => [byte, 0]),
+        ...[...utf16].flatMap((byte) => [byte, 0]),
+      ]),
     });
     const base = await baseOf(gate, "items/q1/");
     const names = [
@@ -329,6 +347,12 @@ describe("the asset gate", () => {
       "unlisted.xml",
       "utf16.html",
       "utf16be.html",
+      "plain16le.txt",
+      "plain16be.txt",
+      "spaces.html",
+      "bom8.txt",
+      "lines.txt",
+      "spaces16.txt",
       HIDDEN_KEY_FILE.slice("items/q1/".length),
     ];
     for (const name of names) {

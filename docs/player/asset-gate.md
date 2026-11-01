@@ -143,7 +143,8 @@ is, and serves a file only when all of these hold. Anything else is `404`, whate
    `cartridge_basiclti_link`, is denied. That covers a wrapper element around QTI elements. So is a file that starts with `<`
    and shows no root element in those bytes. This catches the XML that no resource declares, and a file of QTI data that the
    manifest lists as `webcontent`, under an extension that rule 1 serves, such as `.html`, `.svg` or `.txt`. The sniff reads
-   UTF-8 or UTF-16 by the byte order mark and skips the declaration, comments and the document type.
+   UTF-8 or UTF-16 by the byte order mark or, without one, by the zero byte beside the first character, skips white space of
+   any length, and then skips the declaration, comments and the document type.
 
 A file under a prefix that no view references is served when it passes these rules, such as another item's image in a shared
 folder: that is the price of relative resolution. Keep one folder for each item and its media, which makes prefixes tight.
