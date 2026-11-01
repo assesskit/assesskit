@@ -32,6 +32,7 @@ import {
   writeManifest,
   writePackage,
 } from "../src/index.js";
+import { checkSynchronous } from "../src/package/internal.js";
 import { hostileArchives, manifests, smallZipLimits } from "./arbitraries/package.js";
 import { mutateBytes, mutateText, mutations } from "./arbitraries/xml.js";
 import { expectOutcome, FUZZ, fuzzReader } from "./fuzz.js";
@@ -100,6 +101,22 @@ function packageOf(manifest: string, files: Readonly<Record<string, string>> = {
 const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
 const item = (identifier: string, body = ""): string =>
   `<qti-assessment-item xmlns="${ASI}" xmlns:xi="http://www.w3.org/2001/XInclude" identifier="${identifier}" title="${identifier}" adaptive="false" time-dependent="false">${body}</qti-assessment-item>`;
+
+describe("checkSynchronous", () => {
+  it("accepts any value that is not a promise", () => {
+    for (const value of [{ resource: "a" }, [], "a", 1, null, undefined, JSON.parse('{"then":1}')]) {
+      expect(() => checkSynchronous(value, "The resolver items")).not.toThrow();
+    }
+  });
+
+  it("rejects a promise and any other thenable", () => {
+    const message = "The resolver items must return its value synchronously, found a promise.";
+    expect(() => checkSynchronous(Promise.resolve(1), "The resolver items")).toThrow(message);
+    // biome-ignore lint/suspicious/noThenProperty: the test needs a thenable that is not a Promise.
+    const thenable = { then: () => undefined };
+    expect(() => checkSynchronous(thenable, "The resolver items")).toThrow(DataError);
+  });
+});
 
 describe("dependency closure", () => {
   const manifest = readManifest(

@@ -5,9 +5,10 @@ import type {
   AssessmentTest,
   TestPart,
 } from "../asi/index.js";
-import { checkFunction, checkRecord, checkString, checkSynchronous, describe } from "../checks.js";
+import { checkFunction, checkRecord, checkString, describe } from "../checks.js";
 import { DataError } from "../errors.js";
 import { type Resolvers, resolveReference } from "../package/index.js";
+import { checkSynchronous } from "../package/internal.js";
 
 /** The test, the root of its structure. */
 export interface TestNode {

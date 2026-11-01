@@ -3,5 +3,6 @@
  *
  * @module
  */
+export { checkSynchronous } from "./check-synchronous.js";
 export { normalizeEntryName } from "./paths.js";
 export { resolveZipLimits } from "./zip-limits.js";

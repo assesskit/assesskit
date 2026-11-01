@@ -1,6 +1,6 @@
 import { type AssessmentItem, type AssessmentStimulus, type AssessmentTest, walkDocument } from "../asi/index.js";
-import { checkSynchronous } from "../checks.js";
 import { type DeliverableItem, type ResolvedItem, type Resolvers, resolveReference } from "../package/index.js";
+import { checkSynchronous } from "../package/internal.js";
 import { AttributeReferences } from "./attribute-references.js";
 import { BindRuleSets } from "./bind-rule-sets.js";
 import { BranchRuleChecks } from "./branch-rules.js";

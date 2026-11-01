@@ -15,13 +15,13 @@ import {
   checkPositiveInteger,
   checkRecord,
   checkString,
-  checkSynchronous,
   describe,
 } from "../checks.js";
 import { type DrdHazardTerm, HAZARD_TERMS } from "../content/index.js";
 import { DataError, type Issue } from "../errors.js";
 import type { DeliverableItem, LtiLink, ResolvedItem, Resolvers } from "../package/index.js";
 import { resolveReference } from "../package/index.js";
+import { checkSynchronous } from "../package/internal.js";
 import {
   BUILT_IN_CONTEXTS,
   type CustomOperator,

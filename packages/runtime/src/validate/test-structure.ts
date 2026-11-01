@@ -5,8 +5,9 @@ import type {
   AssessmentTest,
   TestPart,
 } from "../asi/index.js";
-import { checkSynchronous, describe } from "../checks.js";
+import { describe } from "../checks.js";
 import { type Resolvers, resolveReference } from "../package/index.js";
+import { checkSynchronous } from "../package/internal.js";
 import { failureIssues } from "./failures.js";
 import type { Findings } from "./findings.js";
 
