@@ -38,6 +38,9 @@ const TOOLS_CSS = `
   outline: 3px solid CanvasText; outline-offset: 2px; box-shadow: 0 0 0 2px Canvas; }
 .ak-physical { padding: 0.75rem; border: 2px solid CanvasText; border-radius: 0.5rem; }
 .ak-physical h3, .ak-panel h3 { margin: 0; font-size: 1.125rem; }
+.ak-panel ul { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.ak-mark-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.ak-mark-item span { overflow-wrap: anywhere; }
 .ak-physical ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
 .ak-panel { display: grid; gap: 0.75rem; box-sizing: border-box; max-width: 100%; padding: 0.75rem;
   color: CanvasText; background: Canvas; border: 2px solid CanvasText; border-radius: 0.5rem; }
@@ -66,8 +69,8 @@ const TOOLS_CSS = `
 `;
 
 /**
- * The stylesheet of what the tools put over the item: the layer with the rule and the protractor, the line reader and
- * the masks of the answers.
+ * The stylesheet of what the tools put over the item: the layer with the rule and the protractor, the line reader, the
+ * marks of the highlighter, and the masks and the buttons of the answers.
  *
  * @remarks
  * It is adopted into the root that holds the item, so every rule names a class of the tools, which the content does not
@@ -93,6 +96,19 @@ qti-choice-interaction[data-ak-masked] qti-simple-choice { display: none !import
   background: repeating-linear-gradient(135deg, color-mix(in srgb, CanvasText 14%, Canvas) 0 0.5rem, Canvas 0.5rem 1rem); }
 .ak-mask .ak-button { ${BUTTON_CSS} }
 .ak-mask-notice { padding: 0.25rem 0.5rem; color: CanvasText; background: Canvas; }
+.ak-highlights { position: absolute; inset: 0; }
+.ak-marks { position: absolute; inset: 0; }
+.ak-mark { position: absolute; box-sizing: border-box; pointer-events: none; forced-color-adjust: none;
+  background: color-mix(in srgb, #ffd400 45%, transparent); }
+.ak-mark-pending { background: none; border: 2px dashed CanvasText; }
+.ak-caret { position: absolute; box-sizing: border-box; pointer-events: none; border-bottom: 3px solid CanvasText; }
+.ak-caret:focus-visible { outline-offset: 0; }
+.ak-highlights .ak-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; }
+.ak-eliminate { ${BUTTON_CSS} min-width: 1.75rem; min-height: 1.75rem; padding: 0 0.5rem; font-size: 0.875em;
+  flex: none; }
+.ak-eliminate[aria-pressed="true"] { color: Canvas; background: CanvasText; font-weight: 700; }
+qti-simple-choice[data-ak-struck] > .ak-face { text-decoration: line-through; }
 .ak-placed .ak-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap; }
 `;

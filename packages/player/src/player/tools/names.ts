@@ -42,6 +42,10 @@ export function toolName(spec: ToolSpec, messages: Messages): string {
       return messages.toolLineReader;
     case "answer-masking":
       return messages.toolAnswerMasking;
+    case "highlighter":
+      return messages.toolHighlighter;
+    case "eliminator":
+      return messages.toolEliminator;
     case "calculator":
       return spec.type === "basic" ? messages.toolBasicCalculator : messages.toolStandardCalculator;
     case "slot":

@@ -1499,6 +1499,39 @@ describe("the tools in the player", () => {
     expect(contentOf(s.ui).querySelectorAll(".ak-mask")).toHaveLength(1);
   });
 
+  it("keeps the marks of the highlighter with the item through the shell: they come back when the item does", async () => {
+    const profile = `<access-for-all-pnp xmlns="${PNP_NAMESPACE}"><x:highlighter xmlns:x="urn:example:pnp"/></access-for-all-pnp>`;
+    const s = await shell({ profile });
+    await waitFor(() => expect(toolNames(s.ui)).toContain("Highlighter"));
+    await waitFor(() => expect(stageOf(s.ui).querySelector(".ak-caret")).not.toBeNull());
+    const wordAt = (text: string): { x: number; y: number } => {
+      const stage = stageOf(s.ui);
+      const walker = document.createTreeWalker(stage.querySelector(".ak-body") as Element, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node instanceof Text; node = walker.nextNode()) {
+        const at = node.data.indexOf(text);
+        if (at < 0) continue;
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + text.length);
+        const box = range.getBoundingClientRect();
+        const around = stage.getBoundingClientRect();
+        return { x: box.left + box.width / 2 - around.left, y: box.top + box.height / 2 - around.top };
+      }
+      throw new Error(`The item has no word ${text}.`);
+    };
+    const marks = (): string[] =>
+      [...s.ui.querySelectorAll(".ak-mark-item span")].map((each) => each.textContent ?? "");
+    await userEvent.click(stageOf(s.ui), { position: wordAt("Look") });
+    expect(marks()).toEqual(["Look"]);
+    buttonNamed(s.ui, "Next").click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    await waitFor(() => expect(marks()).toEqual([]));
+    buttonNamed(s.ui, "Previous").click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+    await waitFor(() => expect(marks()).toEqual(["Look"]));
+    expect(stageOf(s.ui).querySelectorAll(".ak-mark")).toHaveLength(1);
+  });
+
   it("builds a tool that the host provides in its panel, and takes it down when it closes", async () => {
     const built: string[] = [];
     const tools: ToolSlots = {

@@ -100,7 +100,7 @@ is assigned with `support-not-available`, and records the supports that were on 
 - A prohibited support has no control and is not listed. A support that is `active` or `assigned` has no control either,
   because the runtime would refuse it; the panel lists it with its state.
 - The panel does not list the supports that the toolbar of the tools turns on and off (`line-reader`, `answer-masking`,
-  `calculator-on-screen` and the on-screen tools but the glossary), so that no support has two controls.
+  `calculator-on-screen`, the on-screen tools but the glossary, and the custom supports `ext:highlighter` and `ext:eliminator`), so that no support has two controls.
 
 ## The look
 

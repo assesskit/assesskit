@@ -9,21 +9,21 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [11.5, 7.0, 21.1, 117.6, 85.8, 124.3]
+  bar [11.9, 7.1, 21.4, 123.6, 87.6, 125.2]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@assesskit/player`           | 35,514  | 11,521  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
-| `@assesskit/player/protocol`  | 21,958  | 7,016   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
-| `@assesskit/player/client`    | 65,739  | 21,134  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
-| `@assesskit/player/player`    | 368,331 | 117,575 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
-| `mountItem`                   | 265,709 | 85,814  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
-| `@assesskit/runtime/delivery` | 526,637 | 124,304 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
+| `@assesskit/player`           | 36,737  | 11,874  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
+| `@assesskit/player/protocol`  | 22,112  | 7,067   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
+| `@assesskit/player/client`    | 66,539  | 21,407  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
+| `@assesskit/player/player`    | 386,277 | 123,577 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
+| `mountItem`                   | 271,245 | 87,568  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
+| `@assesskit/runtime/delivery` | 529,076 | 125,213 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
 | `pci-frame/bridge.js`         | 10,026  | 3,735   | 5,000   | The script of the frame of a portable custom interaction                                                                      |
 | `pci-frame/require.js`        | 17,781  | 6,863   | 9,000   | RequireJS, which the frame loads                                                                                              |
 | `recorder-worklet.js`         | 322     | 270     | 500     | The script of the audio worklet of a WAV recording                                                                            |
-| `player.css`                  | 60,623  | 12,747  | 16,000  | The stylesheet of a content root                                                                                              |
+| `player.css`                  | 61,800  | 12,993  | 16,000  | The stylesheet of a content root                                                                                              |
 
 The sizes are bytes of the minified file. The first load of a client holds none of the engine: the engine is a chunk that
 the client loads on demand, and the test fails when the first load holds a file of the runtime's processing. The entry points of
@@ -42,9 +42,9 @@ exports `parseLexicon`.
 
 | Part                                             | Bytes   | Why                                                                                              |
 | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------ |
-| The elements of the player                       | 209,234 | The folders of `player/`, of which `elements` is 74 kB and `tools` 29 kB                         |
+| The elements of the player                       | 233,720 | The folders of `player/`, of which `elements` is 74 kB and `tools` 39 kB                         |
 | `values` of the runtime                          | 40,761  | The values of responses, and the automaton and the Unicode tables for the patterns of text entry |
-| The messages                                     | 25,599  | Both catalogs; `selectMessages` chooses one at run time                                          |
+| The messages                                     | 27,400  | Both catalogs; `selectMessages` chooses one at run time                                          |
 | `saxes`, and `xml` and `xmlchars` of the runtime | 40,317  | The reader of a pronunciation lexicon in `speech/`                                               |
 | valibot                                          | 11,350  | The schemas of the JSON that crosses the wire                                                    |
 
@@ -64,6 +64,7 @@ phone is, and fails when the fastest of 5 samples is above its budget. The files
 | ---------------------------------------------------------- | -------- | ------ |
 | `mountDelivery` over a test, until the first item is shown | 5 ms     | 30 ms  |
 | 10 calls of `mountItem` on one page, until all are shown   | 16 ms    | 80 ms  |
+| Turning on the highlighter over a passage of 2,000 words   | 14 ms    | 70 ms  |
 
 A budget is five times the fastest sample, the median over three runs, rounded up to one significant digit: the rule of the
 other benchmarks of the repository ([performance](../runtime/performance.md#budgets)). It holds on a machine up to five times slower than

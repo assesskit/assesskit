@@ -63,10 +63,17 @@ const companionSchema = looseRecord({
 });
 
 // The supports are checked by `checkSupportViews`, which names the list in its messages.
-const toolsInputSchema = strictRecord({ companion: v.nullable(companionSchema), supports: v.unknown() });
+const contentSchema = strictRecord({ item: nonEmptyStringSchema, stimuli: v.array(nonEmptyStringSchema) });
+
+const toolsInputSchema = strictRecord({
+  companion: v.nullable(companionSchema),
+  supports: v.unknown(),
+  content: v.optional(v.nullable(contentSchema)),
+});
 
 /**
- * Checks the input of the tools: the companion materials of an item, or `null`, and the supports of the candidate.
+ * Checks the input of the tools: the companion materials of an item, or `null`, the supports of the candidate and the names of
+ * the content.
  *
  * @param value - The value to check.
  * @throws `DataError` when the input, a material or a support has the wrong type, an unknown property or a value out of

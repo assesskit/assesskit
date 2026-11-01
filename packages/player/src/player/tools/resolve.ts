@@ -104,6 +104,12 @@ function addSupport(add: Add, support: SupportView): void {
     case "answer-masking":
       add({ kind: "answer-masking" }, null, support);
       break;
+    case "ext:highlighter":
+      add({ kind: "highlighter" }, null, support);
+      break;
+    case "ext:eliminator":
+      add({ kind: "eliminator" }, null, support);
+      break;
     case "calculator-on-screen": {
       const type =
         (settings?.name === "calculator-on-screen" ? settings.calculatorType : undefined) ?? DEFAULT_CALCULATOR_TYPE;

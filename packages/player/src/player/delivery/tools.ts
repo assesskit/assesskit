@@ -31,11 +31,12 @@ export interface DeliveryTools {
    * @remarks
    * A tool that stays in force stays open where the candidate put it, and the others go; with no item presented there are no
    * tools. Call it once the content of the view is shown. A view with the same item and the same supports as the last one
-   * changes nothing.
+   * changes nothing, unless the content was drawn again.
    *
    * @param view - The view.
+   * @param redrawn - Whether the content of the view was drawn again, so that what the tools put on it is drawn again too.
    */
-  update(view: CandidateView): void;
+  update(view: CandidateView, redrawn?: boolean): void;
   /** Takes the tools down. */
   destroy(): void;
 }
@@ -57,15 +58,19 @@ export function mountDeliveryTools(context: DeliveryToolsContext): DeliveryTools
   let shown: string | undefined;
 
   return {
-    update: (view) => {
+    update: (view, redrawn = false) => {
       const { current } = view;
       const key = current === undefined ? "" : JSON.stringify([current.key, view.supports]);
-      if (key === shown) return;
+      if (key === shown && !redrawn) return;
       shown = key;
       try {
         tools.update({
           companion: current?.companionMaterials ?? null,
           supports: current === undefined ? [] : view.supports,
+          content:
+            current === undefined
+              ? null
+              : { item: JSON.stringify(current.key), stimuli: current.stimuli.map(({ identifier }) => identifier) },
         });
       } catch (error) {
         // A tool of the host that fails must not keep the candidate from the question.

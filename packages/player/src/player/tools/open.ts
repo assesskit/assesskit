@@ -2,6 +2,8 @@ import { openAnswerMasking } from "./answer-masking.js";
 import { openCalculator } from "./calculator.js";
 import type { OpenTool, ToolContext } from "./context.js";
 import { openDigital } from "./digital.js";
+import { openEliminator } from "./eliminator.js";
+import { openHighlighter } from "./highlighter.js";
 import { openLineReader } from "./line-reader.js";
 import type { ToolEntry } from "./model.js";
 import { openProtractor } from "./protractor.js";
@@ -26,6 +28,10 @@ export function openTool(context: ToolContext, { spec, description, file }: Tool
       return openLineReader(context, spec.highlightColor, close);
     case "answer-masking":
       return openAnswerMasking(context);
+    case "highlighter":
+      return openHighlighter(context, close);
+    case "eliminator":
+      return openEliminator(context);
     case "calculator":
       return openCalculator(context, spec.type, description, file, close);
     case "slot":

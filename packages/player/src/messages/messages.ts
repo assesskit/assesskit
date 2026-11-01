@@ -16,6 +16,10 @@ export interface Messages {
   readonly toolLineReader: string;
   /** The name of answer masking, a tool that hides the answer options the candidate chooses to hide. */
   readonly toolAnswerMasking: string;
+  /** The name of the highlighter, a tool that marks the words the candidate chooses in the text of the item. */
+  readonly toolHighlighter: string;
+  /** The name of the answer eliminator, a tool that crosses out the answer choices the candidate has ruled out. */
+  readonly toolEliminator: string;
   /** The name of the basic calculator, which has the four operations. */
   readonly toolBasicCalculator: string;
   /** The name of the standard calculator, which adds memory, percent, square root and sign to the basic one. */
@@ -76,6 +80,22 @@ export interface Messages {
   readonly toolLineOf: string;
   /** The notice of a line reader with no text to follow. */
   readonly toolNoText: string;
+  /** How to mark words with the highlighter, with the pointer and with the keyboard. */
+  readonly toolHighlighterHint: string;
+  /** The name of the list of the words that the highlighter marked. */
+  readonly toolMarks: string;
+  /** The notice of the highlighter when no word is marked. */
+  readonly toolNoMarks: string;
+  /** The action that takes one mark of the highlighter away; the text of the mark follows it. */
+  readonly toolRemoveMark: string;
+  /** The action that takes every mark of the highlighter away. */
+  readonly toolClearMarks: string;
+  /** What the highlighter says of a word it marked. */
+  readonly toolMarkSet: string;
+  /** What the highlighter says of a word whose mark it took away. */
+  readonly toolMarkCleared: string;
+  /** The action that crosses out an answer choice, or takes the cross-out away; the text of the choice follows it. */
+  readonly toolCrossOut: string;
   /** The notice of a mask that hides the answer choices of a question. */
   readonly answerMaskingNotice: string;
   /** The action that takes the mask off the answer choices. */

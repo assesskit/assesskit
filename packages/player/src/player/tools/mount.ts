@@ -6,8 +6,8 @@ import type { Messages } from "../../messages/index.js";
 import { checkMessages } from "../../messages/internal.js";
 import { deepActiveElement, html } from "../internal.js";
 import { checkToolsInput } from "./check-input.js";
-import type { OpenTool, ToolContext, ToolSlots } from "./context.js";
-import { SLOT_TOOLS, type ToolEntry, type ToolsInput } from "./model.js";
+import type { OpenTool, ToolContext, ToolMemory, ToolSlots } from "./context.js";
+import { SLOT_TOOLS, type ToolContent, type ToolEntry, type ToolsInput } from "./model.js";
 import { toolName } from "./names.js";
 import { openTool } from "./open.js";
 import { isAbsoluteUrl } from "./package-path.js";
@@ -63,6 +63,9 @@ export interface Tools {
   destroy(): void;
 }
 
+/** The names of content that the host did not name: no marks outlast the next `update`. */
+const UNNAMED: ToolContent = { item: "", stimuli: [] };
+
 /** A tool in force, with its button and what it has open. */
 interface Instance {
   entry: ToolEntry;
@@ -107,6 +110,16 @@ function turnable({ support }: ToolEntry): SupportView | null {
   return support?.state === "option" ? support : null;
 }
 
+/**
+ * Returns whether a tool is open after an input: the tool that a `support` action turns on and off follows its support,
+ * and any other starts open when its support is on, and then the candidate decides.
+ */
+function wantsOpen(entry: ToolEntry, fresh: boolean, opened: boolean): boolean {
+  const support = turnable(entry);
+  if (support !== null) return support.active;
+  return fresh ? (entry.support?.active ?? false) : opened;
+}
+
 /** Names the tools for their buttons: a number follows the name of each tool that shares it with another. */
 function buttonNames(entries: readonly ToolEntry[], messages: Messages): readonly string[] {
   const names = entries.map(({ spec }) => toolName(spec, messages));
@@ -146,8 +159,29 @@ export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
   const layer = html("div", { class: "ak-tool-layer" });
   host.append(root);
   stage.append(layer);
-  const context: ToolContext = { messages, language, stage, layer, tray, assets, slots };
+  let content: ToolContent = UNNAMED;
+  const memory: ToolMemory = { words: new Map(), choices: new Map() };
+  const context: ToolContext = {
+    messages,
+    language,
+    stage,
+    layer,
+    tray,
+    assets,
+    slots,
+    content: () => content,
+    memory,
+  };
   const instances = new Map<string, Instance>();
+
+  /** Takes the names of the content shown; content with no names leaves nothing in the memory. */
+  const nameContent = (named: ToolsInput["content"]): void => {
+    content = named ?? UNNAMED;
+    if (named == null) {
+      memory.words.clear();
+      memory.choices.clear();
+    }
+  };
 
   const setOpen = (instance: Instance, open: boolean, focus: boolean): void => {
     if (open && instance.opened === null) {
@@ -195,6 +229,7 @@ export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
   return {
     update(input) {
       checkToolsInput(input);
+      nameContent(input.content);
       const { tools, physical: materials } = resolveTools(input);
       const keys = new Set(tools.map(({ key }) => key));
       for (const [key, instance] of instances) {
@@ -210,15 +245,14 @@ export function mountTools(host: HTMLElement, options: ToolsOptions): Tools {
         const known = instances.get(entry.key);
         const fresh = known === undefined;
         const instance = known ?? create(entry);
+        const wasOpen = instance.opened !== null;
         instances.set(entry.key, instance);
         instance.entry = entry;
         label(instance, names[index] ?? "");
-        const support = turnable(entry);
-        // A tool that no `support` action can turn on starts open when its support is on, and then the candidate decides.
-        const open =
-          support === null ? (fresh ? (entry.support?.active ?? false) : instance.opened !== null) : support.active;
+        const open = wantsOpen(entry, fresh, wasOpen);
         try {
           setOpen(instance, open, open && instance.focusNext);
+          if (wasOpen) instance.opened?.refresh?.();
         } catch (error) {
           failure ??= error;
         }

@@ -6,6 +6,7 @@ import type {
 } from "@assesskit/runtime/asi";
 import type { SupportView } from "@assesskit/runtime/delivery";
 import type { SupportName } from "@assesskit/runtime/pnp";
+import { TOOL_EXTENSIONS } from "../supports/internal.js";
 
 /**
  * The calculator types of QTI, as the runtime's `qti-calculator-type` has them.
@@ -127,12 +128,13 @@ export const TOOL_SUPPORT_NAMES = [
   "outliner-on-screen",
   "peer-interaction-on-screen",
   "spell-checker-on-screen",
+  ...TOOL_EXTENSIONS,
 ] as const satisfies readonly SupportName[];
 
 /** The name of a support that puts a tool on the screen. */
 export type ToolSupportName = (typeof TOOL_SUPPORT_NAMES)[number];
 
-/** What decides the tools in force for an item: its companion materials and the candidate's supports. */
+/** What decides the tools in force for an item: its companion materials, the candidate's supports and the content shown. */
 export interface ToolsInput {
   /**
    * The companion materials of the item as the runtime reads them, or `null` for an item without them.
@@ -142,7 +144,22 @@ export interface ToolsInput {
   readonly companion: CompanionMaterialsInfo | null;
   /** The supports of the view; those that put no tool on the screen are ignored. */
   readonly supports: readonly SupportView[];
+  /**
+   * Names the content shown, so that what the highlighter and the answer eliminator keep comes back with it: the marks of a
+   * passage that several items share stay with the passage.
+   *
+   * @defaultValue `null`: the marks last until the next `update`
+   */
+  readonly content?: {
+    /** Names the item presented: the same name when the item comes again, a different one for another item. */
+    readonly item: string;
+    /** Names the stimuli the item shares, in the order they are shown: the same name for the same stimulus in any item. */
+    readonly stimuli: readonly string[];
+  } | null;
 }
+
+/** The names of the content shown, as {@link ToolsInput.content} gives them. */
+export type ToolContent = NonNullable<ToolsInput["content"]>;
 
 /** The tools that the host provides in place of built-in ones, by name. */
 export const SLOT_TOOLS = [
@@ -167,6 +184,8 @@ export type ToolSpec =
   | { readonly kind: "protractor"; readonly protractor: ProtractorSpec }
   | { readonly kind: "line-reader"; readonly highlightColor: string | null }
   | { readonly kind: "answer-masking" }
+  | { readonly kind: "highlighter" }
+  | { readonly kind: "eliminator" }
   | { readonly kind: "calculator"; readonly type: BuiltInCalculator }
   | { readonly kind: "slot"; readonly tool: SlotTool }
   | { readonly kind: "digital"; readonly material: DigitalMaterial };

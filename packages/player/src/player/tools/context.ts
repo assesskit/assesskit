@@ -1,5 +1,5 @@
 import type { Messages } from "../../messages/index.js";
-import type { SlotTool } from "./model.js";
+import type { SlotTool, ToolContent } from "./model.js";
 
 /**
  * The file at which an item says that a calculator is available.
@@ -33,6 +33,14 @@ export interface ToolOptions {
  */
 export type ToolSlots = Partial<Record<SlotTool, (host: HTMLElement, options: ToolOptions) => () => void>>;
 
+/** What the tools remember of the content shown, which outlasts a tool that is turned off. */
+export interface ToolMemory {
+  /** The marked words of each part of the content, by the key of the part. */
+  readonly words: Map<string, Set<number>>;
+  /** The crossed-out choices of each item, by the key of the item. */
+  readonly choices: Map<string, Set<string>>;
+}
+
 /** What a tool needs from the mount that opens it. */
 export interface ToolContext {
   /** The text of the interface. */
@@ -49,12 +57,18 @@ export interface ToolContext {
   readonly assets: (path: string) => string;
   /** The tools that the host provides. */
   readonly slots: ToolSlots;
+  /** The names of the content shown now. */
+  readonly content: () => ToolContent;
+  /** What the tools remember of the content shown. */
+  readonly memory: ToolMemory;
 }
 
 /** A tool that is open: its panel in the tray and what it puts over the item. */
 export interface OpenTool {
   /** Moves the focus to the part of the tool that the candidate works with first. */
   focus(): void;
+  /** Draws the tool again after the content changed or was drawn again; a tool that does not depend on the content has none. */
+  refresh?(): void;
   /** Takes the tool down. */
   destroy(): void;
 }

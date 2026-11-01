@@ -366,7 +366,14 @@ describe("presentation", () => {
 describe("names", () => {
   it("names every predefined support except the ones that a tool of the toolbar turns on and off", () => {
     const unnamed = SUPPORT_NAMES.filter((name) => supportLabel(name, EN_MESSAGES) === undefined);
-    expect([...unnamed].sort()).toEqual([...TOOL_SUPPORT_NAMES].sort());
+    expect([...unnamed].sort()).toEqual(TOOL_SUPPORT_NAMES.filter((name) => !name.startsWith("ext:")).sort());
+  });
+
+  it("names no custom support that a tool of the toolbar turns on and off: the highlighter and the answer eliminator", () => {
+    for (const name of TOOL_SUPPORT_NAMES.filter((each) => each.startsWith("ext:"))) {
+      expect(supportLabel(name, EN_MESSAGES)).toBeUndefined();
+    }
+    expect(supportLabel("ext:highlighting", EN_MESSAGES)).toBe("highlighting");
   });
 
   it("names a support in the language of the interface, and a custom one by its local name", () => {

@@ -314,6 +314,36 @@ describe("check-input", () => {
     expect(() => checkToolsInput({ companion: companion(), supports: [] })).not.toThrow();
   });
 
+  it("accepts the names of the content, or none, and rejects names that are not an item and a list of stimuli", () => {
+    const named = { companion: null, supports: [] };
+    for (const content of [
+      undefined,
+      null,
+      { item: "q1", stimuli: [] },
+      { item: "q1", stimuli: ["passage", "table"] },
+    ]) {
+      expect(() => checkToolsInput({ ...named, content })).not.toThrow();
+    }
+    for (const content of [
+      1,
+      "q1",
+      [],
+      {},
+      { item: "q1" },
+      { item: "", stimuli: [] },
+      { item: 1, stimuli: [] },
+      { item: "q1", stimuli: "passage" },
+      { item: "q1", stimuli: [""] },
+      { item: "q1", stimuli: [1] },
+      { item: "q1", stimuli: [], extra: true },
+    ]) {
+      expect(() => checkToolsInput({ ...named, content: json(content) }), JSON.stringify(content)).toThrow(DataError);
+    }
+    expect(() => checkToolsInput({ ...named, content: json({ item: "q1", stimuli: [1] }) })).toThrow(
+      new DataError("The tools input is invalid at content.stimuli[0]: expected a string, found 1."),
+    );
+  });
+
   it("rejects input of other types with a sentence that names the property", () => {
     const rejects = (value: unknown, message: string): void => {
       expect(() => checkToolsInput(value)).toThrow(new DataError(message));
@@ -648,6 +678,29 @@ describe("resolve", () => {
         support: { name: "answer-masking", state: "assigned", active: true },
       },
     ]);
+  });
+
+  it("puts the highlighter and the answer eliminator on the screen, and leaves them out when the profile prohibits them", () => {
+    const set = resolveTools({
+      companion: null,
+      supports: [
+        support({ name: "ext:highlighter", state: "option" }),
+        support({ name: "ext:eliminator", active: true }),
+      ],
+    });
+    expect(set.tools.map(({ key, spec, support: each }) => [key, spec, each?.name])).toEqual([
+      ['{"kind":"highlighter"}', { kind: "highlighter" }, "ext:highlighter"],
+      ['{"kind":"eliminator"}', { kind: "eliminator" }, "ext:eliminator"],
+    ]);
+    const prohibited = resolveTools({
+      companion: null,
+      supports: [
+        support({ name: "ext:highlighter", state: "prohibited" }),
+        support({ name: "ext:eliminator", state: "prohibited" }),
+      ],
+    });
+    expect(prohibited.tools).toEqual([]);
+    expect(resolveTools({ companion: null, supports: [support({ name: "ext:vendor" })] }).tools).toEqual([]);
   });
 
   it("puts the calculator of the profile on the screen when the item has none, whatever the test says", () => {

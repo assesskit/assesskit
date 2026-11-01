@@ -1,16 +1,16 @@
 # Tools
 
 The tools of an item are what the item's companion materials ask the player to provide and what the candidate's profile
-puts on the screen: a rule, a protractor, calculators, digital and physical materials, a line reader, answer masking and
-the tools that the host provides, such as a dictionary. `mountTools` of `@assesskit/player/player` shows them.
+puts on the screen: a rule, a protractor, calculators, digital and physical materials, a line reader, answer masking, a
+highlighter, an answer eliminator and the tools that the host provides, such as a dictionary. `mountTools` of `@assesskit/player/player` shows them.
 
 ```mermaid
 flowchart LR
   companion["Companion materials of the item:<br/>rule, protractor, calculators, materials"] --> resolve["Tools in force"]
-  supports["Supports of the profile:<br/>line reader, masking, calculators, host tools"] --> resolve
+  supports["Supports of the profile:<br/>line reader, masking, highlighter, eliminator,<br/>calculators, host tools"] --> resolve
   resolve --> toolbar["Toolbar: a button for each tool"]
   toolbar --> panel["Panel of the open tool"]
-  resolve --> layer["Layer over the item:<br/>rule, protractor, line reader, masks"]
+  resolve --> layer["Layer over the item:<br/>rule, protractor, line reader, marks, masks"]
   toolbar -- "an option" --> action["support action"]
 ```
 
@@ -24,6 +24,8 @@ flowchart LR
 | Physical material                                                                                            | `qti-physical-material`                  | a notice |
 | Line reader                                                                                                  | `line-reader`                            | yes      |
 | Answer masking                                                                                               | `answer-masking`                         | yes      |
+| Highlighter                                                                                                  | `ext:highlighter`                        | yes      |
+| Answer eliminator                                                                                            | `ext:eliminator`                         | yes      |
 | Dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction, spell checker | `*-on-screen` supports                   | host     |
 
 ## In the player
@@ -31,13 +33,13 @@ flowchart LR
 `mountDelivery` ([delivery](delivery.md)) mounts the tools of the item presented and of the profile. The toolbar and the
 panels go above the content, in the chrome; what lies over the item goes into the stage of the content root
 (`ContentRoot.stage`, [content](content.md#the-stage)), which holds the item and stays when the item changes. With every view
-that has another item or other supports the shell gives `update` the `companionMaterials` of the item and the `supports` of
-the view, once the content is shown. A tool that stays in force stays open where the candidate put it when the next item
+that has another item or other supports, and with every view whose content was drawn again, the shell gives `update` the
+`companionMaterials` of the item, the `supports` of the view and the names of the content, once the content is shown. A tool that stays in force stays open where the candidate put it when the next item
 comes, and the others close; with no item presented there are no tools. A button for a tool of the profile that is an
 option sends the `support` action, and the tool opens when the next view says it is on. The tools of the host come from
 `hooks.tools`. A host that draws its own chrome (`chrome: false`) gets no tools from the shell and mounts `mountTools` itself.
 
-The stage takes only the stylesheet of what lies over the item (the layer, the line reader and the masks); the toolbar and
+The stage takes only the stylesheet of what lies over the item (the layer, the line reader, the marks and the masks); the toolbar and
 the panels have another, adopted into the chrome, so that their classes do not restyle the interactions of the item.
 
 ## Mounting
@@ -107,16 +109,17 @@ panel is taken down.
 
 ### Input
 
-`update` takes the companion materials of the item, or `null`, and the supports of the view: the `supports` of the runtime's
-`CandidateView`, as they are. The supports that put no tool on the screen are ignored.
+`update` takes the companion materials of the item, or `null`, the supports of the view: the `supports` of the runtime's
+`CandidateView`, as they are, and the names of the content. The supports that put no tool on the screen are ignored.
 
-| Field                 | Meaning                                                                                                                                                                                                                                                                                                                             |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `companion`           | The `CompanionMaterialsInfo` of the runtime's `asi` module, which `readAsi` gives as `item.companionMaterials`, or `null`                                                                                                                                                                                                           |
-| `supports[].name`     | The support. Those that put a tool on the screen are `line-reader`, `answer-masking`, `calculator-on-screen`, `dictionary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen` and `spell-checker-on-screen` |
-| `supports[].state`    | `prohibited`, `active`, `option` or `assigned`, the `SupportState` of the runtime's `pnp` module                                                                                                                                                                                                                                    |
-| `supports[].active`   | Whether the tool is on                                                                                                                                                                                                                                                                                                              |
-| `supports[].settings` | The settings of the profile: `highlightColor` (`#RGB` or `#RRGGBB`) of `line-reader`, default the player's own; `calculatorType` of `calculator-on-screen`, a calculator type or an extension term, default `basic`                                                                                                                 |
+| Field                 | Meaning                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `companion`           | The `CompanionMaterialsInfo` of the runtime's `asi` module, which `readAsi` gives as `item.companionMaterials`, or `null`                                                                                                                                                                                                                                                                        |
+| `supports[].name`     | The support. Those that put a tool on the screen are `line-reader`, `answer-masking`, `calculator-on-screen`, `dictionary-on-screen`, `thesaurus-on-screen`, `homophone-checker-on-screen`, `note-taking-on-screen`, `visual-organizer-on-screen`, `outliner-on-screen`, `peer-interaction-on-screen`, `spell-checker-on-screen`, and the custom supports `ext:highlighter` and `ext:eliminator` |
+| `supports[].state`    | `prohibited`, `active`, `option` or `assigned`, the `SupportState` of the runtime's `pnp` module                                                                                                                                                                                                                                                                                                 |
+| `supports[].active`   | Whether the tool is on                                                                                                                                                                                                                                                                                                                                                                           |
+| `content`             | `{ item, stimuli }`: names of the item presented and of the stimuli it shares, in the order they are shown, so that what the highlighter and the answer eliminator keep comes back with the content. Default `null`: it lasts until the next `update`                                                                                                                                            |
+| `supports[].settings` | The settings of the profile: `highlightColor` (`#RGB` or `#RRGGBB`) of `line-reader`, default the player's own; `calculatorType` of `calculator-on-screen`, a calculator type or an extension term, default `basic`                                                                                                                                                                              |
 
 The tools read these parts of the companion materials; the runtime keeps a decimal as the text that the document has, and the player
 reads it as a number.
@@ -196,6 +199,40 @@ their place says so and has a button that shows them. The mask covers an interac
 later and comes back if the renderer removes it. The button stays, to hide the choices again; the focus stays on it. The
 support's `active` flag turns masking on for the item and off again.
 
+### Highlighter
+
+The custom support `ext:highlighter` (a term of the PNP schema allows no hyphen) marks the words of the item's text. QTI
+names no highlighter, and a text selection inside a shadow root cannot be read in every browser of the baseline, so the
+highlighter works on words, drawn in the layer; it never changes the DOM of the item.
+
+```mermaid
+flowchart LR
+  press["Press or drag on a word"] --> marks["Marks: sets of word indexes,<br/>by item and by stimulus"]
+  keys["Caret in the layer:<br/>arrows, Shift, Enter"] --> marks
+  panel["Panel: Remove, Clear all"] --> marks
+  marks --> bands["Bands in the layer,<br/>drawn again on resize"]
+  marks --> list["List of the marked text<br/>in the panel"]
+```
+
+| Part            | Rule                                                                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A word          | A run of characters that are no space, or one Han, Hiragana or Katakana character. A word lies in one text node. Text in inputs, text areas, selects and buttons is left out; a script that writes no spaces, Thai for one, has whole phrases for words      |
+| Pointer         | A press on a word marks it or takes its mark away, and a drag from one word to another marks the run; a press on a link, a button, a label or a field is for that control. A press needs no drag (2.5.7)                                                     |
+| Keyboard        | The caret is a focusable element in the layer. Left and Right move to the next and the previous word, Up and Down to the word nearest in the line below and above. Shift with an arrow extends from where the caret was, within the part, and Escape lets go |
+| Enter           | Marks the words from the caret, or from where the extension began; when each of them is marked already, it takes the marks away                                                                                                                              |
+| Marks           | Bands in the layer, one for each line a run takes, drawn again when the stage changes size. They never enter a response, an action or a report                                                                                                               |
+| Panel           | Lists the runs of marked words with their text and a Remove button that names the text, and has Clear all marks, so that marks have a non-visual form; a status line says each word and each change                                                          |
+| Parts           | The stimuli (`ak-stimulus`) and the item (`ak-body`) of the content root are parts; a stage without them is one part. A mark is kept by the name of its part and the index of its word, so a stimulus that items share keeps its marks across items          |
+| Memory          | The marks stay in the mount: turning the tool off and on again brings them back. Without `content` in the input they last until the next `update`. They are lost on reload; keeping them needs a store of the host                                           |
+| Content changes | The index of a mark that the content no longer has is out of range, and the mark is dropped when the mount is told of the content; marks of another item or stimulus are not drawn over it                                                                   |
+
+### Answer eliminator
+
+The custom support `ext:eliminator` puts a toggle button, named with the choice ("Cross out Alpha") and with `aria-pressed`,
+at the end of each `qti-simple-choice` of a `qti-choice-interaction`. A crossed-out choice has a line through its text and
+stays selectable; the cross-out never reaches a response. It is not answer masking, which hides the choices until they are shown.
+The cross-outs stay in the mount by item and come back with the item; the buttons go with the tool and return with it.
+
 ### Calculators
 
 The basic calculator has the digits, the decimal point, the four operations, equals and clear. The standard calculator adds
@@ -267,7 +304,7 @@ available. Host tools are not built in: the player does not test them.
 | 2.1.1 Keyboard                      | Every tool and every control works by keyboard: the toolbar, the panels, the keys of the tools above, the calculator by typing                                                      |
 | 2.1.4 Character Key Shortcuts       | The typing of the calculator, and the keys of a tool, work only while the focus is in that tool                                                                                     |
 | 2.4.11 Focus Not Obscured (Minimum) | The line reader and the masks hide no element that can take focus; the rule and the protractor move away from one that they would hide; panels are in the tray, never over the item |
-| 2.5.7 Dragging Movements            | Every move and turn has buttons and keys, the line reader has no drag                                                                                                               |
+| 2.5.7 Dragging Movements            | Every move and turn has buttons and keys, the line reader has no drag, and the highlighter marks a word with a press or the keyboard, as a drag does                                |
 | 2.5.8 Target Size (Minimum)         | Buttons and fields are at least 2.75rem by 2.75rem                                                                                                                                  |
 | 2.5.3 Label in Name                 | A key's name starts with the letters on it: "MC, clear memory"; symbols such as ÷ are named by what they do                                                                         |
 
@@ -279,6 +316,7 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 - The numbers of a rule and a protractor are in the unit of the major increment; the unit symbols are not translated.
 - A protractor measures 180 degrees.
 - `qti-calculator-info` is content for the candidate: the information model says that the calculator is available at the location it names, and that the file is information "to be made available to the learner". The player builds the basic and standard calculators in and takes the other types from the host, so it shows the file and gives it to the host's tool, and never runs it. It is not metadata, and it does not change the type of calculator.
+- QTI names no highlighter and no answer eliminator: they are custom supports, `ext:highlighter` and `ext:eliminator`, which `universalSupports` of the engine can give every candidate of a form as an option.
 - Only `qti-choice-interaction` is masked: the best practices guide requires masks for choice interactions only.
 - A digital material that is an LTI resource is a file here; the launch belongs to the host ([LTI items](lti-items.md)).
 - The display of a calculator uses a decimal point in every language.
@@ -315,7 +353,9 @@ Each file of `src/player/tools/` holds one concept.
 | `check-input.ts`       | The check of the input of the tools                                           |
 | `context.ts`           | What a tool needs from the mount                                              |
 | `digital.ts`           | A digital material                                                            |
+| `eliminator.ts`        | The answer eliminator                                                         |
 | `file-viewer.ts`       | Showing a file of the package                                                 |
+| `highlighter.ts`       | The highlighter                                                               |
 | `index.ts`             | The public API                                                                |
 | `internal.ts`          | Helpers that other folders and tests share, which the package does not export |
 | `line-reader.ts`       | The line reader                                                               |
@@ -333,6 +373,7 @@ Each file of `src/player/tools/` holds one concept.
 | `scale.ts`             | The scales of the rule and the protractor                                     |
 | `slot.ts`              | A tool that the host provides                                                 |
 | `styles.ts`            | The stylesheets of the toolbar and the stage                                  |
+| `word-layout.ts`       | The words of a text, where they are on the page, and their lines              |
 
 ## References
 

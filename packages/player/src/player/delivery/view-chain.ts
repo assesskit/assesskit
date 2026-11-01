@@ -13,7 +13,7 @@ export interface ViewChainContext extends Pick<ItemSettings, "client" | "report"
   /** The supports and the lexicons. */
   readonly attachments: ContentAttachments;
   /** The tools, which follow the content once it is shown; a player without them leaves them out. */
-  readonly tools: { update(view: CandidateView): void } | undefined;
+  readonly tools: { update(view: CandidateView, redrawn: boolean): void } | undefined;
 }
 
 /**
@@ -35,7 +35,7 @@ export function createViewChain(context: ViewChainContext): (view: CandidateView
     if (drawn !== undefined) {
       supports.applyToContent(next, drawn);
       lexicons.follow(client.documents.lexicons);
-      tools?.update(next);
+      tools?.update(next, drawn);
     }
     await body.showModal(next);
   };

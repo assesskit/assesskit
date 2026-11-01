@@ -845,6 +845,454 @@ describe("answer masking", () => {
   });
 });
 
+/** Returns the box in the page of a word of the text below an element, found with a range. */
+function wordBox(scope: Element, word: string): DOMRect {
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node instanceof Text; node = walker.nextNode()) {
+    const at = node.data.indexOf(word);
+    if (at < 0) continue;
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + word.length);
+    return range.getBoundingClientRect();
+  }
+  throw new Error(`The stage has no word ${word}.`);
+}
+
+/** The position of the middle of a word in the box of the stage, for a pointer. */
+function middleOf(scene: Scene, word: string): { x: number; y: number } {
+  const box = wordBox(scene.stage, word);
+  const stage = scene.stage.getBoundingClientRect();
+  return { x: box.left + box.width / 2 - stage.left, y: box.top + box.height / 2 - stage.top };
+}
+
+const pressWord = (scene: Scene, word: string): Promise<void> =>
+  userEvent.click(scene.stage, { position: middleOf(scene, word) });
+
+const dragWords = (scene: Scene, from: string, to: string): Promise<void> =>
+  userEvent.dragAndDrop(scene.stage, scene.stage, {
+    sourcePosition: middleOf(scene, from),
+    targetPosition: middleOf(scene, to),
+  });
+
+describe("the highlighter", () => {
+  const highlighter = (extra: Partial<ToolsInput> = {}, overrides: ToolSupportFields = {}): ToolsInput => ({
+    ...profile(support("ext:highlighter", { state: "option", active: true, ...overrides })),
+    ...extra,
+  });
+  const Text = '<p class="passage" style="margin: 0; line-height: 24px;">Bright light falls on green leaves</p>';
+  /** Three lines of words of equal width, so that a column is the same on every line. */
+  const Grid =
+    '<p class="passage" style="margin: 0; font: 16px/24px monospace; white-space: pre-line;">aaa bbb\nccc ddd\neee fff</p>';
+  const bands = (scene: Scene, pending = false): DOMRect[] =>
+    [...scene.stage.querySelectorAll(pending ? ".ak-mark-pending" : ".ak-mark:not(.ak-mark-pending)")].map((each) =>
+      each.getBoundingClientRect(),
+    );
+  const listed = (scene: Scene): string[] =>
+    [...found(panelOf(scene, "Highlighter"), "panel").querySelectorAll(".ak-mark-item span")].map(
+      (each) => each.textContent ?? "",
+    );
+  const caretOf = (scene: Scene): HTMLElement => found(scene.stage.querySelector<HTMLElement>(".ak-caret"), "caret");
+  const said = (scene: Scene): string =>
+    found(scene.stage.querySelector(".ak-highlights [role=status]"), "status").textContent ?? "";
+  const near = (actual: DOMRect | undefined, expected: DOMRect): void => {
+    expect(Math.abs((actual?.left ?? -99) - expected.left)).toBeLessThan(2);
+    expect(Math.abs((actual?.top ?? -99) - expected.top)).toBeLessThan(2);
+    expect(Math.abs((actual?.width ?? -99) - expected.width)).toBeLessThan(2);
+  };
+
+  it("has a button in the toolbar and a panel with the marks, and puts the focus on the caret when it opens", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter({}, { active: false }));
+    await userEvent.click(toolbarButton(scene, "Highlighter"));
+    expect(scene.requests).toEqual([["ext:highlighter", true]]);
+    scene.show(highlighter());
+    const panel = found(panelOf(scene, "Highlighter"), "panel");
+    expect(panel.textContent).toContain("No words are marked.");
+    expect(focused()).toBe(caretOf(scene));
+    expect(caretOf(scene).getAttribute("aria-label")).toBe("Highlighter");
+  });
+
+  it("marks a word with a press and takes the mark away with a second press", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter());
+    await pressWord(scene, "green");
+    expect(listed(scene)).toEqual(["green"]);
+    expect(bands(scene)).toHaveLength(1);
+    near(bands(scene)[0], wordBox(scene.stage, "green"));
+    expect(said(scene)).toBe("green marked");
+    await pressWord(scene, "green");
+    expect(listed(scene)).toEqual([]);
+    expect(bands(scene)).toHaveLength(0);
+    expect(found(panelOf(scene, "Highlighter"), "panel").textContent).toContain("No words are marked.");
+    expect(said(scene)).toBe("green mark removed");
+  });
+
+  it("marks the words from where a drag begins to where it ends, as one band for a line", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter());
+    await dragWords(scene, "light", "green");
+    expect(listed(scene)).toEqual(["light falls on green"]);
+    expect(bands(scene)).toHaveLength(1);
+    const [light, green] = [wordBox(scene.stage, "light"), wordBox(scene.stage, "green")];
+    near(bands(scene)[0], new DOMRect(light.left, light.top, green.right - light.left, light.height));
+  });
+
+  it("leaves a press on a control to the control, and the text of controls out of the words", async () => {
+    const scene = createScene();
+    setContent(
+      scene,
+      '<p style="margin: 0; line-height: 24px;">Open <a href="#x">the link</a> then <label>pick <input type="text" value="typed"></label> ok <button type="button">press me</button></p><textarea>typed words</textarea>',
+    );
+    scene.show(highlighter());
+    await userEvent.click(found(scene.stage.querySelector("a"), "link"));
+    await userEvent.click(found(scene.stage.querySelector("label"), "label"));
+    expect(listed(scene)).toEqual([]);
+    caretOf(scene).focus();
+    const seen: string[] = [];
+    for (let step = 0; step < 8; step++) {
+      await userEvent.keyboard("{ArrowRight}");
+      seen.push(said(scene));
+    }
+    expect([...new Set(seen)]).toEqual(["the", "link", "then", "pick", "ok"]);
+  });
+
+  it("moves the caret by word and by line with the arrow keys, and marks with Enter", async () => {
+    const scene = createScene();
+    setContent(scene, Grid);
+    scene.show(highlighter());
+    const caret = caretOf(scene);
+    caret.focus();
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "aaa"));
+    await userEvent.keyboard("{ArrowRight}");
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "bbb"));
+    expect(said(scene)).toBe("bbb");
+    await userEvent.keyboard("{ArrowDown}");
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "ddd"));
+    await userEvent.keyboard("{ArrowLeft}");
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "ccc"));
+    await userEvent.keyboard("{ArrowUp}");
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "aaa"));
+    await userEvent.keyboard("{ArrowUp}{ArrowLeft}");
+    near(caret.getBoundingClientRect(), wordBox(scene.stage, "aaa"));
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(listed(scene)).toEqual(["ccc"]);
+    expect(said(scene)).toBe("ccc marked");
+    await userEvent.keyboard("{Enter}");
+    expect(listed(scene)).toEqual([]);
+  });
+
+  it("extends from where the caret was with Shift, shows the extension, and marks it with Enter or lets go of it with Escape", async () => {
+    const scene = createScene();
+    setContent(scene, Grid);
+    scene.show(highlighter());
+    caretOf(scene).focus();
+    await userEvent.keyboard("{ArrowDown}{ArrowRight}{Shift>}{ArrowDown}{/Shift}");
+    expect(bands(scene, true)).toHaveLength(2);
+    expect(listed(scene)).toEqual([]);
+    await userEvent.keyboard("{Escape}");
+    expect(bands(scene, true)).toHaveLength(0);
+    await userEvent.keyboard("{Shift>}{ArrowLeft}{/Shift}{Enter}");
+    expect(listed(scene)).toEqual(["eee fff"]);
+    await userEvent.keyboard("{Shift>}{ArrowLeft}{/Shift}{Enter}");
+    expect(listed(scene)).toEqual(["ddd eee fff"]);
+    expect(bands(scene)).toHaveLength(2);
+    // When every word of the extension is marked already, Enter takes the marks away.
+    await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}{Enter}");
+    expect(listed(scene)).toEqual(["fff"]);
+  });
+
+  it("removes one mark or all of them from the panel, and names a button after the mark it removes", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter());
+    await pressWord(scene, "Bright");
+    await pressWord(scene, "falls");
+    await pressWord(scene, "leaves");
+    const panel = found(panelOf(scene, "Highlighter"), "panel");
+    expect(listed(scene)).toEqual(["Bright", "falls", "leaves"]);
+    await userEvent.click(controlOf(panel, "Remove mark falls"));
+    expect(listed(scene)).toEqual(["Bright", "leaves"]);
+    expect(bands(scene)).toHaveLength(2);
+    expect(focused()).toBe(controlOf(panel, "Remove mark leaves"));
+    await userEvent.click(buttonOf(panel, "Clear all marks"));
+    expect(listed(scene)).toEqual([]);
+    expect(bands(scene)).toHaveLength(0);
+  });
+
+  it("keeps the marks of the item and of a stimulus with them: a stimulus that the next item shares keeps its marks", async () => {
+    const scene = createScene();
+    const parts = (stimulus: string, body: string): string =>
+      `<div class="ak-main"><div class="ak-stimuli"><section class="ak-stimulus"><p style="margin: 0;">${stimulus}</p></section></div><div class="ak-body"><p style="margin: 0;">${body}</p></div></div>`;
+    const content = (item: string) => ({ item, stimuli: ["passage"] });
+    setContent(scene, parts("Roots drink water", "First question here"));
+    scene.show(highlighter({ content: content("q1") }));
+    await pressWord(scene, "water");
+    await pressWord(scene, "question");
+    expect(listed(scene)).toEqual(["water", "question"]);
+    setContent(scene, parts("Roots drink water", "Second question here"));
+    scene.show(highlighter({ content: content("q2") }));
+    expect(listed(scene)).toEqual(["water"]);
+    expect(bands(scene)).toHaveLength(1);
+    near(bands(scene)[0], wordBox(scene.stage, "water"));
+    await pressWord(scene, "here");
+    setContent(scene, parts("Roots drink water", "First question here"));
+    scene.show(highlighter({ content: content("q1") }));
+    expect(listed(scene)).toEqual(["water", "question"]);
+    expect(bands(scene)).toHaveLength(2);
+  });
+
+  it("takes a mark away when the content under it has fewer words", async () => {
+    const scene = createScene();
+    const body = (text: string): string => `<div class="ak-body"><p style="margin: 0;">${text}</p></div>`;
+    setContent(scene, body("one two three four five"));
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    await pressWord(scene, "five");
+    await pressWord(scene, "one");
+    expect(listed(scene)).toEqual(["one", "five"]);
+    setContent(scene, body("one two three"));
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    expect(listed(scene)).toEqual(["one"]);
+    expect(bands(scene)).toHaveLength(1);
+  });
+
+  it("draws no mark over content that was drawn again, until the mount hears which content it is", async () => {
+    const scene = createScene();
+    const body = (text: string): string => `<div class="ak-body"><p style="margin: 0;">${text}</p></div>`;
+    // The stage takes the height of its content, as the stage of a root does.
+    scene.stage.style.minHeight = "0";
+    setContent(scene, body("one two"));
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    await pressWord(scene, "two");
+    expect(bands(scene)).toHaveLength(1);
+    setContent(scene, body("one<br><br><br>two"));
+    await frame();
+    expect(bands(scene)).toHaveLength(0);
+    scene.show(highlighter({ content: { item: "q2", stimuli: [] } }));
+    expect(bands(scene)).toHaveLength(0);
+    setContent(scene, body("one two"));
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    expect(bands(scene)).toHaveLength(1);
+  });
+
+  it("forgets the marks at the next update when the content has no names", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter());
+    await pressWord(scene, "green");
+    expect(listed(scene)).toEqual(["green"]);
+    scene.show(highlighter());
+    expect(listed(scene)).toEqual([]);
+  });
+
+  it("keeps the marks when the tool is turned off and on again", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    await pressWord(scene, "green");
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }, { active: false }));
+    expect(scene.stage.querySelector(".ak-mark")).toBeNull();
+    expect(scene.stage.querySelector(".ak-highlights")).toBeNull();
+    scene.show(highlighter({ content: { item: "q1", stimuli: [] } }));
+    expect(listed(scene)).toEqual(["green"]);
+    expect(bands(scene)).toHaveLength(1);
+  });
+
+  it("draws the marks again where the words are after the stage changes size", async () => {
+    const scene = createScene();
+    setContent(scene, Text);
+    scene.show(highlighter());
+    await pressWord(scene, "leaves");
+    near(bands(scene)[0], wordBox(scene.stage, "leaves"));
+    scene.stage.style.width = "150px";
+    await frame();
+    near(bands(scene)[0], wordBox(scene.stage, "leaves"));
+    scene.stage.style.width = "360px";
+    await frame();
+    near(bands(scene)[0], wordBox(scene.stage, "leaves"));
+  });
+
+  it("marks a run that spans lines with a band for each line", async () => {
+    const scene = createScene();
+    setContent(scene, '<p style="margin: 0; width: 70px; line-height: 24px;">one two three four five</p>');
+    scene.show(highlighter());
+    await dragWords(scene, "two", "five");
+    expect(listed(scene)).toEqual(["two three four five"]);
+    expect(bands(scene).length).toBeGreaterThan(1);
+  });
+
+  it("takes each CJK character as a word, and a run of the other characters as one", async () => {
+    const scene = createScene();
+    setContent(scene, '<p style="margin: 0; line-height: 24px;">日本語 and 文字</p>');
+    scene.show(highlighter());
+    caretOf(scene).focus();
+    const seen: string[] = [];
+    for (let step = 0; step < 6; step++) {
+      await userEvent.keyboard("{ArrowRight}");
+      seen.push(said(scene));
+    }
+    expect(seen).toEqual(["本", "語", "and", "文", "字", "字"]);
+  });
+
+  it("works for a screen reader: the caret has a role and a description, the words are announced, and axe finds nothing", async () => {
+    const scene = createScene({ playerCss: true });
+    setContent(scene, Text);
+    scene.show(highlighter());
+    const caret = caretOf(scene);
+    expect(caret.getAttribute("role")).toBe("application");
+    const hint = scene.stage.querySelector(`#${caret.getAttribute("aria-describedby")}`);
+    expect(hint?.textContent).toContain("Shift with an arrow extends");
+    await pressWord(scene, "light");
+    await dragWords(scene, "falls", "green");
+    expect(await violations()).toEqual([]);
+  });
+
+  it("is named in Indonesian", () => {
+    const scene = createScene({ messages: ID_MESSAGES });
+    setContent(scene, Text);
+    scene.show(highlighter());
+    expect(panelOf(scene, "Penanda teks")).not.toBeNull();
+  });
+});
+
+describe("the answer eliminator", () => {
+  const eliminator = (extra: Partial<ToolsInput> = {}, overrides: ToolSupportFields = {}): ToolsInput => ({
+    ...profile(support("ext:eliminator", { state: "option", active: true, ...overrides })),
+    ...extra,
+  });
+  const Choices = `<qti-choice-interaction response-identifier="RESPONSE" style="display: block;">
+    <qti-prompt><p style="margin: 0;">Which line is the second?</p></qti-prompt>
+    <qti-simple-choice identifier="A"><input class="ak-control" type="radio" name="answer" id="a"><label class="ak-face" for="a">Alpha</label></qti-simple-choice>
+    <qti-simple-choice identifier="B"><input class="ak-control" type="radio" name="answer" id="b"><label class="ak-face" for="b">Beta</label></qti-simple-choice>
+  </qti-choice-interaction>`;
+  const choices = (scene: Scene): HTMLElement[] => [...scene.stage.querySelectorAll<HTMLElement>("qti-simple-choice")];
+  const crossOut = (scene: Scene, name: string, action = "Cross out"): HTMLButtonElement =>
+    found(scene.stage.querySelector<HTMLButtonElement>(`button[aria-label="${action} ${name}"]`), `button for ${name}`);
+  const struck = (scene: Scene): (string | null)[] =>
+    choices(scene).flatMap((choice) =>
+      choice.hasAttribute("data-ak-struck") ? [choice.getAttribute("identifier")] : [],
+    );
+
+  it("puts a toggle button beside each choice, named with the choice", () => {
+    const scene = createScene({ playerCss: true });
+    setContent(scene, Choices);
+    scene.show(eliminator());
+    expect(choices(scene).map((choice) => choice.querySelector("button")?.getAttribute("aria-label"))).toEqual([
+      "Cross out Alpha",
+      "Cross out Beta",
+    ]);
+    const button = crossOut(scene, "Alpha");
+    expect(button.textContent).toBe("Cross out");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(button.parentElement).toBe(choices(scene)[0]);
+    expect(toolbarButton(scene, "Answer eliminator").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("crosses a choice out with a press and takes the cross-out away with a second press, and leaves it selectable", async () => {
+    const scene = createScene({ playerCss: true });
+    setContent(scene, Choices);
+    scene.show(eliminator());
+    const events: string[] = [];
+    for (const type of ["change", "input"]) scene.stage.addEventListener(type, () => events.push(type));
+    const alpha = found(scene.stage.querySelector<HTMLInputElement>("#a"), "input a");
+    await userEvent.click(alpha);
+    expect(alpha.checked).toBe(true);
+    events.length = 0;
+    await userEvent.click(crossOut(scene, "Alpha"));
+    expect(struck(scene)).toEqual(["A"]);
+    expect(getComputedStyle(found(choices(scene)[0]?.querySelector(".ak-face"), "face")).textDecorationLine).toBe(
+      "line-through",
+    );
+    expect(crossOut(scene, "Alpha").getAttribute("aria-pressed")).toBe("true");
+    expect(alpha.checked).toBe(true);
+    expect(events).toEqual([]);
+    await userEvent.click(found(scene.stage.querySelector("#b"), "input b"));
+    expect(alpha.checked).toBe(false);
+    await userEvent.click(crossOut(scene, "Alpha"));
+    expect(struck(scene)).toEqual([]);
+    expect(crossOut(scene, "Alpha").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("is operated by keyboard", async () => {
+    const scene = createScene();
+    setContent(scene, Choices);
+    scene.show(eliminator());
+    const button = crossOut(scene, "Beta");
+    button.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(choices(scene)[1]?.hasAttribute("data-ak-struck")).toBe(true);
+    expect(focused()).toBe(button);
+    await userEvent.keyboard(" ");
+    expect(choices(scene)[1]?.hasAttribute("data-ak-struck")).toBe(false);
+  });
+
+  it("gives a choice that is drawn later a button, and crosses out again what the item had crossed out", async () => {
+    const scene = createScene();
+    const input = (item: string) => eliminator({ content: { item, stimuli: [] } });
+    setContent(scene, Choices);
+    scene.show(input("q1"));
+    await userEvent.click(crossOut(scene, "Beta"));
+    setContent(scene, Choices);
+    await frame();
+    expect(crossOut(scene, "Beta").getAttribute("aria-pressed")).toBe("false");
+    expect(choices(scene).some((choice) => choice.hasAttribute("data-ak-struck"))).toBe(false);
+    scene.show(input("q1"));
+    expect(choices(scene).map((choice) => choice.hasAttribute("data-ak-struck"))).toEqual([false, true]);
+    setContent(scene, Choices);
+    scene.show(input("q2"));
+    expect(choices(scene).some((choice) => choice.hasAttribute("data-ak-struck"))).toBe(false);
+    setContent(scene, Choices);
+    scene.show(input("q1"));
+    expect(crossOut(scene, "Beta").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("takes the buttons and the cross-outs away when the tool is turned off, and brings them back when it is turned on", async () => {
+    const scene = createScene();
+    const input = (overrides: ToolSupportFields = {}) =>
+      eliminator({ content: { item: "q1", stimuli: [] } }, overrides);
+    setContent(scene, Choices);
+    scene.show(input());
+    await userEvent.click(crossOut(scene, "Alpha"));
+    scene.show(input({ active: false }));
+    expect(scene.stage.querySelector("button")).toBeNull();
+    expect(scene.stage.querySelector("[data-ak-struck]")).toBeNull();
+    scene.show(input());
+    expect(choices(scene).map((choice) => choice.hasAttribute("data-ak-struck"))).toEqual([true, false]);
+  });
+
+  it("names a choice that has no text after its control", () => {
+    const scene = createScene();
+    setContent(
+      scene,
+      Choices.replace(">Alpha<", "><img alt='' src=''><").replace(
+        'class="ak-control" type="radio" name="answer" id="a"',
+        'class="ak-control" type="radio" name="answer" id="a" aria-label="Choice 1"',
+      ),
+    );
+    scene.show(eliminator());
+    expect(choices(scene)[0]?.querySelector("button")?.getAttribute("aria-label")).toBe("Cross out Choice 1");
+  });
+
+  it("passes axe with the buttons and a crossed-out choice", async () => {
+    const scene = createScene({ playerCss: true });
+    setContent(scene, Choices);
+    scene.show(eliminator());
+    await userEvent.click(crossOut(scene, "Alpha"));
+    expect(await violations()).toEqual([]);
+  });
+
+  it("is named in Indonesian", () => {
+    const scene = createScene({ messages: ID_MESSAGES });
+    setContent(scene, Choices);
+    scene.show(eliminator());
+    expect(toolbarButton(scene, "Pencoret pilihan jawaban")).toBeTruthy();
+    expect(crossOut(scene, "Alpha", "Coret")).toBeTruthy();
+  });
+});
+
 describe("the calculators", () => {
   const calculators = (...types: ("basic" | "standard")[]): ToolsInput =>
     items({ calculators: types.map((type) => calculatorXml(type, `The ${type} calculator of the item.`)) });

@@ -2,11 +2,13 @@ import { ASI_NAMESPACE, readAsi } from "@assesskit/runtime/asi";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { commands } from "vitest/browser";
 import { createLocalSession, type LocalStore } from "../src/client/index.js";
-import { mountDelivery, mountItem } from "../src/player/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import { mountDelivery, mountItem, mountTools } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, fakeClock } from "./exam-fixture.js";
 import { NO_RECORDING } from "./files-fixture.js";
-import { CPU_SLOWDOWN, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
+import { CPU_SLOWDOWN, HIGHLIGHT_WORDS, LESSON_ITEMS, MOUNT_BUDGETS, SAMPLES } from "./mount-budgets.js";
+import { supportView } from "./supports-fixture.js";
 
 const player = new CSSStyleSheet();
 player.replaceSync(PLAYER_CSS);
@@ -135,6 +137,34 @@ async function timeLesson(): Promise<number> {
   return took;
 }
 
+/** Times turning on the highlighter over a passage of {@link HIGHLIGHT_WORDS} words, until its words are found, measured and drawn. */
+function timeHighlighter(): Promise<number> {
+  const stage = document.createElement("div");
+  stage.style.cssText = "position: relative; width: 600px; font: 16px/24px sans-serif;";
+  const lengths = ["a", "word", "longer", "passage", "typeset", "of", "text", "between", "lines", "and"];
+  for (let paragraph = 0; paragraph < HIGHLIGHT_WORDS / 20; paragraph += 1) {
+    const words = Array.from({ length: 20 }, (_, index) => lengths[(paragraph + index) % lengths.length]);
+    const element = document.createElement("p");
+    element.textContent = words.join(" ");
+    stage.append(element);
+  }
+  const host = newHost();
+  document.body.append(stage);
+  hosts.push(stage);
+  const tools = mountTools(host, {
+    messages: EN_MESSAGES,
+    language: "en",
+    stage,
+    assets: (path) => path,
+    onSupport: ignore,
+  });
+  const began = performance.now();
+  tools.update({ companion: null, supports: [supportView("ext:highlighter", { state: "active", active: true })] });
+  const took = performance.now() - began;
+  tools.destroy();
+  return Promise.resolve(took);
+}
+
 /** Returns the fastest of the samples of a timing. */
 async function fastest(time: () => Promise<number>): Promise<number> {
   const times: number[] = [];
@@ -157,5 +187,12 @@ describe(`the mount time with the CPU slowed ${CPU_SLOWDOWN} times`, () => {
     const took = await fastest(timeLesson);
     await annotate(`lesson page: fastest ${took.toFixed(2)} ms, budget ${MOUNT_BUDGETS.lesson} ms`);
     expect(took, "the fastest sample of the lesson page, in milliseconds").toBeLessThan(MOUNT_BUDGETS.lesson);
+  });
+
+  it("turns the highlighter on over a passage of 2,000 words within its budget", async ({ annotate }) => {
+    await commands.throttleCpu(CPU_SLOWDOWN);
+    const took = await fastest(timeHighlighter);
+    await annotate(`highlighter: fastest ${took.toFixed(2)} ms, budget ${MOUNT_BUDGETS.highlighter} ms`);
+    expect(took, "the fastest sample of the highlighter, in milliseconds").toBeLessThan(MOUNT_BUDGETS.highlighter);
   });
 });
