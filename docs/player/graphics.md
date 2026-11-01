@@ -116,6 +116,26 @@ draw on. The element then shows the hint `drawLoadFailed` as a status that the c
 area `aria-invalid`, and rejects nothing; Clear brings back the picture of the question, and the hint goes with a picture that
 loads.
 
+## Errors
+
+The graphic interactions follow the errors of [interactions](interactions.md#errors). What belongs to an image:
+
+| Error                       | When                                                                                                                                                                                           | What to do                                                                                                             |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `DataError`                 | A shape has the wrong number of coordinates for its kind (`circle` needs 3, `rect` and `ellipse` 4, `poly` an even number of 6 or more), or a coordinate is not a length such as `12` or `50%` | Correct the `coords` of the area in the item                                                                           |
+| `DataError`                 | `files.upload` or `files.url` is missing for a drawing, or gives something that is not a file value                                                                                            | Pass `files` with both methods ([interactions](interactions.md#upload-and-recording))                                  |
+| An image that does not load | The file is outside `origins`, or missing                                                                                                                                                      | Serve the file from an origin the page allows; the URL policy of [content](content.md#references) applies to the image |
+| A message under the control | The response breaks a rule of the runtime                                                                                                                                                      | The candidate follows the hint                                                                                         |
+| A drawing that is not saved | `files.upload` rejected                                                                                                                                                                        | The host's store failed; no response is given                                                                          |
+
+## Not included
+
+| Not included                                           | Why                                                                                                                                |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Freehand drawing without a path for the keyboard       | The pen and the eraser follow a path; the shapes and the fill give the keyboard a way to draw (WCAG 2.1.1 exempts the path itself) |
+| Editing of an image                                    | The drawing keeps what the candidate drew over the picture; it is no editor                                                        |
+| A coordinate unit that the specification does not give | Points are in the pixels of the size the author declared, the one reading the sources allow (see below)                            |
+
 ## Where the sources differ
 
 | Case                                                                                                      | Reading                                                                                                                                     |

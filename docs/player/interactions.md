@@ -312,6 +312,33 @@ path (WCAG 2.5.1, 2.5.7).
 | Select point, position object, drawing | A crosshair moves over the image with the arrow keys and Enter places the point, the object or the shape.                                                                     |
 | Media, end attempt, upload             | The buttons, Enter or Space.                                                                                                                                                  |
 
+## Errors
+
+An interaction never throws at the candidate: it says in words what is wrong and why ([Hints and limits](#hints-and-limits)). What a host can meet:
+
+| Error                                     | When                                                                                                                              | What to do                                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `DataError`                               | A descriptor is not that of the kind and the response variable of the element, or is malformed                                    | Give each element the descriptor that the runtime's `interactions` made for it                    |
+| `DataError`                               | `files.upload` gives something that is not a file value, or `staticUrl` is not an absolute `http` or `https` URL that ends in `/` | Return the `FileValue` of the store; fix `staticUrl`                                              |
+| `DataError`                               | A renderer is given a node of another kind, or the option `interactions` is not a `Map` from kind to function                     | Register each renderer under the kind it draws                                                    |
+| A message under the control               | The response breaks a rule: a limit, a pattern, a type, a missing answer                                                          | The candidate follows the hint; the texts are in the table above                                  |
+| "This file type is not accepted"          | The file's type is not in `accept`                                                                                                | Offer the types the item lists, or change the item                                                |
+| A message that the file could not be sent | `files.upload` rejected                                                                                                           | The host's store failed: check it; no response is given, so nothing wrong is saved                |
+| A recording that does not start           | The browser has no microphone, no `MediaRecorder` for an accepted type, or the page's content security policy blocks the worklet  | Allow the origin of `staticUrl` in `script-src`, or accept an audio type that the browser records |
+| A custom interaction that did not start   | The page's policy, a module that did not load, no registration or a factory that threw ([pci](pci.md#events))                     | The `failed` event gives the reason; the guide's table says what each one means                   |
+| The error of `hooks.onError`              | Something failed after the mount, with no call to carry the error                                                                 | Log it; the default is `reportError` of the page                                                  |
+
+## Not included
+
+| Not included                                                                                            | Why                                                                                    |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| The validity and the scoring of a response                                                              | The runtime decides them; the interactions draw the controls and the hints             |
+| The interactions that no renderer draws: `qti-custom-interaction` without a hook, and kinds a host adds | A host passes its own renderer in the same map                                         |
+| Drag and drop                                                                                           | Nothing needs a drag: every task has a keyboard and a pointer path (WCAG 2.5.1, 2.5.7) |
+| An MP3 or other encoder for recordings                                                                  | An encoder would be a dependency; the player records what the browser encodes, or WAV  |
+| Storing uploads                                                                                         | `files.upload` is the host's: the player holds the reference, never the bytes          |
+| A server render                                                                                         | The elements need a DOM; importing the module in Node is safe, defining them is not    |
+
 ## Where the sources differ
 
 | Case                                                                                              | Reading                                                                                                                                                                                                       |

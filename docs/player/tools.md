@@ -283,6 +283,26 @@ The stylesheet uses system colors, so that the tools follow the color scheme and
 - A digital material that is an LTI resource is a file here; the launch belongs to the host ([LTI items](lti-items.md)).
 - The display of a calculator uses a decimal point in every language.
 
+## Errors
+
+| Error                                  | When                                                                                                                | What to do                                                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`                            | The host or the `stage` is not an element in a document, or an option or the input of `update` is of the wrong type | Mount after the elements are in the page; the message names the option                                                     |
+| `DataError`                            | The `stage` is positioned `static`                                                                                  | Give it a `position` such as `relative`: the layer of the rule, the protractor, the line reader and the masks goes over it |
+| `DataError`                            | The companion materials are not a `CompanionMaterialsInfo` of the runtime's `asi`, as a hand-built object may be    | Pass `item.companionMaterials` as `readAsi` gave it                                                                        |
+| `DataError`                            | A function of `slots` returns something other than a function, or throws                                            | `update` shows the other tools first and then throws; the panel of that tool is taken down. Fix the function               |
+| "Not available" in a panel             | The item or the profile asks for a tool of the host and `slots` has no function for it                              | Provide the function of that name ([tools of the host](#tools-of-the-host))                                                |
+| "Not available" for a digital material | Its path has a scheme, so it is not a package path and nothing is loaded                                            | Give the path of a file of the package ([digital materials](#digital-materials))                                           |
+
+## Not included
+
+| Not included                                                                                                                                                 | Why                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scientific and graphing calculators, and the dictionary, thesaurus, homophone checker, notes, visual organizer, outliner, peer interaction and spell checker | The host provides them through `slots`; the player has a slot, a button and a panel for each, and tests none of them                                        |
+| A viewer for every file type of a digital material                                                                                                           | The viewer shows the types in [Digital materials](#digital-materials) and runs nothing of the file; any other type is a link that opens in a tab of its own |
+| Physical materials                                                                                                                                           | They are things to have ready: the player lists their descriptions under a heading                                                                          |
+| Deciding which candidate has which tool                                                                                                                      | The profile decides; the player shows the tools in force                                                                                                    |
+
 ## Files
 
 Each file of `src/player/tools/` holds one concept.

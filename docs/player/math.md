@@ -113,6 +113,27 @@ An expression becomes a `mjx-container` that takes the keyboard focus, with the 
 accessibility tree (`aria-hidden`) and an `mjx-speech` element of `role="img"` that names it. axe-core at WCAG 2.2 A and
 AA reports no violation for it in a shadow root.
 
+## Errors
+
+| Error                           | When                                                                              | What to do                                                                                                                                                                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`                     | `url` is not an absolute `http` or `https` URL                                    | Give the URL of `mml-chtml.js`                                                                                                                                                                                                                 |
+| `DataError`                     | `root` is neither an element nor a shadow root                                    | Pass a content root, or an element of one                                                                                                                                                                                                      |
+| `DataError`                     | The page loaded MathJax from another URL, and this typesetter has a different one | Use one URL for the page; MathJax is a global                                                                                                                                                                                                  |
+| `AssesskitError`                | MathJax cannot be loaded, or the script is not MathJax 4 with the CHTML output    | Check the URL, the `script-src` and `connect-src` of the page's policy and that the file is `mml-chtml.js` of MathJax 4. The expressions stay MathML, which the browser renders. The failure is final for the page, so reload it after the fix |
+| Expressions that stay MathML    | The expression has an element of elementary math, such as `mstack` or `mlongdiv`  | Nothing: MathJax 4 does not implement them, and the browser draws MathML Core                                                                                                                                                                  |
+| Braille labels that are not UEB | The PNP asks for UEB math                                                         | The Speech Rule Engine has no UEB map: the labels are Nemeth braille ([Braille](#braille))                                                                                                                                                     |
+
+## Not included
+
+| Not included                                                              | Why                                                               |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| A copy of MathJax                                                         | The host serves it and gives the URL; the player bundles none     |
+| Typesetting of a page outside the content roots                           | The typesetter takes the root it is given                         |
+| UEB math braille                                                          | MathJax's Speech Rule Engine has no UEB map ([Braille](#braille)) |
+| Elementary math (`mstack`, `mlongdiv` and the elements that go with them) | MathJax 4 does not implement it; the browser renders MathML Core  |
+| Authoring of MathML                                                       | The player shows the MathML of the content                        |
+
 ## Files
 
 Each file of `src/player/math/` holds one concept.

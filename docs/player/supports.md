@@ -275,6 +275,29 @@ variant without a language says that an adapted version is shown. `undefined`, t
 with the keyboard alone and with the pointer alone, so the support changes nothing: buttons are buttons, the popup opens on
 hover and on focus, and Escape has the Close button as its pointer equivalent.
 
+## Errors
+
+A support that is wrong for the candidate is not an error of the player: the runtime refuses the action and the status region says why. What a host can meet:
+
+| Error                                                  | When                                                                                                                                                                                                                    | What to do                                                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DataError`                                            | The host of a part is not an element in the document, or the root of the content root is not a shadow root                                                                                                              | Mount the part after the host is in the page, and pass the content root that `createContentRoot` made |
+| `DataError`                                            | The list of supports is not an array of `SupportView`: a support of the wrong type, with an unknown property, with a name that is not a support, or with settings that are not those of its support or are out of range | Pass `view.supports` as the runtime gave it                                                           |
+| `DataError`                                            | An option, such as `onSupport`, `messages` or `hooks`, is of the wrong type                                                                                                                                             | Fix the option; the message names it                                                                  |
+| A refusal `support-not-available` in the status region | The panel asked for a support that is prohibited, on from the start or assigned                                                                                                                                         | The runtime decides; the panel has no button for these, so a host's own button should not offer them  |
+| A support with no visible effect                       | It is `prohibited`, or the content has nothing for it: a card the catalog lacks, a track the media lacks                                                                                                                | Nothing: see [the cards](#cards) for what an absent card leaves                                       |
+| No voice for reading aloud                             | The browser has none for the language, or `hooks.voice` fails                                                                                                                                                           | The error goes to `hooks.onError` ([speech](speech.md#errors))                                        |
+
+## Not included
+
+| Not included                                                                                                          | Why                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Deciding which candidate has which support                                                                            | The system that administers the test decides; the runtime reads the profile             |
+| Choosing the variant of an item                                                                                       | The runtime chooses it; the player shows the notice                                     |
+| Dictionary, thesaurus, homophone checker, note taking, visual organizer, outliner, peer interaction and spell checker | Tools of the host: the player has a slot for each ([tools](tools.md#tools-of-the-host)) |
+| A control for a support that is on from the start or assigned                                                         | The runtime would refuse it; the panel lists the support with its state                 |
+| Live captions and media that the content does not provide                                                             | The player shows the media and tracks of the content                                    |
+
 ## Where the sources differ
 
 | Case                                                                       | Reading                                                                               |

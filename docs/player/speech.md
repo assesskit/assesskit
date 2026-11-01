@@ -218,6 +218,29 @@ It removes what an earlier call set and nothing else: an `aria-hidden` of the co
 support changes or the content is replaced. It throws `DataError` for a value that is neither a reading type nor
 `undefined`.
 
+## Errors
+
+| Error                                      | When                                                                                                                                                                                                                     | What to do                                                                                                |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `DataError`                                | An option of a request is not of its type: a reading type or a restriction type that is not a term of the vocabulary, a rate that is not a positive whole number of words per minute, a pitch or a volume outside 0 to 1 | Fix the value; the message names it and says what is valid                                                |
+| `DataError`                                | The range is not a `Range`, a lexicon is not a PLS document (its root, version `1.0`, an alphabet and an `xml:lang`), or the field of the typing echo is not an `input` or a `textarea`                                  | Pass what the call asks for                                                                               |
+| `DataError`                                | `speak` gets something that is not a speech request                                                                                                                                                                      | Pass the request that `buildSpeechRequest` returned                                                       |
+| `AssesskitError`                           | The voice fails: the utterance of `webSpeech()` reports an error that is not a stop, `The voice failed: …`                                                                                                               | Read the reason in the message; check that the browser has a voice for the language, or give a host voice |
+| No sound, no error                         | The reading type is `screen-reader`, or the range holds only what the restrictions leave out                                                                                                                             | `buildSpeechRequest` returns `undefined`; there is nothing to say                                         |
+| Speech without phonemes, prosody or breaks | `webSpeech()` ignores SSML                                                                                                                                                                                               | Use a host voice that takes `request.ssml`                                                                |
+
+A voice that fails while the typing echo speaks does not stop the typing.
+
+## Not included
+
+| Not included                                  | Why                                                                                                                              |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| A speech engine                               | The browser's `webSpeech()` is the default; a host voice takes the SSML and keeps everything                                     |
+| SSML in `webSpeech()`                         | The Web Speech API ignores SSML: phonemes, prosody, breaks and the voice of links are lost; the text keeps the aliases           |
+| A screen reader                               | A candidate with the reading type `screen-reader` reads the DOM with their own; the player only keeps what is suppressed from it |
+| Voice selection by the candidate              | The host's voice decides; the request carries `lang`, `rate`, `pitch` and `volume`                                               |
+| Pronunciation beyond the lexicons of the item | The lexicons that the item names are applied; the host adds none of its own                                                      |
+
 ## Files
 
 Each file of `src/player/speech/` holds one concept.

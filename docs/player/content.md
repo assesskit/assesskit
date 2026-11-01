@@ -307,6 +307,30 @@ The promise resolves when the candidate closes it.
 
 Test feedback is a field of `show`: the entries from the runtime's `visibleTestFeedback` are drawn after the item in a region.
 
+## Errors
+
+`createContentRoot` and `createBodyRenderer` throw the runtime's `DataError` for a call that is wrong. Content that is hostile or broken is not an error: the renderer leaves out what it refuses and the page stays whole.
+
+| Error                                                            | When                                                                                                                                                                                                               | What to do                                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `DataError`                                                      | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier root left with content                                                                                     | Pass an element with no shadow root, or destroy the earlier root first                                    |
+| `DataError`                                                      | `stylesheet` is not a `CSSStyleSheet`, `interactions` is not a `Map` from kind to function, `variables` holds something other than `Map`s, or `origins` has an entry that is not an absolute `http` or `https` URL | Fix the option; the message names it                                                                      |
+| `DataError`                                                      | A node is not an object whose `kind` names an element, or a text node's value is not a string                                                                                                                      | Pass the nodes that `readAsi` of the runtime returns                                                      |
+| A notice in the root                                             | An item stylesheet failed to load, or a hazard of the profile remains and the media is withheld                                                                                                                    | Check the stylesheet's URL and that its origin is in `origins`; the notice says what was withheld         |
+| An element left out, an attribute dropped, a link without `href` | The attribute is not on the allowlist, the URL is outside `origins`, or a stylesheet rule is on the removal list                                                                                                   | Serve the file from an origin in `origins`; see [Attributes](#attributes) and [Stylesheets](#stylesheets) |
+| The error of `onError`                                           | A stylesheet's fetch failed, with no call to carry the error                                                                                                                                                       | Log it; the default is `reportError` of the page                                                          |
+
+## Not included
+
+| Not included                                                    | Why                                                                                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `innerHTML`, inline `style` and scripts of the content          | A hostile package must run no script and cover no part of the page; a class of the shared vocabulary does what an author needs |
+| A decision of QTI: which feedback shows, which choice is hidden | The runtime resolves them; the renderer draws what it is given                                                                 |
+| Fetching files by itself                                        | Every file goes through `assets`, `fetch` or `fileUrl`, which the host passes                                                  |
+| A viewer for the files of a package                             | A link opens the file in a tab of its own; the tools show the companion materials                                              |
+| Typesetting of MathML                                           | [MathJax](math.md) does it, when the page has it                                                                               |
+| Authoring and editing of content                                | The player shows content; it has no editor                                                                                     |
+
 ## Where the sources differ
 
 | Case                                                              | Reading                                                                                                                    |

@@ -281,10 +281,31 @@ read whose signal aborted before its turn rejects with `signal.reason` and is dr
 | A listener throws                                             | The error goes to `reportError`, and the other listeners still run.                                                                                                                                |
 | After `close()`                                               | `dispatch`, `apply` and `subscribeSteps` throw `DataError`. The reads still answer, because the state is in memory and in the store.                                                               |
 
-| Error                  | When                                                                                                                    |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `DataError`            | `apply` gets what is not an action of the host, or a malformed one; `scorerView` names a request that does not exist    |
-| `DataError`            | An option, a listener or a `signal` is of the wrong type, or the clock answers with anything but a non-negative integer |
-| `DataError`            | The client is closed, for `dispatch`, `apply` and `subscribeSteps`                                                      |
-| The error of the store | A `load` or a `save` rejected                                                                                           |
-| `signal.reason`        | The signal of the call aborted before the call ran                                                                      |
+## Errors
+
+Both clients throw the runtime's `DataError` for what the caller did wrong and pass on the errors of what they call.
+
+| Error                                         | When                                                                                                                                 | What to do                                                                                                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`                                   | An option, an argument, a listener or a `signal` is of the wrong type, or the clock answers with anything but a non-negative integer | Fix the call; the message names the option                                                                                                                    |
+| `DataError`                                   | The client is closed, for `dispatch`, `refresh`, `apply` and `subscribeSteps`                                                        | Create a new client; the host's `view` gives the state to start from                                                                                          |
+| `DataError`                                   | `apply` gets what is not an action of the host, or a malformed one; `scorerView` names a request that does not exist                 | Send a candidate action with `dispatch`; read `pending()` for the requests                                                                                    |
+| `DataError`                                   | The host answered with a sequence number other than the request's, or with something that is not a view envelope (remote)            | Make the transport return the answer of each request, with no cache or proxy that replays another; check that the endpoint is the session host                |
+| `DataError`                                   | The host rejected the request: a malformed action, or one outside its policy (remote)                                                | The request is dropped and the next one goes on; do not send it again                                                                                         |
+| `DataError`                                   | `The session cannot start: …`, the engine refused the start (local)                                                                  | Read the refusal in the message; check the definition and the profile                                                                                         |
+| `AccessError`                                 | The host's authentication names another principal than the one the session is bound to, or the session exists already (remote)       | Authenticate as the candidate of the session; a session is started once                                                                                       |
+| `ServiceError`, or the error of the transport | The host cannot be reached or cannot save (remote)                                                                                   | Call again: a request that got no answer is sent once more, unchanged, before the next one, and the host answers a repeated request with the answer it stored |
+| The error of the store                        | A `load` or a `save` rejected (local)                                                                                                | The state stays as it was; fix the store and call again                                                                                                       |
+| `signal.reason`                               | The signal of the call aborted before the call ran, or while it waited                                                               | Nothing was sent when it aborted first; a request in flight is in doubt, except a view request                                                                |
+
+A listener that throws, and a send of an autosave or a deadline that failed, go to `onError` (default `reportError` of the page), because no call waits for them.
+
+## Not included
+
+| Not included                                       | Why                                                                                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| The network call of the remote session             | `Transport` is a function of the host: it chooses the URL, the authentication and the retry policy                                         |
+| A queue of requests that survives a reload         | One request that got no answer is kept in memory; after a reload the host's `view` gives the state, whether or not the request was applied |
+| Exam mode on a device                              | The engine and the answer keys are on the device in a local session, so it is for practice; an exam runs on the server                     |
+| Two live sessions on one store key                 | `LocalStore.save` has no version, so they overwrite each other; the host keeps one live session per key                                    |
+| Rating, scoring and CAT in the browser for an exam | The session host does them on the server ([server](server.md)); a local session gives `host` for practice                                  |

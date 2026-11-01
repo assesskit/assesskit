@@ -344,3 +344,28 @@ Each file of `src/player/delivery/`, `src/player/lti-frame/` holds one concept.
 | [QTI 3.0 Best Practices and Implementation Guide](https://www.imsglobal.org/spec/qti/v3p0/impl/) | portable custom interactions      |
 | [LTI 1.3](https://www.imsglobal.org/spec/lti/v1p3/)                                              |                                   |
 | [LTI Client Side postMessages 0.1](https://www.imsglobal.org/spec/lti-cs-pm/v0p1)                |                                   |
+
+## Errors
+
+`mountDelivery` and `mountItem` throw the runtime's `DataError` for a call that cannot mount, and report the rest through `hooks.onError`. The answers to actions are the [status messages](#refusals-and-status-messages), not errors.
+
+| Error                        | When                                                                                                                            | What to do                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `DataError`                  | The host is not an element, or has a shadow root that the player did not attach, or one that an earlier mount left with content | Pass an element with no shadow root, or the host of an earlier mount after its `destroy` |
+| `DataError`                  | `staticUrl` does not end in `/`, `stylesheet` is not a `CSSStyleSheet`, or another option or hook is of the wrong type          | Fix the option; the message names it                                                     |
+| `DataError`                  | `headingLevel` is above 6, `landmark` is neither `main` nor `region`, or `resumeCheckMs` is negative                            | Use a value in range                                                                     |
+| `DataError`                  | `mountItem` finds that the current item is a link to an LTI tool                                                                | Use `mountDelivery`, which starts the login ([LTI items](#lti-items))                    |
+| The error of `hooks.onError` | A stylesheet, a module, a file or a voice failed after the mount, with no call to carry the error                               | Log it; the default is `reportError` of the page. None arrives after `destroy`           |
+| A status message             | The engine refused an action, or the host could not be reached                                                                  | Read the message; the player sends held answers again by itself                          |
+
+An error of the session client, such as `ServiceError` for a host that is down, reaches the player through `dispatch`, and the player turns it into the status message "Your answers could not be sent. They will be sent again." ([client errors](client.md#errors)).
+
+## Not included
+
+| Not included                                         | Why                                                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Deciding what the candidate may do                   | The runtime and the host's client-action policy decide; the player draws the actions the view lists       |
+| Authentication, login and the page around the player | The host's page; the player mounts in the element it is given                                             |
+| An LTI launch                                        | The host gives `ltiLogin`; [interopkit](https://github.com/interopkit/interopkit) implements the protocol |
+| A heading, a map or a timer on a page of many items  | `mountItem` draws the content and the interactions only; a lesson page keeps its own layout               |
+| A server-side render                                 | The player needs a DOM; importing it in Node is safe, mounting it is not                                  |
