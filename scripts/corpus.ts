@@ -33,10 +33,15 @@ export type CorpusLock = Readonly<Record<string, CorpusSource>>;
 const LOCK_PATH = "scripts/corpus.lock.json";
 /** Where the sources are downloaded to, relative to the repository root. */
 const CORPUS_PATH = ".cache/corpus";
-/** The file in the directory of a source that holds the SHA-256 of the archive it was extracted from. */
-const STAMP = ".archive-sha256";
+/** The file in the directory of a source that holds the stamp of what was extracted. */
+const STAMP = ".stamp";
 /** Files that editors and operating systems add to repositories. */
 const IGNORED = new Set([".DS_Store"]);
+
+/** Returns what a source extracts to: the archive it comes from and the files it takes, so that a change of either downloads again. */
+export function stampOf({ sha256: archive, include }: CorpusSource): string {
+  return [archive, ...include].join("\n");
+}
 
 /** Returns the SHA-256 of a file as lowercase hexadecimal. */
 export function sha256(path: string): string {
@@ -91,7 +96,7 @@ async function withScratch<T>(parent: string, run: (directory: string) => Promis
 }
 
 /**
- * Downloads a source into `<corpus>/<name>` unless it was extracted from the pinned archive already.
+ * Downloads a source into `<corpus>/<name>` unless the pinned archive was extracted with the same include list already.
  *
  * @throws `Error` when the archive differs from its pinned SHA-256; nothing is written then.
  */
@@ -102,7 +107,7 @@ export async function fetchSource(
 ): Promise<"downloaded" | "current"> {
   const target = join(corpus, name);
   const stamp = join(target, STAMP);
-  if (existsSync(stamp) && readFileSync(stamp, "utf8") === source.sha256) return "current";
+  if (existsSync(stamp) && readFileSync(stamp, "utf8") === stampOf(source)) return "current";
   await withScratch(corpus, async (scratch) => {
     const found = await downloadArchive(source.repository, source.commit, scratch);
     if (found !== source.sha256)
@@ -115,7 +120,7 @@ export async function fetchSource(
       mkdirSync(dirname(destination), { recursive: true });
       await copyFile(join(tree, path), destination);
     }
-    writeFileSync(stamp, source.sha256);
+    writeFileSync(stamp, stampOf(source));
   });
   return "downloaded";
 }

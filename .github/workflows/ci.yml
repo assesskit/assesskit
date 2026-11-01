@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  # Whether the change touches the runtime, its harness or this workflow. The xsd, corpus and bench jobs run only
+  # Whether the change touches the runtime, its examples, its harness or this workflow. The xsd, corpus and bench jobs run only
   # then. A job that is skipped passes a required check. A change that cannot be compared with its base, such as the
   # first push of a branch, counts as touching the runtime.
   changes:
@@ -23,9 +23,9 @@ jobs:
       - id: filter
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          # The runtime, the harness (scripts/, validation/ and the files of the root that configure
+          # The runtime, its examples, the harness (scripts/, validation/ and the files of the root that configure
           # it) and this workflow.
-          RUNTIME_PATHS: ^(packages/runtime/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
+          RUNTIME_PATHS: ^(packages/runtime/|examples/runtime/|scripts/|validation/|\.github/workflows/ci\.yml$|[^/]+\.(json|ts|ya?ml)$)
         run: |
           changed="$RUNNER_TEMP/changed.txt"
           if [ -n "$BASE" ] && git diff --name-only --no-renames "$BASE" HEAD > "$changed" && ! grep -Eq "$RUNTIME_PATHS" "$changed"; then
@@ -125,7 +125,7 @@ jobs:
       - run: pnpm build
       - run: pnpm compat:engines
 
-  # Tests of the runtime that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
+  # Tests of the runtime and of its examples that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes
   # that scripts/corpus.lock.json pins. The tests of the player that read them run in the browsers job.
   corpus:
     needs: changes
@@ -142,7 +142,7 @@ jobs:
       - run: pnpm corpus
       - run: pnpm test:corpus --project '!player*'
 
-  # Tests that validate against the official XSDs, downloaded at the hashes that
+  # Tests of the runtime and of its examples that validate against the official XSDs, downloaded at the hashes that
   # packages/runtime/src/node/schema-files.json pins, and that read the 1EdTech examples.
   xsd:
     needs: changes

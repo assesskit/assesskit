@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type CorpusSource, fetchSource, loadLock, selectFiles, sha256 } from "../corpus.ts";
+import { type CorpusSource, fetchSource, loadLock, selectFiles, sha256, stampOf } from "../corpus.ts";
 
 let directory = "";
 
@@ -43,10 +43,15 @@ describe("fetchSource", () => {
     include: ["items/"],
   };
 
-  it("downloads nothing when the directory of the source holds the stamp of the pinned archive", async () => {
+  it("downloads nothing when the directory of the source holds the stamp of the pinned archive and include list", async () => {
     mkdirSync(join(directory, "stamped"));
-    writeFileSync(join(directory, "stamped", ".archive-sha256"), A);
+    writeFileSync(join(directory, "stamped", ".stamp"), stampOf(source));
     expect(await fetchSource(directory, "stamped", source)).toBe("current");
+  });
+
+  it("stamps a different include list or archive differently, so that a change downloads again", () => {
+    expect(stampOf({ ...source, include: ["items/", "more/"] })).not.toBe(stampOf(source));
+    expect(stampOf({ ...source, sha256: "f".repeat(64) })).not.toBe(stampOf(source));
   });
 });
 

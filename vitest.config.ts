@@ -122,7 +122,27 @@ export default defineConfig({
         test: {
           name: "examples",
           include: ["examples/*/*/test/**/*.test.ts"],
+          exclude: ["**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
+        },
+      },
+      {
+        // The examples of the runtime that read the 1EdTech examples: `pnpm corpus` downloads them.
+        resolve: { alias: RUNTIME_SOURCES },
+        test: {
+          name: "runtime-examples-corpus",
+          include: ["examples/runtime/*/test/**/*.corpus.test.ts"],
+          testTimeout: HANG_LIMIT,
+        },
+      },
+      {
+        // The examples of the runtime that validate against the official XSDs: `pnpm schemas` and `pnpm corpus` download them.
+        resolve: { alias: RUNTIME_SOURCES },
+        test: {
+          name: "runtime-examples-xsd",
+          include: ["examples/runtime/*/test/**/*.xsd.test.ts"],
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
         },
       },
       {

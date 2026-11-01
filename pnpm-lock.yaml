@@ -281,6 +281,15 @@ importers:
         specifier: 4.10.2
         version: 4.10.2
 
+  examples/runtime/migrate-qti2:
+    devDependencies:
+      '@assesskit/runtime':
+        specifier: workspace:^
+        version: link:../../../packages/runtime
+      '@longsightgroup/qti3-migrator':
+        specifier: 0.13.3
+        version: 0.13.3
+
   packages/player:
     dependencies:
       '@assesskit/runtime':
@@ -1031,6 +1040,12 @@ packages:
   '@longsightgroup/qti3-core@0.13.3':
     resolution: {integrity: sha512-rNc4ZBek+fFIK2Cbnxtb80HMlHdHUxF6FvnQztUmeT3jZgi6f88Ow9ctssESjStQXrXIdYDkgTVS5Z11wn0akw==}
 
+  '@longsightgroup/qti3-migrator@0.13.3':
+    resolution: {integrity: sha512-qXMivHhgivoI+40sanJhCNzhhSKslujWeYzMbSHVLNHaa+ZJ0HHF31BEPFvyPryPq/MCRvWFCtn6mOMp12iEPw==}
+
+  '@longsightgroup/qti3-writer@0.13.3':
+    resolution: {integrity: sha512-xfrrGYNgZ0MsbZlGHbbyFDACV6ILXWVjcGnHqOdA4hJHQJ9pw7nmYSv8HET1+NJLLuQQjOjmJZjUtpWocrVIXA==}
+
   '@manypkg/find-root@3.1.0':
     resolution: {integrity: sha512-BcSqCyKhBVZ5YkSzOiheMCV41kqAFptW6xGqYSTjkVTl9XQpr+pqHhwgGCOHQtjDCv7Is6EFyA14Sm5GVbVABA==}
     engines: {node: '>=20.0.0'}
@@ -1509,6 +1524,10 @@ packages:
 
   '@vitest/utils@5.0.5':
     resolution: {integrity: sha512-/rBu7gzLDQI/SC79Tn98b5DwOgaHU/Gt4I9OVeP3YofzNaYtbImRCOJQmT1S6vOJg9gEIlWC+r3QxKkjuSa1nQ==}
+
+  '@xmldom/xmldom@0.9.12':
+    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
+    engines: {node: '>=14.6'}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -3645,6 +3664,18 @@ snapshots:
 
   '@longsightgroup/qti3-core@0.13.3': {}
 
+  '@longsightgroup/qti3-migrator@0.13.3':
+    dependencies:
+      '@longsightgroup/qti3-core': 0.13.3
+      '@longsightgroup/qti3-writer': 0.13.3
+      '@xmldom/xmldom': 0.9.12
+      fflate: 0.8.3
+
+  '@longsightgroup/qti3-writer@0.13.3':
+    dependencies:
+      '@longsightgroup/qti3-core': 0.13.3
+      fflate: 0.8.3
+
   '@manypkg/find-root@3.1.0':
     dependencies:
       '@manypkg/tools': 2.1.2
@@ -3989,6 +4020,8 @@ snapshots:
       '@vitest/pretty-format': 5.0.5
       convert-source-map: 2.0.0
       tinyrainbow: 3.2.0
+
+  '@xmldom/xmldom@0.9.12': {}
 
   acorn-jsx@5.3.2(acorn@8.19.0):
     dependencies:

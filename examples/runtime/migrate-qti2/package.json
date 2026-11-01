@@ -1,0 +1,15 @@
+{
+  "name": "@assesskit/example-migrate-qti2",
+  "private": true,
+  "type": "module",
+  "description": "Migrates the 1EdTech examples of QTI 2.2 to QTI 3 with Longsight qti3-migrator, then validates and runs the result with @assesskit/runtime.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "node migrate.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@assesskit/runtime": "workspace:^",
+    "@longsightgroup/qti3-migrator": "0.13.3"
+  }
+}

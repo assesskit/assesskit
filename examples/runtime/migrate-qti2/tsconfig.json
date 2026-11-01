@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@assesskit/runtime": ["../../../packages/runtime/src/index.ts"],
+      "@assesskit/runtime/checks": ["../../../packages/runtime/src/checks.ts"],
+      "@assesskit/runtime/errors": ["../../../packages/runtime/src/errors.ts"],
+      "@assesskit/runtime/*": ["../../../packages/runtime/src/*/index.ts"]
+    },
+    "types": ["node"]
+  },
+  "include": ["migrate.ts", "src", "test"]
+}

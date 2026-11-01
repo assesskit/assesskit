@@ -3,7 +3,7 @@
     "repository": "1EdTech/qti-examples",
     "commit": "0a92fbbb6d2e620a1f7fad19977be4c418246bc0",
     "sha256": "c54978bdc78d1d21e8b99e203959b5a73f263d1187fcac4fb9b4d32b966746fd",
-    "include": ["qtiv3-examples/"]
+    "include": ["qtiv3-examples/", "qtiv2p2-examples/"]
   },
   "xsdtests": {
     "repository": "w3c/xsdtests",
