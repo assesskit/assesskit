@@ -1118,6 +1118,171 @@ Where the specifications are silent or contradict themselves, the engine follows
 | The binding of CAT results            | The port carries the typed `AssessmentResult`; the codec of [CAT](cat.md#json-binding) writes and reads the field names of the binding's OpenAPI 3.0 listing.                                                    |
 | Datestamps                            | A datestamp is a time in UTC with milliseconds and `Z`; a time outside the years 1 to 9999 is a `DataError` at `start` and `apply`.                                                                              |
 
+## Recipes
+
+```mermaid
+flowchart LR
+  attempt["An attempt ends"] --> asked{"Hint asked?"}
+  asked -->|"yes"| rung["HINTS + 1<br/>FEEDBACK names the rung"]
+  rung --> again["The candidate tries again"]
+  again --> attempt
+  asked -->|"no"| right{"Right?"}
+  right -->|"yes"| done["SCORE = 1 - 0.25 × HINTS<br/>completed: the session closes"]
+  right -->|"no, ladder used up"| over["completed, no score:<br/>the session closes"]
+  right -->|"no"| again
+  done --> solution["Show solution, if the control allows it"]
+  over --> solution
+```
+
+| Recipe                                                          | For                                                                                         | Where                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [A ladder of hints](#a-ladder-of-hints)                         | A practice item that gives a hint for each request, charges for them and ends in a solution | Below, with the player in `hint-ladder.browser.test.ts`                       |
+| [Sessions across content edits](#sessions-across-content-edits) | A host that edits items while stored sessions exist                                         | Below                                                                         |
+| [Sessions across days](#sessions-across-days)                   | A learner who comes back after days                                                         | Below, and [a learner who is away](../player/client.md#a-learner-who-is-away) |
+| [Attempts for a learner model](#events)                         | A host that feeds each attempt to a model of what the learner knows                         | [Events](#events)                                                             |
+
+### A ladder of hints
+
+| Part of the item                                                      | Why                                                                                                                                                                               |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adaptive="true"`                                                     | An adaptive item keeps its outcomes from one attempt to the next, so `HINTS` counts the requests. A non-adaptive item resets its outcomes before each attempt: the count stays 1. |
+| A `qti-end-attempt-interaction` bound to a boolean response (`HINT`)  | The candidate presses it to ask for a hint. It ends the attempt with `HINT` true, so that response processing can tell a hint from an answer.                                     |
+| An integer outcome `HINTS`                                            | Response processing adds 1 for each hint. It is the number of the rung.                                                                                                           |
+| A `qti-feedback-block` for each rung, bound to the outcome `FEEDBACK` | Response processing sets `FEEDBACK` to `hint1`, `hint2`, `hint3`; the block of that rung shows after the attempt.                                                                 |
+| A score that falls with `HINTS`                                       | The price of a hint. The sample takes a quarter for each.                                                                                                                         |
+| `completionStatus` set to `completed`                                 | An adaptive item closes only when response processing completes it: on the right answer, and when the ladder is used up.                                                          |
+
+A session that has closed shows its solution when the item session control sets `show-solution="true"`; before that the engine refuses `solution` as
+`solution-not-allowed`. A non-adaptive item with unlimited attempts (`max-attempts="0"`) never closes, so its solution cannot be reached: use
+the adaptive form. With [`eventOutcomes`](#events) the host reads the rung, the score and the time of each attempt in the events of the steps.
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { createEngine } from "@assesskit/runtime/delivery";
+import { single } from "@assesskit/runtime/values";
+
+const { item } = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="ladder" title="Ladder" adaptive="true" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>B</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-response-declaration identifier="HINT" cardinality="single" base-type="boolean"/>
+  <qti-outcome-declaration identifier="HINTS" cardinality="single" base-type="integer">
+    <qti-default-value><qti-value>0</qti-value></qti-default-value>
+  </qti-outcome-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float">
+    <qti-default-value><qti-value>0</qti-value></qti-default-value>
+  </qti-outcome-declaration>
+  <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
+  <qti-item-body>
+    <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-simple-choice identifier="A">3</qti-simple-choice>
+      <qti-simple-choice identifier="B">7</qti-simple-choice>
+    </qti-choice-interaction>
+    <p><qti-end-attempt-interaction response-identifier="HINT" title="Show a hint"/></p>
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="hint1" show-hide="show">
+      <qti-content-body><p>Compare the digits.</p></qti-content-body>
+    </qti-feedback-block>
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="hint2" show-hide="show">
+      <qti-content-body><p>Seven is more than five.</p></qti-content-body>
+    </qti-feedback-block>
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="hint3" show-hide="show">
+      <qti-content-body><p>The answer is the second choice.</p></qti-content-body>
+    </qti-feedback-block>
+  </qti-item-body>
+  <qti-response-processing>
+    <qti-set-outcome-value identifier="FEEDBACK"><qti-base-value base-type="identifier">none</qti-base-value></qti-set-outcome-value>
+    <qti-response-condition>
+      <qti-response-if>
+        <qti-variable identifier="HINT"/>
+        <qti-set-outcome-value identifier="HINTS">
+          <qti-sum><qti-variable identifier="HINTS"/><qti-base-value base-type="integer">1</qti-base-value></qti-sum>
+        </qti-set-outcome-value>
+        <qti-response-condition>
+          <qti-response-if>
+            <qti-gte><qti-variable identifier="HINTS"/><qti-base-value base-type="integer">3</qti-base-value></qti-gte>
+            <qti-set-outcome-value identifier="FEEDBACK"><qti-base-value base-type="identifier">hint3</qti-base-value></qti-set-outcome-value>
+          </qti-response-if>
+          <qti-response-else-if>
+            <qti-gte><qti-variable identifier="HINTS"/><qti-base-value base-type="integer">2</qti-base-value></qti-gte>
+            <qti-set-outcome-value identifier="FEEDBACK"><qti-base-value base-type="identifier">hint2</qti-base-value></qti-set-outcome-value>
+          </qti-response-else-if>
+          <qti-response-else>
+            <qti-set-outcome-value identifier="FEEDBACK"><qti-base-value base-type="identifier">hint1</qti-base-value></qti-set-outcome-value>
+          </qti-response-else>
+        </qti-response-condition>
+      </qti-response-if>
+      <qti-response-else>
+        <qti-response-condition>
+          <qti-response-if>
+            <qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match>
+            <qti-set-outcome-value identifier="SCORE">
+              <qti-subtract>
+                <qti-base-value base-type="float">1</qti-base-value>
+                <qti-product>
+                  <qti-base-value base-type="float">0.25</qti-base-value>
+                  <qti-integer-to-float><qti-variable identifier="HINTS"/></qti-integer-to-float>
+                </qti-product>
+              </qti-subtract>
+            </qti-set-outcome-value>
+            <qti-set-outcome-value identifier="completionStatus"><qti-base-value base-type="identifier">completed</qti-base-value></qti-set-outcome-value>
+          </qti-response-if>
+          <qti-response-else-if>
+            <qti-gte><qti-variable identifier="HINTS"/><qti-base-value base-type="integer">3</qti-base-value></qti-gte>
+            <qti-set-outcome-value identifier="completionStatus"><qti-base-value base-type="identifier">completed</qti-base-value></qti-set-outcome-value>
+          </qti-response-else-if>
+        </qti-response-condition>
+      </qti-response-else>
+    </qti-response-condition>
+  </qti-response-processing>
+</qti-assessment-item>`);
+const engine = createEngine({ kind: "item", item, base: "ladder.xml" }, { eventOutcomes: true });
+const started = engine.start({ seed: 1, at: 0 });
+const key = started.state.current;
+const hint = (state, at) => engine.apply(state, { type: "end-attempt", item: key, interaction: "HINT", at });
+const again = (state, at) => engine.apply(state, { type: "next-attempt", item: key, at });
+const first = hint(started.state, 2_000);
+const second = hint(again(first.state, 2_500).state, 3_000);
+const responses = new Map([["RESPONSE", single("identifier", "B")]]);
+const answered = engine.apply(again(second.state, 3_500).state, {
+  type: "set-responses",
+  item: key,
+  responses,
+  at: 4_000,
+});
+const solved = engine.apply(answered.state, { type: "submit", item: key, at: 5_000 });
+const rungs = [first, second, solved].map(({ events }) => events.find(({ type }) => type === "response-processed"));
+rungs.map(({ attempt, duration }) => [attempt, duration]); // => [[1, 2000], [2, 3000], [3, 5000]]
+rungs.map(({ outcomes }) => outcomes.HINTS.value.base.integer); // => [1, 2, 2]
+rungs.map(({ outcomes }) => outcomes.FEEDBACK.value.base.identifier); // => ["hint1", "hint2", "none"]
+rungs.map(({ outcomes }) => outcomes.SCORE.value.base.float); // => [0, 0, 0.5]
+solved.state.items[0].session.status; // => "closed"
+```
+
+### Sessions across content edits
+
+A state does not hold the item. It keeps what the session captured when it started, and the engine reads the rest from the item it was
+built with, on every call. Content that was edited after a session started is therefore scored, and shown, without a word.
+
+| The state keeps                                                                                   | The engine reads from its item                                                                                                      |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| The correct responses, the defaults and the template values of the item, the order of its choices | The rules of response and outcome processing, the interactions and the text of the item, the item session control of the definition |
+| The responses and outcomes so far, the attempts and the clocks                                    |                                                                                                                                     |
+
+Name the version of the content when the engine is built, such as a hash of the package: `createEngine(definition, { contentVersion })`.
+`start` keeps it in the state, and every call that reads a state throws a `DataError` that names both versions when another started it.
+A state that names none passes, so that sessions from before the option go on. To finish old sessions on the old content, a host keeps an
+engine of each version it has sessions for and picks the engine by the version in the state (`JSON.parse(text).contentVersion`). A state is
+also a record of what the candidate saw, so a host that edits content while exams are open starts new sessions on the new version only.
+
+### Sessions across days
+
+A learner who closes the page and comes back three days later has not worked in between. With `maxIdle` on a practice session
+or a session host, the first action after a gap above it suspends the session at its latest step and resumes it now, so that `duration`
+and every running maximum time leave the gap out, exactly as an explicit `suspend` and `resume` would. The `duration` of a
+`response-processed` event is then the time on task. [A learner who is away](../player/client.md#a-learner-who-is-away) has the
+rules, and the value to choose: above the longest pause that a learner takes while working.
+
 ## Errors
 
 | Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

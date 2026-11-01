@@ -96,7 +96,7 @@ if (document.kind !== "item") throw new Error("The document is not an item.");
 
 const saved = new Map();
 const client = await createLocalSession({
-  definition: { kind: "item", item: document.item, base: "items/q1.xml" }, // a preview of one item
+  definition: { kind: "item", item: document.item, base: "items/q1.xml" }, // one item alone
   store: {
     load: async (session) => saved.get(session),
     save: async (session, state) => void saved.set(session, state),
@@ -115,7 +115,7 @@ first save. A session that was saved stays, and a new call resumes it.
 
 | Option       | Type                                  | Meaning                                                                                                                                                                                                |
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                                                                                                               |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone, for practice or for a page of many items.                                                                                                                   |
 | `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                                                          |
 | `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                                                      |
 | `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.                                                                                                     |
@@ -133,7 +133,8 @@ fires a `time` action at each maximum time with `setTimeout`, so a time-out happ
 has the session resumes it. The candidate can suspend and resume. Results of practice are never official: nothing here brands a
 report, so `sessionScore` refuses them.
 
-A preview of one item is a session of `{ kind: "item", item, base }`; `documents.item` is `base`.
+An item alone is a session of `{ kind: "item", item, base }`; `documents.item` is `base`. It serves a preview, a practice item and a
+lesson page whose items each have a session of their own, which [`mountItem`](delivery.md#items-in-a-page) shows without the chrome.
 
 The session has the engine and the definition but not the package, so a host that wants reading aloud to use the lexicons of
 the items names them with `lexicons`, from the manifest of the package it made the definition from:

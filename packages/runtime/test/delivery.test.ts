@@ -1606,6 +1606,63 @@ describe("the events of an attempt", () => {
   });
 });
 
+describe("a ladder of hints", () => {
+  const unlimited = '<qti-item-session-control max-attempts="0" show-solution="true"/>';
+  const engineWith = (item: AssessmentItem, control: string): Engine =>
+    engineOf(
+      `${TOTAL}${testPart("P", section("S", itemRef("a", control)), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`,
+      {
+        "a.xml": item,
+      },
+    );
+  const hint = (at: number): Action => ({ type: "end-attempt", item: key("a"), interaction: "HINT", at });
+  const tryAgain = (at: number): Action => ({ type: "next-attempt", item: key("a"), at });
+  const solution = (at: number): Action => ({ type: "solution", item: key("a"), at });
+  const runs = (state: DeliveryState): Value | null => sessionOf(state, "a").variables.outcomes.get("RUNS") ?? null;
+
+  it("keeps the outcomes of an adaptive item from one attempt to the next, and resets those of another item", () => {
+    for (const [adaptive, expected] of [
+      [true, [1, 2, 3]],
+      [false, [1, 1, 1]],
+    ] as const) {
+      const engine = engineWith(counterItem({ adaptive }), unlimited);
+      let state = begun(engine).state;
+      const seen: (Value | null)[] = [];
+      for (const [index, at] of [1_000, 3_000, 5_000].entries()) {
+        state = played(engine, state, hint(at), tryAgain(at + 500)).state;
+        seen.push(runs(state));
+        expect(sessionOf(state, "a").countedAttempts).toBe(index + 1);
+      }
+      expect(seen).toEqual(expected.map(integer));
+    }
+  });
+
+  it("closes an adaptive item when response processing completes it, and then allows the solution", () => {
+    const engine = engineWith(counterItem({ adaptive: true }), unlimited);
+    const asking = played(engine, begun(engine).state, hint(1_000), tryAgain(1_500), hint(2_000), tryAgain(2_500));
+    expect(refusalOf(engine, asking.state, solution(3_000)).code).toBe("solution-not-allowed");
+    const done = played(engine, asking.state, answer("a", "B", 3_000), on("submit", "a", 4_000));
+    expect(sessionOf(done.state, "a").status).toBe("closed");
+    expect(outcome(sessionOf(done.state, "a"), "completionStatus")).toEqual(identifier("completed"));
+    expect(sessionOf(played(engine, done.state, solution(5_000)).state, "a").status).toBe("solution");
+  });
+
+  it("never closes a non-adaptive item with unlimited attempts, so that its solution stays out of reach", () => {
+    const engine = engineWith(counterItem(), unlimited);
+    let state = begun(engine).state;
+    for (let round = 0; round < 5; round += 1) {
+      const at = 1_000 * (round + 1);
+      state = played(engine, state, answer("a", "B", at), on("submit", "a", at + 100), tryAgain(at + 200)).state;
+    }
+    expect(sessionOf(state, "a").status).toBe("interacting");
+    expect(sessionOf(state, "a").countedAttempts).toBe(5);
+    expect(refusalOf(engine, state, solution(9_000))).toEqual({
+      code: "solution-not-allowed",
+      message: "The item shows its solution only after its session closed.",
+    });
+  });
+});
+
 describe("deadlines", () => {
   it("gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(
@@ -4340,6 +4397,41 @@ describe("the content version of a state", () => {
     const tagged = begun(named).state;
     expect(unnamed.apply(tagged, { type: "time", at: 1 }).ok).toBe(true);
     expect(unnamed.results(tagged)).toEqual(named.results(tagged));
+  });
+
+  it("scores a state on what it captured under edited content when no version is named, and refuses it when one is", () => {
+    // The edit gives another correct response and a score of 5 for it. A state keeps the correct response, the defaults
+    // and the template values that its session started with, and reads the rules of response processing from the item.
+    const choice = (correct: string, processing: string): AssessmentItem =>
+      itemOf(
+        'time-dependent="false"',
+        `<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+          <qti-correct-response><qti-value>${correct}</qti-value></qti-correct-response>
+        </qti-response-declaration>
+        <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+        <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">${CHOICES}</qti-choice-interaction></qti-item-body>
+        ${processing}`,
+      );
+    const matchCorrect =
+      '<qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>';
+    const fiveForCorrect = `<qti-response-processing><qti-response-condition><qti-response-if>
+      <qti-match><qti-variable identifier="RESPONSE"/><qti-correct identifier="RESPONSE"/></qti-match>
+      <qti-set-outcome-value identifier="SCORE"><qti-base-value base-type="float">5</qti-base-value></qti-set-outcome-value>
+    </qti-response-if></qti-response-condition></qti-response-processing>`;
+    const part = testPart("P", section("S", refs("a")), "nonlinear");
+    const original = engineOf(part, { "a.xml": choice("A", matchCorrect) }, { contentVersion: "form-1" });
+    const stored = serializeState(played(original, begun(original).state, answer("a", "A", 1_000)).state);
+    const submit = on("submit", "a", 2_000);
+    const scoreOf = (state: DeliveryState): Value | null =>
+      sessionOf(state, "a").variables.outcomes.get("SCORE") ?? null;
+    expect(scoreOf(played(original, deserializeState(stored), submit).state)).toEqual(float(1));
+    // Without a version the edit applies silently: A is correct as captured, and the edited rule gives it 5.
+    const edited = engineOf(part, { "a.xml": choice("B", fiveForCorrect) });
+    expect(scoreOf(played(edited, deserializeState(stored), submit).state)).toEqual(float(5));
+    const named = engineOf(part, { "a.xml": choice("B", fiveForCorrect) }, { contentVersion: "form-2" });
+    expect(() => named.apply(deserializeState(stored), submit)).toThrow(
+      'The state started on the content version "form-1", and this engine delivers the content version "form-2".',
+    );
   });
 
   it("refuses a content version that is not a string in a state", () => {
