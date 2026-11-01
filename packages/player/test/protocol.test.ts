@@ -406,11 +406,59 @@ describe("the answer loop of CAT requests", () => {
     const loops = createCatLoops();
     const { made } = answerer(["r1"]);
     const first = loops.join("k", made);
-    expect(loops.running("k")).toBe(true);
-    expect(loops.running("other")).toBe(false);
+    expect(loops.wake("k")).toBe(true);
+    expect(loops.wake("other")).toBe(false);
     expect(loops.join("k", made)).toBe(first);
     await first;
-    expect(loops.running("k")).toBe(false);
+    expect(loops.wake("k")).toBe(false);
+  });
+
+  it("reads the pending work once more when a step woke the loop after its last read began", async () => {
+    const waiting: CatRequest[] = [];
+    const log: string[] = [];
+    let reply: (requests: readonly CatRequest[]) => void = () => undefined;
+    let reads = 0;
+    const made: CatAnswerer = {
+      waiting: () => {
+        reads += 1;
+        // The first read began before the step saved: it replies with the old state, and its reply waits.
+        return reads === 1 ? new Promise((resolve) => (reply = resolve)) : Promise.resolve([...waiting]);
+      },
+      ask: async (request) => {
+        log.push(`ask ${request.id}`);
+        return JSON.parse("{}");
+      },
+      answer: async (request) => {
+        log.push(`answer ${request.id}`);
+        waiting.splice(0);
+        return { events: [] };
+      },
+    };
+    const loops = createCatLoops();
+    const done = loops.join("k", made);
+    waiting.push(requestOf("late"));
+    expect(loops.wake("k")).toBe(true);
+    reply([]);
+    expect(await done).toBeUndefined();
+    expect(log).toEqual(["ask late", "answer late"]);
+    expect(loops.wake("k")).toBe(false);
+  });
+
+  it("names no request when the read of the pending work fails after an answer", async () => {
+    const waiting = [requestOf("r1")];
+    const made: CatAnswerer = {
+      waiting: async () => {
+        if (waiting.length === 0) throw new Error("The store is down.");
+        return [...waiting];
+      },
+      ask: async () => JSON.parse("{}"),
+      answer: async () => {
+        waiting.splice(0);
+        return { events: [] };
+      },
+    };
+    const failed = await createCatLoops().join("k", made);
+    expect(failed?.failure).toEqual({ request: "", message: "The store is down." });
   });
 });
 

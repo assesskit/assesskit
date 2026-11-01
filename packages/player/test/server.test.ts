@@ -1471,6 +1471,42 @@ describe("the option cat of the session host", () => {
     expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]);
   });
 
+  it("answers the requests of a step that the proctor saved while the loop of a reload read the state before it", async () => {
+    const port = scriptedPort();
+    const base = memoryStore();
+    let loads = -1;
+    let reach: () => void = () => undefined;
+    let release: () => void = () => undefined;
+    const reached = new Promise<void>((resolve) => (reach = resolve));
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const { host } = await adaptiveHost(port, "", {
+      store: {
+        create: base.create,
+        save: base.save,
+        // The second load after the reload began is the read of the loop: it gets the old record, and its reply waits.
+        load: async (session, options) => {
+          const record = await base.load(session, options);
+          if (loads >= 0) loads += 1;
+          if (loads === 2) {
+            reach();
+            await held;
+          }
+          return record;
+        },
+      },
+    });
+    await host.start(ALICE, { seed: 7 });
+    loads = 0;
+    const reload = host.view(ALICE);
+    await reached;
+    const step = await host.proctor(ALICE.session, { type: "end-test" });
+    expect(step.catFailure).toBeUndefined();
+    release();
+    expect(viewOf(await reload).status).toBe("ended");
+    expect((await host.session(ALICE.session).pending()).cat).toEqual([]);
+    expect(port.calls).toEqual(["createSession", "submitResults", "endSession"]);
+  });
+
   it("answers a repeated request with the view after the CAT answer, and keeps its refusal", async () => {
     const port = scriptedPort();
     const { host } = await adaptiveHost(port);

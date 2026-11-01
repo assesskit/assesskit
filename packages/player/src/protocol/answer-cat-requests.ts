@@ -35,6 +35,11 @@ function failureOf(request: CatRequest | undefined, error: unknown): CatLoopFail
   };
 }
 
+/** Whether a step joined a running loop since the loop last started to read the pending work. */
+interface Marks {
+  dirty: boolean;
+}
+
 /**
  * Answers the CAT requests that wait, one at a time, until none waits or one fails.
  *
@@ -43,20 +48,36 @@ function failureOf(request: CatRequest | undefined, error: unknown): CatLoopFail
  * request first, so the loop reads the pending work again. Any other refusal, an error of the port, and a failed save stop
  * the loop at that request, which stays pending for the next call; the answers saved before stay.
  *
+ * A step that joins the loop while it reads may have saved after the read began, so the read can miss its requests. The step
+ * marks the loop, and a loop that finds nothing waiting reads once more when it was marked since that read began. The loop
+ * calls `forget` in the same synchronous run as its last check, so that no step can join between the check and the end.
+ *
  * @returns The failure, or `undefined` when nothing waits any more.
  */
-async function answerCatRequests(answerer: CatAnswerer): Promise<CatLoopFailure | undefined> {
+async function answerCatRequests(
+  answerer: CatAnswerer,
+  marks: Marks,
+  forget: () => void,
+): Promise<CatLoopFailure | undefined> {
   let request: CatRequest | undefined;
   try {
-    for (request = (await answerer.waiting())[0]; request !== undefined; request = (await answerer.waiting())[0]) {
+    for (;;) {
+      request = undefined;
+      marks.dirty = false;
+      request = (await answerer.waiting())[0];
+      if (request === undefined) {
+        if (marks.dirty) continue;
+        return undefined;
+      }
       const step = await answerer.answer(request, await answerer.ask(request));
       if (step.refusal !== undefined && step.refusal.code !== "unknown-request") {
         throw new Error(`The answer was refused: ${step.refusal.message}`);
       }
     }
-    return undefined;
   } catch (error) {
     return failureOf(request, error);
+  } finally {
+    forget();
   }
 }
 
@@ -64,21 +85,33 @@ async function answerCatRequests(answerer: CatAnswerer): Promise<CatLoopFailure 
 export interface CatLoops {
   /** Joins the running loop of the key, or starts one with the answerer; resolves when that loop ends. */
   join(key: string, answerer: CatAnswerer): Promise<CatLoopFailure | undefined>;
-  /** Tells whether a loop runs for the key. */
-  running(key: string): boolean;
+  /**
+   * Tells the running loop of the key that a step saved work, so that the loop reads the pending work once more before it
+   * ends, and returns whether a loop runs. It never waits for the loop.
+   */
+  wake(key: string): boolean;
 }
 
 /** Creates the registry of running loops, which forgets a loop when it ends. */
 export function createCatLoops(): CatLoops {
-  const loops = new Map<string, Promise<CatLoopFailure | undefined>>();
+  const loops = new Map<string, { readonly done: Promise<CatLoopFailure | undefined>; readonly marks: Marks }>();
   return {
     join: (key, answerer) => {
       const running = loops.get(key);
-      if (running !== undefined) return running;
-      const started = answerCatRequests(answerer).finally(() => void loops.delete(key));
-      loops.set(key, started);
-      return started;
+      if (running !== undefined) {
+        running.marks.dirty = true;
+        return running.done;
+      }
+      const marks = { dirty: false };
+      const done = answerCatRequests(answerer, marks, () => void loops.delete(key));
+      loops.set(key, { done, marks });
+      return done;
     },
-    running: (key) => loops.has(key),
+    wake: (key) => {
+      const running = loops.get(key);
+      if (running === undefined) return false;
+      running.marks.dirty = true;
+      return true;
+    },
   };
 }

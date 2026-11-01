@@ -357,16 +357,16 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const serve = async (signal: AbortSignal | undefined): Promise<CatLoopFailure | undefined> =>
     answerer === undefined ? undefined : untilAborted(loops.join("", answerer), signal);
 
-  /** Runs the answer loop after a step of the host, unless one runs: that loop reads the pending work again. */
+  /** Runs the answer loop after a step of the host, unless one runs: that loop is told to read the pending work once more. */
   const finish = async (step: HostStep): Promise<HostStep> => {
-    if (answerer === undefined || loops.running("")) return step;
+    if (answerer === undefined || loops.wake("")) return step;
     const failed = await loops.join("", answerer);
     return failed === undefined ? step : { ...step, catFailure: failed.failure };
   };
 
   /** Runs the answer loop after the timer's step; a failure goes to `reportError`, and the next call retries. */
   const settleTimer = async (): Promise<void> => {
-    if (answerer === undefined || loops.running("")) return;
+    if (answerer === undefined || loops.wake("")) return;
     const failed = await loops.join("", answerer);
     if (failed !== undefined) reportError(failed.error);
   };

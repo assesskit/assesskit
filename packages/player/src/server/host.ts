@@ -365,11 +365,11 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     cat === undefined ? undefined : untilAborted(loops.join(session, answererOf(session, cat)), signal);
 
   /**
-   * Runs the answer loop after a step of the host, unless one runs: that loop reads the pending work again, and a `log` that
-   * awaits a call of the host from inside a step of the loop must not wait for the loop that waits for it.
+   * Runs the answer loop after a step of the host, unless one runs: that loop is told to read the pending work once more,
+   * and a `log` that awaits a call of the host from inside a step of the loop must not wait for the loop that waits for it.
    */
   const finish = async (session: string, step: HostStep): Promise<HostStep> => {
-    if (cat === undefined || loops.running(session)) return step;
+    if (cat === undefined || loops.wake(session)) return step;
     const failed = await loops.join(session, answererOf(session, cat));
     return failed === undefined ? step : { ...step, catFailure: failed.failure };
   };
