@@ -6,7 +6,6 @@
  */
 
 export type { Clock } from "../protocol/index.js";
-export { assetResolver, UNSIGNED_URL } from "./assets.js";
 export { BROWSER_CLOCK } from "./clock.js";
 export {
   createLocalSession,

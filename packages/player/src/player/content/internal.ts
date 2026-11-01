@@ -6,7 +6,7 @@
  *
  * @module
  */
-export { scaleSize } from "./attributes.js";
+export { DECLARED_HEIGHT, DECLARED_WIDTH, scaleDeclaredSizes, scaleSize } from "./attributes.js";
 export { canAnimate, essence } from "./embed.js";
 export { elementName, HTML_ELEMENT_NAMES, isHtmlName } from "./html-elements.js";
 export { readRenderOptions } from "./options.js";

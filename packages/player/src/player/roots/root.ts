@@ -10,13 +10,8 @@ import {
 import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { renderCard } from "../catalogs/index.js";
-import {
-  type BodyRenderer,
-  type BodyRendererOptions,
-  createBodyRenderer,
-  scaleDeclaredSizes,
-} from "../content/index.js";
-import { readRenderOptions } from "../content/internal.js";
+import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
+import { readRenderOptions, scaleDeclaredSizes } from "../content/internal.js";
 import { showFeedbackDialog } from "../feedback/index.js";
 import { html, shadowRootOf } from "../internal.js";
 import type { MathTypesetter } from "../math/index.js";

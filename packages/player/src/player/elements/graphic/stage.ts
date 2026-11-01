@@ -1,6 +1,7 @@
 import type { HotspotInteraction } from "@assesskit/runtime/asi";
 import type { Point } from "@assesskit/runtime/values";
-import { type BodyRenderer, DECLARED_HEIGHT, DECLARED_WIDTH } from "../../content/index.js";
+import type { BodyRenderer } from "../../content/index.js";
+import { DECLARED_HEIGHT, DECLARED_WIDTH } from "../../content/internal.js";
 import { html } from "../../internal.js";
 import { pointAt, type Size } from "./geometry.js";
 
