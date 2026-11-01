@@ -60,15 +60,18 @@ are built by `scripts/build-static.ts`, which the test calls, so it measures wha
 phone is, and fails when the fastest of 5 samples is above its budget. The files are `mount-time.browser.bench.ts` and
 `mount-budgets.ts` in `packages/player/test/`; the browser pane of the run is the Chromium of Playwright.
 
-| Mount                                                      | Measured | Budget |
-| ---------------------------------------------------------- | -------- | ------ |
-| `mountDelivery` over a test, until the first item is shown | 5 ms     | 30 ms  |
-| 10 calls of `mountItem` on one page, until all are shown   | 16 ms    | 80 ms  |
-| Turning on the highlighter over a passage of 2,000 words   | 14 ms    | 70 ms  |
+| Mount                                                      | On the CI runner | On a laptop | Budget |
+| ---------------------------------------------------------- | ---------------- | ----------- | ------ |
+| `mountDelivery` over a test, until the first item is shown | 30 ms            | 5 ms        | 200 ms |
+| 10 calls of `mountItem` on one page, until all are shown   | 73 ms            | 16 ms       | 400 ms |
+| Turning on the highlighter over a passage of 2,000 words   | 48 ms            | 14 ms       | 300 ms |
 
 A budget is five times the fastest sample, the median over three runs, rounded up to one significant digit: the rule of the
-other benchmarks of the repository ([performance](../runtime/performance.md#budgets)). It holds on a machine up to five times slower than
-the one measured.
+other benchmarks of the repository ([performance](../runtime/performance.md#budgets)), whose sample is the one that the CI
+runner took, because the gate runs there. The runner takes 4 to 6 times as long as a laptop, and one run of it takes up to 1.4
+times as long as another on the same code (`mountDelivery` 23.9, 30.1 and 33.2 ms), so a budget of five times the sample of a
+laptop fails on the runner with no change in the code. A mount must become several times slower on the runner before it fails
+its budget; the sizes above guard the load.
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
 the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.
