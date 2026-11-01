@@ -54,18 +54,18 @@ A change to semantics cites the specification section in the pull request and ad
 
 ## Before opening a pull request
 
-| Run                                                                             | When                                                                                                                   |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `pnpm lint`, `pnpm check:standards`, `pnpm typecheck`, `pnpm test`, `pnpm knip` | Always                                                                                                                 |
-| `pnpm build`, `pnpm check:packages`, `pnpm compat`, `pnpm docs:api`             | Always                                                                                                                 |
-| `pnpm check:release`, `pnpm check:tarballs`, `pnpm check:licenses`              | Always; `check:tarballs` needs the build, and installs the packed packages into a scratch project with npm             |
-| `pnpm test:coverage`, `pnpm test:coverage:browser`                              | A change to code or tests: the floors of `vitest.config.ts` hold for the runtime and for each part of the player       |
-| `pnpm check:rules`                                                              | A change to a security rule or its test ([AGENTS.md](AGENTS.md#commands)); it needs Chromium                           |
-| `pnpm check:audit`                                                              | A change to the dependencies; it needs the network                                                                     |
-| `pnpm test:browser`                                                             | A change to the code that runs in a browser; it needs `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` |
-| `pnpm compat:engines`                                                           | The same change; it needs Docker ([baseline](docs/player/baseline.md))                                                 |
-| `pnpm corpus`, `pnpm test:corpus`                                               | A change to what the corpus tests read (those of the player also need the browsers)                                    |
-| `pnpm schemas`, `pnpm test:xsd`                                                 | A change to what is validated against the official XSDs                                                                |
+| Run                                                                             | When                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`, `pnpm check:standards`, `pnpm typecheck`, `pnpm test`, `pnpm knip` | Always                                                                                                                                                                                         |
+| `pnpm build`, `pnpm check:packages`, `pnpm compat`, `pnpm docs:api`             | Always                                                                                                                                                                                         |
+| `pnpm check:release`, `pnpm check:tarballs`, `pnpm check:licenses`              | Always; `check:tarballs` needs the build, and installs the packed packages into a scratch project with npm                                                                                     |
+| `pnpm test:coverage`, `pnpm test:coverage:browser`                              | A change to code or tests: the floors of `vitest.config.ts` hold for the runtime and for each part of the player                                                                               |
+| `pnpm check:rules`                                                              | A change to a security rule, a limit or their tests, or a new limit, which needs its rule in `scripts/rules/` ([evidence](docs/runtime/evidence.md#mutation-of-the-limits)); it needs Chromium |
+| `pnpm check:audit`                                                              | A change to the dependencies; it needs the network                                                                                                                                             |
+| `pnpm test:browser`                                                             | A change to the code that runs in a browser; it needs `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus`                                                                         |
+| `pnpm compat:engines`                                                           | The same change; it needs Docker ([baseline](docs/player/baseline.md))                                                                                                                         |
+| `pnpm corpus`, `pnpm test:corpus`                                               | A change to what the corpus tests read (those of the player also need the browsers)                                                                                                            |
+| `pnpm schemas`, `pnpm test:xsd`                                                 | A change to what is validated against the official XSDs                                                                                                                                        |
 
 CI runs the jobs `xsd`, `corpus` and `bench` only when a change touches `packages/runtime/`, the harness (`scripts/`,
 `validation/` and the configuration files at the root) or `.github/workflows/ci.yml`; the other jobs run on every change.

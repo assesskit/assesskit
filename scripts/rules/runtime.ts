@@ -1,0 +1,291 @@
+// biome-ignore-all lint/suspicious/noTemplateCurlyInString: the entries quote source code, which holds template strings.
+import type { Rule } from "./rule.ts";
+
+const ZIP = "packages/runtime/src/package/zip-reader.ts";
+const DIRECTORY = "packages/runtime/src/node/directory-files.ts";
+const PARSE = "packages/runtime/src/xml/parse.ts";
+const TREE = "packages/runtime/src/xml/tree-builder.ts";
+const INCLUDE = "packages/runtime/src/xml/include.ts";
+const ACTION = "packages/runtime/src/delivery/action-json.ts";
+const PLAN = "packages/runtime/src/delivery/plan.ts";
+const PACKAGE_TEST = "packages/runtime/test/package.test.ts";
+const XML_TEST = "packages/runtime/test/xml.test.ts";
+const NODE_TEST = "packages/runtime/test/node.test.ts";
+const DELIVERY_TEST = "packages/runtime/test/delivery.test.ts";
+
+/** The limits and the security checks of the runtime, which SECURITY.md lists, each with the test that guards it. */
+export const RUNTIME_RULES: readonly Rule[] = [
+  {
+    rule: "An archive entry whose name is absolute or leaves the package rejects the archive (zip-slip).",
+    file: ZIP,
+    find: "const path = normalizeEntryName(name);",
+    replace: "const path = normalizeEntryName(name) ?? name;",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "A directory entry of an archive whose name leaves the package rejects the archive.",
+    file: ZIP,
+    find: "if (normalizeEntryName(name) === undefined) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "Two archive entries with one normalized name reject the archive.",
+    file: ZIP,
+    find: "if (entries.has(path))",
+    replace: "if (false)",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An encrypted archive entry rejects the archive.",
+    file: ZIP,
+    find: "if ((flags & ENCRYPTION_FLAGS) !== 0)",
+    replace: "if (false)",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "A symbolic link in an archive rejects the archive.",
+    file: ZIP,
+    find: "if (UNIX_HOSTS.includes(reader.u8(position + 5)) && (unixMode & UNIX_FILE_TYPE_MASK) === UNIX_SYMLINK) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An archive whose end record declares more entries than maxEntries is refused before its directory is read.",
+    file: ZIP,
+    find: "if (directory.count > limits.maxEntries)",
+    replace: "if (false)",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An archive whose directory holds more records than maxEntries is refused, whatever its end record declares.",
+    file: ZIP,
+    find: 'if (records === limits.maxEntries) throw exceeded("maxEntries", limits, "holds more entries than");',
+    replace: "",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An archive whose end record and directory disagree on the number of entries is refused.",
+    file: ZIP,
+    find: "if (records % directory.countRange !== directory.count) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An entry that declares more than maxEntryBytes is refused.",
+    file: ZIP,
+    find: "if (entry.size > limits.maxEntryBytes)",
+    replace: "if (false)",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "Entries that declare more than maxTotalBytes together are refused.",
+    file: ZIP,
+    find: 'if (total > limits.maxTotalBytes) throw exceeded("maxTotalBytes", limits, "holds more bytes uncompressed than");',
+    replace: "",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An entry that is more than maxRatio times larger uncompressed than compressed is refused.",
+    file: ZIP,
+    find: "if (entry.size > RATIO_GRACE_BYTES && entry.size > entry.compressedSize * limits.maxRatio) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "An entry that inflates to more bytes than its header declares is refused while it inflates.",
+    file: ZIP,
+    find: "if (produced > entry.size) {",
+    replace: "if (false) {",
+    test: PACKAGE_TEST,
+  },
+  {
+    rule: "A symbolic link while a package directory is listed rejects the package.",
+    file: DIRECTORY,
+    find: "if (stat.isSymbolicLink()) throw symlink(path);\n      if (stat.isDirectory())",
+    replace: "if (stat.isDirectory())",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A file of a package directory that became a symbolic link after the listing is not read.",
+    file: DIRECTORY,
+    find: "if (stat.isSymbolicLink()) throw symlink(path);\n      if (!(realpathSync",
+    replace: "if (!(realpathSync",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A file whose real path is outside the package directory is not read.",
+    file: DIRECTORY,
+    find: "if (!(realpathSync(full) + sep).startsWith(`${root}${sep}`) || !stat.isFile()) {",
+    replace: "if (!stat.isFile()) {",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A file of a package directory larger than maxEntryBytes is refused when it is read.",
+    file: DIRECTORY,
+    find: "if (stat.size > limits.maxEntryBytes)\n        throw exceeded",
+    replace: "if (false)\n        throw exceeded",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A package directory with more files and directories than maxEntries is refused.",
+    file: DIRECTORY,
+    find: "if (++this.entries > this.limits.maxEntries)",
+    replace: "if (++this.entries < 0)",
+    test: NODE_TEST,
+  },
+  {
+    rule: "A package directory that holds more than maxTotalBytes is refused.",
+    file: DIRECTORY,
+    find: 'if (this.total > limits.maxTotalBytes) throw exceeded("maxTotalBytes", limits, "holds more bytes than");',
+    replace: "",
+    test: NODE_TEST,
+  },
+  {
+    rule: "An XML document with a DOCTYPE is rejected, so that no entity is declared or read.",
+    file: PARSE,
+    find: 'throw new SecurityError(message, "doctype", 0);',
+    replace: "void message;",
+    test: XML_TEST,
+  },
+  {
+    rule: "An XML document larger than maxBytes is refused before it is decoded.",
+    file: PARSE,
+    find: 'if (typeof input === "string" ? exceedsBytes(input, maxBytes) : input.byteLength > maxBytes) {',
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "A document that nests elements deeper than maxDepth is refused.",
+    file: TREE,
+    find: 'if (this.frames.length >= this.limits.maxDepth) throw this.exceeded("maxDepth", "nests elements deeper than");',
+    replace: "",
+    test: XML_TEST,
+  },
+  {
+    rule: "An element with more attributes than maxAttributes is refused.",
+    file: TREE,
+    find: "if (attributes.length > this.limits.maxAttributes) {",
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "A document with more nodes than maxNodes is refused.",
+    file: TREE,
+    find: 'if (++this.nodes > this.limits.maxNodes) throw this.exceeded("maxNodes", "has more nodes than");',
+    replace: "++this.nodes;",
+    test: XML_TEST,
+  },
+  {
+    rule: "A document with its includes that has more nodes than maxNodes is refused.",
+    file: INCLUDE,
+    find: "if (++this.nodes > this.limits.maxNodes) {",
+    replace: "if (++this.nodes < 0) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "A document with its includes that nests deeper than maxDepth is refused.",
+    file: INCLUDE,
+    find: "if (depth > this.limits.maxDepth) {",
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "Includes that nest deeper than maxIncludeDepth are refused.",
+    file: INCLUDE,
+    find: "if (context.chain.length > this.limits.maxIncludeDepth) {",
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "An include of a document that is already being included is refused, so that a loop ends.",
+    file: INCLUDE,
+    find: "if (context.chain.includes(key)) {",
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "An include with an xpointer is refused.",
+    file: INCLUDE,
+    find: 'if (attributeOf(include, "xpointer") !== undefined) {',
+    replace: "if (false) {",
+    test: XML_TEST,
+  },
+  {
+    rule: "A pattern that needs more states than maxStates is refused.",
+    file: "packages/runtime/src/values/xsd-regex.ts",
+    find: "if (countStates(tree, maxStates) > maxStates) {",
+    replace: "if (false) {",
+    test: "packages/runtime/test/values.test.ts",
+  },
+  {
+    rule: "A pattern that nests groups deeper than maxDepth is refused.",
+    file: "packages/runtime/src/values/xsd-regex-parser.ts",
+    find: "if (depth >= this.maxDepth) this.fail(`more than ${this.maxDepth} levels of nesting`);",
+    replace: "",
+    test: "packages/runtime/test/values.test.ts",
+  },
+  {
+    rule: "A width or precision of a printed variable above 1,100 is ignored.",
+    file: "packages/runtime/src/content/format-specification.ts",
+    find: "if (widthValue > MAX_FIELD || (precision !== undefined && precision > MAX_FIELD)) return undefined;",
+    replace: "",
+    test: "packages/runtime/test/content.test.ts",
+  },
+  {
+    rule: "A container that an expression builds with more values than maxContainerSize is refused.",
+    file: "packages/runtime/src/processing/context.ts",
+    find: "const limit = environment.limits.maxContainerSize;\n  if (size > limit) {",
+    replace: "const limit = environment.limits.maxContainerSize;\n  if (false) {",
+    test: "packages/runtime/test/processing.test.ts",
+  },
+  {
+    rule: "An action of a client larger than maxActionSize is refused.",
+    file: ACTION,
+    find: 'throw new SecurityError(`The action is larger than the limit maxActionSize of ${limit}.`, "maxActionSize", limit);',
+    replace: "return;",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A PCI state of a client longer than maxPciStateLength is refused.",
+    file: ACTION,
+    find: "if (state.length > limit) {",
+    replace: "if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A client cannot send an action of the host: the time, a supplied score or a CAT response.",
+    file: ACTION,
+    find: 'if (isRecord(json) && typeof json.type === "string" && HOST_ACTION_TYPES.includes(json.type)) {',
+    replace: "if (false) {",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A test plan with more sections and items than maxPlanNodes is refused.",
+    file: PLAN,
+    find: "if (drafting.remaining < 1) throw overLimit(drafting);",
+    replace: "",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A selection with replacement that would exceed maxPlanNodes is refused before it draws.",
+    file: PLAN,
+    find: "if ((section.model.selection?.select ?? 0) > drafting.remaining) throw overLimit(drafting);",
+    replace: "",
+    test: DELIVERY_TEST,
+  },
+  {
+    rule: "A stage of an adaptive section that would make the plan exceed maxPlanNodes is refused.",
+    file: "packages/runtime/src/delivery/cat-flow.ts",
+    find: "if (planSize(grown.plan) > course.limits.maxPlanNodes) {",
+    replace: "if (false) {",
+    test: "packages/runtime/test/delivery-pending.test.ts",
+  },
+  {
+    rule: "JSON that a view or an action carries is no deeper than 256 levels.",
+    file: "packages/runtime/src/delivery/json-checks.ts",
+    find: "if (depth >= MAX_JSON_DEPTH) return `nests deeper than ${MAX_JSON_DEPTH} levels`;",
+    replace: "",
+    test: DELIVERY_TEST,
+  },
+];

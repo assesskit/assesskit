@@ -1,4 +1,14 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -132,6 +142,59 @@ describe("reading package files", () => {
       expect((await readPackageFile(link)).manifest.identifier).toBe("m");
     },
   );
+
+  it.skipIf(!POSIX)("rejects a file that became a link to another file of the package after the listing", async () => {
+    const root = unpacked({ "a.txt": "hello", "b.txt": "world" });
+    const pkg = await readPackageFile(root);
+    unlinkSync(join(root, "a.txt"));
+    symlinkSync(join(root, "b.txt"), join(root, "a.txt"));
+    const error = (() => {
+      try {
+        return pkg.file("a.txt");
+      } catch (caught) {
+        return caught;
+      }
+    })();
+    expect(error).toBeInstanceOf(SecurityError);
+    expect((error as SecurityError).limit).toBe("symlink");
+  });
+
+  it.skipIf(!POSIX)(
+    "rejects a file below a directory that became a link out of the package after the listing",
+    async () => {
+      const root = unpacked({ "sub/a.txt": "hello" });
+      const pkg = await readPackageFile(root);
+      const outside = join(directory, "outside-sub");
+      mkdirSync(outside, { recursive: true });
+      writeFileSync(join(outside, "a.txt"), "secret");
+      renameSync(join(root, "sub"), join(directory, "moved-sub"));
+      symlinkSync(outside, join(root, "sub"));
+      const error = (() => {
+        try {
+          return pkg.file("sub/a.txt");
+        } catch (caught) {
+          return caught;
+        }
+      })();
+      expect(error).toBeInstanceOf(SecurityError);
+      expect((error as SecurityError).limit).toBe("path");
+    },
+  );
+
+  it("refuses a file that grew past maxEntryBytes after the listing, when it is read", async () => {
+    const root = unpacked({ "a.txt": "a".repeat(100) });
+    const pkg = await readPackageFile(root, { limits: { maxEntryBytes: 2000 } });
+    appendFileSync(join(root, "a.txt"), "a".repeat(3000));
+    const error = (() => {
+      try {
+        return pkg.file("a.txt");
+      } catch (caught) {
+        return caught;
+      }
+    })();
+    expect(error).toBeInstanceOf(SecurityError);
+    expect((error as SecurityError).limit).toBe("maxEntryBytes");
+  });
 
   it.skipIf(!POSIX)("rejects a file that is neither a regular file nor a directory", async () => {
     const root = unpacked({});

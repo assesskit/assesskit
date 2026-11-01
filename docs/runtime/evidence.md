@@ -143,6 +143,36 @@ FUZZ_SEED=7 FUZZ_RUNS=50000 pnpm exec vitest run --project runtime --testTimeout
 
 A defect that fuzzing finds is fixed with a test that names the input that exposed it.
 
+## Mutation of the limits
+
+A limit or a check that SECURITY.md lists is correct only if a test fails when it is gone. `pnpm check:rules` holds each of them as a rule: the file, the line that implements it, the text that stands in its place without it (the condition becomes `false`, the `throw` is removed) and the test file that must then fail. It runs the test file on a copy of the code without the rule, and fails when the test still passes.
+
+```mermaid
+flowchart LR
+  rule["A rule: file, line,<br/>text without it, test"] --> copy["Copy of the repository"]
+  copy --> base{"The test passes<br/>on the unchanged copy?"}
+  base -->|no| fix["Fix the test first"]
+  base -->|yes| remove["Remove the rule in the copy"]
+  remove --> run{"The test fails?"}
+  run -->|yes| ok["The rule is guarded"]
+  run -->|no| add["Add a test that fails without it"]
+```
+
+| Group                | What is removed                                                                                                                                                                               | Test file                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Archives             | Names that leave the package, duplicates, encryption, links, the entry count in the end record and in the directory, the declared sizes, the ratio, the bytes counted while an entry inflates | `package.test.ts`                                                    |
+| Package directories  | Links while listing and again when a file is read, a real path outside the directory, the sizes at listing and at reading, the entry count                                                    | `node.test.ts`                                                       |
+| XML                  | The DOCTYPE, `maxBytes`, `maxDepth`, `maxAttributes`, `maxNodes`, and the same limits of a document with its includes, `maxIncludeDepth`, loops and `xpointer`                                | `xml.test.ts`                                                        |
+| Patterns and formats | `maxStates`, the nesting of a pattern, the width of a printed variable                                                                                                                        | `values.test.ts`, `content.test.ts`                                  |
+| Processing and plans | `maxContainerSize`, `maxPlanNodes` for a plan, a selection and a stage of an adaptive section, the depth of JSON                                                                              | `processing.test.ts`, `delivery.test.ts`, `delivery-pending.test.ts` |
+| Actions of a client  | `maxActionSize`, `maxPciStateLength`, the refusal of the actions of the host                                                                                                                  | `delivery.test.ts`                                                   |
+
+The rules for the player's server, protocol, frames and `cat-rest` are in the same list ([the player's evidence](../player/evidence.md)).
+
+**Why not a mutation tool.** A generic tool such as StrykerJS makes a mutant for every operator and branch and reports the survivors. A person must then decide for each survivor whether it is equivalent, harmless or a missing test, and the removal of a limit is one survivor among them. The rules name the mutants that matter, each written so that the code stays valid, so a survivor always means a missing test. The cost is that a new limit needs its rule: `check:rules` passes only for the rules it lists, and review asks for the rule when a limit is added.
+
+The text to find occurs once in its file, which `scripts/test/check-rules.test.ts` checks, so a refactor that moves the line fails that test and not silently.
+
 ## Test sessions
 
 No independent implementation of a QTI 3 test session was found, so test sessions are not compared with another

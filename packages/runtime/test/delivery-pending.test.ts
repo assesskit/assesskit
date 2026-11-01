@@ -1071,6 +1071,17 @@ describe("adaptive sections in nonlinear parts and at the end", () => {
     ).toBeUndefined();
   });
 
+  it("refuses a stage that would make the plan hold more sections and items than maxPlanNodes allows", () => {
+    const limited = engineOf(test(), { cat: CAT_A, options: { limits: { maxPlanNodes: 3 } } });
+    const start = begun(limited);
+    const tooMany = stage(limited, start.state, 1, { itemIdentifiers: ["i1", "i2", "i3"], stageLength: 3 });
+    const refusal = refusalOf(limited, start.state, tooMany);
+    expect(refusal.code).toBe("invalid-response");
+    expect(refusal.message).toContain("maxPlanNodes");
+    const fits = stage(limited, start.state, 1, { itemIdentifiers: ["i1", "i2"], stageLength: 2 });
+    expect(played(limited, start.state, fits).state.current).toEqual(key("i1"));
+  });
+
   it("presents the first item when the answer comes while the session is suspended and the candidate resumes", () => {
     const engine = engineOf(test(), { cat: CAT_A });
     const start = begun(engine);
