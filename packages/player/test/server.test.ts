@@ -562,6 +562,74 @@ describe("the asset gate", () => {
     expect((await gate.serve({ path: `/f/${packageToken}/file-1` }, NOW)).status).toBe(403);
   });
 
+  describe("with a signal", () => {
+    const reason = new Error("The caller left.");
+
+    /** A gate whose package and file store record the options they get, and whose store can hang. */
+    async function recording(hang = false) {
+      const pkg = packageOf(examFiles());
+      const received: { readonly where: string; readonly signal: AbortSignal | undefined }[] = [];
+      const files = {
+        put: async () => ({ reference: "file-1", mimeType: "audio/wav" }),
+        read: (_file: unknown, options?: { readonly signal?: AbortSignal }) => {
+          received.push({ where: "files.read", signal: options?.signal });
+          return hang ? new Promise<undefined>(() => undefined) : Promise.resolve(new Uint8Array([1]));
+        },
+      };
+      const gate = createAssetGate({
+        key: await gateKey(),
+        origin: EXAM_ORIGIN,
+        packages: async (_session, options) => {
+          received.push({ where: "packages", signal: options?.signal });
+          return pkg;
+        },
+        files,
+      });
+      return { gate, received };
+    }
+
+    it("passes the signal of serve to the package and to the file store", async () => {
+      const { gate, received } = await recording();
+      const controller = new AbortController();
+      const base = await baseOf(gate, "items/q1/");
+      const served = await gate.serve({ path: pathOf(base, "items/q1/images/map.png") }, NOW, {
+        signal: controller.signal,
+      });
+      expect(served.status).toBe(200);
+      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" }, NOW);
+      await gate.serve({ path: new URL(url).pathname }, NOW, { signal: controller.signal });
+      expect(received).toEqual([
+        { where: "packages", signal: controller.signal },
+        { where: "files.read", signal: controller.signal },
+      ]);
+    });
+
+    it("ends the wait of serve at the abort, though the file store never answers", async () => {
+      const { gate } = await recording(true);
+      const url = await gate.signFile("s1", { reference: "file-1", mimeType: "audio/wav" }, NOW);
+      const controller = new AbortController();
+      const waiting = gate.serve({ path: new URL(url).pathname }, NOW, { signal: controller.signal });
+      const rejected = expect(waiting).rejects.toBe(reason);
+      controller.abort(reason);
+      await rejected;
+    });
+
+    it("rejects sign, signFile and serve with the reason when the signal has aborted, and asks for nothing", async () => {
+      const { gate, received } = await recording();
+      const options = { signal: AbortSignal.abort(reason) };
+      await expect(gate.sign("s1", [""], NOW, options)).rejects.toBe(reason);
+      await expect(gate.signFile("s1", { reference: "f", mimeType: "x/y" }, NOW, options)).rejects.toBe(reason);
+      await expect(gate.serve({ path: "/g/t/x.png" }, NOW, options)).rejects.toBe(reason);
+      expect(received).toEqual([]);
+    });
+
+    it("refuses options of another type", async () => {
+      const { gate } = await recording();
+      await expect(gate.sign("s1", [""], NOW, JSON.parse("5"))).rejects.toThrow(DataError);
+      await expect(gate.serve({ path: "/x" }, NOW, JSON.parse('{"signal":1}'))).rejects.toThrow(DataError);
+    });
+  });
+
   it("answers 404 for a file that the store no longer has", async () => {
     const { gate } = await gateOf();
     const gone = await gate.signFile("s1", { reference: "gone", mimeType: "image/png" }, NOW);

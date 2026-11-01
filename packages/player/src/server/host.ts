@@ -170,7 +170,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     return {
       seq,
       view: viewToJson(view),
-      assets: await gate.sign(session, collectAssetPrefixes(view, pkg), now),
+      assets: await gate.sign(session, collectAssetPrefixes(view, pkg), now, { signal }),
       documents: locateDocuments(view, pkg),
       ...(refusal === undefined ? {} : { refusal }),
     };
@@ -303,10 +303,15 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   };
 
   /** Answers a request again: the stored envelope, with tokens that have not expired. */
-  const replay = async (session: string, stored: StoredSession, now: number): Promise<ViewEnvelope> => {
+  const replay = async (
+    session: string,
+    stored: StoredSession,
+    now: number,
+    signal: AbortSignal | undefined,
+  ): Promise<ViewEnvelope> => {
     const answer: unknown = JSON.parse(stored.envelope);
     checkViewEnvelope(answer);
-    return { ...answer, assets: await gate.sign(session, Object.keys(answer.assets), now) };
+    return { ...answer, assets: await gate.sign(session, Object.keys(answer.assets), now, { signal }) };
   };
 
   /** Applies the action of a request to the stored state and builds the change and the answer. */
@@ -342,7 +347,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
   ): Promise<ViewEnvelope> =>
     transact(caller.session, signal, notBound, async (stored, now) => {
       if (stored.principal !== caller.principal) throw notBound();
-      if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, now) };
+      if (envelope.seq === stored.seq) return { result: await replay(caller.session, stored, now, signal) };
       if (envelope.seq < stored.seq) {
         throw new DataError(
           `The sequence number ${envelope.seq} is stale: the latest request answered has ${stored.seq}.`,
@@ -393,7 +398,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     if (stored === undefined) return answer;
     const now = readClock(clock);
     if (failure !== undefined && stranded(stored, now)) throw failure.error;
-    return stored.seq === answer.seq ? replay(session, stored, now) : answer;
+    return stored.seq === answer.seq ? replay(session, stored, now, signal) : answer;
   };
 
   const view: SessionHost["view"] = async (caller, callOptions) => {

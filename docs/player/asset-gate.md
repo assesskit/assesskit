@@ -94,12 +94,16 @@ The token is in the path, and not the query, so that relative URLs inherit it: R
 `define(["./renderer"], …)` against `baseUrl`, and a stylesheet loaded as text resolves `url(../fonts/x.woff)` against its own
 URL. Both stay under the prefix and need no signature of their own.
 
-`sign(session, prefixes, now)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
+`sign(session, prefixes, now, options?)` throws `DataError` when a prefix is not a directory in normal form: empty, or segments that
 each end in `/`, without `.`, `..`, empty segments, backslashes or control characters. The tokens last `ttlSeconds`, and the
 session host renews them with every envelope. A client sends an envelope only when the candidate acts, so a candidate who sends
 nothing for longer than `ttlSeconds` gets `403` for what the page loads afterwards, such as a range of a long recording, a card
 of a catalog or a module that loads late. Choose `ttlSeconds` above the longest idle that a test allows, or have the page call
 `SessionClient.refresh` at an interval below it, which renews the tokens ([client](client.md)).
+
+`sign`, `signFile` and `serve` take `options.signal` last. A signal that has aborted rejects the call with its reason before
+anything is asked; `serve` passes the signal to the `packages` function and to `FileStore.read`, and its wait ends at the abort
+though the store never answers. `FileStore.put` and `read` take the options after their arguments.
 
 ## Prefixes
 

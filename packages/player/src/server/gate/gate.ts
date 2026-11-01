@@ -13,6 +13,8 @@ import { type QtiPackage, resolveReference } from "@assesskit/runtime/package";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { CryptoKey } from "jose";
 import * as v from "valibot";
+import type { SessionCallOptions } from "../../protocol/index.js";
+import { checkCallOptions, untilAborted } from "../../protocol/internal.js";
 import type { FileStore } from "../internal.js";
 import { contentTypeOf } from "./content-type.js";
 import { deniedPaths, isQtiData } from "./deny.js";
@@ -34,8 +36,8 @@ export interface AssetGateOptions {
   readonly key: CryptoKey;
   /** The origin that serves the gate, `https` and without a path, such as `https://assets.example`. */
   readonly origin: string;
-  /** Returns the package that a session delivers. */
-  readonly packages: (session: string) => Promise<QtiPackage>;
+  /** Returns the package that a session delivers. Its `options.signal` ends the wait of the call that asked. */
+  readonly packages: (session: string, options?: SessionCallOptions) => Promise<QtiPackage>;
   /** The storage of the files that candidates upload. */
   readonly files: FileStore;
   /**
@@ -70,20 +72,29 @@ export interface AssetGate {
    * @param session - The identifier of the session.
    * @param prefixes - Directories of the package, each `""` or ending in `/`.
    * @param now - The time in epoch milliseconds.
+   * @param options - See {@link SessionCallOptions}.
    * @returns The base URL of each prefix, `https://<origin>/g/<token>/`; the URL of a file is the base plus its path.
    * @throws `DataError` when an argument has the wrong type or a prefix is not a directory.
+   * @throws `signal.reason` when the signal has aborted.
    */
-  sign(session: string, prefixes: Iterable<string>, now: number): Promise<Readonly<Record<string, string>>>;
+  sign(
+    session: string,
+    prefixes: Iterable<string>,
+    now: number,
+    options?: SessionCallOptions,
+  ): Promise<Readonly<Record<string, string>>>;
   /**
    * Signs the URL of one file of a candidate for `uploadTtlSeconds` from `now`.
    *
    * @param session - The identifier of the session.
    * @param file - The file value that names the file in the host's store.
    * @param now - The time in epoch milliseconds.
+   * @param options - See {@link SessionCallOptions}.
    * @returns The URL, `https://<origin>/f/<token>/<reference>`.
    * @throws `DataError` when an argument has the wrong type.
+   * @throws `signal.reason` when the signal has aborted.
    */
-  signFile(session: string, file: FileValue, now: number): Promise<string>;
+  signFile(session: string, file: FileValue, now: number, options?: SessionCallOptions): Promise<string>;
   /**
    * Answers a request for a path of the form `/g/<token>/<package path>` or `/f/<token>/<reference>`.
    *
@@ -96,10 +107,12 @@ export interface AssetGate {
    *
    * @param request - The path of the request, without the origin and the query.
    * @param now - The time of the request in epoch milliseconds.
+   * @param options - Its `signal` goes to the package and the file store, and ends the wait of this call.
    * @returns The status, the headers and, for `200`, the bytes.
    * @throws `DataError` when an argument has the wrong type.
+   * @throws `signal.reason` when the signal has aborted.
    */
-  serve(request: { readonly path: string }, now: number): Promise<GateResponse>;
+  serve(request: { readonly path: string }, now: number, options?: SessionCallOptions): Promise<GateResponse>;
 }
 
 /** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed. */
@@ -205,14 +218,19 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
   const { key, origin, packages, files } = options;
   const { ttlSeconds = DEFAULT_TTL_SECONDS, uploadTtlSeconds = DEFAULT_UPLOAD_TTL_SECONDS } = options;
 
-  const servePackage = async (token: string, rest: string, now: number): Promise<GateResponse> => {
+  const servePackage = async (
+    token: string,
+    rest: string,
+    now: number,
+    options: SessionCallOptions | undefined,
+  ): Promise<GateResponse> => {
     const claims = await claimsOf(key, token, PACKAGE_USE, now);
     const session = claims?.session;
     const prefix = claims?.prefix;
     if (typeof session !== "string" || typeof prefix !== "string") return refused(403);
     const path = resolveReference("", rest);
     if (path === undefined || !path.startsWith(prefix)) return refused(403);
-    const pkg = await packages(session);
+    const pkg = await packages(session, options);
     const bytes = pkg.file(path);
     const type = contentTypeOf(path);
     if (bytes === undefined || type === undefined || deniedPaths(pkg).has(path) || isQtiData(bytes))
@@ -221,7 +239,12 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
     return { status: 200, headers: { ...headers, "Content-Type": type }, body: bytes };
   };
 
-  const serveFile = async (token: string, rest: string, now: number): Promise<GateResponse> => {
+  const serveFile = async (
+    token: string,
+    rest: string,
+    now: number,
+    options: SessionCallOptions | undefined,
+  ): Promise<GateResponse> => {
     const claims = await claimsOf(key, token, FILE_USE, now);
     const reference = claims?.reference;
     const mimeType = claims?.mimeType;
@@ -233,16 +256,18 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       return refused(403);
     }
     if (named !== reference) return refused(403);
-    const bytes = await files.read({ reference, mimeType });
+    const bytes = await files.read({ reference, mimeType }, options);
     return bytes === undefined
       ? refused(404)
       : { status: 200, headers: { ...SANDBOXED_HEADERS, "Content-Type": mimeType }, body: bytes };
   };
 
   return {
-    sign: async (session, prefixes, now) => {
+    sign: async (session, prefixes, now, options) => {
       checkString(session, "The session");
       checkNonNegativeInteger(now, "The time now");
+      checkCallOptions(options);
+      options?.signal?.throwIfAborted();
       const signed = new Map<string, string>();
       for (const prefix of prefixes) {
         checkPrefix(prefix);
@@ -251,10 +276,12 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       }
       return Object.fromEntries(signed);
     },
-    signFile: async (session, file, now) => {
+    signFile: async (session, file, now, options) => {
       checkString(session, "The session");
       checkFileValue(file);
       checkNonNegativeInteger(now, "The time now");
+      checkCallOptions(options);
+      options?.signal?.throwIfAborted();
       const claims = {
         session,
         reference: file.reference,
@@ -263,14 +290,17 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
       };
       return `${origin}/f/${await sealToken(FILE_USE, claims, key)}/${encodeURIComponent(file.reference)}`;
     },
-    serve: async (request, now) => {
+    serve: async (request, now, options) => {
       checkRecord(request, "The request must be an object");
       checkString(request.path, "The path of the request");
       checkNonNegativeInteger(now, "The time now");
+      checkCallOptions(options);
+      options?.signal?.throwIfAborted();
       const match = REQUEST_PATH.exec(request.path);
       if (match === null) return refused(404);
       const [, kind = "", token = "", rest = ""] = match;
-      return kind === "g" ? servePackage(token, rest, now) : serveFile(token, rest, now);
+      const served = kind === "g" ? servePackage(token, rest, now, options) : serveFile(token, rest, now, options);
+      return untilAborted(served, options?.signal);
     },
   };
 }
