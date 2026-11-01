@@ -1,7 +1,6 @@
 {
   "name": "@assesskit/player",
   "version": "0.0.0",
-  "private": true,
   "description": "A player and integrations for QTI 3.0 assessments: rendering, the host of portable custom interactions, accessibility in the interface, and the server-side session host and computer adaptive testing, built on @assesskit/runtime.",
   "keywords": [
     "assesskit",
@@ -74,6 +73,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",

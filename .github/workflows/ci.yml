@@ -50,6 +50,7 @@ jobs:
       - run: pnpm check:standards
       - run: pnpm knip
       - run: pnpm check:packages
+      - run: pnpm check:release
       - run: pnpm compat
       - run: pnpm docs:api
       # Version and Dependabot pull requests change package files without a changeset of their own.
