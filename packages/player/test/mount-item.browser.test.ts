@@ -3,6 +3,7 @@ import type { CandidateView } from "@assesskit/runtime/delivery";
 import { readPnp } from "@assesskit/runtime/pnp";
 import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
 import { mountItem } from "../src/player/index.js";
 import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
@@ -326,9 +327,7 @@ describe("the focus of an item in a page", () => {
     check.focus();
     await submit(s, "B");
     await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
-    const dialog = dialogOf(s.ui) as HTMLDialogElement;
-    dialog.dispatchEvent(new Event("cancel"));
-    dialog.close();
+    await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     expect(document.activeElement).toBe(check);
   });
