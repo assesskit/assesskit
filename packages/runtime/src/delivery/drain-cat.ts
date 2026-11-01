@@ -22,25 +22,34 @@ function checkMethod(port: CatPort, method: (typeof SESSION_METHODS)[number]): v
   checkFunction(port[method], `The port must have a function ${method}`);
 }
 
+/** Reads the option `signal` of a call that waits for the CAT engine. */
+function readSignal(options: SendCatRequestOptions): AbortSignal | undefined {
+  checkOptions(options);
+  const { signal } = options;
+  optional(signal, (value) => checkAbortSignal(value, "The option signal"));
+  return signal;
+}
+
 /**
- * Makes one CAT request through a port and returns the answer as a `cat-response` action takes it: the engine's reply to
- * Create Session or Submit Results, or `{ ended: true }` for End Session, which the CAT specification answers with no
- * body.
+ * Ends the wait for a promise when a signal aborts: the promise goes on, and nothing waits for it any more.
  *
- * @remarks
- * It is the one place that maps a request to a method of the port, for `drainCat` and for a host that answers requests
- * itself. The requests of a CAT engine are not idempotent, so a request that fails is not repeated.
- *
- * @param port - The host's access to the CAT engine; only the method that the request needs is called.
- * @param request - A request from `Engine.pending`.
- * @returns The answer, for the `response` of a `cat-response` action.
- * @throws `DataError` when the request is not a CAT request or the port lacks the method that it needs; the error of the
- * port when it rejects.
+ * @returns The promise, or a promise that rejects with `signal.reason` as soon as the signal aborts.
  */
-export async function sendCatRequest(port: CatPort, request: CatRequest): Promise<CatResponse> {
-  checkRecord(port, "The port must be an object with the methods of CatPort");
-  checkRecord(request, "The request must be a CAT request from Engine.pending");
-  checkChoice(request.kind, "The kind of the request", REQUEST_KINDS);
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (signal === undefined) return promise;
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = (): void => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
+/** Calls the method of the port that the request needs. */
+async function call(port: CatPort, request: CatRequest): Promise<CatResponse> {
   switch (request.kind) {
     case "create-session":
       checkMethod(port, "createSession");
@@ -58,11 +67,55 @@ export async function sendCatRequest(port: CatPort, request: CatRequest): Promis
   }
 }
 
+/** The options of {@link sendCatRequest}. */
+export interface SendCatRequestOptions {
+  /**
+   * Ends the wait of the caller: the call rejects with the reason of the signal, before the request when the signal has
+   * aborted already, else as soon as it aborts. A request already sent goes on to the timeout of the port, and its answer
+   * is lost.
+   *
+   * @defaultValue none
+   */
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * Makes one CAT request through a port and returns the answer as a `cat-response` action takes it: the engine's reply to
+ * Create Session or Submit Results, or `{ ended: true }` for End Session, which the CAT specification answers with no
+ * body.
+ *
+ * @remarks
+ * It is the one place that maps a request to a method of the port, for `drainCat` and for a host that answers requests
+ * itself. The requests of a CAT engine are not idempotent, so a request that fails is not repeated, and one that the
+ * signal gave up on is not repeated either.
+ *
+ * @param port - The host's access to the CAT engine; only the method that the request needs is called.
+ * @param request - A request from `Engine.pending`.
+ * @param options - See {@link SendCatRequestOptions}.
+ * @returns The answer, for the `response` of a `cat-response` action.
+ * @throws `DataError` when the request is not a CAT request, an option has the wrong type or the port lacks the method that
+ * it needs; the error of the port when it rejects.
+ * @throws `signal.reason` when the signal aborts before the answer arrives.
+ */
+export async function sendCatRequest(
+  port: CatPort,
+  request: CatRequest,
+  options: SendCatRequestOptions = {},
+): Promise<CatResponse> {
+  checkRecord(port, "The port must be an object with the methods of CatPort");
+  checkRecord(request, "The request must be a CAT request from Engine.pending");
+  checkChoice(request.kind, "The kind of the request", REQUEST_KINDS);
+  const signal = readSignal(options);
+  signal?.throwIfAborted();
+  return untilAborted(call(port, request), signal);
+}
+
 /** The options of {@link drainCat}. */
 export interface DrainCatOptions {
   /**
-   * Stops the drain before its next request. The call then rejects with the reason of the signal, and the answers applied
-   * so far are lost with the state that was not returned.
+   * Ends the wait of the caller, before the next request or while one waits for its answer, as in
+   * {@link SendCatRequestOptions}. The call then rejects with the reason of the signal, and the answers applied so far are
+   * lost with the state that was not returned.
    *
    * @defaultValue none
    */
@@ -89,7 +142,7 @@ export interface DrainCatOptions {
  * @param options - See {@link DrainCatOptions}.
  * @returns The state after every answer.
  * @throws `DataError` when an argument has the wrong type, or the engine refuses an answer of the port.
- * @throws `signal.reason` when the signal aborts before a request.
+ * @throws `signal.reason` when the signal aborts before a request or while one waits for its answer.
  */
 export async function drainCat(
   engine: Engine,
@@ -103,15 +156,12 @@ export async function drainCat(
   checkRecord(port, "The port must be an object with the methods of CatPort");
   for (const method of SESSION_METHODS) checkMethod(port, method);
   checkFunction(now, "The clock now must be a function that returns epoch milliseconds");
-  checkOptions(options);
-  const { signal } = options;
-  optional(signal, (value) => checkAbortSignal(value, "The option signal"));
+  const signal = readSignal(options);
   let current = state;
   for (let waiting = engine.pending(current).cat; waiting.length > 0; waiting = engine.pending(current).cat) {
     const [request] = waiting;
     if (request === undefined) break;
-    signal?.throwIfAborted();
-    const response = await sendCatRequest(port, request);
+    const response = await sendCatRequest(port, request, { signal });
     const step = engine.apply(current, stamp(current, { type: "cat-response", request: request.id, response }, now()));
     if (!step.ok) {
       throw new DataError(

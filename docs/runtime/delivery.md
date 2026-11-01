@@ -58,8 +58,8 @@ sequenceDiagram
 | `CandidateAction`, `HostAction`, `Action`                      | The actions of the candidate and the host, with their time.                                    |
 | `DeliveryDefinition`, `EngineOptions`, `StartOptions`          | What the engine delivers, its options, and the options of a session.                           |
 | `drainCat(engine, state, port, now, options?)`                 | Makes the waiting requests of CAT engines through a `CatPort` and applies each answer.         |
-| `sendCatRequest(port, request)`                                | Makes one CAT request through a `CatPort` and returns the answer for a `cat-response` action.  |
-| `DrainCatOptions`                                              | The options of `drainCat`: `signal`.                                                           |
+| `sendCatRequest(port, request, options?)`                      | Makes one CAT request through a `CatPort` and returns the answer for a `cat-response` action.  |
+| `DrainCatOptions`, `SendCatRequestOptions`                     | The options of `drainCat` and `sendCatRequest`: `signal`.                                      |
 | `PendingWork`, `ScoringRequest`, `CatRequest`                  | What the engine waits on the host for: scores and answers of CAT engines.                      |
 | `ScorerView`, `ScorerItem`                                     | What a scorer needs to rate a request, correct responses included.                             |
 | `CatSession`, `CatSectionRef`                                  | The session of an adaptive section in a state, and where its CAT engine is.                    |
@@ -735,7 +735,7 @@ host deployed the section. The host answers the engine's requests: `sendCatReque
 - A report to the engine names an item the plan holds more than once `<ref>.<instance>`, has an empty `context`,
   and gives an item that the candidate submitted without a response no response variables and no `SCORE`, with the status
   `initial`; items not presented are left out.
-- `sendCatRequest(port, request)` makes one request through the method of the port that its kind needs (Create Session,
+- `sendCatRequest(port, request, options?)` makes one request through the method of the port that its kind needs (Create Session,
   Submit Results or End Session) and returns the answer as a `cat-response` action takes it; the answer to End Session is
   `{ ended: true }`. It throws `DataError` when `request` is not a CAT request or the port lacks the method it needs.
 - `drainCat(engine, state, port, now, options?)` makes the waiting requests one by one with `sendCatRequest` and applies
@@ -743,9 +743,9 @@ host deployed the section. The host answers the engine's requests: `sendCatReque
   because the requests of a CAT engine are not idempotent: a host that must resume reads `pending(state).cat`, calls
   `sendCatRequest` and applies the `cat-response` itself, one request at a time.
 
-| Option   | Type          | Default | Meaning                                                                                                                 |
-| -------- | ------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `signal` | `AbortSignal` | none    | Stops the drain before its next request; the call rejects with the reason of the signal. A request in flight completes. |
+| Option   | Type          | Default | Meaning                                                                                                                                                                                                                        |
+| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `signal` | `AbortSignal` | none    | Ends the wait of the caller, of `sendCatRequest` and of `drainCat`: the call rejects with the reason of the signal, at once if it has aborted. A request already sent runs to the timeout of the port, and its answer is lost. |
 
 A test part that holds an adaptive section should be linear; the engine waits for the first stage where the walk
 reaches the section, in a nonlinear part too.

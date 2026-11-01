@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type Action,
   type AssessmentResult,
+  type CreateSessionResponse,
   createEngine,
   createRandom,
   DataError,
@@ -1420,6 +1421,20 @@ describe("the state with pending work", () => {
   });
 });
 
+/** A promise that the test settles itself, to hold a request of a port in flight. */
+function unsettled<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+  readonly reject: (reason: unknown) => void;
+} {
+  const handles: { resolve?: (value: T) => void; reject?: (reason: unknown) => void } = {};
+  const promise = new Promise<T>((resolve, reject) => {
+    handles.resolve = resolve;
+    handles.reject = reject;
+  });
+  return { promise, resolve: (value) => handles.resolve?.(value), reject: (reason) => handles.reject?.(reason) };
+}
+
 describe("sendCatRequest", () => {
   const pool = refs("i1", "i2", "i3");
   const engine = engineOf(
@@ -1468,8 +1483,43 @@ describe("sendCatRequest", () => {
     expect(calls).toBe(1);
   });
 
+  it("ends the wait when the signal aborts, and lets the request of the port go on", async () => {
+    const request = waiting(engine, begun(engine).state);
+    const reason = new Error("The page was closed.");
+    const aborted = fakePort([]);
+    await expect(sendCatRequest(aborted, request, { signal: AbortSignal.abort(reason) })).rejects.toBe(reason);
+    expect(aborted.calls).toEqual([]);
+
+    const answer = unsettled<CreateSessionResponse>();
+    let sent = 0;
+    const slow = {
+      ...fakePort([]),
+      createSession: () => {
+        sent++;
+        return answer.promise;
+      },
+    };
+    const controller = new AbortController();
+    const waited = sendCatRequest(slow, request, { signal: controller.signal });
+    controller.abort(reason);
+    await expect(waited).rejects.toBe(reason);
+    answer.reject(new Error("The CAT engine answered too late."));
+    await Promise.resolve();
+    expect(sent).toBe(1);
+
+    const quick = fakePort([]);
+    const answered = await sendCatRequest(quick, request, { signal: new AbortController().signal });
+    expect(answered).toMatchObject({ sessionIdentifier: "session-1" });
+  });
+
   it("checks its arguments", async () => {
     const request = waiting(engine, begun(engine).state);
+    await expect(sendCatRequest(fakePort([]), request, JSON.parse("null"))).rejects.toThrow(
+      "The options must be an object, found null.",
+    );
+    await expect(sendCatRequest(fakePort([]), request, JSON.parse('{"signal":{}}'))).rejects.toThrow(
+      "The option signal must be an AbortSignal, found an object.",
+    );
     await expect(sendCatRequest(JSON.parse("null"), request)).rejects.toThrow(
       "The port must be an object with the methods of CatPort, found null.",
     );
@@ -1586,6 +1636,25 @@ describe("drainCat", () => {
     };
     await expect(drainCat(engine, left.state, stopping, clock(), { signal: controller.signal })).rejects.toBe(reason);
     expect(port.calls.map(({ method }) => method)).toEqual(["submitResults"]);
+  });
+
+  it("ends the wait for the answer to a request when the signal aborts", async () => {
+    const reason = new Error("The page was closed.");
+    const controller = new AbortController();
+    const answer = unsettled<CreateSessionResponse>();
+    let sent = 0;
+    const slow = {
+      ...fakePort([]),
+      createSession: () => {
+        sent++;
+        return answer.promise;
+      },
+    };
+    const draining = drainCat(engine, begun(engine).state, slow, clock(), { signal: controller.signal });
+    controller.abort(reason);
+    await expect(draining).rejects.toBe(reason);
+    answer.resolve({ sessionIdentifier: "session-1", nextItems: { itemIdentifiers: ["i1", "i2"], stageLength: 2 } });
+    expect(sent).toBe(1);
   });
 
   it("checks its arguments", async () => {

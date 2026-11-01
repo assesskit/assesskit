@@ -58,7 +58,7 @@ export type {
   Step,
 } from "./delivery-state.js";
 export { STATE_VERSION } from "./delivery-state.js";
-export { type DrainCatOptions, drainCat, sendCatRequest } from "./drain-cat.js";
+export { type DrainCatOptions, drainCat, type SendCatRequestOptions, sendCatRequest } from "./drain-cat.js";
 export { createEngine, type Engine, type StartOptions } from "./engine.js";
 export type { DeliveryEvent, DeliveryEventType } from "./events.js";
 export { applyItemAction, type ItemAction } from "./item-action.js";
