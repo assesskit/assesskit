@@ -61,11 +61,12 @@ client.close();
 
 `createRemoteSession(transport, initial, options)` throws `DataError` when an argument is not of its type.
 
-| Argument    | Type           | Meaning                                                                                                                    |
-| ----------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `transport` | `Transport`    | Sends an `ActionEnvelope` or a `ViewRequest`, and the `signal` of the call, to the host; resolves with its `ViewEnvelope`. |
-| `initial`   | `ViewEnvelope` | What `SessionHost.start` or `SessionHost.view` gave. The first request has its `seq` plus one.                             |
-| `clock`     | `Clock`        | In the options. Times the age of a view. Default: the clock of the browser, `BROWSER_CLOCK`.                               |
+| Argument    | Type                       | Meaning                                                                                                                                                                                                          |
+| ----------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport` | `Transport`                | Sends an `ActionEnvelope` or a `ViewRequest`, and the `signal` of the call, to the host; resolves with its `ViewEnvelope`.                                                                                       |
+| `initial`   | `ViewEnvelope`             | What `SessionHost.start` or `SessionHost.view` gave. The first request has its `seq` plus one.                                                                                                                   |
+| `clock`     | `Clock`                    | In the options. Times the age of a view. Default: the clock of the browser, `BROWSER_CLOCK`.                                                                                                                     |
+| `onError`   | `(error: unknown) => void` | In the options. Receives the errors that the client can only report: a listener that threw, and a send at an autosave or a deadline that failed, since no call waits for it. Default: `reportError` of the page. |
 
 ### What the client does
 
@@ -125,6 +126,7 @@ first save. A session that was saved stays, and a new call resumes it.
 | `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                                                  |
 | `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                           |
 | `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                              |
+| `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.        |
 | `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts. |
 | `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `restCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                                |
 | `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                  |
