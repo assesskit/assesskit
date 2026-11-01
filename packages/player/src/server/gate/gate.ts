@@ -105,8 +105,14 @@ export interface AssetGate {
 /** The headers of every response: the token is in the URL, so no referrer carries it, and nothing is sniffed. */
 const BASE_HEADERS = { "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff" } as const;
 
-/** The files of a candidate are untrusted content of the asset origin, so they get no script, no frame and no form. */
-const FILE_HEADERS = { ...BASE_HEADERS, "Content-Security-Policy": "sandbox" } as const;
+/**
+ * The files of a candidate and of a package are untrusted content of the asset origin. A browser that opens one as a
+ * document, as a link of the content or a frame does, gives it an opaque origin, with no script, no frame and no form.
+ */
+const SANDBOXED_HEADERS = { ...BASE_HEADERS, "Content-Security-Policy": "sandbox" } as const;
+
+/** A PDF runs no script on the origin, and the viewer of Chromium refuses to show one under `sandbox`. */
+const PDF_TYPE = "application/pdf";
 
 const REQUEST_PATH = /^\/([gf])\/([^/]+)\/(.*)$/su;
 
@@ -211,7 +217,8 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
     const type = contentTypeOf(path);
     if (bytes === undefined || type === undefined || deniedPaths(pkg).has(path) || isQtiData(bytes))
       return refused(404);
-    return { status: 200, headers: { ...BASE_HEADERS, "Content-Type": type }, body: bytes };
+    const headers = type === PDF_TYPE ? BASE_HEADERS : SANDBOXED_HEADERS;
+    return { status: 200, headers: { ...headers, "Content-Type": type }, body: bytes };
   };
 
   const serveFile = async (token: string, rest: string, now: number): Promise<GateResponse> => {
@@ -229,7 +236,7 @@ export function createAssetGate(options: AssetGateOptions): AssetGate {
     const bytes = await files.read({ reference, mimeType });
     return bytes === undefined
       ? refused(404)
-      : { status: 200, headers: { ...FILE_HEADERS, "Content-Type": mimeType }, body: bytes };
+      : { status: 200, headers: { ...SANDBOXED_HEADERS, "Content-Type": mimeType }, body: bytes };
   };
 
   return {

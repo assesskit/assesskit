@@ -131,6 +131,9 @@ const STYLE = ".note { color: #123456; }\n";
 /** A file of the fixture package that is XML in the namespace of QTI data, though the manifest lists it as web content. */
 export const HIDDEN_KEY_FILE = "items/q1/notes.xml";
 
+/** A page of the package that a link of the content could open: it tells its opener that its script ran. */
+export const HOSTILE_PAGE = '<!doctype html><title>Page</title><script>parent.postMessage("script-ran", "*")</script>';
+
 /** The files of the fixture package: a test of three items in a nonlinear part, an image, a stylesheet and a key that hides as web content. */
 export function examFiles(
   options: { readonly part?: string; readonly limits?: string; readonly control?: string } = {},
@@ -156,6 +159,7 @@ export function examFiles(
     "items/q3/images/dot.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
     "items/q1/images/map.png": PNG,
     "items/q1/style.css": STYLE,
+    "items/q1/page.html": HOSTILE_PAGE,
     [HIDDEN_KEY_FILE]: `<?xml version="1.0"?><qti-assessment-item xmlns="${ASI_NAMESPACE}" identifier="hidden" title="Hidden" adaptive="false" time-dependent="false"/>`,
   };
 }

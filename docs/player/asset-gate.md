@@ -154,9 +154,17 @@ keys in response processing.
 ## Headers
 
 Every response, whatever its status, carries `Referrer-Policy: no-referrer`, since the token is in the URL, and
-`X-Content-Type-Options: nosniff`. The gate sets no CORS headers: the host's HTTP layer adds the headers its deployment
-needs, such as `Access-Control-Allow-Origin` for the origin of the player when stylesheets are fetched. Serve `pci-frame/*`
-and `player.css` from the same origin, outside the gate; they hold no package data.
+`X-Content-Type-Options: nosniff`. A `200` for a package file carries `Content-Security-Policy: sandbox`, except for a PDF,
+whose viewer in Chromium refuses to show a sandboxed document.
+
+A package is untrusted content: a link of the content opens its page in a tab, and without the header a script of that page
+would run on the asset origin. Under `sandbox` the page has an opaque origin and runs no script, no frame and no form. A page
+of a package is therefore static content, and an interaction that needs script is a portable custom interaction. A page or a
+drawing that loads a font needs `Access-Control-Allow-Origin`, since an opaque origin sends `Origin: null`.
+
+The gate sets no CORS headers: the host's HTTP layer adds the headers its deployment needs, such as
+`Access-Control-Allow-Origin` for the origin of the player when stylesheets are fetched. Serve `pci-frame/*` and `player.css`
+from the same origin, outside the gate; they hold no package data.
 
 The code of a portable custom interaction is visible to the candidate: keep answer keys in response processing, which the gate
 never serves.

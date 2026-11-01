@@ -146,6 +146,32 @@ describe("the asset gate", () => {
     expect(response.body?.length).toBeGreaterThan(0);
   });
 
+  it("serves a page, a drawing and a script of the package in a sandbox, so that a hostile package runs no script on the gate's origin", async () => {
+    const hostile = "<script>parent.postMessage(document.cookie, '*')</script>";
+    const { gate } = await gateOf({
+      ...examFiles(),
+      "items/q1/page.html": `<!doctype html>${hostile}`,
+      "items/q1/page.htm": `<!doctype html>${hostile}`,
+      "items/q1/drawing.svg": `<svg xmlns="http://www.w3.org/2000/svg">${hostile}</svg>`,
+      "items/q1/pronunciation.pls": `<lexicon xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" version="1.0" alphabet="ipa" xml:lang="en"/>`,
+      "items/q1/module.js": "export {};",
+      "items/q1/note.txt": "A note.",
+    });
+    const base = await baseOf(gate, "items/q1/");
+    for (const file of ["page.html", "page.htm", "drawing.svg", "pronunciation.pls", "module.js", "note.txt"]) {
+      const response = await gate.serve({ path: pathOf(base, `items/q1/${file}`) }, NOW);
+      expect(response.status, file).toBe(200);
+      expect(response.headers["Content-Security-Policy"], file).toBe("sandbox");
+    }
+  });
+
+  it("serves a PDF without the sandbox, which the viewer of Chromium refuses to show", async () => {
+    const { gate } = await gateOf({ ...examFiles(), "items/q1/reading.pdf": "%PDF-1.7" });
+    const response = await gate.serve({ path: pathOf(await baseOf(gate, "items/q1/"), "items/q1/reading.pdf") }, NOW);
+    expect(response.status).toBe(200);
+    expect(response.headers["Content-Security-Policy"]).toBeUndefined();
+  });
+
   it("sends Referrer-Policy and nosniff with every status", async () => {
     const { gate } = await gateOf();
     const base = await baseOf(gate, "items/q1/");

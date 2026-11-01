@@ -136,8 +136,9 @@ session holds any file of the engine. Practice runs the engine on the device, so
   started once.
 - Serve package files only through the asset gate ([asset-gate.md](docs/player/asset-gate.md)), from an origin
   without cookies. A token is in the path and names a session, a prefix and an expiry (an hour by default). The gate sends
-  `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`; do not strip them. Keep the HMAC key out of the
-  browser and rotate it to end every token.
+  `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff`, and `Content-Security-Policy: sandbox` on every
+  package file except a PDF, so that a page or a drawing of a hostile package runs no script on the asset origin when a
+  link opens it in a tab; do not strip them. Keep the HMAC key out of the browser and rotate it to end every token.
 - The gate never serves the manifest, a file of a QTI resource type, a file that an adaptive section names, or an XML file in a
   namespace of QTI data. Keys stay safe by type and content, not by what a view references: a file under a prefix that no view
   references is served, so keep one folder for each item and its media.

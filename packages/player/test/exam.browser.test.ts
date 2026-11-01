@@ -133,6 +133,30 @@ describe("exam mode over HTTP", () => {
     expect(reply.refusal?.code).toBe("time-over");
   });
 
+  it("runs no script of a package page that a browser opens as a document of the asset origin", async () => {
+    const session = fresh();
+    const first = await start(candidate(session));
+    const base = first.assets["items/q1/"] ?? "";
+    const heard: unknown[] = [];
+    const listen = (event: MessageEvent): void => void heard.push(event.data);
+    window.addEventListener("message", listen);
+    // A frame without the attribute sandbox is what a tab that a link opens is: only the header can sandbox its page.
+    const frame = document.createElement("iframe");
+    const loaded = new Promise<void>((resolve) => frame.addEventListener("load", () => resolve(), { once: true }));
+    frame.src = `${base}items/q1/page.html`;
+    document.body.append(frame);
+    try {
+      await loaded;
+      // Messages of one window arrive in the order they were posted: a script that ran has posted before this sentinel.
+      window.postMessage("sentinel", "*");
+      await waitFor(() => expect(heard).toContain("sentinel"));
+      expect(heard).toEqual(["sentinel"]);
+    } finally {
+      window.removeEventListener("message", listen);
+      frame.remove();
+    }
+  });
+
   it("serves the files of a prefix with the headers of the gate, and refuses what is not allowed", async () => {
     const session = fresh();
     const alice = candidate(session);
@@ -144,6 +168,7 @@ describe("exam mode over HTTP", () => {
     expect(image.headers.get("referrer-policy")).toBe("no-referrer");
     expect(image.headers.get("x-content-type-options")).toBe("nosniff");
     expect(image.headers.get("content-type")).toBe("image/png");
+    expect(image.headers.get("content-security-policy")).toBe("sandbox");
     const status = async (url: string, headers: Record<string, string> = {}): Promise<number> =>
       (await fetch(url, { headers })).status;
     expect(await status(`${base}items/q2/item.xml`)).toBe(403);
