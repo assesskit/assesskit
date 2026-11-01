@@ -55,6 +55,13 @@ export const sameValue = (a: Value | null, b: Value | null): boolean =>
   a === null || b === null ? a === b : matchValues(a, b);
 
 /**
+ * The class that the elements extend. A server that renders a page imports the player where there is no `HTMLElement`, so
+ * there the class is an empty one, which lets the module load; `defineElements` and the mounts need a browser.
+ */
+const ElementBase: typeof HTMLElement =
+  typeof HTMLElement === "undefined" ? (class {} as unknown as typeof HTMLElement) : HTMLElement;
+
+/**
  * The element of an interaction: what the player gives the content root for `qti-…-interaction`.
  *
  * @remarks
@@ -74,7 +81,7 @@ export const sameValue = (a: Value | null, b: Value | null): boolean =>
  *
  * @see {@link https://www.w3.org/TR/WCAG22/#error-identification | WCAG 2.2, error identification}
  */
-export abstract class InteractionElement extends HTMLElement {
+export abstract class InteractionElement extends ElementBase {
   /** The kind of interaction the element is for, such as `choice-interaction`. */
   abstract readonly kind: InteractionKind;
   #descriptor: InteractionDescriptor | undefined;

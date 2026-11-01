@@ -10,16 +10,20 @@ import { isRasterDataUrl } from "../content/internal.js";
  * not let a script change, so that a URL in them could be neither rewritten nor removed. A font face declared in a shadow
  * root does not apply in every engine either: the host declares the fonts of its packages in the page.
  */
-const KEPT_RULES: readonly (abstract new () => CSSRule)[] = [
-  CSSStyleRule,
-  CSSMediaRule,
-  CSSSupportsRule,
-  CSSKeyframesRule,
-  CSSKeyframeRule,
-  CSSLayerBlockRule,
-  CSSLayerStatementRule,
-  CSSContainerRule,
-];
+let kept: readonly (abstract new () => CSSRule)[] | undefined;
+
+/** The types of rule that the player keeps, looked up when a stylesheet is cleaned: a server that imports the player has none of them. */
+const keptRules = (): readonly (abstract new () => CSSRule)[] =>
+  (kept ??= [
+    CSSStyleRule,
+    CSSMediaRule,
+    CSSSupportsRule,
+    CSSKeyframesRule,
+    CSSKeyframeRule,
+    CSSLayerBlockRule,
+    CSSLayerStatementRule,
+    CSSContainerRule,
+  ]);
 
 /** A selector that reaches the host of the root or the content slotted into it: an item cannot restyle the player's frame. */
 const HOST_SELECTOR = /:host|::slotted/iu;
@@ -125,7 +129,7 @@ function cleanRules(parent: RuleParent, policy: StylesheetPolicy): void {
     const rule = parent.cssRules.item(index);
     if (rule === null) continue;
     const kept =
-      KEPT_RULES.some((type) => rule instanceof type) &&
+      keptRules().some((type) => rule instanceof type) &&
       !(rule instanceof CSSStyleRule && HOST_SELECTOR.test(rule.selectorText));
     if (kept) cleanRule(rule, policy);
     else parent.deleteRule(index);
