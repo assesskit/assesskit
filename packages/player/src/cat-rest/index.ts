@@ -7,8 +7,9 @@
  * @module @assesskit/player/cat-rest
  */
 
+export type { CatAuthorization, CatAuthorizer } from "./authorization.js";
 export type { CatFetch, CatFetchRequest, CatFetchResponse, OAuthClientCredentials } from "./rest-client.js";
-export { type CatAuthenticate, type CatRestHandlerOptions, createCatRestHandler } from "./rest-handler.js";
+export { type CatRestHandlerOptions, createCatRestHandler } from "./rest-handler.js";
 export {
   type CatEngine,
   type CatEngineResolver,
@@ -17,3 +18,4 @@ export {
   type RestCatPortOptions,
 } from "./rest-port.js";
 export type { CatOperation } from "./route.js";
+export { CAT_SCOPES, scopesOf } from "./scopes.js";

@@ -10,6 +10,8 @@ import {
   untilAborted,
 } from "@assesskit/runtime/checks";
 import * as v from "valibot";
+import { httpsUrlSchema } from "../checks.js";
+import { type CatAuthorizer, grantOf } from "./authorization.js";
 import {
   readCreateSessionBody,
   readResultsBody,
@@ -21,35 +23,52 @@ import {
 } from "./binding.js";
 import { readJsonBody } from "./body.js";
 import { type CatOperation, matchRoute, type PathIdentifiers } from "./route.js";
-import { failureOf, failureResponse, successResponse } from "./status.js";
-
-/**
- * Decides whether a request may use an operation.
- *
- * @param request - The request, whose body is not read yet. The bearer token is in its `Authorization` header.
- * @param operation - The operation that the request selects; the scopes of the binding map to it.
- * @returns `true` to serve the request; anything else answers 401. A function that throws answers 500.
- * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, security and scopes}
- */
-export type CatAuthenticate = (request: Request, operation: CatOperation) => boolean | Promise<boolean>;
+import {
+  AUTHORIZATION_FAILURE,
+  bodyFailure,
+  ENCODING_FAILURE,
+  type Failure,
+  failureResponse,
+  portFailure,
+  successResponse,
+} from "./status.js";
 
 /** Options of {@link createCatRestHandler}. */
 export interface CatRestHandlerOptions {
-  /** Decides whether a request is authorized; the handler serves nothing without it. */
-  readonly authenticate: CatAuthenticate;
+  /** Decides whether a request may use an operation, and with which port; the handler serves nothing without it. */
+  readonly authorize: CatAuthorizer;
   /**
-   * The path under which the six endpoints are served, from the root of the host, with no trailing slash. The binding
-   * fixes it as `/ims/cat/v1p0`.
+   * The path that the handler receives, from the root of the host, with no trailing slash, or `""` where a proxy strips the
+   * path. The binding asks the public paths to begin with `/ims/cat/v1p0`; another root is for a proxy that rewrites the
+   * path.
    *
    * @defaultValue `"/ims/cat/v1p0"`
    */
   readonly root?: string;
   /**
-   * The most bytes of a request body. A larger body answers 400 and is not read to its end.
+   * The reference that every call of the port receives as its `prefix`: the address of the engine as the
+   * `qti-adaptive-engine-ref` of its sections names it, an `https` URL. Trailing slashes are removed. Set it for a public
+   * deployment: the URL of a request is internal behind a proxy, and its host may come from a header.
    *
-   * @defaultValue `33554432` (32 MiB, the default size limit of an XML file in the runtime, which the largest field of a body holds in base64)
+   * @defaultValue the origin and `root` of the request
+   */
+  readonly prefix?: string;
+  /**
+   * The most bytes of a request body, counted as the stream is read. A larger body answers 400 and is not read to its end.
+   * It holds a base64 field of about 24 MiB of file.
+   *
+   * @defaultValue `33554432` (32 MiB, the default size limit of an XML file in the runtime)
    */
   readonly maxBodyBytes?: number;
+  /**
+   * Receives the error behind every answer of 500, with the request and the operation, so that an operator sees what failed.
+   * It is not called for a refusal of the caller (4xx), for an engine that is busy (429, 503), or after an abort, when
+   * nothing is answered. An error or a rejection of the callback is ignored, and it is not awaited. What it receives may hold
+   * addresses, tokens or candidate data.
+   *
+   * @defaultValue none
+   */
+  readonly onError?: (error: unknown, request: Request, operation: CatOperation) => void;
 }
 
 /** The path of the endpoints in the binding (section 2.2). */
@@ -61,15 +80,17 @@ const DEFAULT_MAX_BODY_BYTES = 33_554_432;
 const rootSchema = v.pipe(
   v.string(),
   v.check(
-    (root) => root.startsWith("/") && !root.endsWith("/"),
-    (issue) => `expected a path that starts with a slash and does not end with one, found ${issue.received}`,
+    (root) => root === "" || (root.startsWith("/") && !root.endsWith("/")),
+    (issue) => `expected "" or a path that starts with a slash and does not end with one, found ${issue.received}`,
   ),
 );
 
 const optionsSchema = v.strictObject({
-  authenticate: functionSchema<CatAuthenticate>(),
+  authorize: functionSchema<CatAuthorizer>(),
   root: v.optional(rootSchema, DEFAULT_ROOT),
+  prefix: v.optional(httpsUrlSchema),
   maxBodyBytes: v.optional(positiveIntegerSchema, DEFAULT_MAX_BODY_BYTES),
+  onError: v.optional(functionSchema<NonNullable<CatRestHandlerOptions["onError"]>>()),
 });
 
 const portSchema = methodsSchema<CatPort>(
@@ -83,6 +104,13 @@ const portSchema = methodsSchema<CatPort>(
 
 const requestSchema = guardSchema((value): value is Request => value instanceof Request, "a Request");
 
+/** Removes the slashes that end a URL, so that a reference with and without one is the same. */
+function withoutTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") end -= 1;
+  return url.slice(0, end);
+}
+
 /** Calls the port and returns the function that encodes its answer, so that a failure of the port is told from one of the encoding. */
 type Invocation = () => Promise<() => unknown>;
 
@@ -90,30 +118,29 @@ type Invocation = () => Promise<() => unknown>;
  * Returns the engine side of the REST/JSON binding of CAT 1.0: a function from a web `Request` to a `Response`.
  *
  * @remarks
- * It is the mirror of `createRestCatPort`, over web-standard `Request` and `Response`, so that it runs on Node.js, Deno, Bun and
- * edge runtimes; mount it on the paths under `root`. It serves the six requests of the binding, reads their bodies with
- * the codec of the runtime and the shapes of `createRestCatPort`, and calls the `CatPort` with the URL prefix of the request
- * (its origin and `root`).
+ * It is the mirror of `createRestCatPort`, over web-standard `Request` and `Response`, so that it runs on Node.js, Deno, Bun
+ * and edge runtimes; mount it on the paths under `root`. It serves the six requests of the binding, reads their bodies with
+ * the codec of the runtime and the shapes of `createRestCatPort`, and calls the `CatPort` with the `prefix` of the engine.
  *
- * - **Order.** The path and method select the operation (404 or 405 if none), `authenticate` decides (401), then the body
- *   is read and checked (400), then the port is called.
+ * - **Order.** The path and method select the operation (404 or 405 if none), `authorize` decides (401 or 403) before any of
+ *   the body is read, then the body is read and checked (400), then the port is called.
  * - **Authorization.** The handler holds no credentials. The authorization server issues the tokens of the OAuth 2.0
- *   client credentials grant, and `authenticate` checks the bearer token and its scope. TLS is the host's.
- * - **Failures.** The answers are those of table 2.4 of the binding, with the status information as JSON. The port
- *   signals an unknown section or session with a `ServiceError` of status 404; a `DataError`, `ReadError` or
- *   `SecurityError` answers 400 with its message; any other error, an `authenticate` that throws, and an answer of the
- *   port that is not valid answer 500 without the message.
- * - **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason, nothing is sent, and the
- *   port is not called when the abort came first. A call of the port that has begun runs on, because `CatPort` takes no
- *   signal.
- * - **Metadata.** A `qtiMetadata` object of Create Section is checked and dropped, and the metadata file of the section
- *   data is not returned by Get Section, because the binding gives the file no place (see the guide).
+ *   client credentials grant, and `authorize` checks the bearer token and its scope. It may answer with the port of the
+ *   caller, so that several clients share one root and one engine without seeing each other's sections. TLS is the host's.
+ * - **Failures.** The answers are those of table 2.4 of the binding and its `default` response, with the status
+ *   information as JSON. The status follows the origin of the error: a malformed request is 400 with the path of the value;
+ *   a `ServiceError` of the port is 404 (an unknown object, but not for Create Section), 400, or 429 and 503 for an engine
+ *   that is busy; every other error of the port, of `authorize` or of the encoding is 500 with a fixed text, and goes to
+ *   `onError`.
+ * - **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason, nothing is sent, the read of
+ *   the body is cancelled, and the port is not called when the abort came first. A call of the port that has begun runs
+ *   on, because `CatPort` takes no signal.
+ * - **Metadata.** A `qtiMetadata` object of Create Section reaches the port as `qtiMetadataRecord`, and Get Section returns
+ *   it. The metadata file of the section data is not returned, because the binding gives the file no place (see the guide).
  * - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session.
  *
- * To log the failures of the engine, wrap the port: the handler logs nothing.
- *
- * @param port - The engine.
- * @param options - Authentication, the root path and the size limit of a body.
+ * @param port - The engine, for a request that `authorize` answers with `true`.
+ * @param options - Authorization, the root path, the reference, the size limit of a body and the callback for faults.
  * @returns The handler.
  * @throws `DataError` when `port` lacks a method or an option has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
@@ -123,51 +150,63 @@ export function createCatRestHandler(
   options: CatRestHandlerOptions,
 ): (request: Request) => Promise<Response> {
   parseWith(portSchema, port, "The port");
-  const { authenticate, root, maxBodyBytes } = parseWith(optionsSchema, options, "The options object");
+  const { authorize, root, prefix, maxBodyBytes, onError } = parseWith(optionsSchema, options, "The options object");
+  const reference = prefix === undefined ? undefined : withoutTrailingSlashes(prefix);
+
+  /** Tells the operator about a fault, never after an abort, and never lets the callback change the answer. */
+  const report = (error: unknown, request: Request, operation: CatOperation): void => {
+    if (onError === undefined || request.signal.aborted) return;
+    try {
+      Promise.resolve(onError(error, request, operation)).catch(() => undefined);
+    } catch {
+      // The answer is 500 already.
+    }
+  };
 
   /** Reads the body of an operation and returns what calls the port. */
   const invocation = async (
     operation: CatOperation,
     { sectionIdentifier, sessionIdentifier }: PathIdentifiers,
-    prefix: string,
+    engine: CatPort,
+    engineReference: string,
     request: Request,
   ): Promise<Invocation> => {
-    const body = (): Promise<unknown> => readJsonBody(request, maxBodyBytes);
+    const body = (): Promise<unknown> => readJsonBody(request, maxBodyBytes, request.signal);
     switch (operation) {
       case "createSection": {
         const data = readSectionBody(await body());
         return async () => {
-          const answer = await port.createSection(prefix, data);
+          const answer = await engine.createSection(engineReference, data);
           return () => writeCreateSectionAnswer(answer);
         };
       }
       case "getSection":
         return async () => {
-          const answer = await port.getSection(prefix, sectionIdentifier);
+          const answer = await engine.getSection(engineReference, sectionIdentifier);
           return () => writeGetSectionAnswer(answer);
         };
       case "endSection":
         return async () => {
-          await port.endSection(prefix, sectionIdentifier);
+          await engine.endSection(engineReference, sectionIdentifier);
           return () => undefined;
         };
       case "createSession": {
         const session = readCreateSessionBody(await body());
         return async () => {
-          const answer = await port.createSession(prefix, sectionIdentifier, session);
+          const answer = await engine.createSession(engineReference, sectionIdentifier, session);
           return () => writeCreateSessionAnswer(answer);
         };
       }
       case "submitResults": {
         const results = readResultsBody(await body());
         return async () => {
-          const answer = await port.submitResults(prefix, sectionIdentifier, sessionIdentifier, results);
+          const answer = await engine.submitResults(engineReference, sectionIdentifier, sessionIdentifier, results);
           return () => writeSubmitResultsAnswer(answer);
         };
       }
       case "endSession":
         return async () => {
-          await port.endSession(prefix, sectionIdentifier, sessionIdentifier);
+          await engine.endSession(engineReference, sectionIdentifier, sessionIdentifier);
           return () => undefined;
         };
     }
@@ -189,22 +228,33 @@ export function createCatRestHandler(
     }
     const { operation, identifiers } = route;
 
-    let authorized: boolean;
-    try {
-      authorized = (await authenticate(request, operation)) === true;
-    } catch {
+    /** Answers a failure, and reports it when it is a fault of the engine or of the host. */
+    const failed = (failure: Failure, cause: unknown): Response => {
       signal.throwIfAborted();
-      return failureResponse(500, "The request could not be authorized.");
+      if (failure.fault) report(cause, request, operation);
+      return failureResponse(failure.status, failure.description);
+    };
+
+    let granted: ReturnType<typeof grantOf>;
+    try {
+      granted = grantOf(await authorize(request, operation), operation);
+    } catch (error) {
+      return failed(AUTHORIZATION_FAILURE, error);
     }
-    if (!authorized) return failureResponse(401, "The request is not authorized.", { "WWW-Authenticate": "Bearer" });
+    signal.throwIfAborted();
+    if (!granted.serve) return granted.response;
 
     let invoke: Invocation;
     try {
-      invoke = await invocation(operation, identifiers, `${url.origin}${root}`, request);
+      invoke = await invocation(
+        operation,
+        identifiers,
+        granted.port ?? port,
+        reference ?? `${url.origin}${root}`,
+        request,
+      );
     } catch (error) {
-      signal.throwIfAborted();
-      const { status, description } = failureOf(error);
-      return failureResponse(status, description);
+      return failed(bodyFailure(error), error);
     }
     signal.throwIfAborted();
 
@@ -212,13 +262,12 @@ export function createCatRestHandler(
     try {
       encode = await invoke();
     } catch (error) {
-      const { status, description } = failureOf(error);
-      return failureResponse(status, description);
+      return failed(portFailure(error, operation), error);
     }
     try {
       return successResponse(operation, encode());
-    } catch {
-      return failureResponse(500, "The engine failed to answer the request.");
+    } catch (error) {
+      return failed(ENCODING_FAILURE, error);
     }
   };
 

@@ -16,7 +16,8 @@ import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
-  type CatAuthenticate,
+  CAT_SCOPES,
+  type CatAuthorizer,
   type CatEngine,
   type CatFetch,
   type CatFetchRequest,
@@ -31,6 +32,7 @@ import { readCreateSessionBody, readResultsBody, readSectionBody, readSectionDat
 import { ServiceError } from "../src/index.js";
 import { base64, json, PREFIX, rejection, resultsOf } from "./cat-fixture.js";
 import { fuzzJson } from "./fuzz.js";
+import { waitFor } from "./wait.js";
 
 /** A result with one answered item, and the same result in the JSON of the binding (sections 5.2.8 and 5.3, section 6.11). */
 const RESULT = resultsOf(new Map([["i1", 1]]));
@@ -883,10 +885,10 @@ describe("createCatRestHandler", () => {
   /** Lets the pending work of the event loop run, so that a test sees that nothing more happens. */
   const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
-  const authorize: CatAuthenticate = (request) => request.headers.get("authorization") === "Bearer tok";
+  const authorize: CatAuthorizer = (request) => request.headers.get("authorization") === "Bearer tok";
 
   const handlerOf = (port: CatPort, options: Partial<CatRestHandlerOptions> = {}) =>
-    createCatRestHandler(port, { authenticate: authorize, ...options });
+    createCatRestHandler(port, { authorize: authorize, ...options });
 
   /** A request to the engine at `PREFIX`; a body that is not text is sent as JSON. */
   function requestOf(
@@ -1075,24 +1077,72 @@ describe("createCatRestHandler", () => {
     expect(calls()).toHaveLength(5);
   });
 
-  it("answers 400 when the port refuses the data of a request, with the message of a DataError and without that of a ServiceError", async () => {
-    const refuse = (error: Error) => async (): Promise<never> => {
-      throw error;
-    };
-    for (const [error, description] of [
-      [
-        new DataError("The settings of the section must have a length."),
-        "The settings of the section must have a length.",
-      ],
-      [new ReadError("The usage data is not well-formed.", []), "The usage data is not well-formed."],
-      [new SecurityError("The usage data has a DOCTYPE.", "doctype", 0), "The usage data has a DOCTYPE."],
-      [new ServiceError("secret detail", 400, "body"), "The engine refused the request."],
-    ] as const) {
-      const { port } = stubPort({ createSection: refuse(error) });
+  it("answers 400 with a fixed text when the port throws a ServiceError of status 400, and never shows its message", async () => {
+    const { port } = stubPort({
+      createSection: async () => {
+        throw new ServiceError("secret detail at https://internal.example", 400, "body");
+      },
+    });
+    const response = await handlerOf(port)(requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } }));
+    const body = await expectFailure(response, 400, "invaliddata", "The engine refused the request.");
+    expect(JSON.stringify(body)).not.toContain("internal.example");
+  });
+
+  it("answers 500 for the errors of the data classes of the port, whose messages name the engine's own state or addresses", async () => {
+    for (const error of [
+      new DataError("The item bank at /srv/banks/a is invalid."),
+      new ReadError("The usage data at /srv/usage.xml is not well-formed.", []),
+      new SecurityError("The usage data has a DOCTYPE.", "doctype", 0),
+      new DataError(
+        'The prefix "https://gateway.example/ims/cat/v1p0" is not the engine "https://internal-engine.corp.example/ims/cat/v1p0".',
+      ),
+    ]) {
+      const { port } = stubPort({
+        createSection: async () => {
+          throw error;
+        },
+      });
       const response = await handlerOf(port)(
         requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } }),
       );
-      await expectFailure(response, 400, "invaliddata", description);
+      const body = await expectFailure(
+        response,
+        500,
+        "internal_server_error",
+        "The engine failed to answer the request.",
+      );
+      expect(JSON.stringify(body)).not.toMatch(/srv|internal-engine|gateway\.example|DOCTYPE/);
+    }
+  });
+
+  it("answers 500 for a 404 of the port on Create Section, which names no object", async () => {
+    const unknown = async (): Promise<never> => {
+      throw new ServiceError("The CAT engine answered POST with the status 404.", 404, "");
+    };
+    const { port } = stubPort({ createSection: unknown });
+    await expectFailure(
+      await handlerOf(port)(requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } })),
+      500,
+      "internal_server_error",
+    );
+  });
+
+  it("passes the status of an engine that is busy, 429 and 503, with the code minor server_busy", async () => {
+    for (const status of [429, 503]) {
+      const { port } = stubPort({
+        getSection: async () => {
+          throw new ServiceError("The engine is busy.", status, "");
+        },
+      });
+      const faults: unknown[] = [];
+      const handler = handlerOf(port, { onError: (error) => faults.push(error) });
+      await expectFailure(
+        await handler(requestOf("GET", "/sections/sec1")),
+        status,
+        "server_busy",
+        "The engine is busy; try again later.",
+      );
+      expect(faults).toEqual([]);
     }
   });
 
@@ -1126,12 +1176,15 @@ describe("createCatRestHandler", () => {
       );
       expect(JSON.stringify(body)).not.toContain("hunter2");
     }
-    // A ServiceError of another status than 400 and 404 is a failure of the engine, even a 401 from the engine behind a gateway.
-    const upstream = async (): Promise<never> => {
-      throw new ServiceError("The token endpoint refused.", 401, "");
-    };
-    const { port: gateway } = stubPort({ getSection: upstream });
-    await expectFailure(await handlerOf(gateway)(requestOf("GET", "/sections/sec1")), 500, "internal_server_error");
+    // A ServiceError of another status than 400, 404, 429 and 503 is a failure of the engine, even a 401 or a 403 from the
+    // engine behind a gateway, which the gateway's own credentials caused.
+    for (const status of [401, 403, 409, 502]) {
+      const upstream = async (): Promise<never> => {
+        throw new ServiceError("The token endpoint refused.", status, "");
+      };
+      const { port: gateway } = stubPort({ getSection: upstream });
+      await expectFailure(await handlerOf(gateway)(requestOf("GET", "/sections/sec1")), 500, "internal_server_error");
+    }
 
     const garbage = {
       createSection: async () => json<CreateSectionResponse>('{"sectionIdentifier":""}'),
@@ -1148,17 +1201,11 @@ describe("createCatRestHandler", () => {
   it("answers 401 with a challenge and calls neither the port nor reads the body when the request is not authorized", async () => {
     const { port, calls } = stubPort();
     const seen: [string, CatOperation][] = [];
-    for (const authenticate of [
-      () => false,
-      async () => false,
-      // Only true authorizes: a truthy value that is not a boolean does not.
-      () => json<boolean>('"yes"'),
-      async () => json<boolean>("1"),
-    ]) {
+    for (const decide of [() => false, async () => false]) {
       const handler = handlerOf(port, {
-        authenticate: (request, operation) => {
+        authorize: (request, operation) => {
           seen.push([request.method, operation]);
-          return authenticate();
+          return decide();
         },
       });
       const request = requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" }, headers: JSON_HEADERS });
@@ -1168,12 +1215,74 @@ describe("createCatRestHandler", () => {
       expect(request.bodyUsed).toBe(false);
     }
     expect(calls()).toEqual([]);
-    expect(seen).toHaveLength(4);
+    expect(seen).toHaveLength(2);
   });
 
-  it("answers 500 and calls no port when the authentication itself fails", async () => {
+  it("answers 401 with error invalid_token when the request carries a token that is not valid", async () => {
     const { port, calls } = stubPort();
-    for (const authenticate of [
+    const handler = handlerOf(port, { authorize: () => ({ denied: "invalid-token" }) });
+    const request = requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } });
+    const response = await handler(request);
+    await expectFailure(response, 401, "unauthorisedrequest", "The token is not valid.");
+    expect(response.headers.get("www-authenticate")).toBe('Bearer error="invalid_token"');
+    expect(request.bodyUsed).toBe(false);
+    expect(calls()).toEqual([]);
+  });
+
+  it("answers 403 with the code minor forbidden and the scopes of the operation when the token lacks the scope", async () => {
+    const { port, calls } = stubPort();
+    const handler = handlerOf(port, { authorize: () => ({ denied: "insufficient-scope" }) });
+    const requests: [Request, string][] = [
+      [requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } }), CAT_SCOPES.configure],
+      [requestOf("GET", "/sections/sec1"), CAT_SCOPES.configure],
+      [requestOf("POST", "/sections/sec1/sessions", { body: {} }), CAT_SCOPES.deliver],
+      [requestOf("DELETE", "/sections/sec1/sessions/s1"), CAT_SCOPES.deliver],
+    ];
+    for (const [request, scope] of requests) {
+      const response = await handler(request);
+      await expectFailure(response, 403, "forbidden", "The token does not carry the scope of this operation.");
+      expect(response.headers.get("www-authenticate")).toBe(
+        `Bearer error="insufficient_scope", scope="${CAT_SCOPES.api} ${scope}"`,
+      );
+      expect(request.bodyUsed).toBe(false);
+    }
+    const custom = handlerOf(port, { authorize: () => ({ denied: "insufficient-scope", scopes: ["read", "write"] }) });
+    const response = await custom(requestOf("GET", "/sections/sec1"));
+    expect(response.headers.get("www-authenticate")).toBe('Bearer error="insufficient_scope", scope="read write"');
+    expect(calls()).toEqual([]);
+  });
+
+  it("answers 500 for a result of authorize that is not a decision, and calls no port", async () => {
+    const { port, calls } = stubPort();
+    const faults: unknown[] = [];
+    for (const result of [
+      json("null"),
+      json('"yes"'),
+      json("1"),
+      json("{}"),
+      json('{"port":{}}'),
+      json('{"denied":"nope"}'),
+      json('{"denied":"insufficient-scope","scopes":[]}'),
+      json('{"denied":"insufficient-scope","scopes":["a b"]}'),
+      json('{"denied":"insufficient-scope","scopes":["a\\"b"]}'),
+      json('{"denied":"invalid-token","scopes":["a"]}'),
+    ]) {
+      const handler = handlerOf(port, { authorize: () => result as never, onError: (error) => faults.push(error) });
+      await expectFailure(
+        await handler(requestOf("GET", "/sections/sec1")),
+        500,
+        "internal_server_error",
+        "The request could not be authorized.",
+      );
+    }
+    expect(faults).toHaveLength(10);
+    expect(faults.every((error) => error instanceof DataError)).toBe(true);
+    expect(calls()).toEqual([]);
+  });
+
+  it("answers 500 and calls no port when the authorization itself fails", async () => {
+    const { port, calls } = stubPort();
+    for (const decide of [
       () => {
         throw new Error("identity provider down");
       },
@@ -1181,18 +1290,90 @@ describe("createCatRestHandler", () => {
         throw new Error("identity provider down");
       },
     ]) {
-      const response = await handlerOf(port, { authenticate })(requestOf("GET", "/sections/sec1"));
+      const response = await handlerOf(port, { authorize: decide })(requestOf("GET", "/sections/sec1"));
       const body = await expectFailure(response, 500, "internal_server_error", "The request could not be authorized.");
       expect(JSON.stringify(body)).not.toContain("identity provider");
     }
     expect(calls()).toEqual([]);
   });
 
+  it("answers 500 when authorize reads the body, which the handler then cannot read", async () => {
+    const { port, calls } = stubPort();
+    const faults: unknown[] = [];
+    const handler = handlerOf(port, {
+      authorize: async (request) => {
+        await request.text();
+        return true;
+      },
+      onError: (error) => faults.push(error),
+    });
+    const response = await handler(requestOf("POST", "/sections", { body: { sectionConfiguration: "e30=" } }));
+    await expectFailure(response, 500, "internal_server_error", "The engine failed to answer the request.");
+    expect(faults).toHaveLength(1);
+    expect(calls()).toEqual([]);
+  });
+
+  it("serves a request with the port that authorize returns, and a true with the port of the handler", async () => {
+    const own = stubPort();
+    const callers = stubPort();
+    const handler = handlerOf(own.port, {
+      authorize: (request) => (request.headers.get("x-caller") === null ? true : { port: callers.port }),
+    });
+    await handler(requestOf("GET", "/sections/sec1"));
+    await handler(requestOf("GET", "/sections/sec2", { headers: { ...JSON_HEADERS, "x-caller": "a" } }));
+    expect(own.calls()).toEqual(["getSection"]);
+    expect(callers.received).toEqual([["getSection", PREFIX, "sec2"]]);
+  });
+
+  it("keeps the clients of one root apart with the port of the caller, and a true reaches no section when the port of the handler refuses all", async () => {
+    // The pattern of the guide: a shared engine, an owner check in the port of each caller, and a port of the handler that
+    // refuses everything, so that a path that returns true by mistake reaches no section.
+    const owners = new Map([["sec1", "a"]]);
+    const unknown = (): ServiceError => new ServiceError("Not the owner.", 404, "");
+    const shared = stubPort();
+    const scoped = (client: string): CatPort => ({
+      ...shared.port,
+      async getSection(prefix, sectionIdentifier) {
+        if (owners.get(sectionIdentifier) !== client) throw unknown();
+        return shared.port.getSection(prefix, sectionIdentifier);
+      },
+      async endSection(prefix, sectionIdentifier) {
+        if (owners.get(sectionIdentifier) !== client) throw unknown();
+        return shared.port.endSection(prefix, sectionIdentifier);
+      },
+    });
+    const refuseAll: CatPort = {
+      createSection: async () => Promise.reject(unknown()),
+      getSection: async () => Promise.reject(unknown()),
+      createSession: async () => Promise.reject(unknown()),
+      submitResults: async () => Promise.reject(unknown()),
+      endSession: async () => Promise.reject(unknown()),
+      endSection: async () => Promise.reject(unknown()),
+    };
+    const handler = createCatRestHandler(refuseAll, {
+      authorize: (request) => {
+        const client = request.headers.get("x-client");
+        return client === "a" || client === "b" ? { port: scoped(client) } : true;
+      },
+    });
+    const as = (client: string | undefined, method: string, path: string): Promise<Response> =>
+      handler(
+        requestOf(method, path, {
+          headers: client === undefined ? JSON_HEADERS : { ...JSON_HEADERS, "x-client": client },
+        }),
+      );
+    expect((await as("a", "GET", "/sections/sec1")).status).toBe(200);
+    await expectFailure(await as("b", "GET", "/sections/sec1"), 404, "unknownobject", "Unknown Object");
+    await expectFailure(await as("b", "DELETE", "/sections/sec1"), 404, "unknownobject", "Unknown Object");
+    await expectFailure(await as(undefined, "GET", "/sections/sec1"), 404, "unknownobject", "Unknown Object");
+    expect(shared.calls()).toEqual(["getSection"]);
+  });
+
   it("tells the authentication the operation of each of the six requests", async () => {
     const { port } = stubPort();
     const operations: CatOperation[] = [];
     const handler = handlerOf(port, {
-      authenticate: (_request, operation) => {
+      authorize: (_request, operation) => {
         operations.push(operation);
         return true;
       },
@@ -1213,6 +1394,151 @@ describe("createCatRestHandler", () => {
     ]);
   });
 
+  it("tells onError the error, the request and the operation behind every answer of 500, from the four origins", async () => {
+    const reports: [unknown, Request, CatOperation][] = [];
+    const onError = (error: unknown, request: Request, operation: CatOperation): void => {
+      reports.push([error, request, operation]);
+    };
+    const boom = new Error("The engine broke.");
+
+    // The authorization step.
+    const refused = handlerOf(stubPort().port, {
+      authorize: () => {
+        throw boom;
+      },
+      onError,
+    });
+    const first = requestOf("GET", "/sections/sec1");
+    await refused(first);
+    // The body: a stream that fails.
+    const stream = new ReadableStream<Uint8Array>({
+      pull(source) {
+        source.error(boom);
+      },
+    });
+    const second = new Request(`${PREFIX}/sections`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+    await handlerOf(stubPort().port, { onError })(second);
+    // The port.
+    const third = requestOf("POST", "/sections/sec1/sessions", { body: {} });
+    await handlerOf(
+      stubPort({
+        createSession: async () => {
+          throw boom;
+        },
+      }).port,
+      { onError },
+    )(third);
+    // The encoding of the answer of the port.
+    const fourth = requestOf("GET", "/sections/sec1");
+    await handlerOf(
+      stubPort({ getSection: async () => json<GetSectionResponse>('{"sectionData":5,"items":{}}') }).port,
+      {
+        onError,
+      },
+    )(fourth);
+
+    expect(reports.map(([error]) => error === boom)).toEqual([true, true, true, false]);
+    expect(reports[3]?.[0]).toBeInstanceOf(DataError);
+    expect(reports.map(([, request]) => request)).toEqual([first, second, third, fourth]);
+    expect(reports.map(([, , operation]) => operation)).toEqual([
+      "getSection",
+      "createSection",
+      "createSession",
+      "getSection",
+    ]);
+  });
+
+  it("tells onError nothing about a refusal of the caller", async () => {
+    const faults: unknown[] = [];
+    const onError = (error: unknown): void => void faults.push(error);
+    const { port } = stubPort({
+      getSection: async () => {
+        throw new ServiceError("Unknown.", 404, "");
+      },
+      endSection: async () => {
+        throw new ServiceError("Refused.", 400, "");
+      },
+      endSession: async () => {
+        throw new ServiceError("Busy.", 503, "");
+      },
+    });
+    const handler = handlerOf(port, { onError });
+    await handler(requestOf("GET", "/sections/sec1"));
+    await handler(requestOf("DELETE", "/sections/sec1"));
+    await handler(requestOf("DELETE", "/sections/sec1/sessions/s1"));
+    await handler(requestOf("POST", "/sections", { body: "not json" }));
+    await handler(requestOf("POST", "/sections", { body: {} }));
+    await handler(requestOf("GET", "/nowhere"));
+    await handler(requestOf("PUT", "/sections"));
+    await handler(requestOf("GET", "/sections/%E0%A4%A"));
+    await handlerOf(port, { authorize: () => false, onError })(requestOf("GET", "/sections/sec1"));
+    await handlerOf(port, { authorize: () => ({ denied: "invalid-token" }), onError })(
+      requestOf("GET", "/sections/sec1"),
+    );
+    await handlerOf(port, { authorize: () => ({ denied: "insufficient-scope" }), onError })(
+      requestOf("GET", "/sections/sec1"),
+    );
+    expect(faults).toEqual([]);
+  });
+
+  it("leaves the answer of 500 as it is, and leaves no unhandled rejection, when onError throws or rejects", async () => {
+    const unhandled: unknown[] = [];
+    const watch = (reason: unknown): void => void unhandled.push(reason);
+    process.on("unhandledRejection", watch);
+    try {
+      const { port } = stubPort({
+        getSection: async () => {
+          throw new Error("The engine broke.");
+        },
+      });
+      for (const onError of [
+        (): void => {
+          throw new Error("The log is full.");
+        },
+        (): void => void Promise.reject(new Error("The log is gone.")),
+        (async () => {
+          throw new Error("The log is gone.");
+        }) as () => void,
+      ]) {
+        await expectFailure(
+          await handlerOf(port, { onError })(requestOf("GET", "/sections/sec1")),
+          500,
+          "internal_server_error",
+        );
+      }
+      await flush();
+      await flush();
+      expect(unhandled.length).toBe(1);
+    } finally {
+      process.off("unhandledRejection", watch);
+    }
+  });
+
+  it("gives the port the prefix of the option, without trailing slashes, in place of the URL of the request", async () => {
+    const { port, received } = stubPort();
+    const handler = handlerOf(port, { prefix: "https://engine.example/ims/cat/v1p0///" });
+    await handler(requestOf("GET", "/sections/sec1"));
+    expect(received).toEqual([["getSection", "https://engine.example/ims/cat/v1p0", "sec1"]]);
+  });
+
+  it("serves at the root that the option names, and at an empty root, and nowhere else", async () => {
+    const { port, received } = stubPort();
+    const bare = handlerOf(port, { root: "" });
+    expect((await bare(new Request("https://cat.example/sections/sec1", { headers: JSON_HEADERS }))).status).toBe(200);
+    expect(received).toEqual([["getSection", "https://cat.example", "sec1"]]);
+    await expectFailure(await bare(requestOf("GET", "/sections/sec1")), 404, "unknownobject");
+    const nested = handlerOf(port, { root: "/gateway/cat" });
+    expect(
+      (await nested(new Request("https://cat.example/gateway/cat/sections/sec1", { headers: JSON_HEADERS }))).status,
+    ).toBe(200);
+    await expectFailure(await nested(requestOf("GET", "/sections/sec1")), 404, "unknownobject");
+  });
+
   describe("an aborted request", () => {
     const reason = new Error("the client left");
 
@@ -1220,7 +1546,7 @@ describe("createCatRestHandler", () => {
       const { port, calls } = stubPort();
       let authentications = 0;
       const handler = handlerOf(port, {
-        authenticate: () => {
+        authorize: () => {
           authentications += 1;
           return true;
         },
@@ -1237,7 +1563,7 @@ describe("createCatRestHandler", () => {
       const controller = new AbortController();
       let release: (authorized: boolean) => void = () => undefined;
       const handler = handlerOf(port, {
-        authenticate: () => new Promise<boolean>((resolve) => (release = resolve)),
+        authorize: () => new Promise<boolean>((resolve) => (release = resolve)),
       });
       const pending = handler(requestOf("GET", "/sections/sec1", { signal: controller.signal }));
       controller.abort(reason);
@@ -1272,6 +1598,93 @@ describe("createCatRestHandler", () => {
       finish();
       await flush();
       expect(calls()).toEqual([]);
+    });
+
+    it("rejects with the reason when it is aborted during authorization, and then reads no body", async () => {
+      const { port, calls } = stubPort();
+      const controller = new AbortController();
+      let pulls = 0;
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull() {
+            pulls += 1;
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      let release: (decision: boolean) => void = () => undefined;
+      const handler = handlerOf(port, { authorize: () => new Promise<boolean>((resolve) => (release = resolve)) });
+      const request = new Request(`${PREFIX}/sections`, {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: stream,
+        signal: controller.signal,
+        duplex: "half",
+      } as RequestInit);
+      const pending = handler(request);
+      controller.abort(reason);
+      await expect(pending).rejects.toBe(reason);
+      release(true);
+      await flush();
+      expect(pulls).toBe(0);
+      expect(calls()).toEqual([]);
+    });
+
+    it("cancels the stream of the body when it is aborted after the first chunk, and does not call the port", async () => {
+      const { port, calls } = stubPort();
+      const controller = new AbortController();
+      const cancelled: unknown[] = [];
+      let sent = false;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(source) {
+          if (sent) return;
+          sent = true;
+          source.enqueue(new TextEncoder().encode('{"sectionConfiguration":'));
+        },
+        cancel(why) {
+          cancelled.push(why);
+        },
+      });
+      const faults: unknown[] = [];
+      const request = new Request(`${PREFIX}/sections`, {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: stream,
+        signal: controller.signal,
+        duplex: "half",
+      } as RequestInit);
+      const pending = handlerOf(port, { onError: (error) => faults.push(error) })(request);
+      await waitFor(() => expect(sent).toBe(true));
+      await flush();
+      controller.abort(reason);
+      await expect(pending).rejects.toBe(reason);
+      await waitFor(() => expect(cancelled).toEqual([reason]));
+      expect(calls()).toEqual([]);
+      expect(faults).toEqual([]);
+    });
+
+    it("does not tell onError about a port that fails after the request was aborted", async () => {
+      const controller = new AbortController();
+      let fail: (error: Error) => void = () => undefined;
+      let reached: () => void = () => undefined;
+      const called = new Promise<void>((resolve) => (reached = resolve));
+      const { port } = stubPort({
+        createSession: () =>
+          new Promise<CreateSessionResponse>((_resolve, reject) => {
+            fail = reject;
+            reached();
+          }),
+      });
+      const faults: unknown[] = [];
+      const pending = handlerOf(port, { onError: (error) => faults.push(error) })(
+        requestOf("POST", "/sections/sec1/sessions", { body: {}, signal: controller.signal }),
+      );
+      await called;
+      controller.abort(reason);
+      await expect(pending).rejects.toBe(reason);
+      fail(new Error("The engine broke after the client left."));
+      await flush();
+      expect(faults).toEqual([]);
     });
 
     it("rejects with the reason as soon as it is aborted during the call of the port, which runs on", async () => {
@@ -1499,7 +1912,7 @@ describe("createCatRestHandler", () => {
 
   it("checks its port, options and request, as JavaScript or JSON passes them", async () => {
     const { port } = stubPort();
-    const options = { authenticate: authorize };
+    const options = { authorize: authorize };
     expect(() => createCatRestHandler(json("null"), options)).toThrow(
       /^The port is invalid: expected an object with the functions createSection, getSection, createSession, submitResults, endSession and endSection/,
     );
@@ -1508,16 +1921,24 @@ describe("createCatRestHandler", () => {
       /^The options object is invalid: expected an object/,
     );
     expect(() => createCatRestHandler(port, {} as never)).toThrow(
-      /^The options object is invalid: missing the property "authenticate"/,
+      /^The options object is invalid: missing the property "authorize"/,
     );
-    expect(() => createCatRestHandler(port, { authenticate: json("5") })).toThrow(
-      /^The options object is invalid at authenticate: expected a function/,
+    expect(() => createCatRestHandler(port, { authorize: json("5") })).toThrow(
+      /^The options object is invalid at authorize: expected a function/,
     );
-    for (const root of ["gateway", "/gateway/", "", json<string>("5")]) {
+    for (const root of ["gateway", "/gateway/", json<string>("5")]) {
       expect(() => createCatRestHandler(port, { ...options, root }), String(root)).toThrow(
         /^The options object is invalid at root/,
       );
     }
+    for (const prefix of ["http://cat.example/ims/cat/v1p0", "cat.example", "", json<string>("5")]) {
+      expect(() => createCatRestHandler(port, { ...options, prefix }), String(prefix)).toThrow(
+        /^The options object is invalid at prefix/,
+      );
+    }
+    expect(() => createCatRestHandler(port, { ...options, onError: json("5") })).toThrow(
+      /^The options object is invalid at onError: expected a function/,
+    );
     for (const maxBodyBytes of [0, -1, 1.5, json<number>("null"), json<number>('"big"')]) {
       expect(() => createCatRestHandler(port, { ...options, maxBodyBytes }), String(maxBodyBytes)).toThrow(
         /^The options object is invalid at maxBodyBytes/,
@@ -1525,6 +1946,8 @@ describe("createCatRestHandler", () => {
     }
     expect(() => createCatRestHandler(port, { ...options, speed: 1 } as never)).toThrow(/unexpected property/);
     expect(() => createCatRestHandler(port, { ...options, root: "/ims/cat/v1p0", maxBodyBytes: 1 })).not.toThrow();
+    expect(() => createCatRestHandler(port, { ...options, root: "" })).not.toThrow();
+    expect(() => createCatRestHandler(port, { ...options, prefix: "https://cat.example/ims/cat/v1p0/" })).not.toThrow();
     await expect(createCatRestHandler(port, options)(json("null"))).rejects.toThrow(
       /^The request is invalid: expected a Request/,
     );
@@ -1598,7 +2021,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
         log.push(["submitResults", prefix, sectionIdentifier, sessionIdentifier, request]);
         if (sessionIdentifier !== "s1") throw missing("session");
         if (request.sessionState !== `state-${submissions}`)
-          throw new DataError("The session state is not the last one.");
+          throw new ServiceError("The session state is not the last one.", 400, "");
         submissions += 1;
         return submissions === 1
           ? {
@@ -1647,7 +2070,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
     const { port: engine, log } = replacement === undefined ? fakeEngine() : { port: replacement, log: [] };
     const tokens = { current: BEARER, issued: 0 };
     const handler = createCatRestHandler(engine, {
-      authenticate: (request) => request.headers.get("authorization") === `Bearer ${tokens.current}`,
+      authorize: (request) => request.headers.get("authorization") === `Bearer ${tokens.current}`,
     });
     const client = onePort({
       fetch: wire(handler, tokens),
@@ -1803,14 +2226,14 @@ describe("createRestCatPort against createCatRestHandler", () => {
       createSession: async () => ({ sessionIdentifier: "s9", nextItems: { itemIdentifiers: [], stageLength: 0 } }),
     });
     const tokens = { current: BEARER, issued: 0 };
-    const handler = createCatRestHandler(engine, { authenticate: () => true });
+    const handler = createCatRestHandler(engine, { authorize: () => true });
     const client = onePort({ fetch: wire(handler, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
     const session = await client.createSession(ENDPOINT, "sec1", {});
     expect(session.sessionIdentifier).toBe("s9");
     expect(isSessionEnd(session.nextItems)).toBe(true);
   });
 
-  it("carries an unknown section or session as a ServiceError of status 404, and the engine's refusal as 400", async () => {
+  it("carries an unknown section or session as a ServiceError of status 404, and the engine's refusal as 400 with a fixed text", async () => {
     const { client } = connect();
     const failure = async (promise: Promise<unknown>): Promise<ServiceError> => {
       const error = await promise.then(
@@ -1837,7 +2260,7 @@ describe("createRestCatPort against createCatRestHandler", () => {
       client.submitResults(ENDPOINT, "sec1", "s1", { assessmentResult: RESULT, sessionState: "stale" }),
     );
     expect(refused.status).toBe(400);
-    expect(JSON.parse(refused.body).imsx_description).toBe("The session state is not the last one.");
+    expect(JSON.parse(refused.body).imsx_description).toBe("The engine refused the request.");
   });
 
   it("asks the token endpoint again after the handler answers 401, and repeats the request once", async () => {
@@ -1850,18 +2273,89 @@ describe("createRestCatPort against createCatRestHandler", () => {
     expect(log.map(([name]) => name)).toEqual(["getSection", "getSection"]);
 
     // A client whose token the server never accepts gets the 401 as a ServiceError after one repeat.
-    const rejecting = createCatRestHandler(fakeEngine().port, { authenticate: () => false });
+    const rejecting = createCatRestHandler(fakeEngine().port, { authorize: () => false });
     const refused = onePort({ fetch: wire(rejecting, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
     await expect(refused.getSection(ENDPOINT, "sec1")).rejects.toMatchObject({ name: "ServiceError", status: 401 });
     expect(tokens.issued).toBe(4);
+  });
+
+  it("does not ask for a new token when the handler answers 403, and reads it as a failure", async () => {
+    const tokens = { current: BEARER, issued: 0 };
+    const forbidding = createCatRestHandler(fakeEngine().port, { authorize: () => ({ denied: "insufficient-scope" }) });
+    const lacking = onePort({ fetch: wire(forbidding, tokens), endpoint: ENDPOINT, credentials: CREDENTIALS });
+    const error = await lacking.getSection(ENDPOINT, "sec1").then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).toMatchObject({ name: "ServiceError", status: 403 });
+    expect(
+      JSON.parse((error as ServiceError).body).imsx_codeMinor.imsx_codeMinorField[0].imsx_codeMinorFieldValue,
+    ).toBe("forbidden");
+    expect(tokens.issued).toBe(1);
+  });
+
+  describe("through a gateway", () => {
+    const PUBLIC = "https://engine.example/ims/cat/v1p0";
+    const INTERNAL = "https://internal-engine.corp.example/ims/cat/v1p0";
+    const GATEWAY = "https://gateway.example/ims/cat/v1p0";
+    const authorized: CatAuthorizer = (request) => request.headers.get("authorization") === `Bearer ${BEARER}`;
+
+    /** A platform, a gateway over the client of an engine, and the engine; the gateway sets `prefix` unless a test says not. */
+    function chain(prefix: string | undefined) {
+      const tokens = { current: BEARER, issued: 0 };
+      const { port: engine, log } = fakeEngine();
+      const behind = createCatRestHandler(engine, { authorize: authorized });
+      const upstream = createRestCatPort({
+        fetch: wire(behind, tokens),
+        engines: new Map([[PUBLIC, { endpoint: INTERNAL, credentials: CREDENTIALS }]]),
+      });
+      const faults: unknown[] = [];
+      const gateway = createCatRestHandler(upstream, {
+        authorize: authorized,
+        ...(prefix === undefined ? {} : { prefix }),
+        onError: (error) => faults.push(error),
+      });
+      const platform = createRestCatPort({
+        fetch: wire(gateway, tokens),
+        engines: new Map([[PUBLIC, { endpoint: GATEWAY, credentials: CREDENTIALS }]]),
+      });
+      return { platform, log, faults };
+    }
+
+    it("reaches an engine that the package names by its public reference, with the prefix set at the gateway", async () => {
+      const { platform, log } = chain(PUBLIC);
+      expect(await platform.createSection(PUBLIC, { sectionConfiguration: "e30=" })).toEqual({
+        sectionIdentifier: "sec1",
+      });
+      expect((await platform.getSection(PUBLIC, "sec1")).items.itemIdentifiers).toEqual(["q1", "q2", "q3"]);
+      expect(log.map(([name, prefix]) => [name, prefix])).toEqual([
+        ["createSection", INTERNAL],
+        ["getSection", INTERNAL],
+      ]);
+    });
+
+    it("answers 500 without an address when the gateway does not set the prefix, and tells onError why", async () => {
+      const { platform, log, faults } = chain(undefined);
+      const error = await platform.getSection(PUBLIC, "sec1").then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+      expect(error).toMatchObject({ name: "ServiceError", status: 500 });
+      expect((error as ServiceError).body).not.toMatch(/internal-engine|gateway/);
+      expect(log).toEqual([]);
+      expect(faults).toHaveLength(1);
+      expect((faults[0] as Error).message).toMatch(/is not an engine that the host configured/);
+    });
   });
 });
 
 describe("the exports", () => {
   it("are the REST port and its handler", async () => {
     expect(Object.keys(await import("../src/cat-rest/index.js")).sort()).toEqual([
+      "CAT_SCOPES",
       "createCatRestHandler",
       "createRestCatPort",
+      "scopesOf",
     ]);
   });
 });

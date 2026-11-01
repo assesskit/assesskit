@@ -66,17 +66,18 @@ the function as it is; `listen(handler, port, host)` serves it on Node.js with `
 | `now`          | required | Returns the milliseconds since the epoch; a token expires when it passes.                         |
 | `tokenSeconds` | `3600`   | The seconds a token lives (the binding recommends 3600).                                          |
 
-| Request                                | Answer                                                                                                                                                                |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Token request with right credentials   | 200 with a bearer token and the scopes asked for                                                                                                                      |
-| Wrong or missing client credentials    | 401 `invalid_client`                                                                                                                                                  |
-| Another grant, or an unknown scope     | 400 `unsupported_grant_type` or `invalid_scope`                                                                                                                       |
-| An operation without a valid token     | 401: no token, an unknown or an expired one                                                                                                                           |
-| An operation outside the token's scope | 401, because the binding defines no 403. `.../scope/configure` allows the section operations, `.../scope/deliver` the session operations, `.../scope/api` all of them |
-| A section the store does not have      | 404, because the ports throw a `ServiceError` with the status 404                                                                                                     |
+| Request                                                           | Answer                                                                                                                                                              |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Token request with right credentials                              | 200 with a bearer token and the scopes asked for                                                                                                                    |
+| Wrong or missing client credentials                               | 401 `invalid_client`                                                                                                                                                |
+| Another grant, or an unknown scope                                | 400 `unsupported_grant_type` or `invalid_scope`                                                                                                                     |
+| An operation without a valid token                                | 401: no token, or 401 with `error="invalid_token"` for an unknown or an expired one                                                                                 |
+| An operation outside the token's scope                            | 403 with `error="insufficient_scope"`. `.../scope/configure` allows the section operations, `.../scope/deliver` the session operations, `.../scope/api` all of them |
+| A section the store does not have, or that another client created | 404, because the ports throw a `ServiceError` with the status 404                                                                                                   |
+| A request that the engine cannot read                             | 400 with a fixed text: the engine's `DataError`, `ReadError` and `SecurityError` become a `ServiceError` with the status 400                                        |
 
 The tokens are kept in memory, so one process serves them. A host with several processes keeps them in a database, or signs
-them as JWTs with a library, and answers the same `authenticate`. The OAuth server is in the example because the binding needs
+them as JWTs with a library, and answers the same `authorize`. The OAuth server is in the example because the binding needs
 one beside the endpoints; the player does not include one.
 
 ## Sections

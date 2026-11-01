@@ -125,7 +125,7 @@ function refuseRedirect(response: CatFetchResponse, what: string): void {
  * It keeps the bearer token of each token URL, client and scope, so that a run of requests asks once, and the requests that
  * need a token at the same time share one request for it. It keeps no clock, so it learns that a token expired from the
  * service's `401`, not from `expires_in`; the new token is asked for with the credentials of the call that met the `401`,
- * so that a secret that was replaced is used.
+ * so that the current secret of the host is used.
  *
  * @param options - The `fetch` function and the timeout.
  * @returns The client.

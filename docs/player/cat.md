@@ -23,15 +23,17 @@ flowchart LR
   example["examples/player: one engine in process, and as a server"] -.->|illustrates| engine
 ```
 
-| Subpath                      | Side   | Export                                            | Purpose                                                                                      |
-| ---------------------------- | ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port)`                    | Creates the sections of a package's adaptive selections at the engine and checks their pool. |
-| `@assesskit/player/cat`      | shared | `DeployedCatSection`                              | What a deployment returns for an adaptive section.                                           |
-| `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                      | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                          |
-| `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`             | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.             |
-| `@assesskit/player/cat-rest` | server | `CatAuthenticate`, `CatOperation`                 | The callback that authorizes a request, and the names of the six operations.                 |
-| `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `createRestCatPort` uses.                                           |
-| `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                          | The client credentials with which `createRestCatPort` asks for a token.                      |
+| Subpath                      | Side   | Export                                              | Purpose                                                                                       |
+| ---------------------------- | ------ | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port)`                      | Creates the sections of a package's adaptive selections at the engine and checks their pool.  |
+| `@assesskit/player/cat`      | shared | `DeployedCatSection`                                | What a deployment returns for an adaptive section.                                            |
+| `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                        | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                           |
+| `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`               | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.              |
+| `@assesskit/player/cat-rest` | server | `CatAuthorizer`, `CatAuthorization`, `CatOperation` | The callback that authorizes a request, what it answers, and the names of the six operations. |
+| `@assesskit/player/cat-rest` | server | `CAT_SCOPES`, `scopesOf(operation)`                 | The scopes of the binding, and the scopes that enable an operation.                           |
+| `@assesskit/player/cat-rest` | server | `CatEngine`, `CatEngines`, `CatEngineResolver`      | The engines that `createRestCatPort` reaches, by the reference that a package names.          |
+| `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse`   | The part of `fetch` that `createRestCatPort` uses.                                            |
+| `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                            | The client credentials with which `createRestCatPort` asks for a token.                       |
 
 ## Why the REST subpath stays on servers
 
@@ -300,24 +302,26 @@ flowchart LR
     drain["drainCat, session host"] --> client["createRestCatPort"]
   end
   subgraph engineSide["The engine service"]
-    handler["createCatRestHandler"] --> engine{{"CatPort of the engine"}}
-    auth["authenticate: your callback"]
+    handler["createCatRestHandler"] --> engine{{"CatPort of the engine,<br/>or the port of the caller"}}
+    auth["authorize: your callback"]
   end
   as[("Authorization server<br/>token endpoint")]
   client -->|"client credentials grant"| as
   client -->|"HTTPS, bearer token, JSON"| handler
-  handler -->|"is the request authorized?"| auth
+  handler -->|"may this request use this operation?"| auth
   auth -.->|"checks the token and its scope"| as
 ```
 
-| Option         | Default           | Meaning                                                                                                                        |
-| -------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `authenticate` | required          | `(request, operation) => boolean \| Promise<boolean>`. Only `true` authorizes. The handler holds no credentials of its own.    |
-| `root`         | `"/ims/cat/v1p0"` | The path under which the endpoints are served, from the root of the host, with no trailing slash. The binding fixes this path. |
-| `maxBodyBytes` | `33554432`        | The most bytes of a request body (32 MiB, the size limit of an XML file in the runtime). A larger body answers 400.            |
+| Option         | Default                              | Meaning                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authorize`    | required                             | `(request, operation) => CatAuthorization`, sync or async: the decision, below. The handler holds no credentials of its own. The request has its body unread, and the step must not read it.                                      |
+| `root`         | `"/ims/cat/v1p0"`                    | The path that the handler receives, with no trailing slash, or `""` where a proxy strips the path. The binding asks the public paths to begin with `/ims/cat/v1p0` (section 2.2).                                                 |
+| `prefix`       | the origin and `root` of the request | The reference that every call of the port gets as its `prefix`: the address of the engine as the `qti-adaptive-engine-ref` of its sections names it, an `https` URL. Set it for a public deployment.                              |
+| `maxBodyBytes` | `33554432`                           | The most bytes of a request body, counted as the stream is read (32 MiB, the size limit of an XML file in the runtime). It holds a base64 field of about 24 MiB of file. A larger body answers 400.                               |
+| `onError`      | none                                 | `(error, request, operation) => void`: called once for every answer of 500, with the error behind it. Never for a refusal of the caller, for `server_busy`, or after an abort. It is not awaited, and its own failure is ignored. |
 
 ```ts
-import { createCatRestHandler } from "@assesskit/player/cat-rest";
+import { CAT_SCOPES, createCatRestHandler, scopesOf } from "@assesskit/player/cat-rest";
 
 const engine = {
   createSection: async () => ({ sectionIdentifier: "s1" }),
@@ -327,19 +331,115 @@ const engine = {
   endSession: async () => undefined,
   endSection: async () => undefined,
 };
+// A token store of your own: the scopes that each token carries.
+const tokens = new Map([["t0ken", new Set([CAT_SCOPES.deliver])]]);
 const handle = createCatRestHandler(engine, {
-  authenticate: (request) => request.headers.get("authorization") === "Bearer t0ken",
+  authorize: (request, operation) => {
+    const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
+    if (token === undefined) return false;
+    const scopes = tokens.get(token);
+    if (scopes === undefined) return { denied: "invalid-token" };
+    return scopesOf(operation).some((scope) => scopes.has(scope)) ? true : { denied: "insufficient-scope" };
+  },
 });
-const response = await handle(
-  new Request("https://cat.example/ims/cat/v1p0/sections", {
-    method: "POST",
-    headers: { authorization: "Bearer t0ken", "content-type": "application/json" },
-    body: JSON.stringify({ sectionConfiguration: "e30=" }),
-  }),
-);
-response.status; // => 201
-await response.json(); // => { sectionIdentifier: "s1" }
+const create = (token) =>
+  handle(
+    new Request("https://cat.example/ims/cat/v1p0/sections", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ sectionConfiguration: "e30=" }),
+    }),
+  );
+(await create("t0ken")).status; // => 403
+(await create("other")).status; // => 401
 ```
+
+`authorize` decides, before any of the body is read, and its result is one of these:
+
+| Result                                      | The handler                                                                                                                      |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `true`                                      | Serves the request with the `port` that it was created with.                                                                     |
+| `false`                                     | Answers 401 with `WWW-Authenticate: Bearer`: the request carries no credentials, or you do not say why.                          |
+| `{ port }`                                  | Serves the request with that port: the port of the caller, for several clients on one root.                                      |
+| `{ denied: "invalid-token" }`               | Answers 401 with `WWW-Authenticate: Bearer error="invalid_token"`: the token is unknown, expired or malformed.                   |
+| `{ denied: "insufficient-scope", scopes? }` | Answers 403 with the code minor `forbidden` and `error="insufficient_scope"`, naming `scopes`, by default `scopesOf(operation)`. |
+
+`scopesOf(operation)` gives the scopes of the binding that enable an operation: `CAT_SCOPES.api`, and `CAT_SCOPES.configure` for the
+sections or `CAT_SCOPES.deliver` for the sessions (binding section 4.3). Any other result, or a step that throws, is a fault of the
+host: 500, and `onError`.
+
+### Several clients on one root
+
+The port has no idea who calls. A host that serves several clients answers with the port of the caller, which it builds over the
+shared engine with a check of the owner of every section and session, and gives the handler a port that refuses everything, so that
+a path that returns `true` by mistake reaches no section. An object of another client is an unknown object (a `ServiceError` of status
+404), which also hides that it exists. [The example](../../examples/player/cat-with-measurekit/README.md) does exactly this.
+
+```ts
+import { ServiceError } from "@assesskit/player";
+
+const owners = new Map(); // section identifier -> client
+const unknown = () => new ServiceError("The section is unknown.", 404, "");
+const portOf = (engine, client) => ({
+  ...engine,
+  async createSection(prefix, data) {
+    const answer = await engine.createSection(prefix, data);
+    owners.set(answer.sectionIdentifier, client);
+    return answer;
+  },
+  async getSection(prefix, section) {
+    if (owners.get(section) !== client) throw unknown();
+    return engine.getSection(prefix, section);
+  },
+});
+const refusing = {
+  createSection: unknown,
+  getSection: unknown,
+  createSession: unknown,
+  submitResults: unknown,
+  endSession: unknown,
+  endSection: unknown,
+};
+// authorize: (request, operation) => ({ port: portOf(engine, clientOf(request)) })
+// createCatRestHandler(refusing, { authorize })
+owners.size; // => 0
+```
+
+### A gateway
+
+A gateway answers for an engine at another address. The package names the engine by its public reference, the gateway serves that
+reference, and `createRestCatPort` reaches the upstream endpoint:
+
+```ts
+import { createCatRestHandler, createRestCatPort } from "@assesskit/player/cat-rest";
+
+const reference = "https://engine.example/ims/cat/v1p0";
+const upstream = createRestCatPort({
+  fetch,
+  engines: new Map([
+    [
+      reference,
+      {
+        endpoint: "https://engine.internal/ims/cat/v1p0",
+        credentials: {
+          tokenUrl: "https://auth.internal/token",
+          clientId: "gateway",
+          clientSecret: "secret",
+          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
+        },
+      },
+    ],
+  ]),
+});
+const gateway = createCatRestHandler(upstream, {
+  authorize: (request) => request.headers.has("authorization"),
+  prefix: reference,
+});
+typeof gateway; // => "function"
+```
+
+Without `prefix` the port gets the internal address of the gateway as the reference, and `createRestCatPort` refuses it: every
+request answers 500, and `onError` has the `DataError` that says why.
 
 Every request goes through the same steps, in this order, and a request leaves at the first step that fails:
 
@@ -349,17 +449,21 @@ flowchart TD
   route -->|"no endpoint"| e404["404 Unknown Object"]
   route -->|"wrong method"| e405["405 with Allow"]
   route -->|"bad percent-encoding"| e400a["400"]
-  route -->|yes| auth{"authenticate(request, operation) is true?"}
+  route -->|yes| auth{"authorize(request, operation)"}
   auth -->|false| e401["401 with WWW-Authenticate: Bearer"]
-  auth -->|throws| e500a["500"]
-  auth -->|true| body{"Body within the limit, JSON, and valid?"}
-  body -->|no| e400b["400 with the first problem"]
+  auth -->|"invalid-token"| e401b["401 with error invalid_token"]
+  auth -->|"insufficient-scope"| e403["403 forbidden"]
+  auth -->|"throws, or not a decision"| e500a["500 and onError"]
+  auth -->|"true or a port"| body{"Body within the limit, JSON, and valid?"}
+  body -->|"no: a DataError of the readers"| e400b["400 with the first problem"]
+  body -->|"no: another error"| e500b["500 and onError"]
   body -->|yes| call["The port is called"]
-  call -->|"ServiceError 404"| e404b["404 Unknown Object"]
-  call -->|"DataError, ReadError, SecurityError, ServiceError 400"| e400c["400"]
-  call -->|"any other error"| e500b["500"]
+  call -->|"ServiceError 404, not Create Section"| e404b["404 Unknown Object"]
+  call -->|"ServiceError 400"| e400c["400"]
+  call -->|"ServiceError 429 or 503"| e503["the same status, server_busy"]
+  call -->|"any other error"| e500c["500 and onError"]
   call -->|answer| enc{"A valid answer?"}
-  enc -->|no| e500c["500"]
+  enc -->|no| e500d["500 and onError"]
   enc -->|yes| ok["200, 201 or 204"]
 ```
 
@@ -372,31 +476,44 @@ flowchart TD
 | Submit Results | `POST /sections/{id}/sessions/{session}/results` | 201     | `{ nextItems, assessmentResult, sessionState }`  |
 | End Session    | `DELETE /sections/{id}/sessions/{session}`       | 204     | none                                             |
 
-Failures answer the status information of the binding as JSON, with the code minor of the table, and `Cache-Control: no-store`. The port signals an unknown section or session by throwing a `ServiceError` with the status 404.
+Failures answer the status information of the binding as JSON (table 2.4 and the `default` response of every endpoint), with the code
+minor of the table, and `Cache-Control: no-store`. **The status follows the origin of the error, never its class.** A port
+signals what the caller did wrong with a `ServiceError`, the error that `createRestCatPort` throws for the answer of an engine, so
+that the round trip through both gives the same error back.
 
-| Status | Code minor              | When                                                                                                                                                                               | Description                                                   |
-| ------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 400    | `invaliddata`           | A body is not JSON, empty, not UTF-8, above `maxBodyBytes`, of another content type than `application/json`, or does not match the binding.                                        | What is wrong, with the path of the value                     |
-| 400    | `invaliddata`           | The port throws `DataError`, `ReadError` or `SecurityError`, or `ServiceError` with the status 400; an identifier of the path is not valid percent-encoding.                       | The message of the first three; fixed text for `ServiceError` |
-| 401    | `unauthorisedrequest`   | `authenticate` returns anything but `true`. The answer has `WWW-Authenticate: Bearer`. The binding defines no 403, so a token without the scope of the operation also answers 401. | `The request is not authorized.`                              |
-| 404    | `unknownobject`         | The path is no endpoint, or the port throws `ServiceError` with the status 404.                                                                                                    | `Unknown Object`, with the reason for a path                  |
-| 405    | none (`unsupported`)    | The path is an endpoint, and the method is not one of its methods. The answer has `Allow`.                                                                                         | `The method is not allowed for this endpoint.`                |
-| 500    | `internal_server_error` | `authenticate` throws, the port throws any other error, or its answer cannot be written in the binding.                                                                            | Fixed text; the message of the error is not shown             |
+| Status   | Code minor              | When                                                                                                                                                                                                                                                                                                                                  | Description                                                   |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 400      | `invaliddata`           | A body is not JSON, empty, not UTF-8, above `maxBodyBytes`, of another content type than `application/json`, or does not match the binding; an identifier of the path is not valid percent-encoding.                                                                                                                                  | What is wrong, with the path of the value                     |
+| 400      | `invaliddata`           | The port throws `ServiceError` with the status 400.                                                                                                                                                                                                                                                                                   | `The engine refused the request.`                             |
+| 401      | `unauthorisedrequest`   | `authorize` answers `false` or `{ denied: "invalid-token" }`. The answer has `WWW-Authenticate: Bearer`, with `error="invalid_token"` for the second.                                                                                                                                                                                 | `The request is not authorized.` or `The token is not valid.` |
+| 403      | `forbidden`             | `authorize` answers `{ denied: "insufficient-scope" }`. The answer has `WWW-Authenticate: Bearer error="insufficient_scope", scope="…"`.                                                                                                                                                                                              | `The token does not carry the scope of this operation.`       |
+| 404      | `unknownobject`         | The path is no endpoint, or the port throws `ServiceError` with the status 404 for an operation other than Create Section.                                                                                                                                                                                                            | `Unknown Object`, with the reason for a path                  |
+| 405      | none (`unsupported`)    | The path is an endpoint, and the method is not one of its methods. The answer has `Allow`. The binding's `default` response asks for `failure/error`; the service specification calls `unsupported` the required default for an unsupported operation, and the answer follows that.                                                   | `The method is not allowed for this endpoint.`                |
+| 429, 503 | `server_busy`           | The port throws `ServiceError` with the status 429 or 503: the engine is busy. The status passes through, so that a client can tell "retry later" from a failure.                                                                                                                                                                     | `The engine is busy; try again later.`                        |
+| 500      | `internal_server_error` | `authorize` throws or answers something that is not a decision, a body fails to read for another reason than its content, the port throws any other error (a `DataError`, `ReadError` or `SecurityError` of the engine, a `ServiceError` of another status, a 404 of Create Section), or its answer cannot be written in the binding. | Fixed text; the message of the error is never shown           |
 
-- **Messages.** A `ServiceError` of a port that calls another service, such as a gateway over `createRestCatPort`, names an address of
-  that service in its message, so the message is not shown, and a `ServiceError` with another status than 400 and 404 is a 500.
-- **Authorization.** The authorization server issues the tokens of the OAuth 2.0 client credentials grant, and `authenticate`
-  checks the bearer token and the scope that `operation` needs (`.../scope/configure` for sections, `.../scope/deliver` for
-  sessions, `.../scope/api` for all). The handler neither reads the `Authorization` header nor keeps a token.
-- **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason and nothing is sent. The port is
-  not called when the abort came first. A call of the port that has begun runs on, because `CatPort` takes no signal.
-- **Prefix.** The port gets the URL prefix of the request, its origin and `root`, as the `prefix` argument.
-- **Logging.** The handler logs nothing. To log the failures of the engine, wrap the port.
+- **What the caller reads.** A 400 for a body names the path of the caller's own value. Every failure of the port, of `authorize`
+  and of the encoding has a fixed text, because the message of a gateway names the address of the upstream engine and the
+  message of an engine its own state. The operator reads the error in `onError`.
+- **An engine tells the caller's fault with a `ServiceError`.** An engine that finds the data of a request invalid throws
+  `ServiceError` with the status 400, and one that does not have an object throws it with 404 (or 429 and 503 when it is busy).
+  A `DataError` of the engine is a 500: it does not say whose fault it is.
+- **A 403 is not an expired token.** `createRestCatPort` reads a 401 as an expired token, asks for a new one and repeats the call
+  once. It reads a 403 as a failure, `ServiceError` with the status 403, and repeats nothing.
+- **Authorization.** The authorization server issues the tokens of the OAuth 2.0 client credentials grant, and `authorize`
+  checks the bearer token and the scope that `operation` needs. The handler neither reads the `Authorization` header nor keeps a
+  token. `authorize` runs once for each request, and requests run at once, so it must be safe to call at once.
+- **Abort.** A request whose signal aborts ends the wait: the promise rejects with the reason and nothing is sent. The read of
+  the body is cancelled, and the port is not called when the abort came first. A call of the port that has begun runs on, because
+  `CatPort` takes no signal. `onError` does not run after an abort.
+- **Prefix.** The port gets the `prefix` option, or the origin and `root` of the request.
+- **Logging.** The handler logs nothing. `onError` gets the error of every 500, which may hold addresses, tokens or candidate
+  data: the host decides where it goes.
 - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session. The item set of
   Get Section has no stage length, and an empty pool leaves `items` out; `createRestCatPort` reads both back.
-- **Metadata.** A `qtiMetadata` object of Create Section is checked and dropped, and Get Section returns the settings and the
-  usage data only, for the reason in [Section metadata](#section-metadata). The `glossaryURI` of prior data has no place in
-  the model and is dropped. A value of prior data arrives as text.
+- **Metadata.** A `qtiMetadata` object of Create Section reaches the port as `qtiMetadataRecord`, and Get Section returns it, for
+  the reason in [Section metadata](#section-metadata). The `glossaryURI` of prior data is `glossaryUri`. A value of prior data
+  arrives as text.
 - **Where it runs.** Any runtime with web `Request` and `Response`:
 
 | Runtime | Mount                                                                                     |
@@ -408,7 +525,7 @@ Failures answer the status information of the binding as JSON, with the code min
 
 TLS terminates in front of the handler, because the binding requires it. The example
 [cat-with-measurekit](../../examples/player/cat-with-measurekit/README.md) is a whole server: the token endpoint, `createCatRestHandler`
-over an engine of measurekit, and the Node adapter.
+over an engine of measurekit, with a port for each client, and the Node adapter.
 
 ## deployCatSections
 
@@ -427,21 +544,22 @@ the sections made so far stay, and the `DataError` names the section at the engi
 
 ## Errors
 
-| Error          | When                                                                                                                                                                                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DataError`    | An option or an argument has the wrong type, or section data, a `sessionState` or an engine's answer is malformed. `createCatRestHandler` throws it for a `port` that lacks a method, an option of the wrong type, or a value that is not a `Request`. |
-| `ServiceError` | The engine answers with a status other than 2xx, or with a body that is not JSON, or the token endpoint fails.                                                                                                                                         |
+| Error          | When                                                                                                                                                                                                                                                                                                                                                                                     | What to do                                                                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`    | An option or an argument has the wrong type, or section data, a `sessionState` or an engine's answer is malformed. `createCatRestHandler` throws it for a `port` that lacks a method, an option of the wrong type, or a value that is not a `Request`. `createRestCatPort` throws it for a malformed engine, and for a reference that `engines` does not know, before it sends anything. | Fix the call; the message names the option or the path of the value. For an unknown reference, add the engine to `engines`: the package's word is not trusted. |
+| `ServiceError` | The engine answers with a status other than 2xx, or with a body that is not JSON, or the token endpoint fails. A port that `createCatRestHandler` serves throws it to tell the caller's fault: status 400, 404, 429 or 503.                                                                                                                                                              | Read `status` and `body`. A 401 after a new token means that the credentials are wrong; a 403 means that the token lacks the scope of the operation.           |
 
 Errors of the runtime pass through unchanged: `ReadError` and `SecurityError` of the usage data and the package, and the `DataError`
 of the runtime for an assessment result or an item stage of an answer that is not the JSON of the binding. The errors of an
-engine that the host supplies pass through unchanged too.
+engine that the host supplies pass through unchanged too. The handler answers for them with 500 and a fixed text, and `onError`
+has the error ([status table](#createcatresthandler)).
 
 ## Not included
 
-| Not included                                 | Why                                                                                                                                                              |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A CAT algorithm                              | Neither package runs one; an engine is a `CatPort` that the host supplies                                                                                        |
-| The section metadata file over REST          | The binding has no field for it (see [Section metadata](#section-metadata))                                                                                      |
-| Another transport than the REST/JSON binding | Implement `CatPort` over it                                                                                                                                      |
-| The authorization server                     | The token endpoint is an OAuth 2.0 service, and a library or a hosted service issues the tokens; `authenticate` only checks them (the example has a minimal one) |
-| TLS and the listener                         | The host terminates TLS and mounts the handler on its runtime                                                                                                    |
+| Not included                                 | Why                                                                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A CAT algorithm                              | Neither package runs one; an engine is a `CatPort` that the host supplies                                                                                     |
+| The section metadata file over REST          | The binding has no field for it (see [Section metadata](#section-metadata))                                                                                   |
+| Another transport than the REST/JSON binding | Implement `CatPort` over it                                                                                                                                   |
+| The authorization server                     | The token endpoint is an OAuth 2.0 service, and a library or a hosted service issues the tokens; `authorize` only checks them (the example has a minimal one) |
+| TLS and the listener                         | The host terminates TLS and mounts the handler on its runtime                                                                                                 |

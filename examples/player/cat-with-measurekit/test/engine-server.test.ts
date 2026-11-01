@@ -131,15 +131,20 @@ describe("the token endpoint", () => {
 });
 
 describe("the endpoints of the binding", () => {
-  it("answers 401 to a request without a token, with an unknown token, and with an expired one", async () => {
+  it("answers 401 to a request without a token, and 401 with invalid_token to an unknown token and to an expired one", async () => {
     const { server, clock } = fixture();
     const missing = await server(new Request(`${PREFIX}/sections/x`));
     expect(missing.status).toBe(401);
-    expect((await call(server, "token-9", "GET", "/sections/x")).status).toBe(401);
+    expect(missing.headers.get("www-authenticate")).toBe("Bearer");
+    const unknown = await call(server, "token-9", "GET", "/sections/x");
+    expect(unknown.status).toBe(401);
+    expect(unknown.headers.get("www-authenticate")).toBe('Bearer error="invalid_token"');
     await tokenFor(server, API);
     expect((await call(server, "token-1", "GET", "/sections/x")).status).toBe(404);
     clock.now = 3600 * 1000;
-    expect((await call(server, "token-1", "GET", "/sections/x")).status).toBe(401);
+    const expired = await call(server, "token-1", "GET", "/sections/x");
+    expect(expired.status).toBe(401);
+    expect(expired.headers.get("www-authenticate")).toBe('Bearer error="invalid_token"');
   });
 
   it("lets a token do the operations of its scope, and only those, unless it has the api scope", async () => {
@@ -148,15 +153,58 @@ describe("the endpoints of the binding", () => {
     await tokenFor(server, DELIVER);
     await tokenFor(server, API);
     const body = { sectionConfiguration: base64(JSON.stringify({ length: 1 })), qtiUsagedata: SECTION.qtiUsagedata };
-    expect((await call(server, "token-2", "POST", "/sections", body)).status).toBe(401);
+    const lacking = await call(server, "token-2", "POST", "/sections", body);
+    expect(lacking.status).toBe(403);
+    expect(lacking.headers.get("www-authenticate")).toBe(
+      `Bearer error="insufficient_scope", scope="${API} ${CONFIGURE}"`,
+    );
     const created = await call(server, "token-1", "POST", "/sections", body);
     expect(created.status).toBe(201);
     const { sectionIdentifier } = (await created.json()) as { sectionIdentifier: string };
-    expect((await call(server, "token-1", "POST", `/sections/${sectionIdentifier}/sessions`, {})).status).toBe(401);
+    expect((await call(server, "token-1", "POST", `/sections/${sectionIdentifier}/sessions`, {})).status).toBe(403);
     const session = await call(server, "token-2", "POST", `/sections/${sectionIdentifier}/sessions`, {});
     expect(session.status).toBe(201);
-    expect((await call(server, "token-2", "DELETE", `/sections/${sectionIdentifier}`)).status).toBe(401);
+    expect((await call(server, "token-2", "DELETE", `/sections/${sectionIdentifier}`)).status).toBe(403);
     expect((await call(server, "token-3", "DELETE", `/sections/${sectionIdentifier}`)).status).toBe(204);
+  });
+
+  it("keeps each client to the sections it created: another client's section is unknown to it", async () => {
+    const server = engineServer({
+      engine: measurekitCatPort({ sections: memoryStore(), seeds: () => 7 }),
+      verifyClient: async (id, secret) => (id === "tool" || id === "other") && secret === "secret/+",
+      newToken: (() => {
+        let issued = 0;
+        return () => `token-${++issued}`;
+      })(),
+      now: () => 0,
+    });
+    await tokenFor(server, API);
+    await tokenFor(server, API, basic("other", "secret/+"));
+    const body = { sectionConfiguration: base64(JSON.stringify({ length: 1 })), qtiUsagedata: SECTION.qtiUsagedata };
+    const created = await call(server, "token-1", "POST", "/sections", body);
+    const { sectionIdentifier } = (await created.json()) as { sectionIdentifier: string };
+    expect((await call(server, "token-1", "GET", `/sections/${sectionIdentifier}`)).status).toBe(200);
+    for (const [method, path] of [
+      ["GET", `/sections/${sectionIdentifier}`],
+      ["DELETE", `/sections/${sectionIdentifier}`],
+      ["POST", `/sections/${sectionIdentifier}/sessions`],
+    ] as const) {
+      const response = await call(server, "token-2", method, path, method === "POST" ? {} : undefined);
+      expect([response.status, method]).toEqual([404, method]);
+    }
+    expect((await call(server, "token-1", "DELETE", `/sections/${sectionIdentifier}`)).status).toBe(204);
+  });
+
+  it("answers 400 to a section that the engine cannot read, with a fixed text and not its message", async () => {
+    const { server } = fixture();
+    await tokenFor(server, API);
+    const response = await call(server, "token-1", "POST", "/sections", {
+      sectionConfiguration: base64("not json"),
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { imsx_description: string }).imsx_description).toBe(
+      "The engine refused the request.",
+    );
   });
 
   it("answers 404 to a section that the engine does not have", async () => {

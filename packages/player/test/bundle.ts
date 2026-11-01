@@ -12,6 +12,7 @@ const RUNTIME_FOLDERS = [
   "content",
   "delivery",
   "interactions",
+  "metadata",
   "package",
   "pci",
   "pnp",

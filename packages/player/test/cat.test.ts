@@ -170,8 +170,13 @@ describe("the guide", () => {
   it("shows the results that its samples give", async () => {
     const cat = await import("../src/cat/index.js");
     const catRest = await import("../src/cat-rest/index.js");
+    const player = await import("../src/index.js");
     expect(
-      await runGuideSamples(catGuide, { "@assesskit/player/cat": cat, "@assesskit/player/cat-rest": catRest }),
+      await runGuideSamples(catGuide, {
+        "@assesskit/player": player,
+        "@assesskit/player/cat": cat,
+        "@assesskit/player/cat-rest": catRest,
+      }),
     ).toBeGreaterThan(0);
   });
 });

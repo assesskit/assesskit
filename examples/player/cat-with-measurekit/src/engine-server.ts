@@ -1,26 +1,11 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and OAuth parameters are those of their specifications.
 
-import { type CatAuthenticate, type CatOperation, createCatRestHandler } from "@assesskit/player/cat-rest";
+import { ServiceError } from "@assesskit/player";
+import { CAT_SCOPES, type CatAuthorizer, createCatRestHandler, scopesOf } from "@assesskit/player/cat-rest";
 import type { CatPort } from "@assesskit/runtime/cat";
+import { DataError, ReadError, SecurityError } from "@assesskit/runtime/errors";
 
-/** The scope that enables every endpoint of the binding. */
-const SCOPE_API = "https://purl.imsglobal.org/cat/v1p0/scope/api";
-/** The scope that enables the management of sections. */
-const SCOPE_CONFIGURE = "https://purl.imsglobal.org/cat/v1p0/scope/configure";
-/** The scope that enables the management of sessions. */
-const SCOPE_DELIVER = "https://purl.imsglobal.org/cat/v1p0/scope/deliver";
-
-const SCOPES: ReadonlySet<string> = new Set([SCOPE_API, SCOPE_CONFIGURE, SCOPE_DELIVER]);
-
-/** The scope, besides `api`, that enables each operation (the binding, section 4.3). */
-const OPERATION_SCOPES: Readonly<Record<CatOperation, string>> = {
-  createSection: SCOPE_CONFIGURE,
-  getSection: SCOPE_CONFIGURE,
-  endSection: SCOPE_CONFIGURE,
-  createSession: SCOPE_DELIVER,
-  submitResults: SCOPE_DELIVER,
-  endSession: SCOPE_DELIVER,
-};
+const SCOPES: ReadonlySet<string> = new Set(Object.values(CAT_SCOPES));
 
 /** The path of the token endpoint, beside the endpoints of the binding. */
 export const TOKEN_PATH = "/oauth2/token";
@@ -46,10 +31,81 @@ export interface EngineServerOptions {
   readonly tokenSeconds?: number;
 }
 
-/** A token that the server issued: what it enables and until when. */
+/** A token that the server issued: the client it is for, what it enables and until when. */
 interface Grant {
+  readonly clientId: string;
   readonly scopes: ReadonlySet<string>;
   readonly expiresAt: number;
+}
+
+/** What an engine throws for an object that the caller does not own, or that does not exist. */
+const unknownObject = (what: string): ServiceError => new ServiceError(`The ${what} is unknown.`, 404, "");
+
+/**
+ * Refuses every request, as an unknown object. It is the port of the handler, so that a path of `authorize` that returns
+ * `true` by mistake reaches no section: only the port of a client serves.
+ */
+const REFUSING_PORT: CatPort = {
+  createSection: () => Promise.reject(unknownObject("section")),
+  getSection: () => Promise.reject(unknownObject("section")),
+  createSession: () => Promise.reject(unknownObject("section")),
+  submitResults: () => Promise.reject(unknownObject("session")),
+  endSession: () => Promise.reject(unknownObject("session")),
+  endSection: () => Promise.reject(unknownObject("section")),
+};
+
+/**
+ * Returns the port of one client over the shared engine: it records who created each section and answers as an unknown
+ * object, which also hides that it exists, for a section that another client created. What the caller sent wrong is a
+ * `DataError`, `ReadError` or `SecurityError` of the engine; it becomes the refusal that the handler answers with 400.
+ */
+function portOf(engine: CatPort, clientId: string, owners: Map<string, string>): CatPort {
+  const owned = (sectionIdentifier: string): void => {
+    if (owners.get(sectionIdentifier) !== clientId) throw unknownObject("section");
+  };
+  const refusing = async <T>(call: () => Promise<T>): Promise<T> => {
+    try {
+      return await call();
+    } catch (error) {
+      if (error instanceof DataError || error instanceof ReadError || error instanceof SecurityError) {
+        throw new ServiceError(error.message, 400, "");
+      }
+      throw error;
+    }
+  };
+  return {
+    createSection: (prefix, data) =>
+      refusing(async () => {
+        const answer = await engine.createSection(prefix, data);
+        owners.set(answer.sectionIdentifier, clientId);
+        return answer;
+      }),
+    getSection: (prefix, section) =>
+      refusing(async () => {
+        owned(section);
+        return engine.getSection(prefix, section);
+      }),
+    createSession: (prefix, section, request) =>
+      refusing(async () => {
+        owned(section);
+        return engine.createSession(prefix, section, request);
+      }),
+    submitResults: (prefix, section, session, request) =>
+      refusing(async () => {
+        owned(section);
+        return engine.submitResults(prefix, section, session, request);
+      }),
+    endSession: (prefix, section, session) =>
+      refusing(async () => {
+        owned(section);
+        return engine.endSession(prefix, section, session);
+      }),
+    endSection: (prefix, section) =>
+      refusing(async () => {
+        owned(section);
+        return engine.endSection(prefix, section);
+      }),
+  };
 }
 
 /** Returns the client credentials of an HTTP Basic header, decoded as RFC 6749 section 2.3.1 encodes them. */
@@ -78,9 +134,12 @@ function refusal(status: number, error: string, headers: Readonly<Record<string,
  *
  * @remarks
  * The function runs on Node.js (see `listen`), Deno, Bun and Workers. The tokens live in memory, so this server is one
- * process; a host with several processes keeps them in a database, or signs them as JWTs, behind the same `authenticate`.
+ * process; a host with several processes keeps them in a database, or signs them as JWTs, behind the same `authorize`.
  * A token that has expired is forgotten when the next token is issued.
- * A request whose token lacks the scope of its operation answers 401, because the binding defines no 403 for its endpoints.
+ *
+ * A request without a token answers 401, one with an unknown or expired token 401 with `invalid_token`, and one whose token
+ * lacks the scope of its operation 403. Each client sees only the sections it created: `authorize` answers with the port of
+ * the client, which asks the engine for nothing that another client owns, and the port of the handler refuses every request.
  *
  * @param options - The engine, the check of the clients, the source of tokens and the clock.
  * @returns The handler of the server.
@@ -101,21 +160,24 @@ export function engineServer(options: EngineServerOptions): (request: Request) =
     const issued = now();
     for (const [expired, grant] of grants) if (grant.expiresAt <= issued) grants.delete(expired);
     const token = newToken();
-    grants.set(token, { scopes: new Set(scopes), expiresAt: issued + tokenSeconds * 1000 });
+    grants.set(token, { clientId: credentials[0], scopes: new Set(scopes), expiresAt: issued + tokenSeconds * 1000 });
     return Response.json(
       { access_token: token, token_type: "bearer", expires_in: tokenSeconds, scope: scopes.join(" ") },
       { headers: { "Cache-Control": "no-store", Pragma: "no-cache" } },
     );
   };
 
-  const authenticate: CatAuthenticate = (request, operation) => {
+  const owners = new Map<string, string>();
+  const authorize: CatAuthorizer = (request, operation) => {
     const token = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
-    const grant = token === undefined ? undefined : grants.get(token);
-    if (grant === undefined || grant.expiresAt <= now()) return false;
-    return grant.scopes.has(SCOPE_API) || grant.scopes.has(OPERATION_SCOPES[operation]);
+    if (token === undefined) return false;
+    const grant = grants.get(token);
+    if (grant === undefined || grant.expiresAt <= now()) return { denied: "invalid-token" };
+    if (!scopesOf(operation).some((scope) => grant.scopes.has(scope))) return { denied: "insufficient-scope" };
+    return { port: portOf(engine, grant.clientId, owners) };
   };
 
-  const cat = createCatRestHandler(engine, { authenticate });
+  const cat = createCatRestHandler(REFUSING_PORT, { authorize });
   return (request) =>
     request.method === "POST" && new URL(request.url).pathname === TOKEN_PATH ? issue(request) : cat(request);
 }

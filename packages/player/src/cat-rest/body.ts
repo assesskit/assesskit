@@ -15,15 +15,17 @@ function join(chunks: readonly Uint8Array[], length: number): Uint8Array {
 }
 
 /**
- * Reads the JSON body of a request, within a limit on its size.
+ * Reads the JSON body of a request, within a limit on its size, for as long as the caller waits.
  *
  * @param request - The request, whose body is read once.
  * @param maxBytes - The most bytes of body; the read stops at the first byte above it.
+ * @param signal - The signal of the caller: when it aborts, the stream is cancelled with its reason and nothing more is read.
  * @returns The parsed JSON.
  * @throws `DataError` when the content type is not `application/json`, the body is larger than the limit, empty, not UTF-8,
  * or not JSON.
+ * @throws `signal.reason` when the signal aborts.
  */
-export async function readJsonBody(request: Request, maxBytes: number): Promise<unknown> {
+export async function readJsonBody(request: Request, maxBytes: number, signal: AbortSignal): Promise<unknown> {
   const mediaType = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
   if (mediaType !== JSON_MEDIA_TYPE) {
     throw new DataError(`The request must have the content type ${JSON_MEDIA_TYPE}, found ${mediaType ?? "none"}.`);
@@ -34,15 +36,23 @@ export async function readJsonBody(request: Request, maxBytes: number): Promise<
   const chunks: Uint8Array[] = [];
   let length = 0;
   const reader = request.body?.getReader();
-  while (reader !== undefined) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    length += value.byteLength;
-    if (length > maxBytes) {
-      await reader.cancel();
-      throw tooLarge;
+  const stop = (): void => void reader?.cancel(signal.reason).catch(() => undefined);
+  signal.addEventListener("abort", stop, { once: true });
+  try {
+    while (reader !== undefined) {
+      const { done, value } = await reader.read();
+      // A cancelled stream reads as done, so the abort is looked at before the end.
+      signal.throwIfAborted();
+      if (done) break;
+      length += value.byteLength;
+      if (length > maxBytes) {
+        await reader.cancel();
+        throw tooLarge;
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
+  } finally {
+    signal.removeEventListener("abort", stop);
   }
   let text: string;
   try {

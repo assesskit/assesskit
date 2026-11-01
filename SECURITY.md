@@ -147,14 +147,18 @@ session holds any file of the engine. Practice runs the engine on the device, so
 ## The player: CAT engines
 
 `createRestCatPort` of `@assesskit/player/cat-rest` sends a candidate's results and an OAuth bearer token to a remote engine, so
-it is built to send them to one place only.
+it is built to send them only to the engines that the host configured.
 
-- It serves the one `endpoint` that the host configures. The `qti-adaptive-engine-ref` of a package is the package's word:
-  a request for another prefix is a `DataError`, and nothing leaves. Give each trusted engine its own port.
+- It serves the engines that the host configures in `engines`, by reference. The `qti-adaptive-engine-ref` of a package is the
+  package's word, and it only selects among those engines: a reference that `engines` does not know is a `DataError`, and
+  nothing leaves, no candidate data and no token. A function for `engines` is an allowlist from known references to configured
+  engines. It never builds an endpoint or a token URL from the reference, and never returns shared credentials for any
+  reference: the port sends the client secret and the candidate's data wherever the function points.
 - The endpoint and the token URL must be `https`. Redirects are errors, so a redirect cannot carry the token to another
   address or from HTTPS to HTTP. Every request is aborted after `timeoutMs`.
-- The personal needs and preferences of a candidate go to the engine only with `sharePnp: true`.
-- The client secret goes only to the token URL, as HTTP Basic credentials.
+- The personal needs and preferences of a candidate go only to an engine with `sharePnp: true`.
+- The client secret goes only to the token URL of its engine, as HTTP Basic credentials. A token is kept for each token URL,
+  client and scope, so engines never share one.
 - The client secret stays on the server. `cat-rest` is the one folder that takes it, no shared or browser folder of the
   package imports it (lint), and a test checks that the bundles of the candidate and of practice hold none of its files. A
   host's own page is out of the library's sight: keep `credentials` and the import of `@assesskit/player/cat-rest` out of
@@ -164,16 +168,25 @@ it is built to send them to one place only.
 `createCatRestHandler` is the other end: the engine side of the binding, which receives a candidate's results and answers with the
 items to present. It trusts nothing it is sent.
 
-- It serves nothing without the host's `authenticate`, which it calls with the request and the operation before it reads a
-  body, so that a caller who is not authorized costs one function call. Only the value `true` authorizes; a callback that
-  throws answers 500. The handler holds no secret and issues no token, and the host terminates TLS in front of it.
+- It serves nothing without the host's `authorize`, which it calls with the request and the operation before it reads a
+  body, so that a caller who is not authorized costs one function call. Only `true` or the port of the caller authorizes; a
+  callback that throws, or answers anything else, answers 500. A token that lacks the scope of the operation answers 403 and an
+  invalid one 401. The handler holds no secret and issues no token, and the host terminates TLS in front of it.
+- The handler does not know who a client is. A host that serves several clients on one root answers with the port of the
+  caller, built over the shared engine with a check of the owner of every section and session. Without it every client with a
+  valid token can read and end every section, and the guide shows the pattern.
 - A body must be `application/json`, at most `maxBodyBytes` (32 MiB by default), counted as it arrives, and valid UTF-8 and
   JSON. Each body is read with a strict schema of the binding, so an unknown property is a 400; the assessment result is read
   by the runtime's codec.
-- An answer that the port got wrong is a 500, and the message of an error that the port threw is not shown, except that of a
-  `DataError`, `ReadError` or `SecurityError`, which says what was wrong with the data of the request. Every answer is
-  `Cache-Control: no-store`. The handler logs nothing, so a host that logs wraps the port and takes care not to log results.
-- A request that is aborted ends the wait and is not answered; the call of the port that has begun runs on.
+- The status follows the origin of an error. What the caller sent wrong is a 400 that names the path of the caller's own value.
+  An error of the port is never shown: a `ServiceError` of status 400, 404 (not for Create Section), 429 or 503 is the refusal that
+  the binding has for it, with a fixed text, and any other error, a `DataError` of a gateway that names its upstream address
+  among them, is a 500 with a fixed text. Every answer is `Cache-Control: no-store`. The handler logs nothing: `onError` gets
+  the error behind every 500, which may hold addresses, tokens or candidate data, so the host decides where it goes.
+- The `prefix` that the port receives is set by the host for a public deployment. Without it the handler takes the origin of
+  the request, which many servers build from the `Host` header, so a port must not treat it as an identity.
+- A request that is aborted ends the wait, cancels the read of the body, and is not answered; the call of the port that has
+  begun runs on.
 
 An engine that the host runs in process, behind the runtime's `CatPort`, sends nothing. The `sessionState` that it returns is kept
 in the delivery state, so keep it on the server like the seed of an exam session, and keep the engine's own store of the
