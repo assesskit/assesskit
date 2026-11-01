@@ -33,21 +33,21 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
-    "@biomejs/biome": "^2.6.3",
-    "@changesets/cli": "^3.0.3",
-    "@types/node": "^22.20.5",
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.6.4",
+    "@changesets/cli": "3.0.3",
+    "@types/node": "22.20.5",
     "@vitest/browser-playwright": "5.0.5",
-    "cspell": "^10.4.0",
-    "knip": "^6.43.0",
-    "lefthook": "^2.2.2",
-    "playwright": "^1.64.1",
-    "publint": "^0.3.25",
+    "cspell": "10.4.0",
+    "knip": "6.43.0",
+    "lefthook": "2.2.2",
+    "playwright": "1.64.1",
+    "publint": "0.3.25",
     "saxes": "6.0.0",
-    "typedoc": "^0.28.20",
+    "typedoc": "0.28.20",
     "typedoc-plugin-mermaid": "1.12.0",
-    "typescript": "~6.0.3",
-    "vitest": "^5.0.5"
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
   },
   "license": "Apache-2.0"
 }

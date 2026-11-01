@@ -10,9 +10,9 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "eslint": "^10.13.0",
-    "eslint-plugin-compat": "^7.0.2",
-    "stylelint": "^17.16.0",
-    "stylelint-no-unsupported-browser-features": "^8.1.2"
+    "eslint": "10.13.0",
+    "eslint-plugin-compat": "7.0.2",
+    "stylelint": "17.16.0",
+    "stylelint-no-unsupported-browser-features": "8.1.2"
   }
 }

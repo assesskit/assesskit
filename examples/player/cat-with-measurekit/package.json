@@ -12,7 +12,7 @@
     "@assesskit/player": "workspace:^",
     "@assesskit/runtime": "workspace:^",
     "@measurekit/psychometrics": "link:../../../../measurekit/packages/psychometrics",
-    "fast-check": "^4.10.2",
+    "fast-check": "4.10.2",
     "valibot": "1.5.0"
   }
 }

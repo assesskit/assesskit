@@ -102,8 +102,9 @@ Use these words with these meanings in code, comments and docs.
 | `pnpm check:packages`  | Builds, then publint and Are the Types Wrong on the packed packages                                                                              |
 | `pnpm docs:api`        | TypeDoc into `docs/api`; fails on undocumented exports                                                                                           |
 
-Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12. The scripts in `compat/` and
-`scripts/` are TypeScript that Node runs directly, so their relative imports end in `.ts`. `pnpm compat:engines`
+Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12: the scripts in `compat/` and
+`scripts/` are TypeScript that Node runs directly (from 22.18 without a flag), so their relative imports end in `.ts`. The
+packages run on Node.js 22 and later, the oldest version that CI tests, which the `engines` of their manifests say. `pnpm compat:engines`
 also needs Docker. `pnpm test:browser` runs all three engines, and the Firefox of Playwright does not start on some macOS
 versions (it did not on macOS 27): run the suite in the Linux container of
 [evidence.md](docs/player/evidence.md#tests-in-a-browser) there.
@@ -150,6 +151,7 @@ The runtime owns everything QTI defines that is not presentation or platform; th
 - `packages/runtime` never imports `@assesskit/player`. `@assesskit/player` and the other packages import the runtime by package name and subpath, never
   by a relative path into `src/` or `dist/`.
 - Runtime dependencies are listed in the `package.json` of the package that loads them, pinned, and recorded in `SECURITY.md`.
+  Development dependencies are pinned to an exact version too, and CI installs with the lockfile frozen.
 - Packages of different families never import each other. A package defines a port (the runtime's `CatPort`, the player's
   `LtiLogin`, `forward.log`, `sessionScore` and `createToolScoreIntake`) or speaks an open standard, and an adapter to another
   family's library lives in `examples/`, never in a package. `pnpm check:standards` fails on an import of `@measurekit/*` or

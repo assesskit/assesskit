@@ -131,7 +131,7 @@
   },
   "devDependencies": {
     "@longsightgroup/qti3-core": "0.13.3",
-    "fast-check": "^4.10.2"
+    "fast-check": "4.10.2"
   },
   "dependencies": {
     "fflate": "0.8.3",

@@ -13,6 +13,6 @@
     "@interopkit/core": "link:../../../../interopkit/packages/core",
     "@interopkit/learning-analytics": "link:../../../../interopkit/packages/learning-analytics",
     "@interopkit/tool-integration": "link:../../../../interopkit/packages/tool-integration",
-    "fast-check": "^4.10.2"
+    "fast-check": "4.10.2"
   }
 }
