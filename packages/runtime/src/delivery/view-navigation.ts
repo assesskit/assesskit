@@ -12,13 +12,15 @@ interface Walk {
   readonly state: DeliveryState;
   /** Whether the test part moves forward only. */
   readonly linear: boolean;
+  /** Whether the map is that of a review after the end: the items presented, those that `review` reaches. */
+  readonly reviewing: boolean;
 }
 
 function itemEntry(walk: Walk, key: ItemKey, depth: number): NavigationEntry | undefined {
-  const { course, state, linear } = walk;
+  const { course, state, linear, reviewing } = walk;
   const delivered = findDelivered(state, key);
-  // A linear part lists only what the candidate has been presented: nothing else can be reached.
-  if (linear && delivered === undefined) return undefined;
+  // A linear part and a review list only what the candidate has been presented: nothing else can be reached.
+  if ((linear || reviewing) && delivered === undefined) return undefined;
   const entry = course.items.get(key.ref);
   const placement = planIndex(state.plan).placement(key);
   if (entry === undefined || placement === undefined) return undefined;
@@ -31,7 +33,8 @@ function itemEntry(walk: Walk, key: ItemKey, depth: number): NavigationEntry | u
     depth,
     status: delivered?.session.status ?? "initial",
     current,
-    reachable: !linear && !current && !closed,
+    // A maximum time binds responses, so an item that it closed can still be reviewed.
+    reachable: reviewing ? !current && entry.control.allowReview : !linear && !current && !closed,
   };
 }
 
@@ -66,5 +69,17 @@ export function navigationOf(
   const part = state.plan.parts.find((each) => each.identifier === placement.part);
   if (part === undefined) return [];
   const linear = partModel(course.structure, placement).navigationMode === "linear";
-  return walkChildren({ course, state, linear }, part.children, 0);
+  return walkChildren({ course, state, linear, reviewing: false }, part.children, 0);
+}
+
+/**
+ * Returns the navigation map of a review after the end: the item instances presented, in every test part, in the order of
+ * the plan, with the visible sections that hold them.
+ *
+ * @remarks
+ * An item is reachable when its item session control allows review, because the map sends `review`.
+ */
+export function reviewNavigationOf(course: Course, state: DeliveryState): NavigationEntry[] {
+  const walk = { course, state, linear: false, reviewing: true };
+  return state.plan.parts.flatMap((part) => walkChildren(walk, part.children, 0));
 }

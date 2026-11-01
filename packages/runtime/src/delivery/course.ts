@@ -129,6 +129,15 @@ export interface EngineOptions {
    * @defaultValue `false`
    */
   readonly eventOutcomes?: boolean;
+  /**
+   * Whether a candidate may review the items presented after the test ended, as the item session control of each item
+   * allows: the actions `review` and `solution` are accepted in an ended session, and its view lists the items presented.
+   * An engine with the option reads a state that names a content version only when it names the same one, so that a
+   * review shows what the candidate sat.
+   *
+   * @defaultValue `false`, so that an ended session accepts no action of the candidate
+   */
+  readonly reviewAfterEnd?: boolean;
 }
 
 /** A stimulus that an item names, with the path of its document. */
@@ -195,6 +204,8 @@ export interface Course {
   readonly contentVersion: string | undefined;
   /** Whether `response-processed` events carry the outcomes of the item. */
   readonly eventOutcomes: boolean;
+  /** Whether an ended session accepts `review` and `solution`. */
+  readonly reviewAfterEnd: boolean;
   /** The CAT engine of each adaptive section of the test, by the identifier of the section. */
   readonly catSections: ReadonlyMap<string, CatSectionRef>;
   /** The covers of the externally scored outcomes of the test, by outcome identifier. */
@@ -244,7 +255,10 @@ const TEST_KIND = "assessment-test";
 /** Checks the options of `createEngine` and applies their defaults. */
 function checkEngineOptions(
   options: EngineOptions,
-): Pick<Course, "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes"> {
+): Pick<
+  Course,
+  "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes" | "reviewAfterEnd"
+> {
   checkOptions(options);
   const { customOperators, resolveTemplate, limits: processing } = checkProcessingOptions(options);
   const { maxPlanNodes = DEFAULT_PLAN_LIMITS.maxPlanNodes } = options.limits ?? {};
@@ -253,7 +267,16 @@ function checkEngineOptions(
   if (contentVersion !== undefined) checkNonEmptyString(contentVersion, "The option contentVersion");
   const { eventOutcomes = false } = options;
   checkBoolean(eventOutcomes, "The option eventOutcomes");
-  return { customOperators, resolveTemplate, limits: { ...processing, maxPlanNodes }, contentVersion, eventOutcomes };
+  const { reviewAfterEnd = false } = options;
+  checkBoolean(reviewAfterEnd, "The option reviewAfterEnd");
+  return {
+    customOperators,
+    resolveTemplate,
+    limits: { ...processing, maxPlanNodes },
+    contentVersion,
+    eventOutcomes,
+    reviewAfterEnd,
+  };
 }
 
 /**
@@ -356,7 +379,10 @@ function itemRefsOf(structure: TestStructure): ItemRefNode[] {
 function courseOf(
   structure: TestStructure,
   items: ReadonlyMap<string, CourseItem>,
-  options: Pick<Course, "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes">,
+  options: Pick<
+    Course,
+    "customOperators" | "resolveTemplate" | "limits" | "contentVersion" | "eventOutcomes" | "reviewAfterEnd"
+  >,
   adaptive: Pick<Course, "catSections" | "standalone">,
 ): Course {
   const test = structure.test.model;

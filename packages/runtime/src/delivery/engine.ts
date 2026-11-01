@@ -98,7 +98,7 @@ export interface Engine {
    * ended, as long as the request they answer exists.
    *
    * @throws `DataError` when the state or the action is not one, or the state started on another content version than
-   * the engine's.
+   * the engine's, or an engine with `reviewAfterEnd` names none and the state does.
    */
   apply(state: DeliveryState, action: Action): Step;
   /**
@@ -255,19 +255,27 @@ function checkContextValues(course: Course, values: ReadonlyMap<string, Value | 
 
 /**
  * Checks a state, and that the content version of the engine, when it names one, is the one the state started on. A
- * state that names none passes, as it started before the option existed or on an engine that named none.
+ * state that names none passes, as it started before the option existed or on an engine that named none. An engine with
+ * `reviewAfterEnd` must name the version of a state that has one, so that a review cannot open on content that is not the
+ * content the candidate sat.
  *
  * @throws `DataError` when the state is not one, or another content version started it.
  */
 function checkEngineState(course: Course, state: DeliveryState): void {
   checkState(state);
-  const { contentVersion } = course;
-  if (contentVersion === undefined || state.contentVersion === undefined || state.contentVersion === contentVersion) {
-    return;
+  const { contentVersion, reviewAfterEnd } = course;
+  const started = state.contentVersion;
+  if (started === undefined || started === contentVersion) return;
+  if (contentVersion !== undefined) {
+    throw new DataError(
+      `The state started on the content version ${describe(started)}, and this engine delivers the content version ${describe(contentVersion)}. Apply the state on the engine of its version.`,
+    );
   }
-  throw new DataError(
-    `The state started on the content version ${describe(state.contentVersion)}, and this engine delivers the content version ${describe(contentVersion)}. Apply the state on the engine of its version.`,
-  );
+  if (reviewAfterEnd) {
+    throw new DataError(
+      `The state started on the content version ${describe(started)}, and this engine names none. An engine with the option reviewAfterEnd must name the content version of the states it reads, so that a review shows the content that the candidate sat: build it with the option contentVersion ${describe(started)}.`,
+    );
+  }
 }
 
 function start(course: Course, options: StartOptions): Step {

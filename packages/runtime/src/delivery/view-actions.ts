@@ -2,6 +2,7 @@ import type { AssessmentItem } from "../asi/index.js";
 import type { CandidateAction } from "./action.js";
 import { endAttemptInteractions } from "./attempt.js";
 import { CANDIDATE_ACTION_TYPES } from "./candidate-actions.js";
+import type { Course } from "./course.js";
 import type { DeliveredItem, DeliveryState } from "./delivery-state.js";
 import type { EffectiveSessionControl } from "./session-control.js";
 
@@ -64,5 +65,21 @@ export function allowedActions(state: DeliveryState, rules: ItemRules | undefine
   if (rules !== undefined) allowed.add("move");
   if ([...state.supports.values()].some((support) => support.state === "option")) allowed.add("support");
   for (const type of rules === undefined ? [] : itemTypes(rules)) allowed.add(type);
+  return CANDIDATE_ACTION_TYPES.filter((type) => allowed.has(type));
+}
+
+/**
+ * Returns the types of the actions of the candidate that an ended session allows when the engine allows a review after the
+ * end: `review` and `solution`, each when the item session control of any item presented allows it.
+ *
+ * @remarks
+ * A maximum time that closed an item does not take the actions away: it binds responses, and a review has none.
+ */
+export function reviewActions(course: Course, state: DeliveryState): readonly CandidateAction["type"][] {
+  const controls = state.items.flatMap(({ session }) => course.items.get(session.key.ref)?.control ?? []);
+  const allowed = new Set<CandidateAction["type"]>([
+    ...(controls.some(({ allowReview }) => allowReview) ? (["review"] as const) : []),
+    ...(controls.some(({ showSolution }) => showSolution) ? (["solution"] as const) : []),
+  ]);
   return CANDIDATE_ACTION_TYPES.filter((type) => allowed.has(type));
 }

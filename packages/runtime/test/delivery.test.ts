@@ -1663,6 +1663,305 @@ describe("a ladder of hints", () => {
   });
 });
 
+describe("a review after the end", () => {
+  const Feedback = '<qti-item-session-control show-feedback="true"/>';
+  const control = (attributes: string): string => `<qti-item-session-control ${attributes}/>`;
+  const two = (
+    head: string,
+    mode: "linear" | "nonlinear" = "nonlinear",
+    submission: "individual" | "simultaneous" = "individual",
+  ) => `${TOTAL}${testPart("P", section("S", refs("a", "b")), mode, submission, head)}${outcomeProcessing(SUM_SCORES)}`;
+  const review = (ref: string, at: number): Action => ({ type: "review", item: key(ref), at });
+  const solution = (ref: string, at: number): Action => ({ type: "solution", item: key(ref), at });
+  const endTest = (at: number): Action => ({ type: "end-test", at });
+
+  /** Answers a, moves to b, answers b wrongly, and ends the test; a part that submits together has no submit before the end. */
+  function ended(
+    content: string,
+    options: EngineOptions = {},
+    submitting = true,
+  ): { engine: Engine; state: DeliveryState } {
+    const engine = engineOf(content, {}, options);
+    const submit = (ref: string, at: number): Action[] => (submitting ? [on("submit", ref, at)] : []);
+    const { state } = played(
+      engine,
+      begun(engine).state,
+      answer("a", "B", 1_000),
+      ...submit("a", 2_000),
+      moveTo(key("b"), 3_000),
+      answer("b", "A", 4_000),
+      ...submit("b", 5_000),
+      endTest(6_000),
+    );
+    return { engine, state };
+  }
+
+  /** The datestamps of a report: the test's and each item's, by name. */
+  const datestamps = (engine: Engine, state: DeliveryState): Record<string, string | undefined> => {
+    const results = engine.results(state);
+    return {
+      test: results.testResult?.datestamp,
+      ...Object.fromEntries(results.itemResults.map(({ identifier, datestamp }) => [identifier, datestamp])),
+    };
+  };
+
+  it("refuses review and solution as ended unless the engine allows them, and its ended view has no map and no actions", () => {
+    for (const options of [{}, { reviewAfterEnd: false }]) {
+      const { engine, state } = ended(two(control('show-solution="true"')), options);
+      expect(refusalOf(engine, state, review("a", 7_000))).toEqual({ code: "ended", message: "The test has ended." });
+      expect(refusalOf(engine, state, solution("a", 7_000)).code).toBe("ended");
+      const view = engine.view(state, 7_000);
+      expect(view).toEqual({
+        status: "ended",
+        test: { identifier: "T", title: "T" },
+        supports: [],
+        navigation: [],
+        rubric: [],
+        testFeedback: [],
+        timers: [],
+        actions: [],
+      });
+      expect(state.current).toBeUndefined();
+    }
+  });
+
+  it("shows an item as the one reviewed while the status stays ended, and changes nothing that the results report", () => {
+    const { engine, state } = ended(two(Feedback), { reviewAfterEnd: true });
+    const before = engine.results(state);
+    const out = played(engine, state, review("a", 9_000));
+    expect(out.state.status).toBe("ended");
+    expect(out.state.current).toEqual(key("a"));
+    expect(described(out.events)).toEqual(["moved a@9000"]);
+    expect(sessionOf(out.state, "a").status).toBe("review");
+    // No clock runs and no outcome processing runs: the time of the state and of each session are as they were.
+    expect([out.state.at, out.state.clocks, out.state.outcomes]).toEqual([state.at, state.clocks, state.outcomes]);
+    expect(sessionOf(out.state, "a").updatedAt).toBe(sessionOf(state, "a").updatedAt);
+    expect(engine.results(out.state)).toEqual(before);
+    expect(datestamps(engine, out.state)).toEqual(datestamps(engine, state));
+    const again = played(engine, out.state, review("b", 10_000), review("a", 11_000));
+    expect(described(again.events)).toEqual(["moved b@10000", "moved a@11000"]);
+    expect(engine.results(again.state)).toEqual(before);
+    expect(datestamps(engine, again.state)).toEqual({
+      test: new Date(6_000).toISOString(),
+      a: new Date(2_000).toISOString(),
+      b: new Date(5_000).toISOString(),
+    });
+    // The same action again changes nothing but the status it shows.
+    expect(described(played(engine, again.state, review("a", 12_000)).events)).toEqual([]);
+  });
+
+  it("shows the item as sat: its responses, its feedback and, when the control allows it, the correct responses", () => {
+    const { engine, state } = ended(two(control('show-feedback="true" show-solution="true"')), {
+      reviewAfterEnd: true,
+    });
+    const reviewing = played(engine, state, review("a", 7_000)).state;
+    const view = engine.view(reviewing, 7_000);
+    expect(view.status).toBe("ended");
+    expect(view.current?.key).toEqual(key("a"));
+    expect(view.current?.status).toBe("review");
+    expect(view.current?.responses.get("RESPONSE")).toEqual(identifier("B"));
+    expect(view.part).toEqual({ identifier: "P", navigationMode: "nonlinear", submissionMode: "individual" });
+    expect(view.timers).toEqual([]);
+    // The candidate answered b wrongly with A: its review shows A, and its solution the correct B.
+    const second = played(engine, reviewing, review("b", 7_500)).state;
+    expect(engine.view(second, 7_500).current?.responses.get("RESPONSE")).toEqual(identifier("A"));
+    const solved = engine.view(played(engine, second, solution("b", 8_000)).state, 8_000);
+    expect(solved.current?.status).toBe("solution");
+    expect(solved.current?.responses.get("RESPONSE")).toEqual(identifier("B"));
+    expect(leaksIn(engine.view(reviewing, 7_000))).toEqual([]);
+  });
+
+  it("lists the presented items of every part, reachable where review is allowed, and offers the actions that an item allows", () => {
+    const content = `${TOTAL}${testPart("P", section("S", itemRef("a", control('allow-review="false"')) + refs("b")), "linear")}${testPart(
+      "Q",
+      section("U", itemRef("c", control('show-solution="true"')) + refs("d")),
+      "nonlinear",
+    )}${outcomeProcessing(SUM_SCORES)}`;
+    const engine = engineOf(content, {}, { reviewAfterEnd: true });
+    const { state } = played(
+      engine,
+      begun(engine).state,
+      answer("a", "B", 1_000),
+      moveTo("next", 2_000),
+      moveTo("next", 3_000),
+      moveTo("next", 4_000),
+      endTest(5_000),
+    );
+    const summary = engine.view(state, 6_000);
+    expect(summary.current).toBeUndefined();
+    expect(summary.part).toBeUndefined();
+    const items = summary.navigation.flatMap((entry) =>
+      entry.kind === "item" ? [[entry.key.ref, entry.status, entry.reachable, entry.current]] : [],
+    );
+    expect(items).toEqual([
+      ["a", "closed", false, false],
+      ["b", "closed", true, false],
+      ["c", "closed", true, false],
+      ["d", "closed", true, false],
+    ]);
+    expect(summary.actions).toEqual(["review", "solution"]);
+    expect(refusalOf(engine, state, review("a", 6_000)).code).toBe("review-not-allowed");
+    expect(refusalOf(engine, state, solution("b", 6_000)).code).toBe("solution-not-allowed");
+    const viewing = played(engine, state, review("d", 7_000), solution("c", 8_000)).state;
+    const view = engine.view(viewing, 9_000);
+    expect(view.part?.identifier).toBe("Q");
+    expect(view.current?.key).toEqual(key("c"));
+    expect(view.navigation.filter((entry) => entry.kind === "item" && entry.current).length).toBe(1);
+  });
+
+  it("lists no action when no item allows review or solution, and refuses an item that was not presented", () => {
+    const content = `${TOTAL}${testPart("P", section("S", itemRef("a", control('allow-review="false"')) + refs("b", "c")), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
+    const engine = engineOf(content, {}, { reviewAfterEnd: true });
+    const early = played(engine, begun(engine).state, endTest(1_000)).state;
+    // The first item is presented at the start; the others never were.
+    expect(sessionOf(early, "a").status).toBe("closed");
+    expect(engine.view(early, 2_000).actions).toEqual([]);
+    expect(
+      engine.view(early, 2_000).navigation.flatMap((entry) => (entry.kind === "item" ? [entry.key.ref] : [])),
+    ).toEqual(["a"]);
+    expect(refusalOf(engine, early, review("b", 3_000))).toEqual({
+      code: "not-current",
+      message: 'The item instance "b" 1 was not presented, so it cannot be reviewed.',
+    });
+    expect(refusalOf(engine, early, review("zzz", 3_000)).code).toBe("unknown-item");
+  });
+
+  it("refuses every other action as ended, and a review earlier than the latest step", () => {
+    const { engine, state } = ended(two(""), { reviewAfterEnd: true });
+    const reviewing = played(engine, state, review("a", 7_000)).state;
+    for (const action of [
+      answer("a", "C", 8_000),
+      on("submit", "a", 8_000),
+      moveTo("next", 8_000),
+      { type: "suspend", at: 8_000 },
+      { type: "support", name: "line-reader", active: true, at: 8_000 },
+      { type: "comment", item: key("a"), text: "x", at: 8_000 },
+      { type: "time", at: 8_000 },
+      endTest(8_000),
+    ] as const) {
+      expect(refusalOf(engine, reviewing, action).code, action.type).toBe("ended");
+    }
+    expect(refusalOf(engine, reviewing, review("b", 5_999)).code).toBe("clock-regression");
+    expect(engine.deadlines(reviewing)).toEqual([]);
+  });
+
+  it("reviews in a part that submits simultaneously and in an item that a maximum time closed", () => {
+    const simultaneous = ended(two("", "nonlinear", "simultaneous"), { reviewAfterEnd: true }, false);
+    expect(sessionOf(simultaneous.state, "a").status).toBe("closed");
+    const reviewed = played(simultaneous.engine, simultaneous.state, review("a", 7_000)).state;
+    expect([reviewed.status, reviewed.current]).toEqual(["ended", key("a")]);
+    const timed = engineOf(
+      `${TOTAL}${testPart("P", section("S", itemRef("a", limits('max-time="10"')) + refs("b")), "linear")}${outcomeProcessing(SUM_SCORES)}`,
+      {},
+      { reviewAfterEnd: true },
+    );
+    const over = played(
+      timed,
+      begun(timed).state,
+      answer("a", "B", 5_000),
+      { type: "time", at: 12_000 },
+      endTest(13_000),
+    );
+    expect(over.state.items[0]?.expired).toBe("closed");
+    const out = played(timed, over.state, review("a", 14_000)).state;
+    expect(sessionOf(out, "a").status).toBe("review");
+    expect(timed.results(out)).toEqual(timed.results(over.state));
+  });
+
+  it("reviews a test that a time-out ended", () => {
+    const engine = engineOf(
+      `${TOTAL}${limits('max-time="10"')}${testPart("P", section("S", refs("a", "b")), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`,
+      {},
+      { reviewAfterEnd: true },
+    );
+    const out = played(engine, begun(engine).state, answer("a", "B", 5_000), { type: "time", at: 11_000 });
+    expect(out.state.status).toBe("ended");
+    const reviewing = played(engine, out.state, review("a", 12_000)).state;
+    expect(engine.view(reviewing, 12_000).current?.responses.get("RESPONSE")).toEqual(identifier("B"));
+    expect(engine.results(reviewing)).toEqual(engine.results(out.state));
+  });
+
+  it("stays a state that reads back, and survives the JSON of its view", () => {
+    const { engine, state } = ended(two(Feedback), { reviewAfterEnd: true });
+    const reviewing = played(engine, state, review("a", 7_000)).state;
+    expect(deserializeState(serializeState(reviewing))).toEqual(reviewing);
+    const view = engine.view(reviewing, 7_000);
+    expect(viewFromJson(JSON.parse(JSON.stringify(viewToJson(view))))).toEqual(view);
+  });
+
+  describe("on a later compile of the form", () => {
+    const named = (version: string | undefined, head: string, options: EngineOptions = {}): Engine =>
+      engineOf(two(head), {}, { ...(version === undefined ? {} : { contentVersion: version }), ...options });
+    const sat = (engine: Engine): DeliveryState =>
+      played(
+        engine,
+        begun(engine).state,
+        answer("a", "B", 1_000),
+        on("submit", "a", 2_000),
+        moveTo(key("b"), 3_000),
+        answer("b", "C", 4_000),
+        on("submit", "b", 5_000),
+        endTest(6_000),
+      ).state;
+
+    it("reviews what was sat on a compile with other session control and the same content version", () => {
+      // The exam showed no feedback and allowed no review; the compile for the review shows feedback and allows both.
+      const exam = named("form-7", control('show-feedback="false" allow-review="false"'));
+      const recorded = sat(exam);
+      const later = named("form-7", control('show-feedback="true" allow-review="true" show-solution="true"'), {
+        reviewAfterEnd: true,
+      });
+      const reviewing = played(
+        later,
+        deserializeState(serializeState(recorded)),
+        review("a", 9_000),
+        review("b", 9_500),
+      ).state;
+      const view = later.view(reviewing, 10_000);
+      expect(view.current?.responses.get("RESPONSE")).toEqual(identifier("C"));
+      expect(view.current?.status).toBe("review");
+      const first = later.view(played(later, reviewing, review("a", 10_000)).state, 10_000);
+      expect(first.current?.responses.get("RESPONSE")).toEqual(identifier("B"));
+      expect(later.results(reviewing)).toEqual(exam.results(recorded));
+      expect(datestamps(later, reviewing)).toEqual(datestamps(exam, recorded));
+    });
+
+    it("refuses a review engine that names another content version, or none, for a state that has one", () => {
+      const recorded = sat(named("form-7", ""));
+      const wrong = named("form-8", "", { reviewAfterEnd: true });
+      const none = named(undefined, "", { reviewAfterEnd: true });
+      const same = named("form-7", "", { reviewAfterEnd: true });
+      expect(() => wrong.apply(recorded, review("a", 9_000))).toThrow(
+        'The state started on the content version "form-7", and this engine delivers the content version "form-8".',
+      );
+      for (const call of [
+        () => none.apply(recorded, review("a", 9_000)),
+        () => none.view(recorded, 9_000),
+        () => none.results(recorded),
+      ]) {
+        expect(call).toThrow(DataError);
+        expect(call).toThrow(
+          'The state started on the content version "form-7", and this engine names none. An engine with the option reviewAfterEnd must name the content version of the states it reads',
+        );
+      }
+      expect(same.apply(recorded, review("a", 9_000)).ok).toBe(true);
+      // A state that names no version, and an engine that does not review, read as before.
+      const bare = sat(named(undefined, ""));
+      expect(none.apply(bare, review("a", 9_000)).ok).toBe(true);
+      expect(named(undefined, "").apply(recorded, { type: "time", at: 9_000 }).ok).toBe(false);
+    });
+  });
+
+  it("refuses an option that is not a boolean", () => {
+    expect(() => engineOf(two(""), {}, { reviewAfterEnd: json("1") })).toThrow(
+      "The option reviewAfterEnd must be a boolean, found 1.",
+    );
+    expect(() => engineOf(two(""), {}, { reviewAfterEnd: json("null") })).toThrow(
+      "The option reviewAfterEnd must be a boolean, found null.",
+    );
+  });
+});
+
 describe("deadlines", () => {
   it("gives the maximum and minimum times that run as absolute times, with extra time and without suspended time", () => {
     const content = `<qti-time-limits max-time="60"/>${testPart(

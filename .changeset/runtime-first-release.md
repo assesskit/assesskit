@@ -16,3 +16,5 @@ The option `contentVersion` of `createEngine` names the version of the content: 
 state that another version started.
 `response-processed` events carry the `attempt` number and the `duration` of the item so far in milliseconds, and with the
 option `eventOutcomes` of `createEngine` its outcomes, so that a host needs no `results()` call after each step.
+The option `reviewAfterEnd` of `createEngine` lets a candidate review the items presented after the test ended, as each item
+session control allows; it is off by default, and an engine with it names the content version of the states it reads.

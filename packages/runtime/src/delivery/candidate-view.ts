@@ -39,7 +39,10 @@ export interface NavigationItem {
   readonly status: ItemSessionStatus;
   /** Whether it is the item presented. */
   readonly current: boolean;
-  /** Whether a `move` to it changes the item presented: another item of a nonlinear test part that no maximum time closed. */
+  /**
+   * Whether a `move` to it changes the item presented: another item of a nonlinear test part that no maximum time closed.
+   * After the end, whether a `review` of it does: another item whose item session control allows review.
+   */
   readonly reachable: boolean;
 }
 
@@ -219,15 +222,21 @@ export interface PartView {
  * reaches it.
  */
 export interface CandidateView {
-  /** Whether the session runs, is suspended or has ended. A suspended or ended session shows no item. */
+  /**
+   * Whether the session runs, is suspended or has ended. A suspended session shows no item, and neither does an ended one,
+   * unless the engine allows a review after the end and the candidate is reviewing an item.
+   */
   readonly status: DeliveryStatus;
   /** The test. */
   readonly test: TestView;
-  /** The test part presented; absent once the test has ended. */
+  /** The test part presented; absent once the test has ended, unless an item is being reviewed: then its part. */
   readonly part?: PartView;
-  /** The navigation map; empty unless the session runs. */
+  /**
+   * The navigation map; empty unless the session runs, or the test has ended and the engine allows a review: then the items
+   * presented, in every test part, reachable where review is allowed.
+   */
   readonly navigation: readonly NavigationEntry[];
-  /** The item presented; absent unless the session runs. */
+  /** The item presented; absent unless the session runs, or the test has ended and an item is being reviewed. */
   readonly current?: CandidateItem;
   /** The rubric for the candidate: of the test, then of the test part, then of the sections from the top down (F-m25). */
   readonly rubric: readonly BodyNode[];
@@ -235,7 +244,10 @@ export interface CandidateView {
   readonly testFeedback: readonly BodyNode[];
   /** The time limits that run; none unless the session runs. */
   readonly timers: readonly TimerView[];
-  /** The types of the actions of the candidate that the state allows; the data of an action can still make it refused. */
+  /**
+   * The types of the actions of the candidate that the state allows; the data of an action can still make it refused. Once
+   * the test has ended it is empty, or with a review after the end `review` and `solution` where an item allows them.
+   */
   readonly actions: readonly CandidateAction["type"][];
   /** The supports of the session. */
   readonly supports: readonly SupportView[];

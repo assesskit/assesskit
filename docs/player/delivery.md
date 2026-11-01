@@ -127,7 +127,7 @@ It returns a `Mounted`:
 | Supports              | The panel of the supports, with a button for each option and the state of the others, and what the supports that are on change: the look, the size of media, the cards, the reading aloud and the notice of the variant ([supports](supports.md#in-the-player)).                             | T75 |
 | Tools                 | The tools that the item and the profile put in force: a toolbar, the panels of the open tools, and the rule, protractor, line reader and masks over the item ([tools](tools.md#in-the-player)).                                                                                              | T63 |
 
-The map is hidden where the test part has fewer than two items.
+The map is hidden where the test part has fewer than two items. After the end of a test that the engine lets the candidate review (`reviewAfterEnd` of the [runtime](../runtime/delivery.md#review-after-the-end)), the map lists the items presented in every part, and choosing one sends `review` in place of `move`; the buttons for the review and the solution of the item shown follow `view.actions`.
 
 ## LTI items
 

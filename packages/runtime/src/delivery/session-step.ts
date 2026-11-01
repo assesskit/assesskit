@@ -7,6 +7,7 @@ import { createStepContext, type StepContext } from "./step-context.js";
 import { enter } from "./step-entry.js";
 import { catResponse, reconcile, supply } from "./step-host.js";
 import { act, move } from "./step-moves.js";
+import { isReview, reviewEnded } from "./step-review.js";
 import { resume, suspend, toggle } from "./step-session.js";
 import { advance, expireUntil } from "./step-time.js";
 import { arrive, end, navigate } from "./step-walk.js";
@@ -53,7 +54,9 @@ export class SessionStep {
     const { at } = action;
     // The host answers scoring and CAT requests in any state, also after the test ended.
     const answer = action.type === "supply-scores" || action.type === "cat-response";
-    if (this.ended() && !answer) return refusal("ended", "The test has ended.");
+    // An ended session takes `review` and `solution` when the engine allows a review after the end.
+    const reviewing = this.ended() && isReview(action) && step.course.reviewAfterEnd;
+    if (this.ended() && !answer && !reviewing) return refusal("ended", "The test has ended.");
     if (at < step.state.at) {
       const message = `The action at ${at} is earlier than the latest step of the session at ${step.state.at}.`;
       return refusal("clock-regression", message);
@@ -61,6 +64,7 @@ export class SessionStep {
     if (step.state.status === "suspended" && action.type !== "resume" && !answer) {
       return refusal("suspended", "The candidate session is suspended; it goes on when it is resumed.");
     }
+    if (reviewing && isReview(action)) return reviewEnded(step, action);
     const expired = expireUntil(step, at);
     if (expired !== undefined) return expired;
     advance(step, at);

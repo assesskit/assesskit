@@ -17,8 +17,16 @@ stateDiagram-v2
   InProgress --> suspended: suspend
   suspended --> InProgress: resume
   InProgress --> ended: end-test, the last item, a maximum time of the test
+  state ended {
+    [*] --> summary
+    summary --> reviewing: review or solution of an item, with reviewAfterEnd
+    reviewing --> reviewing: review or solution of an item
+  }
   ended --> [*]
 ```
+
+`ended` is final unless the engine is built with `reviewAfterEnd`: then `review` and `solution` are accepted in it, and its
+status stays `ended` ([Review after the end](#review-after-the-end)).
 
 An action reaches the candidate's view through the host. The host keeps the state, and the client holds only views and actions.
 
@@ -171,13 +179,14 @@ it is given, and a refusal gives no state. `apply` never throws on a state of it
 | `kind: "test"`       | `test`, `base`, `resolvers` (such as `packageResolvers(pkg)`), `catSections` (default: none)            |
 | `kind: "item"`       | `item`, `base` (the path of the item document), `control` (a `qti-item-session-control`; default: none) |
 
-| `EngineOptions`   | Default                                            | Meaning                                                                       |
-| ----------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `customOperators` | none                                               | The custom operators, by `definition`, else `class`.                          |
-| `resolveTemplate` | none                                               | The response processing of a template URI other than the six standard ones.   |
-| `limits`          | `maxContainerSize`: 10,000; `maxPlanNodes`: 10,000 | The limits of processing and of the plan of a session.                        |
-| `contentVersion`  | none                                               | The version of the content, as the host names it: see [State](#state).        |
-| `eventOutcomes`   | `false`                                            | `response-processed` carries the outcomes of the item: see [Events](#events). |
+| `EngineOptions`   | Default                                            | Meaning                                                                                                             |
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `customOperators` | none                                               | The custom operators, by `definition`, else `class`.                                                                |
+| `resolveTemplate` | none                                               | The response processing of a template URI other than the six standard ones.                                         |
+| `limits`          | `maxContainerSize`: 10,000; `maxPlanNodes`: 10,000 | The limits of processing and of the plan of a session.                                                              |
+| `contentVersion`  | none                                               | The version of the content, as the host names it: see [State](#state).                                              |
+| `eventOutcomes`   | `false`                                            | `response-processed` carries the outcomes of the item: see [Events](#events).                                       |
+| `reviewAfterEnd`  | `false`                                            | A candidate may review the items presented after the test ended: see [Review after the end](#review-after-the-end). |
 
 `createEngine` runs the static gate first: `validateTest`, or `validateAsi` for an item, with the custom operators
 and the template resolver given, so that a custom operator that none serves is an error. Any issue of severity `error` is a
@@ -249,7 +258,7 @@ applies, are listed under Item sessions.
 | `awaiting-cat`          | The next item depends on a CAT engine that has not answered, or a first stage is awaited.                                                                                                                                                                                                                                  |
 | `clock-regression`      | `at` is before the latest step.                                                                                                                                                                                                                                                                                            |
 | `comment-not-allowed`   | `comment` on an item whose item session control does not allow comments.                                                                                                                                                                                                                                                   |
-| `ended`                 | The test has ended.                                                                                                                                                                                                                                                                                                        |
+| `ended`                 | The test has ended, and the action is not `supply-scores`, `cat-response` or, with `reviewAfterEnd`, `review` or `solution`.                                                                                                                                                                                               |
 | `invalid-response`      | `set-responses` for a variable the candidate does not set, or a value of another type; `end-attempt` or a portable custom interaction state that the item does not have; a `submit` of responses that `validate-responses` rejects; a `cat-response` that does not fit its request, or whose stage exceeds `maxPlanNodes`. |
 | `item-closed`           | `set-responses` or `submit` on a session that is closed.                                                                                                                                                                                                                                                                   |
 | `linear-backward`       | `previous`, or a move to an earlier item, in a linear part.                                                                                                                                                                                                                                                                |
@@ -399,6 +408,47 @@ submission: the test is named as the item, the part `<identifier>-part`, its sec
 item reference has the identifier of the item. Its control is `standaloneSessionControl(control)`. The definition may give
 `resolvers` with `stimuli`, to present the stimuli the item names.
 
+### Review after the end
+
+```mermaid
+flowchart LR
+  ended["status ended: the summary"] -->|"review or solution of an item"| reviewing["status ended: that item is current"]
+  reviewing -->|"review or solution of an item"| reviewing
+  reviewing -.->|"anything else"| refused["refused as ended"]
+```
+
+A candidate may look at the items that were presented once the test has ended, as the item session control of each allows. The
+option is on the engine, so a program opens review when it chooses: the same stored state, read by a second engine with
+`reviewAfterEnd`, for example when results are released. It is off by default, because `allow-review` is true unless an item says
+otherwise, and honoring it unasked would open every exam.
+
+| Rule                 | Behavior                                                                                                                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Actions              | `review` and `solution`, each naming an item; the item becomes `current` with the event `moved`. Every other action stays refused as `ended`, and `supply-scores` and `cat-response` are accepted as before.                                               |
+| Which items          | Any item presented, in any part and in both submission modes. An item that was not presented is refused as `not-current`.                                                                                                                                  |
+| Control              | `allow-review` and `show-solution` of the item, refused as `review-not-allowed` and `solution-not-allowed`. `show-feedback` decides the feedback as in a running session.                                                                                  |
+| Time limits          | They bind responses, so an item that a maximum time closed, and a test that a time-out ended, can be reviewed.                                                                                                                                             |
+| Clocks and outcomes  | No clock runs and no outcome processing runs. `results()` is deep-equal before and after a review.                                                                                                                                                         |
+| Time of an action    | Not earlier than the latest step, as ever. A review leaves the time of the state and of each item session alone, because the results report them as datestamps; the event carries the time of the action.                                                  |
+| The view             | `status` stays `ended`. `navigation` lists the items presented in every part, `reachable` where review is allowed; `actions` lists `review` and `solution` when any item allows them; `current` and `part` follow the item reviewed. `testFeedback` stays. |
+| Without the option   | An `ended` view has no navigation, no item and no action, and a review is refused as `ended`.                                                                                                                                                              |
+| A solution-only item | `reachable` follows `allow-review`, because the player's map sends `review`. A host reaches an item that allows only its solution by sending `solution`.                                                                                                   |
+
+The state holds no item, so a review shows what the engine reads from the content it was built with. A compile of the form with other
+session control and nothing else gives the same responses and results, which is the case for a review that shows feedback the exam hid.
+A compile with an edited item reads the state too, and silently, so the engine is pinned to the content version:
+
+| The state started on | A review engine that names | Result                                                                   |
+| -------------------- | -------------------------- | ------------------------------------------------------------------------ |
+| a content version    | the same version           | The review opens.                                                        |
+| a content version    | another version            | `DataError` that names both.                                             |
+| a content version    | none                       | `DataError` that names the state's version and the option to build with. |
+| no content version   | any, or none               | The review opens, as the state predates the option.                      |
+
+Name the content version that the state started on, such as a hash of the package, and keep it across a recompile that changes
+session control only; any other change is a new version, and the review needs the definition the state ran on
+([sessions across content edits](#sessions-across-content-edits)).
+
 ## Modes
 
 The same engine serves an exam on a server and practice on a device. Only the placement of the answer keys differs.
@@ -494,17 +544,17 @@ JSON.parse(JSON.stringify(viewToJson(engine.view(step.state, 5_000)))).current.r
 // => [["RESPONSE", { cardinality: "single", baseType: "identifier", value: { base: { identifier: "B" } } }]]
 ```
 
-| Field of `CandidateView` | Holds                                                                                                                                                                                                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`                 | `in-progress`, `suspended` or `ended`. A suspended session shows no content and the action `resume` only; an ended one shows the test feedback `atEnd`.                                                                                                                |
-| `test`, `part`           | The identifier and title of the test; the identifier, navigation mode and submission mode of the test part presented.                                                                                                                                                  |
-| `navigation`             | The visible sections and the item instances of the test part, in order, with the state of each item session, whether it is current and whether a `move` reaches it. A nonlinear part lists every instance; a linear part lists those presented so far, none reachable. |
-| `current`                | The `CandidateItem`.                                                                                                                                                                                                                                                   |
-| `rubric`                 | The content of the rubric blocks for the candidate: of the test, then of the test part, then of the sections from the top down.                                                                                                                                        |
-| `testFeedback`           | The content of the test feedback that is shown: `during` while the session runs, of the test and of the test part; `atEnd` once it ended, of the test and of the test parts entered.                                                                                   |
-| `timers`                 | For each running scope with a limit: `remaining` and `minimumRemaining` in milliseconds, and `late` after a maximum time that allows late submission.                                                                                                                  |
-| `actions`                | The types of the actions the state allows. The data of an action can still make it refused, such as a `submit` without a response under `allow-skipping="false"`.                                                                                                      |
-| `supports`               | Each support with its state, whether it is on and the settings of the profile; the settings of a prohibited support stay out.                                                                                                                                          |
+| Field of `CandidateView` | Holds                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                 | `in-progress`, `suspended` or `ended`. A suspended session shows no content and the action `resume` only; an ended one shows the test feedback `atEnd`, and with [`reviewAfterEnd`](#review-after-the-end) the items presented and the item reviewed.                                                                                                                              |
+| `test`, `part`           | The identifier and title of the test; the identifier, navigation mode and submission mode of the test part presented.                                                                                                                                                                                                                                                              |
+| `navigation`             | The visible sections and the item instances of the test part, in order, with the state of each item session, whether it is current and whether a `move` reaches it. A nonlinear part lists every instance; a linear part lists those presented so far, none reachable. After the end, with `reviewAfterEnd`, the items presented in every part, reachable where review is allowed. |
+| `current`                | The `CandidateItem`.                                                                                                                                                                                                                                                                                                                                                               |
+| `rubric`                 | The content of the rubric blocks for the candidate: of the test, then of the test part, then of the sections from the top down.                                                                                                                                                                                                                                                    |
+| `testFeedback`           | The content of the test feedback that is shown: `during` while the session runs, of the test and of the test part; `atEnd` once it ended, of the test and of the test parts entered.                                                                                                                                                                                               |
+| `timers`                 | For each running scope with a limit: `remaining` and `minimumRemaining` in milliseconds, and `late` after a maximum time that allows late submission.                                                                                                                                                                                                                              |
+| `actions`                | The types of the actions the state allows. The data of an action can still make it refused, such as a `submit` without a response under `allow-skipping="false"`.                                                                                                                                                                                                                  |
+| `supports`               | Each support with its state, whether it is on and the settings of the profile; the settings of a prohibited support stay out.                                                                                                                                                                                                                                                      |
 
 | Field of `CandidateItem`                             | Holds                                                                                                                                                                                                                                                                     |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

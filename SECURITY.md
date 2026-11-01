@@ -81,6 +81,11 @@ Points to be aware of when deploying the runtime:
   endpoints and never with an identifier that a candidate supplies. In practice the device holds the keys already, and
   `LocalSession.host` offers it by design. `supply-scores` is a host action: accept a score only from the scorer or the tool it
   belongs to.
+- **Review after the end.** An ended session accepts no action of the candidate, unless the engine is built with
+  `reviewAfterEnd`. The option opens the answers of every presented item to the candidate after an exam, as `allow-review`
+  of each item allows, and the correct responses where `show-solution` allows: build such an engine on purpose, for a program
+  that releases results, and never for a live exam. The engine then reads a state that names a content version only when it
+  names the same one, so that a review cannot show content that the candidate did not sit.
 - **Scores in events.** The events of a step hold no score. With the engine option `eventOutcomes`, `response-processed`
   carries the outcomes of the item, scores included, to `forward.log` of a session host and to the listeners of
   `subscribeSteps` of a local session, and never to a candidate, who receives views. The host's log, outbox and event sinks

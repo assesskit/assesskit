@@ -1,5 +1,6 @@
 import { ASI_NAMESPACE } from "@assesskit/runtime/asi";
 import type { CandidateAction } from "@assesskit/runtime/delivery";
+import { createEngine } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import { readPnp } from "@assesskit/runtime/pnp";
 import { type FileValue, single } from "@assesskit/runtime/values";
@@ -45,6 +46,8 @@ async function shell(
     readonly files?: Readonly<Record<string, string | Uint8Array>>;
     readonly language?: string;
     readonly practice?: boolean;
+    /** Whether the engine allows a review after the end. */
+    readonly reviewAfterEnd?: boolean;
     readonly chrome?: boolean;
     readonly wrap?: (client: SessionClient) => SessionClient;
     /** The PNP of the candidate, as a document. */
@@ -56,8 +59,9 @@ async function shell(
   } = {},
 ) {
   const origin = inject("fixtures").asset;
-  const setup = await examHost({}, options.files, origin);
   const definition = examDefinition(packageOf(options.files ?? examFiles()));
+  const engineOptions = options.reviewAfterEnd === true ? { reviewAfterEnd: true } : {};
+  const setup = await examHost({ engine: createEngine(definition, engineOptions) }, options.files, origin);
   const pnp = options.profile === undefined ? undefined : readPnp(options.profile);
   if (pnp !== undefined && !("supports" in pnp)) throw new Error("The fixture profile must be one profile.");
   const profile = pnp === undefined ? {} : { pnp };
@@ -73,6 +77,7 @@ async function shell(
       },
       session: "practice-1",
       seed: 1,
+      engine: engineOptions,
       start: profile,
       assets: (path) => `${origin}${PRACTICE_PATH}${path}`,
       clock: setup.clock,
@@ -624,6 +629,78 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { hooks: { tools: [] } })).toThrow("The hook tools must be an object");
     expect(() => mount(fresh(), { client: {} })).toThrow("The function age of the option client");
     expect(() => mount(fresh(), { other: 1 })).toThrow("The options has the properties");
+  });
+});
+
+describe("a review after the end in the player", () => {
+  /** Answers the first item, moves to the second, and ends the test through the buttons. */
+  async function sat(options: { readonly practice?: boolean } = {}): Promise<Shell> {
+    const s = await shell({ ...options, reviewAfterEnd: true });
+    await shown(s);
+    await s.client.dispatch(answer("B"));
+    buttonNamed(s.ui, "Next").click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    buttonNamed(s.ui, "End the test").click();
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    buttonNamed(s.ui, "Yes, continue").click();
+    await waitFor(() => expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended."));
+    return s;
+  }
+
+  const entries = (s: Shell): string[] =>
+    [...s.ui.querySelectorAll(".ak-nav button")].map((button) => button.textContent?.trim() ?? "");
+
+  it("lists the questions that were presented once the test ended, and shows the one that the candidate chooses as sat", async () => {
+    for (const practice of [false, true]) {
+      const s = await sat({ practice });
+      expect(entries(s)).toEqual(["Item q1 (Submitted)", "Item q2 (Submitted)"]);
+      expect(s.client.view.current).toBeUndefined();
+      expect(buttons(s.ui)).toEqual([]);
+      const first = [...s.ui.querySelectorAll<HTMLButtonElement>(".ak-nav button")][0] as HTMLButtonElement;
+      first.click();
+      await waitFor(() => expect(s.client.view.current?.key.ref).toBe("q1"));
+      expect(s.client.view.status).toBe("ended");
+      expect(s.client.view.current?.status).toBe("review");
+      await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+      await waitFor(() =>
+        expect(
+          [...contentOf(s.ui).querySelectorAll<HTMLInputElement>("input.ak-control")].map((input) => input.checked),
+        ).toEqual([false, true]),
+      );
+      expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended.");
+      expect(entries(s)).toEqual(["Item q1 (In review)", "Item q2 (Submitted)"]);
+    }
+  });
+
+  it("leaves the answers as they were: the choices are fixed and the view of the other question shows its own", async () => {
+    const s = await sat();
+    ([...s.ui.querySelectorAll<HTMLButtonElement>(".ak-nav button")][1] as HTMLButtonElement).click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+    const inputs = [...contentOf(s.ui).querySelectorAll<HTMLInputElement>("input.ak-control")];
+    expect(inputs.map((input) => [input.checked, input.disabled])).toEqual([
+      [false, true],
+      [false, true],
+    ]);
+    const results = await s.host.session(ALICE.session).results();
+    expect(results.itemResults.map(({ identifier }) => identifier)).toEqual(["q1", "q2"]);
+  });
+
+  it("has no accessibility violations while a question is reviewed", async () => {
+    const s = await sat();
+    ([...s.ui.querySelectorAll<HTMLButtonElement>(".ak-nav button")][0] as HTMLButtonElement).click();
+    await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+    expect(await axeViolations(s.page)).toEqual([]);
+  });
+
+  it("shows no map and no button after the end when the engine does not allow a review", async () => {
+    const s = await shell();
+    await shown(s);
+    buttonNamed(s.ui, "End the test").click();
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    buttonNamed(s.ui, "Yes, continue").click();
+    await waitFor(() => expect(s.ui.querySelector(".ak-notice")?.textContent).toBe("The test has ended."));
+    expect(entries(s)).toEqual([]);
+    expect(buttons(s.ui)).toEqual([]);
   });
 });
 

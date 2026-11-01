@@ -24,3 +24,4 @@ keeps four ports: `LtiLogin` and the frame of an LTI item (`player`), `forward.l
 jobs that publish a grade are in the example `examples/player/lms-integration`. `forward` takes only `log`, `HostApplyOptions.scoredBy`
 is a non-empty string, and `LtiLogin` takes a `signal`. The CAT client refuses a redirect as `redirect: "manual"` with a
 `ServiceError`. The package does not depend on `uuid`.
+After the end of a test that the engine lets the candidate review, the navigation map lists the items presented and reviews the one chosen.

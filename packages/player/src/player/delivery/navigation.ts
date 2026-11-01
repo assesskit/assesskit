@@ -51,7 +51,8 @@ function itemEntry(
  *
  * @remarks
  * A linear part lists the items presented so far, and only the reachable ones can be chosen, so that the map moves
- * forward only where the part does. It is a landmark named for the questions.
+ * forward only where the part does. After the end of a test that allows review, it lists the items presented in every
+ * part. It is a landmark named for the questions.
  *
  * @param view - The view.
  * @param messages - The interface messages.

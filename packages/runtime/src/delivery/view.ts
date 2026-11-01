@@ -11,9 +11,9 @@ import { type DeliveryState, findDelivered } from "./delivery-state.js";
 import { partModel, submissionModeOf } from "./modes.js";
 import { type Placement, planIndex, type SectionInstance } from "./plan-index.js";
 import { SessionStep } from "./session-step.js";
-import { allowedActions, type ItemRules } from "./view-actions.js";
+import { allowedActions, type ItemRules, reviewActions } from "./view-actions.js";
 import { candidateItem } from "./view-item.js";
-import { navigationOf } from "./view-navigation.js";
+import { navigationOf, reviewNavigationOf } from "./view-navigation.js";
 
 /** What resolution reads of an item for the content of a test: it declares no template variables. */
 const NO_TEMPLATES: Pick<AssessmentItem, "templateDeclarations"> = { templateDeclarations: [] };
@@ -28,6 +28,35 @@ function settled(course: Course, state: DeliveryState, now: number): DeliverySta
   const refused = step.apply({ type: "time", at: Math.max(now, state.at) });
   const done = step.done();
   return refused === undefined && done.ok ? done.state : state;
+}
+
+/**
+ * Adds to the view of an ended session what a review shows: the items presented in every part, the actions `review` and
+ * `solution`, and the item that is being reviewed, with its part, once there is one.
+ */
+function reviewing(course: Course, state: DeliveryState, ended: CandidateView): CandidateView {
+  const reviewed = {
+    ...ended,
+    navigation: reviewNavigationOf(course, state),
+    actions: reviewActions(course, state),
+  };
+  const { current } = state;
+  if (current === undefined) return reviewed;
+  const placement = planIndex(state.plan).placement(current);
+  const delivered = findDelivered(state, current);
+  const entry = course.items.get(current.ref);
+  if (placement === undefined || delivered === undefined || entry === undefined) {
+    throw new DataError(`The state does not present the item instance ${describe(current.ref)} ${current.instance}.`);
+  }
+  return {
+    ...reviewed,
+    part: {
+      identifier: placement.part,
+      navigationMode: partModel(course.structure, placement).navigationMode,
+      submissionMode: submissionModeOf(course.structure, placement),
+    },
+    current: candidateItem(state, delivered, entry),
+  };
 }
 
 /** Where the candidate is: the part and sections, and the placement of the item presented when there is one. */
@@ -105,6 +134,9 @@ const feedbackContent = (feedback: readonly TestFeedback[]): BodyNode[] =>
  * | `in-progress` | has the item presented, the navigation map, the rubric, the `during` test feedback, the timers, the actions |
  * | `suspended`   | has no content, and `resume` as the only action                                                             |
  * | `ended`       | has the `atEnd` test feedback of the test and of the test parts the candidate entered, and no action        |
+ *
+ * With `reviewAfterEnd`, an `ended` view also lists the items presented in every part, offers `review` and `solution`
+ * where an item allows them, and has the item being reviewed as `current`.
  */
 export function candidateView(course: Course, original: DeliveryState, now: number): CandidateView {
   const state = settled(course, original, now);
@@ -122,7 +154,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
     const feedback = [test, ...entered.map((part) => part.model)].flatMap((holder) =>
       visibleTestFeedback(holder.testFeedback, state.outcomes, "atEnd"),
     );
-    return {
+    const ended = {
       ...base,
       navigation: [],
       rubric: [],
@@ -130,6 +162,7 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
       timers: [],
       actions: allowedActions(state, undefined),
     };
+    return course.reviewAfterEnd ? reviewing(course, state, ended) : ended;
   }
   const where = whereabouts(state);
   const { placement } = where;

@@ -61,7 +61,12 @@ export function createChrome(context: ChromeContext): Chrome {
   return {
     render: (view) => {
       const focused = shadow.activeElement?.getAttribute("data-focus-id") ?? undefined;
-      const map = renderNavigation(view, messages, (to) => void sendSettled({ type: "move", to }));
+      // After the end the map reviews: the engine takes `review` of an item and no `move`.
+      const map = renderNavigation(
+        view,
+        messages,
+        (to) => void sendSettled(view.status === "ended" ? { type: "review", item: to } : { type: "move", to }),
+      );
       shell.mapSlot.replaceChildren(...(map === undefined ? [] : [map]));
       shell.layout.toggleAttribute("data-ak-map", map !== undefined);
       renderActionRow(shell.actionsSlot, planActions(view), messages, (planned) => void act(planned));
