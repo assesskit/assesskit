@@ -1218,6 +1218,33 @@ describe("createCatRestHandler", () => {
     expect(seen).toHaveLength(2);
   });
 
+  it("pulls nothing from the stream of the body of a request that authorize refuses", async () => {
+    const { port, calls } = stubPort();
+    for (const decision of [false, { denied: "invalid-token" }, { denied: "insufficient-scope" }] as const) {
+      let pulls = 0;
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull(source) {
+            pulls += 1;
+            source.close();
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      const request = new Request(`${PREFIX}/sections`, {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: stream,
+        duplex: "half",
+      } as RequestInit);
+      const response = await handlerOf(port, { authorize: () => decision })(request);
+      expect(response.status, JSON.stringify(decision)).toBeGreaterThanOrEqual(401);
+      await flush();
+      expect(pulls, JSON.stringify(decision)).toBe(0);
+    }
+    expect(calls()).toEqual([]);
+  });
+
   it("answers 401 with error invalid_token when the request carries a token that is not valid", async () => {
     const { port, calls } = stubPort();
     const handler = handlerOf(port, { authorize: () => ({ denied: "invalid-token" }) });

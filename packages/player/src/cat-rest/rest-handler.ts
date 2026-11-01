@@ -256,7 +256,6 @@ export function createCatRestHandler(
     } catch (error) {
       return failed(bodyFailure(error), error);
     }
-    signal.throwIfAborted();
 
     let encode: () => unknown;
     try {

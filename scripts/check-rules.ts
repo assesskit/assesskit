@@ -11,14 +11,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { CAT_REST_RULES } from "./rules/cat-rest.ts";
 import { PLAYER_RULES } from "./rules/player.ts";
 import type { Rule } from "./rules/rule.ts";
 import { RUNTIME_RULES } from "./rules/runtime.ts";
 
 export type { Rule };
 
-/** The security-critical rules of the player and of the runtime, each with the test that guards it. */
-export const RULES: readonly Rule[] = [...PLAYER_RULES, ...RUNTIME_RULES];
+/** The security-critical rules of the player, of the runtime and of the CAT binding, each with the test that guards it. */
+export const RULES: readonly Rule[] = [...PLAYER_RULES, ...RUNTIME_RULES, ...CAT_REST_RULES];
 
 /** The folders that a scratch copy leaves out: generated output and installed packages, which it links instead. */
 const SKIPPED = new Set(["node_modules", ".git", "dist", "coverage", ".cache", ".vitest"]);
@@ -48,11 +49,21 @@ export function removeRule(source: string, rule: Rule): string {
   return source.replace(rule.find, () => rule.replace);
 }
 
-/** Returns the number of failed tests in the report of a Vitest run, or `undefined` when the run did not run tests. */
+/**
+ * Returns the number of tests of a Vitest run that failed, or `undefined` when the run did not run tests.
+ *
+ * @remarks
+ * A test that did not finish counts as failed, and so does an error of the run. A removed rule can make the worker crash, and
+ * the summary then says "29 passed (80)" without a word about the 51 tests that never ran.
+ */
 export function failedTests(report: string): number | undefined {
   const summary = /^\s*Tests\s+(.*)$/m.exec(report)?.[1];
   if (summary === undefined || !/\d+ (?:failed|passed)/.test(summary)) return undefined;
-  return Number(/(\d+) failed/.exec(summary)?.[1] ?? 0);
+  const count = (state: string): number => Number(new RegExp(`(\\d+) ${state}`).exec(summary)?.[1] ?? 0);
+  const total = Number(/\((\d+)\)\s*$/.exec(summary)?.[1] ?? 0);
+  const finished = count("failed") + count("passed") + count("skipped") + count("todo");
+  const errors = Number(/^\s*Errors\s+(\d+)/m.exec(report)?.[1] ?? 0);
+  return count("failed") + Math.max(0, total - finished) + errors;
 }
 
 /** The folders directly below a folder of the repository, if it exists. */

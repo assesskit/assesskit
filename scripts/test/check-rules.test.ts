@@ -50,6 +50,12 @@ describe("failedTests", () => {
     expect(failedTests(" Test Files  1 passed (1)\n      Tests  40 passed (40)\n")).toBe(0);
   });
 
+  it("counts the tests that never finished and the errors of the run as failures, as a crashed worker leaves them", () => {
+    expect(failedTests(" Test Files   (1)\n      Tests  29 passed (80)\n     Errors  1 error\n")).toBe(52);
+    expect(failedTests(" Test Files  1 passed (1)\n      Tests  3 passed | 1 skipped (4)\n")).toBe(0);
+    expect(failedTests(" Test Files  1 passed (1)\n      Tests  4 passed (4)\n     Errors  2 errors\n")).toBe(2);
+  });
+
   it("answers undefined for a run that ran no tests, whether it reported them or not", () => {
     expect(failedTests("Error: Transform failed with 1 error")).toBeUndefined();
     expect(failedTests(" Test Files  1 failed (1)\n      Tests  no tests\n")).toBeUndefined();
