@@ -87,7 +87,7 @@ Use these words with these meanings in code, comments and docs.
 | `pnpm lint`                  | Biome and cspell; `pnpm format` fixes formatting                                                                                                                                  |
 | `pnpm check:standards`       | The rules of the engineering standards that a tool can check; `node scripts/check-standards.ts <path>...` reports only the files below the paths                                  |
 | `pnpm typecheck`             | `tsc` over every package and the tooling                                                                                                                                          |
-| `pnpm test`                  | Vitest, offline                                                                                                                                                                   |
+| `pnpm test`                  | Vitest in Node, offline: no browser, corpus, XSD or benchmark project                                                                                                             |
 | `pnpm test:browser`          | The browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first                                       |
 | `pnpm test:corpus`           | Tests that read the corpus; run `pnpm corpus` first                                                                                                                               |
 | `pnpm test:xsd`              | Tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first                                                                                                     |

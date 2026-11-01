@@ -9,7 +9,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
-    "test": "vitest run --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*'",
+    "test": "vitest run --project '!*-corpus*' --project '!*-xsd' --project '!*-browser*' --project '!*-bench'",
     "test:coverage": "vitest run --coverage --project runtime --project player --project examples --project scripts",
     "bench": "pnpm -r bench",
     "test:browser": "vitest run --project '*-browser*'",
