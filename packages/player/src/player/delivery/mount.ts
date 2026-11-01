@@ -49,7 +49,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const resolved = resolveSettings(options);
   const state = createMountState(resolved.client.view);
   const settings = bindToLifetime(resolved, state);
-  const { client, messages, language, chrome, staticUrl, hooks } = settings;
+  const { client, messages, language, chrome, marking, staticUrl, hooks } = settings;
   const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles(), chromeStyles()];
 
@@ -79,7 +79,18 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   shadow.append(shell.app);
   const attachments = mountAttachments({ ...settings, state, sender, shell, body });
   const chromeView = chrome
-    ? createChrome({ messages, shadow, shell, timers, comment, client, state, sendSettled: body.sendSettled })
+    ? createChrome({
+        messages,
+        shadow,
+        shell,
+        timers,
+        comment,
+        client,
+        state,
+        marking,
+        send: sender.send,
+        sendSettled: body.sendSettled,
+      })
     : undefined;
 
   const update = createUpdate({ ...settings, state, shell, body, attachments, chromeView, lti, resume });

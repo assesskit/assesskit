@@ -33,6 +33,7 @@ function itemEntry(walk: Walk, key: ItemKey, depth: number): NavigationEntry | u
     depth,
     status: delivered?.session.status ?? "initial",
     current,
+    marked: delivered?.marked === true,
     // A maximum time binds responses, so an item that it closed can still be reviewed.
     reachable: reviewing ? !current && entry.control.allowReview : !linear && !current && !closed,
   };

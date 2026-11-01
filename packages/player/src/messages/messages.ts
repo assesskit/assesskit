@@ -374,6 +374,8 @@ export interface Messages {
   readonly statusReview: string;
   /** The state of a question that shows its solution. */
   readonly statusSolution: string;
+  /** What the navigation map says of a question that the candidate marked to come back to. */
+  readonly statusMarked: string;
   /** The action that goes to the question before. */
   readonly actionPrevious: string;
   /** The action that goes to the question after. */
@@ -388,6 +390,8 @@ export interface Messages {
   readonly actionReview: string;
   /** The action that shows the solution of a question. */
   readonly actionSolution: string;
+  /** The toggle that marks a question to come back to, or takes the mark away. */
+  readonly actionMark: string;
   /** The action that ends the part of the test the candidate is in. */
   readonly actionEndPart: string;
   /** The action that ends the test. */

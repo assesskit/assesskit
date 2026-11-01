@@ -53,6 +53,8 @@ export interface DeliveredItem {
   readonly submittedAt?: number;
   /** What the maximum time of the item did when it passed; absent before it passed. */
   readonly expired?: Expiry;
+  /** Whether the candidate marked the item for review; absent when it is not marked. */
+  readonly marked?: true;
 }
 
 /** The time of the test, of a test part or of a section. */

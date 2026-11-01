@@ -68,6 +68,7 @@ import {
   runOutcomeProcessing,
   SecurityError,
   type SingleValue,
+  STATE_VERSION,
   type StartOptions,
   type Step,
   type SupportName,
@@ -1470,6 +1471,127 @@ describe("applying actions", () => {
   });
 });
 
+describe("marking an item for review", () => {
+  const engine = engineOf(testPart("P", section("S", refs("a", "b", "c")), "nonlinear"));
+  const mark = (ref: string, marked: boolean, at: number, instance = 1): Action => ({
+    type: "mark",
+    item: key(ref, instance),
+    marked,
+    at,
+  });
+  const marksOf = (view: CandidateView): string[] =>
+    view.navigation.flatMap((entry) => (entry.kind === "item" && entry.marked ? [entry.key.ref] : []));
+
+  it("marks an item instance that was presented, whichever is on the screen, and takes the mark away", () => {
+    const { state } = begun(engine);
+    const first = played(
+      engine,
+      state,
+      mark("a", true, 1),
+      moveTo(key("b"), 2),
+      mark("a", false, 3),
+      mark("b", true, 4),
+    );
+    expect(marksOf(engine.view(first.state, 5))).toEqual(["b"]);
+    const away = played(engine, first.state, moveTo(key("a"), 5), mark("b", false, 6));
+    expect(marksOf(engine.view(away.state, 7))).toEqual([]);
+    expect(first.events).toEqual(played(engine, state, moveTo(key("b"), 2)).events);
+  });
+
+  it("marks again with no change, by value: a state with the mark is the same state when it is marked twice", () => {
+    const { state } = begun(engine);
+    const once = played(engine, state, mark("a", true, 1));
+    const twice = played(engine, once.state, mark("a", true, 2));
+    expect(twice.state.items).toEqual(once.state.items);
+    const never = played(engine, state, mark("a", false, 1));
+    expect(never.state.items).toEqual(state.items);
+    expect(never.state.items.some((item) => "marked" in item)).toBe(false);
+    const cleared = played(engine, once.state, mark("a", false, 2));
+    expect(cleared.state.items.some((item) => "marked" in item)).toBe(false);
+  });
+
+  it("refuses an item instance that was not presented, and one the test does not have", () => {
+    const { state } = begun(engine);
+    expect(refusalOf(engine, state, mark("b", true, 1))).toEqual({
+      code: "unknown-item",
+      message: 'The candidate was not presented the item instance "b" 1.',
+    });
+    expect(refusalOf(engine, state, mark("a", true, 1, 2)).code).toBe("unknown-item");
+    expect(refusalOf(engine, state, mark("zzz", true, 1)).code).toBe("unknown-item");
+  });
+
+  it("refuses after the end and while suspended, as it does every action, and accepts again when the session resumes", () => {
+    const { state } = begun(engine);
+    const suspended = played(engine, state, { type: "suspend", at: 1 });
+    expect(refusalOf(engine, suspended.state, mark("a", true, 2)).code).toBe("suspended");
+    const resumed = played(engine, suspended.state, { type: "resume", at: 2 }, mark("a", true, 3));
+    expect(marksOf(engine.view(resumed.state, 4))).toEqual(["a"]);
+    const ended = played(engine, state, { type: "end-test", at: 1 });
+    expect(refusalOf(engine, ended.state, mark("a", true, 2)).code).toBe("ended");
+    expect(refusalOf(engine, resumed.state, mark("a", true, 1)).code).toBe("clock-regression");
+  });
+
+  it("is listed once an item was presented, in a linear part too, and by no view of a suspended or ended session", () => {
+    const { state } = begun(engine);
+    expect(engine.view(state, 0).actions).toContain("mark");
+    const linear = begun(engineOf(testPart("P", section("S", refs("a", "b")), "linear")));
+    expect(engine.view(linear.state, 0).actions).toContain("mark");
+    expect(engine.view(played(engine, state, { type: "suspend", at: 1 }).state, 1).actions).toEqual(["resume"]);
+    expect(engine.view(played(engine, state, { type: "end-test", at: 1 }).state, 1).actions).toEqual([]);
+  });
+
+  it("marks in a linear part, where the map lists the items presented", () => {
+    const linear = engineOf(testPart("P", section("S", refs("a", "b")), "linear"));
+    const { state } = begun(linear);
+    const marked = played(linear, state, mark("a", true, 1), moveTo("next", 2));
+    expect(marksOf(linear.view(marked.state, 3))).toEqual(["a"]);
+  });
+
+  it("leaves the results as they are without marks", () => {
+    const { state } = begun(engine);
+    const flow: Action[] = [
+      mark("a", true, 0),
+      answer("a", "A", 1),
+      on("submit", "a", 2),
+      moveTo("next", 3),
+      mark("b", true, 3),
+      answer("b", "B", 4),
+      on("submit", "b", 5),
+      mark("a", false, 6),
+    ];
+    // The same moments without the marks: the clocks and the datestamps of the report are those of the times.
+    const unmarked = flow.map((action): Action => (action.type === "mark" ? { type: "time", at: action.at } : action));
+    const marked = played(engine, state, ...flow);
+    expect(engine.results(marked.state)).toEqual(engine.results(played(engine, state, ...unmarked).state));
+    expect(marksOf(engine.view(marked.state, 7))).toEqual(["b"]);
+  });
+
+  it("writes the mark into the state and reads it back, and reads a state without it as unmarked", () => {
+    const { state } = begun(engine);
+    const marked = played(engine, state, mark("a", true, 1), moveTo(key("b"), 2)).state;
+    const text = serializeState(marked);
+    expect(JSON.parse(text).items[0]).toMatchObject({ marked: true });
+    expect(JSON.parse(text).items[1]).not.toHaveProperty("marked");
+    expect(deserializeState(text)).toEqual(marked);
+    expect(STATE_VERSION).toBe(1);
+    const before = JSON.parse(text);
+    delete before.items[0].marked;
+    const older = deserializeState(JSON.stringify(before));
+    expect(marksOf(engine.view(older, 3))).toEqual([]);
+    expect(marksOf(engine.view(played(engine, older, mark("a", true, 3)).state, 4))).toEqual(["a"]);
+    expect(() =>
+      deserializeState(JSON.stringify({ ...before, items: [{ ...before.items[0], marked: false }] })),
+    ).toThrow(DataError);
+  });
+
+  it("is a view that reads back from its JSON", () => {
+    const { state } = begun(engine);
+    const view = engine.view(played(engine, state, mark("a", true, 1)).state, 2);
+    expect(viewFromJson(throughText(viewToJson(view)))).toEqual(view);
+    expect(marksOf(viewFromJson(throughText(viewToJson(view))))).toEqual(["a"]);
+  });
+});
+
 describe("the events of an attempt", () => {
   const threeAttempts = itemRef("a", '<qti-item-session-control max-attempts="3"/>');
   const content = `${TOTAL}${testPart("P", section("S", threeAttempts), "nonlinear")}${outcomeProcessing(SUM_SCORES)}`;
@@ -2098,10 +2220,37 @@ describe("the view of a state", () => {
     // The invisible section U has no entry of its own; its item stands at the depth of the section above.
     expect(first.navigation).toEqual([
       { kind: "section", identifier: "S", title: "S", depth: 0 },
-      { kind: "item", key: key("a"), title: "Item", depth: 1, status: "interacting", current: true, reachable: false },
-      { kind: "item", key: key("b"), title: "Item", depth: 0, status: "initial", current: false, reachable: true },
+      {
+        kind: "item",
+        key: key("a"),
+        title: "Item",
+        depth: 1,
+        status: "interacting",
+        current: true,
+        marked: false,
+        reachable: false,
+      },
+      {
+        kind: "item",
+        key: key("b"),
+        title: "Item",
+        depth: 0,
+        status: "initial",
+        current: false,
+        marked: false,
+        reachable: true,
+      },
       { kind: "section", identifier: "V", title: "V", depth: 0 },
-      { kind: "item", key: key("c"), title: "Item", depth: 1, status: "initial", current: false, reachable: true },
+      {
+        kind: "item",
+        key: key("c"),
+        title: "Item",
+        depth: 1,
+        status: "initial",
+        current: false,
+        marked: false,
+        reachable: true,
+      },
     ]);
     const moved = played(engine, state, moveTo(key("c"), 1));
     expect(
@@ -2347,6 +2496,7 @@ describe("the view of a state", () => {
       "submit",
       "skip",
       "comment",
+      "mark",
       "move",
       "end-part",
       "end-test",
@@ -2357,6 +2507,7 @@ describe("the view of a state", () => {
       "review",
       "solution",
       "comment",
+      "mark",
       "move",
       "end-part",
       "end-test",
@@ -2365,6 +2516,7 @@ describe("the view of a state", () => {
     const together = engineOf(testPart("P", section("S", refs("a")), "nonlinear", "simultaneous"));
     expect(together.view(begun(together).state, 0).actions).toEqual([
       "set-responses",
+      "mark",
       "move",
       "end-part",
       "end-test",
@@ -4450,6 +4602,8 @@ describe("candidate actions", () => {
     { type: "solution", item },
     { type: "end-attempt", item, interaction: "HINT" },
     { type: "comment", item, text: "The question is ambiguous" },
+    { type: "mark", item, marked: true },
+    { type: "mark", item: key("b", 2), marked: false },
     { type: "move", to: "next" },
     { type: "move", to: "previous" },
     { type: "move", to: key("b", 3) },
@@ -4520,6 +4674,11 @@ describe("candidate actions", () => {
     refuses(
       '{"type":"end-attempt","item":{"ref":"a","instance":1}}',
       'The action is invalid: missing the property "interaction".',
+    );
+    refuses('{"type":"mark","item":{"ref":"a","instance":1}}', 'The action is invalid: missing the property "marked".');
+    refuses(
+      '{"type":"mark","item":{"ref":"a","instance":1},"marked":"yes"}',
+      'The action is invalid at marked: expected true or false, found "yes".',
     );
     refuses(
       '{"type":"move","to":"left"}',
@@ -6166,6 +6325,8 @@ describe("properties", () => {
         return { type, item, interaction: "HINT" };
       case "comment":
         return { type, item, text: "A note" };
+      case "mark":
+        return { type, item, marked: true };
       case "move":
         return { type, to: "next" };
       case "support":
@@ -6256,6 +6417,8 @@ describe("properties", () => {
         "review",
         "solution",
         "comment",
+        "mark",
+        "unmark",
         "next-attempt",
         "goto-a",
         "goto-b",
@@ -6286,6 +6449,9 @@ describe("properties", () => {
         return { type: "set-responses", item, responses: new Map([["TEXT", text(typed)]]) };
       case "comment":
         return { type: "comment", item, text: typed };
+      case "mark":
+      case "unmark":
+        return { type: "mark", item, marked: move === "mark" };
       case "goto-a":
       case "goto-b":
         return { type: "move", to: key(move.slice(-1)) };

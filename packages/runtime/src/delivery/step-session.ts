@@ -1,5 +1,8 @@
+import { describe } from "../checks.js";
 import type { SupportName } from "../pnp/index.js";
+import { findDelivered } from "./delivery-state.js";
 import { suspendItem } from "./item-lifecycle.js";
+import type { ItemKey } from "./plan.js";
 import { type Refusal, refusal } from "./refusal.js";
 import { deliveredOf, type StepContext, settle, store } from "./step-context.js";
 import { present } from "./step-entry.js";
@@ -42,5 +45,18 @@ export function toggle(step: StepContext, name: SupportName, active: boolean, at
   if (!active || current === undefined) return undefined;
   const item = deliveredOf(step, current);
   if (!item.supports.includes(name)) store(step, { ...item, supports: [...item.supports, name] });
+  return undefined;
+}
+
+/** Marks an item instance that was presented for review, or takes the mark away; marking a marked item changes nothing. */
+export function mark(step: StepContext, key: ItemKey, marked: boolean): Refusal | undefined {
+  const item = findDelivered(step.state, key);
+  if (item === undefined) {
+    const message = `The candidate was not presented the item instance ${describe(key.ref)} ${key.instance}.`;
+    return refusal("unknown-item", message);
+  }
+  if ((item.marked === true) === marked) return undefined;
+  const { marked: _, ...unmarked } = item;
+  store(step, marked ? { ...item, marked } : unmarked);
   return undefined;
 }

@@ -28,6 +28,8 @@ export interface Settings extends Omit<ItemSettings, "hooks"> {
   readonly landmark: "main" | "region";
   /** The level of the heading of the item. */
   readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6;
+  /** Whether the chrome offers Mark for review in a nonlinear part. */
+  readonly marking: boolean;
   /** The hooks of the host. */
   readonly hooks: NonNullable<DeliveryOptions["hooks"]>;
 }
@@ -68,7 +70,16 @@ export function resolveSettings(options: DeliveryOptions): Settings {
     resumeCheckMs = DEFAULT_RESUME_CHECK_MS,
     landmark = "region",
     headingLevel = 2,
+    marking = false,
     ...shared
   } = options;
-  return { ...resolveItemSettings({ ...shared, hooks }), chrome, hooks, resumeCheckMs, landmark, headingLevel };
+  return {
+    ...resolveItemSettings({ ...shared, hooks }),
+    chrome,
+    hooks,
+    resumeCheckMs,
+    landmark,
+    headingLevel,
+    marking,
+  };
 }

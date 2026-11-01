@@ -43,3 +43,9 @@ at most `MAX_RECORDING_SECONDS`, and allow one recording only.
 `outcome` and `declaration` of its request, so that a rater's page passes the fields of a `Submission`. The option `cat` of a session host and of a local session is a
 `CatSessionPort`. `data-ak-count="words"` on an extended text shows the words typed, with the message `counterWords`; the text areas and the editor ask the browser for no
 spell check, correction, capital letters or completion, and the support `spell-checker-on-screen` turns the spell check on.
+
+The content root gives a tablist the keys of the ARIA tabs pattern, keeps the tab of a stimulus that items share, and lets the
+candidate sort a table by a column that has `aria-sort`. The custom supports `ext:highlighter` and `ext:eliminator` put a
+highlighter, which marks the words of the item and keeps them by item and stimulus, and an answer eliminator, which crosses out
+choices, in the toolbar. With the option `marking`, `mountDelivery` offers Mark for review in a nonlinear part, and the map names
+a marked item. The guide of the server has the recipe of a review step with a cap on changes, as a wrapper of the `Engine`.

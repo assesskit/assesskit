@@ -29,6 +29,7 @@ export function renderActionRow(
             messages[each.label],
           );
           button.disabled = each.disabled === true;
+          if (each.pressed !== undefined) button.setAttribute("aria-pressed", String(each.pressed));
           button.addEventListener("click", () => act(each));
           return button;
         }),

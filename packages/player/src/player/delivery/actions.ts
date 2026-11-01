@@ -31,6 +31,12 @@ export interface PlannedAction {
    * @defaultValue `false`
    */
   readonly disabled?: boolean;
+  /**
+   * Whether the button is a toggle and is pressed.
+   *
+   * @defaultValue Not a toggle
+   */
+  readonly pressed?: boolean;
   /** The group of the button. */
   readonly group: ActionGroup;
 }
@@ -80,6 +86,22 @@ function answerActions(view: CandidateView, linear: boolean): PlannedAction[] {
   }));
 }
 
+/** The toggle that marks the item presented for review, in a nonlinear part, where a mark leads somewhere. */
+function markActions(view: CandidateView, linear: boolean, marking: boolean): PlannedAction[] {
+  const { current } = view;
+  if (!marking || linear || current === undefined || !view.actions.includes("mark")) return [];
+  const marked = view.navigation.some((entry) => entry.kind === "item" && entry.current && entry.marked);
+  return [
+    {
+      id: "mark",
+      label: "actionMark",
+      action: { type: "mark", item: current.key, marked: !marked },
+      group: "answer",
+      pressed: marked,
+    },
+  ];
+}
+
 /** The buttons that end a part or the test, or pause and resume it. */
 function sessionActions(view: CandidateView): PlannedAction[] {
   const planned: PlannedAction[] = [];
@@ -115,19 +137,26 @@ function sessionActions(view: CandidateView): PlannedAction[] {
  * @remarks
  * The list is the engine's allowance, which the session host has already narrowed by its client-action policy, so a
  * button for `suspend` exists only where the host lets the candidate pause. `set-responses` and `end-attempt` have no
- * button here: the interactions send them, and `comment` and `support` have controls of their own.
+ * button here: the interactions send them, and `comment` and `support` have controls of their own. `mark` has a toggle
+ * where the host asks for marking and the part is nonlinear.
  *
  * Moving back is offered only in a nonlinear part, and moving on stops at the last item of a nonlinear part. Submitting
  * in a linear part, and ending a part or the test, ask the candidate to confirm; in a nonlinear part the candidate can
  * review before submitting.
  *
  * @param view - The view.
+ * @param marking - Whether to offer Mark for review. Default: `false`.
  * @returns The buttons, in the order of the chrome.
  * @see {@link https://www.w3.org/TR/WCAG22/#error-prevention-legal-financial-data | WCAG 2.2, error prevention}
  */
-export function planActions(view: CandidateView): readonly PlannedAction[] {
+export function planActions(view: CandidateView, marking = false): readonly PlannedAction[] {
   const linear = view.part?.navigationMode === "linear";
-  return [...navigateActions(view, linear), ...answerActions(view, linear), ...sessionActions(view)];
+  return [
+    ...navigateActions(view, linear),
+    ...answerActions(view, linear),
+    ...markActions(view, linear, marking),
+    ...sessionActions(view),
+  ];
 }
 
 /**

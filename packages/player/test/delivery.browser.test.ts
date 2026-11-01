@@ -58,6 +58,7 @@ async function shell(
     readonly onError?: (error: unknown) => void;
     readonly landmark?: "main" | "region";
     readonly headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
+    readonly marking?: boolean;
     readonly wrap?: (client: SessionClient) => SessionClient;
     /** The PNP of the candidate, as a document. */
     readonly profile?: string;
@@ -146,6 +147,7 @@ async function shell(
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
     ...(options.landmark === undefined ? {} : { landmark: options.landmark }),
     ...(options.headingLevel === undefined ? {} : { headingLevel: options.headingLevel }),
+    ...(options.marking === undefined ? {} : { marking: options.marking }),
   });
   const ui = host.shadowRoot as ShadowRoot;
   return { ...setup, client: shown, page: host, ui, mounted, started, definition, hostSession };
@@ -207,6 +209,75 @@ describe("mountDelivery", () => {
     items[1]?.click();
     await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
     expect(s.ui.querySelector("nav [aria-current]")?.textContent).toContain("Item q2");
+  });
+
+  describe("Mark for review", () => {
+    const mark = (ui: ShadowRoot): HTMLButtonElement => buttonNamed(ui, "Mark for review");
+    const mapOf = (ui: ShadowRoot): string[] =>
+      [...ui.querySelectorAll("nav button")].map((button) => button.textContent ?? "");
+
+    it("offers no button unless the host asks for marking", async () => {
+      const s = await shell();
+      await shown(s);
+      expect(buttons(s.ui)).not.toContain("Mark for review");
+    });
+
+    it("marks the item presented with a toggle that is pressed while it is marked, and names the mark in the map", async () => {
+      const s = await shell({ marking: true });
+      await shown(s);
+      expect(mark(s.ui).getAttribute("aria-pressed")).toBe("false");
+      mark(s.ui).click();
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("true"));
+      expect(mapOf(s.ui)).toEqual([
+        "Item q1 (In progress, Marked for review)",
+        "Item q2 (Not started)",
+        "Item q3 (Not started)",
+      ]);
+      buttonNamed(s.ui, "Next").click();
+      await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q2"));
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("false"));
+      expect(mapOf(s.ui)[0]).toBe("Item q1 (Paused, Marked for review)");
+      buttonNamed(s.ui, "Previous").click();
+      await waitFor(() => expect(heading(s.ui).textContent).toBe("Item q1"));
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("true"));
+      mark(s.ui).click();
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("false"));
+      expect(mapOf(s.ui)[0]).toBe("Item q1 (In progress)");
+    });
+
+    it("keeps the focus on the toggle, and passes axe with and without a mark", async () => {
+      const s = await shell({ marking: true });
+      await shown(s);
+      mark(s.ui).focus();
+      mark(s.ui).click();
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("true"));
+      expect(s.ui.activeElement).toBe(mark(s.ui));
+      expect(await axeViolations(s.page)).toEqual([]);
+      mark(s.ui).click();
+      await waitFor(() => expect(mark(s.ui).getAttribute("aria-pressed")).toBe("false"));
+      expect(await axeViolations(s.page)).toEqual([]);
+    });
+
+    it("shows a mark that the host made when it does not offer the button, and offers none in a linear part", async () => {
+      const s = await shell();
+      await shown(s);
+      await s.client.dispatch({ type: "mark", item: Q1, marked: true });
+      await waitFor(() => expect(mapOf(s.ui)[0]).toBe("Item q1 (In progress, Marked for review)"));
+      expect(buttons(s.ui)).not.toContain("Mark for review");
+      const linear = await shell({
+        files: examFiles({ part: 'navigation-mode="linear" submission-mode="individual"' }),
+        marking: true,
+      });
+      await shown(linear);
+      expect(buttons(linear.ui)).not.toContain("Mark for review");
+    });
+
+    it("names the button and the mark in Indonesian", async () => {
+      const s = await shell({ marking: true, language: "id" });
+      await waitFor(() => expect(buttonNamed(s.ui, "Tandai untuk ditinjau")).toBeTruthy());
+      buttonNamed(s.ui, "Tandai untuk ditinjau").click();
+      await waitFor(() => expect(mapOf(s.ui)[0]).toContain("Ditandai untuk ditinjau"));
+    });
   });
 
   it("moves forward only in a linear part: no way back, and the items behind are out of reach", async () => {

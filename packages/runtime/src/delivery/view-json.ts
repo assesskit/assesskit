@@ -54,6 +54,7 @@ const navigationEntrySchema: Schema<NavigationEntry> = v.variant("kind", [
     depth: nonNegativeIntegerSchema,
     status: v.picklist(ITEM_SESSION_STATUSES),
     current: v.boolean(),
+    marked: v.boolean(),
     reachable: v.boolean(),
   }),
 ]);

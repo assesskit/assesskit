@@ -145,7 +145,7 @@ It prints:
 ```text
 Capital of France?
 A B
-set-responses submit skip move end-part end-test suspend
+set-responses submit skip mark move end-part end-test suspend
 false
 attempt-ended response-processed outcome-processed moved presented
 linear-backward

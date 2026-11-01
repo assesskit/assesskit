@@ -15,6 +15,7 @@ import type { Scorer } from "./scoring.js";
  * | Type                      | The candidate …                                                                                           |
  * | ------------------------- | --------------------------------------------------------------------------------------------------------- |
  * | the types of `ItemAction` | acts on the item presented: responses, submit, skip, end attempt, next attempt, review, solution, comment |
+ * | `mark`                    | marks an item instance presented for review, or takes the mark away                                       |
  * | `move`                    | goes to the next item, to the previous one, or to an item of a nonlinear test part                        |
  * | `support`                 | turns on or off a support that is an option                                                               |
  * | `end-part`                | ends the test part                                                                                        |
@@ -27,6 +28,14 @@ import type { Scorer } from "./scoring.js";
  */
 export type CandidateAction =
   | ItemAction
+  | {
+      /** Marks an item instance for review, or takes the mark away. */
+      readonly type: "mark";
+      /** Any item instance presented. */
+      readonly item: ItemKey;
+      /** Whether the item is to be marked. */
+      readonly marked: boolean;
+    }
   | {
       /** Moves. */
       readonly type: "move";
@@ -87,6 +96,7 @@ export type Action = (CandidateAction | HostAction) & {
 
 /** The types of the actions that are not actions on an item. */
 const SESSION_ACTION_TYPES = [
+  "mark",
   "move",
   "support",
   "end-part",
@@ -116,6 +126,10 @@ export function checkAction(action: unknown): asserts action is Action {
   checkChoice(action.type, "The type of the action", ACTION_TYPES);
   checkInstant(action.at, "The time of the action");
   switch (action.type) {
+    case "mark":
+      checkKey(action.item);
+      checkBoolean(action.marked, "The marked of mark");
+      break;
     case "move":
       if (typeof action.to !== "string") checkKey(action.to);
       else if (!MOVES.includes(action.to)) {

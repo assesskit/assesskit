@@ -34,7 +34,11 @@ function itemEntry(
       ...(entry.current ? { "aria-current": "true" } : {}),
     },
     html("span", {}, entry.title),
-    html("span", { class: "ak-nav-status" }, ` (${messages[STATUS_MESSAGES[entry.status]]})`),
+    html(
+      "span",
+      { class: "ak-nav-status" },
+      ` (${messages[STATUS_MESSAGES[entry.status]]}${entry.marked ? `, ${messages.statusMarked}` : ""})`,
+    ),
   );
   button.disabled = !entry.reachable && !entry.current;
   button.addEventListener("click", () => {

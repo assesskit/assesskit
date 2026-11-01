@@ -39,6 +39,8 @@ export interface NavigationItem {
   readonly status: ItemSessionStatus;
   /** Whether it is the item presented. */
   readonly current: boolean;
+  /** Whether the candidate marked it for review. */
+  readonly marked: boolean;
   /**
    * Whether a `move` to it changes the item presented: another item of a nonlinear test part that no maximum time closed.
    * After the end, whether a `review` of it does: another item whose item session control allows review.

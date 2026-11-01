@@ -168,3 +168,67 @@ export function scriptedPort(
     endSession: async () => call("endSession"),
   };
 }
+
+/** The items of the pools of the two adaptive sections of {@link reviewFiles}: the first stage of each gives two of three. */
+const REVIEW_POOLS = { A: ["a1", "a2", "a3"], B: ["b1", "b2", "b3"] } as const;
+
+/**
+ * The files of a test whose only part is nonlinear, with individual submission and two attempts for each item, and two
+ * adaptive sections `A` and `B` of three items each, for the recipe of a review step with a cap on changes.
+ */
+export function reviewFiles(): Readonly<Record<string, string>> {
+  const section = (id: keyof typeof REVIEW_POOLS): string =>
+    `<qti-assessment-section identifier="${id}" title="${id}" visible="true">
+      <qti-adaptive-selection><qti-adaptive-engine-ref identifier="engine" href="https://cat.example/api"/><qti-adaptive-settings-ref identifier="settings" href="settings.json"/></qti-adaptive-selection>
+      ${REVIEW_POOLS[id].map((ref) => `<qti-assessment-item-ref identifier="${ref}" href="../items/${ref}.xml"/>`).join("")}
+    </qti-assessment-section>`;
+  const pool = [...REVIEW_POOLS.A, ...REVIEW_POOLS.B];
+  return {
+    "imsmanifest.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="${CP}" identifier="review-package">
+  <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+  <organizations/>
+  <resources>
+    <resource identifier="exam" type="imsqti_test_xmlv3p0" href="tests/exam.xml"><file href="tests/exam.xml"/></resource>
+    ${pool.map((id) => `<resource identifier="${id}" type="imsqti_item_xmlv3p0" href="items/${id}.xml"><file href="items/${id}.xml"/></resource>`).join("")}
+  </resources>
+</manifest>`,
+    "tests/exam.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-test xmlns="${ASI_NAMESPACE}" identifier="exam" title="Exam">
+  <qti-test-part identifier="part" navigation-mode="nonlinear" submission-mode="individual">
+    <qti-item-session-control max-attempts="2"/>
+    ${section("A")}${section("B")}
+  </qti-test-part>
+</qti-assessment-test>`,
+    ...Object.fromEntries(pool.map((id) => [`items/${id}.xml`, item(id)])),
+  };
+}
+
+/** The engine of {@link reviewFiles}, whose two adaptive sections have a CAT engine behind the port. */
+export function reviewEngine(files: Readonly<Record<string, string>>): Engine {
+  const definition = examDefinition(packageOf(files));
+  if (definition.kind !== "test") throw new Error("The fixture is a test.");
+  return createEngine({
+    ...definition,
+    catSections: new Map([
+      ["A", { prefix: "https://cat.example/api", sectionIdentifier: "section-a" }],
+      ["B", { prefix: "https://cat.example/api", sectionIdentifier: "section-b" }],
+    ]),
+  });
+}
+
+/** A port for {@link reviewFiles}: Create Session gives the first two items of the pool of the section, and Submit Results ends the session. */
+export function reviewPort(): ScriptedPort {
+  const port = scriptedPort([], []);
+  return {
+    ...port,
+    createSession: async (prefix, section, request) => {
+      await port.createSession(prefix, section, request);
+      const items = section === "section-a" ? REVIEW_POOLS.A : REVIEW_POOLS.B;
+      return {
+        sessionIdentifier: `session-${section}`,
+        nextItems: { itemIdentifiers: items.slice(0, 2), stageLength: 2 },
+      };
+    },
+  };
+}

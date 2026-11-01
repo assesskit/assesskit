@@ -15,6 +15,7 @@ export const CANDIDATE_ACTION_TYPES = [
   "review",
   "solution",
   "comment",
+  "mark",
   "move",
   "support",
   "end-part",

@@ -28,7 +28,16 @@ const ids = (view: CandidateView): string[] => planActions(view).map(({ id }) =>
 describe("planActions", () => {
   it("plans a button for each action that the view lists and that a button can send", () => {
     const view = firstView();
-    expect(view.actions).toEqual(["set-responses", "submit", "skip", "move", "end-part", "end-test", "suspend"]);
+    expect(view.actions).toEqual([
+      "set-responses",
+      "submit",
+      "skip",
+      "mark",
+      "move",
+      "end-part",
+      "end-test",
+      "suspend",
+    ]);
     expect(ids(view)).toEqual(["previous", "next", "submit", "skip", "end-part", "end-test", "suspend"]);
   });
 
@@ -78,6 +87,55 @@ describe("planActions", () => {
     const view = firstView();
     const submit = planActions(view).find(({ id }) => id === "submit");
     expect(submit?.action).toEqual({ type: "submit", item: { ref: "q1", instance: 1 } });
+  });
+
+  describe("Mark for review", () => {
+    const markedAt = (view: CandidateView, marked: boolean): CandidateView => ({
+      ...view,
+      navigation: view.navigation.map((entry) =>
+        entry.kind === "item" ? { ...entry, marked: entry.current && marked } : entry,
+      ),
+    });
+
+    it("is a toggle in a nonlinear part when the host asks for it, and not otherwise", () => {
+      const view = firstView();
+      expect(ids(view)).not.toContain("mark");
+      expect(planActions(view, false).map(({ id }) => id)).not.toContain("mark");
+      const planned = planActions(view, true).find(({ id }) => id === "mark");
+      expect(planned).toEqual({
+        id: "mark",
+        label: "actionMark",
+        action: { type: "mark", item: { ref: "q1", instance: 1 }, marked: true },
+        group: "answer",
+        pressed: false,
+      });
+      expect(planActions(markedAt(view, true), true).find(({ id }) => id === "mark")).toMatchObject({
+        action: { type: "mark", item: { ref: "q1", instance: 1 }, marked: false },
+        pressed: true,
+      });
+    });
+
+    it("is offered in no linear part, and not when the view does not list the action", () => {
+      const linear = firstView('navigation-mode="linear" submission-mode="individual"');
+      expect(linear.actions).toContain("mark");
+      expect(planActions(linear, true).map(({ id }) => id)).not.toContain("mark");
+      const view = firstView();
+      const without: CandidateView = { ...view, actions: view.actions.filter((type) => type !== "mark") };
+      expect(planActions(without, true).map(({ id }) => id)).not.toContain("mark");
+    });
+
+    it("stands among the buttons that act on the item, after submit and skip", () => {
+      expect(planActions(firstView(), true).map(({ id }) => id)).toEqual([
+        "previous",
+        "next",
+        "submit",
+        "skip",
+        "mark",
+        "end-part",
+        "end-test",
+        "suspend",
+      ]);
+    });
   });
 
   it("plans nothing for an ended test", () => {

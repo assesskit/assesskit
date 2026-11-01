@@ -52,7 +52,8 @@ function itemTypes(rules: ItemRules): CandidateAction["type"][] {
 /**
  * Returns the types of the actions of the candidate that the state allows, in the order of `CANDIDATE_ACTION_TYPES`: a
  * suspended session allows `resume` only, an ended one nothing; a running one allows the actions on the item presented
- * that its session allows, `move`, `end-part`, `end-test`, `suspend`, and `support` when a support is an option.
+ * that its session allows, `mark` once an item was presented, `move`, `end-part`, `end-test`, `suspend`, and `support` when a
+ * support is an option.
  *
  * @remarks
  * The rules are those of `Engine.apply`, which refuses every type left out. While the first stage of an adaptive
@@ -62,6 +63,7 @@ export function allowedActions(state: DeliveryState, rules: ItemRules | undefine
   if (state.status === "ended") return [];
   if (state.status === "suspended") return ["resume"];
   const allowed = new Set<CandidateAction["type"]>(["end-part", "end-test", "suspend"]);
+  if (state.items.length > 0) allowed.add("mark");
   if (rules !== undefined) allowed.add("move");
   if ([...state.supports.values()].some((support) => support.state === "option")) allowed.add("support");
   for (const type of rules === undefined ? [] : itemTypes(rules)) allowed.add(type);

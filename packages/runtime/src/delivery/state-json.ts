@@ -32,13 +32,14 @@ import { supportNameSchema, supportsSchema } from "./support-json.js";
 const CLOCK_SCOPES: readonly ScopeClock["scope"][] = ["test", "part", "section"];
 
 function itemToJson(item: DeliveredItem): unknown {
-  const { variant, submittedAt, expired } = item;
+  const { variant, submittedAt, expired, marked } = item;
   return {
     session: itemSessionToJson(item.session),
     ...(variant === undefined ? {} : { variant }),
     supports: item.supports,
     ...(submittedAt === undefined ? {} : { submittedAt }),
     ...(expired === undefined ? {} : { expired }),
+    ...(marked === undefined ? {} : { marked }),
   };
 }
 
@@ -108,6 +109,7 @@ const deliveredItemSchema: Schema<DeliveredItem> = v.object({
   supports: v.array(supportNameSchema),
   submittedAt: v.optional(finiteSchema),
   expired: v.optional(expirySchema),
+  marked: v.optional(v.literal(true)),
 });
 
 const clockSchema: Schema<ScopeClock> = v.object({

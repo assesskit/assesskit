@@ -27,6 +27,10 @@ export interface ChromeContext {
   readonly client: SessionClient;
   /** The state of the mounted player, which holds the view a confirmation speaks of. */
   readonly state: MountState;
+  /** Whether the chrome offers Mark for review in a nonlinear part. */
+  readonly marking: boolean;
+  /** Sends an action at once. */
+  readonly send: (action: CandidateAction) => Promise<void>;
   /** Sends an action once the interactions have settled. */
   readonly sendSettled: (action: CandidateAction) => Promise<void>;
 }
@@ -49,13 +53,14 @@ export interface Chrome {
  * @returns The chrome.
  */
 export function createChrome(context: ChromeContext): Chrome {
-  const { messages, shadow, shell, timers, comment, client, state, sendSettled } = context;
+  const { messages, shadow, shell, timers, comment, client, state, marking, send, sendSettled } = context;
 
   const act = async (planned: PlannedAction): Promise<void> => {
     if (planned.confirm !== undefined) {
       if (!(await confirmAction(shadow, messages, confirmationText(planned.confirm, state.view, messages)))) return;
     }
-    await sendSettled(planned.action);
+    // A mark neither submits nor leaves the item, so it does not wait for the interactions: a recording goes on.
+    await (planned.action.type === "mark" ? send : sendSettled)(planned.action);
   };
 
   return {
@@ -69,7 +74,7 @@ export function createChrome(context: ChromeContext): Chrome {
       );
       shell.mapSlot.replaceChildren(...(map === undefined ? [] : [map]));
       shell.layout.toggleAttribute("data-ak-map", map !== undefined);
-      renderActionRow(shell.actionsSlot, planActions(view), messages, (planned) => void act(planned));
+      renderActionRow(shell.actionsSlot, planActions(view, marking), messages, (planned) => void act(planned));
       renderAttempts(shell.attempts, view, messages);
       timers.update(view.timers, client.age());
       comment.update(view);

@@ -8,7 +8,7 @@ import { enter } from "./step-entry.js";
 import { catResponse, reconcile, supply } from "./step-host.js";
 import { act, move } from "./step-moves.js";
 import { isReview, reviewEnded } from "./step-review.js";
-import { resume, suspend, toggle } from "./step-session.js";
+import { mark, resume, suspend, toggle } from "./step-session.js";
 import { advance, expireUntil } from "./step-time.js";
 import { arrive, end, navigate } from "./step-walk.js";
 
@@ -95,6 +95,8 @@ export class SessionStep {
     switch (action.type) {
       case "time":
         return undefined;
+      case "mark":
+        return mark(step, action.item, action.marked);
       case "move":
         return move(step, action.to, at);
       case "support":
@@ -123,6 +125,8 @@ export class SessionStep {
     switch (action.type) {
       case "time":
         return undefined;
+      case "mark":
+        return mark(step, action.item, action.marked);
       case "support":
         return toggle(step, action.name, action.active, at);
       case "suspend":

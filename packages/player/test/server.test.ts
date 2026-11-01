@@ -43,6 +43,9 @@ import {
   abandonedToolFiles,
   adaptiveEngine,
   adaptiveFiles,
+  reviewEngine,
+  reviewFiles,
+  reviewPort,
   type ScriptedPort,
   scriptedPort,
 } from "./adaptive-fixture.js";
@@ -695,6 +698,7 @@ describe("the client-action policy", () => {
       review: true,
       solution: true,
       comment: true,
+      mark: true,
       move: true,
       support: true,
       "end-part": true,
@@ -907,6 +911,33 @@ describe("createSessionHost", () => {
     expect(viewOf(suspended).actions).toEqual(["resume"]);
     const resumed = await host.handle(ALICE, request(2, { type: "resume" }));
     expect(viewOf(resumed).status).toBe("in-progress");
+  });
+
+  it("lets a client mark an item for review in an exam, keeps the mark in the stored session, and shows it again after a reload", async () => {
+    const { host, store } = await examHost();
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(viewOf(started).actions).toContain("mark");
+    const marked = await host.handle(ALICE, request(1, { type: "mark", item: Q1, marked: true }));
+    expect(marked.refusal).toBeUndefined();
+    const marks = (view: CandidateView): string[] =>
+      view.navigation.flatMap((entry) => (entry.kind === "item" && entry.marked ? [entry.key.ref] : []));
+    expect(marks(viewOf(marked))).toEqual(["q1"]);
+    expect(deserializeState(store.records.get("exam-1")?.state ?? "").items.map(({ marked }) => marked)).toEqual([
+      true,
+    ]);
+    expect(marks(viewOf(await host.view(ALICE)))).toEqual(["q1"]);
+    const refused = await host.handle(
+      ALICE,
+      request(2, { type: "mark", item: { ref: "q2", instance: 1 }, marked: true }),
+    );
+    expect(refused.refusal?.code).toBe("unknown-item");
+  });
+
+  it("refuses a mark of a client that the policy does not allow it", async () => {
+    const { host } = await examHost({ clientActions: ["set-responses", "move"] });
+    const started = await host.start(ALICE, { seed: 7 });
+    expect(viewOf(started).actions).not.toContain("mark");
+    await expect(host.handle(ALICE, request(1, { type: "mark", item: Q1, marked: true }))).rejects.toThrow(DataError);
   });
 
   it("lets the proctor suspend and resume, and the candidate then sees the break and cannot end it", async () => {
@@ -1943,6 +1974,152 @@ describe("the option cat of the session host", () => {
   });
 });
 
+describe("a review step with a cap on changes", () => {
+  /** The wrapper of the recipe in the guide of the server, as the guide has it. */
+  const recipe = /const UNSUBMITTED[\s\S]*?^\}\);$/m.exec(serverGuide)?.[0];
+  if (recipe === undefined) throw new Error("The guide of the server has no recipe of a review step.");
+  const withReview = new Function(`${recipe}\nreturn withReview;`)() as (
+    engine: ReturnType<typeof reviewEngine>,
+    sections: readonly { refs: ReadonlySet<string>; length: number; maxChanges: number }[],
+  ) => ReturnType<typeof reviewEngine>;
+  const sections = [
+    { refs: new Set(["a1", "a2", "a3"]), length: 2, maxChanges: 1 },
+    { refs: new Set(["b1", "b2", "b3"]), length: 2, maxChanges: 1 },
+  ];
+
+  /** A session host, started, over the exam of two adaptive sections, with its wrapper counting the actions that reach the engine. */
+  async function reviewHost() {
+    const files = reviewFiles();
+    const port = reviewPort();
+    const engine = reviewEngine(files);
+    const wrapped = withReview(engine, sections);
+    const seen: CandidateAction["type"][] = [];
+    const counting = {
+      ...wrapped,
+      apply: (state: Parameters<typeof wrapped.apply>[0], action: Parameters<typeof wrapped.apply>[1]) => {
+        seen.push(action.type as CandidateAction["type"]);
+        return wrapped.apply(state, action);
+      },
+    };
+    const { host } = await examHost({ engine: counting, cat: port }, files);
+    const first = await host.start(ALICE, { seed: 7 });
+    let seq = 0;
+    return {
+      port,
+      seen,
+      host,
+      first,
+      send: async (action: CandidateAction) => {
+        seq += 1;
+        return host.handle(ALICE, request(seq, action));
+      },
+      repeat: async (sequence: number, action: CandidateAction) => host.handle(ALICE, request(sequence, action)),
+    };
+  }
+
+  const key = (ref: string) => ({ ref, instance: 1 });
+  const choose = (ref: string): CandidateAction => ({
+    type: "set-responses",
+    item: key(ref),
+    responses: new Map([["RESPONSE", single("identifier", "A")]]),
+  });
+  const submit = (ref: string): CandidateAction => ({ type: "submit", item: key(ref) });
+  const edit = (ref: string): CandidateAction => ({ type: "next-attempt", item: key(ref) });
+  const next: CandidateAction = { type: "move", to: "next" };
+  const previous: CandidateAction = { type: "move", to: "previous" };
+
+  /** Answers and submits the two items of the first section, each before it moves on. */
+  async function finishFirstSection(send: Awaited<ReturnType<typeof reviewHost>>["send"]): Promise<void> {
+    await send(choose("a1"));
+    await send(submit("a1"));
+    await send(next);
+    await send(choose("a2"));
+    await send(submit("a2"));
+  }
+
+  it("keeps the candidate going forward, one answer at a time, until the section is finished", async () => {
+    const { first, send } = await reviewHost();
+    expect(viewOf(first).current?.key).toEqual(key("a1"));
+    expect((await send(next)).refusal?.code).toBe("skipping-not-allowed");
+    expect((await send(edit("a1"))).refusal?.code).toBe("linear-backward");
+    await send(choose("a1"));
+    await send(submit("a1"));
+    expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
+    for (const action of [previous, edit("a2"), { type: "move", to: key("a1") } as const]) {
+      expect((await send(action)).refusal?.code, JSON.stringify(action)).toBe("linear-backward");
+    }
+    await send(choose("a2"));
+    expect((await send(submit("a2"))).refusal).toBeUndefined();
+  });
+
+  it("opens the review after the last answer, spends a change when an answer is opened, and refuses the one after the cap", async () => {
+    const { send } = await reviewHost();
+    await finishFirstSection(send);
+    expect(viewOf(await send(previous)).current?.key).toEqual(key("a1"));
+    expect((await send(edit("a1"))).refusal).toBeUndefined();
+    await send(choose("a1"));
+    await send(submit("a1"));
+    expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
+    expect((await send(edit("a2"))).refusal).toEqual({
+      code: "attempts-exhausted",
+      message: "No change is left.",
+    });
+  });
+
+  it("lets the candidate leave an edit open, go to another answer and come back to it", async () => {
+    const { send } = await reviewHost();
+    await finishFirstSection(send);
+    await send(previous);
+    await send(edit("a1"));
+    expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
+    const back = viewOf(await send(previous));
+    expect(back.current?.key).toEqual(key("a1"));
+    expect(back.current?.status).toBe("interacting");
+    expect((await send(submit("a1"))).refusal).toBeUndefined();
+  });
+
+  it("starts the second section closed, with a cap of its own, and shuts the first behind it", async () => {
+    const { send, port } = await reviewHost();
+    await finishFirstSection(send);
+    await send(previous);
+    await send(edit("a1"));
+    await send(submit("a1"));
+    expect(viewOf(await send(next)).current?.key).toEqual(key("a2"));
+    expect(viewOf(await send(next)).current?.key).toEqual(key("b1"));
+    expect(port.calls).toContain("createSession");
+    expect((await send(previous)).refusal?.code).toBe("linear-backward");
+    expect((await send(edit("b1"))).refusal?.code).toBe("linear-backward");
+    await send(choose("b1"));
+    await send(submit("b1"));
+    await send(next);
+    await send(choose("b2"));
+    await send(submit("b2"));
+    await send(previous);
+    expect((await send(edit("b1"))).refusal).toBeUndefined();
+  });
+
+  it("passes the actions it has no rule for: answering, a comment the engine refuses, the clock and the end of the part", async () => {
+    const { send, host } = await reviewHost();
+    expect((await send(choose("a1"))).refusal).toBeUndefined();
+    expect((await send(submit("a1"))).refusal).toBeUndefined();
+    expect((await send({ type: "comment", item: key("a1"), text: "Hm." })).refusal?.code).toBe("comment-not-allowed");
+    expect((await host.session(ALICE.session).apply({ type: "time" })).refusal).toBeUndefined();
+    expect((await send({ type: "end-part" })).refusal).toBeUndefined();
+  });
+
+  it("answers a repeated request with the stored answer, without calling the wrapper again", async () => {
+    const { send, repeat, seen } = await reviewHost();
+    await send(choose("a1"));
+    const refused = await send(next);
+    expect(refused.refusal?.code).toBe("skipping-not-allowed");
+    const calls = seen.length;
+    const again = await repeat(2, next);
+    expect(again.refusal).toEqual(refused.refusal);
+    expect(again.seq).toBe(refused.seq);
+    expect(seen).toHaveLength(calls);
+  });
+});
+
 describe("createToolScoreIntake", () => {
   const Item = { ref: "draw", instance: 1 };
   const Open = ["item:draw:1:SCORE", "item:draw:1:MAXSCORE"];
@@ -2372,6 +2549,7 @@ describe("the guide", () => {
       "@assesskit/player/server": await import("../src/server/index.js"),
       "@assesskit/runtime/delivery": await import("@assesskit/runtime/delivery"),
       "@assesskit/runtime/package": await import("@assesskit/runtime/package"),
+      "@assesskit/runtime/values": await import("@assesskit/runtime/values"),
     };
     expect(await runGuideSamples(serverGuide, modules)).toBeGreaterThan(0);
     expect(await runGuideSamples(assetGateGuide, modules)).toBeGreaterThan(0);

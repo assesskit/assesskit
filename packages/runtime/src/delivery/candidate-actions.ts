@@ -16,6 +16,7 @@ export const CANDIDATE_ACTION_TYPES: readonly CandidateAction["type"][] = [
   "review",
   "solution",
   "comment",
+  "mark",
   "move",
   "support",
   "end-part",

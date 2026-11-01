@@ -99,6 +99,7 @@ const actionSchema: Schema<CandidateAction> = v.variant("type", [
   v.strictObject({ type: v.picklist(["submit", "skip", "next-attempt", "review", "solution"]), ...itemSchema }),
   v.strictObject({ type: v.literal("end-attempt"), ...itemSchema, interaction: v.string() }),
   v.strictObject({ type: v.literal("comment"), ...itemSchema, text: v.string() }),
+  v.strictObject({ type: v.literal("mark"), ...itemSchema, marked: v.boolean() }),
   v.strictObject({
     type: v.literal("move"),
     to: v.union(
@@ -202,6 +203,9 @@ export function actionToJson(action: CandidateAction): unknown {
       break;
     case "comment":
       json = { type: action.type, item: itemKeyJson(action.item), text: action.text };
+      break;
+    case "mark":
+      json = { type: action.type, item: itemKeyJson(action.item), marked: action.marked };
       break;
     case "move":
       json = { type: action.type, to: typeof action.to === "string" ? action.to : itemKeyJson(action.to) };

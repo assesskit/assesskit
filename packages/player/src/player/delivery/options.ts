@@ -198,10 +198,20 @@ export interface DeliveryOptions extends MountOptions {
    * @defaultValue `2`
    */
   readonly headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
+  /**
+   * Whether the chrome offers Mark for review in a nonlinear part: a toggle button for the item presented, which the
+   * navigation map shows in words.
+   *
+   * @remarks
+   * The map shows a mark whoever made it. A linear part has no button, since a mark there has nowhere to lead.
+   *
+   * @defaultValue `false`
+   */
+  readonly marking?: boolean;
 }
 
 /** What `mountItem` needs: the options of `mountDelivery` without the chrome, the tools and the login of an LTI item. */
-export interface ItemMountOptions extends Omit<DeliveryOptions, "chrome" | "hooks"> {
+export interface ItemMountOptions extends Omit<DeliveryOptions, "chrome" | "hooks" | "marking"> {
   /**
    * Hooks of the host.
    *
@@ -291,6 +301,7 @@ type SharedOptions = Omit<ItemMountOptions, "hooks"> & {
   readonly resumeCheckMs?: unknown;
   readonly landmark?: unknown;
   readonly headingLevel?: unknown;
+  readonly marking?: unknown;
 };
 
 /** The deepest level of a heading in HTML. */
@@ -338,7 +349,14 @@ function checkSharedOptions(
  * type.
  */
 export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
-  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome", "resumeCheckMs", "landmark", "headingLevel"]);
+  checkSharedOptions(host, options, [
+    ...ITEM_OPTION_NAMES,
+    "chrome",
+    "resumeCheckMs",
+    "landmark",
+    "headingLevel",
+    "marking",
+  ]);
   if (options.landmark !== undefined) checkChoice(options.landmark, "The option landmark", ["main", "region"]);
   if (options.headingLevel !== undefined) {
     checkPositiveInteger(options.headingLevel, "The option headingLevel");
@@ -349,6 +367,7 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
     }
   }
   if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
+  if (options.marking !== undefined) checkBoolean(options.marking, "The option marking");
   if (options.resumeCheckMs !== undefined) {
     checkNonNegativeInteger(options.resumeCheckMs, "The option resumeCheckMs");
   }

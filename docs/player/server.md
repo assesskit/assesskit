@@ -386,6 +386,164 @@ Create the intake with `host: { session: (id) => host.session(id) }`, then the h
 A host that logs in other ways calls `settle` after its own log, or from a job. The intake does not publish the results: that is
 the job of the host, which calls `sessionScore` when the session is over, and again when a person or a tool supplies the rest.
 
+## A review step with a cap on changes
+
+An exam can let a candidate go through a section once, in order, and then review it and change a few answers (GMAT Focus: three
+changes in each of two sections). QTI has no session control that counts changes across items, and the engine needs none: the
+section is a nonlinear test part of its own whose items have `max-attempts="2"`, and the rule is a wrapper of the `Engine` that
+the session host takes. The host applies every action of a candidate through `engine.apply`, inside the save, so the refusal of
+the wrapper is in the envelope as a refusal of the engine, and a repeated `seq` gets the stored answer without calling it.
+
+```mermaid
+flowchart TD
+  action["move or next-attempt,<br/>the item presented in a listed section"] --> open{"Submitted items<br/>= length of the section?"}
+  open -->|"no"| order{"move next from a<br/>submitted item?"}
+  order -->|"no"| refuseOrder["refused: linear-backward,<br/>or skipping-not-allowed"]
+  order -->|"yes"| pass["engine.apply"]
+  open -->|"yes: the review is open"| cap{"next-attempt, and the items<br/>already changed = maxChanges?"}
+  cap -->|"yes"| refuseCap["refused: attempts-exhausted"]
+  cap -->|"no"| pass
+```
+
+| Part of the recipe        | How                                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The section               | A nonlinear test part of its own with individual submission and `max-attempts="2"` on its items. `refs` is the set of its item references, its pool in an adaptive section; `length` says how many items it gives |
+| No going back             | Until the submitted items of the section reach its `length`, the wrapper refuses every `move` but `next`, a `next` from an item not submitted, and `next-attempt`                                                 |
+| An item that is submitted | Its `numAttempts` is above 1, or its `sessionStatus` is neither `initial` nor `pendingSubmission`, so that an edit in progress keeps the review open                                                              |
+| The cap                   | It counts the items of the section with a `numAttempts` of 2 and refuses `next-attempt` at `maxChanges`. An attempt counts from its start, so opening an answer to edit it spends a change                        |
+| A section after another   | The wrapper reads only the results of the section of the item presented, so a later section starts closed with a cap of its own                                                                                   |
+| The end                   | `end-part`, or the clock of the part, which also ends the step when no time is left                                                                                                                               |
+| The score                 | The final report is scored (`scoreTheta` of measurekit for an adaptive test), so that no answer depends on a closed CAT session                                                                                   |
+
+```ts
+import { createEngine } from "@assesskit/runtime/delivery";
+import { openPackage, packageResolvers } from "@assesskit/runtime/package";
+import { single } from "@assesskit/runtime/values";
+
+const ASI = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
+const refs = ["a1", "a2", "b1", "b2"];
+const item = (
+  id,
+) => `<qti-assessment-item xmlns="${ASI}" identifier="${id}" title="Question ${id}" adaptive="false" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>
+  <qti-item-body><qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+    <qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice>
+  </qti-choice-interaction></qti-item-body>
+</qti-assessment-item>`;
+const section = (id, ...items) =>
+  `<qti-assessment-section identifier="${id}" title="${id}" visible="true">${items
+    .map((ref) => `<qti-assessment-item-ref identifier="${ref}" href="../items/${ref}.xml"/>`)
+    .join("")}</qti-assessment-section>`;
+const files = new Map(
+  Object.entries({
+    "imsmanifest.xml": `<manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="package">
+      <metadata><schema>QTI Package</schema><schemaversion>3.0.0</schemaversion></metadata>
+      <organizations/>
+      <resources>
+        <resource identifier="exam" type="imsqti_test_xmlv3p0" href="tests/exam.xml"><file href="tests/exam.xml"/></resource>
+        ${refs.map((ref) => `<resource identifier="${ref}" type="imsqti_item_xmlv3p0" href="items/${ref}.xml"><file href="items/${ref}.xml"/></resource>`).join("")}
+      </resources>
+    </manifest>`,
+    "tests/exam.xml": `<qti-assessment-test xmlns="${ASI}" identifier="exam" title="Exam">
+      <qti-test-part identifier="part" navigation-mode="nonlinear" submission-mode="individual">
+        <qti-item-session-control max-attempts="2"/>
+        ${section("first", "a1", "a2")}${section("second", "b1", "b2")}
+      </qti-test-part>
+    </qti-assessment-test>`,
+    ...Object.fromEntries(refs.map((ref) => [`items/${ref}.xml`, item(ref)])),
+  }).map(([path, text]) => [path, new TextEncoder().encode(text)]),
+);
+const pkg = openPackage({ paths: [...files.keys()].sort(), read: (path) => files.get(path) });
+const test = pkg.document("tests/exam.xml");
+if (test.kind !== "test") throw new Error("The document is not a test.");
+const engine = createEngine({
+  kind: "test",
+  test: test.test,
+  base: "tests/exam.xml",
+  resolvers: packageResolvers(pkg),
+});
+
+const UNSUBMITTED = ["initial", "pendingSubmission"];
+const numAttempts = (result) =>
+  result.variables.find(({ identifier }) => identifier === "numAttempts")?.candidateResponse?.value ?? 0;
+const isSubmitted = (result) => numAttempts(result) > 1 || !UNSUBMITTED.includes(result.sessionStatus);
+const refused = (code, message) => ({ ok: false, refusal: { code, message } });
+
+// A section is { refs, length, maxChanges }; an action outside the sections, and every action but a move and a new attempt, passes.
+const withReview = (engine, sections) => ({
+  ...engine,
+  apply(state, action) {
+    const section = sections.find(({ refs }) => refs.has(state.current?.ref));
+    if (section === undefined || (action.type !== "move" && action.type !== "next-attempt")) {
+      return engine.apply(state, action);
+    }
+    const results = engine.results(state).itemResults.filter(({ identifier }) => section.refs.has(identifier));
+    if (results.filter(isSubmitted).length < section.length) {
+      if (action.type !== "move" || action.to !== "next") {
+        return refused("linear-backward", "The review opens after the last item.");
+      }
+      if (!isSubmitted(results.find(({ identifier }) => identifier === state.current.ref))) {
+        return refused("skipping-not-allowed", "Submit this answer first.");
+      }
+    } else if (
+      action.type === "next-attempt" &&
+      results.filter((result) => numAttempts(result) > 1).length >= section.maxChanges
+    ) {
+      return refused("attempts-exhausted", "No change is left.");
+    }
+    return engine.apply(state, action);
+  },
+});
+const sections = [
+  { refs: new Set(["a1", "a2"]), length: 2, maxChanges: 1 },
+  { refs: new Set(["b1", "b2"]), length: 2, maxChanges: 1 },
+];
+const reviewing = withReview(engine, sections);
+
+// The session host takes it in place of the engine: createSessionHost({ engine: reviewing, store, scheduler, clock, gate, packages }).
+let at = 0;
+let state = reviewing.start({ seed: 1, at }).state;
+const play = (action) => {
+  at += 1;
+  const step = reviewing.apply(state, { ...action, at });
+  if (step.ok) state = step.state;
+  return step.ok ? "accepted" : step.refusal.code;
+};
+const key = (ref) => ({ ref, instance: 1 });
+const answer = (ref) => ({
+  type: "set-responses",
+  item: key(ref),
+  responses: new Map([["RESPONSE", single("identifier", "A")]]),
+});
+
+play({ type: "move", to: "next" }); // => "skipping-not-allowed"
+play(answer("a1")); // => "accepted"
+play({ type: "submit", item: key("a1") }); // => "accepted"
+play({ type: "move", to: "next" }); // => "accepted"
+play({ type: "move", to: "previous" }); // => "linear-backward"
+play({ type: "next-attempt", item: key("a2") }); // => "linear-backward"
+play({ type: "submit", item: key("a2") }); // => "accepted"
+play({ type: "move", to: "previous" }); // => "accepted"
+play({ type: "next-attempt", item: key("a1") }); // => "accepted"
+play({ type: "submit", item: key("a1") }); // => "accepted"
+play({ type: "move", to: "next" }); // => "accepted"
+play({ type: "next-attempt", item: key("a2") }); // => "attempts-exhausted"
+play({ type: "move", to: "next" }); // => "accepted"
+state.current.ref; // => "b1"
+play({ type: "move", to: "previous" }); // => "linear-backward"
+```
+
+The first `move` is refused because `a1` is not submitted; after the last item of the first section is submitted the review is open, and
+the first change is spent when `a1` opens its second attempt. The second section starts closed, with a cap of its own. The wrapper lives
+in the host, so another host of the same exam has no such rule: the compile of the form names it as the rule of that exam.
+
+| Failure                                | Result                                                                                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| The wrapper throws                     | The request fails and nothing is saved, as for a store that fails                             |
+| The wrapper is slow                    | It runs in the request, and `engine.results` is linear in the items                           |
+| A repeated request                     | The stored answer is returned without calling the wrapper, whatever the wrapper would say now |
+| A local session (`createLocalSession`) | It builds its own engine and takes no wrapper: a device session is practice                   |
+
 ## Errors
 
 The host throws the runtime's `DataError` for a request it refuses and the player's `AccessError` and `ServiceError` for the rest; the route of the host maps them to statuses.
