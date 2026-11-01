@@ -14,7 +14,7 @@ import {
   InteractionElement,
   type InteractionFiles,
 } from "../src/player/index.js";
-import { audioContextRuns } from "./audio.js";
+import { audioContextRuns, needsAudio } from "./audio.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
@@ -1047,7 +1047,9 @@ describe("upload", () => {
   });
 
   it("records in a type that the interaction accepts, and sends the recording, asking for the microphone only when pressed", async (context) => {
-    if (typeof MediaRecorder === "undefined" || !(await audioContextRuns())) context.skip();
+    // The WebKit of Playwright on Linux has no MediaRecorder.
+    if (typeof MediaRecorder === "undefined") context.skip();
+    await needsAudio(context, audioContextRuns());
     const microphone = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(fakeMicrophone);
     const files = fakeFiles();
     const scene = mountScene(Declaration, Body('type="audio/webm audio/ogg audio/mp4"'), { options: { files } });

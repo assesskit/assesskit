@@ -1,17 +1,24 @@
+import { inject } from "vitest";
 import { userEvent } from "vitest/browser";
+
+/**
+ * The longest a sound device may take to start an audio context or to play a short recording to its end, in milliseconds.
+ * A host with a device answers within a moment; one without never does, and this bound only ends that wait.
+ */
+const DEVICE_WAIT_MS = 10_000;
 
 let contexts: Promise<boolean> | undefined;
 
 /**
- * Whether an audio context starts within a second, which a recording of a stream needs. A sandbox without a sound device
- * has a context that never starts, so a test that records skips itself there and runs in the engines that have one.
+ * Whether an audio context starts, which a recording of a stream needs. A host without a sound device has a context that
+ * never starts.
  */
 export function audioContextRuns(): Promise<boolean> {
   contexts ??= (async () => {
     // A browser starts an audio context only after a gesture of the person.
     await userEvent.click(document.body);
     const context = new AudioContext();
-    await Promise.race([context.resume(), new Promise((done) => setTimeout(done, 1000))]);
+    await Promise.race([context.resume(), new Promise((done) => setTimeout(done, DEVICE_WAIT_MS))]);
     const running = context.state === "running";
     await context.close();
     return running;
@@ -23,8 +30,7 @@ let playbacks: Promise<boolean> | undefined;
 
 /**
  * Whether audio plays to its end in the markup the player uses, an `audio` element with a `source`, which the counting
- * of plays needs. A sandbox without a sound device can leave playback where it started, so a test that plays to the end
- * skips itself there.
+ * of plays needs. A host without a sound device can leave playback where it started.
  */
 export function audioPlaysToEnd(url: string): Promise<boolean> {
   playbacks ??= (async () => {
@@ -34,11 +40,31 @@ export function audioPlaysToEnd(url: string): Promise<boolean> {
     source.src = url;
     audio.append(source);
     document.body.append(audio);
+    const ended = new Promise<boolean>((done) => {
+      audio.addEventListener("ended", () => done(true), { once: true });
+      setTimeout(() => done(false), DEVICE_WAIT_MS);
+    });
     await audio.play().catch(() => undefined);
-    await new Promise((done) => setTimeout(done, 1500));
-    const ended = audio.ended;
+    const played = await ended;
     audio.remove();
-    return ended;
+    return played;
   })();
   return playbacks;
+}
+
+/**
+ * Skips a test that needs a sound device when the host has none. A host that says it has one, with `REQUIRE_AUDIO=1`, fails
+ * the test instead, so that a missing device cannot turn a test into a skip unseen.
+ *
+ * @param context - The context of the test.
+ * @param available - What the probe of the device says, such as {@link audioContextRuns}.
+ */
+export async function needsAudio(context: { skip(): never }, available: Promise<boolean>): Promise<void> {
+  if (await available) return;
+  if (inject("requireAudio")) {
+    throw new Error(
+      "REQUIRE_AUDIO says that the host has a sound device, and the browser has no audio output that works.",
+    );
+  }
+  context.skip();
 }

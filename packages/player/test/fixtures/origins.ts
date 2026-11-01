@@ -11,5 +11,7 @@ export interface FixtureOrigins {
 declare module "vitest" {
   interface ProvidedContext {
     fixtures: FixtureOrigins;
+    /** Whether the host has a sound device (`REQUIRE_AUDIO=1`), so that a test that needs one fails without it and does not skip. */
+    requireAudio: boolean;
   }
 }

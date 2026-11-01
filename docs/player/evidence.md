@@ -64,6 +64,14 @@ Safari on macOS leaves form controls out of the tab order unless the person turn
 control and press its keys. `elements.browser.corpus.test.ts` renders every item of the examples that has one of these
 interactions, answers each, and runs axe on it.
 
+**Audio.** The tests that play a recording to its end, follow its playback with a companion, count its plays and record a
+stream need an audio output. A Linux host with no sound card has none, so `scripts/linux-audio.sh` starts PulseAudio with a
+sink that plays to nowhere, and all three engines then play and record. With `REQUIRE_AUDIO=1` a test that needs audio fails
+when the output is missing, and does not skip; without it the test skips, so that a laptop with no device still runs the rest.
+CI and the container below set it. Two tests skip in WebKit on Linux, for a reason that is not the device: the WebKit of
+Playwright there has no `MediaRecorder`, so the test of the recorder of the browser and the test of a recording in a type that
+the interaction accepts run in Chromium and Firefox, and the WAV recording through the worklet runs in all three.
+
 The tests of the graphic interactions ([graphics](graphics.md)) show items through `graphic-fixture.ts`, which waits for the
 pictures, keeps what a drawing uploads in memory and gives the interactions of `interactions-fixture.ts` their pictures as
 `data:` URLs that the test draws on a canvas. `graphic.browser.corpus.test.ts` renders the graphic items of the 1EdTech
@@ -122,8 +130,9 @@ beside the repository at `/measurekit` and `/interopkit`:
 docker run --rm --ipc=host --volume "$PWD":/src:ro --volume "$PWD/../measurekit":/measurekit:ro --volume "$PWD/../interopkit":/interopkit:ro mcr.microsoft.com/playwright:v1.64.1-noble bash -c '
   mkdir /work && tar -C /src --exclude=node_modules --exclude=.git --exclude=dist --exclude=.cache -cf - . | tar -C /work -xf - &&
   cd /work && npm install --global pnpm@12.8.1 && pnpm install --frozen-lockfile --ignore-scripts &&
+  apt-get update && apt-get install -y pulseaudio && sh scripts/linux-audio.sh &&
   pnpm schemas && pnpm exec playwright install chromium firefox webkit &&
-  pnpm schemas && pnpm corpus && pnpm test:browser && pnpm test:corpus'
+  pnpm schemas && pnpm corpus && REQUIRE_AUDIO=1 pnpm test:browser && pnpm test:corpus'
 ```
 
 ## Tests of the shell, the clients and the gate

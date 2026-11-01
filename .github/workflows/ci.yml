@@ -120,6 +120,9 @@ jobs:
   # WebKit, and its tests of the asset gate over the same examples, which run in Node.
   browsers:
     runs-on: ubuntu-latest
+    # The runner has no sound card: scripts/linux-audio.sh gives the browsers an output, and a test that needs audio fails without it.
+    env:
+      REQUIRE_AUDIO: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -131,6 +134,8 @@ jobs:
       - run: pnpm schemas
       - run: pnpm corpus
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: sudo apt-get install -y pulseaudio
+      - run: scripts/linux-audio.sh
       # Chromium runs with coverage, the one engine that reports it, and holds the floors of the folders that draw a page.
       - run: pnpm test:coverage:browser
       - run: BROWSERS=firefox,webkit pnpm test:browser

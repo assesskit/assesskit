@@ -19,7 +19,7 @@ import {
   type SpeechHook,
   type SpeechRequest,
 } from "../src/player/index.js";
-import { audioPlaysToEnd } from "./audio.js";
+import { audioPlaysToEnd, needsAudio } from "./audio.js";
 import { computed, mount, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 import { axeViolations, ITEM_PATH } from "./renderer-fixture.js";
@@ -1347,7 +1347,7 @@ describe("supports and a media interaction", () => {
   });
 
   it("makes the audio of a description follow the player, with no controls and no sound of its own", async (context) => {
-    if (!(await audioPlaysToEnd(`${ASSETS}${Tone}`))) context.skip();
+    await needsAudio(context, audioPlaysToEnd(`${ASSETS}${Tone}`));
     const { root, supports, recording } = await open();
     supports.update([onSupport("audio-description")]);
     const companion = el<HTMLAudioElement>(root.root, "[data-ak-card='audio-description'] audio");

@@ -158,6 +158,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     response.end("reached");
   });
   project.provide("fixtures", { asset: asset.origin, other: other.origin, stranger: stranger.origin });
+  project.provide("requireAudio", process.env.REQUIRE_AUDIO === "1");
   return async () => {
     await Promise.all([asset, other, stranger].map(({ server }) => close(server)));
     await schemas?.then((set) => set.close(), () => undefined);

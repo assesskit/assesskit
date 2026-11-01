@@ -2,7 +2,7 @@ import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { followPlayback, Playback, type PlaybackNotice } from "../src/player/media/index.js";
-import { audioPlaysToEnd } from "./audio.js";
+import { audioPlaysToEnd, needsAudio } from "./audio.js";
 import { ASSETS, mountScene, type Scene } from "./interactions-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
@@ -21,10 +21,9 @@ const BODY = (
   <audio><source src="media/${source}.wav" type="audio/wav"/><track kind="captions" src="media/captions.vtt" srclang="en" label="English"/></audio>
 </qti-media-interaction>`;
 
-/** Skips a test that plays a recording to its end where the engine cannot: a sandbox without a sound device. */
-async function needsPlaybackToEnd(context: { skip(): never }): Promise<void> {
-  if (!(await audioPlaysToEnd(`${ASSETS}items/q1/media/blip.wav`))) context.skip();
-}
+/** Skips a test that plays a recording to its end where the host has no sound device. */
+const needsPlaybackToEnd = (context: { skip(): never }): Promise<void> =>
+  needsAudio(context, audioPlaysToEnd(`${ASSETS}items/q1/media/blip.wav`));
 
 const audioOf = (scene: Scene): HTMLAudioElement => scene.find<HTMLAudioElement>("audio");
 const button = (scene: Scene, name: string): HTMLButtonElement =>

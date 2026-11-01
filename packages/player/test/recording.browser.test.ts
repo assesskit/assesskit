@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { chooseRecording, startRecording } from "../src/player/recording/index.js";
-import { audioContextRuns } from "./audio.js";
+import { audioContextRuns, needsAudio } from "./audio.js";
 import { STATIC_URL } from "./interactions-fixture.js";
 
 /** The URL of the worklet that the asset origin of the tests serves. */
@@ -84,7 +84,9 @@ describe("recording", () => {
   });
 
   it("records with the recorder of the browser into a blob of the type", async (context) => {
-    if (typeof MediaRecorder === "undefined" || !(await audioContextRuns())) context.skip();
+    // The WebKit of Playwright on Linux has no MediaRecorder.
+    if (typeof MediaRecorder === "undefined") context.skip();
+    await needsAudio(context, audioContextRuns());
     const type = ["audio/webm", "audio/ogg", "audio/mp4"].find((candidate) => MediaRecorder.isTypeSupported(candidate));
     expect(type).toBeDefined();
     const recording = await startRecording(await tone(), { kind: "recorder", mimeType: type ?? "" }, WORKLET);
@@ -95,7 +97,7 @@ describe("recording", () => {
   });
 
   it("records 16-bit mono PCM through the worklet into a WAV file", async (context) => {
-    if (!(await audioContextRuns())) context.skip();
+    await needsAudio(context, audioContextRuns());
     const stream = await tone();
     const recording = await startRecording(stream, { kind: "wav", mimeType: "audio/wav" }, WORKLET);
     await new Promise((done) => setTimeout(done, 400));
