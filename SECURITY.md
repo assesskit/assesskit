@@ -239,8 +239,7 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 
 Every limit is a positive integer that a caller can replace per call, field by field, with the option named above its table;
 a limit left out keeps its default. Input over a limit is a `SecurityError` whose `limit` is the limit's name, except a
-regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing, and an action of a
-client, which is a `DataError` from `parseCandidateAction`. Each default is a safety factor over the largest value among the
+regular expression, which is a `DataError` from `compileXsdRegex` and a `ProcessingError` in processing. Each default is a safety factor over the largest value among the
 1EdTech QTI 3.0 examples, where the examples have one.
 
 XML (`XmlLimits`; option `limits` of `parseXml`, `resolveIncludes`, `readAsi`, `readManifest` and the other readers, and

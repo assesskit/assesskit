@@ -124,6 +124,7 @@ export interface SessionHost {
    * @returns The envelope that answers it.
    * @throws `AccessError` (`not-bound`) when the session is not bound to the caller's principal.
    * @throws `DataError` when the envelope or the action is not valid, the action is outside the policy, or the sequence number is stale.
+   * @throws `SecurityError` when the action is above a limit of `limits`.
    * @throws `ServiceError` when the session cannot be saved after the retries.
    * @throws `signal.reason` when the signal aborts before a load, including the load of a retry. Nothing was applied.
    */

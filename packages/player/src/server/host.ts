@@ -315,7 +315,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     now: number,
     signal: AbortSignal | undefined,
   ): Promise<Attempt<ViewEnvelope>> => {
-    const action = parseCandidateAction(envelope.action, limits);
+    const action = parseCandidateAction(envelope.action, { limits });
     checkClientAction(policy, action.type);
     const state = deserializeState(stored.state);
     const { step, at } = stepAfterIdle(idle, { state, action, now, maxIdle });

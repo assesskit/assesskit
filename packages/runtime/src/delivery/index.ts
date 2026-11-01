@@ -14,7 +14,13 @@
  * @module @assesskit/runtime/delivery
  */
 export type { Action, CandidateAction, HostAction } from "./action.js";
-export { type ActionLimits, actionToJson, DEFAULT_ACTION_LIMITS, parseCandidateAction } from "./action-json.js";
+export {
+  type ActionLimits,
+  actionToJson,
+  DEFAULT_ACTION_LIMITS,
+  type ParseCandidateActionOptions,
+  parseCandidateAction,
+} from "./action-json.js";
 export type {
   CandidateItem,
   CandidateView,

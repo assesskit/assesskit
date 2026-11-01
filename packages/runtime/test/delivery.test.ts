@@ -4558,20 +4558,28 @@ describe("candidate actions", () => {
   it("refuses an action larger than the limit maxActionSize, and a PCI state longer than maxPciStateLength", () => {
     const comment = (text: string): unknown => actionToJson({ type: "comment", item, text });
     expect(DEFAULT_ACTION_LIMITS).toEqual({ maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 });
-    expect(parseCandidateAction(comment("x".repeat(100)), { maxActionSize: 200 })).toMatchObject({ type: "comment" });
-    expect(() => parseCandidateAction(comment("x".repeat(300)), { maxActionSize: 200 })).toThrow(
+    expect(parseCandidateAction(comment("x".repeat(100)), { limits: { maxActionSize: 200 } })).toMatchObject({
+      type: "comment",
+    });
+    expect(() => parseCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
       "The action is larger than the limit maxActionSize of 200.",
+    );
+    expect(() => parseCandidateAction(comment("x".repeat(300)), { limits: { maxActionSize: 200 } })).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxActionSize", value: 200 }),
     );
     expect(() => parseCandidateAction(comment("x".repeat(DEFAULT_ACTION_LIMITS.maxActionSize)))).toThrow(
       "The action is larger than the limit maxActionSize of 4194304.",
     );
     const pci = (state: string): unknown =>
       actionToJson({ type: "set-responses", item, responses: new Map(), pciStates: new Map([["P", state]]) });
-    expect(parseCandidateAction(pci("x".repeat(10)), { maxPciStateLength: 10 })).toMatchObject({
+    expect(parseCandidateAction(pci("x".repeat(10)), { limits: { maxPciStateLength: 10 } })).toMatchObject({
       type: "set-responses",
     });
-    expect(() => parseCandidateAction(pci("x".repeat(11)), { maxPciStateLength: 10 })).toThrow(
+    expect(() => parseCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
       'The PCI state of "P" has 11 code units, more than the limit maxPciStateLength of 10.',
+    );
+    expect(() => parseCandidateAction(pci("x".repeat(11)), { limits: { maxPciStateLength: 10 } })).toThrow(
+      expect.objectContaining({ name: "SecurityError", limit: "maxPciStateLength", value: 10 }),
     );
     expect(() => parseCandidateAction(pci("x".repeat(DEFAULT_ACTION_LIMITS.maxPciStateLength + 1)))).toThrow(
       /more than the limit maxPciStateLength of 1048576\.$/,
@@ -4583,7 +4591,7 @@ describe("candidate actions", () => {
         responses: Array.from({ length: 300 }, (_, at) => [`R${at}`, null]),
       }),
     );
-    expect(() => parseCandidateAction(many, { maxActionSize: 1_000 })).toThrow(
+    expect(() => parseCandidateAction(many, { limits: { maxActionSize: 1_000 } })).toThrow(
       "The action is larger than the limit maxActionSize of 1000.",
     );
     expect(parseCandidateAction(many)).toMatchObject({ type: "set-responses" });
@@ -4595,7 +4603,7 @@ describe("candidate actions", () => {
     expect(() => parseCandidateAction(deep)).toThrow(/^The action is invalid at type: /);
     const cycle: unknown[] = [];
     cycle.push(cycle);
-    expect(() => parseCandidateAction(cycle, { maxActionSize: 10_000 })).toThrow(
+    expect(() => parseCandidateAction(cycle, { limits: { maxActionSize: 10_000 } })).toThrow(
       "The action is larger than the limit maxActionSize of 10000.",
     );
   });
@@ -4603,10 +4611,13 @@ describe("candidate actions", () => {
   it("refuses limits of other types", () => {
     const input = actionToJson({ type: "end-test" });
     expect(() => parseCandidateAction(input, json("null"))).toThrow("The options must be an object, found null.");
-    expect(() => parseCandidateAction(input, json('{"maxActionSize":"1"}'))).toThrow(
+    expect(() => parseCandidateAction(input, json('{"limits":null}'))).toThrow(
+      "The option limits must be an object, found null.",
+    );
+    expect(() => parseCandidateAction(input, json('{"limits":{"maxActionSize":"1"}}'))).toThrow(
       'The limit maxActionSize must be a positive integer, found "1".',
     );
-    expect(() => parseCandidateAction(input, { maxPciStateLength: 0 })).toThrow(
+    expect(() => parseCandidateAction(input, { limits: { maxPciStateLength: 0 } })).toThrow(
       "The limit maxPciStateLength must be a positive integer, found 0.",
     );
   });

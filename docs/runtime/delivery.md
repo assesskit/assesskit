@@ -45,51 +45,51 @@ sequenceDiagram
   Host-->>Client: viewToJson(view)
 ```
 
-| Function or type                                              | Does                                                                                           |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `createEngine(definition, options?)`                          | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.       |
-| `stamp(state, action, now)`                                   | The action with `at` = max(`now`, the time of the latest step).                                |
-| `viewToJson(view)`, `viewFromJson(json)`                      | The JSON form of a `CandidateView`, and the view of a JSON form.                               |
-| `actionToJson(action)`, `parseCandidateAction(json, limits?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.             |
-| `CandidateView`, `CandidateItem`, `NavigationEntry`, …        | What the candidate sees: the item, the navigation map, timers, actions and supports.           |
-| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                       | The limits of `parseCandidateAction`.                                                          |
-| `serializeState(state)`, `deserializeState(text)`             | The JSON text of a state, and the state of a text, with the version of the format.             |
-| `DeliveryState`, `Step`, `Deadline`                           | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
-| `CandidateAction`, `HostAction`, `Action`                     | The actions of the candidate and the host, with their time.                                    |
-| `DeliveryDefinition`, `EngineOptions`, `StartOptions`         | What the engine delivers, its options, and the options of a session.                           |
-| `drainCat(engine, state, port, now, options?)`                | Makes the waiting requests of CAT engines through a `CatPort` and applies each answer.         |
-| `sendCatRequest(port, request)`                               | Makes one CAT request through a `CatPort` and returns the answer for a `cat-response` action.  |
-| `DrainCatOptions`                                             | The options of `drainCat`: `signal`.                                                           |
-| `PendingWork`, `ScoringRequest`, `CatRequest`                 | What the engine waits on the host for: scores and answers of CAT engines.                      |
-| `ScorerView`, `ScorerItem`                                    | What a scorer needs to rate a request, correct responses included.                             |
-| `CatSession`, `CatSectionRef`                                 | The session of an adaptive section in a state, and where its CAT engine is.                    |
-| `resolveStructure(test, base, resolvers)`                     | The `TestStructure`: parts, sections and item references, section references replaced.         |
-| `planTest(structure, options)`                                | A `TestPlan`: the sections and item instances of one session.                                  |
-| `planItems(plan, part?)`                                      | The item instances of a plan, or of one test part, in order of presentation.                   |
-| `nextItem(structure, plan, from, rules)`                      | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
-| `previousItem(structure, plan, from)`                         | The item before `from`, in a nonlinear part.                                                   |
-| `sessionControl(item)`                                        | The item session control of an item reference after inheritance.                               |
-| `timeLimits(node, extra?)`                                    | The time limits of the test, a part, a section or an item reference, with extra time.          |
-| `additionalTestingTime(profile)`                              | The extra testing time of a PNP.                                                               |
-| `ancestry(node)`, `partOf(node)`                              | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
-| `ItemKey`                                                     | An item instance: the identifier of the item reference and the instance, from 1.               |
-| `TestPlan`, `PlannedPart`, `PlannedSection`, …                | The plan: plain data, identifiers and numbers only.                                            |
-| `TestNode`, `PartNode`, `SectionNode`, …                      | The nodes of the structure, with their models and the path of the document that holds them.    |
-| `RuleContext`                                                 | What pre-conditions and branch rules read.                                                     |
-| `EffectiveSessionControl`, `EffectiveTimeLimits`              | The results of `sessionControl` and `timeLimits`.                                              |
-| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`            | The limit on the size of a plan, and the options of `planTest`.                                |
-| `startItemSession(key, at, context, options?)`                | A new item session in the state `initial`, after template processing.                          |
-| `presentItem(session, at, context)`                           | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
-| `suspendItem(session, at)`                                    | Suspends an interacting session, as when the candidate moves to another item.                  |
-| `closeItem(session, at, context)`                             | Closes the session, ending an open attempt with its drafts.                                    |
-| `applyItemAction(session, action, context)`                   | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
-| `itemFeedback(session, item, control)`                        | The outcomes that decide the feedback shown in the state of the session.                       |
-| `itemResponses(session)`                                      | The responses the item shows: drafts, submitted responses, or the solution.                    |
-| `resultStatus(session, item)`                                 | The session status of Results Reporting.                                                       |
-| `standaloneSessionControl(control?)`                          | The item session control of an item delivered alone.                                           |
-| `ItemSession`, `ItemSessionStatus`                            | The state of an item session: plain data with its variables, drafts and attempts.              |
-| `ItemSessionContext`, `ItemAction`, `ItemStep`                | What a step reads besides the session, the actions of the candidate, and the result of a step. |
-| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                  | Why a step is refused, and what an accepted step reports.                                      |
+| Function or type                                               | Does                                                                                           |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `createEngine(definition, options?)`                           | The `Engine`: `start`, `apply`, `deadlines`, `view`, `pending`, `scorerView`, `results`.       |
+| `stamp(state, action, now)`                                    | The action with `at` = max(`now`, the time of the latest step).                                |
+| `viewToJson(view)`, `viewFromJson(json)`                       | The JSON form of a `CandidateView`, and the view of a JSON form.                               |
+| `actionToJson(action)`, `parseCandidateAction(json, options?)` | The JSON form of a candidate action, and the action of a JSON form, within limits.             |
+| `CandidateView`, `CandidateItem`, `NavigationEntry`, …         | What the candidate sees: the item, the navigation map, timers, actions and supports.           |
+| `DEFAULT_ACTION_LIMITS`, `ActionLimits`                        | The limits of `parseCandidateAction`.                                                          |
+| `serializeState(state)`, `deserializeState(text)`              | The JSON text of a state, and the state of a text, with the version of the format.             |
+| `DeliveryState`, `Step`, `Deadline`                            | A candidate session as plain data, the result of a step, a time limit as an absolute time.     |
+| `CandidateAction`, `HostAction`, `Action`                      | The actions of the candidate and the host, with their time.                                    |
+| `DeliveryDefinition`, `EngineOptions`, `StartOptions`          | What the engine delivers, its options, and the options of a session.                           |
+| `drainCat(engine, state, port, now, options?)`                 | Makes the waiting requests of CAT engines through a `CatPort` and applies each answer.         |
+| `sendCatRequest(port, request)`                                | Makes one CAT request through a `CatPort` and returns the answer for a `cat-response` action.  |
+| `DrainCatOptions`                                              | The options of `drainCat`: `signal`.                                                           |
+| `PendingWork`, `ScoringRequest`, `CatRequest`                  | What the engine waits on the host for: scores and answers of CAT engines.                      |
+| `ScorerView`, `ScorerItem`                                     | What a scorer needs to rate a request, correct responses included.                             |
+| `CatSession`, `CatSectionRef`                                  | The session of an adaptive section in a state, and where its CAT engine is.                    |
+| `resolveStructure(test, base, resolvers)`                      | The `TestStructure`: parts, sections and item references, section references replaced.         |
+| `planTest(structure, options)`                                 | A `TestPlan`: the sections and item instances of one session.                                  |
+| `planItems(plan, part?)`                                       | The item instances of a plan, or of one test part, in order of presentation.                   |
+| `nextItem(structure, plan, from, rules)`                       | The item to present after `from`, or the first item; pre-conditions and branch rules apply.    |
+| `previousItem(structure, plan, from)`                          | The item before `from`, in a nonlinear part.                                                   |
+| `sessionControl(item)`                                         | The item session control of an item reference after inheritance.                               |
+| `timeLimits(node, extra?)`                                     | The time limits of the test, a part, a section or an item reference, with extra time.          |
+| `additionalTestingTime(profile)`                               | The extra testing time of a PNP.                                                               |
+| `ancestry(node)`, `partOf(node)`                               | The nodes that enclose a node, outermost first; the test part of a section or item reference.  |
+| `ItemKey`                                                      | An item instance: the identifier of the item reference and the instance, from 1.               |
+| `TestPlan`, `PlannedPart`, `PlannedSection`, …                 | The plan: plain data, identifiers and numbers only.                                            |
+| `TestNode`, `PartNode`, `SectionNode`, …                       | The nodes of the structure, with their models and the path of the document that holds them.    |
+| `RuleContext`                                                  | What pre-conditions and branch rules read.                                                     |
+| `EffectiveSessionControl`, `EffectiveTimeLimits`               | The results of `sessionControl` and `timeLimits`.                                              |
+| `DEFAULT_PLAN_LIMITS`, `PlanLimits`, `PlanOptions`             | The limit on the size of a plan, and the options of `planTest`.                                |
+| `startItemSession(key, at, context, options?)`                 | A new item session in the state `initial`, after template processing.                          |
+| `presentItem(session, at, context)`                            | Presents the item: the first time it starts the first attempt; a suspended session resumes.    |
+| `suspendItem(session, at)`                                     | Suspends an interacting session, as when the candidate moves to another item.                  |
+| `closeItem(session, at, context)`                              | Closes the session, ending an open attempt with its drafts.                                    |
+| `applyItemAction(session, action, context)`                    | Applies an action of the candidate: responses, submit, skip, end attempt, review and more.     |
+| `itemFeedback(session, item, control)`                         | The outcomes that decide the feedback shown in the state of the session.                       |
+| `itemResponses(session)`                                       | The responses the item shows: drafts, submitted responses, or the solution.                    |
+| `resultStatus(session, item)`                                  | The session status of Results Reporting.                                                       |
+| `standaloneSessionControl(control?)`                           | The item session control of an item delivered alone.                                           |
+| `ItemSession`, `ItemSessionStatus`                             | The state of an item session: plain data with its variables, drafts and attempts.              |
+| `ItemSessionContext`, `ItemAction`, `ItemStep`                 | What a step reads besides the session, the actions of the candidate, and the result of a step. |
+| `Refusal`, `RefusalCode`, `DeliveryEvent`, …                   | Why a step is refused, and what an accepted step reports.                                      |
 
 ## Engine
 
@@ -461,8 +461,8 @@ The same engine serves an exam on a server and practice on a device. Only the pl
 **Server mode.** The server owns the engine, the states and the clock. A request is handled in four steps, and the answer is
 the view:
 
-1. `parseCandidateAction(json, limits?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
-   malformed, too large or an action of the host.
+1. `parseCandidateAction(json, options?)` reads the JSON of the client into an action, and throws a `DataError` for one that is
+   malformed or an action of the host, and a `SecurityError` for one above a limit.
 2. `stamp(state, action, now)` sets the time of the action to the clock of the server.
 3. `engine.apply(state, action)` gives the next state, or a refusal, which the server reports to the client.
 4. `viewToJson(engine.view(state, now))` is what the client receives.
@@ -537,7 +537,7 @@ const answer = {
   responses: new Map([["RESPONSE", single("identifier", "B")]]),
 };
 const text = JSON.stringify(actionToJson(answer));
-const received = parseCandidateAction(JSON.parse(text), { maxActionSize: 100_000 });
+const received = parseCandidateAction(JSON.parse(text), { limits: { maxActionSize: 100_000 } });
 stamp(started.state, received, 5_000).at; // => 5000
 const step = engine.apply(started.state, stamp(started.state, received, 5_000));
 JSON.parse(JSON.stringify(viewToJson(engine.view(step.state, 5_000)))).current.responses;
@@ -592,12 +592,12 @@ with NULL as `null`, durations as `PT<seconds>S`, and files as references. Maps 
 so an identifier such as `__proto__` stays data. They decode without declarations and lose nothing: `multiple` stays apart
 from `ordered`, and the NULL of one type from that of another.
 
-| Function                              | Does                                                                                                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `viewToJson(view)`                    | Builds the JSON form property by property, reads it back with `viewFromJson` and returns it. The content nodes are shared with the view.                     |
-| `viewFromJson(json)`                  | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
-| `actionToJson(action)`                | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
-| `parseCandidateAction(json, limits?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
+| Function                               | Does                                                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `viewToJson(view)`                     | Builds the JSON form property by property, reads it back with `viewFromJson` and returns it. The content nodes are shared with the view.                     |
+| `viewFromJson(json)`                   | Checks every property of the form and no other, the type of each field, the values, and the content as plain JSON of at most 256 levels with finite numbers. |
+| `actionToJson(action)`                 | Writes the properties of the action's type and no other: the time `at` is not written.                                                                       |
+| `parseCandidateAction(json, options?)` | Reads an action of the candidate, checks its type, its properties and its limits, and refuses an action of the host and any property `at`.                   |
 
 | Limit               | Default   | Bounds                                                                                                     |
 | ------------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
@@ -1152,7 +1152,7 @@ Where the specifications are silent or contradict themselves, the engine follows
 | Stylesheets                      | `stylesheets` are package paths against the document of the item, and of each stimulus against its own; a variant, whose path the resolvers do not give, resolves against the package root.                                                        |
 | Time-dependent items             | `timeDependent` is part of `CandidateItem`, because the player marks time-dependent items. The title of an item that models a link to a tool is the title of the link.                                                                             |
 | Times in the view                | `remaining` and `minimumRemaining` are in milliseconds, like every time of the engine.                                                                                                                                                             |
-| Limits of requests               | A request larger than a limit of `parseCandidateAction` is a `DataError`, and not a `SecurityError`. The limits belong to `parseCandidateAction`; `EngineOptions.limits` keeps the limits of processing and planning.                              |
+| Limits of requests               | A request above a limit of `parseCandidateAction` is a `SecurityError`, as for every other limit. The limits are the option `limits` of `parseCandidateAction`; `EngineOptions.limits` keeps the limits of processing and planning.                |
 | Settings of supports             | The settings of a support are kept in the state (`SessionSupport.settings`), so that the view of a state read back on another device has them.                                                                                                     |
 
 ### Pending work
@@ -1335,12 +1335,12 @@ rules, and the value to choose: above the longest pause that a learner takes whi
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate, or larger than a limit; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
-| `SecurityError`   | A plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
+| `SecurityError`   | An action is above `maxActionSize` or `maxPciStateLength` at `parseCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and in the engine are data.
 

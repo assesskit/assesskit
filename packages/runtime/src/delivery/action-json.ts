@@ -9,7 +9,7 @@ import {
   parseWith,
   type Schema,
 } from "../checks.js";
-import { DataError } from "../errors.js";
+import { DataError, SecurityError } from "../errors.js";
 import type { CandidateAction } from "./action.js";
 import { CANDIDATE_ACTION_TYPES, checkResponseMaps } from "./candidate-actions.js";
 import { entriesSchema, valuesSchema, valuesToJson } from "./entries-json.js";
@@ -33,6 +33,16 @@ export interface ActionLimits {
   readonly maxPciStateLength: number;
 }
 
+/** The options of {@link parseCandidateAction}. */
+export interface ParseCandidateActionOptions {
+  /**
+   * Limits that replace those of {@link DEFAULT_ACTION_LIMITS}, field by field.
+   *
+   * @defaultValue {@link DEFAULT_ACTION_LIMITS}
+   */
+  readonly limits?: Partial<ActionLimits>;
+}
+
 /** The default limits of {@link parseCandidateAction}. */
 export const DEFAULT_ACTION_LIMITS: ActionLimits = { maxActionSize: 4_194_304, maxPciStateLength: 1_048_576 };
 
@@ -43,7 +53,7 @@ const HOST_ACTION_TYPES: readonly string[] = ["time", "supply-scores", "cat-resp
 const MOVES = ["next", "previous"] as const;
 
 function readLimits(limits: Partial<ActionLimits>): ActionLimits {
-  checkOptions(limits);
+  checkRecord(limits, "The option limits must be an object");
   const {
     maxActionSize = DEFAULT_ACTION_LIMITS.maxActionSize,
     maxPciStateLength = DEFAULT_ACTION_LIMITS.maxPciStateLength,
@@ -73,7 +83,7 @@ function checkSize(json: unknown, limit: number): void {
     }
   }
   if (size > limit) {
-    throw new DataError(`The action is larger than the limit maxActionSize of ${limit}.`);
+    throw new SecurityError(`The action is larger than the limit maxActionSize of ${limit}.`, "maxActionSize", limit);
   }
 }
 
@@ -114,8 +124,10 @@ function checkPciStates(action: CandidateAction, limit: number): void {
   if (action.type !== "set-responses" || action.pciStates === undefined) return;
   for (const [identifier, state] of action.pciStates) {
     if (state.length > limit) {
-      throw new DataError(
+      throw new SecurityError(
         `The PCI state of ${describe(identifier)} has ${state.length} code units, more than the limit maxPciStateLength of ${limit}.`,
+        "maxPciStateLength",
+        limit,
       );
     }
   }
@@ -130,11 +142,14 @@ function checkPciStates(action: CandidateAction, limit: number): void {
  * `cat-response`) or a property `at` is refused.
  *
  * @param json - The parsed JSON.
- * @param limits - Limits that replace those of {@link DEFAULT_ACTION_LIMITS}; a limit left out keeps its default.
+ * @param options - See {@link ParseCandidateActionOptions}.
  * @returns The action of the candidate, without a time.
- * @throws `DataError` when the input is not an action of the candidate, or is larger than a limit.
+ * @throws `DataError` when the input is not an action of the candidate, or an option has the wrong type.
+ * @throws `SecurityError` when the action is larger than `maxActionSize`, or a PCI state is longer than `maxPciStateLength`.
  */
-export function parseCandidateAction(json: unknown, limits: Partial<ActionLimits> = {}): CandidateAction {
+export function parseCandidateAction(json: unknown, options: ParseCandidateActionOptions = {}): CandidateAction {
+  checkOptions(options);
+  const { limits = {} } = options;
   const { maxActionSize, maxPciStateLength } = readLimits(limits);
   checkSize(json, maxActionSize);
   refuseHostAction(json);
@@ -201,7 +216,7 @@ export function actionToJson(action: CandidateAction): unknown {
       json = { type: action.type };
       break;
   }
-  parseCandidateAction(json, UNLIMITED);
+  parseCandidateAction(json, { limits: UNLIMITED });
   return json;
 }
 
