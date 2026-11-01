@@ -96,12 +96,12 @@ and `restoreRandom(state)` continues the sequence from it.
 import { createRandom, restoreRandom } from "@assesskit/runtime";
 
 const random = createRandom(42);
-random.uniform(); // 0.6606157208001621
-const saved = random.state(); // [3799000961, 1141679633, 2034301298, 2592122788]
-random.uniform(); // 0.1117019639532224
+random.uniform(); // => 0.6606157208001621
+const saved = random.state(); // => [3799000961, 1141679633, 2034301298, 2592122788]
+random.uniform(); // => 0.1117019639532224
 
 // Continues where the state was taken, so a stored session never draws differently.
-restoreRandom(saved).uniform(); // 0.1117019639532224
+restoreRandom(saved).uniform(); // => 0.1117019639532224
 ```
 
 Draw procedures are part of the behavior of a module, are documented there, and changing one is a breaking change.
