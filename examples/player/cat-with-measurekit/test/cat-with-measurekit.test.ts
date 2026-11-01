@@ -27,7 +27,7 @@ import {
 } from "@measurekit/psychometrics/cat";
 import {
   generalizedPartialCredit,
-  type LogisticParameters,
+  type LogisticItem,
   type TestItem,
   threeParameterLogistic,
   twoParameterLogistic,
@@ -81,7 +81,7 @@ async function rejection(promise: Promise<unknown>): Promise<string> {
 }
 
 /** The same items as measurekit's three-parameter logistic items, to compare with measurekit without the code of the port. */
-const measurekitPool: readonly TestItem<LogisticParameters>[] = BANK.map(({ id, a = 1, b, c = 0 }) => ({
+const measurekitPool: readonly TestItem<LogisticItem>[] = BANK.map(({ id, a = 1, b, c = 0 }) => ({
   id,
   model: threeParameterLogistic,
   parameters: { a, b, c, d: 1 },
@@ -192,7 +192,7 @@ describe("pool", () => {
   });
 
   it("lets a host item replace the item of the usage data in its place and adds the others at the end", () => {
-    const host: TestItem<LogisticParameters>[] = [
+    const host: TestItem<LogisticItem>[] = [
       { id: "y", model: twoParameterLogistic, parameters: { a: 2, b: 2, c: 0, d: 1 } },
       { id: "z", model: twoParameterLogistic, parameters: { a: 1, b: 3, c: 0, d: 1 } },
     ];
@@ -776,7 +776,7 @@ const PANEL_DATA = sectionDataOf(PANEL_SETTINGS, PANEL_BANK);
 
 /** measurekit's multistage test of the same panel, built with measurekit's own models. */
 function measurekitModules(scale = 1, answers: (item: string) => number): string[] {
-  const items = (ids: string[]): TestItem<LogisticParameters>[] =>
+  const items = (ids: string[]): TestItem<LogisticItem>[] =>
     ids.map((id) => {
       const item = PANEL_BANK.find((candidate) => candidate.id === id) ?? { id, b: 0 };
       return { id, model: twoParameterLogistic, parameters: { a: (item.a ?? 1) * scale, b: item.b, c: 0, d: 1 } };
@@ -1254,7 +1254,7 @@ describe("properties", () => {
         fc.integer({ min: 0, max: 2 ** 31 }),
         async (items, length, theta, seed) => {
           const pool = items.map(
-            ({ id, a = 1, b, c = 0 }): TestItem<LogisticParameters> => ({
+            ({ id, a = 1, b, c = 0 }): TestItem<LogisticItem> => ({
               id,
               model: threeParameterLogistic,
               parameters: { a, b, c, d: 1 },

@@ -29,6 +29,9 @@ Node.js 22.18+ and pnpm 12 are required. One command sets the repository up, and
 pnpm install
 ```
 
+`examples/player/cat-with-measurekit` needs measurekit beside this repository, in `../measurekit` and built with `pnpm install && pnpm build`
+there, until measurekit is on npm. CI checks it out at the commit of `scripts/measurekit.lock.json`.
+
 [AGENTS.md](AGENTS.md) lists the commands and the conventions for layout, naming, code, docs and tests;
 [architecture.md](docs/runtime/architecture.md) states the design principles.
 

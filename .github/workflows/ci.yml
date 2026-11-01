@@ -76,6 +76,24 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
+      # examples/player/cat-with-measurekit links measurekit from the folder beside this repository, until measurekit is on npm.
+      # The only job that reads the example is this one, so the others do not check measurekit out. The deploy key is read-only.
+      - name: Check out measurekit beside this repository, at the commit of scripts/measurekit.lock.json, and build it
+        env:
+          MEASUREKIT_DEPLOY_KEY: ${{ secrets.MEASUREKIT_DEPLOY_KEY }}
+        run: |
+          repository=$(node -p "JSON.parse(fs.readFileSync('scripts/measurekit.lock.json', 'utf8')).repository")
+          commit=$(node -p "JSON.parse(fs.readFileSync('scripts/measurekit.lock.json', 'utf8')).commit")
+          key="$RUNNER_TEMP/measurekit-key"
+          (umask 077 && printf '%s\n' "$MEASUREKIT_DEPLOY_KEY" > "$key")
+          git init --quiet ../measurekit
+          git -C ../measurekit -c "core.sshCommand=ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+            fetch --quiet --depth 1 "git@github.com:$repository.git" "$commit"
+          git -C ../measurekit checkout --quiet FETCH_HEAD
+          rm "$key"
+          cd ../measurekit
+          pnpm install --frozen-lockfile
+          pnpm --filter @measurekit/psychometrics... build
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # The coverage floors (vitest.config.ts) are checked once, on the oldest supported Node.js.
