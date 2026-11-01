@@ -81,7 +81,7 @@
     "clean": "node --eval \"for (const path of ['dist', 'tsconfig.build.tsbuildinfo']) fs.rmSync(path, { recursive: true, force: true })\"",
     "build": "pnpm clean && tsc -b tsconfig.build.json && node scripts/build-static.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.browser.json && tsc -p tsconfig.server.json",
-    "bench": "vitest run --root ../.. --project player-bench",
+    "bench": "vitest run --root ../.. --project player-bench --reporter verbose",
     "check:packages": "pnpm build && publint --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./player.css ./recorder-worklet.js"
   },
   "dependencies": {

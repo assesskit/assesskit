@@ -62,8 +62,12 @@ phone is, and fails when the fastest of 5 samples is above its budget. The files
 
 | Mount                                                      | Measured | Budget |
 | ---------------------------------------------------------- | -------- | ------ |
-| `mountDelivery` over a test, until the first item is shown | 6 ms     | 25 ms  |
-| 10 calls of `mountItem` on one page, until all are shown   | 17 ms    | 60 ms  |
+| `mountDelivery` over a test, until the first item is shown | 5 ms     | 30 ms  |
+| 10 calls of `mountItem` on one page, until all are shown   | 16 ms    | 80 ms  |
+
+A budget is five times the fastest sample, the median over three runs, rounded up to one significant digit: the rule of the
+other benchmarks of the repository ([performance](../runtime/performance.md#budgets)). It holds on a machine up to five times slower than
+the one measured.
 
 The times do not include loading and parsing the bundle, which `size.test.ts` bounds by bytes: with the CPU slowed 4 times
 the bundle of `mountDelivery` loaded, parsed and evaluated in 47 ms, and that of `mountItem` in 46 ms.

@@ -19,12 +19,12 @@ xychart-beta
 
 | Row              | The runtime                                                                                          | Longsight                                                                  | Runtime  | Longsight | Ratio | Budget (time, ratio) |
 | ---------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------- | --------- | ----- | -------------------- |
-| parse            | `readAsi` on the 223 example items that both read                                                    | `parseQtiXml` on the same items                                            | 13.86 ms | 16.44 ms  | 0.85  | 70 ms, 1.5           |
-| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | `createItemSession` for each                                               | 0.345 ms | 0.303 ms  | 1.14  | 2 ms, 2              |
-| start + template | the same for the 8 items with template processing, 20 times each                                     | the same                                                                   | 1.766 ms | 1.452 ms  | 1.21  | 9 ms, 2              |
-| submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | `respond` for each response, then `score`                                  | 0.559 ms | 0.493 ms  | 1.13  | 3 ms, 2              |
-| item end to end  | `readAsi`, start, present, set the responses and submit                                              | `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.91 ms | 17.49 ms  | 0.97  | 90 ms, 1.5           |
-| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 2.07 ms  | 0.649 ms  | 3.19  | 10 ms, 4.5           |
+| parse            | `readAsi` on the 223 example items that both read                                                    | `parseQtiXml` on the same items                                            | 13.86 ms | 16.44 ms  | 0.85  | 500 ms, 1.5          |
+| start            | `startItemSession` and `presentItem` for each: variables, template processing, first attempt         | `createItemSession` for each                                               | 0.345 ms | 0.303 ms  | 1.14  | 7 ms, 2              |
+| start + template | the same for the 8 items with template processing, 20 times each                                     | the same                                                                   | 1.766 ms | 1.452 ms  | 1.21  | 40 ms, 2             |
+| submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | `respond` for each response, then `score`                                  | 0.559 ms | 0.493 ms  | 1.13  | 20 ms, 2             |
+| item end to end  | `readAsi`, start, present, set the responses and submit                                              | `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.91 ms | 17.49 ms  | 0.97  | 400 ms, 1.5          |
+| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 2.07 ms  | 0.649 ms  | 3.19  | 40 ms, 4.5           |
 
 The inputs are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses
 the oracle reports, and a test of 10 sections of 10 choice items with the sum of the scores as its outcome. A sample is the
@@ -53,25 +53,34 @@ the work in the table:
 of the tests generate with a fixed seed. A benchmark fails when its fastest sample is above its budget. The budgets are in
 `packages/runtime/test/budgets.ts`.
 
-| Benchmark                               | Input                                                                                                                 | Measured (fastest) | Budget        |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
-| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource     | 26.5 ms            | 200 ms        |
-| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                 | 0.87 ms            | 5 ms          |
-| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                               | 0.34 ms            | 2 ms          |
-| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                     | 5.6 ms             | 30 ms         |
-| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules | 80 ms              | 500 ms        |
-| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                     | 1.34 ms            | 5 ms          |
-| Size of that state                      | The same state as JSON text                                                                                           | 118,699 bytes      | 150,000 bytes |
+| Benchmark                               | Input                                                                                                                 | Fastest on the CI runner | Budget        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- |
+| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource     | 92.2 ms                  | 500 ms        |
+| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                 | 2.97 ms                  | 20 ms         |
+| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                               | 1.16 ms                  | 6 ms          |
+| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                     | 18.4 ms                  | 100 ms        |
+| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules | 264 ms                   | 2,000 ms      |
+| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                     | 4.81 ms                  | 30 ms         |
+| Size of that state                      | The same state as JSON text                                                                                           | 118,699 bytes            | 150,000 bytes |
 
 The replay also checks that the replayed state equals the state of the session.
 
 A benchmark takes at least 10 samples, and the gate is the fastest of them, which the other work of a shared machine affects
-least. The measurement is the median of that sample over three runs on a laptop with an Apple M5 and Node.js 26.8; the median
-of the samples of a run was up to 3 times higher on a busy laptop. The budget of a time is five times its measurement, rounded
-up to one significant digit, and that of the size 1.25 times the size. The factor allows for CI hardware two to three times
-slower than the laptop, and for the noise of shared machines. It is far below the cost of the changes that the budgets exist
-to catch: a reader that parsed every item would take about ten times as long. A budget changes only with the reason in the
-commit that changes it.
+least. The rule of the budgets is the one of measurekit and of the rest of the family: **a time is five times the fastest
+sample, rounded up to one significant digit, and a size is 1.25 times the size.** The sample is the one that the CI runner
+took, because the gate runs there. The runner took 3 to 6 times as long as a laptop with an Apple M5 and Node.js 26.8 (`parse`
+85 ms against 14 ms), so a change must make a path several times slower than it is on the runner before it fails a time. The
+factor allows for the noise of a shared host and for a runner that is slower on another day. It is far below the cost of the
+changes that the budgets exist to catch: a reader that parsed every item would take about ten times as long. A budget changes
+only with the reason in the commit that changes it.
+
+Which budgets hold on a machine other than the runner:
+
+| Budget                      | What it compares                                           | Holds                                                                                       |
+| --------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The ratio against Longsight | Two samples of one run, which a slow machine slows equally | On any machine, within the noise of a shared one                                            |
+| The size of a state         | Bytes                                                      | On any machine                                                                              |
+| A time                      | One sample against a fixed number of milliseconds          | On a machine up to five times slower than the runner; on a slower one only the ratios apply |
 
 Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
 so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks that import the sources run through

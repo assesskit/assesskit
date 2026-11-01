@@ -141,15 +141,19 @@ async function fastest(time: () => Promise<number>): Promise<number> {
 }
 
 describe(`the mount time with the CPU slowed ${CPU_SLOWDOWN} times`, () => {
-  it("brings the first item of mountDelivery onto the page within its budget", async () => {
+  it("brings the first item of mountDelivery onto the page within its budget", async ({ annotate }) => {
     await commands.throttleCpu(CPU_SLOWDOWN);
     const took = await fastest(timeDelivery);
+    await annotate(`mountDelivery: fastest ${took.toFixed(2)} ms, budget ${MOUNT_BUDGETS.delivery} ms`);
     expect(took, "the fastest sample of mountDelivery, in milliseconds").toBeLessThan(MOUNT_BUDGETS.delivery);
   });
 
-  it("brings the items of a lesson page of ten mountItem calls onto the page within its budget", async () => {
+  it("brings the items of a lesson page of ten mountItem calls onto the page within its budget", async ({
+    annotate,
+  }) => {
     await commands.throttleCpu(CPU_SLOWDOWN);
     const took = await fastest(timeLesson);
+    await annotate(`lesson page: fastest ${took.toFixed(2)} ms, budget ${MOUNT_BUDGETS.lesson} ms`);
     expect(took, "the fastest sample of the lesson page, in milliseconds").toBeLessThan(MOUNT_BUDGETS.lesson);
   });
 });
