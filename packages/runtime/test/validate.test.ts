@@ -80,11 +80,14 @@ describe("the unordered classes of the XML binding", () => {
     expect(issues[0]?.location?.element).toBe("qti-assessment-item/qti-item-body/figure");
   });
 
-  it("allows each of rp, rt and rtc once in a ruby and reports a repeat", () => {
-    expect(check({ body: "<p><ruby><rb>真</rb><rp>(</rp><rt>ま</rt></ruby></p>" })).toEqual([]);
-    for (const repeated of ["<rt>a</rt><rt>b</rt>", "<rp>(</rp><rp>)</rp>"]) {
-      const issues = check({ body: `<p><ruby><rb>真</rb>${repeated}</ruby></p>` });
-      expect(codesOf(issues)).toEqual(["assesskit/validate/ruby-multiplicity"]);
+  it("leaves the elements of a ruby to the schema: an rp before and after the rt, and an rt for each base", () => {
+    for (const ruby of [
+      "<rb>真</rb><rp>(</rp><rt>ま</rt><rp>)</rp>",
+      "<rb>真</rb><rt>ま</rt>",
+      "漢<rt>かん</rt>字<rt>じ</rt>",
+      "<rb>漢</rb><rtc><rt>かん</rt></rtc>",
+    ]) {
+      expect(check({ body: `<p><ruby>${ruby}</ruby></p>` })).toEqual([]);
     }
   });
 });
@@ -147,6 +150,13 @@ describe("the explicit rule sets of the XML binding: the attributes of the inter
   it("treats a max-plays of 0 as a number, not as no limit", () => {
     const body = MEDIA(' min-plays="1" max-plays="0"');
     expect(only(check({ declarations: single("integer"), body }), "RULE_SET_INTERACTION_13B")).toHaveLength(1);
+  });
+
+  it("lets a text entry bind a record, which has no base type, and refuses a record for an interaction that fixes the base type", () => {
+    const record = '<qti-response-declaration identifier="R" cardinality="record"/>';
+    expect(only(check({ declarations: record, body: textEntry("") }), "RULE_SET_INTERACTION_01B")).toEqual([]);
+    const endAttempt = '<p><qti-end-attempt-interaction response-identifier="R" title="Hint"/></p>';
+    expect(only(check({ declarations: record, body: endAttempt }), "RULE_SET_INTERACTION_17B")).toHaveLength(1);
   });
 });
 
@@ -2088,6 +2098,32 @@ describe("the files that documents name", () => {
       "modules/tap.js": "js",
     });
     expect(validatePackage(pkg)).toEqual([]);
+  });
+
+  it("locates the configuration files and the modules of an item in a folder from the root of the package, as the player does", () => {
+    const configuration = JSON.stringify({ paths: { tap: "modules/tap" } });
+    const configured = packageOf(
+      [
+        {
+          identifier: "p1",
+          type: ITEM_TYPE,
+          href: "items/p1.xml",
+          files: ["modules/module_resolution.js", "modules/tap.js"],
+        },
+      ],
+      { "items/p1.xml": pci('module="tap"'), "modules/module_resolution.js": configuration, "modules/tap.js": "js" },
+    );
+    expect(validatePackage(configured)).toEqual([]);
+    const named = packageOf([{ identifier: "p1", type: ITEM_TYPE, href: "items/p1.xml", files: ["modules/tap.js"] }], {
+      "items/p1.xml": pci("", modules),
+      "modules/tap.js": "js",
+    });
+    expect(validatePackage(named)).toEqual([]);
+    const misplaced = packageOf(
+      [{ identifier: "p1", type: ITEM_TYPE, href: "items/p1.xml", files: ["items/modules/tap.js"] }],
+      { "items/p1.xml": pci("", modules), "items/modules/tap.js": "js" },
+    );
+    expect(only(validatePackage(misplaced), "assesskit/validate/missing-file")).toHaveLength(1);
   });
 
   it("reports a module file that is missing or unlisted, reads the extension a path leaves out, and ignores a module the interaction does not name", () => {

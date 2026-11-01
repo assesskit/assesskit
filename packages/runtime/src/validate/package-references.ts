@@ -51,14 +51,21 @@ function isPortableCustomInteraction(node: ModelNode): node is PortableCustomInt
   return node.kind === "portable-custom-interaction";
 }
 
-/** Reads a module resolution file of an item from the package; `undefined` when the package has none or it cannot be read. */
+/**
+ * The base of the locations of a portable custom interaction: its configuration files and its modules are paths in the
+ * content package, whichever folder holds the item.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, InteractionModules}
+ */
+const PACKAGE_ROOT = "";
+
+/** Reads a module resolution file from the package; `undefined` when the package has none or it cannot be read. */
 function readConfiguration(
   contents: Contents,
-  itemPath: string,
   location: string,
   findings: Findings,
 ): PciModuleConfiguration["primary"] {
-  const path = contents.pkg.resolve(itemPath, location);
+  const path = contents.pkg.resolve(PACKAGE_ROOT, location);
   const bytes = path === undefined ? undefined : contents.pkg.file(path);
   if (path === undefined || bytes === undefined) return undefined;
   contents.check(
@@ -81,21 +88,21 @@ function readConfiguration(
 }
 
 /** Returns the path of the file a module location names: the location as written, or with the extension its paths leave out. */
-function moduleFile(contents: Contents, itemPath: string, location: string): string | undefined {
-  const direct = contents.pkg.resolve(itemPath, location);
+function moduleFile(contents: Contents, location: string): string | undefined {
+  const direct = contents.pkg.resolve(PACKAGE_ROOT, location);
   if (direct !== undefined && contents.has(direct)) return direct;
   return location.endsWith(MODULE_EXTENSION)
     ? direct
-    : contents.pkg.resolve(itemPath, `${location}${MODULE_EXTENSION}`);
+    : contents.pkg.resolve(PACKAGE_ROOT, `${location}${MODULE_EXTENSION}`);
 }
 
 /**
  * Checks the files of a module at package-relative locations: the module needs one of them, because the fallback is for the
  * location that fails, and each one that is there must be listed.
  */
-function checkModuleFiles(contents: Contents, module: PciModule, itemPath: string, findings: Findings): void {
+function checkModuleFiles(contents: Contents, module: PciModule, findings: Findings): void {
   const files = [module.primary, module.fallback].flatMap((location) =>
-    location !== undefined && isPackageRelative(location) ? [moduleFile(contents, itemPath, location)] : [],
+    location !== undefined && isPackageRelative(location) ? [moduleFile(contents, location)] : [],
   );
   const present = files.filter((path) => path !== undefined && contents.has(path));
   const what = `The file of the module ${JSON.stringify(module.id)}`;
@@ -107,20 +114,19 @@ function checkModuleFiles(contents: Contents, module: PciModule, itemPath: strin
 /**
  * Checks the portable custom interactions of an item against the package: that each names modules which a module
  * resolution file or its own paths locate and that the module files at package-relative locations, and
- * the resolution files, are in the package and listed in the manifest. A location with a scheme is
- * fetched from there and is not checked.
+ * the resolution files, are in the package and listed in the manifest. A location is a path from the root of the package,
+ * not from the folder of the item. A location with a scheme is fetched from there and is not checked.
  *
  * @param contents - The files of the package.
  * @param item - The item.
  * @param findings - The findings of the document, which receive the issues.
- * @param itemPath - The path of the item, against which the module locations resolve.
  */
-export function checkPciFiles(contents: Contents, item: AssessmentItem, itemPath: string, findings: Findings): void {
+export function checkPciFiles(contents: Contents, item: AssessmentItem, findings: Findings): void {
   for (const interaction of descendantNodes(item).filter(isPortableCustomInteraction)) {
     const paths = moduleConfigurationPaths(interaction);
     const configuration: PciModuleConfiguration = {
-      primary: readConfiguration(contents, itemPath, paths.primary, findings),
-      fallback: readConfiguration(contents, itemPath, paths.fallback, findings),
+      primary: readConfiguration(contents, paths.primary, findings),
+      fallback: readConfiguration(contents, paths.fallback, findings),
     };
     findings.adopt(checkPortableInteraction(interaction, configuration));
     // The modules that only a configuration names are loaded when another module requires them, which only the code can say.
@@ -129,7 +135,7 @@ export function checkPciFiles(contents: Contents, item: AssessmentItem, itemPath
       ...(interaction.interactionModules?.interactionModules ?? []).map(({ id }) => id),
     ]);
     for (const module of resolvePciModules(interaction, configuration).filter(({ id }) => named.has(id))) {
-      checkModuleFiles(contents, module, itemPath, findings);
+      checkModuleFiles(contents, module, findings);
     }
   }
 }

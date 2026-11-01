@@ -99,7 +99,6 @@ attributes of the interaction and the base type of its response.
 | Code                                     | Reported when                                                                                                                                                                                       |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `assesskit/validate/figure-multiplicity` | A `figure` has more than one `figcaption`.                                                                                                                                                          |
-| `assesskit/validate/ruby-multiplicity`   | A `ruby` has more than one `rp`, `rt` or `rtc`.                                                                                                                                                     |
 | `RULE_SET_ARIA_ROLES_1`                  | A `source` has a `role`, or an `h1` has a `role` other than `heading`, `tab` or `presentation`.                                                                                                     |
 | `RULE_SET_GENERAL_1`                     | `qti-outcome-minimum`, `qti-outcome-maximum` or `qti-test-variables` in response processing.                                                                                                        |
 | `RULE_SET_INTERACTION_01A` to `20A`      | One of the 20 interactions inside another interaction, in the model or in the XML that it keeps (PCI, custom).                                                                                      |
@@ -248,7 +247,9 @@ Where the specifications are silent or ambiguous, the validator reads them like 
 | `qti-custom-interaction` and its attributes           | It is constrained to `data-` attributes although its schema allows any: the XML binding lists it.                       |
 | An interaction inside kept XML                        | Interactions in the XML that the model keeps (portable custom interactions) count as nested.                            |
 | `RULE_SET_SPECIFIC_CLASS_RESPONSEDEC`                 | Its first rule is about a `max-choices` of `qti-inline-choice-interaction`, which has none, so it cannot apply.         |
-| Modules of a portable custom interaction              | A module is served when one package-relative location of it is in the package; each location that is present is listed. |
+| A text entry bound to a record                        | It passes: a record has no base type ([spec gaps](spec-gaps.md)).                                                       |
+| A `ruby` and its `rp`, `rt` and `rtc`                 | No limit on their number: the schema decides ([spec gaps](spec-gaps.md)).                                               |
+| Modules of a portable custom interaction              | A module is served when a location of it is in the package, read from its root; every location that is there is listed. |
 | LOM identifier and item identifier                    | They are compared after the white space around them is removed.                                                         |
 | An item reference with another identifier             | A warning, since the Information Model says it should be the same as the item's.                                        |
 | Results of one item instance                          | Item results of one instance, such as attempts, share a `sequenceIndex`; two different items must not.                  |

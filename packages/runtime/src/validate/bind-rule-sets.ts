@@ -53,7 +53,10 @@ const ASSOCIATION_LIMITS = new Set([
 /** The interactions whose `string-identifier` must differ from the `response-identifier`. */
 const STRING_IDENTIFIERS = new Set(["qti-text-entry-interaction", "qti-extended-text-interaction"]);
 
-/** The base types that the response declaration of an interaction must have, where the XML binding fixes them. */
+/**
+ * The base types that the response declaration of an interaction must have, where the XML binding fixes them. A response of the
+ * text entry may be a record instead, which has no base type (`RECORD_RESPONSES`).
+ */
 const BOUND_BASE_TYPES: ReadonlyMap<string, readonly BaseType[]> = new Map([
   ["qti-text-entry-interaction", ["string", "float", "integer"]],
   ["qti-drawing-interaction", ["file"]],
@@ -62,6 +65,16 @@ const BOUND_BASE_TYPES: ReadonlyMap<string, readonly BaseType[]> = new Map([
   ["qti-gap-match-interaction", ["directedPair"]],
   ["qti-graphic-gap-match-interaction", ["directedPair"]],
 ]);
+
+/**
+ * The interactions whose response may have the cardinality record. The information model lets the text entry bind a record with
+ * the fields `stringValue`, `floatValue` and the rest, while rule 1Bb of the XML binding says its base type is string, float or
+ * integer, which a record lacks; the information model decides.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, TextEntryInteraction}
+ * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+ */
+const RECORD_RESPONSES = new Set(["qti-text-entry-interaction"]);
 
 /** The elements with `match-max` and `match-min`, by the number of their rule set `RULE_SET_INTERACTION-RELATED_<number>`. */
 const MATCH_LIMITS: ReadonlyMap<string, number> = new Map([
@@ -83,17 +96,8 @@ const CONSTRAINED_FOREIGN = "qti-custom-interaction";
 /** What an extension attribute of a constrained element is named: `data-` and one or more name characters. */
 const DATA_ATTRIBUTE = /^data-[a-zA-Z0-9_.-]+$/;
 
-/** The elements of a `figure` and a `ruby` that the XML binding allows once at most, with the code of their issues. */
-const FIGURE = {
-  name: "figure",
-  code: "assesskit/validate/figure-multiplicity",
-  once: ["figcaption"],
-};
-const RUBY = {
-  name: "ruby",
-  code: "assesskit/validate/ruby-multiplicity",
-  once: ["rp", "rt", "rtc"],
-};
+/** The code of the issue for a `figure` with more than one `figcaption`, which the XML binding allows once at most. */
+const FIGURE_CODE = "assesskit/validate/figure-multiplicity";
 
 /** Returns the property of the model for an attribute name: `max-choices` becomes `maxChoices`. */
 function camelCase(attribute: string): string {
@@ -144,7 +148,7 @@ export class BindRuleSets {
    */
   visit(visit: ElementVisit): void {
     const { name } = visit;
-    this.unorderedClass(visit);
+    this.figureCaption(visit);
     this.ariaRole(visit);
     this.nestedInteraction(visit);
     this.interactionAttributes(visit);
@@ -160,17 +164,18 @@ export class BindRuleSets {
     this.findings.error(code, message, elementPath(visit));
   }
 
-  /** 5.1.1 and 5.1.2: the elements of a `figure` and a `ruby` that occur at most once. */
-  private unorderedClass(visit: ElementVisit): void {
-    const rule = visit.name === FIGURE.name ? FIGURE : visit.name === RUBY.name ? RUBY : undefined;
-    if (rule === undefined) return;
-    const kinds = kindsOf(visit.model, "children");
-    for (const element of rule.once) {
-      const count = kinds.filter((kind) => kind === element).length;
-      if (count > 1) {
-        const message = `The ${visit.name} has ${count} ${element} elements, but the multiplicity of ${element} must be 0 or 1.`;
-        this.error(rule.code, message, visit);
-      }
+  /**
+   * 5.1.1: a `figure` has at most one `figcaption`. The rule of a `ruby` (5.1.2) is not applied: the information model gives
+   * each group of a `ruby` the multiplicities that the XML binding gives the element, and the schema limits none.
+   *
+   * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/spec-gaps.md | Spec gaps}
+   */
+  private figureCaption(visit: ElementVisit): void {
+    if (visit.name !== "figure") return;
+    const count = kindsOf(visit.model, "children").filter((kind) => kind === "figcaption").length;
+    if (count > 1) {
+      const message = `The figure has ${count} figcaption elements, but the multiplicity of figcaption must be 0 or 1.`;
+      this.error(FIGURE_CODE, message, visit);
     }
   }
 
@@ -239,6 +244,7 @@ export class BindRuleSets {
     if (
       baseTypes !== undefined &&
       declaration !== undefined &&
+      !(declaration.cardinality === "record" && RECORD_RESPONSES.has(name)) &&
       !(declaration.baseType !== undefined && baseTypes.includes(declaration.baseType))
     ) {
       report(

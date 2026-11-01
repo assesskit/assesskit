@@ -73,7 +73,8 @@ called for a value without a file. A message from a module is untrusted until it
 ## Modules
 
 A module resolution file is JSON with `waitSeconds` and `paths`. `parseModuleResolution` reads it and ignores other properties. A
-path has no `.js` extension; a path with a protocol is fetched from there, and any other is a path in the package.
+path has no `.js` extension; a path with a protocol is fetched from there, and any other is a path from the root of the package,
+whichever folder holds the item. The same holds for the configuration files and for `primary-path`.
 
 `resolvePciModules` lists the modules in this order: the module of the `module` attribute, the `qti-interaction-module`s in
 document order, then the modules that only the configuration files name, which are the dependencies of the PCI's modules. Each

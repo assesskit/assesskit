@@ -77,7 +77,7 @@ function checkResource(
     const resolveTemplate = (uri: string): ResponseProcessing | undefined =>
       options.resolveTemplate?.(uri) ?? packageTemplate(pkg, path, uri);
     checkItem(document.item, reports.of(path), { ...scoped, resolveTemplate });
-    checkPciFiles(contents, document.item, path, reports.of(path));
+    checkPciFiles(contents, document.item, reports.of(path));
     checkMetadataIdentifier(resource, document.item.identifier, reports.of(MANIFEST_PATH));
   } else if (document.kind === "test") {
     checkTest(document.test, reports, scoped, { base: path, resolvers: packageResolvers(pkg) }, false);
