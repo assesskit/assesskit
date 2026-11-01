@@ -91,7 +91,7 @@ Use these words with these meanings in code, comments and docs.
 | `pnpm test:browser`          | The browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first                                       |
 | `pnpm test:corpus`           | Tests that read the corpus; run `pnpm corpus` first                                                                                                                               |
 | `pnpm test:xsd`              | Tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first                                                                                                     |
-| `pnpm bench`                 | The benchmarks of the runtime against their budgets                                                                                                                               |
+| `pnpm bench`                 | The benchmarks of the runtime and the mount time of the player, in Chromium with the CPU slowed 4 times, against their budgets                                                    |
 | `pnpm schemas`               | Downloads the XSDs into `.cache/schemas`; `pnpm schemas:pin` writes new hashes                                                                                                    |
 | `pnpm unicode`               | Regenerates the Unicode tables of `values` from the pinned files                                                                                                                  |
 | `pnpm asi-table`             | Regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first                                                                                       |

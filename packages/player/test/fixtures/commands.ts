@@ -37,6 +37,7 @@ declare module "vitest/browser" {
     frameTheme: (title: string) => Promise<FrameTheme>;
     watchConsole: () => Promise<void>;
     consoleErrors: () => Promise<readonly string[]>;
+    throttleCpu: (rate: number) => Promise<void>;
   }
 }
 
@@ -108,6 +109,15 @@ const watchConsole: BrowserCommand<[], void> = (context) => {
 /** Returns the errors that the page logged since `watchConsole`. */
 const consoleErrors: BrowserCommand<[], readonly string[]> = (context) => consoleErrorsOf.get(context.page) ?? [];
 
+/**
+ * Slows the CPU of the page by a factor through the DevTools protocol of Chromium, so that a timing stands for a phone and
+ * not for the machine of the run. A rate of 1 is full speed.
+ */
+const throttleCpu: BrowserCommand<[number], void> = async (context, rate) => {
+  const session = await context.context.newCDPSession(context.page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate });
+};
+
 /** Returns the XML and CSS files of the 1EdTech examples, which a browser test cannot read: the page has no file system. */
 const corpusFiles: BrowserCommand<[], readonly CorpusFile[]> = () => {
   const root = resolve(import.meta.dirname, "../../../..");
@@ -120,4 +130,13 @@ const corpusFiles: BrowserCommand<[], readonly CorpusFile[]> = () => {
 };
 
 /** The browser commands of the tests of the player. */
-export const COMMANDS = { axeInFrame, ariaSnapshot, clickInFrame, frameTheme, watchConsole, consoleErrors, corpusFiles };
+export const COMMANDS = {
+  axeInFrame,
+  ariaSnapshot,
+  clickInFrame,
+  frameTheme,
+  watchConsole,
+  consoleErrors,
+  corpusFiles,
+  throttleCpu,
+};

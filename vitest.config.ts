@@ -117,6 +117,17 @@ export default defineConfig({
         },
       },
       {
+        // The time to mount, with the CPU slowed by a factor that only Chromium can apply: `pnpm bench` runs it.
+        resolve: { alias: RUNTIME_SOURCES },
+        test: {
+          name: "player-bench",
+          include: ["packages/player/test/**/*.browser.bench.ts"],
+          globalSetup: GLOBAL_SETUP,
+          testTimeout: HANG_LIMIT,
+          browser: { ...browser(), instances: [{ browser: "chromium" as const }] },
+        },
+      },
+      {
         // The 1EdTech examples in the browsers: `pnpm corpus` downloads them.
         resolve: { alias: RUNTIME_SOURCES },
         test: {

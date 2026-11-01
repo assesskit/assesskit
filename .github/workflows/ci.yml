@@ -99,7 +99,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm corpus
-      - run: pnpm bench
+      - run: pnpm --filter @assesskit/runtime bench
+
+  # The time to mount the player, with the CPU slowed 4 times in Chromium, against the budgets of test/mount-budgets.ts
+  # (docs/player/size.md).
+  player-bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @assesskit/player bench
 
   # The rendering tests of the player, and its tests that render the 1EdTech examples, in the current Chromium, Firefox and
   # WebKit, and its tests of the asset gate over the same examples, which run in Node.
