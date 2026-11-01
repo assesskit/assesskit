@@ -17,11 +17,14 @@ import {
   PNP_NAMESPACE,
   type Refusal,
   type ResolvedItem,
+  type Resolvers,
   readAsi,
   readPnp,
+  resolveStructure,
   type StartOptions,
   type SubmitResultsRequest,
   single,
+  type TestStructure,
 } from "../src/index.js";
 
 /** Throws an error with a message; a test calls it where a result of the wrong kind would end the test. */
@@ -166,26 +169,30 @@ export interface EngineSetup {
   readonly create?: typeof createEngine;
 }
 
+/** The resolvers of a test whose item references name the items given by href; a reference not given names a choice item. */
+function resolversOf(items: Readonly<Record<string, AssessmentItem | ResolvedItem>>): Resolvers {
+  return {
+    items: (href) => {
+      const named = items[href] ?? choice(href);
+      return "deliverable" in named ? named : resolution(named);
+    },
+    sections: () => fail("The test has no section reference."),
+    stimuli: () => fail("The test has no stimulus."),
+  };
+}
+
 /** An engine of a test whose item references name the items given by href. */
 export function engineOf(content: string, setup: EngineSetup = {}): Engine {
   const { items = {}, cat = new Map(), options = {}, create = createEngine } = setup;
   return create(
-    {
-      kind: "test",
-      test: testOf(content),
-      base: "test.xml",
-      catSections: cat,
-      resolvers: {
-        items: (href) => {
-          const named = items[href] ?? choice(href);
-          return "deliverable" in named ? named : resolution(named);
-        },
-        sections: () => fail("The test has no section reference."),
-        stimuli: () => fail("The test has no stimulus."),
-      },
-    },
+    { kind: "test", test: testOf(content), base: "test.xml", catSections: cat, resolvers: resolversOf(items) },
     options,
   );
+}
+
+/** The structure of the test that {@link engineOf} delivers, for the readers of a report. */
+export function structureOf(content: string): TestStructure {
+  return resolveStructure(testOf(content), "test.xml", resolversOf({}));
 }
 
 /** The CAT engine of the section `A`. */

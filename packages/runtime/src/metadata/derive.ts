@@ -1,4 +1,5 @@
 import type { AssessmentItem } from "../asi/index.js";
+import { setCorrectResponses } from "../asi/internal.js";
 import { checkArray, checkRecord } from "../checks.js";
 import { MAX_TOOL_STRING_LENGTH } from "./lexical.js";
 import {
@@ -62,27 +63,9 @@ function inspectBody(model: unknown, facts: BodyFacts): void {
   }
 }
 
-/** Collects the identifiers that a `qti-set-correct-response` rule sets, anywhere in a model of template processing. */
-function correctResponsesSet(model: unknown, identifiers: Set<string>): void {
-  if (Array.isArray(model)) {
-    for (const member of model) correctResponsesSet(member, identifiers);
-  } else if (typeof model === "object" && model !== null) {
-    if (
-      "kind" in model &&
-      model.kind === "set-correct-response" &&
-      "identifier" in model &&
-      typeof model.identifier === "string"
-    ) {
-      identifiers.add(model.identifier);
-    }
-    for (const member of Object.values(model)) correctResponsesSet(member, identifiers);
-  }
-}
-
 /** Returns whether every declared response has a correct response, in its declaration or set by template processing. */
 function solutionAvailable(item: AssessmentItem): boolean {
-  const set = new Set<string>();
-  correctResponsesSet(item.templateProcessing, set);
+  const set = setCorrectResponses(item);
   return (
     item.responseDeclarations.length > 0 &&
     item.responseDeclarations.every(

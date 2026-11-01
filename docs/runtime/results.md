@@ -123,14 +123,15 @@ text, bytes or an element is a `DataError`, and text or bytes that break a limit
 
 ## Not included
 
-| Not included                                    | Why                                                                                      |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Building a report from a session                | The [delivery](delivery.md#results) engine knows the session; `results` holds the format |
-| Placing a report in a content package           | A report is a document of its own, and a package holds items, tests and their resources  |
-| Reading a clock for `datestamp`                 | The runtime reads no clock; the caller supplies the time                                 |
-| The bytes of a `file` value                     | The XML form of a file is its reference, and the host stores the bytes                   |
-| Years and months in a duration                  | They have no length in seconds                                                           |
-| Elements of other namespaces outside two places | The schema allows them only after the candidate response and in `outcomeInformation`     |
+| Not included                                    | Why                                                                                                       |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Building a report from a session                | The [delivery](delivery.md#results) engine knows the session; `results` holds the format                  |
+| Scoring a report again                          | The [delivery](delivery.md#rescoring-a-stored-report) readers turn a report into the inputs of processing |
+| Placing a report in a content package           | A report is a document of its own, and a package holds items, tests and their resources                   |
+| Reading a clock for `datestamp`                 | The runtime reads no clock; the caller supplies the time                                                  |
+| The bytes of a `file` value                     | The XML form of a file is its reference, and the host stores the bytes                                    |
+| Years and months in a duration                  | They have no length in seconds                                                                            |
+| Elements of other namespaces outside two places | The schema allows them only after the candidate response and in `outcomeInformation`                      |
 
 ## Files
 

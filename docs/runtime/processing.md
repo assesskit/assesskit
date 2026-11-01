@@ -186,7 +186,8 @@ text (see [values](values.md#limits)), so no pattern is a limit on the text.
 
 ## Test scope
 
-Outcome processing reads the item sessions of a test through a `TestScope`, which the delivery engine implements.
+Outcome processing reads the item sessions of a test through a `TestScope`, which the delivery engine implements over a session and
+`readTestInputs` over a stored report ([Rescoring a stored report](delivery.md#rescoring-a-stored-report)).
 
 | Method                              | Returns                                                                                                                                                  |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -254,7 +255,7 @@ An attribute out of its range at run time (`figures`, a negative tolerance) make
 | Not included                                                      | Why                                                            |
 | ----------------------------------------------------------------- | -------------------------------------------------------------- |
 | When each processing runs, and the reset of outcomes before a run | The delivery engine decides                                    |
-| The item sessions of a test                                       | The engine implements `TestScope`; processing reads them       |
+| The item sessions of a test                                       | `delivery` implements `TestScope`; processing reads them       |
 | A percentage coordinate in `qti-inside`                           | It needs the size of the image, which processing does not have |
 | Evaluating a document that failed validation                      | Static checks are `validate`'s                                 |
 

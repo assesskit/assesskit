@@ -1,4 +1,5 @@
 import type { AssessmentItem, OutcomeDeclaration } from "../asi/index.js";
+import { setCorrectResponses } from "../asi/internal.js";
 import { answeredStatus } from "../interactions/index.js";
 import type { SupportName } from "../pnp/index.js";
 import { COMPLETION_STATUS, DURATION, NUM_ATTEMPTS } from "../processing/index.js";
@@ -15,12 +16,12 @@ import type {
   TemplateVariable,
   TestResult,
 } from "../results/index.js";
-import type { Value } from "../values/index.js";
+import { single, type Value } from "../values/index.js";
 import { endAttemptInteractions } from "./attempt.js";
 import { type CatSession, endedAttempts } from "./cat-session.js";
 import { type Course, candidateOf } from "./course.js";
 import { datestampOf } from "./datestamp.js";
-import { type DeliveredItem, type DeliveryState, findDelivered } from "./delivery-state.js";
+import { type DeliveredItem, type DeliveryState, deliveredLookup, findDelivered } from "./delivery-state.js";
 import { presentedInteractions } from "./item-display.js";
 import { type ItemKey, sameKey } from "./plan.js";
 import { planIndex } from "./plan-index.js";
@@ -165,7 +166,35 @@ function catIdentifier(state: DeliveryState, key: ItemKey): string {
 }
 
 /**
- * Returns the response variables of an item instance: the built-ins, then the declared ones.
+ * Returns the built-in response variables of an item instance: `numAttempts` and `duration`.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
+function builtInResponses(numAttempts: Value | null, duration: Value | null): ResponseVariable[] {
+  return [
+    {
+      kind: "response",
+      identifier: NUM_ATTEMPTS,
+      cardinality: "single",
+      baseType: "integer",
+      candidateResponse: numAttempts,
+      extensions: [],
+    },
+    {
+      kind: "response",
+      identifier: DURATION,
+      cardinality: "single",
+      baseType: "duration",
+      candidateResponse: duration,
+      extensions: [],
+    },
+  ];
+}
+
+/**
+ * Returns the response variables of an item instance: the built-ins, then the declared ones. The correct response is
+ * written for a variable whose key template processing set, when `keys` is true: a declared key is in the item, and
+ * the key of a variable that processing set is in no other place, so that a report can be scored again.
  *
  * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
  */
@@ -174,44 +203,36 @@ function responseVariables(
   state: DeliveryState,
   delivered: DeliveredItem,
   status: SessionStatus,
-  omitted: boolean,
+  options: { readonly omitted: boolean; readonly keys: boolean },
 ): ResponseVariable[] {
   const { session } = delivered;
   const { variables } = session;
   const entry = course.items.get(session.key.ref);
   const item = entry === undefined ? undefined : candidateOf(entry, delivered.variant).item;
-  const builtIns: ResponseVariable[] = [
-    {
-      kind: "response",
-      identifier: NUM_ATTEMPTS,
-      cardinality: "single",
-      baseType: "integer",
-      candidateResponse: variables.responses.get(NUM_ATTEMPTS) ?? null,
-      extensions: [],
-    },
-    {
-      kind: "response",
-      identifier: DURATION,
-      cardinality: "single",
-      baseType: "duration",
-      candidateResponse: variables.responses.get(DURATION) ?? null,
-      extensions: [],
-    },
-  ];
-  if (entry === undefined || item === undefined || omitted) return builtIns;
+  const builtIns = builtInResponses(
+    variables.responses.get(NUM_ATTEMPTS) ?? null,
+    variables.responses.get(DURATION) ?? null,
+  );
+  if (entry === undefined || item === undefined || options.omitted) return builtIns;
   const interactions = presentedInteractions(session, item, entry.control);
   const answered = answeredStatus(interactions, variables.responses);
+  const keysSet = setCorrectResponses(item);
   const declared = item.responseDeclarations.map((declaration): ResponseVariable => {
     const sequence = interactions.find(
       (descriptor) =>
         descriptor.responseIdentifier === declaration.identifier && descriptor.shuffle && descriptor.choices.length > 0,
     );
     const scored = status === "final" && !isCoveredUnscored(course, state, session.key, declaration.identifier);
+    const key =
+      options.keys && keysSet.has(declaration.identifier)
+        ? variables.correctResponses.get(declaration.identifier)
+        : null;
     return {
       kind: "response",
       identifier: declaration.identifier,
       cardinality: declaration.cardinality,
       ...(declaration.baseType === undefined ? {} : { baseType: declaration.baseType }),
+      ...(key === undefined || key === null ? {} : { correctResponse: { value: key } }),
       candidateResponse: variables.responses.get(declaration.identifier) ?? null,
       ...(sequence === undefined ? {} : { choiceSequence: sequence.choices.map(({ identifier }) => identifier) }),
       scoreStatus: scored ? "scored" : "notscored",
@@ -301,7 +322,7 @@ function itemResultOf(
   const skipped = options.cat !== undefined && isSkipped(delivered, item);
   const status = skipped ? "initial" : sessionStatusOf(course, state, delivered, item);
   const variables: ResultVariable[] = [
-    ...responseVariables(course, state, delivered, status, skipped),
+    ...responseVariables(course, state, delivered, status, { omitted: skipped, keys: options.cat === undefined }),
     ...valuedVariables(delivered, item),
     ...outcomeVariables(state, delivered, item, options),
   ];
@@ -380,17 +401,41 @@ function testResultOf(course: Course, state: DeliveryState, cat: CatSession | un
 }
 
 /**
+ * Returns the results of the instances of the plan not presented, after those presented, in plan order: no attempt, no
+ * time, the status `initial`, the datestamp of the test result, which the schema requires, and no other variable.
+ *
+ * @see {@link https://www.imsglobal.org/sites/default/files/spec/qti/v3/rr-bind/index.html | QTI 3.0 Results Reporting}
+ */
+function notPresented(state: DeliveryState): ItemResult[] {
+  const delivered = deliveredLookup(state);
+  return planIndex(state.plan)
+    .placements.filter(({ key }) => delivered(key) === undefined)
+    .map(({ key }, position) => ({
+      identifier: key.ref,
+      sequenceIndex: state.items.length + position + 1,
+      datestamp: datestampOf(state.at),
+      sessionStatus: "initial",
+      variables: builtInResponses(single("integer", 0), single("duration", 0)),
+      supports: [],
+    }));
+}
+
+/**
  * Assembles the results report of a session: the context, the result of the test unless an item is delivered alone, and
- * one result for each item instance presented, in the order of presentation.
+ * one result for each item instance of the plan, those presented in the order of presentation and then those not.
  *
  * @remarks
- * While scoring requests are pending the report is provisional.
+ * While scoring requests are pending the report is provisional. An instance not presented has the status `initial`,
+ * and the report writes the correct response of a response variable that template processing set.
  */
 export function assembleResults(course: Course, state: DeliveryState): AssessmentResult {
   return {
     context: state.report,
     ...(course.standalone ? {} : { testResult: testResultOf(course, state, undefined) }),
-    itemResults: state.items.flatMap((delivered) => itemResultOf(course, state, delivered, {}) ?? []),
+    itemResults: [
+      ...state.items.flatMap((delivered) => itemResultOf(course, state, delivered, {}) ?? []),
+      ...notPresented(state),
+    ],
   };
 }
 

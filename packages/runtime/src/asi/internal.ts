@@ -9,6 +9,7 @@ export { withDescendants } from "./nodes.js";
 export { readElement } from "./read.js";
 export { RUBRIC_KINDS } from "./scoring-rubric.js";
 export { scoringRubricBlocks, scoringRubricOf } from "./scoring-rubric-block.js";
+export { setCorrectResponses } from "./set-correct-responses.js";
 export type {
   AcceptDef,
   AttributeDef,

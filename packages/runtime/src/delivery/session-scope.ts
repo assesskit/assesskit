@@ -17,7 +17,7 @@ import { type Course, type CourseItem, candidateOf, itemContextValues } from "./
 import { type DeliveredItem, type DeliveryState, deliveredLookup, type ScopeClock } from "./delivery-state.js";
 import type { ItemKey } from "./plan.js";
 import { type PlanIndex, planIndex } from "./plan-index.js";
-import { ancestry, type ItemRefNode } from "./structure.js";
+import { ancestry, type ItemRefNode, type TestStructure } from "./structure.js";
 
 /**
  * Returns the time a clock shows as the value of a `duration` variable: seconds, truncated to the millisecond.
@@ -34,7 +34,7 @@ export function durationOf(clocks: readonly ScopeClock[], scope: ScopeClock["sco
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
-function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
+export function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
   const { sectionIdentifier, includeCategories, excludeCategories } = filter;
   const categories = node.model.category ?? [];
   if (
@@ -47,6 +47,38 @@ function keeps(node: ItemRefNode, filter: ItemSessionFilter): boolean {
     return false;
   }
   return !(excludeCategories ?? []).some((category) => categories.includes(category));
+}
+
+/** Where the variables of a test that are not outcomes get their values from. */
+export interface TestVariableSource {
+  /** Returns the duration of the test, or of a test part or section, as a value; 0 for one not entered. */
+  duration(scope: ScopeClock["scope"], identifier: string): Value;
+  /** Returns the value of `QTI_CONTEXT` or of a context variable of the test; `undefined` when the test declares none. */
+  context(identifier: string): Value | null | undefined;
+}
+
+/**
+ * Returns a variable of the test that is not an outcome: `duration` of the test and `PART.duration` or
+ * `SECTION.duration`, a context variable of the test or `QTI_CONTEXT`, and NULL for a variable of an item reference of the
+ * structure, which the scope reads when the reference has no such instance; `undefined` when there is no such variable.
+ *
+ * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
+ */
+export function testVariable(
+  structure: TestStructure,
+  source: TestVariableSource,
+  identifier: string,
+): Value | null | undefined {
+  const [prefix = "", ...rest] = identifier.split(".");
+  if (identifier === DURATION) return source.duration("test", structure.test.model.identifier);
+  if (rest.length === 1 && rest[0] === DURATION) {
+    if (structure.part(prefix) !== undefined) return source.duration("part", prefix);
+    if (structure.section(prefix) !== undefined) return source.duration("section", prefix);
+  }
+  const context = source.context(identifier);
+  if (context !== undefined) return context;
+  const prefixed = (rest.length === 1 || rest.length === 2) && structure.itemRef(prefix) !== undefined;
+  return prefixed ? null : undefined;
 }
 
 /**
@@ -70,6 +102,7 @@ export class SessionScope implements TestScope {
   private readonly state: DeliveryState;
   private readonly index: PlanIndex;
   private readonly delivered: (key: ItemKey) => DeliveredItem | undefined;
+  private readonly source: TestVariableSource;
   /** The variables of the instances not yet presented, by item reference, found at the first need. */
   private initials: WeakMap<CourseItem, ItemVariables> | undefined;
 
@@ -78,6 +111,10 @@ export class SessionScope implements TestScope {
     this.state = state;
     this.index = planIndex(state.plan);
     this.delivered = deliveredLookup(state);
+    this.source = {
+      duration: (scope, identifier) => durationOf(state.clocks, scope, identifier),
+      context: (identifier) => this.contextValue(identifier),
+    };
   }
 
   /** Returns the instances of the plan that the filter keeps, in presentation order. */
@@ -124,18 +161,7 @@ export class SessionScope implements TestScope {
    * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
    */
   variable(identifier: string): Value | null | undefined {
-    const [prefix = "", ...rest] = identifier.split(".");
-    const duration =
-      identifier === DURATION
-        ? this.duration(undefined)
-        : rest.length === 1 && rest[0] === DURATION
-          ? this.duration(prefix)
-          : undefined;
-    if (duration !== undefined) return duration;
-    const context = this.contextValue(identifier);
-    if (context !== undefined) return context;
-    const prefixed = (rest.length === 1 || rest.length === 2) && this.course.structure.itemRef(prefix) !== undefined;
-    return prefixed ? null : undefined;
+    return testVariable(this.course.structure, this.source, identifier);
   }
 
   /**
@@ -152,19 +178,6 @@ export class SessionScope implements TestScope {
     if (given === undefined) return this.course.contexts.get(identifier) ?? null;
     // The values given were checked against every declaration at the start, so each fits.
     return given === null ? null : (fitValue(given, declaration) ?? null);
-  }
-
-  /**
-   * Returns the duration of the test, or of the test part or section with the identifier; `undefined` when there is no
-   * such part or section.
-   */
-  private duration(identifier: string | undefined): Value | undefined {
-    const { structure } = this.course;
-    const { clocks } = this.state;
-    if (identifier === undefined) return durationOf(clocks, "test", structure.test.model.identifier);
-    if (structure.part(identifier) !== undefined) return durationOf(clocks, "part", identifier);
-    if (structure.section(identifier) !== undefined) return durationOf(clocks, "section", identifier);
-    return undefined;
   }
 
   private entry(ref: string): CourseItem {

@@ -86,6 +86,9 @@ sequenceDiagram
 | `itemFeedback(session, item, control)`                         | The outcomes that decide the feedback shown in the state of the session.                       |
 | `itemResponses(session)`                                       | The responses the item shows: drafts, submitted responses, or the solution.                    |
 | `resultStatus(session, item)`                                  | The session status of Results Reporting.                                                       |
+| `readItemVariables(item, result)`                              | The variables that response processing starts from, read from a stored result of one instance. |
+| `readTestInputs(structure, result, items, options?)`           | The outcomes and the scope that outcome processing takes, read from a stored report.           |
+| `TestInputs`, `ReadTestInputsOptions`                          | What `readTestInputs` returns, and its option `variables`.                                     |
 | `standaloneSessionControl(control?)`                           | The item session control of an item delivered alone.                                           |
 | `ItemSession`, `ItemSessionStatus`                             | The state of an item session: plain data with its variables, drafts and attempts.              |
 | `ItemSessionContext`, `ItemAction`, `ItemStep`                 | What a step reads besides the session, the actions of the candidate, and the result of a step. |
@@ -754,7 +757,9 @@ reaches the section, in a nonlinear part too.
 
 `results(state)` assembles the Results Reporting document: the `context` given at `start`; the result of the test, with its
 `duration`, `PART.duration` and `SECTION.duration`, its context variables and outcomes, and the supports used; and an item
-result for each instance presented, in order of presentation, with `sequenceIndex` from 1.
+result for each instance of the plan: those presented, in order of presentation, with `sequenceIndex` from 1, then those not
+presented, in plan order, with the next indexes. A report that lists every planned instance can be scored again
+([Rescoring a stored report](#rescoring-a-stored-report)).
 
 | Item result       | Content                                                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -763,6 +768,8 @@ result for each instance presented, in order of presentation, with `sequenceInde
 | responses         | `numAttempts` and `duration` (also for an item that is not time dependent), then each declared response with its last submitted value, `choiceSequence` when the choices were shuffled, `scoreStatus` and `answeredStatus`. |
 | other variables   | Template and context variables, then `completionStatus` and each declared outcome with its `view`, interpretation, normal and mastery values, `external-scored` and `variable-identifier-ref`.                              |
 | comment, supports | The candidate's comment, and the supports on while the item was presented: `assigned` when the profile names them, `universal` when only the program gives them.                                                            |
+| not presented     | An instance of the plan that was never shown: `numAttempts` 0, `duration` 0, the status `initial`, the datestamp of the test result and no other variable. An adaptive section lists only what it presented.                |
+| correct response  | Written for a response variable whose key template processing set with `qti-set-correct-response`, in the report of the session only; a declared key is in the item, and a report to a CAT engine never holds one.          |
 
 The result of the test has no datestamp of its own: it is the time of the latest step. An item delivered alone has no result
 of the test. A datestamp is always written with an offset because the JSON binding of CAT 1.0 declares it as
@@ -1190,6 +1197,7 @@ flowchart LR
 | [Sessions across content edits](#sessions-across-content-edits) | A host that edits items while stored sessions exist                                         | Below                                                                         |
 | [Sessions across days](#sessions-across-days)                   | A learner who comes back after days                                                         | Below, and [a learner who is away](../player/client.md#a-learner-who-is-away) |
 | [Attempts for a learner model](#events)                         | A host that feeds each attempt to a model of what the learner knows                         | [Events](#events)                                                             |
+| [Rescoring a stored report](#rescoring-a-stored-report)         | A host that fixes an item or a weight and recomputes the outcomes of stored reports         | Below                                                                         |
 
 ### A ladder of hints
 
@@ -1309,6 +1317,153 @@ rungs.map(({ outcomes }) => outcomes.SCORE.value.base.float); // => [0, 0, 0.5]
 solved.state.items[0].session.status; // => "closed"
 ```
 
+### Rescoring a stored report
+
+A key found wrong after an exam, a changed mapping or weight, or a regrade: the host reads each stored report back into the inputs of
+`runResponseProcessing` and `runOutcomeProcessing`, runs the fixed item, then the test, and stores what it chooses. The runtime reads;
+the host decides which items are corrected, stores results and supplies new scores.
+
+```mermaid
+flowchart LR
+  report[("Stored report")] --> rv["readItemVariables"]
+  fixed["Fixed item"] --> rv
+  rv --> rp["runResponseProcessing"]
+  rp -->|"variables by position"| ti["readTestInputs"]
+  report --> ti
+  ti -->|"outcomes, scope"| op["runOutcomeProcessing"]
+  op --> new["New test outcomes"]
+```
+
+```ts
+import {
+  createEngine,
+  createRandom,
+  readAsi,
+  readItemVariables,
+  readResults,
+  readTestInputs,
+  resolveStructure,
+  runOutcomeProcessing,
+  runResponseProcessing,
+  writeResults,
+} from "@assesskit/runtime";
+
+const itemXml = (
+  key,
+) => `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="Q1" title="Q1" time-dependent="false">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>${key}</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
+  <qti-item-body>
+    <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+  <qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct"/>
+</qti-assessment-item>`;
+const test = readAsi(`<qti-assessment-test xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="T" title="T">
+  <qti-outcome-declaration identifier="TOTAL" cardinality="single" base-type="float"/>
+  <qti-test-part identifier="P" navigation-mode="linear" submission-mode="individual">
+    <qti-assessment-section identifier="S" title="S" visible="true">
+      <qti-assessment-item-ref identifier="Q1" href="Q1.xml"/>
+    </qti-assessment-section>
+  </qti-test-part>
+  <qti-outcome-processing>
+    <qti-set-outcome-value identifier="TOTAL"><qti-sum><qti-test-variables variable-identifier="SCORE"/></qti-sum></qti-set-outcome-value>
+  </qti-outcome-processing>
+</qti-assessment-test>`).test;
+const wrongKey = readAsi(itemXml("A")).item;
+const fixedKey = readAsi(itemXml("B")).item;
+const resolvers = {
+  items: (href) => ({ resource: href, deliverable: { kind: "qti", item: wrongKey }, hazards: [], variants: [] }),
+  sections: () => undefined,
+  stimuli: () => undefined,
+};
+
+// The session, as it was stored: the candidate answered B, and the key then was A.
+const engine = createEngine({ kind: "test", test, base: "test.xml", resolvers });
+const started = engine.start({ seed: 1, at: 0 });
+const answered = engine.apply(started.state, {
+  type: "set-responses",
+  item: { ref: "Q1", instance: 1 },
+  responses: new Map([["RESPONSE", { cardinality: "single", baseType: "identifier", value: "B" }]]),
+  at: 1000,
+});
+const submitted = engine.apply(answered.state, { type: "submit", item: { ref: "Q1", instance: 1 }, at: 2000 });
+const stored = writeResults(engine.results(submitted.state));
+submitted.state.outcomes.get("TOTAL"); // => { cardinality: "single", baseType: "float", value: 0 }
+
+// The recipe: the report and the fixed item in, the new outcomes out.
+const report = readResults(stored);
+const structure = resolveStructure(test, "test.xml", resolvers);
+const items = new Map([["Q1", fixedKey]]);
+const corrected = new Set(["Q1"]);
+const context = { random: createRandom(1) };
+const variables = new Map(
+  report.itemResults.flatMap((itemResult, position) =>
+    corrected.has(itemResult.identifier) && !["initial", "pendingSubmission"].includes(itemResult.sessionStatus)
+      ? [
+          [
+            position,
+            runResponseProcessing(
+              items.get(itemResult.identifier),
+              readItemVariables(items.get(itemResult.identifier), itemResult),
+              context,
+            ),
+          ],
+        ]
+      : [],
+  ),
+);
+const inputs = readTestInputs(structure, report, items, { variables });
+runOutcomeProcessing(structure.test.model, inputs.outcomes, inputs.scope, context).get("TOTAL"); // => { cardinality: "single", baseType: "float", value: 1 }
+```
+
+Skip the results with the status `initial`, which ran no response processing, and `pendingSubmission`, which holds a response never submitted:
+the recipe is for ended sessions. Filter `itemResults` to leave an item out of the score, as the mock correction does; put the host's own values
+into `variables` for a regrade such as full credit.
+
+| What                                                 | Happens in the recipe                                          | Why                                                                                                                                                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Responses, template and context values               | The report's                                                   | The fix changes the scoring, not what the candidate did                                                                                                                                                                   |
+| A key that the declaration holds                     | The fixed item's                                               | The reason for the recipe                                                                                                                                                                                                 |
+| A key that `qti-set-correct-response` sets           | The report's, so a fix to that rule changes no score by itself | The rule ran once, with draws that a report does not hold. Put the new key in first: `{ ...variables, correctResponses: new Map(variables.correctResponses).set("RESPONSE", key) }`, on what `readItemVariables` returned |
+| A default that `qti-set-default-value` set           | The declared one                                               | A report holds no defaults                                                                                                                                                                                                |
+| Outcomes that processing sets                        | Reset as the engine resets them                                | The specification resets outcomes before each run                                                                                                                                                                         |
+| An item outcome that a scorer sets                   | Kept from the report                                           | A rating does not depend on the key                                                                                                                                                                                       |
+| An outcome of the test that a scorer sets            | In `inputs.outcomes`, as the report holds it                   | As the engine keeps supplied scores. A declared `THETA_*` stays as it was, so it is stale when a corrected item fed it: set the new value first, `new Map(inputs.outcomes).set("THETA_READING", value)`                   |
+| An outcome of a CAT engine that no declaration takes | Not an input; it stays in the report                           | Outcome processing cannot read it                                                                                                                                                                                         |
+| Every other outcome of the test                      | Starts from its default                                        | The specification's reset                                                                                                                                                                                                 |
+| Durations                                            | The test result's, at the end of the session                   | The engine reads its clock at the last outcome processing, so an outcome that reads `duration` differs by the time that passed after it                                                                                   |
+| Route, selection, CAT stages                         | Stay as taken                                                  | The recipe evaluates no navigation: a corrected item never reroutes a finished session                                                                                                                                    |
+| `qti-random` in processing                           | Fresh draws from `context.random`                              | A report holds no seed                                                                                                                                                                                                    |
+| The variant of an item that was delivered            | The item in `items`                                            | A report does not name the variant; variants share their scoring by content rule                                                                                                                                          |
+| `ITEM.n.VAR` after jumps in a nonlinear part         | The nth result of the reference in the report                  | The report is in order of presentation, which the candidate's jumps can make differ from the plan; `ITEM.VAR` and every aggregate are unaffected                                                                          |
+| `QTI_CONTEXT`, when the test does not declare it     | NULL                                                           | A report holds no value for an undeclared variable: declare it to read it                                                                                                                                                 |
+
+`ITEM.VAR` reads the result with the latest datestamp among those of the reference that have an attempt and are not `pendingSubmission`, and
+the last result of the reference when none has; on equal datestamps, the later. `ITEM.n.VAR` reads the nth result of the reference.
+
+| Options of `readTestInputs` | Default | Meaning                                                                                                   |
+| --------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `variables`                 | none    | The variables that replace the report's for an instance, by its position in `itemResults`, counted from 0 |
+
+The readers take one result for each planned instance, as `results` writes them. A report that lists presented instances only, or several
+results for one instance, makes `ITEM.n`, `qti-number-*` and every aggregate read wrong, and no error says so. An adaptive item has no reader:
+a report holds its last attempt, and its outcomes depend on all of them, so replay its attempts.
+
+| Failure                                                                  | Result                                                                     |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| An item of the report is missing from `items`, or from the test          | `DataError` that names it                                                  |
+| A response, template or context value does not fit the fixed declaration | `DataError`: the fix changed the declaration, so the host voids the result |
+| An adaptive item given to `readItemVariables`                            | `DataError`: replay the attempts                                           |
+| A report without a test result                                           | `DataError`: an item delivered alone uses `readItemVariables` alone        |
+| A position of `variables` outside `itemResults`                          | `DataError`                                                                |
+| A datestamp that is not a date and time                                  | `DataError`                                                                |
+| An outcome of the report that the item or the test does not declare      | Left out, as the extras of a CAT engine are                                |
+| A rule of processing fails                                               | `ProcessingError` passes through; the host voids the result                |
+
 ### Sessions across content edits
 
 A state does not hold the item. It keeps what the session captured when it started, and the engine reads the rest from the item it was
@@ -1335,12 +1490,12 @@ rules, and the value to choose: above the longest pause that a learner takes whi
 
 ## Errors
 
-| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value. |
-| `SecurityError`   | An action is above `maxActionSize` or `maxPciStateLength` at `parseCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Class             | Thrown when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DataError`       | `parseCandidateAction` meets input that is not an action of the candidate; `viewFromJson` meets JSON that is not a view; `viewToJson` or `actionToJson` is given something else; the static checks of `createEngine` find an error; a context value given to `start` names no context variable or does not fit one; a state is not one of the format, or started on another content version than the engine's; an argument has the wrong type; identifiers repeat; a section reference and its section differ; a selection cannot be made; a multiplier is not positive; a plan does not match its structure; an item instance is not in the plan; a context value does not fit its declaration; a response is not a value; `readItemVariables` is given an adaptive item, or `readItemVariables` or `readTestInputs` meets a value of a report that does not fit the declaration, an item or a position that the test lacks, a report without a test result, or a datestamp that is not a date. |
+| `SecurityError`   | An action is above `maxActionSize` or `maxPciStateLength` at `parseCandidateAction`; a plan would hold more than `maxPlanNodes` sections and items, also at `start`; an expression of a pre-condition or branch rule builds a container above its limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `ProcessingError` | A pre-condition or branch rule fails, or does not give a boolean; a declared value of an item is not in the lexical form of its base type, also in `readItemVariables`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `ReadError`       | A resolver cannot find a section.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 A well-formed action that the rules do not allow is a refusal, not an error, and processing failures in item sessions and in the engine are data.
 
@@ -1353,6 +1508,7 @@ A well-formed action that the rules do not allow is a refusal, not an error, and
 | The HTTP client of a CAT engine and the transport of scores | The host implements `CatPort` and `supply-scores`                                                       |
 | Rendering of the view                                       | The player draws the `CandidateView`                                                                    |
 | Asynchronous resolvers                                      | The engine does no I/O; the host loads documents before `createEngine`                                  |
+| A rescoring job, a store of reports, a report writer        | The host decides what is corrected and stores the results; the runtime reads reports and processes them |
 
 ## Files
 
@@ -1382,6 +1538,7 @@ flowchart BT
 | `view.ts`, `view-body.ts`, `view-item.ts`, `view-navigation.ts`, `view-actions.ts`, `candidate-view.ts`, `view-json.ts`                  | The candidate view                              |
 | `scoring.ts`, `scorer-view.ts`, `cat-session.ts`, `cat-flow.ts`, `cat-outcomes.ts`, `drain-cat.ts`, `pending-work.ts`, `pending-json.ts` | Pending work                                    |
 | `results-assembly.ts`                                                                                                                    | The results report                              |
+| `result-variables.ts`, `result-scope.ts`                                                                                                 | Reading a stored report back into processing    |
 | `internal.ts`                                                                                                                            | The helpers that the tests of the package share |
 
 ## References

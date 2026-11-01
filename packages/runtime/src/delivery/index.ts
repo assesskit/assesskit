@@ -9,7 +9,8 @@
  * candidate view, which holds no answer key, processing or hidden content, and the JSON forms of views and actions,
  * with the limits that a server puts on the actions of its clients — and the pending work that the engine waits on the
  * host for: scoring requests with their scorer view, the sessions of adaptive sections with a CAT engine,
- * `drainCat` and `sendCatRequest`, links to tools scored by their tool, and the results report of a session.
+ * `drainCat` and `sendCatRequest`, links to tools scored by their tool, the results report of a session, and the readers that
+ * take a stored report back to the inputs of response and outcome processing.
  *
  * @module @assesskit/runtime/delivery
  */
@@ -87,7 +88,9 @@ export {
   type TestPlan,
 } from "./plan.js";
 export type { Refusal, RefusalCode } from "./refusal.js";
+export { type ReadTestInputsOptions, readTestInputs, type TestInputs } from "./result-scope.js";
 export { resultStatus } from "./result-status.js";
+export { readItemVariables } from "./result-variables.js";
 export type { ScorerItem, ScorerView } from "./scorer-view.js";
 export type {
   Scorer,

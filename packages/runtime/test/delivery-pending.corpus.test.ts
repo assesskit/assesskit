@@ -134,6 +134,7 @@ describe("the pending work of the examples", () => {
     expect(results.itemResults.map(({ identifier, sessionStatus }) => [identifier, sessionStatus])).toEqual([
       ["i853928446", "final"],
       ["i09f742081", "final"],
+      ["elements", "initial"],
     ]);
     expect(readResults(writeResults(results))).toEqual(results);
   });

@@ -54,15 +54,16 @@ the work in the table:
 of the tests generate with a fixed seed. A benchmark fails when its fastest sample is above its budget. The budgets are in
 `packages/runtime/test/budgets.ts`.
 
-| Benchmark                               | Input                                                                                                                 | Fastest on the CI runner | Budget        |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- |
-| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource     | 92.2 ms                  | 500 ms        |
-| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                 | 2.97 ms                  | 20 ms         |
-| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                               | 1.16 ms                  | 6 ms          |
-| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                     | 18.4 ms                  | 100 ms        |
-| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules | 264 ms                   | 2,000 ms      |
-| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                     | 4.81 ms                  | 30 ms         |
-| Size of that state                      | The same state as JSON text                                                                                           | 118,699 bytes            | 150,000 bytes |
+| Benchmark                               | Input                                                                                                                       | Fastest on the CI runner | Budget        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- |
+| `readPackage`                           | 1,000 generated items of 7.6 MB, an archive of 2.7 MB, and the manifest with generated metadata for each resource           | 92.2 ms                  | 500 ms        |
+| First use of 3 items                    | The resolvers of `packageResolvers` on a package that has parsed none                                                       | 2.97 ms                  | 20 ms         |
+| `start` of a test of 100 sections       | 100 sections of 10 items, each selecting 8 and shuffling: 800 instances                                                     | 1.16 ms                  | 6 ms          |
+| `submit` with outcome processing        | The same test halfway through its session, with 101 rules that read item sessions                                           | 18.4 ms                  | 100 ms        |
+| Replay of 1,000 actions                 | `deserializeState` of a stored state, then `apply` of 250 items times 4 actions on a test of 10 sections and 11 rules       | 264 ms                   | 2,000 ms      |
+| `serializeState` and `deserializeState` | The state of a session of 100 items, all answered                                                                           | 4.81 ms                  | 30 ms         |
+| Rescoring a report                      | `readTestInputs` and `runOutcomeProcessing` on the report of 200 items, all answered, with 21 rules that read item sessions | 0.49 ms on a laptop      | 10 ms         |
+| Size of that state                      | The same state as JSON text                                                                                                 | 118,699 bytes            | 150,000 bytes |
 
 The replay also checks that the replayed state equals the state of the session.
 
@@ -77,11 +78,11 @@ only with the reason in the commit that changes it.
 
 Which budgets hold on a machine other than the runner:
 
-| Budget                      | What it compares                                           | Holds                                                                                       |
-| --------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| The ratio against Longsight | Two samples of one run, which a slow machine slows equally | On any machine, within the noise of a shared one                                            |
-| The size of a state         | Bytes                                                      | On any machine                                                                              |
-| A time                      | One sample against a fixed number of milliseconds          | On a machine up to five times slower than the runner; on a slower one only the ratios apply |
+| Budget                        | What it compares                                           | Holds                                                                                       |
+| ----------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The ratio against a reference | Two samples of one run, which a slow machine slows equally | On any machine, within the noise of a shared one                                            |
+| The size of a state           | Bytes                                                      | On any machine                                                                              |
+| A time                        | One sample against a fixed number of milliseconds          | On a machine up to five times slower than the runner; on a slower one only the ratios apply |
 
 Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
 so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks of the delivery and of packages import
@@ -98,3 +99,10 @@ cost of a submission is therefore the rules that read item sessions times the ma
 plan for each such rule. The benchmark has 101 such rules over 800 instances, one for each of 100 sections and one for the
 test. The session looks the items presented up in a map made once for the step, so the cost grows with the rules times the
 instances of the plan.
+
+## Rescoring
+
+`readTestInputs` and `runOutcomeProcessing` on the stored report of a session of 200 items take 1.3 times the outcome step of the
+engine on the same session (`apply` of the last submission): the budget is 2. No outside library rescores a stored report, so the
+engine is the reference. Reading the report back builds the variables of each of the 200 results, which the engine keeps in its
+state, and the outcome processing is the same work over the same plan.

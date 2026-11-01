@@ -47,6 +47,13 @@ export const LONGSIGHT_BUDGETS = {
   testSubmit: { time: 20, ratio: 3 },
 } as const;
 
+/**
+ * The budget of rescoring a report of 200 items, the reading of its inputs and the outcome processing: the most that the
+ * fastest sample may take, in milliseconds, and the most as a multiple of the fastest sample of the outcome step of the
+ * engine on the same session. No outside library rescores a stored report, so the engine is the reference.
+ */
+export const RESCORING_BUDGET = { time: 10, ratio: 2 } as const;
+
 /** The budget of one row against Longsight. */
 export interface LongsightBudget {
   /** The most the fastest sample of the runtime may take, in milliseconds. */
@@ -56,8 +63,8 @@ export interface LongsightBudget {
 }
 
 /**
- * Reports the fastest and the median sample of a row for both implementations and their ratio, and fails the test when
- * the fastest sample of the runtime is above its time or above the ratio of the fastest sample of Longsight.
+ * Reports the fastest and the median sample of a row for the runtime and its reference and their ratio, and fails the
+ * test when the fastest sample of the runtime is above its time or above the ratio of the fastest sample of the reference.
  */
 export async function expectAgainst(
   annotate: TestContext["annotate"],
@@ -69,10 +76,10 @@ export async function expectAgainst(
   const ratio = subject.latency.min / reference.latency.min;
   const medians = subject.latency.p50 / reference.latency.p50;
   await annotate(
-    `${name}: runtime ${subject.latency.min.toFixed(3)} ms (median ${subject.latency.p50.toFixed(3)}), Longsight ${reference.latency.min.toFixed(3)} ms (median ${reference.latency.p50.toFixed(3)}); ratio ${ratio.toFixed(2)} (median ${medians.toFixed(2)}); budget ${budget.time} ms and ${budget.ratio}`,
+    `${name}: runtime ${subject.latency.min.toFixed(3)} ms (median ${subject.latency.p50.toFixed(3)}), reference ${reference.latency.min.toFixed(3)} ms (median ${reference.latency.p50.toFixed(3)}); ratio ${ratio.toFixed(2)} (median ${medians.toFixed(2)}); budget ${budget.time} ms and ${budget.ratio}`,
   );
   expect(subject.latency.min, `The fastest sample of "${name}" in milliseconds`).toBeLessThan(budget.time);
-  expect(ratio, `The fastest sample of "${name}" as a multiple of Longsight's`).toBeLessThan(budget.ratio);
+  expect(ratio, `The fastest sample of "${name}" as a multiple of the reference's`).toBeLessThan(budget.ratio);
 }
 
 /**
