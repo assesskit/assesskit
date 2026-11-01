@@ -56,10 +56,11 @@ interface Grant {
 function basicCredentials(header: string | null): readonly [string, string] | undefined {
   const match = /^Basic ([A-Za-z0-9+/=]+)$/.exec(header ?? "");
   if (match?.[1] === undefined) return undefined;
-  const [id, secret, ...rest] = atob(match[1]).split(":");
-  if (id === undefined || secret === undefined || rest.length > 0) return undefined;
   const decode = (part: string): string => decodeURIComponent(part.replaceAll("+", " "));
+  // atob refuses text that is not base64 of a whole number of bytes, such as "a", and decodeURIComponent a bad escape.
   try {
+    const [id, secret, ...rest] = atob(match[1]).split(":");
+    if (id === undefined || secret === undefined || rest.length > 0) return undefined;
     return [decode(id), decode(secret)];
   } catch {
     return undefined;
@@ -78,6 +79,7 @@ function refusal(status: number, error: string, headers: Readonly<Record<string,
  * @remarks
  * The function runs on Node.js (see `listen`), Deno, Bun and Workers. The tokens live in memory, so this server is one
  * process; a host with several processes keeps them in a database, or signs them as JWTs, behind the same `authenticate`.
+ * A token that has expired is forgotten when the next token is issued.
  * A request whose token lacks the scope of its operation answers 401, because the binding defines no 403 for its endpoints.
  *
  * @param options - The engine, the check of the clients, the source of tokens and the clock.
@@ -96,8 +98,10 @@ export function engineServer(options: EngineServerOptions): (request: Request) =
     if (form.get("grant_type") !== "client_credentials") return refusal(400, "unsupported_grant_type");
     const scopes = (form.get("scope") ?? "").split(" ").filter((scope) => scope !== "");
     if (scopes.length === 0 || scopes.some((scope) => !SCOPES.has(scope))) return refusal(400, "invalid_scope");
+    const issued = now();
+    for (const [expired, grant] of grants) if (grant.expiresAt <= issued) grants.delete(expired);
     const token = newToken();
-    grants.set(token, { scopes: new Set(scopes), expiresAt: now() + tokenSeconds * 1000 });
+    grants.set(token, { scopes: new Set(scopes), expiresAt: issued + tokenSeconds * 1000 });
     return Response.json(
       { access_token: token, token_type: "bearer", expires_in: tokenSeconds, scope: scopes.join(" ") },
       { headers: { "Cache-Control": "no-store", Pragma: "no-cache" } },

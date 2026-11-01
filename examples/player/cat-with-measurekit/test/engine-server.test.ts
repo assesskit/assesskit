@@ -2,7 +2,7 @@
 
 import { ServiceError } from "@assesskit/player";
 import { type OAuthClientCredentials, restCatPort } from "@assesskit/player/cat-rest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { administer, answersEasyItems, fetchFrom } from "../scenario.ts";
 import { DEMO_CREDENTIALS, demoServer } from "../src/demo-server.ts";
 import { engineServer, TOKEN_PATH } from "../src/engine-server.ts";
@@ -71,10 +71,33 @@ const call = (
 describe("the token endpoint", () => {
   it("refuses a client whose credentials are wrong or missing", async () => {
     const { server } = fixture();
-    for (const authorization of [basic("tool", "wrong"), basic("other", "secret/+"), "Basic !!!", "Bearer x", ""]) {
+    const undecodable = `Basic ${btoa("tool:%")}`;
+    for (const authorization of [
+      basic("tool", "wrong"),
+      basic("other", "secret/+"),
+      "Basic !!!",
+      "Basic a",
+      undecodable,
+      "Bearer x",
+      "",
+    ]) {
       const response = await tokenFor(server, API, authorization);
       expect([response.status, await response.json()], authorization).toEqual([401, { error: "invalid_client" }]);
       expect(response.headers.get("www-authenticate")).toBe("Basic");
+    }
+  });
+
+  it("forgets a token that has expired when it issues the next one", async () => {
+    const { server, clock } = fixture();
+    await tokenFor(server, API);
+    const forgotten = vi.spyOn(Map.prototype, "delete");
+    try {
+      clock.now = 3600 * 1000;
+      await tokenFor(server, API);
+      expect(forgotten).toHaveBeenCalledWith("token-1");
+      expect(forgotten).not.toHaveBeenCalledWith("token-2");
+    } finally {
+      forgotten.mockRestore();
     }
   });
 
