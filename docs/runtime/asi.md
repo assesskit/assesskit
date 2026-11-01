@@ -367,6 +367,17 @@ examples contain every interaction but the custom one; the other elements have n
 unit tests. Two examples are not read, because the ASI schema rejects them: one lacks the
 required `use` of a rubric block, and one has an attribute `qti-interaction-modules` does not have.
 
+## Errors
+
+| Situation                                                                                             | Class                                                    | What to do                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| The document is not well-formed, declares XML 1.1 or an encoding the reader cannot use                | `ReadError`, code `assesskit/xml/...`                    | See the [codes of the XML reader](xml.md#errors); fix the document at the line and column of the issue. |
+| The document does not map to the model                                                                | `ReadError`, a code of the table under Reading           | Fix the document where the issue says: its `location` has the path, line, column and element path.      |
+| The document has a DOCTYPE, or is above a limit of the XML reader                                     | `SecurityError`, `limit` names the limit                 | Do not read it. For a document you trust, raise the limit with the option `limits`.                     |
+| An argument is not of its type: a document that is neither text, bytes nor an element, or bad options | `DataError` that says what is wrong and what is expected | Pass the type that the message names.                                                                   |
+| `writeAsi` is given a model that is not the model of its element                                      | `DataError` that names the property                      | Build the model with the types of this module, and fix the property that the message names.             |
+| `walkDocument` is given a model whose shape is wrong                                                  | `DataError`                                              | As for `writeAsi`.                                                                                      |
+
 ## Not included
 
 | Not included                                          | Why                                                                                            |
