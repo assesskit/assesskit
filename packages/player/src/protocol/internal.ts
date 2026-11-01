@@ -8,6 +8,7 @@ export { type CatAnswerer, type CatLoopFailure, createCatLoops } from "./answer-
 export { checkClock, clockSchema, readClock } from "./clock.js";
 export { checkHostAction } from "./host-action.js";
 export { checkCallOptions, checkHostApplyOptions } from "./host-session.js";
+export { stepAfterIdle } from "./idle.js";
 export { markOfficial } from "./official.js";
 export { SCORERS } from "./scorers.js";
 export { checkDeclaration } from "./scoring-declaration.js";

@@ -6,9 +6,12 @@ import {
   type CandidateAction,
   type CandidateView,
   type CatRequest,
+  createEngine,
   type DeliveryEvent,
+  type DeliveryState,
   type HostAction,
   type RefusalCode,
+  stamp,
 } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { AssessmentResult } from "@assesskit/runtime/results";
@@ -41,8 +44,10 @@ import {
   checkHostApplyOptions,
   createCatLoops,
   markOfficial,
+  stepAfterIdle,
 } from "../src/protocol/internal.js";
-import { examDefinition, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
+import { CANDIDATE_ACTION_TYPES } from "../src/server/index.js";
+import { examDefinition, examFiles, examHost, packageOf, ratedFiles } from "./exam-fixture.js";
 import { fuzzJson } from "./fuzz.js";
 import { runGuideSamples } from "./guide-samples.js";
 import { localOptions } from "./local-fixture.js";
@@ -446,6 +451,111 @@ describe("the options of a session call", () => {
   });
 });
 
+describe("stepAfterIdle", () => {
+  const Day = 24 * 3600 * 1000;
+  const Start = 1_700_000_000_000;
+  const engine = createEngine(examDefinition(packageOf(examFiles({ limits: '<qti-time-limits max-time="600"/>' }))));
+  const runtime = { engine, stamp };
+  const started = engine.start({ seed: 1, at: Start });
+  if (!started.ok) throw new Error("The fixture session must start.");
+  const begin = started.state;
+  const Q1 = { ref: "q1", instance: 1 };
+  const choose = (identifier: string): CandidateAction => ({
+    type: "set-responses",
+    item: Q1,
+    responses: new Map([["RESPONSE", single("identifier", identifier)]]),
+  });
+  const types = (events: readonly DeliveryEvent[]): string[] => events.map(({ type }) => type);
+
+  /** What the session reaches when the candidate suspends at the latest step and resumes later, as a person would. */
+  function explicit(state: DeliveryState, action: CandidateAction, now: number): DeliveryState {
+    let current = state;
+    for (const [step, at] of [
+      [{ type: "suspend" }, state.at],
+      [{ type: "resume" }, now],
+      [action, now],
+    ] as const) {
+      const taken = engine.apply(current, stamp(current, step, at));
+      if (!taken.ok) throw new Error(taken.refusal.message);
+      current = taken.state;
+    }
+    return current;
+  }
+
+  it("applies the action as the engine does when no maxIdle is given, however long the gap", () => {
+    const now = Start + 3 * Day;
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: undefined });
+    expect(taken).toEqual({ step: engine.apply(begin, stamp(begin, choose("A"), now)), at: now });
+  });
+
+  it("counts a gap above maxIdle as a suspension at the latest step and a resumption now, with the events in order", () => {
+    const now = Start + 3 * Day;
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    if (taken?.step.ok !== true) throw new Error("The action must be accepted.");
+    expect(types(taken.step.events).slice(0, 3)).toEqual(["suspended", "resumed", "presented"]);
+    expect(taken.step.events.slice(0, 2).map(({ at }) => at)).toEqual([Start, now]);
+    expect(taken.step.events.length).toBeGreaterThan(3);
+    expect(taken.at).toBe(now);
+  });
+
+  it("leaves the clocks and the durations as an explicit suspension does, so that a running maximum time stops with the gap", () => {
+    const now = Start + 3 * Day;
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    if (taken?.step.ok !== true) throw new Error("The action must be accepted.");
+    expect(taken.step.state).toEqual(explicit(begin, choose("A"), now));
+    expect(engine.results(taken.step.state)).toEqual(engine.results(explicit(begin, choose("A"), now)));
+    // The limit of the first item is ten minutes: without maxIdle the gap has used it, and with it none has passed.
+    const without = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: undefined });
+    expect(without?.step.ok === false ? without.step.refusal.code : "accepted").toBe("time-over");
+    expect(engine.view(taken.step.state, now).timers.map(({ remaining }) => remaining)).toEqual([600_000]);
+  });
+
+  it("treats a gap as long as maxIdle as time on task", () => {
+    const now = Start + 3600 * 1000;
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    expect(taken).toEqual({ step: engine.apply(begin, stamp(begin, choose("A"), now)), at: now });
+  });
+
+  it("drops a time action that finds a gap above maxIdle, and applies one that does not", () => {
+    const time: HostAction = { type: "time" };
+    expect(
+      stepAfterIdle(runtime, { state: begin, action: time, now: Start + 3 * Day, maxIdle: 3600 * 1000 }),
+    ).toBeUndefined();
+    const soon = stepAfterIdle(runtime, { state: begin, action: time, now: Start + 1000, maxIdle: 3600 * 1000 });
+    expect(soon?.step.ok).toBe(true);
+  });
+
+  it("closes no gap of a session that is suspended or ended", () => {
+    const now = Start + 3 * Day;
+    const suspended = engine.apply(begin, stamp(begin, { type: "suspend" }, Start + 1000));
+    if (!suspended.ok) throw new Error("The session must suspend.");
+    const resumed = stepAfterIdle(runtime, {
+      state: suspended.state,
+      action: { type: "resume" },
+      now,
+      maxIdle: 3600 * 1000,
+    });
+    expect(types(resumed?.step.ok ? resumed.step.events : [])).toEqual(["resumed", "presented"]);
+    const ended = engine.apply(begin, stamp(begin, { type: "end-test" }, Start + 1000));
+    if (!ended.ok) throw new Error("The test must end.");
+    const refused = stepAfterIdle(runtime, { state: ended.state, action: choose("A"), now, maxIdle: 3600 * 1000 });
+    expect(refused?.step.ok === false ? refused.step.refusal.code : "accepted").toBe("ended");
+  });
+
+  it("gives the refusal of the action and leaves the state as it was", () => {
+    const now = Start + 3 * Day;
+    const action: CandidateAction = { type: "submit", item: { ref: "q2", instance: 1 } };
+    const taken = stepAfterIdle(runtime, { state: begin, action, now, maxIdle: 3600 * 1000 });
+    expect(taken?.step.ok === false ? taken.step.refusal.code : "accepted").toBe("not-current");
+    expect(taken?.at).toBe(now);
+  });
+
+  it("stamps the action at the latest step when the clock is behind it", () => {
+    const taken = stepAfterIdle(runtime, { state: begin, action: choose("A"), now: Start - 5000, maxIdle: 1000 });
+    expect(taken?.at).toBe(Start);
+  });
+});
+
 describe("the frame of an LTI item", () => {
   const frame = { url: "https://tool.example.com/lti/login", storageUrl: "https://lti.platform.example/storage" };
 
@@ -823,6 +933,51 @@ describe("the host side of a session host and of a local session", () => {
   });
 });
 
+describe("the option maxIdle of a session host and of a local session", () => {
+  const Alice = { session: "exam-1", principal: "alice" };
+  const Hour = 3600 * 1000;
+
+  it("gives equal steps and results for one script with a gap above it", async () => {
+    const files = examFiles({ limits: '<qti-time-limits max-time="600"/>' });
+    const { host, logged, clock } = await examHost({ clientActions: CANDIDATE_ACTION_TYPES, maxIdle: Hour }, files);
+    await host.start(Alice, { seed: 1 });
+    const setup = localOptions({ definition: examDefinition(packageOf(files)), maxIdle: Hour });
+    const local = await createLocalSession({ ...setup.options, seed: 1 });
+    const feed: (readonly DeliveryEvent[])[] = [];
+    local.host.subscribeSteps((events) => feed.push(events));
+
+    let seq = 0;
+    const candidate = async (action: CandidateAction): Promise<void> => {
+      seq += 1;
+      const answered = await host.handle(Alice, { seq, action: actionToJson(action) });
+      expect(answered.refusal, JSON.stringify(action)).toEqual((await local.dispatch(action)).refusal);
+    };
+    const wait = (milliseconds: number): void => {
+      clock.advance(milliseconds);
+      setup.clock.advance(milliseconds);
+    };
+    const item = { ref: "q1", instance: 1 };
+    const choose: CandidateAction = {
+      type: "set-responses",
+      item,
+      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+    };
+
+    await candidate(choose);
+    wait(3 * 24 * Hour);
+    expect(await host.session(Alice.session).apply({ type: "time" })).toEqual(await local.host.apply({ type: "time" }));
+    await candidate(choose);
+    wait(2 * Hour);
+    await candidate({ type: "move", to: "next" });
+    await candidate({ type: "end-test" });
+
+    expect(await host.session(Alice.session).results()).toEqual(await local.host.results());
+    expect(logged.slice(1).map(({ events }) => events)).toEqual(feed);
+    expect(feed.flat().filter(({ type }) => type === "suspended")).toHaveLength(2);
+    local.close();
+  });
+});
+
 describe("the guide", () => {
   it("shows the results that its samples give", async () => {
     const protocol = await import("../src/protocol/index.js");
@@ -841,6 +996,43 @@ describe("the guide", () => {
 describe("properties", () => {
   const seq = fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER });
   const payload = fc.jsonValue();
+
+  it("reaches the state of an explicit suspension for every gap above maxIdle, and the state of the engine for any other", () => {
+    const engine = createEngine(examDefinition(packageOf(examFiles({ limits: '<qti-time-limits max-time="600"/>' }))));
+    const started = engine.start({ seed: 1, at: 0 });
+    if (!started.ok) throw new Error("The fixture session must start.");
+    const item = { ref: "q1", instance: 1 };
+    const answered: CandidateAction = {
+      type: "set-responses",
+      item,
+      responses: new Map([["RESPONSE", single("identifier", "B")]]),
+    };
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 10 * 24 * 3600 * 1000 }),
+        fc.integer({ min: 1, max: 24 * 3600 * 1000 }),
+        (gap, maxIdle) => {
+          const taken = stepAfterIdle({ engine, stamp }, { state: started.state, action: answered, now: gap, maxIdle });
+          const direct = engine.apply(started.state, stamp(started.state, answered, gap));
+          if (gap <= maxIdle) {
+            expect(taken?.step).toEqual(direct);
+            return;
+          }
+          let current = started.state;
+          for (const [step, at] of [
+            [{ type: "suspend" }, 0],
+            [{ type: "resume" }, gap],
+            [answered, gap],
+          ] as const) {
+            const next = engine.apply(current, stamp(current, step, at));
+            if (!next.ok) throw new Error(next.refusal.message);
+            current = next.state;
+          }
+          expect(taken?.step.ok ? taken.step.state : undefined).toEqual(current);
+        },
+      ),
+    );
+  });
 
   it("accepts every action envelope with a sequence number and an action, whatever the action", () => {
     fc.assert(

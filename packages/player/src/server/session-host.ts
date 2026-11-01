@@ -43,6 +43,19 @@ export interface SessionHostOptions {
    */
   readonly clientActions?: readonly CandidateActionType[];
   /**
+   * The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`: a gap above
+   * it counts as suspended, from the latest step to the next action of the candidate or of the host, while the session is in
+   * progress.
+   *
+   * @remarks
+   * Never set it for an exam: it suspends on behalf of the candidate, which the policy of an exam does not allow
+   * (`createSessionHost` throws `DataError` unless `clientActions` has `suspend`). A `time` action that finds a gap above it
+   * is dropped: nothing is saved or scheduled, and the next action closes the gap.
+   *
+   * @defaultValue none, so that every gap counts
+   */
+  readonly maxIdle?: number;
+  /**
    * The limits on the size of an action, which replace the defaults of the runtime's `parseCandidateAction` field by field.
    *
    * @defaultValue the runtime's limits

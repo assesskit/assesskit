@@ -113,19 +113,20 @@ client.view.current?.title; // => "Question"
 the definition, or the session cannot start, and it rejects with `signal.reason` when the `signal` aborts before the load or the
 first save. A session that was saved stays, and a new call resumes it.
 
-| Option       | Type                                  | Meaning                                                                                                                                                                 |
-| ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                                                                                |
-| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                           |
-| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                       |
-| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.                                                                      |
-| `session`    | `string`                              | The identifier of the session in the store.                                                                                                                             |
-| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                 |
-| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                   |
-| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                            |
-| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                               |
-| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `restCatPort` ([CAT](cat.md#the-option-cat)). Default: none. |
-| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                   |
+| Option       | Type                                  | Meaning                                                                                                                                                                                                |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `definition` | `DeliveryDefinition`                  | What to deliver: a test, or an item alone for a preview.                                                                                                                                               |
+| `engine`     | `EngineOptions`                       | The options of `createEngine`. Default: none.                                                                                                                                                          |
+| `start`      | `Omit<StartOptions, "seed" \| "at">`  | The PNP, the universal supports and the context of `Engine.start`. Default: none.                                                                                                                      |
+| `store`      | `LocalStore`                          | Where the state is saved and restored from: `load` and `save`, which get the `signal` of the call.                                                                                                     |
+| `session`    | `string`                              | The identifier of the session in the store.                                                                                                                                                            |
+| `seed`       | `number`                              | The seed of a session that the store does not have yet, a safe integer.                                                                                                                                |
+| `assets`     | `(path: string) => string`            | Turns the path of a file in the package into the URL to load it from.                                                                                                                                  |
+| `lexicons`   | `(item: string) => readonly string[]` | The paths of the pronunciation lexicons that the item whose document is at `item` depends on. Default: none.                                                                                           |
+| `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                              |
+| `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts. |
+| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `restCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                                |
+| `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                  |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and
 fires a `time` action at each maximum time with `setTimeout`, so a time-out happens on the device without a server. A store that
@@ -142,6 +143,44 @@ A lexicon is a resource of type `pls` among the dependencies of the item's resou
 return the paths.
 
 The server's session host finds them the same way for an exam.
+
+### A learner who is away
+
+A learner who closes the page and comes back three days later has not worked in between, but the clock of every limit and every
+duration ran. `maxIdle` closes such a gap. The first action after a gap above it suspends the session at the latest step, resumes it
+now and then applies the action, so that the durations and the running maximum times leave the gap out exactly as an explicit
+`suspend` and `resume` would.
+
+```mermaid
+sequenceDiagram
+  participant C as Caller
+  participant S as Session
+  participant E as Engine
+  C->>S: action at now
+  alt now - latest step > maxIdle, and in progress
+    alt the action is a time action
+      S-->>C: dropped, nothing saved
+    end
+    S->>E: suspend at the latest step
+    S->>E: resume at now
+  end
+  S->>E: the action at now
+  alt accepted
+    S->>S: save once, then notify
+  else refused
+    S-->>C: refusal, nothing saved
+  end
+```
+
+| Rule               | Behavior                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Choosing a value   | Above the longest pause that a learner takes while working: a gap above it counts in full as suspended.                                                                   |
+| Limits             | A running maximum time stops with the gap, and resumes with the next action.                                                                                              |
+| Saving             | The suspension, the resumption and the action are saved once, so that a crash leaves all of them or none. The step listeners get their events in order.                   |
+| A `time` action    | One that finds a gap above `maxIdle` is dropped: the timer fires it and the host can send it, but nothing is saved or armed again, so an abandoned session costs nothing. |
+| Applies to         | Actions of the candidate and of the host, while the session is in progress. A session that is suspended or ended has no gap to close.                                     |
+| A refused action   | Saves nothing, so the next action still closes the gap.                                                                                                                   |
+| The view before it | A view that the session gives before the first action after the gap counts the gap, so the timers in it show the time as passed. The action's view is right.              |
 
 ### The host side
 

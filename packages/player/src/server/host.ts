@@ -3,6 +3,7 @@ import {
   checkAbortSignal,
   checkChoice,
   checkNonEmptyString,
+  checkPositiveInteger,
   checkRecord,
   describe,
   functionSchema,
@@ -50,6 +51,7 @@ import {
   createCatLoops,
   markOfficial,
   readClock,
+  stepAfterIdle,
   untilAborted,
 } from "../protocol/internal.js";
 import type { StepSink, SuppliedGrade } from "./forward.js";
@@ -84,13 +86,16 @@ const hostOptionsSchema = v.strictObject({
   gate: methodsSchema<AssetGate>("sign"),
   packages: functionSchema<(session: string, options?: SessionCallOptions) => Promise<QtiPackage>>(),
   clientActions: v.optional(v.unknown()),
+  maxIdle: v.optional(v.unknown()),
   limits: v.optional(recordSchema),
   forward: v.optional(v.strictObject({ log: functionSchema<StepSink>() })),
   cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
 });
 
 function checkHostOptions(options: unknown): asserts options is SessionHostOptions {
-  checkClock(parseWith(hostOptionsSchema, options, "The options object").clock);
+  const { clock, maxIdle } = parseWith(hostOptionsSchema, options, "The options object");
+  checkClock(clock);
+  optional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
 }
 
 /** Returns the action as the log of a session keeps it: candidate actions in the runtime's JSON form, host actions without their payloads. */
@@ -117,7 +122,8 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  * - **Idempotence.** A repeated sequence number gets the stored answer, with fresh asset tokens; a stale one is refused.
  * - **Time.** An action is stamped with the server's clock (the runtime's `stamp` never goes back), the deadlines of the new
  *   state are scheduled before it is saved so that a failure of the scheduler loses no time-out, and the scheduler's job
- *   calls `session(id).apply` with `time`.
+ *   calls `session(id).apply` with `time`. With {@link SessionHostOptions.maxIdle}, a gap above it counts as suspended, and
+ *   the job's `time` action that finds one is dropped.
  * - **Saving.** The store saves by version; a conflict reloads and handles the request again.
  * - **Signals.** A call with an aborted `signal` stops before its next load and applies nothing. The signal reaches the
  *   store, the scheduler and `packages`. After the save it is ignored, so that forwarding completes.
@@ -127,12 +133,18 @@ function loggedAction(action: CandidateAction | HostAction, at: number): string 
  *
  * @param options - See {@link SessionHostOptions}.
  * @returns The session host.
- * @throws `DataError` when an option has the wrong type.
+ * @throws `DataError` when an option has the wrong type, or `maxIdle` is set and `clientActions` omit `suspend`.
  */
 export function createSessionHost(options: SessionHostOptions): SessionHost {
   checkHostOptions(options);
-  const { engine, store, scheduler, clock, gate, packages, limits = {}, forward, cat } = options;
+  const { engine, store, scheduler, clock, gate, packages, limits = {}, forward, cat, maxIdle } = options;
   const policy = readClientActions(options.clientActions ?? EXAM_CLIENT_ACTIONS);
+  if (maxIdle !== undefined && !policy.has("suspend")) {
+    throw new DataError(
+      'The option maxIdle counts a long gap as a suspension, which the option clientActions does not let a client take: it has no "suspend". Add "suspend" to clientActions for a host where candidates may pause, and leave maxIdle out for an exam.',
+    );
+  }
+  const idle = { engine, stamp };
   const loops = createCatLoops();
 
   /** Loads the record of a session, unless the call was aborted before. */
@@ -256,8 +268,9 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
       () => new DataError(`The session ${describe(session)} does not exist.`),
       async (stored, now) => {
         const state = deserializeState(stored.state);
-        const stamped = stamp(state, action, now);
-        const step = engine.apply(state, stamped);
+        const taken = stepAfterIdle(idle, { state, action, now, maxIdle });
+        if (taken === undefined) return { result: { events: [] } };
+        const { step, at } = taken;
         if (!step.ok) return { result: { events: [], refusal: step.refusal } };
         return {
           result: { events: step.events },
@@ -266,7 +279,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
             seq: stored.seq,
             envelope:
               action.type === "cat-response" ? await refreshed(session, step.state, stored, now) : stored.envelope,
-            action: loggedAction(action, stamped.at),
+            action: loggedAction(action, at),
             events: step.events,
             ...(supplied === undefined ? {} : { supplied }),
           },
@@ -305,8 +318,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
     const action = parseCandidateAction(envelope.action, limits);
     checkClientAction(policy, action.type);
     const state = deserializeState(stored.state);
-    const stamped = stamp(state, action, now);
-    const step = engine.apply(state, stamped);
+    const { step, at } = stepAfterIdle(idle, { state, action, now, maxIdle });
     const next = step.ok ? step.state : state;
     const reply = await envelopeOf(caller.session, next, now, envelope.seq, signal, step.ok ? undefined : step.refusal);
     return {
@@ -315,7 +327,7 @@ export function createSessionHost(options: SessionHostOptions): SessionHost {
         state: next,
         seq: envelope.seq,
         envelope: JSON.stringify(reply),
-        action: JSON.stringify({ at: stamped.at, action: envelope.action }),
+        action: JSON.stringify({ at, action: envelope.action }),
         events: step.ok ? step.events : [],
       },
     };

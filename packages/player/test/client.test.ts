@@ -137,10 +137,10 @@ async function essaySession(overrides: Parameters<typeof localOptions>[0] = {}) 
 }
 
 /** A local session over the fixture test whose first item has a time limit of ten minutes. */
-async function timedSession() {
+async function timedSession(overrides: Parameters<typeof localOptions>[0] = {}) {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const files = examFiles({ limits: '<qti-time-limits max-time="600"/>' });
-  const setup = localOptions({ definition: examDefinition(packageOf(files)) });
+  const setup = localOptions({ definition: examDefinition(packageOf(files)), ...overrides });
   const client = await createLocalSession(setup.options);
   return { ...setup, client };
 }
@@ -557,6 +557,168 @@ describe("saving before applying", () => {
   });
 });
 
+describe("maxIdle of a local session", () => {
+  const Hour = 3600 * SECOND;
+  const Day = 24 * Hour;
+  const typesOf = (events: readonly DeliveryEvent[]): string[] => events.map(({ type }) => type);
+
+  it("counts a gap above it as suspended, so that the time limit that would have passed has not run", async () => {
+    const without = await timedSession();
+    without.clock.advance(3 * Day);
+    expect((await without.client.dispatch(answer("A"))).refusal?.code).toBe("time-over");
+    without.client.close();
+
+    const { client, clock } = await timedSession({ maxIdle: Hour });
+    clock.advance(3 * Day);
+    const reply = await client.dispatch(answer("A"));
+    expect(reply.refusal).toBeUndefined();
+    expect(client.view.timers.map(({ remaining }) => remaining)).toEqual([600 * SECOND]);
+    client.close();
+  });
+
+  it("gives the durations that an explicit suspension gives", async () => {
+    const explicit = await timedSession();
+    await explicit.client.dispatch({ type: "suspend" });
+    explicit.clock.advance(3 * Day);
+    await explicit.client.dispatch({ type: "resume" });
+    await explicit.client.dispatch(answer("A"));
+    const expected = await explicit.client.host.results();
+    explicit.client.close();
+
+    const { client, clock } = await timedSession({ maxIdle: Hour });
+    clock.advance(3 * Day);
+    await client.dispatch(answer("A"));
+    expect(await client.host.results()).toEqual(expected);
+    client.close();
+  });
+
+  it("saves the gap and the action once, and gives the step listeners the events of the three in order", async () => {
+    const { client, clock, store } = await timedSession({ maxIdle: Hour });
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    const saves = store.saved.get("practice-1")?.length ?? 0;
+    clock.advance(3 * Day);
+    await client.dispatch(answer("A"));
+    expect(store.saved.get("practice-1")).toHaveLength(saves + 1);
+    expect(steps).toHaveLength(1);
+    expect(steps[0]?.slice(0, 3)).toEqual(["suspended", "resumed", "presented"]);
+    expect(steps[0]?.length).toBeGreaterThan(3);
+    client.close();
+  });
+
+  it("treats a gap no longer than it as time on task, so that the timer ends the item at its limit", async () => {
+    const { client, clock } = await timedSession({ maxIdle: 700 * SECOND });
+    clock.advance(600 * SECOND);
+    await vi.advanceTimersByTimeAsync(600 * SECOND);
+    await client.host.pending();
+    expect(statusOfQ1(client.view)).toBe("closed");
+    client.close();
+  });
+
+  it("drops the time action of the timer that finds a gap above it: nothing is saved, no timer is armed, and the next action closes the gap", async () => {
+    const { client, clock, store } = await timedSession({ maxIdle: 5 * 60 * SECOND });
+    expect(vi.getTimerCount()).toBe(1);
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    clock.advance(600 * SECOND);
+    await vi.advanceTimersByTimeAsync(600 * SECOND);
+    await client.host.pending();
+    expect(store.saved.get("practice-1")).toHaveLength(1);
+    expect(steps).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(statusOfQ1(client.view)).not.toBe("closed");
+
+    const reply = await client.dispatch(answer("A"));
+    expect(reply.refusal).toBeUndefined();
+    expect(steps[0]?.slice(0, 2)).toEqual(["suspended", "resumed"]);
+    expect(vi.getTimerCount()).toBe(1);
+    client.close();
+  });
+
+  it("answers a time action of the host that it drops with no events and no refusal", async () => {
+    const { client, clock, store } = await timedSession({ maxIdle: Hour });
+    clock.advance(Day);
+    expect(await client.host.apply({ type: "time" })).toEqual({ events: [] });
+    expect(store.saved.get("practice-1")).toHaveLength(1);
+    client.close();
+  });
+
+  it("drops the time action of the timer of a session that the store returns after days", async () => {
+    const { client, clock, store, options } = await timedSession({ maxIdle: Hour });
+    client.close();
+    clock.advance(3 * Day);
+    const resumed = await createLocalSession(options);
+    await vi.advanceTimersByTimeAsync(0);
+    await resumed.host.pending();
+    expect(store.saved.get("practice-1")).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect((await resumed.dispatch(answer("A"))).refusal).toBeUndefined();
+    resumed.close();
+  });
+
+  it("closes the gap for an action of the host as for one of the candidate", async () => {
+    const { client, clock, write, submit } = await essaySession({ maxIdle: Hour });
+    await write();
+    await submit();
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    clock.advance(3 * Day);
+    expect((await client.host.apply(supply(7))).refusal).toBeUndefined();
+    expect(steps[0]?.slice(0, 2)).toEqual(["suspended", "resumed"]);
+    expect(steps[0]?.slice(-2)).toEqual(["scores-applied", "outcome-processed"]);
+    client.close();
+  });
+
+  it("closes a gap once for calls made together: the second call sees the latest step of the first", async () => {
+    const { client, clock } = await timedSession({ maxIdle: Hour });
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    clock.advance(3 * Day);
+    await Promise.all([client.dispatch(answer("A")), client.dispatch(answer("B"))]);
+    expect(steps).toHaveLength(2);
+    expect(steps[0]?.slice(0, 2)).toEqual(["suspended", "resumed"]);
+    expect(steps[1]).not.toContain("suspended");
+    client.close();
+  });
+
+  it("closes no gap of a session that is suspended", async () => {
+    const { client, clock } = await timedSession({ maxIdle: Hour });
+    await client.dispatch({ type: "suspend" });
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    clock.advance(3 * Day);
+    expect((await client.dispatch({ type: "resume" })).refusal).toBeUndefined();
+    expect(steps).toEqual([["resumed", "presented"]]);
+    client.close();
+  });
+
+  it("saves nothing for a refused action, so that the next action still closes the gap", async () => {
+    const { client, clock, store } = await timedSession({ maxIdle: Hour });
+    clock.advance(3 * Day);
+    const saves = store.saved.get("practice-1")?.length;
+    const refused = await client.dispatch({ type: "submit", item: { ref: "q2", instance: 1 } });
+    expect(refused.refusal?.code).toBe("not-current");
+    expect(store.saved.get("practice-1")).toHaveLength(saves ?? 0);
+    const steps: string[][] = [];
+    client.host.subscribeSteps((events) => steps.push(typesOf(events)));
+    await client.dispatch(answer("A"));
+    expect(steps[0]?.slice(0, 2)).toEqual(["suspended", "resumed"]);
+    client.close();
+  });
+
+  it("leaves the state, the view and the timer as they were when the save of the gap and the action fails", async () => {
+    const { client, clock, store } = await timedSession({ maxIdle: Hour });
+    const before = client.view;
+    clock.advance(3 * Day);
+    store.failNext(1, new Error("The disk is full."));
+    await expect(client.dispatch(answer("A"))).rejects.toThrow("The disk is full.");
+    expect(client.view).toBe(before);
+    expect(store.saved.get("practice-1")).toHaveLength(1);
+    expect((await client.dispatch(answer("A"))).refusal).toBeUndefined();
+    client.close();
+  });
+});
+
 describe("signals", () => {
   it("drops a call whose signal aborted before its turn, whether it is an action or a read", async () => {
     const base = localStore();
@@ -715,6 +877,17 @@ describe("input of other types", () => {
       "The listener must be a function, found null.",
     );
     client.close();
+  });
+
+  it("checks the option maxIdle", async () => {
+    const { options } = localOptions();
+    const make = (changes: string): Promise<unknown> => createLocalSession({ ...options, ...JSON.parse(changes) });
+    await expect(make('{"maxIdle":0}')).rejects.toThrow("The option maxIdle must be a positive integer, found 0.");
+    await expect(make('{"maxIdle":1.5}')).rejects.toThrow("The option maxIdle must be a positive integer, found 1.5.");
+    await expect(make('{"maxIdle":"5"}')).rejects.toThrow('The option maxIdle must be a positive integer, found "5".');
+    await expect(make('{"maxIdle":null}')).rejects.toThrow(
+      "The option maxIdle must be a positive integer, found null.",
+    );
   });
 
   it("checks the signal and the clock of the creation", async () => {

@@ -3,6 +3,7 @@ import type { CatPort } from "@assesskit/runtime/cat";
 import {
   checkAbortSignal,
   checkFunction,
+  checkPositiveInteger,
   functionSchema,
   methodsSchema,
   nonEmptyStringSchema,
@@ -44,6 +45,7 @@ import {
   clockSchema,
   createCatLoops,
   readClock,
+  stepAfterIdle,
   untilAborted,
 } from "../protocol/internal.js";
 import { BROWSER_CLOCK } from "./clock.js";
@@ -114,6 +116,18 @@ export interface LocalSessionOptions extends SessionCallOptions {
    */
   readonly clock?: Clock;
   /**
+   * The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended, from
+   * the latest step to the next action, so that a learner who comes back after days has used no time in between.
+   *
+   * @remarks
+   * Pick a value above the longest pause that a learner takes while working. A running maximum time stops with the gap,
+   * and the `time` action of the timer that finds a gap is dropped: nothing is saved or armed again, and the next action
+   * closes the gap. Until then the view counts it.
+   *
+   * @defaultValue none, so that every gap counts
+   */
+  readonly maxIdle?: number;
+  /**
    * The port of the CAT engines of the adaptive sections. Each call then answers the CAT requests that wait, one at a time,
    * saving each answer before the next request.
    *
@@ -133,6 +147,7 @@ const optionsSchema = v.strictObject({
   assets: functionSchema<(path: string) => string>(),
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
+  maxIdle: v.optional(v.unknown()),
   signal: v.optional(v.unknown()),
   cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
 });
@@ -221,8 +236,9 @@ interface Applied {
  */
 export async function createLocalSession(options: LocalSessionOptions): Promise<LocalSession> {
   parseWith(optionsSchema, options, "The options object");
-  const { signal: creating, cat } = options;
+  const { signal: creating, cat, maxIdle } = options;
   optional(creating, (value) => checkAbortSignal(value, "The option signal"));
+  optional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
   const now = (): number => readClock(clock);
 
@@ -291,11 +307,14 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
 
   /**
    * Applies one action after the ones before it. An accepted step is saved before it takes effect, so that a store that
-   * rejects leaves the state, the view and the timer as they were; then the view listeners and the step listeners run.
+   * rejects leaves the state, the view and the timer as they were; then the view listeners and the step listeners run. A
+   * `time` action that `maxIdle` drops changes nothing and arms no timer.
    */
   const run = (action: CandidateAction | HostAction, signal: AbortSignal | undefined): Promise<Applied> =>
     enqueue(async (): Promise<Applied> => {
-      const step = engine.apply(state, delivery.stamp(state, action, now()));
+      const taken = stepAfterIdle({ engine, stamp: delivery.stamp }, { state, action, now: now(), maxIdle });
+      if (taken === undefined) return { step: { ok: true, state, events: [] }, view: latest.view };
+      const { step } = taken;
       if (step.ok) {
         await store.save(session, delivery.serializeState(step.state), { signal });
         state = step.state;

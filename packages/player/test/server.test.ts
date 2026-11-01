@@ -1142,6 +1142,128 @@ describe("createSessionHost", () => {
   });
 });
 
+describe("the option maxIdle of the session host", () => {
+  const Hour = 3600 * SECOND;
+  const timed = (): ReturnType<typeof examFiles> => examFiles({ limits: '<qti-time-limits max-time="600"/>' });
+  const practice = { clientActions: CANDIDATE_ACTION_TYPES };
+  const typesOf = (step: StepEvents | undefined): string[] => step?.events.map(({ type }) => type) ?? [];
+
+  it("throws at creation when the client may not suspend, as in an exam by default, and names what to do", async () => {
+    await expect(examHost({ maxIdle: Hour })).rejects.toThrow(
+      /^The option maxIdle counts a long gap as a suspension.*Add "suspend" to clientActions/u,
+    );
+    await expect(examHost({ maxIdle: Hour, clientActions: EXAM_CLIENT_ACTIONS })).rejects.toThrow(DataError);
+    await expect(examHost({ maxIdle: Hour, ...practice })).resolves.toBeDefined();
+    await expect(examHost({ ...practice })).resolves.toBeDefined();
+  });
+
+  it("checks the option", async () => {
+    const options = (text: string): Parameters<typeof examHost>[0] => JSON.parse(text);
+    await expect(examHost(options('{"maxIdle":0}'))).rejects.toThrow(
+      "The option maxIdle must be a positive integer, found 0.",
+    );
+    await expect(examHost(options('{"maxIdle":"5"}'))).rejects.toThrow(
+      'The option maxIdle must be a positive integer, found "5".',
+    );
+    await expect(examHost(options('{"maxIdle":null}'))).rejects.toThrow(
+      "The option maxIdle must be a positive integer, found null.",
+    );
+    await expect(examHost(options('{"maxIdle":2.5}'))).rejects.toThrow(
+      "The option maxIdle must be a positive integer, found 2.5.",
+    );
+  });
+
+  it("counts a gap above it as suspended for a request, saves once and logs the events of the three in order", async () => {
+    const without = await examHost(practice, timed());
+    await without.host.start(ALICE, { seed: 7 });
+    without.clock.advance(3 * DAY);
+    expect((await without.host.handle(ALICE, request(1, answer("A")))).refusal?.code).toBe("time-over");
+
+    const { host, clock, store, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(3 * DAY);
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(reply.refusal).toBeUndefined();
+    expect(store.saves).toHaveLength(1);
+    expect(logged).toHaveLength(2);
+    expect(typesOf(logged.at(-1)).slice(0, 3)).toEqual(["suspended", "resumed", "presented"]);
+    expect(viewOf(reply).timers.map(({ remaining }) => remaining)).toEqual([600 * SECOND]);
+  });
+
+  it("gives the results that an explicit suspension gives", async () => {
+    const explicit = await examHost(practice, timed());
+    await explicit.host.start(ALICE, { seed: 7 });
+    await explicit.host.handle(ALICE, request(1, { type: "suspend" }));
+    explicit.clock.advance(3 * DAY);
+    await explicit.host.handle(ALICE, request(2, { type: "resume" }));
+    await explicit.host.handle(ALICE, request(3, answer("A")));
+    const expected = await explicit.host.session(ALICE.session).results();
+
+    const { host, clock } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(3 * DAY);
+    await host.handle(ALICE, request(1, answer("A")));
+    expect(await host.session(ALICE.session).results()).toEqual(expected);
+  });
+
+  it("drops the time action of the job of the scheduler that finds a gap: nothing is saved or scheduled, and the next request closes the gap", async () => {
+    const { host, clock, store, scheduler } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    const jobs = scheduler.jobs.length;
+    clock.advance(3 * DAY);
+    expect(await host.session(ALICE.session).apply({ type: "time" })).toEqual({ events: [] });
+    expect(store.saves).toHaveLength(0);
+    expect(scheduler.jobs).toHaveLength(jobs);
+
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(reply.refusal).toBeUndefined();
+    expect(scheduler.jobs).toHaveLength(jobs + 1);
+    expect(scheduler.jobs.at(-1)?.[1]).toBe(clock.now() + 600 * SECOND);
+  });
+
+  it("closes the gap once when the request is handled again after another request saved first", async () => {
+    const { host, clock, store, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(3 * DAY);
+    store.conflictNext(1);
+    const reply = await host.handle(ALICE, request(1, answer("A")));
+    expect(reply.refusal).toBeUndefined();
+    expect(logged).toHaveLength(2);
+    expect(typesOf(logged.at(-1)).filter((type) => type === "suspended")).toHaveLength(1);
+    expect(typesOf(logged.at(-1)).slice(0, 2)).toEqual(["suspended", "resumed"]);
+  });
+
+  it("applies the time action of the job when the gap is no longer than it", async () => {
+    const { host, clock, store } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(600 * SECOND);
+    const step = await host.session(ALICE.session).apply({ type: "time" });
+    expect(step.events.map(({ type }) => type)[0]).toBe("time-out");
+    expect(store.saves).toHaveLength(1);
+  });
+
+  it("closes the gap for the proctor, and for a suspended session closes none", async () => {
+    const { host, clock, logged } = await examHost({ ...practice, maxIdle: Hour }, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(3 * DAY);
+    await host.proctor(ALICE.session, { type: "suspend" });
+    expect(typesOf(logged.at(-1)).slice(0, 3)).toEqual(["suspended", "resumed", "presented"]);
+    expect(typesOf(logged.at(-1)).at(-1)).toBe("suspended");
+    clock.advance(3 * DAY);
+    await host.proctor(ALICE.session, { type: "resume" });
+    expect(typesOf(logged.at(-1))).toEqual(["resumed", "presented"]);
+  });
+
+  it("changes nothing for a host that leaves it out, however long the gap", async () => {
+    const { host, clock, logged } = await examHost({}, timed());
+    await host.start(ALICE, { seed: 7 });
+    clock.advance(3 * DAY);
+    const reply = await host.handle(ALICE, request(1, { type: "move", to: "next" }));
+    expect(reply.refusal).toBeUndefined();
+    expect(typesOf(logged.at(-1))[0]).toBe("time-out");
+  });
+});
+
 describe("the signals of the session host", () => {
   const reason = new Error("The caller left.");
   type Received = Record<"load" | "create" | "save" | "schedule" | "packages", (SessionCallOptions | undefined)[]>;

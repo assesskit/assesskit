@@ -111,18 +111,19 @@ records.get("s1").version; // => 1
 
 `createSessionHost(options)` throws `DataError` when an option is not of its type.
 
-| Option          | Type                                         | Meaning                                                                                                                |
-| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                      |
-| `store`         | `SessionStore`                               | The storage of sessions.                                                                                               |
-| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                       |
-| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                               |
-| `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                   |
-| `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                      |
-| `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).         |
-| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's.       |
-| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                  |
-| `cat`           | `CatPort`                                    | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none. |
+| Option          | Type                                         | Meaning                                                                                                                                                                        |
+| --------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `engine`        | `Engine`                                     | The delivery engine of the test. One engine serves every session.                                                                                                              |
+| `store`         | `SessionStore`                               | The storage of sessions.                                                                                                                                                       |
+| `scheduler`     | `Scheduler`                                  | The scheduler of time-outs, such as a job queue.                                                                                                                               |
+| `clock`         | `Clock`                                      | The time of the server. `SYSTEM_CLOCK` is the machine's.                                                                                                                       |
+| `gate`          | `AssetGate`                                  | Signs the prefixes of each envelope.                                                                                                                                           |
+| `packages`      | `(session, options?) => Promise<QtiPackage>` | The package that a session delivers; the gate takes the same function. It may ignore the options.                                                                              |
+| `clientActions` | `CandidateActionType[]`                      | The types of action a client may send. Default: every type but `suspend` and `resume` (`EXAM_CLIENT_ACTIONS`).                                                                 |
+| `maxIdle`       | `number`                                     | The longest gap between steps, in milliseconds, that counts as time on task, as on `createLocalSession`. Needs `suspend` in `clientActions`; never for an exam. Default: none. |
+| `limits`        | `Partial<ActionLimits>`                      | The limits on the size of an action, as the runtime's `parseCandidateAction` takes them. Default: the runtime's.                                                               |
+| `forward`       | `ForwardOptions`                             | Where the events of each step go: the host's `log`. Default: nowhere.                                                                                                          |
+| `cat`           | `CatPort`                                    | The port of the CAT engines: the host then answers its own CAT requests ([CAT](cat.md#the-option-cat)). Default: none.                                                         |
 
 | Method                               | What it does                                                                                                                                                                                                                                                                                          |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -216,6 +217,14 @@ pair. The job calls `session(id).apply({ type: "time" })` when `at` arrives. The
 action and its view shows a time-out as applied, so a late job delays only a proactive time-out, never correctness. A `time` that
 finds nothing to apply is accepted with no events: it is saved, and the log is not called. Proctor time extensions are out of scope: the runtime has no action
 for them.
+
+With `maxIdle` the host closes a gap above it as [a local session does](client.md#a-learner-who-is-away): the first request of the
+candidate or action of the host after it applies `suspend` at the latest step, `resume` now and the action, saves the three as one
+step with one version, and gives the log the events of all three in order. The `time` of the job that finds such a gap is dropped:
+nothing is saved and no deadline is scheduled again, so an abandoned session stops costing anything, and the next action
+schedules the deadlines that the gap moved. A host that wants old sessions closed sweeps them itself. `maxIdle` suspends on the
+candidate's behalf, which the policy of an exam does not allow, so `createSessionHost` throws `DataError` when `clientActions`
+has no `suspend`; an exam leaves `maxIdle` out.
 
 ## Stores
 

@@ -9,14 +9,14 @@ xychart-beta
   title "Entry points after gzip, in kilobytes"
   x-axis ["root", "protocol", "client", "player", "mountItem", "engine (on demand)"]
   y-axis "kB" 0 --> 140
-  bar [11.5, 7.0, 20.9, 117.6, 85.8, 124.3]
+  bar [11.5, 7.0, 21.1, 117.6, 85.8, 124.3]
 ```
 
 | File                          | Bytes   | Gzip    | Budget  | What it holds                                                                                                                 |
 | ----------------------------- | ------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `@assesskit/player`           | 35,514  | 11,521  | 14,500  | The errors, the checks of the player, valibot, and the interface messages in English and Indonesian                           |
 | `@assesskit/player/protocol`  | 21,958  | 7,016   | 7,500   | The envelopes and their schemas, and the check of a scoring rubric; valibot is 10.9 kB of it                                  |
-| `@assesskit/player/client`    | 64,928  | 20,883  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
+| `@assesskit/player/client`    | 65,739  | 21,134  | 25,000  | The remote and the local session, and the decoders of a view and of an action that they take from the runtime                 |
 | `@assesskit/player/player`    | 368,331 | 117,575 | 140,500 | The custom elements, the tools, the delivery, the supports, speech, the rating form, the host of portable custom interactions |
 | `mountItem`                   | 265,709 | 85,814  | 107,500 | The content, the interactions, the supports, speech and the host of portable custom interactions; no chrome and no tools      |
 | `@assesskit/runtime/delivery` | 526,637 | 124,304 | 152,000 | The engine, which `createLocalSession` loads with `import()` for practice on a device                                         |
