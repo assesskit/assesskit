@@ -162,6 +162,15 @@ read archives in several parts, other compression methods, or encrypted entries.
 it throws a `DataError` for more than 65,534 files or an archive of 4 GiB or more. It writes the manifest first, then the files in the order of the map, deflated when that makes them smaller, with one fixed
 time stamp, so that equal input gives equal bytes.
 
+### Why the reader is written here
+
+The reader reads the central directory itself and uses `fflate` for the inflater only. The `unzip` of `fflate` 0.8.3 reads the
+number of entries that the end record states, a 16-bit field: an archive of 70,002 entries without ZIP64 gives 4,466, while
+Python's `zipfile` and `unzip` read all of them. It returns names such as `../evil.txt` and `/abs.txt` as they are, and leaves
+sizes and ratios to a filter of the caller. The [security checks](#security-checks) run on every entry before any of it is
+inflated, so the reader owns the directory. The inflater is the library's, fed in steps of 8 KiB, so that the reader counts the
+output as it comes.
+
 ### Security checks
 
 | Threat                                | Control                                                                                                                                                                  | Error                                       |

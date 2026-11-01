@@ -232,6 +232,18 @@ limited, at compile time, with `options.limits`; a limit left out keeps its defa
 A repeat of a node that has no state, such as `(){500000000}`, compiles at once, whatever its count. The tests run the regular
 expression tests of the W3C XML Schema test suite and ReDoS fixtures such as `(a+)+$` on 100,000 characters.
 
+### Why it is written here
+
+The patterns come from documents and from templates, so they are untrusted. Two needs of that rule out the mature library of
+this dialect, `xspattern` 3.1.0 (MIT):
+
+| Need                                                   | Here                                                  | `xspattern` 3.1.0                                                                               |
+| ------------------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Memory bounded by a limit, and time linear in the text | A deterministic automaton, `maxStates` and `maxDepth` | A matching automaton, but `compile` takes no limit and expands counted repeats into its program |
+| The same match in every runtime                        | The tables of Unicode 17.0.0, held in the package     | The tables of Unicode 15.0.0                                                                    |
+
+In a library of that kind, `a{99999999}` in a hostile pattern builds a program of about 10^8 instructions.
+
 ## Errors
 
 Every function checks its arguments, as plain JavaScript and JSON can pass anything. None throws for NULL: `null` is a value
