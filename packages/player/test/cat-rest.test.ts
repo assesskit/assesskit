@@ -11,6 +11,7 @@ import {
   type SubmitResultsResponse,
 } from "@assesskit/runtime/cat";
 import { DataError, ReadError, SecurityError } from "@assesskit/runtime/errors";
+import type { QtiMetadata } from "@assesskit/runtime/metadata";
 import { single } from "@assesskit/runtime/values";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -181,6 +182,52 @@ describe("createRestCatPort", () => {
     expect(call?.request.headers["Content-Type"]).toBe("application/json");
     // SectionDType (binding section 5.2.1): qtiMetadata is one QTI metadata record, and the metadata file is not sent.
     expect(bodyOf(call)).toEqual({ sectionConfiguration: "e30=", qtiUsagedata: "PD94" });
+  });
+
+  it("sends the QTI metadata record of a section as the qtiMetadata object, with the lists that are empty left out", async () => {
+    const service = fakeService(() => ({ status: 201, body: { sectionIdentifier: "sec1" } }));
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    const qtiMetadataRecord: QtiMetadata = {
+      composite: false,
+      interactionTypes: ["choiceInteraction", "textEntryInteraction"],
+      feedbackType: "none",
+      scoringModes: [],
+      toolName: "Author",
+    };
+    await port.createSection(PREFIX, { ...sectionData, qtiMetadataRecord });
+    expect(bodyOf(engineCalls(service.calls)[0])).toEqual({
+      sectionConfiguration: "e30=",
+      qtiUsagedata: "PD94",
+      qtiMetadata: {
+        composite: false,
+        interactionType: ["choiceInteraction", "textEntryInteraction"],
+        feedbackType: "none",
+        toolName: "Author",
+      },
+    });
+    expect(
+      await rejection(port.createSection(PREFIX, { ...sectionData, qtiMetadataRecord: json('{"composite":1}') })),
+    ).toMatch(/^The field composite must be a boolean/);
+  });
+
+  it("sends the glossary of a prior datum as glossaryURI", async () => {
+    const service = fakeService(() => ({
+      status: 201,
+      body: { sessionIdentifier: "x", nextItems: { itemIdentifiers: ["i1"] } },
+    }));
+    const port = onePort({ fetch: service.fetch, endpoint: PREFIX, credentials: CREDENTIALS });
+    await port.createSession(PREFIX, "sec1", {
+      priorData: [
+        { name: "level", value: "B2", glossaryUri: "https://example.org/glossary" },
+        { name: "attempts", value: 3 },
+      ],
+    });
+    expect(bodyOf(engineCalls(service.calls)[0])).toEqual({
+      priorData: [
+        { key: "level", value: "B2", glossaryURI: "https://example.org/glossary" },
+        { key: "attempts", value: "3" },
+      ],
+    });
   });
 
   it("sends a section without usage data as the configuration alone, never a shape the binding lacks", async () => {
@@ -743,7 +790,7 @@ describe("createRestCatPort", () => {
     expect(service.calls).toEqual([]);
   });
 
-  it("accepts the qtiMetadata object of Get Section, the binding's QTI metadata record, and does not return it as section data", async () => {
+  it("returns the qtiMetadata object of Get Section as the metadata record of the section data, and refuses what is not one", async () => {
     const answer = (section: unknown): Promise<unknown> =>
       onePort({
         fetch: fakeService(() => ({ status: 200, body: { items: { itemIdentifiers: ["i1"] }, section } })).fetch,
@@ -753,9 +800,18 @@ describe("createRestCatPort", () => {
     expect(
       await answer({ sectionConfiguration: "e30=", qtiMetadata: { composite: false, scoringMode: ["human"] } }),
     ).toEqual({
-      sectionData: { sectionConfiguration: "e30=" },
+      sectionData: {
+        sectionConfiguration: "e30=",
+        qtiMetadataRecord: { composite: false, interactionTypes: [], scoringModes: ["human"] },
+      },
       items: { itemIdentifiers: ["i1"], stageLength: null },
     });
+    expect(
+      await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: { interactionType: ["nope"] } })),
+    ).toMatch(/^The answer to Get Section is invalid at section\.qtiMetadata\.interactionType\[0\]/);
+    expect(
+      await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: { toolName: "x".repeat(257) } })),
+    ).toMatch(/at section\.qtiMetadata\.toolName: expected at most 256 characters/);
     expect(await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: "bWV0YQ==" }))).toBe(
       'The answer to Get Section is invalid at section.qtiMetadata: expected an object, found "bWV0YQ==".',
     );
@@ -1396,7 +1452,6 @@ describe("createCatRestHandler", () => {
     const handler = handlerOf(port);
     await handler(
       requestOf("POST", "/sections", {
-        // The metadata record of the binding is checked and dropped: the model's metadata is a file.
         body: { sectionConfiguration: "e30=", qtiUsagedata: "PD94", qtiMetadata: { composite: false } },
       }),
     );
@@ -1416,7 +1471,15 @@ describe("createCatRestHandler", () => {
       requestOf("POST", "/sections/sec1/sessions/s1/results", { body: { ...RESULT_BODY, sessionState: "st0" } }),
     );
     expect(received).toEqual([
-      ["createSection", PREFIX, { sectionConfiguration: "e30=", qtiUsagedata: "PD94" }],
+      [
+        "createSection",
+        PREFIX,
+        {
+          sectionConfiguration: "e30=",
+          qtiUsagedata: "PD94",
+          qtiMetadataRecord: { composite: false, interactionTypes: [], scoringModes: [] },
+        },
+      ],
       [
         "createSession",
         PREFIX,
@@ -1425,7 +1488,7 @@ describe("createCatRestHandler", () => {
           personalNeedsAndPreferences: PNP,
           demographics: DEMOGRAPHICS,
           priorData: [
-            { name: "level", value: "B2" },
+            { name: "level", value: "B2", glossaryUri: "https://example.org/glossary" },
             { name: "attempts", value: "3" },
           ],
         },
@@ -1580,8 +1643,8 @@ describe("createRestCatPort against createCatRestHandler", () => {
     };
   }
 
-  function connect(sharePnp = false) {
-    const { port: engine, log } = fakeEngine();
+  function connect(sharePnp = false, replacement?: CatPort) {
+    const { port: engine, log } = replacement === undefined ? fakeEngine() : { port: replacement, log: [] };
     const tokens = { current: BEARER, issued: 0 };
     const handler = createCatRestHandler(engine, {
       authenticate: (request) => request.headers.get("authorization") === `Bearer ${tokens.current}`,
@@ -1594,6 +1657,49 @@ describe("createRestCatPort against createCatRestHandler", () => {
     });
     return { client, log, tokens };
   }
+
+  it("carries the metadata record of a section and the glossary of a prior datum both ways", async () => {
+    const qtiMetadataRecord: QtiMetadata = {
+      itemTemplate: true,
+      interactionTypes: ["choiceInteraction"],
+      portableCustomInteractionContext: { customTypeIdentifier: "graph", interactionKind: "plot" },
+      feedbackType: "adaptive",
+      scoringModes: ["human", "responseprocessing"],
+      toolVendor: "Vendor",
+    };
+    const seen: unknown[] = [];
+    const base = fakeEngine().port;
+    const engine: CatPort = {
+      ...base,
+      async createSection(_prefix, data) {
+        seen.push(data);
+        return { sectionIdentifier: "sec1" };
+      },
+      async getSection() {
+        return {
+          sectionData: { sectionConfiguration: "e30=", qtiMetadataRecord },
+          items: { itemIdentifiers: ["q1"] },
+        };
+      },
+      async createSession(_prefix, _section, request) {
+        seen.push(request);
+        return { sessionIdentifier: "s1", nextItems: { itemIdentifiers: ["q1"], stageLength: 1 } };
+      },
+    };
+    const { client } = connect(false, engine);
+    await client.createSection(ENDPOINT, { sectionConfiguration: "e30=", qtiMetadataRecord });
+    expect(await client.getSection(ENDPOINT, "sec1")).toEqual({
+      sectionData: { sectionConfiguration: "e30=", qtiMetadataRecord },
+      items: { itemIdentifiers: ["q1"], stageLength: null },
+    });
+    await client.createSession(ENDPOINT, "sec1", {
+      priorData: [{ name: "level", value: "B2", glossaryUri: "https://example.org/glossary" }],
+    });
+    expect(seen).toEqual([
+      { sectionConfiguration: "e30=", qtiMetadataRecord },
+      { priorData: [{ name: "level", value: "B2", glossaryUri: "https://example.org/glossary" }] },
+    ]);
+  });
 
   it("carries every one of the six requests, and the engine receives what the client sent", async () => {
     const { client, log } = connect(true);

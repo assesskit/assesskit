@@ -1,3 +1,4 @@
+import type { QtiMetadata } from "../metadata/index.js";
 import type { AssessmentResult } from "../results/index.js";
 
 /**
@@ -16,6 +17,14 @@ export interface SectionData {
   readonly qtiUsagedata?: string;
   /** The metadata file, the one `qti-metadata-ref` references; absent when the section has no such reference. */
   readonly qtiMetadata?: string;
+  /**
+   * The one QTI metadata record of the section, which the REST binding carries as `qtiMetadata` (its section 5.3.8); absent
+   * when the section has none. It is not the metadata file of `qtiMetadata`: the implementation guide names a file with a
+   * record for each item, and the binding a single record.
+   *
+   * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding, SectionDType}
+   */
+  readonly qtiMetadataRecord?: QtiMetadata;
 }
 
 /**
@@ -69,6 +78,11 @@ export interface PriorDataEntry {
   readonly name: string;
   /** The value of the datum. */
   readonly value: unknown;
+  /**
+   * The address of the glossary that defines the name, which the REST binding carries as `glossaryURI`; absent when the
+   * entry names none.
+   */
+  readonly glossaryUri?: string;
 }
 
 /**

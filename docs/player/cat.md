@@ -158,15 +158,31 @@ requests, the stages and the section data that any engine reads.
 ## createRestCatPort
 
 `createRestCatPort(options)`, from `@assesskit/player/cat-rest`, returns a `CatPort` that speaks the REST/JSON binding of CAT 1.0
-(<https://www.imsglobal.org/spec/cat/v1p0/bind>) to one remote engine.
+(<https://www.imsglobal.org/spec/cat/v1p0/bind>) to the remote engines that the host configured. A package names an engine by
+a reference (`qti-adaptive-engine-ref`), which is the `prefix` of every request, and `engines` says which engine the reference
+stands for.
 
-| Option        | Default  | Meaning                                                                           |
-| ------------- | -------- | --------------------------------------------------------------------------------- |
-| `fetch`       | required | `fetch`, or a replacement.                                                        |
-| `endpoint`    | required | The `https` URL prefix of the engine, such as `https://cat.example/ims/cat/v1p0`. |
-| `credentials` | required | `{ tokenUrl, clientId, clientSecret, scope }`; `tokenUrl` is an `https` URL.      |
-| `timeoutMs`   | `10000`  | The milliseconds after which a request, the token request included, is aborted.   |
-| `sharePnp`    | `false`  | Whether Create Session sends the personal needs and preferences to the engine.    |
+```mermaid
+flowchart LR
+  package["A package names an engine:<br/>qti-adaptive-engine-ref"] -->|"the prefix of a request"| port["createRestCatPort"]
+  port --> known{"engines: a reference<br/>that the host configured?"}
+  known -->|no| refuse["DataError, nothing is sent"]
+  known -->|yes| engine["The engine: endpoint, credentials, sharePnp"]
+  engine --> token["Token for its token URL, client and scope"]
+  token --> call["HTTPS request with the bearer token"]
+```
+
+| Option      | Default  | Meaning                                                                                                                                                              |
+| ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetch`     | required | `fetch`, or a replacement.                                                                                                                                           |
+| `engines`   | required | A `Map` from reference to engine, or a function from a reference to its engine, or to `undefined` for a reference that the host did not configure (it may be async). |
+| `timeoutMs` | `10000`  | The milliseconds after which a request, the token request included, is aborted.                                                                                      |
+
+| Field of an engine | Default  | Meaning                                                                                                             |
+| ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `endpoint`         | required | The `https` URL prefix of the engine, such as `https://cat.example/ims/cat/v1p0`. It may differ from the reference. |
+| `credentials`      | required | `{ tokenUrl, clientId, clientSecret, scope }`; `tokenUrl` is an `https` URL.                                        |
+| `sharePnp`         | `false`  | Whether Create Session sends the candidate's personal needs and preferences to this engine.                         |
 
 ```ts
 import { createRestCatPort } from "@assesskit/player/cat-rest";
@@ -177,21 +193,38 @@ const fetch = async (url, request) => {
   const body = url.endsWith("/token") ? { access_token: "t0ken", token_type: "Bearer" } : { sectionIdentifier: "s1" };
   return { ok: true, status: 200, text: async () => JSON.stringify(body) };
 };
-const endpoint = "https://cat.example/ims/cat/v1p0";
+// The package names the engine by its public address; the platform reaches it through a gateway.
+const reference = "https://engine.example/ims/cat/v1p0";
 const port = createRestCatPort({
   fetch,
-  endpoint,
-  credentials: {
-    tokenUrl: "https://auth.example/token",
-    clientId: "tool",
-    clientSecret: "secret",
-    scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
-  },
+  engines: new Map([
+    [
+      reference,
+      {
+        endpoint: "https://gateway.internal/engines/a/ims/cat/v1p0",
+        credentials: {
+          tokenUrl: "https://auth.example/token",
+          clientId: "tool",
+          clientSecret: "secret",
+          scope: "https://purl.imsglobal.org/cat/v1p0/scope/api",
+        },
+      },
+    ],
+  ]),
 });
-const section = await port.createSection(endpoint, { sectionConfiguration: "e30=" });
+const section = await port.createSection(reference, { sectionConfiguration: "e30=" });
 section; // => { sectionIdentifier: "s1" }
-requests; // => ["POST https://auth.example/token", "POST https://cat.example/ims/cat/v1p0/sections"]
+requests; // => ["POST https://auth.example/token", "POST https://gateway.internal/engines/a/ims/cat/v1p0/sections"]
 ```
+
+- **Which engine.** The `prefix` of a request is the reference that the package names, with trailing slashes removed. A
+  reference that `engines` does not know is a `DataError`, and nothing is sent: no candidate data and no token leave for an
+  engine that the host did not configure (CAT section 2.2). The delivery definition keeps the reference, not the endpoint.
+- **A function is an allowlist.** The reference is the package's word. A function maps known references to configured
+  engines. It never builds an `endpoint` or a `tokenUrl` from the reference, and never returns shared credentials for any
+  reference, because the port sends the client secret and the candidate's data to the engine it returns.
+- **One port, many engines.** The port keeps a token for each token URL, client and scope, so engines with their own
+  credentials never share a token. A gateway maps its public reference to the upstream endpoint, as the sample does.
 
 | Request        | HTTP                                                       | Body                                                       |
 | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
@@ -202,28 +235,27 @@ requests; // => ["POST https://auth.example/token", "POST https://cat.example/im
 | End Session    | `DELETE {endpoint}/sections/{id}/sessions/{session}`       | none                                                       |
 | End Section    | `DELETE {endpoint}/sections/{id}`                          | none                                                       |
 
-- **One engine.** The `prefix` of a request must be the `endpoint`, else `DataError` and nothing is sent. A package names the
-  engine in `qti-adaptive-engine-ref`, and the host trusts the engine it configured (CAT section 2.2). Give each engine its own port.
 - **Authorization.** The port asks the token endpoint for a bearer token with the client credentials grant: HTTP Basic with
   the form-encoded client identifier and secret, and `grant_type=client_credentials&scope=…` (binding section 4.2, RFC 6749
   section 4.4). The binding recommends the scope `https://purl.imsglobal.org/cat/v1p0/scope/api` for every endpoint, or
   `.../scope/configure` for sections and `.../scope/deliver` for sessions; an engine may define others.
 - **Token.** The port keeps the token. It reads no clock, so it learns that the token expired from a `401`: it asks for a new
-  token and repeats the request once.
+  token with the credentials that `engines` gives at that moment, and repeats the request once. A `403` is a failure and is
+  not repeated.
 - **Transport.** Every URL is `https` (binding section 4.1). Redirects are errors, because a redirect would send the token to
   another address. The error of `fetch`, such as a timeout, is passed on unchanged.
 - **Failure.** A status other than 2xx, and a body that is not JSON, are a `ServiceError` with the `status` and the `body`.
-- **Personal data.** Without `sharePnp` the body of Create Session has no `personalNeedsAndPreferences`.
+- **Personal data.** Without `sharePnp` on the engine the body of Create Session has no `personalNeedsAndPreferences`.
 
 ### JSON
 
 The names of the JSON are those of the binding (section 5, Appendix B). The runtime's `cat` module writes and reads the assessment result
 and the item stage (the JSON binding section of the runtime's CAT guide), and the port reads and writes the rest of the bodies:
 
-| runtime                                      | Binding                                                |
-| -------------------------------------------- | ------------------------------------------------------ |
-| `GetSectionResponse.sectionData` and `items` | `section` and `items`                                  |
-| `PriorDataEntry` `{ name, value }`           | `{ key, value }`; a value that is not text is its JSON |
+| runtime                                         | Binding                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| `GetSectionResponse.sectionData` and `items`    | `section` and `items`                                               |
+| `PriorDataEntry` `{ name, value, glossaryUri }` | `{ key, value, glossaryURI }`; a value that is not text is its JSON |
 
 An engine may leave out the context of the result it returns (CAT section 4.3.2); the result then has no session identifiers.
 
@@ -238,12 +270,17 @@ The two normative documents of CAT 1.0 disagree about `qtiMetadata` of the secti
 
 The port follows the binding, because it defines the JSON on the wire: CAT section 3 sends the reader to the binding for the full
 technical details of the requests and their bodies, and the schema has `additionalProperties: false`, so an engine that
-validates the body rejects text where it expects an object. The metadata file of the section data is not a
-`QTIMetadataDType` record, so no field of the binding carries it:
+validates the body rejects text where it expects an object. The record has a field of its own in the section data,
+`qtiMetadataRecord`, the runtime's `QtiMetadata`, and the metadata file does not reach the wire:
 
-- **Create Section** sends `sectionConfiguration` and `qtiUsagedata` only. The metadata file does not reach the engine, though
-  CAT section 4.1 says a platform must transmit it. The binding gives the file no place, so an engine cannot read it over REST.
-- **Get Section** accepts a `qtiMetadata` object, checks that it is one, and leaves it out of the section data.
+- **Create Section** sends `sectionConfiguration`, `qtiUsagedata` and the record as `qtiMetadata`, with the lists
+  `interactionType` and `scoringMode` left out when they are empty. The metadata file does not reach the engine, though CAT
+  section 4.1 says a platform must transmit it: the binding gives the file no place, so an engine cannot read it over REST.
+- **Get Section** returns the `qtiMetadata` object as `qtiMetadataRecord`, with the lists empty when it leaves them out.
+- **The handler** passes the record of a Create Section request to the port, and writes the record of the port's Get Section
+  answer.
+
+The prior data of Create Session carry a `glossaryURI` for an entry, which is `glossaryUri` in the model.
 
 `datestamp` is a `date-time` of RFC 3339 in the binding's schema; the port sends the `xs:dateTime` of the result as it is.
 

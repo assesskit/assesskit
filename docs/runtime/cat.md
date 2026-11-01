@@ -74,6 +74,10 @@ that a reference of the `qti-adaptive-selection` names.
 | `qtiUsagedata`         | `files.usageData` | Sent when the selection has a `qti-usagedata-ref`, and only then.            |
 | `qtiMetadata`          | `files.metadata`  | Sent when the selection has a `qti-metadata-ref`, and only then.             |
 
+`SectionData` has a further field, `qtiMetadataRecord`, which `sectionData` never sets: the one QTI metadata record that the REST binding carries as
+`qtiMetadata` (the runtime's `QtiMetadata`), which an engine returns from Get Section and a client may send with Create Section. It is not the
+metadata file above ([spec-gaps](spec-gaps.md)). A `PriorDataEntry` has an optional `glossaryUri`, the address of the glossary that defines its name.
+
 The files are bytes, which the host reads from the package or from wherever each `href` points. The usage data is the XML of
 [usage](usage.md) (`writeUsageData`), whose statistics the engine may use as its item parameters. The metadata is the JSON of
 `catMetadata`. A file that the selection does not reference, or a referenced file that is missing, is a `DataError`.

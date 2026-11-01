@@ -24,6 +24,7 @@ import {
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
 import * as v from "valibot";
+import { metadataRecordSchema, writeMetadataRecord } from "./metadata-record.js";
 import { readSectionData } from "./section-data.js";
 
 // The JSON of the bodies of the binding (OpenAPI listing of the binding, Appendix B1.2), in both directions: the client
@@ -47,7 +48,9 @@ const sessionRequestSchema: Schema<CreateSessionRequest> = v.pipe(
   v.object({
     personalNeedsAndPreferences: v.optional(v.string()),
     demographics: v.optional(v.string()),
-    priorData: v.optional(v.array(v.object({ name: v.string(), value: v.unknown() }))),
+    priorData: v.optional(
+      v.array(v.object({ name: v.string(), value: v.unknown(), glossaryUri: v.optional(v.string()) })),
+    ),
   }),
 );
 
@@ -72,7 +75,11 @@ export function writeCreateSessionBody(request: CreateSessionRequest, sharePnp: 
                 `The value of the prior data ${describe(entry.name)} must be JSON, found ${describe(entry.value)}.`,
               );
             }
-            return { key: entry.name, value };
+            return {
+              key: entry.name,
+              value,
+              ...(entry.glossaryUri === undefined ? {} : { glossaryURI: entry.glossaryUri }),
+            };
           }),
         }),
   };
@@ -82,7 +89,7 @@ export function writeCreateSessionBody(request: CreateSessionRequest, sharePnp: 
  * Reads the body of Create Session.
  *
  * @remarks
- * A value is text, as the binding has it. The `glossaryURI` of an entry has no place in the model and is dropped.
+ * A value is text, as the binding has it, and the `glossaryURI` of an entry is its `glossaryUri`.
  */
 export function readCreateSessionBody(json: unknown): CreateSessionRequest {
   const { personalNeedsAndPreferences, demographics, priorData } = parseWith(
@@ -93,28 +100,41 @@ export function readCreateSessionBody(json: unknown): CreateSessionRequest {
   return {
     ...(personalNeedsAndPreferences === undefined ? {} : { personalNeedsAndPreferences }),
     ...(demographics === undefined ? {} : { demographics }),
-    ...(priorData === undefined ? {} : { priorData: priorData.map(({ key, value }) => ({ name: key, value })) }),
+    ...(priorData === undefined
+      ? {}
+      : {
+          priorData: priorData.map(({ key, value, glossaryURI }) => ({
+            name: key,
+            value,
+            ...(glossaryURI === undefined ? {} : { glossaryUri: glossaryURI }),
+          })),
+        }),
   };
 }
 
-// The binding allows a `qtiMetadata` object in the section. It is a QTI metadata record, not the metadata file that
-// `SectionData` holds, so it is checked and not returned, and the metadata file is not sent.
+// The binding's `qtiMetadata` of a section is one QTI metadata record, which `qtiMetadataRecord` carries. It is not the
+// metadata file that `qtiMetadata` of `SectionData` holds, which the binding has no field for and is not sent.
 const bindingSectionSchema: Schema<SectionData> = v.pipe(
   v.strictObject({
     sectionConfiguration: v.string(),
     qtiUsagedata: v.optional(v.string()),
-    qtiMetadata: v.optional(recordSchema),
+    qtiMetadata: v.optional(metadataRecordSchema),
   }),
-  v.transform(({ sectionConfiguration, qtiUsagedata }) => ({
+  v.transform(({ sectionConfiguration, qtiUsagedata, qtiMetadata }) => ({
     sectionConfiguration,
     ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
+    ...(qtiMetadata === undefined ? {} : { qtiMetadataRecord: qtiMetadata }),
   })),
 );
 
 /** Returns the body of Create Section, which is also the `section` of the answer to Get Section. */
 export function writeSectionBody(data: SectionData): unknown {
-  const { sectionConfiguration, qtiUsagedata } = readSectionData(data);
-  return { sectionConfiguration, ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }) };
+  const { sectionConfiguration, qtiUsagedata, qtiMetadataRecord } = readSectionData(data);
+  return {
+    sectionConfiguration,
+    ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
+    ...(qtiMetadataRecord === undefined ? {} : { qtiMetadata: writeMetadataRecord(qtiMetadataRecord) }),
+  };
 }
 
 /** Reads the body of Create Section. */
