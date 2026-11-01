@@ -20,9 +20,10 @@ const DEFAULT_WEIGHT = 1;
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model}
  */
 export function itemIdentifier(ref: AssessmentItemRef, identifier: string): string {
-  return (
-    ref.variableMappings.find((mapping) => mapping.targetIdentifier === identifier)?.sourceIdentifier ?? identifier
-  );
+  const { variableMappings } = ref;
+  // Most item references map nothing, and a test asks for each of its instances.
+  if (variableMappings.length === 0) return identifier;
+  return variableMappings.find((mapping) => mapping.targetIdentifier === identifier)?.sourceIdentifier ?? identifier;
 }
 
 /**

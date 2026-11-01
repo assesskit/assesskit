@@ -183,14 +183,23 @@ export function findDelivered(state: DeliveryState, key: ItemKey): DeliveredItem
  * of them: it reads the items once, where `findDelivered` reads them for each lookup.
  */
 export function deliveredLookup(state: DeliveryState): (key: ItemKey) => DeliveredItem | undefined {
-  const byRef = new Map<string, DeliveredItem[]>();
+  // Most references have one instance, so the first of each is kept apart and only the others need a list.
+  const first = new Map<string, DeliveredItem>();
+  const others = new Map<string, DeliveredItem[]>();
   for (const item of state.items) {
     const { ref } = item.session.key;
-    const known = byRef.get(ref);
-    if (known === undefined) byRef.set(ref, [item]);
-    else known.push(item);
+    if (!first.has(ref)) first.set(ref, item);
+    else {
+      const known = others.get(ref);
+      if (known === undefined) others.set(ref, [item]);
+      else known.push(item);
+    }
   }
-  return (key) => byRef.get(key.ref)?.find((item) => sameKey(item.session.key, key));
+  return (key) => {
+    const head = first.get(key.ref);
+    if (head === undefined || sameKey(head.session.key, key)) return head;
+    return others.get(key.ref)?.find((item) => sameKey(item.session.key, key));
+  };
 }
 
 /**

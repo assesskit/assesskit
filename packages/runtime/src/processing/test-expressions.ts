@@ -1,5 +1,5 @@
 import { ProcessingError } from "../errors.js";
-import { type BaseType, matchValues, type SingleValue, type Value } from "../values/index.js";
+import { type BaseType, matchValues, type Primitive, type Value } from "../values/index.js";
 import { NUM_ATTEMPTS } from "./built-ins.js";
 import { checkContainerSize, type Environment } from "./context.js";
 import { itemIdentifier, itemValue, weightOf } from "./item-session.js";
@@ -185,18 +185,18 @@ export function testVariables(
 ): Value | null {
   const accepted: readonly BaseType[] = baseType === undefined ? NUMERIC : [baseType];
   const weight = baseType === undefined || baseType === "float" ? weightIdentifier : undefined;
-  const found: SingleValue[] = [];
+  const values: Primitive[] = [];
   const weighted: number[] = [];
+  let integers = true;
   for (const view of sessions) {
     const value = itemValue(view.variables, itemIdentifier(view.ref, variableIdentifier));
     if (value?.cardinality !== "single" || !accepted.includes(value.baseType)) continue;
-    found.push(value);
+    values.push(value.value);
+    if (value.baseType !== "integer") integers = false;
     if (weight !== undefined) weighted.push(asNumber(value.value) * weightOf(view.ref, weight));
   }
-  checkContainerSize(environment, found.length, "qti-test-variables");
-  if (found.length === 0) return null;
+  checkContainerSize(environment, values.length, "qti-test-variables");
+  if (values.length === 0) return null;
   if (weight !== undefined) return { cardinality: "multiple", baseType: "float", values: weighted };
-  const integers = found.every((value) => value.baseType === "integer");
-  const values = found.map((value) => value.value);
   return { cardinality: "multiple", baseType: baseType ?? (integers ? "integer" : "float"), values };
 }

@@ -2,6 +2,7 @@ import {
   ASI_NAMESPACE,
   type AssessmentItem,
   applyItemAction,
+  createEngine,
   createRandom,
   type ItemKey,
   type ItemSession,
@@ -251,8 +252,10 @@ test("processes the outcomes of a test on a submission as fast as Longsight", as
     Array.from({ length: TEST_ITEMS_PER_SECTION }, (_, item) => `s${place}i${item}`),
   );
   const sections = itemRefs.map((list, place) => section(`sec${place}`, refs(...list)));
+  // The engine is the build, which `createEngine` of this import is: the helpers of the fixtures import the sources.
   const engine = engineOf(
     outcome("TOTAL", "float") + part("P", sections.join("")) + processing(setOutcome("TOTAL", SUM_SCORES)),
+    { create: createEngine },
   );
   const names = itemRefs.flat();
   const answer = (index: number, at: number) => [pick(names[index] ?? fail("No such item."), "B", at)];

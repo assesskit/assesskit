@@ -2,20 +2,27 @@ import type { Value } from "../values/index.js";
 import {
   allIntegers,
   asNumber,
+  baseTypeOf,
   bigIntegerResult,
   floatResult,
   integerResult,
-  numbersOf,
   primitiveOf,
+  primitivesOf,
 } from "./operands.js";
 
 /** The operators that sum or multiply all their numbers. */
 export type Aggregate = "sum" | "product";
 
-/** Returns the numbers of every operand, `undefined` when one is NULL. */
-function allNumbers(operands: readonly (Value | null)[]): { values: readonly Value[]; numbers: number[] } | undefined {
-  const values = operands.filter((value) => value !== null);
-  return values.length < operands.length ? undefined : { values, numbers: values.flatMap(numbersOf) };
+/** Returns the numbers of every operand and whether every operand is an integer, `undefined` when one is NULL. */
+function allNumbers(operands: readonly (Value | null)[]): { integers: boolean; numbers: number[] } | undefined {
+  const numbers: number[] = [];
+  let integers = true;
+  for (const operand of operands) {
+    if (operand === null) return undefined;
+    if (baseTypeOf(operand) !== "integer") integers = false;
+    for (const primitive of primitivesOf(operand)) numbers.push(asNumber(primitive));
+  }
+  return { integers, numbers };
 }
 
 /** Returns the number of a single operand, `undefined` when it is NULL. */
@@ -36,7 +43,7 @@ function numberOf(operand: Value | null): number | undefined {
 export function aggregate(operator: Aggregate, operands: readonly (Value | null)[]): Value | null {
   const all = allNumbers(operands);
   if (all === undefined) return null;
-  if (allIntegers(all.values)) {
+  if (all.integers) {
     const integers = all.numbers.map(BigInt);
     return bigIntegerResult(
       operator === "sum" ? integers.reduce((a, b) => a + b, 0n) : integers.reduce((a, b) => a * b, 1n),
@@ -173,7 +180,7 @@ export function extremum(operator: "min" | "max", operands: readonly (Value | nu
   const all = allNumbers(operands);
   if (all === undefined || all.numbers.some(Number.isNaN)) return null;
   const value = operator === "min" ? Math.min(...all.numbers) : Math.max(...all.numbers);
-  return allIntegers(all.values) ? integerResult(value) : floatResult(value);
+  return all.integers ? integerResult(value) : floatResult(value);
 }
 
 /**

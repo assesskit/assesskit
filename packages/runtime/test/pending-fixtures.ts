@@ -162,12 +162,14 @@ export interface EngineSetup {
   readonly cat?: ReadonlyMap<string, CatSectionRef>;
   /** The options of `createEngine`. Default: none. */
   readonly options?: EngineOptions;
+  /** The function that creates the engine, as a benchmark passes the build of the runtime. Default: that of the sources. */
+  readonly create?: typeof createEngine;
 }
 
 /** An engine of a test whose item references name the items given by href. */
 export function engineOf(content: string, setup: EngineSetup = {}): Engine {
-  const { items = {}, cat = new Map(), options = {} } = setup;
-  return createEngine(
+  const { items = {}, cat = new Map(), options = {}, create = createEngine } = setup;
+  return create(
     {
       kind: "test",
       test: testOf(content),

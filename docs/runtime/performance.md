@@ -12,8 +12,8 @@ Time of the runtime divided by time of Longsight, on the same items and response
 xychart-beta
   title "Runtime time ÷ Longsight time (lower is faster)"
   x-axis ["parse", "start", "start + template", "submit", "item end to end", "submit in a test"]
-  y-axis "ratio" 0 --> 4
-  bar [0.85, 1.14, 1.21, 1.13, 0.97, 3.19]
+  y-axis "ratio" 0 --> 2
+  bar [0.85, 1.14, 1.21, 1.13, 0.97, 1.61]
   line [1, 1, 1, 1, 1, 1]
 ```
 
@@ -24,7 +24,7 @@ xychart-beta
 | start + template | the same for the 8 items with template processing, 20 times each                                     | the same                                                                   | 1.766 ms | 1.452 ms  | 1.21  | 40 ms, 2             |
 | submit           | `set-responses` and `submit` of the correct responses in presented sessions                          | `respond` for each response, then `score`                                  | 0.559 ms | 0.493 ms  | 1.13  | 20 ms, 2             |
 | item end to end  | `readAsi`, start, present, set the responses and submit                                              | `parseQtiXml`, `createItemSession`, `respond`, `score`                     | 16.91 ms | 17.49 ms  | 0.97  | 400 ms, 1.5          |
-| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 2.07 ms  | 0.649 ms  | 3.19  | 40 ms, 4.5           |
+| submit in a test | `apply` of `submit` for the 51st of 100 items, 100 times: response processing, the sum of the scores | `score` of the item, then `submitQtiTestAnswer` with the 50 earlier scores | 1.02 ms  | 0.633 ms  | 1.61  | 20 ms, 3             |
 
 The inputs are the 1EdTech examples that both implementations read and score (`pnpm corpus`), with the correct responses
 the oracle reports, and a test of 10 sections of 10 choice items with the sum of the scores as its outcome. A sample is the
@@ -41,11 +41,12 @@ the work in the table:
   on size, depth and nodes. Longsight collects diagnostics and validates in a separate call that the row does not make.
 - **Submitting a response (submit; budget 2).** The runtime checks each response against its declaration and the rules of its interaction.
   Longsight stores a copy of the value it is given.
-- **A test (submit in a test; budget 4.5).** Longsight takes the score of an item as a number, on a fixed order of items with the sum, comparison and
-  boolean expressions of a test. The runtime keeps the session of every instance of the plan, reads the sessions that the
-  expression names (`qti-test-variables` visits the 100 instances, those not yet presented included), and also settles the time
-  limits, the scoring requests and the state that the step returns. The row compares one `apply` with the score of an item
-  and `submitQtiTestAnswer`, which is the smallest operation of each that submits an item of a test.
+- **A test (submit in a test; budget 3).** Longsight takes the score of an item as a number and adds the 50 scores that it
+  holds. The runtime evaluates the outcome processing of the test over the 100 instances of the plan, those not yet presented
+  included (`qti-test-variables` reads the variables of each), which is about half of the step: 4.9 of the 10 µs of one `apply`.
+  The rest of the step scores the item, settles the time limits and the scoring requests and returns the state, and takes 5.1 µs,
+  less than all of Longsight's 6.4 µs. The row compares one `apply` with the score of an item and `submitQtiTestAnswer`,
+  which is the smallest operation of each that submits an item of a test.
 
 ## Budgets
 
@@ -83,9 +84,10 @@ Which budgets hold on a machine other than the runner:
 | A time                      | One sample against a fixed number of milliseconds          | On a machine up to five times slower than the runner; on a slower one only the ratios apply |
 
 Vitest counts the export getters that a benchmark reads, which makes the benchmarks of the engine two to three times slower,
-so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks that import the sources run through
-Vite; the one against Longsight imports the build by name, which `pnpm bench` makes first, because Vite's rewrite of the
-imports makes the sources about 1.7 times slower than the code that ships.
+so the project turns the counting off (`suppressExportGetterWarnings`). The benchmarks of the delivery and of packages import
+the sources, which run through Vite; the one against Longsight times the build by name, the engine of the test row included,
+which `pnpm bench` makes first, because Vite's rewrite of the imports makes the sources about 1.7 times slower than the code
+that ships.
 
 ## Outcome processing
 

@@ -70,6 +70,8 @@ export class SessionScope implements TestScope {
   private readonly state: DeliveryState;
   private readonly index: PlanIndex;
   private readonly delivered: (key: ItemKey) => DeliveredItem | undefined;
+  /** The variables of the instances not yet presented, by item reference, found at the first need. */
+  private initials: WeakMap<CourseItem, ItemVariables> | undefined;
 
   constructor(course: Course, state: DeliveryState) {
     this.course = course;
@@ -183,16 +185,15 @@ export class SessionScope implements TestScope {
 
   /** Returns the variables of an instance not yet presented, which only its item and the context of the session decide. */
   private initialOf(entry: CourseItem, item: AssessmentItem): ItemVariables {
-    const { context } = this.state;
-    let byEntry = INITIAL.get(context);
-    if (byEntry === undefined) {
-      byEntry = new WeakMap();
-      INITIAL.set(context, byEntry);
+    if (this.initials === undefined) {
+      const { context } = this.state;
+      this.initials = INITIAL.get(context) ?? new WeakMap();
+      INITIAL.set(context, this.initials);
     }
-    let variables = byEntry.get(entry);
+    let variables = this.initials.get(entry);
     if (variables === undefined) {
-      variables = createItemVariables(item, { context: itemContextValues(context, item) });
-      byEntry.set(entry, variables);
+      variables = createItemVariables(item, { context: itemContextValues(this.state.context, item) });
+      this.initials.set(entry, variables);
     }
     return variables;
   }
