@@ -24,9 +24,20 @@ import { failureResponse } from "./status.js";
  */
 export type CatAuthorization =
   | boolean
-  | { readonly port: CatPort }
-  | { readonly denied: "invalid-token" }
-  | { readonly denied: "insufficient-scope"; readonly scopes?: readonly string[] };
+  | {
+      /** The port that serves this request: the port of the caller. */
+      readonly port: CatPort;
+    }
+  | {
+      /** The request carries a token that is not valid. */
+      readonly denied: "invalid-token";
+    }
+  | {
+      /** The token is valid and lacks the scope of the operation. */
+      readonly denied: "insufficient-scope";
+      /** The scopes that would do, as scope tokens; by default those of `scopesOf(operation)`. */
+      readonly scopes?: readonly string[];
+    };
 
 /**
  * Decides whether a request may use an operation, before any of its body is read.
