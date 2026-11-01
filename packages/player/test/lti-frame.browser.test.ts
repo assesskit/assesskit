@@ -199,6 +199,26 @@ describe("the frames of a tool", () => {
     expect(parent.children).toHaveLength(0);
   });
 
+  it("answers the capabilities request of the window of the tool alone, and never from an opaque origin", () => {
+    const { toolFrame } = mount(frameFor(toolUrl(tool, "sandbox", token())));
+    // A message port stands in for the window of the tool, so that what the player posts to it can be seen.
+    const { port1: standIn } = new MessageChannel();
+    const posted: unknown[][] = [];
+    standIn.postMessage = (...call: unknown[]): void => void posted.push(call);
+    Object.defineProperty(toolFrame, "contentWindow", { value: standIn });
+    const request = { subject: "lti.capabilities", message_id: "7" };
+    const send = (init: MessageEventInit): boolean =>
+      window.dispatchEvent(new MessageEvent("message", { data: request, ...init }));
+    send({ source: window, origin: tool });
+    expect(posted, "a message from another window").toEqual([]);
+    send({ source: standIn, origin: "null" });
+    expect(posted, "a message from an opaque origin").toEqual([]);
+    send({ source: standIn, origin: tool });
+    expect(posted).toHaveLength(1);
+    expect(posted[0]?.[1]).toBe(tool);
+    expect(posted[0]?.[0]).toMatchObject({ subject: "lti.capabilities.response", message_id: "7" });
+  });
+
   it("removes both frames when destroyed", () => {
     const { parent, mounted } = mount(frameFor(toolUrl(tool, "sandbox", token())));
     expect(parent.querySelectorAll("iframe")).toHaveLength(2);
