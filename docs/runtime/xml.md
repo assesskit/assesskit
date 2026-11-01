@@ -91,11 +91,12 @@ root.children.map((child) => child.kind); // => ["text", "element", "comment", "
 
 A string is taken as it is: the encoding it declares is ignored. Bytes are decoded as XML 1.0 says:
 
-| Bytes begin with                     | Encoding                                                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| a UTF-8 or UTF-16 byte order mark    | The mark's. A declaration that names another family is a `ReadError`.                                 |
-| no mark, and `encoding="x"` declared | `x`, when `TextDecoder` supports it; otherwise a `ReadError`. UTF-16 without a mark is a `ReadError`. |
-| no mark and no declaration           | UTF-8. Bytes that are not valid UTF-8 are a `ReadError`.                                              |
+| Bytes begin with                     | Encoding                                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a UTF-8 or UTF-16 byte order mark    | The mark's. A declaration that names another family is a `ReadError`.                                                                                            |
+| no mark, and `encoding="x"` declared | `x`, when `TextDecoder` supports it; otherwise a `ReadError`. UTF-16 without a mark is a `ReadError`.                                                            |
+| no mark, and `ISO-8859-1` declared   | Byte for byte: 0x80 to 0x9F are U+0080 to U+009F, as in XML 1.0. This covers `latin1`, `l1` and the other IANA names, which `TextDecoder` reads as windows-1252. |
+| no mark and no declaration           | UTF-8. Bytes that are not valid UTF-8 are a `ReadError`.                                                                                                         |
 
 A document that declares XML 1.1 is a `ReadError`. So is one that has what the parser lets through and a tree could not
 keep or write: a lone surrogate in a string (it is no character), a namespace declaration with white space at its start or

@@ -37,9 +37,33 @@ function declaredLabel(head: string): string | undefined {
   return match?.[1] ?? match?.[2];
 }
 
-/** Returns the bytes as a string, one character per byte, which is enough to read an ASCII declaration. */
+/**
+ * The labels of ISO-8859-1 that the IANA registry and the Encoding Standard know. XML 1.0 gives the bytes 0x80 to 0x9F the
+ * C1 controls U+0080 to U+009F, and `TextDecoder` follows the Encoding Standard, which reads these labels as windows-1252.
+ */
+const ISO_8859_1_LABELS: ReadonlySet<string> = new Set([
+  "iso-8859-1",
+  "iso_8859-1",
+  "iso_8859-1:1987",
+  "iso8859-1",
+  "iso88591",
+  "iso-ir-100",
+  "latin1",
+  "l1",
+  "ibm819",
+  "cp819",
+  "csisolatin1",
+]);
+/** The bytes that `String.fromCharCode` takes at once, so that a long document does not overflow the call stack. */
+const LATIN1_CHUNK_BYTES = 8192;
+
+/** Returns the bytes as a string, one character per byte: ISO-8859-1, and enough to read an ASCII declaration. */
 function latin1(bytes: Uint8Array): string {
-  return String.fromCharCode(...bytes);
+  let text = "";
+  for (let start = 0; start < bytes.length; start += LATIN1_CHUNK_BYTES) {
+    text += String.fromCharCode(...bytes.subarray(start, start + LATIN1_CHUNK_BYTES));
+  }
+  return text;
 }
 
 function decode(bytes: Uint8Array, encoding: string, path: string | undefined): string {
@@ -67,7 +91,8 @@ function decodeMarked(bytes: Uint8Array, mark: ByteOrderMark, path: string | und
  * @remarks
  * A UTF-8 or UTF-16 byte order mark decides, and a declaration that names another encoding is an error. Without a mark,
  * the declared encoding is used when `TextDecoder` supports it, and UTF-8 when the document declares none. UTF-16 needs
- * a mark.
+ * a mark. ISO-8859-1 is read byte for byte, as XML 1.0 and the IANA registry define it, and not as the windows-1252 that
+ * the Encoding Standard makes of its label.
  *
  * @param bytes - The bytes of the document.
  * @param path - The path of the document, which the error names.
@@ -80,6 +105,7 @@ export function decodeXml(bytes: Uint8Array, path: string | undefined): string {
   const mark = BYTE_ORDER_MARKS.find(({ bytes: prefix }) => prefix.every((byte, index) => bytes[index] === byte));
   if (mark !== undefined) return decodeMarked(bytes, mark, path);
   const label = declaredLabel(latin1(bytes.subarray(0, DECLARATION_LENGTH))) ?? "utf-8";
+  if (ISO_8859_1_LABELS.has(label.toLowerCase())) return latin1(bytes);
   const encoding = encodingOf(label);
   if (encoding === undefined || encoding.startsWith("utf-16")) {
     const reason = encoding === undefined ? "this runtime does not support it" : "UTF-16 needs a byte order mark";

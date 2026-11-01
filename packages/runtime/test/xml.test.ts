@@ -804,6 +804,22 @@ describe("parsing", () => {
       expect(parseXml(xml).children).toEqual([text("é")]);
     });
 
+    it("reads ISO-8859-1 byte for byte and windows-1252 as the Encoding Standard defines it", () => {
+      const declared = (encoding: string) =>
+        new Uint8Array(Buffer.from(`<?xml version="1.0" encoding="${encoding}"?><a>\xE9\x80</a>`, "latin1"));
+      for (const label of ["ISO-8859-1", "iso-8859-1", "latin1", "ISO_8859-1", "ISO8859-1"]) {
+        expect(parseXml(declared(label)).children).toEqual([text("é\u0080")]);
+      }
+      expect(parseXml(declared("windows-1252")).children).toEqual([text("é€")]);
+    });
+
+    it("reads a long ISO-8859-1 document", () => {
+      const long = new Uint8Array(
+        Buffer.from(`<?xml version="1.0" encoding="ISO-8859-1"?><a>${"\xE9".repeat(300_000)}</a>`, "latin1"),
+      );
+      expect(parseXml(long).children).toEqual([text("é".repeat(300_000))]);
+    });
+
     it("takes a string as it is and ignores the encoding it declares", () => {
       expect(parseXml('<?xml version="1.0" encoding="ISO-8859-1"?><a>é€</a>').children).toEqual([text("é€")]);
       expect(parseXml(`﻿${body}`).children).toEqual([text("é€")]);
