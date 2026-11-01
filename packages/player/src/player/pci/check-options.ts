@@ -97,7 +97,9 @@ export function checkPciFrameOptions(options: unknown): asserts options is PciFr
     "contextVariables",
     "files",
     "onEvent",
+    "onError",
   ]);
+  if (options.onError !== undefined) checkFunction(options.onError, "The option onError must be a function");
   const { staticUrl, origins = [], messages, language, prompt, markup, stylesheets, state = null } = options;
   const { templateVariables = new Map(), contextVariables = new Map() } = options;
   checkBaseUrl(staticUrl, "The option staticUrl");

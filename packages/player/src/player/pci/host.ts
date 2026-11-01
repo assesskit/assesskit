@@ -128,10 +128,11 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
     throw new DataError(`The parent must be an element, found ${describe(parent)}.`);
   checkPciFrameOptions(options);
   const { title, prepare } = describeFrame(options);
+  const { onError = (error: unknown) => reportError(error) } = options;
   const frame = createFrameElement(options.staticUrl, title);
   const decode = createResponseDecoder(options.files);
   const starting = prepare().catch((error: unknown) => {
-    reportError(error);
+    onError(error);
     return undefined;
   });
   const asked = new Map<number, (value: PciValidityResult) => void>();
@@ -161,13 +162,13 @@ export function mountPciFrame(parent: HTMLElement, options: PciFrameOptions): Pc
       try {
         event = await toEvent(raw);
       } catch (error) {
-        if (!(error instanceof DataError)) reportError(error);
+        if (!(error instanceof DataError)) onError(error);
         return;
       }
       try {
         options.onEvent(event);
       } catch (error) {
-        reportError(error);
+        onError(error);
       }
     });
   };

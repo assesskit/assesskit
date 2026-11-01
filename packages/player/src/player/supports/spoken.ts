@@ -28,6 +28,12 @@ import { adoptSupportStyles } from "./styles.js";
 
 /** The options of {@link mountSpoken}. */
 export interface SpokenOptions {
+  /**
+   * Receives the error of a voice that failed.
+   *
+   * @defaultValue `reportError` of the page
+   */
+  readonly onError?: (error: unknown) => void;
   /** The text of the interface. */
   readonly messages: Messages;
   /** The language of content that states none, a BCP 47 tag. */
@@ -125,7 +131,8 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
     throw new DataError(`The root of the content root must be a shadow root, found ${describe(root.root)}.`);
   }
   checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", ["messages", "language", "voice", "lexicons"]);
+  checkProperties(options, "The options", ["messages", "language", "voice", "lexicons", "onError"]);
+  if (options.onError !== undefined) checkFunction(options.onError, "The option onError must be a function");
   checkMessages(options.messages);
   checkNonEmptyString(options.language, "The option language");
   checkRecord(options.voice, "The option voice must be an object");
@@ -151,7 +158,7 @@ function checkSpokenOptions(host: unknown, root: unknown, options: unknown): ass
  */
 export function mountSpoken(host: HTMLElement, root: ContentRoot, options: SpokenOptions): Spoken {
   checkSpokenOptions(host, root, options);
-  const { messages, language, voice } = options;
+  const { messages, language, voice, onError = (error: unknown) => reportError(error) } = options;
   let lexicons = options.lexicons ?? [];
   const scope = root.root;
   const release = adoptSupportStyles(host);
@@ -173,7 +180,7 @@ export function mountSpoken(host: HTMLElement, root: ContentRoot, options: Spoke
       await voice.speak(request);
     } catch (error) {
       status.textContent = messages.readAloudFailed;
-      reportError(error);
+      onError(error);
     }
   };
 

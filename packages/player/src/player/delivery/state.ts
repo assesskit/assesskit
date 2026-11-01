@@ -6,6 +6,8 @@ export interface MountState {
   view: CandidateView;
   /** Whether `destroy` has run. */
   destroyed: boolean;
+  /** Aborts the fetches and the calls to the host's files of the mount when it is destroyed. */
+  readonly stop: AbortController;
   /** What is drawn, as texts that compare: the item, the body of the view and its modal feedback. */
   readonly shown: { item: string; content: string; modal: string };
 }
@@ -17,7 +19,7 @@ export interface MountState {
  * @returns The state.
  */
 export function createMountState(view: CandidateView): MountState {
-  return { view, destroyed: false, shown: { item: "", content: "", modal: "" } };
+  return { view, destroyed: false, stop: new AbortController(), shown: { item: "", content: "", modal: "" } };
 }
 
 /** Writes a value so that two of them compare as text: maps as lists of their entries. */

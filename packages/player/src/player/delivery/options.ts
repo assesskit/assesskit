@@ -14,7 +14,7 @@ import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { FileValue } from "@assesskit/runtime/values";
 import type { Messages } from "../../messages/index.js";
-import type { SessionClient } from "../../protocol/index.js";
+import type { SessionCallOptions, SessionClient } from "../../protocol/index.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
 import { canMount, HOST_SHADOW_RULE } from "../internal.js";
@@ -31,16 +31,18 @@ export interface MountFiles {
    * @param bytes - The bytes.
    * @param mimeType - Their media type.
    * @param fileName - The name of the file, if it has one.
+   * @param options - Its `signal` aborts when the mount is destroyed; a host that can, stops the upload.
    * @returns The file value.
    */
-  upload(bytes: Blob, mimeType: string, fileName?: string): Promise<FileValue>;
+  upload(bytes: Blob, mimeType: string, fileName?: string, options?: SessionCallOptions): Promise<FileValue>;
   /**
    * Reads the bytes of a stored file, for a portable custom interaction.
    *
    * @param file - The file value.
+   * @param options - Its `signal` aborts when the mount is destroyed; a host that can, stops the read.
    * @returns The bytes.
    */
-  read(file: FileValue): Promise<Uint8Array>;
+  read(file: FileValue, options?: SessionCallOptions): Promise<Uint8Array>;
   /**
    * Returns the URL that plays a stored file back, such as a recording in review: a URL of the gate with a short-lived token.
    *
@@ -111,6 +113,13 @@ export interface MountOptions {
      * @defaultValue `true`
      */
     readonly record?: boolean;
+    /**
+     * Receives the errors that the player can only report: a stylesheet or a lexicon that failed to load, a tool of the host that
+     * threw, a voice that failed. No error is reported after the mount is destroyed.
+     *
+     * @defaultValue `reportError` of the page, which raises a global `error` event
+     */
+    readonly onError?: (error: unknown) => void;
     /**
      * The voice that reads aloud for the candidates whose supports ask for it.
      *
@@ -221,7 +230,7 @@ const ITEM_OPTION_NAMES = [
   "client",
 ];
 
-const ITEM_HOOK_NAMES = ["customInteraction", "record", "voice"];
+const ITEM_HOOK_NAMES = ["customInteraction", "record", "voice", "onError"];
 
 /** Checks the hooks that every mount has: the custom interaction, the recording and the voice. */
 function checkItemHooks(hooks: Readonly<Record<string, unknown>>): void {
@@ -229,6 +238,7 @@ function checkItemHooks(hooks: Readonly<Record<string, unknown>>): void {
     checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
   }
   if (hooks.record !== undefined) checkBoolean(hooks.record, "The hook record");
+  if (hooks.onError !== undefined) checkFunction(hooks.onError, "The hook onError must be a function");
   if (hooks.voice !== undefined) {
     checkRecord(hooks.voice, "The hook voice must be an object");
     checkFunction(hooks.voice.speak, "The method speak of the hook voice must be a function");

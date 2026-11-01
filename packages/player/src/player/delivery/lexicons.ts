@@ -4,6 +4,8 @@ import type { Lexicon } from "../speech/index.js";
 
 /** What the lexicons of the shell need of the player. */
 export interface LexiconsContext {
+  /** Reports a lexicon that failed to load. */
+  readonly report: (error: unknown) => void;
   /** Loads a lexicon from the gate; `fetch` of the page fits. */
   readonly fetch: StylesheetFetch;
   /** Turns the path of a file in the package into a URL under a signed prefix. */
@@ -71,7 +73,7 @@ export function createLexicons(context: LexiconsContext): Lexicons {
       current = key;
       void Promise.allSettled(paths.map(lexiconAt)).then((results) => {
         if (key !== current) return;
-        for (const result of results) if (result.status === "rejected") reportError(result.reason);
+        for (const result of results) if (result.status === "rejected") context.report(result.reason);
         apply(
           results.flatMap((result) =>
             result.status === "fulfilled" && result.value !== undefined ? [result.value] : [],

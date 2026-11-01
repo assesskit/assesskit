@@ -116,6 +116,13 @@ export interface LocalSessionOptions extends SessionCallOptions {
    */
   readonly clock?: Clock;
   /**
+   * Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the
+   * answer loop that no call waits for.
+   *
+   * @defaultValue `reportError` of the page
+   */
+  readonly onError?: (error: unknown) => void;
+  /**
    * The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended, from
    * the latest step to the next action, so that a learner who comes back after days has used no time in between.
    *
@@ -147,6 +154,7 @@ const optionsSchema = v.strictObject({
   assets: functionSchema<(path: string) => string>(),
   lexicons: v.optional(functionSchema<(item: string) => readonly string[]>()),
   clock: v.optional(clockSchema),
+  onError: v.optional(functionSchema<(error: unknown) => void>()),
   maxIdle: v.optional(v.unknown()),
   signal: v.optional(v.unknown()),
   cat: v.optional(methodsSchema<CatPort>("createSession", "submitResults", "endSession")),
@@ -240,6 +248,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   optional(creating, (value) => checkAbortSignal(value, "The option signal"));
   optional(maxIdle, (value) => checkPositiveInteger(value, "The option maxIdle"));
   const { definition, store, session, seed, assets, lexicons = () => [], clock = BROWSER_CLOCK } = options;
+  const onError = options.onError ?? ((error: unknown) => reportError(error));
   const now = (): number => readClock(clock);
 
   const delivery = await import("@assesskit/runtime/delivery");
@@ -289,7 +298,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
         else
           void run({ type: "time" }, undefined)
             .then(settleTimer)
-            .catch((error: unknown) => reportError(error));
+            .catch((error: unknown) => onError(error));
       },
       Math.min(delay, MAX_TIMER_DELAY_MS),
     );
@@ -320,8 +329,8 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
         state = step.state;
       }
       look();
-      notifyListeners(listeners, latest.view);
-      if (step.ok && step.events.length > 0) notifyListeners(stepListeners, step.events);
+      notifyListeners(listeners, latest.view, onError);
+      if (step.ok && step.events.length > 0) notifyListeners(stepListeners, step.events, onError);
       arm();
       return { step, view: latest.view };
     }, signal);
@@ -368,7 +377,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
   const settleTimer = async (): Promise<void> => {
     if (answerer === undefined || loops.wake("")) return;
     const failed = await loops.join("", answerer);
-    if (failed !== undefined) reportError(failed.error);
+    if (failed !== undefined) onError(failed.error);
   };
 
   /** Rejects with the failure of the loop when the candidate has nothing to do: the session is in progress and presents no item. */
@@ -431,7 +440,7 @@ export async function createLocalSession(options: LocalSessionOptions): Promise<
       if (closed) throw new DataError("The session client is closed.");
       return enqueue(() => {
         look();
-        notifyListeners(listeners, latest.view);
+        notifyListeners(listeners, latest.view, onError);
         return latest.view;
       }, options?.signal);
     },

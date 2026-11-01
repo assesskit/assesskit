@@ -65,6 +65,13 @@ export type PciEvent =
 
 /** The options of {@link mountPciFrame}. */
 export interface PciFrameOptions {
+  /**
+   * Receives the errors that the host of the frame can only report: a frame that failed to prepare, and a message of the
+   * frame that could not be read or that the listener of the host threw on.
+   *
+   * @defaultValue `reportError` of the page
+   */
+  readonly onError?: (error: unknown) => void;
   /** The base URL of the player's static files on the asset origin, ending in `/`: `pci-frame/frame.html` and `player.css` are under it. */
   readonly staticUrl: string;
   /**

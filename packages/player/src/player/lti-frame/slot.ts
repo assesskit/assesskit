@@ -20,6 +20,8 @@ interface LtiSlotOptions {
   readonly login: LtiLogin | undefined;
   /** The origins that a tool must not be served from. */
   readonly refused: readonly string[];
+  /** Reports a login that failed. */
+  readonly report: (error: unknown) => void;
 }
 
 /** The place in the player where the tool of an LTI item runs. */
@@ -49,7 +51,7 @@ function shownKey(item: CandidateItem | undefined): string | undefined {
  * @returns The slot.
  */
 export function createLtiSlot(options: LtiSlotOptions): LtiSlot {
-  const { messages, login, refused, host } = options;
+  const { messages, login, refused, host, report } = options;
   const notes = html("div", { class: "ak-lti-notes" });
   const element = html("div", { class: "ak-lti" }, html("slot", { name: LTI_SLOT }), notes);
   let key: string | undefined;
@@ -79,7 +81,7 @@ export function createLtiSlot(options: LtiSlotOptions): LtiSlot {
       // An abort is the slot's own doing, so it is no failure of the host.
       if (login.signal.aborted) return;
       if (key === current) note(messages.ltiUnavailable, "alert");
-      reportError(error);
+      report(error);
     }
   };
 

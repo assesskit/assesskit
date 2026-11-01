@@ -3,6 +3,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
 import {
+  bindToLifetime,
   clockText,
   confirmationText,
   planActions,
@@ -169,5 +170,58 @@ describe("properties", () => {
         expect(Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds)).toBe(total);
       }),
     );
+  });
+});
+
+describe("bindToLifetime", () => {
+  /** The settings of a mount that record what the host's functions receive. */
+  function settings() {
+    const received: { readonly what: string; readonly signal: AbortSignal | undefined }[] = [];
+    const reports: unknown[] = [];
+    const bytes = new Blob(["x"]);
+    const file = { reference: "f", mimeType: "x/y" };
+    const base = {
+      fetch: async (_url: string, request: { readonly signal?: AbortSignal }) => {
+        received.push({ what: "fetch", signal: request.signal });
+        return { ok: true, status: 200, text: async () => "" };
+      },
+      files: {
+        upload: async (_bytes: Blob, _type: string, _name?: string, options?: { readonly signal?: AbortSignal }) => {
+          received.push({ what: "upload", signal: options?.signal });
+          return file;
+        },
+        read: async (_file: unknown, options?: { readonly signal?: AbortSignal }) => {
+          received.push({ what: "read", signal: options?.signal });
+          return new Uint8Array();
+        },
+        url: (_file: unknown) => "https://assets.example/f",
+      },
+      report: (error: unknown) => void reports.push(error),
+    };
+    const state = { destroyed: false, stop: new AbortController() };
+    // The binding reads only the three functions of the settings and the two fields of the state.
+    const bound = bindToLifetime(base as never, state as never) as typeof base;
+    return { bound, received, reports, state, bytes, file };
+  }
+
+  it("gives the signal of the mount to every fetch and to every call of the host's files", async () => {
+    const { bound, received, state, bytes, file } = settings();
+    await bound.fetch("https://assets.example/a.css", { credentials: "omit", referrerPolicy: "no-referrer" } as never);
+    await bound.files.upload(bytes, "x/y", "a.txt");
+    await bound.files.read(file);
+    expect(received.map(({ what }) => what)).toEqual(["fetch", "upload", "read"]);
+    expect(received.every(({ signal }) => signal === state.stop.signal)).toBe(true);
+    expect(bound.files.url(file)).toBe("https://assets.example/f");
+  });
+
+  it("keeps the signal that a call brings, and reports until the mount is destroyed", async () => {
+    const { bound, received, reports, state, file } = settings();
+    const own = new AbortController();
+    await bound.files.read(file, { signal: own.signal });
+    expect(received[0]?.signal).toBe(own.signal);
+    bound.report("first");
+    state.destroyed = true;
+    bound.report("second");
+    expect(reports).toEqual(["first"]);
   });
 });

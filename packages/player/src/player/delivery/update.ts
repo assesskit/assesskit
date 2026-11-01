@@ -9,7 +9,7 @@ import { itemId, type MountState } from "./state.js";
 import { createViewChain } from "./view-chain.js";
 
 /** What showing a view needs of the player. */
-export interface UpdateContext extends Pick<Settings, "client" | "messages" | "chrome"> {
+export interface UpdateContext extends Pick<Settings, "client" | "messages" | "chrome" | "report"> {
   /** The state of the mounted player. */
   readonly state: MountState;
   /** The elements of the player. */
@@ -37,9 +37,9 @@ export interface UpdateContext extends Pick<Settings, "client" | "messages" | "c
  * @returns The function that shows a view.
  */
 export function createUpdate(context: UpdateContext): (view: CandidateView) => void {
-  const { client, messages, chrome, state, shell, body, attachments, chromeView, lti, resume } = context;
+  const { client, messages, chrome, state, shell, body, attachments, chromeView, lti, resume, report } = context;
   const { supports, tools } = attachments;
-  const draw = createViewChain({ client, state, body, attachments, tools });
+  const draw = createViewChain({ client, state, body, attachments, tools, report });
 
   return (next) => {
     const changed = itemId(next.current?.key) !== state.shown.item || next.status !== state.view.status;

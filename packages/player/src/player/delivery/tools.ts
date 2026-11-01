@@ -5,6 +5,8 @@ import { mountTools, type ToolSlots } from "../tools/index.js";
 
 /** What the tools of the shell need of the player. */
 export interface DeliveryToolsContext {
+  /** Reports a tool of the host that threw. */
+  readonly report: (error: unknown) => void;
   /** The text of the interface. */
   readonly messages: Messages;
   /** The language of the interface, a BCP 47 tag. */
@@ -67,7 +69,7 @@ export function mountDeliveryTools(context: DeliveryToolsContext): DeliveryTools
         });
       } catch (error) {
         // A tool of the host that fails must not keep the candidate from the question.
-        reportError(error);
+        context.report(error);
       }
     },
     destroy: tools.destroy,

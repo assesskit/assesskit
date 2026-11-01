@@ -6,6 +6,7 @@ import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
 import { createChrome } from "./chrome.js";
 import { createCommentBox } from "./comment.js";
+import { bindToLifetime } from "./lifetime.js";
 import { checkDeliveryOptions, type DeliveryOptions, type Mounted } from "./options.js";
 import { createResumeWatch } from "./resume.js";
 import { createSender } from "./sender.js";
@@ -45,16 +46,17 @@ const TICK_MS = 1000;
  */
 export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Mounted {
   checkDeliveryOptions(host, options);
-  const settings = resolveSettings(options);
+  const resolved = resolveSettings(options);
+  const state = createMountState(resolved.client.view);
+  const settings = bindToLifetime(resolved, state);
   const { client, messages, language, chrome, staticUrl, hooks } = settings;
-  const state = createMountState(client.view);
   const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles(), chromeStyles()];
 
   const status = createAnnouncer("ak-status");
   const timerStatus = createAnnouncer("ak-timer-status");
   const timers = createTimerBar(messages, language, timerStatus);
-  const sender = createSender({ client, messages, status, state });
+  const sender = createSender({ client, messages, status, state, report: settings.report });
   const comment = createCommentBox(messages, sender.comment);
   const resume = createResumeWatch({ client, messages, status, state, everyMs: settings.resumeCheckMs });
   const lti = createLtiSlot({
@@ -62,6 +64,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     messages,
     login: hooks.ltiLogin,
     refused: [window.location.origin, new URL(staticUrl, window.location.href).origin],
+    report: settings.report,
   });
   const shell = createShell({
     ...settings,
@@ -90,6 +93,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
     destroy: () => {
       if (state.destroyed) return;
       state.destroyed = true;
+      state.stop.abort();
       unsubscribe();
       clearInterval(ticker);
       resume.destroy();

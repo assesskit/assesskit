@@ -15,6 +15,8 @@ import type { PciHost } from "./pci.js";
 
 /** What the supports of the shell need of the player. */
 export interface SupportsContext {
+  /** Reports settings that reading aloud cannot use. */
+  readonly report: (error: unknown) => void;
   /** The text of the interface. */
   readonly messages: Messages;
   /** The language of the interface, a BCP 47 tag. */
@@ -80,7 +82,7 @@ export function mountDeliverySupports(context: SupportsContext): DeliverySupport
   const { messages, language, slot, contentHost, content, pci, voice } = context;
   const variant = mountVariantNotice(slot, { messages, language });
   const panel = context.panel?.(slot);
-  const spoken = mountSpoken(slot, content, { messages, language, voice });
+  const spoken = mountSpoken(slot, content, { messages, language, voice, onError: context.report });
   const cards = mountContentSupports(content, { messages });
   let look: string | undefined;
   let applied: string | undefined;
@@ -108,7 +110,7 @@ export function mountDeliverySupports(context: SupportsContext): DeliverySupport
         spoken.update(view.supports);
       } catch (error) {
         // Settings that reading aloud cannot use must not keep the candidate from the question.
-        reportError(error);
+        context.report(error);
       }
     },
     destroy: () => {

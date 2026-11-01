@@ -19,6 +19,8 @@ export interface SenderContext {
   readonly status: Announcer;
   /** The state of the mounted player, which tells the item presented and whether the player is gone. */
   readonly state: MountState;
+  /** Reports an error that the player can only report. */
+  readonly report: (error: unknown) => void;
 }
 
 /** The actions that the parts of the player send to the session. */
@@ -51,7 +53,7 @@ export interface Sender {
  * @returns The sender.
  */
 export function createSender(context: SenderContext): Sender {
-  const { client, messages, status, state } = context;
+  const { client, messages, status, state, report } = context;
 
   const send = async (action: CandidateAction, applied?: () => void): Promise<void> => {
     try {
@@ -61,7 +63,7 @@ export function createSender(context: SenderContext): Sender {
     } catch (error) {
       const rejected = error instanceof DataError || error instanceof AccessError;
       status.say(rejected ? messages.sendRejected : messages.sendFailed);
-      if (!rejected) reportError(error);
+      if (!rejected) report(error);
     }
   };
 

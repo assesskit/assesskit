@@ -55,7 +55,7 @@ export interface StylesheetResponse {
 /** The part of the web standard `fetch` that the loader calls, so that a host passes `fetch`, or a replacement. */
 export type StylesheetFetch = (
   url: string,
-  request: { readonly credentials: "omit"; readonly referrerPolicy: "no-referrer" },
+  request: { readonly credentials: "omit"; readonly referrerPolicy: "no-referrer"; readonly signal?: AbortSignal },
 ) => Promise<StylesheetResponse>;
 
 /** The origins a stylesheet may load resources from, and what it is based at. */

@@ -14,6 +14,8 @@ export interface ItemSettings
   readonly origins: readonly string[];
   /** The hooks of the host. */
   readonly hooks: NonNullable<ItemMountOptions["hooks"]>;
+  /** Reports an error that the player can only report: the hook `onError`, or `reportError` of the page. */
+  readonly report: (error: unknown) => void;
 }
 
 /** The options of the player with their defaults applied, which its parts read. */
@@ -48,6 +50,7 @@ export function resolveItemSettings(options: ItemMountOptions): ItemSettings {
     language,
     origins,
     hooks,
+    report: hooks.onError ?? ((error) => reportError(error)),
     messages: selectMessages(language, options.messages),
   };
 }
@@ -67,5 +70,5 @@ export function resolveSettings(options: DeliveryOptions): Settings {
     headingLevel = 2,
     ...shared
   } = options;
-  return { ...resolveItemSettings(shared), chrome, hooks, resumeCheckMs, landmark, headingLevel };
+  return { ...resolveItemSettings({ ...shared, hooks }), chrome, hooks, resumeCheckMs, landmark, headingLevel };
 }

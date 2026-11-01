@@ -50,6 +50,10 @@ async function shell(
     /** Whether the engine allows a review after the end. */
     readonly reviewAfterEnd?: boolean;
     readonly chrome?: boolean;
+    /** Replaces the fetch of the page, which loads the stylesheets of the item. */
+    readonly fetch?: StylesheetFetch;
+    /** Receives the errors that the player can only report. */
+    readonly onError?: (error: unknown) => void;
     readonly landmark?: "main" | "region";
     readonly headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
     readonly wrap?: (client: SessionClient) => SessionClient;
@@ -119,8 +123,9 @@ async function shell(
     },
     staticUrl: `${origin}/static/`,
     stylesheet: player,
-    fetch: fetcher,
+    fetch: options.fetch ?? fetcher,
     hooks: {
+      ...(options.onError === undefined ? {} : { onError: options.onError }),
       ...(options.voice === undefined ? {} : { voice: options.voice }),
       ...(options.tools === undefined ? {} : { tools: options.tools }),
     },
@@ -596,6 +601,50 @@ describe("mountDelivery", () => {
     expect(vi.getTimerCount()).toBeLessThan(timers);
     const moved = await s.client.dispatch({ type: "move", to: "next" });
     expect(moved.view.current?.key.ref).toBe("q2");
+  });
+
+  it("aborts the stylesheets that are still loading when the player is destroyed, and reports nothing after", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const errors: unknown[] = [];
+    const heard: unknown[] = [];
+    const listen = (event: ErrorEvent): void => void heard.push(event.error);
+    window.addEventListener("error", listen);
+    try {
+      const s = await shell({
+        onError: (error) => void errors.push(error),
+        fetch: (_url, request) => {
+          signals.push(request.signal);
+          return new Promise((_resolve, reject) =>
+            request.signal?.addEventListener("abort", () => reject(new DOMException("Aborted.", "AbortError"))),
+          );
+        },
+      });
+      await waitFor(() => expect(signals.length).toBeGreaterThan(0));
+      expect(signals.every((signal) => signal?.aborted === false)).toBe(true);
+      s.mounted.destroy();
+      expect(signals.every((signal) => signal?.aborted === true)).toBe(true);
+      // The failures arrive after the destroy: wait for the page to settle by round trips through the event loop.
+      await new Promise<void>((resolve) => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => resolve();
+        channel.port2.postMessage(null);
+      });
+      expect(errors).toEqual([]);
+      expect(heard).toEqual([]);
+    } finally {
+      window.removeEventListener("error", listen);
+    }
+  });
+
+  it("gives the errors that it can only report to the hook onError, while the player is mounted", async () => {
+    const errors: unknown[] = [];
+    const s = await shell({
+      onError: (error) => void errors.push(error),
+      fetch: async () => ({ ok: false, status: 403, text: async () => "" }),
+    });
+    await waitFor(() => expect(errors.length).toBeGreaterThan(0));
+    expect(String(errors[0])).toContain("could not be fetched: HTTP 403");
+    s.mounted.destroy();
   });
 
   it("holds the player in a region named by a heading of level 2, so that it fits in a page that has a main of its own", async () => {

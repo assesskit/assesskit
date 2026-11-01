@@ -1,4 +1,4 @@
-import { checkFunction, parseWith, recordSchema } from "@assesskit/runtime/checks";
+import { checkFunction, functionSchema, parseWith, recordSchema } from "@assesskit/runtime/checks";
 import { actionToJson, type CandidateAction, type CandidateView, viewFromJson } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { Value } from "@assesskit/runtime/values";
@@ -44,9 +44,19 @@ export interface RemoteSessionOptions {
    * @defaultValue {@link BROWSER_CLOCK}
    */
   readonly clock?: Clock;
+  /**
+   * Receives the errors that the client can only report: a listener that threw, and a send at an autosave or a deadline that
+   * failed, since no call waits for it.
+   *
+   * @defaultValue `reportError` of the page
+   */
+  readonly onError?: (error: unknown) => void;
 }
 
-const remoteOptionsSchema = v.pipe(recordSchema, v.strictObject({ clock: v.optional(clockSchema) }));
+const remoteOptionsSchema = v.pipe(
+  recordSchema,
+  v.strictObject({ clock: v.optional(clockSchema), onError: v.optional(functionSchema<(error: unknown) => void>()) }),
+);
 
 const NO_DOCUMENTS: ViewDocuments = { test: "", item: "", stimuli: [], lexicons: [] };
 
@@ -104,7 +114,7 @@ export function createRemoteSession(
   checkFunction(transport, "The transport must be a function");
   checkViewEnvelope(initial);
   parseWith(remoteOptionsSchema, options, "The options object");
-  const { clock = BROWSER_CLOCK } = options;
+  const { clock = BROWSER_CLOCK, onError = (error: unknown) => reportError(error) } = options;
 
   const listeners = new Set<(view: CandidateView) => void>();
   let sequence = initial.seq;
@@ -125,7 +135,7 @@ export function createRemoteSession(
   let latest = read(initial);
 
   const report = (promise: Promise<unknown>): void => {
-    promise.catch((error: unknown) => reportError(error));
+    promise.catch((error: unknown) => onError(error));
   };
 
   const clearTimers = (): void => {
@@ -148,7 +158,7 @@ export function createRemoteSession(
 
   const accept = (envelope: ViewEnvelope): DispatchResult => {
     latest = read(envelope);
-    notifyListeners(listeners, latest.view);
+    notifyListeners(listeners, latest.view, onError);
     arm();
     return { view: latest.view, ...(envelope.refusal === undefined ? {} : { refusal: envelope.refusal }) };
   };

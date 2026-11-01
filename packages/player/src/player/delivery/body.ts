@@ -21,6 +21,7 @@ export interface BodyContext
     | "language"
     | "origins"
     | "client"
+    | "report"
     | "files"
     | "staticUrl"
     | "stylesheet"
@@ -85,8 +86,9 @@ function bindInteractions(elements: readonly InteractionElement[], item: Candida
 
 /** Creates the host of the portable custom interactions, which report to the sender. */
 function createPci(context: BodyContext): PciHost {
-  const { messages, language, staticUrl, origins, files, client, state, sender } = context;
+  const { messages, language, staticUrl, origins, files, client, state, sender, report } = context;
   return createPciHost({
+    report,
     messages,
     language,
     staticUrl,
@@ -172,7 +174,7 @@ export function createBody(context: BodyContext): Body {
         try {
           await content.show(rootContentOf(view, client.documents));
         } catch (error) {
-          reportError(error);
+          context.report(error);
         }
       }
       // The player may have been destroyed while the content was drawn.

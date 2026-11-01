@@ -6,6 +6,7 @@ import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
 import { mountContentAttachments } from "./content-attachments.js";
 import { createItemShell } from "./item-shell.js";
+import { bindToLifetime } from "./lifetime.js";
 import { checkItemOptions, type ItemMountOptions, type Mounted } from "./options.js";
 import { createSender } from "./sender.js";
 import { resolveItemSettings } from "./settings.js";
@@ -48,19 +49,21 @@ function checkNoLtiItem(view: CandidateView): void {
  */
 export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted {
   checkItemOptions(host, options);
-  const settings = resolveItemSettings(options);
-  const { client, messages, language, hooks } = settings;
+  const resolved = resolveItemSettings(options);
+  const { client, messages, language, hooks } = resolved;
   checkNoLtiItem(client.view);
   const state = createMountState(client.view);
+  const settings = bindToLifetime(resolved, state);
   const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles()];
 
   const status = createAnnouncer("ak-status");
-  const sender = createSender({ client, messages, status, state });
+  const sender = createSender({ client, messages, status, state, report: settings.report });
   const shell = createItemShell(language, status.element);
   const body = createBody({ ...settings, state, sender, host: shell.contentHost });
   shadow.append(shell.app);
   const attachments = mountContentAttachments({
+    report: settings.report,
     client,
     messages,
     language,
@@ -72,7 +75,7 @@ export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted
     body,
   });
 
-  const draw = createViewChain({ client, state, body, attachments, tools: undefined });
+  const draw = createViewChain({ client, state, body, attachments, tools: undefined, report: settings.report });
   const update = (view: CandidateView): void => {
     checkNoLtiItem(view);
     state.view = view;
@@ -88,6 +91,7 @@ export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted
     destroy: () => {
       if (state.destroyed) return;
       state.destroyed = true;
+      state.stop.abort();
       unsubscribe();
       attachments.supports.destroy();
       status.stop();

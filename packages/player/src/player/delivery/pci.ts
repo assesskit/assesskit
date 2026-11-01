@@ -19,6 +19,8 @@ import type { Presentation } from "../supports/index.js";
 
 /** What the PCI host needs of the player. */
 export interface PciContext {
+  /** Reports an error that the host of the interaction can only report. */
+  readonly report: (error: unknown) => void;
   /** The text of the interface. */
   readonly messages: Messages;
   /** The language of the interface, a BCP 47 tag, for the document of the frame. */
@@ -164,6 +166,7 @@ export function createPciHost(context: PciContext): PciHost {
       templateVariables: variablesOf(view?.templateValues ?? new Map()),
       contextVariables: variablesOf(view?.contextValues ?? new Map()),
       files: context.files,
+      onError: context.report,
       onEvent: (event) => {
         if (mine !== generation) return;
         if (event.type === "changed" || event.type === "done" || event.type === "completed") {
@@ -184,7 +187,7 @@ export function createPciHost(context: PciContext): PciHost {
       if (item === undefined) return container;
       const mine = generation;
       const frame = start(container, interaction, renderer, item, mine).catch((error: unknown) => {
-        reportError(error);
+        context.report(error);
         container.replaceChildren(html("p", { class: "ak-notice", role: "note" }, context.messages.pciFailed));
         return undefined;
       });

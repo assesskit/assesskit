@@ -7,7 +7,7 @@ import { type DeliverySupports, mountDeliverySupports, type SupportsContext } fr
 
 /** What the parts that follow the content need of the player. */
 export interface ContentAttachmentsContext
-  extends Pick<ItemSettings, "client" | "messages" | "language" | "fetch" | "hooks"> {
+  extends Pick<ItemSettings, "client" | "messages" | "language" | "fetch" | "hooks" | "report"> {
   /** The state of the mounted player. */
   readonly state: MountState;
   /** The element that gets the notice of the variant, the panel and the controls of reading aloud. */
@@ -37,6 +37,7 @@ export interface ContentAttachments {
 export function mountContentAttachments(context: ContentAttachmentsContext): ContentAttachments {
   const { client, messages, language, hooks, state, slot, contentHost, body, panel } = context;
   const supports = mountDeliverySupports({
+    report: context.report,
     messages,
     language,
     slot,
@@ -47,6 +48,7 @@ export function mountContentAttachments(context: ContentAttachmentsContext): Con
     ...(panel === undefined ? {} : { panel }),
   });
   const lexicons = createLexicons({
+    report: context.report,
     fetch: context.fetch,
     assets: (path) => client.assets(path),
     apply: (loaded) => {

@@ -5,7 +5,7 @@ import type { ItemSettings } from "./settings.js";
 import type { MountState } from "./state.js";
 
 /** What drawing the content of a view needs of the player. */
-export interface ViewChainContext extends Pick<ItemSettings, "client"> {
+export interface ViewChainContext extends Pick<ItemSettings, "client" | "report"> {
   /** The state of the mounted player. */
   readonly state: MountState;
   /** The content. */
@@ -44,6 +44,6 @@ export function createViewChain(context: ViewChainContext): (view: CandidateView
   return (next) => {
     chain = chain
       .then(() => (state.destroyed ? undefined : render(next)))
-      .catch((error: unknown) => reportError(error));
+      .catch((error: unknown) => context.report(error));
   };
 }

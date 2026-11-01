@@ -8,4 +8,5 @@
  */
 export { confirmationText, planActions } from "./actions.js";
 export { clockText, spokenText } from "./duration.js";
+export { bindToLifetime } from "./lifetime.js";
 export { REFUSAL_MESSAGES } from "./refusals.js";
