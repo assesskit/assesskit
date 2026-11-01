@@ -3,7 +3,7 @@
 The runtime defines `CatPort`, the six requests of a CAT 1.0 engine, and makes no network request and runs no CAT algorithm.
 The player has two subpaths for it. `@assesskit/player/cat` deploys the adaptive sections of a package through any port, on a
 server or in a page. `@assesskit/player/cat-rest` speaks the REST binding of CAT 1.0 on a server, on both sides of the wire:
-`restCatPort` is the client of a remote engine, and `catRestHandler` is the engine side, which answers the binding's requests
+`createRestCatPort` is the client of a remote engine, and `createCatRestHandler` is the engine side, which answers the binding's requests
 for any `CatPort`. Any other engine, such as one in process over a psychometrics library, plugs in behind the same port.
 
 ```mermaid
@@ -15,8 +15,8 @@ flowchart LR
     deploy["deployCatSections"] -->|"Create Section, Get Section"| port
   end
   subgraph server["@assesskit/player/cat-rest: a server only"]
-    rest["restCatPort"] -.->|implements| port
-    handler["catRestHandler"] -->|"calls"| engine{{"CatPort of the engine"}}
+    rest["createRestCatPort"] -.->|implements| port
+    handler["createCatRestHandler"] -->|"calls"| engine{{"CatPort of the engine"}}
   end
   rest -->|"REST/JSON binding of CAT 1.0"| handler
   own["Any engine in process or in the page"] -.->|implements| port
@@ -27,18 +27,18 @@ flowchart LR
 | ---------------------------- | ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `@assesskit/player/cat`      | shared | `deployCatSections(pkg, port)`                    | Creates the sections of a package's adaptive selections at the engine and checks their pool. |
 | `@assesskit/player/cat`      | shared | `DeployedCatSection`                              | What a deployment returns for an adaptive section.                                           |
-| `@assesskit/player/cat-rest` | server | `restCatPort(options)`                            | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                          |
-| `@assesskit/player/cat-rest` | server | `catRestHandler(port, options)`                   | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.             |
+| `@assesskit/player/cat-rest` | server | `createRestCatPort(options)`                      | A client of a remote engine, over the REST/JSON binding of CAT 1.0.                          |
+| `@assesskit/player/cat-rest` | server | `createCatRestHandler(port, options)`             | The engine side of the binding: a `Request` to a `Response`, over any `CatPort`.             |
 | `@assesskit/player/cat-rest` | server | `CatAuthenticate`, `CatOperation`                 | The callback that authorizes a request, and the names of the six operations.                 |
-| `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `restCatPort` uses.                                                 |
-| `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                          | The client credentials with which `restCatPort` asks for a token.                            |
+| `@assesskit/player/cat-rest` | server | `CatFetch`, `CatFetchRequest`, `CatFetchResponse` | The part of `fetch` that `createRestCatPort` uses.                                           |
+| `@assesskit/player/cat-rest` | server | `OAuthClientCredentials`                          | The client credentials with which `createRestCatPort` asks for a token.                      |
 
 ## Why the REST subpath stays on servers
 
-`restCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, so it must never reach a
+`createRestCatPort` holds an OAuth client secret and sends the candidate's results to a remote engine, so it must never reach a
 browser bundle. The subpath `cat-rest` is for that reason separate from `cat`, and no shared or browser folder of the package
 imports it (lint); the bundle tests check that the bundles of the candidate and of practice hold none of its files.
-`catRestHandler` holds no secret, but it serves answer keys of the engine and candidate results, so it too belongs on a server.
+`createCatRestHandler` holds no secret, but it serves answer keys of the engine and candidate results, so it too belongs on a server.
 A page that runs practice with an adaptive section brings its own `CatPort`, such as an engine over a psychometrics library in
 the page, and deploys with `deployCatSections(pkg, () => port)` from `@assesskit/player/cat`. Nothing in the library can see a
 host's page: a host that imports `@assesskit/player/cat-rest` there puts the secret in the page, and
@@ -98,8 +98,8 @@ sequenceDiagram
 ## The option cat
 
 A session host and a local session take the port as the option `cat`, and then answer their own CAT requests, so that no host
-code drains them. A server passes any `CatPort`, such as `restCatPort`; a page passes its own in-browser port, never
-`restCatPort`.
+code drains them. A server passes any `CatPort`, such as `createRestCatPort`; a page passes its own in-browser port, never
+`createRestCatPort`.
 
 ```mermaid
 sequenceDiagram
@@ -155,9 +155,9 @@ with the next request. The directory [examples/player](../../examples/player/REA
 psychometrics library, with the tests that run it in CI. The [CAT guide of the runtime](../runtime/cat.md) describes the
 requests, the stages and the section data that any engine reads.
 
-## restCatPort
+## createRestCatPort
 
-`restCatPort(options)`, from `@assesskit/player/cat-rest`, returns a `CatPort` that speaks the REST/JSON binding of CAT 1.0
+`createRestCatPort(options)`, from `@assesskit/player/cat-rest`, returns a `CatPort` that speaks the REST/JSON binding of CAT 1.0
 (<https://www.imsglobal.org/spec/cat/v1p0/bind>) to one remote engine.
 
 | Option        | Default  | Meaning                                                                           |
@@ -169,7 +169,7 @@ requests, the stages and the section data that any engine reads.
 | `sharePnp`    | `false`  | Whether Create Session sends the personal needs and preferences to the engine.    |
 
 ```ts
-import { restCatPort } from "@assesskit/player/cat-rest";
+import { createRestCatPort } from "@assesskit/player/cat-rest";
 
 const requests = [];
 const fetch = async (url, request) => {
@@ -178,7 +178,7 @@ const fetch = async (url, request) => {
   return { ok: true, status: 200, text: async () => JSON.stringify(body) };
 };
 const endpoint = "https://cat.example/ims/cat/v1p0";
-const port = restCatPort({
+const port = createRestCatPort({
   fetch,
   endpoint,
   credentials: {
@@ -251,19 +251,19 @@ The binding's OpenAPI 3 file is named in Appendix B of the binding as
 `https://purl.imsglobal.org/cat/v1p0/schema/openapi/imscatv1p0_openapi3_v1p0.json`; that address does not serve the file. The
 listing in Appendix B1.2 of <https://www.imsglobal.org/spec/cat/v1p0/bind> is the text the codec of the runtime was written against.
 
-## catRestHandler
+## createCatRestHandler
 
-`catRestHandler(port, options)`, from `@assesskit/player/cat-rest`, is the engine side of the same binding: a function from a web
-`Request` to a `Response` that answers the six requests by calling a `CatPort`. It is the mirror of `restCatPort`, built on the
+`createCatRestHandler(port, options)`, from `@assesskit/player/cat-rest`, is the engine side of the same binding: a function from a web
+`Request` to a `Response` that answers the six requests by calling a `CatPort`. It is the mirror of `createRestCatPort`, built on the
 same codec (the JSON of the binding is written once, in `cat-rest`, and read by both), so the two meet without an adapter.
 
 ```mermaid
 flowchart LR
   subgraph delivery["The host of the test"]
-    drain["drainCat, session host"] --> client["restCatPort"]
+    drain["drainCat, session host"] --> client["createRestCatPort"]
   end
   subgraph engineSide["The engine service"]
-    handler["catRestHandler"] --> engine{{"CatPort of the engine"}}
+    handler["createCatRestHandler"] --> engine{{"CatPort of the engine"}}
     auth["authenticate: your callback"]
   end
   as[("Authorization server<br/>token endpoint")]
@@ -280,7 +280,7 @@ flowchart LR
 | `maxBodyBytes` | `33554432`        | The most bytes of a request body (32 MiB, the size limit of an XML file in the runtime). A larger body answers 400.            |
 
 ```ts
-import { catRestHandler } from "@assesskit/player/cat-rest";
+import { createCatRestHandler } from "@assesskit/player/cat-rest";
 
 const engine = {
   createSection: async () => ({ sectionIdentifier: "s1" }),
@@ -290,7 +290,7 @@ const engine = {
   endSession: async () => undefined,
   endSection: async () => undefined,
 };
-const handle = catRestHandler(engine, {
+const handle = createCatRestHandler(engine, {
   authenticate: (request) => request.headers.get("authorization") === "Bearer t0ken",
 });
 const response = await handle(
@@ -346,7 +346,7 @@ Failures answer the status information of the binding as JSON, with the code min
 | 405    | none (`unsupported`)    | The path is an endpoint, and the method is not one of its methods. The answer has `Allow`.                                                                                         | `The method is not allowed for this endpoint.`                |
 | 500    | `internal_server_error` | `authenticate` throws, the port throws any other error, or its answer cannot be written in the binding.                                                                            | Fixed text; the message of the error is not shown             |
 
-- **Messages.** A `ServiceError` of a port that calls another service, such as a gateway over `restCatPort`, names an address of
+- **Messages.** A `ServiceError` of a port that calls another service, such as a gateway over `createRestCatPort`, names an address of
   that service in its message, so the message is not shown, and a `ServiceError` with another status than 400 and 404 is a 500.
 - **Authorization.** The authorization server issues the tokens of the OAuth 2.0 client credentials grant, and `authenticate`
   checks the bearer token and the scope that `operation` needs (`.../scope/configure` for sections, `.../scope/deliver` for
@@ -356,7 +356,7 @@ Failures answer the status information of the binding as JSON, with the code min
 - **Prefix.** The port gets the URL prefix of the request, its origin and `root`, as the `prefix` argument.
 - **Logging.** The handler logs nothing. To log the failures of the engine, wrap the port.
 - **Session end.** A stage without items is sent as no `nextItems`, which is how the binding ends a session. The item set of
-  Get Section has no stage length, and an empty pool leaves `items` out; `restCatPort` reads both back.
+  Get Section has no stage length, and an empty pool leaves `items` out; `createRestCatPort` reads both back.
 - **Metadata.** A `qtiMetadata` object of Create Section is checked and dropped, and Get Section returns the settings and the
   usage data only, for the reason in [Section metadata](#section-metadata). The `glossaryURI` of prior data has no place in
   the model and is dropped. A value of prior data arrives as text.
@@ -370,7 +370,7 @@ Failures answer the status information of the binding as JSON, with the code min
 | Node.js | `listen(handle, port, host)` of the example, or any adapter from `node:http` to `Request` |
 
 TLS terminates in front of the handler, because the binding requires it. The example
-[cat-with-measurekit](../../examples/player/cat-with-measurekit/README.md) is a whole server: the token endpoint, `catRestHandler`
+[cat-with-measurekit](../../examples/player/cat-with-measurekit/README.md) is a whole server: the token endpoint, `createCatRestHandler`
 over an engine of measurekit, and the Node adapter.
 
 ## deployCatSections
@@ -390,10 +390,10 @@ the sections made so far stay, and the `DataError` names the section at the engi
 
 ## Errors
 
-| Error          | When                                                                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DataError`    | An option or an argument has the wrong type, or section data, a `sessionState` or an engine's answer is malformed. `catRestHandler` throws it for a `port` that lacks a method, an option of the wrong type, or a value that is not a `Request`. |
-| `ServiceError` | The engine answers with a status other than 2xx, or with a body that is not JSON, or the token endpoint fails.                                                                                                                                   |
+| Error          | When                                                                                                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DataError`    | An option or an argument has the wrong type, or section data, a `sessionState` or an engine's answer is malformed. `createCatRestHandler` throws it for a `port` that lacks a method, an option of the wrong type, or a value that is not a `Request`. |
+| `ServiceError` | The engine answers with a status other than 2xx, or with a body that is not JSON, or the token endpoint fails.                                                                                                                                         |
 
 Errors of the runtime pass through unchanged: `ReadError` and `SecurityError` of the usage data and the package, and the `DataError`
 of the runtime for an assessment result or an item stage of an answer that is not the JSON of the binding. The errors of an

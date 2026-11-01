@@ -21,7 +21,7 @@ import {
 } from "./binding.js";
 import { type CatFetch, createRestClient, type OAuthClientCredentials, oauthCredentialsSchema } from "./rest-client.js";
 
-/** Options of {@link restCatPort}. */
+/** Options of {@link createRestCatPort}. */
 export interface RestCatPortOptions {
   /** Sends the requests: `fetch`, or a replacement. */
   readonly fetch: CatFetch;
@@ -88,7 +88,7 @@ function withoutTrailingSlashes(url: string): string {
  * @throws `DataError` when an option has the wrong type, or a URL is not an `https` URL.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
  */
-export function restCatPort(options: RestCatPortOptions): CatPort {
+export function createRestCatPort(options: RestCatPortOptions): CatPort {
   const { fetch, endpoint, credentials, timeoutMs, sharePnp } = parseWith(optionsSchema, options, "The options object");
 
   const base = withoutTrailingSlashes(endpoint);

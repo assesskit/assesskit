@@ -8,11 +8,11 @@ measurekit, and this directory does.
 ```mermaid
 flowchart LR
   engine["Delivery engine of @assesskit/runtime"] -->|drainCat| port{{"CatPort"}}
-  client["restCatPort of the player"] -.->|implements| port
+  client["createRestCatPort of the player"] -.->|implements| port
   client -->|"HTTPS, bearer token"| server
   subgraph server["engineServer: your service"]
     token["token endpoint"]
-    handler["catRestHandler of the player"]
+    handler["createCatRestHandler of the player"]
   end
   handler -->|calls| cat
   cat["measurekitCatPort"] -.->|implements| enginePort{{"CatPort"}}
@@ -55,7 +55,7 @@ measurekit is a dependency of this example only, linked from `../measurekit` bes
 ## engineServer
 
 `engineServer(options)` returns one function from a `Request` to a `Response`: `POST /oauth2/token` is the token endpoint, and
-every other request goes to `catRestHandler` from `@assesskit/player/cat-rest`, which calls the engine. Deno, Bun and Workers serve
+every other request goes to `createCatRestHandler` from `@assesskit/player/cat-rest`, which calls the engine. Deno, Bun and Workers serve
 the function as it is; `listen(handler, port, host)` serves it on Node.js with `node:http`, and TLS goes in front of it.
 
 | Option         | Default  | Meaning                                                                                           |
@@ -185,5 +185,5 @@ estimate. Every item of a module needs parameters in the usage data, which Creat
 | Error                     | When                                                                                                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DataError`               | An option or an argument has the wrong type, or section data or a `sessionState` is malformed.                                              |
-| `ServiceError`            | The store has no section with the identifier: status 404, which `catRestHandler` answers as Unknown Object.                                 |
+| `ServiceError`            | The store has no section with the identifier: status 404, which `createCatRestHandler` answers as Unknown Object.                           |
 | `DataError` of measurekit | A section cannot run, such as content targets without content areas or cut points that do not match the modules. Create Section reports it. |

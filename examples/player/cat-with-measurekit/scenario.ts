@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { type CatFetch, restCatPort } from "@assesskit/player/cat-rest";
+import { type CatFetch, createRestCatPort } from "@assesskit/player/cat-rest";
 import { type CatPort, isSessionEnd } from "@assesskit/runtime/cat";
 import type { AssessmentResult } from "@assesskit/runtime/results";
 import { type ItemStatistic, writeUsageData } from "@assesskit/runtime/usage";
@@ -112,6 +112,6 @@ if (import.meta.main) {
   const port = measurekitCatPort({ sections: memoryStore(), seeds: () => 42 });
   console.log((await administer(port, answersEasyItems)).join(", "));
   // The same section over the REST binding: the client of the player, the engine server, and the engine behind it.
-  const client = restCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
+  const client = createRestCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
   console.log((await administer(client, answersEasyItems)).join(", "));
 }

@@ -128,7 +128,7 @@ first save. A session that was saved stays, and a new call resumes it.
 | `clock`      | `Clock`                               | Stamps actions and times the deadlines; it answers whole milliseconds. Default: the clock of the browser.                                                                                              |
 | `onError`    | `(error: unknown) => void`            | Receives the errors that the client can only report: a listener that threw, and a failure of the timer's step or of the answer loop that no call waits for. Default: `reportError` of the page.        |
 | `maxIdle`    | `number`                              | The longest gap between steps, in milliseconds, that counts as time on task: a gap above it counts as suspended ([a learner who is away](#a-learner-who-is-away)). Default: none, so every gap counts. |
-| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `restCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                                |
+| `cat`        | `CatPort`                             | The port of the CAT engines: the session then answers its own CAT requests, with an in-browser port, never `createRestCatPort` ([CAT](cat.md#the-option-cat)). Default: none.                          |
 | `signal`     | `AbortSignal`                         | Stops the creation before its load and its first save. Default: none.                                                                                                                                  |
 
 It stamps each action with `stamp(state, action, now)`, saves the state of each accepted step before the step takes effect, and

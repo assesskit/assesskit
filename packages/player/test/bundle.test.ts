@@ -180,7 +180,9 @@ describe("the practice bundle", () => {
   });
 
   it("holds the CAT client in a bundle that makes one, which is how the check sees it", async () => {
-    const inputs = await bundled('import { restCatPort } from "./cat-rest/index.ts"; export { restCatPort };');
+    const inputs = await bundled(
+      'import { createRestCatPort } from "./cat-rest/index.ts"; export { createRestCatPort };',
+    );
     expect(filesOf(inputs, "cat-rest")).toContain("cat-rest/rest-port.ts");
   });
 });

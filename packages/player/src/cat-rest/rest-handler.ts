@@ -33,7 +33,7 @@ import { failureOf, failureResponse, successResponse } from "./status.js";
  */
 export type CatAuthenticate = (request: Request, operation: CatOperation) => boolean | Promise<boolean>;
 
-/** Options of {@link catRestHandler}. */
+/** Options of {@link createCatRestHandler}. */
 export interface CatRestHandlerOptions {
   /** Decides whether a request is authorized; the handler serves nothing without it. */
   readonly authenticate: CatAuthenticate;
@@ -90,9 +90,9 @@ type Invocation = () => Promise<() => unknown>;
  * Returns the engine side of the REST/JSON binding of CAT 1.0: a function from a web `Request` to a `Response`.
  *
  * @remarks
- * It is the mirror of `restCatPort`, over web-standard `Request` and `Response`, so that it runs on Node.js, Deno, Bun and
+ * It is the mirror of `createRestCatPort`, over web-standard `Request` and `Response`, so that it runs on Node.js, Deno, Bun and
  * edge runtimes; mount it on the paths under `root`. It serves the six requests of the binding, reads their bodies with
- * the codec of the runtime and the shapes of `restCatPort`, and calls the `CatPort` with the URL prefix of the request
+ * the codec of the runtime and the shapes of `createRestCatPort`, and calls the `CatPort` with the URL prefix of the request
  * (its origin and `root`).
  *
  * - **Order.** The path and method select the operation (404 or 405 if none), `authenticate` decides (401), then the body
@@ -118,7 +118,10 @@ type Invocation = () => Promise<() => unknown>;
  * @throws `DataError` when `port` lacks a method or an option has the wrong type.
  * @see {@link https://www.imsglobal.org/spec/cat/v1p0/bind | CAT 1.0 REST/JSON binding}
  */
-export function catRestHandler(port: CatPort, options: CatRestHandlerOptions): (request: Request) => Promise<Response> {
+export function createCatRestHandler(
+  port: CatPort,
+  options: CatRestHandlerOptions,
+): (request: Request) => Promise<Response> {
   parseWith(portSchema, port, "The port");
   const { authenticate, root, maxBodyBytes } = parseWith(optionsSchema, options, "The options object");
 

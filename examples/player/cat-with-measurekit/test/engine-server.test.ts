@@ -1,7 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and OAuth parameters are those of their specifications.
 
 import { ServiceError } from "@assesskit/player";
-import { type OAuthClientCredentials, restCatPort } from "@assesskit/player/cat-rest";
+import { createRestCatPort, type OAuthClientCredentials } from "@assesskit/player/cat-rest";
 import { describe, expect, it, vi } from "vitest";
 import { administer, answersEasyItems, fetchFrom } from "../scenario.ts";
 import { DEMO_CREDENTIALS, demoServer } from "../src/demo-server.ts";
@@ -167,7 +167,11 @@ describe("the endpoints of the binding", () => {
 describe("the client of the player against the engine server", () => {
   it("runs the scenario over the binding and presents the items that the engine alone presents", async () => {
     const alone = measurekitCatPort({ sections: memoryStore(), seeds: () => 42 });
-    const client = restCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
+    const client = createRestCatPort({
+      fetch: fetchFrom(demoServer()),
+      endpoint: PREFIX,
+      credentials: DEMO_CREDENTIALS,
+    });
     // The demonstration server draws its seeds from the system, so the order of equal items may differ; the set may not.
     const served = await administer(client, answersEasyItems);
     expect(served).toHaveLength(3);
@@ -184,15 +188,19 @@ describe("the client of the player against the engine server", () => {
       newToken: () => "token",
       now: () => 0,
     });
-    const client = restCatPort({ fetch: fetchFrom(server), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
+    const client = createRestCatPort({ fetch: fetchFrom(server), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
     expect(await administer(client, answersEasyItems)).toEqual(await administer(alone, answersEasyItems));
   });
 
   it("reports an unknown section as a ServiceError of status 404, and a client with a wrong secret as 401", async () => {
-    const client = restCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: DEMO_CREDENTIALS });
+    const client = createRestCatPort({
+      fetch: fetchFrom(demoServer()),
+      endpoint: PREFIX,
+      credentials: DEMO_CREDENTIALS,
+    });
     await expect(client.getSection(PREFIX, "nope")).rejects.toMatchObject({ name: "ServiceError", status: 404 });
     const wrong: OAuthClientCredentials = { ...DEMO_CREDENTIALS, clientSecret: "wrong" };
-    const refused = restCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: wrong });
+    const refused = createRestCatPort({ fetch: fetchFrom(demoServer()), endpoint: PREFIX, credentials: wrong });
     await expect(refused.getSection(PREFIX, "x")).rejects.toBeInstanceOf(ServiceError);
     await expect(refused.getSection(PREFIX, "x")).rejects.toMatchObject({ status: 401 });
   });

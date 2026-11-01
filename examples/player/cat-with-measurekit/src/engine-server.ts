@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of HTTP headers and OAuth parameters are those of their specifications.
 
-import { type CatAuthenticate, type CatOperation, catRestHandler } from "@assesskit/player/cat-rest";
+import { type CatAuthenticate, type CatOperation, createCatRestHandler } from "@assesskit/player/cat-rest";
 import type { CatPort } from "@assesskit/runtime/cat";
 
 /** The scope that enables every endpoint of the binding. */
@@ -115,7 +115,7 @@ export function engineServer(options: EngineServerOptions): (request: Request) =
     return grant.scopes.has(SCOPE_API) || grant.scopes.has(OPERATION_SCOPES[operation]);
   };
 
-  const cat = catRestHandler(engine, { authenticate });
+  const cat = createCatRestHandler(engine, { authenticate });
   return (request) =>
     request.method === "POST" && new URL(request.url).pathname === TOKEN_PATH ? issue(request) : cat(request);
 }

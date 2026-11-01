@@ -146,7 +146,7 @@ session holds any file of the engine. Practice runs the engine on the device, so
 
 ## The player: CAT engines
 
-`restCatPort` of `@assesskit/player/cat-rest` sends a candidate's results and an OAuth bearer token to a remote engine, so
+`createRestCatPort` of `@assesskit/player/cat-rest` sends a candidate's results and an OAuth bearer token to a remote engine, so
 it is built to send them to one place only.
 
 - It serves the one `endpoint` that the host configures. The `qti-adaptive-engine-ref` of a package is the package's word:
@@ -161,7 +161,7 @@ it is built to send them to one place only.
   it. A page that runs an adaptive section in practice brings its own `CatPort` and deploys with `deployCatSections` of
   `@assesskit/player/cat`.
 
-`catRestHandler` is the other end: the engine side of the binding, which receives a candidate's results and answers with the
+`createCatRestHandler` is the other end: the engine side of the binding, which receives a candidate's results and answers with the
 items to present. It trusts nothing it is sent.
 
 - It serves nothing without the host's `authenticate`, which it calls with the request and the operation before it reads a
