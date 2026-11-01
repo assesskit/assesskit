@@ -15,6 +15,7 @@ import type { Messages } from "../../messages/index.js";
 import type { SessionClient } from "../../protocol/index.js";
 import { readOrigins } from "../content/internal.js";
 import type { CustomInteractionHook } from "../elements/index.js";
+import { canMount, HOST_SHADOW_RULE } from "../internal.js";
 import type { LtiLogin } from "../lti-frame/index.js";
 import type { StylesheetFetch } from "../roots/index.js";
 import type { SpeechHook } from "../speech/index.js";
@@ -187,7 +188,7 @@ export interface Mounted {
    * @returns A promise that resolves when the interactions are settled.
    */
   settled(): Promise<void>;
-  /** Takes the content, the timers and the listeners away. The host element keeps its shadow root, so mount into a new element. */
+  /** Takes the content, the timers and the listeners away, and empties the shadow root, so that a later mount can use the host element. */
   destroy(): void;
 }
 
@@ -249,7 +250,7 @@ function checkSharedOptions(
   names: readonly string[],
 ): asserts options is SharedOptions {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);
-  if (host.shadowRoot !== null) throw new DataError("The host must be an element that has no shadow root.");
+  if (!canMount(host)) throw new DataError(HOST_SHADOW_RULE);
   checkRecord(options, "The options must be an object");
   checkProperties(options, "The options", names);
   checkRecord(options.files, "The option files must be an object");
@@ -279,7 +280,7 @@ function checkSharedOptions(
  *
  * @param host - The host element.
  * @param options - The options.
- * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
+ * @throws `DataError` when the host is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an option is not of its
  * type.
  */
 export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
@@ -296,7 +297,7 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
  *
  * @param host - The host element.
  * @param options - The options.
- * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
+ * @throws `DataError` when the host is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an option is not of its
  * type.
  */
 export function checkItemOptions(host: unknown, options: unknown): asserts options is ItemMountOptions {

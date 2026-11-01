@@ -1,3 +1,4 @@
+import { shadowRootOf } from "../internal.js";
 import { createLtiSlot } from "../lti-frame/index.js";
 import { createAnnouncer } from "./announcer.js";
 import { mountAttachments } from "./attachments.js";
@@ -34,7 +35,7 @@ const TICK_MS = 1000;
  * - **Submits** wait for the interactions to hand over what the candidate gave, such as a drawing that is still being
  *   stored.
  *
- * @param host - An element that has no shadow root. The player attaches one and draws in it. The frames of an LTI item are
+ * @param host - An element that has no shadow root, or one that an earlier mount of the player left empty. The player attaches one, or uses that one, and draws in it. The frames of an LTI item are
  * children of `host`, which the shadow root shows through a slot.
  * @param options - See {@link DeliveryOptions}.
  * @returns The mounted player.
@@ -47,7 +48,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const settings = resolveSettings(options);
   const { client, messages, language, chrome, staticUrl, hooks } = settings;
   const state = createMountState(client.view);
-  const shadow = host.attachShadow({ mode: "open" });
+  const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles(), chromeStyles()];
 
   const status = createAnnouncer("ak-status");

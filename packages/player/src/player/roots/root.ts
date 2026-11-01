@@ -18,7 +18,7 @@ import {
 } from "../content/index.js";
 import { readRenderOptions } from "../content/internal.js";
 import { showFeedbackDialog } from "../feedback/index.js";
-import { html } from "../internal.js";
+import { html, shadowRootOf } from "../internal.js";
 import type { MathTypesetter } from "../math/index.js";
 import { buildContent } from "./build.js";
 import { checkContent, type RootContent } from "./content.js";
@@ -129,10 +129,10 @@ const ROOT_OPTION_NAMES = [
  * stylesheet through `fetch` and sanitizes it, withholds media where a hazard remains and says so in a notice, and
  * typesets MathML. It decides nothing of QTI: it shows the content that the view resolved.
  *
- * @param host - An element in the page that has no shadow root.
+ * @param host - An element in the page that has no shadow root, or one that an earlier mount of the player left empty.
  * @param options - See {@link ContentRootOptions}.
  * @returns The content root.
- * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or an option is not of its
+ * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an option is not of its
  * type.
  */
 export function createContentRoot(host: HTMLElement, options: ContentRootOptions): ContentRoot {
@@ -147,12 +147,7 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
   if (typesetter !== undefined)
     checkFunction(typesetter.typeset, "The typeset method of the option typesetter must be a function");
   const { assets, origins, mediaScale: initialScale } = readRenderOptions({ ...rendererOptions, base: "" });
-  let shadow: ShadowRoot;
-  try {
-    shadow = host.attachShadow({ mode: "open" });
-  } catch {
-    throw new DataError("The host must be an element that can have a shadow root and has none.");
-  }
+  const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [stylesheet];
   let itemSheets: readonly CSSStyleSheet[] = [];
   /** Adopts the stylesheets of the item after the player's, and leaves the sheets that others adopted, such as the tools. */

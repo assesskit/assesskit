@@ -10,6 +10,7 @@ import { createLocalSession, createRemoteSession, type Transport } from "../src/
 import { ID_MESSAGES } from "../src/index.js";
 import type { SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
+import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
 import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
@@ -593,6 +594,30 @@ describe("mountDelivery", () => {
     expect(moved.view.current?.key.ref).toBe("q2");
   });
 
+  /** The options of a second mount over the session of a shell. */
+  const remountOptions = (s: Shell) => ({
+    client: s.client,
+    files: {
+      upload: async () => ({ reference: "f", mimeType: "x" }),
+      read: async () => new Uint8Array(),
+      url: () => "",
+    },
+    staticUrl: "https://s.example/",
+    stylesheet: player,
+    fetch: async () => ({ ok: true, status: 200, text: async () => "" }),
+  });
+
+  it("mounts again on the element of a player that was destroyed, as a page that switches sessions does", async () => {
+    const s = await shell();
+    expect(() => mountDelivery(s.page, remountOptions(s))).toThrow(HOST_SHADOW_RULE);
+    s.mounted.destroy();
+    expect(s.page.shadowRoot?.childNodes.length).toBe(0);
+    const again = mountDelivery(s.page, remountOptions(s));
+    expect(s.page.shadowRoot).toBe(s.ui);
+    await waitFor(() => expect(s.ui.querySelector(".ak-heading")?.textContent).toBe("Item q1"));
+    again.destroy();
+  });
+
   it("checks its arguments", async () => {
     const s = await shell();
     const options = {
@@ -610,7 +635,7 @@ describe("mountDelivery", () => {
     const mount = (host: unknown, changes: Record<string, unknown> = {}): unknown =>
       mountDelivery(host as HTMLElement, { ...options, ...changes });
     expect(() => mount(null)).toThrow("The host must be an element, found null.");
-    expect(() => mount(s.page)).toThrow("The host must be an element that has no shadow root.");
+    expect(() => mount(s.page)).toThrow(HOST_SHADOW_RULE);
     expect(() => mount(fresh(), { staticUrl: "https://s.example" })).toThrow('The option staticUrl must end in "/"');
     expect(() => mount(fresh(), { stylesheet: "css" })).toThrow("The option stylesheet must be a CSSStyleSheet");
     expect(() => mount(fresh(), { fetch: null })).toThrow("The option fetch must be a function");

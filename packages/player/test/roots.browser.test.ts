@@ -4,6 +4,7 @@ import { afterEach, describe, expect, inject, it } from "vitest";
 import { page } from "vitest/browser";
 import { EN_MESSAGES } from "../src/index.js";
 import { type ContentRootOptions, createContentRoot, createMathTypesetter } from "../src/player/index.js";
+import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import { sanitizeStylesheet } from "../src/player/roots/internal.js";
 import { computed, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { axeViolations, ITEM_PATH, itemBody } from "./renderer-fixture.js";
@@ -722,9 +723,17 @@ describe("options", () => {
   it("throws DataError for a host that already has a shadow root", () => {
     const host = document.createElement("div");
     host.attachShadow({ mode: "open" });
-    expect(() => create(host, valid())).toThrow(
-      "The host must be an element that can have a shadow root and has none.",
-    );
+    expect(() => create(host, valid())).toThrow(HOST_SHADOW_RULE);
+  });
+
+  it("uses the shadow root of a content root that was destroyed, and refuses one that is still in use", () => {
+    const host = document.createElement("div");
+    const first = createContentRoot(host, valid());
+    expect(() => createContentRoot(host, valid())).toThrow(HOST_SHADOW_RULE);
+    first.destroy();
+    const again = createContentRoot(host, valid());
+    expect(host.shadowRoot?.childNodes.length).toBeGreaterThan(0);
+    again.destroy();
   });
 
   it("throws DataError for content of other types", async () => {

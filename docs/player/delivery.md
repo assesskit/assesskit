@@ -96,10 +96,10 @@ mounted.destroy();
 | `chrome`        | `boolean`                           | Whether the player draws the navigation, timers, actions, attempts, comment box, panel of supports and tools. A host that draws its own sets `false`. Default: `true`.                                                                                                                                                                                                                                                                               |
 | `hooks`         | `object`                            | The hooks of the host: `customInteraction` mounts `qti-custom-interaction`, `record` says whether an upload of audio offers a recording (Default: `true`), `voice` reads aloud (Default: the voice of the browser, `webSpeech()`, [speech](speech.md)), `tools` gives the tools that the host provides, by name ([tools](tools.md#tools-of-the-host)), and `ltiLogin(item)` starts the tool of an LTI item ([LTI items](#lti-items)). Default: none. |
 
-`mountDelivery(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or an
+`mountDelivery(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, or an
 option is not of its type. It attaches an open shadow root to `host` and draws in it, so the page's styles do not reach the
 chrome. The chrome uses the system colors and `rem` sizes, so it follows the color scheme, forced colors and the text size.
-A host element mounts once: after `destroy`, mount into a new element.
+`destroy` empties the shadow root, so a page that switches sessions, or a React `StrictMode` that mounts, destroys and mounts again, mounts on the same element. A second mount on an element that a mount still draws in throws `DataError`.
 
 It returns a `Mounted`:
 
@@ -224,7 +224,7 @@ host.shadowRoot.querySelector(".ak-actions"); // => null
 mounted.destroy();
 ```
 
-`mountItem(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, an option
+`mountItem(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, an option
 is not of its type (`chrome`, `hooks.tools` and `hooks.ltiLogin` are not options of it), or the view presents an LTI item. The
 last also holds for a view that `update` or the client brings later. `destroy()` is the one of `mountDelivery`: a second call
 does nothing, and the session client stays open.

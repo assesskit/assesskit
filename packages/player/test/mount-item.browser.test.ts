@@ -5,7 +5,7 @@ import { single } from "@assesskit/runtime/values";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
 import { mountItem } from "../src/player/index.js";
-import { deepActiveElement } from "../src/player/internal.js";
+import { deepActiveElement, HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
 import { examHost, fakeClock, pciFiles } from "./exam-fixture.js";
@@ -390,6 +390,17 @@ describe("the lifecycle of an item in a page", () => {
     expect(() => s.mounted.update(lti)).toThrow("Use mountDelivery");
   });
 
+  it("mounts again on the element of an item that was destroyed, as a lesson does that shows another item in it", async () => {
+    const s = await embed("l1");
+    const options = { client: s.client, files, staticUrl: "https://s.example/", stylesheet: player, fetch: fetcher };
+    expect(() => mountItem(s.host, options)).toThrow(HOST_SHADOW_RULE);
+    s.mounted.destroy();
+    const again = mountItem(s.host, options);
+    expect(s.host.shadowRoot).toBe(s.ui);
+    await waitFor(() => expect(choices(s.ui).length).toBeGreaterThan(0));
+    again.destroy();
+  });
+
   it("checks its arguments", async () => {
     const s = await embed("l1");
     const options = { client: s.client, files, staticUrl: "https://s.example/", stylesheet: player, fetch: fetcher };
@@ -397,7 +408,7 @@ describe("the lifecycle of an item in a page", () => {
     const mount = (host: unknown, changes: Record<string, unknown> = {}): unknown =>
       mountItem(host as HTMLElement, { ...options, ...changes });
     expect(() => mount(null)).toThrow("The host must be an element, found null.");
-    expect(() => mount(s.host)).toThrow("The host must be an element that has no shadow root.");
+    expect(() => mount(s.host)).toThrow(HOST_SHADOW_RULE);
     expect(() => mount(fresh(), { staticUrl: "https://s.example" })).toThrow('The option staticUrl must end in "/"');
     expect(() => mount(fresh(), { stylesheet: "css" })).toThrow("The option stylesheet must be a CSSStyleSheet");
     expect(() => mount(fresh(), { fetch: null })).toThrow("The option fetch must be a function");

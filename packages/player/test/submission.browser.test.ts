@@ -12,6 +12,7 @@ import {
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { ID_MESSAGES } from "../src/index.js";
 import { mountSubmission, type SubmissionOptions } from "../src/player/index.js";
+import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import type { Submission, SubmissionItem, SubmissionPart, SubmissionValue } from "../src/protocol/index.js";
 import { computed, PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { axeViolations, ITEM_PATH, itemBody } from "./renderer-fixture.js";
@@ -493,9 +494,14 @@ describe("mountSubmission", () => {
     );
     const taken = document.createElement("div");
     taken.attachShadow({ mode: "open" });
-    expect(() => mountSubmission(taken, submission(), options)).toThrow(
-      new DataError("The host must be an element that can have a shadow root and has none."),
-    );
+    expect(() => mountSubmission(taken, submission(), options)).toThrow(new DataError(HOST_SHADOW_RULE));
+    const host = document.createElement("div");
+    const shown = mountSubmission(host, submission(), options);
+    expect(() => mountSubmission(host, submission(), options)).toThrow(new DataError(HOST_SHADOW_RULE));
+    shown.destroy();
+    const again = mountSubmission(host, submission(), options);
+    expect(host.shadowRoot?.childNodes.length).toBeGreaterThan(0);
+    again.destroy();
     const free = document.createElement("div");
     expect(() => mountSubmission(free, json("{}") as Submission, options)).toThrow(DataError);
     expect(free.shadowRoot).toBeNull();

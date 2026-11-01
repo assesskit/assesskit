@@ -3,6 +3,7 @@ import { DataError } from "@assesskit/runtime/errors";
 import { afterEach, describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { mountRatingForm, type RatingFormOptions } from "../src/player/index.js";
+import { HOST_SHADOW_RULE } from "../src/player/internal.js";
 import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 
@@ -501,9 +502,14 @@ describe("mounting and taking down", () => {
     );
     const taken = document.createElement("div");
     taken.attachShadow({ mode: "open" });
-    expect(() => mountRatingForm(taken, ESSAY, options)).toThrow(
-      new DataError("The host must be an element that can have a shadow root and has none."),
-    );
+    expect(() => mountRatingForm(taken, ESSAY, options)).toThrow(new DataError(HOST_SHADOW_RULE));
+    const host = document.createElement("div");
+    const shown = mountRatingForm(host, ESSAY, options);
+    expect(() => mountRatingForm(host, ESSAY, options)).toThrow(new DataError(HOST_SHADOW_RULE));
+    shown.destroy();
+    const again = mountRatingForm(host, ESSAY, options);
+    expect(host.shadowRoot?.childNodes.length).toBeGreaterThan(0);
+    again.destroy();
     const bad = document.createElement("div");
     expect(() => mountRatingForm(bad, json('{"outcomeIdentifier":1}') as ScoringRubric, options)).toThrow(DataError);
     expect(bad.shadowRoot).toBeNull();

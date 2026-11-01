@@ -3,7 +3,7 @@ import { describe } from "@assesskit/runtime/checks";
 import type { View } from "@assesskit/runtime/content";
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import { checkSubmission, type Submission } from "../../protocol/index.js";
-import { html } from "../internal.js";
+import { html, shadowRootOf } from "../internal.js";
 import { type ContentRoot, createContentRoot } from "../roots/index.js";
 import { buildSubmission } from "./build.js";
 import { readSubmissionOptions, type SubmissionOptions, type SubmissionSettings } from "./options.js";
@@ -68,11 +68,11 @@ function contentIn(
  * the player. The rating form and the rating workflow are the host's. A submission holds the correct responses, so show it
  * only on a page that authorized raters reach.
  *
- * @param host - An element in the page that has no shadow root.
+ * @param host - An element in the page that has no shadow root, or one that an earlier mount of the player left empty.
  * @param submission - What `toSubmission` returned, as JSON parsed it.
  * @param options - See {@link SubmissionOptions}.
  * @returns The handle that shows another submission and takes the display down.
- * @throws `DataError` when `host` is not an element that can have a shadow root and has none, an option is not of its
+ * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, an option is not of its
  * type, or `submission` is not a submission, and a `DataError` of the runtime when a value of it is not a wire value.
  */
 export function mountSubmission(
@@ -98,10 +98,10 @@ export function mountSubmission(
   const first = build(submission);
   let shadow: ShadowRoot;
   try {
-    shadow = host.attachShadow({ mode: "open" });
-  } catch {
+    shadow = shadowRootOf(host);
+  } catch (error) {
     for (const root of first.roots) root.destroy();
-    throw new DataError("The host must be an element that can have a shadow root and has none.");
+    throw error;
   }
   // A sheet of its own for each display: WebKit keeps the media queries of a sheet that no root has adopted as they were.
   shadow.adoptedStyleSheets = [settings.stylesheet, submissionStyleSheet()];

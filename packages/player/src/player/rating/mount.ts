@@ -1,7 +1,7 @@
 import { type RubricRating, type ScoringRubric, scoreFromRatings } from "@assesskit/runtime/asi";
 import { describe } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
-import { html, uniqueId } from "../internal.js";
+import { html, shadowRootOf, uniqueId } from "../internal.js";
 import { buildRatingForm, type CriterionView, type RatingView, scoreText } from "./build.js";
 import { type RatingFormOptions, type RatingSettings, readRatingOptions } from "./options.js";
 import { ratingStyleSheet } from "./styles.js";
@@ -96,11 +96,11 @@ function show(rubric: ScoringRubric, ratings: readonly RubricRating[], settings:
  * a criterion that nobody rated is not taken for one that was not met. Where the score is `null` the form says that a
  * criterion is not rated.
  *
- * @param host - An element in the page that has no shadow root.
+ * @param host - An element in the page that has no shadow root, or one that an earlier mount of the player left empty.
  * @param rubric - The scoring rubric.
  * @param options - See {@link RatingFormOptions}.
  * @returns The handle that gives the ratings and the score, shows another rubric, checks the form and takes it down.
- * @throws `DataError` when `host` is not an element that can have a shadow root and has none, the rubric fails
+ * @throws `DataError` when `host` is not an element that can have a shadow root and has none, or has one that an earlier mount of the player left empty, the rubric fails
  * `checkScoringRubric`, an option is not of its type, or an initial rating does not fit the rubric.
  */
 export function mountRatingForm(
@@ -111,12 +111,7 @@ export function mountRatingForm(
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);
   const settings = readRatingOptions(options);
   let shown = show(rubric, settings.ratings, settings);
-  let shadow: ShadowRoot;
-  try {
-    shadow = host.attachShadow({ mode: "open" });
-  } catch {
-    throw new DataError("The host must be an element that can have a shadow root and has none.");
-  }
+  const shadow = shadowRootOf(host);
   // A sheet of its own for each form: WebKit keeps the media queries of a sheet that no root has adopted as they were.
   shadow.adoptedStyleSheets = [settings.stylesheet, ratingStyleSheet()];
 

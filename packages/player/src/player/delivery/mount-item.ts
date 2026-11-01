@@ -1,5 +1,6 @@
 import type { CandidateView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
+import { shadowRootOf } from "../internal.js";
 import { createAnnouncer } from "./announcer.js";
 import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
@@ -37,7 +38,7 @@ function checkNoLtiItem(view: CandidateView): void {
  * - **A closed item** stays drawn until `destroy`.
  * - **Submits** are the host's: it waits for `settled()` before it sends an action that submits or leaves the item.
  *
- * @param host - An element that has no shadow root. The player attaches one and draws in it.
+ * @param host - An element that has no shadow root, or one that an earlier mount of the player left empty. The player attaches one, or uses that one, and draws in it.
  * @param options - See {@link ItemMountOptions}.
  * @returns The mounted player.
  * @throws `DataError` when `host` or an option is not of its type, or when the view presents an item that is a link to an LTI
@@ -51,7 +52,7 @@ export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted
   const { client, messages, language, hooks } = settings;
   checkNoLtiItem(client.view);
   const state = createMountState(client.view);
-  const shadow = host.attachShadow({ mode: "open" });
+  const shadow = shadowRootOf(host);
   shadow.adoptedStyleSheets = [baseStyles()];
 
   const status = createAnnouncer("ak-status");
