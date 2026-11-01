@@ -74,7 +74,7 @@ export default defineConfig({
         test: {
           name: "player",
           include: ["packages/player/test/**/*.test.ts"],
-          exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts"],
+          exclude: ["**/*.browser.test.ts", "**/*.corpus.test.ts", "**/*.xsd.test.ts"],
           testTimeout: HANG_LIMIT,
         },
       },
