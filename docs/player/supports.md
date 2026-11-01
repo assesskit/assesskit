@@ -93,7 +93,7 @@ itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the 
 
 The runtime turns a support on or off for the `support` action `{ type: "support", name, active }`, and only when the support's
 state is `option`. It refuses the action for a prohibited support, one that is on from the start and one that
-is assigned with `support-not-available`, and records the supports that were on for the item in the results (E28).
+is assigned with `support-not-available`, and records the supports that were on for the item in the results.
 
 - The panel and the tools ask; they never decide. A button shows the `active` flag of the last input, and it calls
   `onSupport(name, !active)` when pressed. The host sends the action, and the next view says whether it took effect.

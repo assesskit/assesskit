@@ -199,8 +199,8 @@ No answer key reaches the view; the evidence is a property and a structure check
 - `delivery.test.ts` runs random actions, time included, on a test whose item holds a correct response and a mapping of a
   text, an outcome and a template value that nothing prints, feedback, modal feedback, template content and a choice that
   the variables hide, and rubric for the scorer and the author, each with a mark. After every step the JSON text of the view
-  holds no mark, except the mark of the correct response in the solution state of an item whose control shows the solution
-  (E20, E21). The property fails when the view takes the rubric of another view or the correct responses.
+  holds no mark, except the mark of the correct response in the solution state of an item whose control shows the solution.
+  The property fails when the view takes the rubric of another view or the correct responses.
 - At every step of generated tests, the view reads back equal from its JSON text and from a state read back; an action that
   reaches the engine through `actionToJson`, the JSON text, `parseCandidateAction` and `stamp` gives the step that the same
   action gives on the device; the engine refuses every action type the view leaves out, and meets no refusal of the state
