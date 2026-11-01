@@ -54,16 +54,16 @@ export interface SessionClient {
    * who pauses a test lists no action for the candidate, and a resume reaches the client only when it asks.
    *
    * @remarks
-   * A remote client holds no change back from the host: it sends the responses it holds, or an empty `set-responses` for the
-   * item presented, and the host answers with the view after it. The step of a paused test is refused, and the same step is
-   * applied with no effect once the test continues. A local client builds the view of the state at the time of the call.
-   * Both call the listeners with the view they get.
+   * A remote client sends the responses it holds, sends again a request that got no answer, and then sends the view
+   * request `{ "type": "view" }`, which the host answers as `SessionHost.view` does and which changes nothing there. A
+   * local client builds the view of the state at the time of the call. Both call the listeners with the view they get.
    *
    * @param options - See {@link SessionCallOptions}.
    * @returns The latest view.
    * @throws `DataError` when the client is closed or the host refuses the request.
    * @throws `ServiceError` when the host cannot be reached or cannot save.
-   * @throws `signal.reason` when the signal aborts before the request starts; one in flight stays in doubt, as for `dispatch`.
+   * @throws `signal.reason` when the signal aborts. Nothing is sent when it aborted before the call, and a view request in
+   * flight is not in doubt, because it changes nothing at the host.
    */
   refresh(options?: SessionCallOptions): Promise<CandidateView>;
   /**
