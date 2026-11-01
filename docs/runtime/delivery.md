@@ -1126,16 +1126,33 @@ A well-formed action that the rules do not allow is a refusal, not an error, and
 
 ## Files
 
-| File                                                                                                                                     | Concept                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `engine.ts`, `course.ts`, `session-step.ts`, `delivery-state.ts`, `state-json.ts`                                                        | The engine, what it delivers, a step, and the state |
-| `action.ts`, `action-json.ts`, `candidate-actions.ts`, `item-action.ts`, `refusal.ts`, `events.ts`                                       | Actions, their JSON forms, refusals and events      |
-| `structure.ts`, `plan.ts`, `plan-index.ts`, `selection.ts`, `navigation.ts`, `session-control.ts`, `time-limits.ts`, `deadlines.ts`      | Planning a session                                  |
-| `item-session.ts`, `item-lifecycle.ts`, `attempt.ts`, `item-display.ts`, `result-status.ts`                                              | The session of an item instance                     |
-| `view.ts`, `view-body.ts`, `view-item.ts`, `view-navigation.ts`, `view-actions.ts`, `candidate-view.ts`, `view-json.ts`                  | The candidate view                                  |
-| `scoring.ts`, `scorer-view.ts`, `cat-session.ts`, `cat-flow.ts`, `cat-outcomes.ts`, `drain-cat.ts`, `pending-work.ts`, `pending-json.ts` | Pending work                                        |
-| `results-assembly.ts`                                                                                                                    | The results report                                  |
-| `internal.ts`                                                                                                                            | The helpers that the tests of the package share     |
+The reducer is one class, `SessionStep`, that holds the context of a step, and the rules are functions of the `step-*.ts` files on that context. Each file imports only the files below it.
+
+```mermaid
+flowchart BT
+  context["step-context.ts<br/>the state, events and generator of a step; lookups, store, settle"]
+  outcomes["step-outcomes.ts<br/>outcome processing of the test"] --> context
+  entry["step-entry.ts<br/>entering and presenting an item"] --> context
+  adaptive["step-adaptive.ts<br/>the CAT session of an adaptive section"] --> context
+  walk["step-walk.ts<br/>the walk of the plan, leaving, ending a part or the test"] --> entry & adaptive & outcomes
+  moves["step-moves.ts<br/>actions on an item, moving"] --> walk
+  host["step-host.ts<br/>scoring requests, scores and CAT answers"] --> walk
+  time["step-time.ts<br/>counting time, maximum times"] --> host
+  session["step-session.ts<br/>suspending, resuming, supports"] --> host
+  shell["session-step.ts<br/>SessionStep: begin, apply, done"] --> moves & time & session
+```
+
+| File                                                                                                                                     | Concept                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `engine.ts`, `course.ts`, `delivery-state.ts`, `state-json.ts`                                                                           | The engine, what it delivers, and the state     |
+| `session-step.ts`, `step-*.ts`                                                                                                           | The reducer: a step and its rules, in layers    |
+| `action.ts`, `action-json.ts`, `candidate-actions.ts`, `item-action.ts`, `refusal.ts`, `events.ts`                                       | Actions, their JSON forms, refusals and events  |
+| `structure.ts`, `plan.ts`, `plan-index.ts`, `selection.ts`, `navigation.ts`, `session-control.ts`, `time-limits.ts`, `deadlines.ts`      | Planning a session                              |
+| `item-session.ts`, `item-lifecycle.ts`, `attempt.ts`, `item-display.ts`, `result-status.ts`                                              | The session of an item instance                 |
+| `view.ts`, `view-body.ts`, `view-item.ts`, `view-navigation.ts`, `view-actions.ts`, `candidate-view.ts`, `view-json.ts`                  | The candidate view                              |
+| `scoring.ts`, `scorer-view.ts`, `cat-session.ts`, `cat-flow.ts`, `cat-outcomes.ts`, `drain-cat.ts`, `pending-work.ts`, `pending-json.ts` | Pending work                                    |
+| `results-assembly.ts`                                                                                                                    | The results report                              |
+| `internal.ts`                                                                                                                            | The helpers that the tests of the package share |
 
 ## References
 
