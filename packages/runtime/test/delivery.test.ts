@@ -16,6 +16,7 @@ import {
   type CandidateAction,
   type CandidateView,
   type CatSectionRef,
+  type CustomOperator,
   closeItem,
   container,
   createEngine,
@@ -3933,6 +3934,38 @@ describe("the result status of an item", () => {
     ]);
     const recovered = acts(step.session, context, respond("RESPONSE", identifier("Y")), SUBMIT);
     expect([outcome(recovered, "STAGE"), resultStatus(recovered, item)]).toEqual([integer(1), "final"]);
+  });
+
+  it("reports processing-failed when a custom operator throws in template or response processing", () => {
+    const item = itemOf(
+      'time-dependent="false"',
+      `<qti-template-declaration identifier="T" cardinality="single" base-type="integer"><qti-default-value><qti-value>7</qti-value></qti-default-value></qti-template-declaration>
+      <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="integer"><qti-default-value><qti-value>0</qti-value></qti-default-value></qti-outcome-declaration>
+      <qti-template-processing><qti-set-template-value identifier="T"><qti-custom-operator class="op"><qti-base-value base-type="integer">1</qti-base-value></qti-custom-operator></qti-set-template-value></qti-template-processing>
+      <qti-item-body><p>Count.</p></qti-item-body>
+      <qti-response-processing><qti-set-outcome-value identifier="SCORE"><qti-custom-operator class="op"><qti-base-value base-type="integer">1</qti-base-value></qti-custom-operator></qti-set-outcome-value></qti-response-processing>`,
+    );
+    const cause = new Error("boom");
+    const customOperators = new Map<string, CustomOperator>([
+      [
+        "op",
+        () => {
+          throw cause;
+        },
+      ],
+    ]);
+    const context: ItemSessionContext = { ...contextOf(item), customOperators };
+    const detail = 'The custom operator "op" threw: boom';
+    const started = accepted(startItemSession(KEY, 0, context));
+    expect(started.events).toEqual([{ type: "processing-failed", at: 0, item: KEY, detail }]);
+    expect(started.session.variables.templates.get("T")).toEqual(integer(7));
+    const step = accepted(act(presented(context), context, SUBMIT));
+    expect(step.events.map(({ type }) => type)).toEqual(["attempt-ended", "processing-failed"]);
+    expect(step.events[1]?.detail).toBe(detail);
+    expect(outcome(step.session, "SCORE")).toEqual(integer(0));
+    const engine = createEngine({ kind: "item", item, base: "item.xml" }, { customOperators });
+    const submitted = played(engine, begun(engine).state, on("submit", "item", 20));
+    expect(described(submitted.events)).toContain(`processing-failed item ${detail}@20`);
   });
 
   it("keeps the outcomes of the earlier attempt of an adaptive item when its response processing fails", () => {

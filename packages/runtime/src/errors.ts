@@ -80,7 +80,7 @@ export class SecurityError extends AssesskitError {
 
 /**
  * The error for a condition that processing does not define as NULL: an undeclared variable, a type mismatch on
- * assignment, or an unknown template or custom operator.
+ * assignment, an unknown template or custom operator, or a custom operator that throws.
  */
 export class ProcessingError extends AssesskitError {
   /** Error class name. */
@@ -91,9 +91,10 @@ export class ProcessingError extends AssesskitError {
   /**
    * @param message - Says what is wrong and what is expected.
    * @param identifier - The variable, template or operator the error is about.
+   * @param options - The `cause`: the error that this one reports.
    */
-  constructor(message: string, identifier?: string) {
-    super(message);
+  constructor(message: string, identifier?: string, options?: ErrorOptions) {
+    super(message, options);
     this.identifier = identifier;
   }
 }

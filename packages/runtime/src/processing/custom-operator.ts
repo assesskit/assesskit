@@ -9,9 +9,10 @@ import { primitivesOf } from "./operands.js";
  * computes from the values of the operands.
  *
  * @remarks
- * What the operator returns is checked like any input.
+ * What the operator returns is checked like any input. An operator that throws is a `ProcessingError` that names it and
+ * keeps what it threw as `cause`, so that a delivery engine reports it as `processing-failed`.
  *
- * @throws `ProcessingError` when no operator is registered for either.
+ * @throws `ProcessingError` when no operator is registered for either, or the operator throws.
  * @throws `DataError` when the operator returns something that is not a value or `null`.
  * @throws `SecurityError` when it returns a container of more than `maxContainerSize` values.
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
@@ -32,7 +33,13 @@ export function customOperator(
         : `the definition or class ${names.map((each) => JSON.stringify(each)).join(" or ")}`;
     throw new ProcessingError(`No custom operator is registered for qti-custom-operator with ${named}.`);
   }
-  const result: unknown = operator(operands, expression);
+  let result: unknown;
+  try {
+    result = operator(operands, expression);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : describe(error);
+    throw new ProcessingError(`The custom operator ${JSON.stringify(name)} threw: ${reason}`, name, { cause: error });
+  }
   if (result === null) return null;
   let value: Value;
   try {

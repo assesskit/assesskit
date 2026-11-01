@@ -646,6 +646,26 @@ describe("custom operators", () => {
     expectProcessingError(() => custom("", new Map([["y", add]])), "with no definition or class");
   });
 
+  it("raises a ProcessingError that names the operator and keeps its cause when an operator throws", () => {
+    const throwing = (thrown: unknown): ReadonlyMap<string, CustomOperator> =>
+      new Map([
+        [
+          "c",
+          () => {
+            throw thrown;
+          },
+        ],
+      ]);
+    const boom = new Error("boom");
+    expect(() => custom(' class="c"', throwing(boom))).toThrow(ProcessingError);
+    expect(() => custom(' class="c"', throwing(boom))).toThrow(
+      expect.objectContaining({ message: 'The custom operator "c" threw: boom', identifier: "c", cause: boom }),
+    );
+    expect(() => custom(' class="c"', throwing("boom"))).toThrow(
+      expect.objectContaining({ message: 'The custom operator "c" threw: "boom"', cause: "boom" }),
+    );
+  });
+
   it("checks what an operator returns as untrusted input", () => {
     const returns = (value: unknown) => () => custom(' class="c"', new Map([["c", () => json(JSON.stringify(value))]]));
     expect(returns({ cardinality: "single", baseType: "integer", value: 1.5 })).toThrow(DataError);

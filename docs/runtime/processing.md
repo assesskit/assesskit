@@ -160,12 +160,12 @@ standardTemplateUri("http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_
 
 Every run takes a `ProcessingContext`.
 
-| Field             | Default                     | Meaning                                                                                                                                                                                          |
-| ----------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `random`          | none, required              | The source of draws, such as `createRandom(seed)`: equal seeds give equal template values                                                                                                        |
-| `customOperators` | none                        | Functions by the `definition` of a `qti-custom-operator`, else by its `class`; an operator that is not registered is a `ProcessingError`, and what an operator returns is checked like any input |
-| `resolveTemplate` | none                        | Returns the response processing of a template that is not standard                                                                                                                               |
-| `limits`          | `DEFAULT_PROCESSING_LIMITS` | `maxContainerSize`: the most values a container that an expression builds may hold, 10,000 by default; see [Limits](#limits)                                                                     |
+| Field             | Default                     | Meaning                                                                                                                                                                                                           |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `random`          | none, required              | The source of draws, such as `createRandom(seed)`: equal seeds give equal template values                                                                                                                         |
+| `customOperators` | none                        | Functions by the `definition` of a `qti-custom-operator`, else by its `class`; an operator that is not registered, or that throws, is a `ProcessingError`, and what an operator returns is checked like any input |
+| `resolveTemplate` | none                        | Returns the response processing of a template that is not standard                                                                                                                                                |
+| `limits`          | `DEFAULT_PROCESSING_LIMITS` | `maxContainerSize`: the most values a container that an expression builds may hold, 10,000 by default; see [Limits](#limits)                                                                                      |
 
 ## Limits
 
@@ -220,7 +220,7 @@ Where the specifications are silent or contradict themselves, [spec gaps](spec-g
 | A relative tolerance with a negative x                                                 | The range between its two ends                                     |
 | `qti-map-response` of NULL                                                             | NULL; the bounds apply to containers only                          |
 | Case-insensitive comparison                                                            | `toLowerCase`, independent of locale                               |
-| A custom operator that is not registered                                               | A `ProcessingError`                                                |
+| A custom operator that is not registered, or that throws                               | A `ProcessingError`                                                |
 | A population variance or standard deviation of one value                               | NULL                                                               |
 | `qti-random-float`                                                                     | Draws from [min, max), a deviation of measure zero                 |
 | A template that is neither standard nor resolved                                       | A `ProcessingError`                                                |
@@ -238,15 +238,16 @@ An attribute out of its range at run time (`figures`, a negative tolerance) make
 
 ## Errors
 
-| Situation                                                            | Result                                                      |
-| -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| An argument of the wrong type, as plain JavaScript or JSON passes it | `DataError` that says what is wrong and what is expected    |
-| An expression that reads a variable the item does not declare        | `ProcessingError`                                           |
-| An operand of the wrong cardinality or base type                     | `ProcessingError` that names the operator and what it takes |
-| A value that does not fit the variable it is assigned to             | `ProcessingError`                                           |
-| A text that is not in the lexical form of its base type              | `ProcessingError`                                           |
-| A container above `maxContainerSize`                                 | `SecurityError` with `limit` `maxContainerSize`             |
-| A response processing template that cannot be found                  | `ProcessingError`                                           |
+| Situation                                                            | Result                                                                      |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| An argument of the wrong type, as plain JavaScript or JSON passes it | `DataError` that says what is wrong and what is expected                    |
+| An expression that reads a variable the item does not declare        | `ProcessingError`                                                           |
+| An operand of the wrong cardinality or base type                     | `ProcessingError` that names the operator and what it takes                 |
+| A custom operator that throws                                        | `ProcessingError` that names the operator, with the thrown value as `cause` |
+| A value that does not fit the variable it is assigned to             | `ProcessingError`                                                           |
+| A text that is not in the lexical form of its base type              | `ProcessingError`                                                           |
+| A container above `maxContainerSize`                                 | `SecurityError` with `limit` `maxContainerSize`                             |
+| A response processing template that cannot be found                  | `ProcessingError`                                                           |
 
 ## Not included
 

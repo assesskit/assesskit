@@ -14,7 +14,8 @@ export type CustomOperatorExpression = ElementModel<"CustomOperator", "qti-custo
  *
  * @remarks
  * It receives the expression, so that it can read the attributes and elements of other namespaces that the operator
- * carries.
+ * carries. A function that throws makes the processing fail with a `ProcessingError`, as an operator that returns a value
+ * that is not one does with a `DataError`.
  *
  * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, qti-custom-operator}
  */
