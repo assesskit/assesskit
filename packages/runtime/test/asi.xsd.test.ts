@@ -9,11 +9,11 @@ import {
   ASI_NAMESPACE,
   type AsiDocument,
   type AssessmentTest,
+  buildScoreCoversBlock,
+  buildScoringRubricBlock,
   ReadError,
   readAsi,
   SecurityError,
-  scoreCoversBlock,
-  scoringRubricBlock,
   writeAsi,
   type XmlElement,
 } from "../src/index.js";
@@ -119,7 +119,7 @@ describe("writeAsi: worked examples", () => {
     const document = readAsi(TEST);
     if (document.kind !== "test") throw new Error("Expected a test.");
     const notes: XmlElement[] = [];
-    const block = scoreCoversBlock(
+    const block = buildScoreCoversBlock(
       "CONTENT",
       [{ itemRef: "W1", responseIdentifier: "RESPONSE", label: "Task 1" }],
       notes,
@@ -134,7 +134,7 @@ describe("writeAsi: worked examples", () => {
     if (item.kind !== "item" || test.kind !== "test") throw new Error("Expected an item and a test.");
     const notes: XmlElement[] = [];
     for (const rubric of Object.values(KIND_EXAMPLES)) {
-      const block = scoringRubricBlock({ ...rubric, outcomeIdentifier: "SCORE" }, notes);
+      const block = buildScoringRubricBlock({ ...rubric, outcomeIdentifier: "SCORE" }, notes);
       const body = { kind: "item-body", children: [...(item.item.body?.children ?? []), block] } as const;
       expect(await validated({ kind: "item", item: { ...item.item, body } }), rubric.kind).toEqual([]);
       const rubricBlocks = [...test.test.rubricBlocks, block];

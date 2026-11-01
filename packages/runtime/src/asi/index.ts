@@ -7,13 +7,13 @@
 export * from "./body.js";
 export type { RubricContent } from "./convention-markup.js";
 export {
+  buildScoreCoversBlock,
   readScoreCovers,
   SCORE_COVERS_CLASS,
   type ScoreCover,
   type ScoreCoverBlock,
   type ScoreCoverEntry,
   scoreCoverBlocks,
-  scoreCoversBlock,
 } from "./covers.js";
 export { type AsiDocument, type ReadAsiOptions, readAsi, walkDocument, writeAsi } from "./document.js";
 export * from "./model.js";
@@ -28,7 +28,7 @@ export {
   SCORING_RUBRIC_CLASS,
   type ScoringRubric,
 } from "./scoring-rubric.js";
-export { readScoringRubrics, type ScoringRubricBlock, scoringRubricBlock } from "./scoring-rubric-block.js";
+export { buildScoringRubricBlock, readScoringRubrics, type ScoringRubricBlock } from "./scoring-rubric-block.js";
 export { type AreaShape, coordinateCountFits } from "./shapes.js";
 export type { AttributeDef, AttributeType, StringFormat } from "./table.js";
 export type { ElementVisit } from "./walk.js";

@@ -310,7 +310,10 @@ function criterionEntry({ identifier, weight, description, levels }: RubricCrite
  * @throws `DataError` when the rubric fails {@link checkScoringRubric}, or a note is an `ol` or not a node.
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, scoring rubrics}
  */
-export function scoringRubricBlock(rubric: ScoringRubric, notes: readonly RubricContent[] = []): ScoringRubricBlock {
+export function buildScoringRubricBlock(
+  rubric: ScoringRubric,
+  notes: readonly RubricContent[] = [],
+): ScoringRubricBlock {
   checkScoringRubric(rubric);
   checkArray(notes, "The notes must be an array");
   if (!notes.every(isModelNode)) {

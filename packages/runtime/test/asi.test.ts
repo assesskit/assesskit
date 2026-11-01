@@ -24,6 +24,8 @@ import {
   type AssessmentSection,
   type AssessmentStimulus,
   type AssessmentTest,
+  buildScoreCoversBlock,
+  buildScoringRubricBlock,
   checkScoringRubric,
   childNodes,
   coordinateCountFits,
@@ -52,9 +54,7 @@ import {
   type ScoreCover,
   type ScoringRubric,
   scoreCoverBlocks,
-  scoreCoversBlock,
   scoreFromRatings,
-  scoringRubricBlock,
   serializeXml,
   type TemplateRule,
   walkDocument,
@@ -369,7 +369,7 @@ describe("building and reading the covers", () => {
   it("builds the block that reading the example gives, and writes it before the first test part", () => {
     const read = checked(testWith(coversBlock));
     if (read.kind !== "test") throw new Error("Expected a test.");
-    const block = scoreCoversBlock("CONTENT", covers, notes);
+    const block = buildScoreCoversBlock("CONTENT", covers, notes);
     expect(block).toEqual(read.test.rubricBlocks[0]);
     const written = writeAsi({ kind: "test", test: { ...testModel(), rubricBlocks: [block] } });
     expect(written.indexOf("<qti-rubric-block")).toBeLessThan(written.indexOf("<qti-test-part"));
@@ -423,7 +423,7 @@ describe("building and reading the covers", () => {
   });
 
   it("builds a block that a round trip keeps unchanged", () => {
-    const block = scoreCoversBlock("CONTENT", covers, notes);
+    const block = buildScoreCoversBlock("CONTENT", covers, notes);
     const document: AsiDocument = { kind: "test", test: { ...testModel(), rubricBlocks: [block] } };
     const again = readAsi(writeAsi(document));
     expect(again).toEqual(document);
@@ -432,7 +432,7 @@ describe("building and reading the covers", () => {
   });
 
   it("writes the white space of a label normalized and leaves a block without notes with the list only", () => {
-    const block = scoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "R", label: " a \n b " }]);
+    const block = buildScoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "R", label: " a \n b " }]);
     expect(block.contentBody.children).toEqual([
       {
         kind: "ul",
@@ -452,27 +452,27 @@ describe("building and reading the covers", () => {
   });
 
   it("refuses what is not an identifier, a list of covers or a list of notes", () => {
-    expect(() => scoreCoversBlock("1x", [])).toThrow(DataError);
-    expect(() => scoreCoversBlock("O", [{ itemRef: "a b", responseIdentifier: "R" }])).toThrow(
+    expect(() => buildScoreCoversBlock("1x", [])).toThrow(DataError);
+    expect(() => buildScoreCoversBlock("O", [{ itemRef: "a b", responseIdentifier: "R" }])).toThrow(
       new DataError('The item reference of a cover must be an identifier, found "a b".'),
     );
-    expect(() => scoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "" }])).toThrow(DataError);
-    expect(() => scoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "R", label: JSON.parse("5") }])).toThrow(
-      new DataError("The label of a cover must be a string, found 5."),
-    );
-    expect(() => scoreCoversBlock("O", JSON.parse("{}"))).toThrow(
+    expect(() => buildScoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "" }])).toThrow(DataError);
+    expect(() =>
+      buildScoreCoversBlock("O", [{ itemRef: "Q", responseIdentifier: "R", label: JSON.parse("5") }]),
+    ).toThrow(new DataError("The label of a cover must be a string, found 5."));
+    expect(() => buildScoreCoversBlock("O", JSON.parse("{}"))).toThrow(
       new DataError("The covers must be an array, found an object."),
     );
-    expect(() => scoreCoversBlock("O", JSON.parse("[null]"))).toThrow(
+    expect(() => buildScoreCoversBlock("O", JSON.parse("[null]"))).toThrow(
       new DataError("A cover must be an object, found null."),
     );
-    expect(() => scoreCoversBlock("O", [], JSON.parse("null"))).toThrow(
+    expect(() => buildScoreCoversBlock("O", [], JSON.parse("null"))).toThrow(
       new DataError("The notes must be an array, found null."),
     );
-    expect(() => scoreCoversBlock("O", [], JSON.parse('["x"]'))).toThrow(
+    expect(() => buildScoreCoversBlock("O", [], JSON.parse('["x"]'))).toThrow(
       new DataError("The notes must be nodes of body content, found an array."),
     );
-    expect(() => scoreCoversBlock(JSON.parse("1"), [])).toThrow(
+    expect(() => buildScoreCoversBlock(JSON.parse("1"), [])).toThrow(
       new DataError("The outcome identifier must be an identifier, found 1."),
     );
   });
@@ -581,11 +581,11 @@ describe("reading and building the scoring rubric", () => {
       { kind: "p", children: [{ kind: "text", value: "Rate the essay on each criterion." }], extensions: [] },
     ] satisfies RubricContent[];
     const [block] = testWithBlocks(compact).rubricBlocks;
-    expect(scoringRubricBlock(ESSAY, notes)).toEqual(block);
+    expect(buildScoringRubricBlock(ESSAY, notes)).toEqual(block);
   });
 
   it("builds a block that fits an item body and the rubric blocks of a test, and reads it back after writing", () => {
-    const block = scoringRubricBlock(ESSAY);
+    const block = buildScoringRubricBlock(ESSAY);
     const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
     const inTest: AssessmentTest = { ...testModel(), rubricBlocks: [block] };
     const item2 = readAsi(writeAsi({ kind: "item", item: inItem }));
@@ -596,7 +596,10 @@ describe("reading and building the scoring rubric", () => {
   });
 
   it("writes the attributes of the convention, leaving the default weight out", () => {
-    const written = writeAsi({ kind: "test", test: { ...testModel(), rubricBlocks: [scoringRubricBlock(ESSAY)] } });
+    const written = writeAsi({
+      kind: "test",
+      test: { ...testModel(), rubricBlocks: [buildScoringRubricBlock(ESSAY)] },
+    });
     expect(written).toContain('class="external-scoring-rubric" xml:lang="en"');
     expect(written).toContain('data-outcome-identifier="SCORE" data-rubric-kind="analytic"');
     expect(written).toContain('<li data-criterion-identifier="content" data-weight="2">');
@@ -608,7 +611,10 @@ describe("reading and building the scoring rubric", () => {
     for (const kind of RUBRIC_KINDS) {
       const rubric = KIND_EXAMPLES[kind];
       const read = itemWithBlocks("");
-      const inItem: AssessmentItem = { ...read, body: { kind: "item-body", children: [scoringRubricBlock(rubric)] } };
+      const inItem: AssessmentItem = {
+        ...read,
+        body: { kind: "item-body", children: [buildScoringRubricBlock(rubric)] },
+      };
       expect(rubricOf(inItem), kind).toEqual(rubric);
     }
   });
@@ -719,7 +725,7 @@ describe("the rules of a scoring rubric as written", () => {
 
   it("accepts the shapes of the four kinds", () => {
     for (const kind of RUBRIC_KINDS) {
-      const block = scoringRubricBlock(KIND_EXAMPLES[kind]);
+      const block = buildScoringRubricBlock(KIND_EXAMPLES[kind]);
       const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
       const [marked] = scoringRubricBlocks(inItem);
       expect(marked && scoringRubricOf(marked.block).issues, kind).toEqual([]);
@@ -999,17 +1005,17 @@ describe("the arguments of the rubric functions", () => {
   });
 
   it("refuses notes that are not nodes, or hold a list, and a rubric that fails the check", () => {
-    expect(() => scoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse("null"))).toThrow(
       new DataError("The notes must be an array, found null."),
     );
-    expect(() => scoringRubricBlock(ESSAY, JSON.parse('["x"]'))).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, JSON.parse('["x"]'))).toThrow(
       new DataError("The notes must be nodes of body content, found an array."),
     );
-    expect(() => scoringRubricBlock(ESSAY, [{ kind: "ol", items: [], extensions: [] }])).toThrow(
+    expect(() => buildScoringRubricBlock(ESSAY, [{ kind: "ol", items: [], extensions: [] }])).toThrow(
       new DataError("The notes must not contain an ol, which a reader would take for the criteria."),
     );
-    expect(() => scoringRubricBlock(JSON.parse("{}"))).toThrow(DataError);
-    expect(() => scoringRubricBlock({ ...ESSAY, kind: "holistic" })).toThrow(DataError);
+    expect(() => buildScoringRubricBlock(JSON.parse("{}"))).toThrow(DataError);
+    expect(() => buildScoringRubricBlock({ ...ESSAY, kind: "holistic" })).toThrow(DataError);
   });
 
   it("names the class token that marks the block", () => {
@@ -4594,7 +4600,7 @@ describe("properties", () => {
   it("reads back any scoring rubric that the builder writes, in an item and in a test, through the XML", () => {
     fc.assert(
       fc.property(SCORING_RUBRICS, (rubric) => {
-        const block = scoringRubricBlock(rubric);
+        const block = buildScoringRubricBlock(rubric);
         const inItem: AssessmentItem = { ...itemOf(item()), body: { kind: "item-body", children: [block] } };
         const inTest: AssessmentTest = { ...testModel(), rubricBlocks: [block] };
         expect(() => checkScoringRubric(rubric)).not.toThrow();
@@ -4659,7 +4665,7 @@ describe("properties", () => {
 
   it("reads a mutated document with a scoring rubric into the rubrics or refuses it with a ReadError or a SecurityError", () => {
     const documents = SCORING_RUBRICS.map((rubric) => {
-      const block = scoringRubricBlock(rubric);
+      const block = buildScoringRubricBlock(rubric);
       return writeAsi({ kind: "item", item: { ...itemOf(item()), body: { kind: "item-body", children: [block] } } });
     });
     fuzzReader(documents, (input) => {

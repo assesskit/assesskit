@@ -158,7 +158,7 @@ function coverEntry(cover: unknown): ListEntry {
  * @defaultValue `[]`
  * @see {@link https://github.com/assesskit/assesskit/blob/main/docs/runtime/conventions.md | Conventions of the runtime, covers}
  */
-export function scoreCoversBlock(
+export function buildScoreCoversBlock(
   outcomeIdentifier: string,
   covers: readonly ScoreCover[],
   notes: readonly RubricContent[] = [],

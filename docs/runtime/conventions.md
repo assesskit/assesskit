@@ -39,30 +39,30 @@ person who reads the document sees the list of the responses that the scorer rat
 </qti-rubric-block>
 ```
 
-The markup is valid ASI: the tests validate the block that `scoreCoversBlock` builds against the official schema.
+The markup is valid ASI: the tests validate the block that `buildScoreCoversBlock` builds against the official schema.
 
-| Part                       | Rule                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Place                      | A child `qti-rubric-block` of `qti-assessment-test`. Blocks of test parts and sections are not covers.              |
-| Marker                     | The class token `external-score-covers` (`SCORE_COVERS_CLASS`).                                                     |
-| `view`                     | A list that contains `scorer` and not `candidate`; `validate` checks it. `scoreCoversBlock` writes `use="scoring"`. |
-| `data-outcome-identifier`  | The outcome the block rates.                                                                                        |
-| Content                    | Optional notes, then a `ul` that is a child of the content body. The `li` elements are the covers.                  |
-| `data-item-ref`            | On an `li`: the identifier of the `qti-assessment-item-ref` of the item.                                            |
-| `data-response-identifier` | On an `li`: the identifier of the response variable of the item.                                                    |
-| Label                      | The text of the `li` with white space normalized. It is absent when empty.                                          |
-| Several blocks             | Blocks for one outcome add their covers in document order. `validate` reports it as a duplicate.                    |
+| Part                       | Rule                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Place                      | A child `qti-rubric-block` of `qti-assessment-test`. Blocks of test parts and sections are not covers.                   |
+| Marker                     | The class token `external-score-covers` (`SCORE_COVERS_CLASS`).                                                          |
+| `view`                     | A list that contains `scorer` and not `candidate`; `validate` checks it. `buildScoreCoversBlock` writes `use="scoring"`. |
+| `data-outcome-identifier`  | The outcome the block rates.                                                                                             |
+| Content                    | Optional notes, then a `ul` that is a child of the content body. The `li` elements are the covers.                       |
+| `data-item-ref`            | On an `li`: the identifier of the `qti-assessment-item-ref` of the item.                                                 |
+| `data-response-identifier` | On an `li`: the identifier of the response variable of the item.                                                         |
+| Label                      | The text of the `li` with white space normalized. It is absent when empty.                                               |
+| Several blocks             | Blocks for one outcome add their covers in document order. `validate` reports it as a duplicate.                         |
 
 The block stays an ordinary `RubricBlock` in `test.rubricBlocks`: one source of truth, with its position and attributes kept.
 Nothing is copied into the model, and a read followed by a write keeps the block unchanged.
 
 ### Reading and writing
 
-| Function                                    | Does                                                                                                                                                                          |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readScoreCovers(test)`                     | The covers by outcome identifier, in document order. A test without blocks gives an empty map; an entry without both attributes is left out.                                  |
-| `scoreCoverBlocks(test)`                    | The blocks that carry the class token, as they are written, with a missing attribute absent, so that `validate` can report them.                                              |
-| `scoreCoversBlock(outcome, covers, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block), then the list. Identifiers are checked, labels are written with white space normalized. |
+| Function                                         | Does                                                                                                                                                                          |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readScoreCovers(test)`                          | The covers by outcome identifier, in document order. A test without blocks gives an empty map; an entry without both attributes is left out.                                  |
+| `scoreCoverBlocks(test)`                         | The blocks that carry the class token, as they are written, with a missing attribute absent, so that `validate` can report them.                                              |
+| `buildScoreCoversBlock(outcome, covers, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block), then the list. Identifiers are checked, labels are written with white space normalized. |
 
 ```ts
 import { readAsi, readScoreCovers } from "@assesskit/runtime/asi";
@@ -116,7 +116,7 @@ survives any QTI tool. The runtime reads it, writes it, and computes the score f
 
 ```mermaid
 flowchart LR
-  author["Author or generator<br/>scoringRubricBlock"] --> block["Item body or test<br/>qti-rubric-block class external-scoring-rubric"]
+  author["Author or generator<br/>buildScoringRubricBlock"] --> block["Item body or test<br/>qti-rubric-block class external-scoring-rubric"]
   block -->|"readScoringRubrics"| rubric["ScoringRubric"]
   rubric --> rater["A person or a machine rates<br/>one level for each criterion"]
   rater --> ratings["ratings: { criterion, score }[]"]
@@ -152,7 +152,7 @@ flowchart LR
 </qti-rubric-block>
 ```
 
-The markup is valid ASI: the tests validate the blocks that `scoringRubricBlock` builds, and the example above, against the official
+The markup is valid ASI: the tests validate the blocks that `buildScoringRubricBlock` builds, and the example above, against the official
 schema. The data model follows the rubric of CASE (see [CASE alignment](#case-alignment)).
 
 ```mermaid
@@ -182,7 +182,7 @@ classDiagram
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Place                       | In an item: a `qti-rubric-block` among the content of `qti-item-body`. In a test: a child `qti-rubric-block` of `qti-assessment-test`. Blocks of test parts and sections are not rubrics. |
 | Marker                      | The class token `external-scoring-rubric` (`SCORING_RUBRIC_CLASS`). A block cannot also carry the token of the covers.                                                                    |
-| `view`                      | A list that contains `scorer` and not `candidate`. `scoringRubricBlock` writes `view="scorer"` and `use="scoring"`, which the schema requires of an item's block.                         |
+| `view`                      | A list that contains `scorer` and not `candidate`. `buildScoringRubricBlock` writes `view="scorer"` and `use="scoring"`, which the schema requires of an item's block.                    |
 | `data-outcome-identifier`   | The outcome the rubric rates, the attribute that covers use. Required.                                                                                                                    |
 | `data-rubric-kind`          | `analytic`, `holistic`, `checklist` or `single-point`. Default `analytic`.                                                                                                                |
 | `xml:lang`                  | The language of the texts: the block's, else the item's. A test has none, so the block gives its own. Absent when neither gives one.                                                      |
@@ -225,13 +225,13 @@ A single-point rubric here has three scored levels, while the literature often l
 
 ### Reading and writing
 
-| Function                             | Does                                                                                                                                                                                          |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readScoringRubrics(document)`       | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.                                |
-| `scoringRubricBlock(rubric, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized.                   |
-| `checkScoringRubric(value)`          | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.                      |
-| `scoreFromRatings(rubric, ratings)`  | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                                            |
-| `rubricScoreRange(rubric)`           | The lowest and the highest score that ratings can give, for a host that shows "7 out of 12" or checks the declaration of the outcome. Throws a `DataError` for a rubric that fails the check. |
+| Function                                  | Does                                                                                                                                                                                          |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readScoringRubrics(document)`            | The rubrics of an item or a test by outcome identifier. An outcome whose first block breaks a rule has no entry; a document without blocks gives an empty map.                                |
+| `buildScoringRubricBlock(rubric, notes?)` | Builds the block: the attributes, the notes (nodes of the content of a rubric block, never an `ol`), then the criteria list. Texts are written with white space normalized.                   |
+| `checkScoringRubric(value)`               | Checks a rubric that arrived as JSON or from a caller: its shape, its numbers and identifiers, and the shape that its kind requires. Throws a `DataError` with the path.                      |
+| `scoreFromRatings(rubric, ratings)`       | The score of `{ criterion, score }` ratings, or `null` while a criterion has none. Throws a `DataError` for a rating that does not fit the rubric.                                            |
+| `rubricScoreRange(rubric)`                | The lowest and the highest score that ratings can give, for a host that shows "7 out of 12" or checks the declaration of the outcome. Throws a `DataError` for a rubric that fails the check. |
 
 ```ts
 import { readAsi, readScoringRubrics, rubricScoreRange, scoreFromRatings } from "@assesskit/runtime/asi";

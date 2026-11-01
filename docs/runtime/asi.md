@@ -37,10 +37,10 @@ flowchart LR
 | `BodyNode`, `TextNode`                                                                              | A node of flow content: an element, text, or XML for MathML, SSML and `xi:include`.                                                 |
 | `RubricBlock`, `TestRubricBlock`                                                                    | A rubric block wherever it occurs, and the one of a test, test part or section.                                                     |
 | `ElementModel`                                                                                      | The model of any element of the table.                                                                                              |
-| `readScoreCovers(test)`, `scoreCoversBlock(…)`                                                      | The covers of externally scored outcomes: read them from a test, build the rubric block that names them.                            |
+| `readScoreCovers(test)`, `buildScoreCoversBlock(…)`                                                 | The covers of externally scored outcomes: read them from a test, build the rubric block that names them.                            |
 | `scoreCoverBlocks(test)`, `SCORE_COVERS_CLASS`                                                      | The covers blocks as written, with what they lack; the class token that marks them.                                                 |
 | `ScoreCover`, `ScoreCoverBlock`, `ScoreCoverEntry`                                                  | One covered response, a block as written, and one list entry of it.                                                                 |
-| `readScoringRubrics(document)`, `scoringRubricBlock(…)`                                             | The scoring rubrics of an item or a test: read them, build the rubric block that holds one.                                         |
+| `readScoringRubrics(document)`, `buildScoringRubricBlock(…)`                                        | The scoring rubrics of an item or a test: read them, build the rubric block that holds one.                                         |
 | `scoreFromRatings(rubric, ratings)`, `checkScoringRubric(value)`                                    | The score that ratings give under a rubric; the check of a rubric that arrived as JSON.                                             |
 | `ScoringRubric`, `RubricCriterion`, `RubricLevel`, `RubricKind`, `RubricRating`, `RubricScoreRange` | The rubric, its criteria and levels, its four kinds, and a rating of a criterion.                                                   |
 | `SCORING_RUBRIC_CLASS`, `ScoringRubricBlock`, `RubricContent`                                       | The class token that marks a rubric block; the block that fits an item body and a test; the content that both accept.               |
@@ -213,7 +213,7 @@ is an array.
 
 An element that occurs in several places can have a type in each, with content that differs: the exported model is the union
 of them. A `qti-rubric-block` has one model in a body and another in a test, test part or section. `RubricBlock` is the
-union, and `TestRubricBlock` the second, which `AssessmentTest.rubricBlocks` holds and `scoreCoversBlock` builds. `scoringRubricBlock`
+union, and `TestRubricBlock` the second, which `AssessmentTest.rubricBlocks` holds and `buildScoreCoversBlock` builds. `buildScoringRubricBlock`
 builds a `ScoringRubricBlock`, which is both models at once, so that it fits an item body and `rubricBlocks` without a cast.
 
 ### Companion materials
@@ -328,10 +328,10 @@ read back as one.
 Two conventions of the runtime are rubric blocks for scorers that a class token marks. They are not part of QTI;
 [Conventions](conventions.md) describes both. In the model each is an ordinary rubric block, and nothing is copied out of it.
 
-| Convention     | Functions                                                                                                | Reads and builds                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Covers         | `readScoreCovers`, `scoreCoverBlocks`, `scoreCoversBlock`                                                | The responses that an externally scored outcome of a test rates, in a block of the test                      |
-| Scoring rubric | `readScoringRubrics`, `scoringRubricBlock`, `checkScoringRubric`, `scoreFromRatings`, `rubricScoreRange` | The criteria, levels and weights of an outcome, in a block of an item or of a test, and the score of ratings |
+| Convention     | Functions                                                                                                     | Reads and builds                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Covers         | `readScoreCovers`, `scoreCoverBlocks`, `buildScoreCoversBlock`                                                | The responses that an externally scored outcome of a test rates, in a block of the test                      |
+| Scoring rubric | `readScoringRubrics`, `buildScoringRubricBlock`, `checkScoringRubric`, `scoreFromRatings`, `rubricScoreRange` | The criteria, levels and weights of an outcome, in a block of an item or of a test, and the score of ratings |
 
 ## The element table
 
