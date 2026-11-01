@@ -48,15 +48,24 @@ export function renderBody(
   return content;
 }
 
+/** The tags of the rules of WCAG 2.0, 2.1 and 2.2 at levels A and AA, which every run of axe in the tests uses. */
+export const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
 /**
- * Runs axe with the rules of WCAG 2.2 A and AA, and the one for 2.5.3 that axe leaves off by default (d-m8), over an
- * element and what it holds, shadow roots included.
+ * Runs axe with the rules of WCAG 2.2 A and AA, and the one for 2.5.3 that axe leaves off by default, over an element and
+ * what it holds, shadow roots included.
  *
+ * @param scope - The element to check.
+ * @param options - `only` runs the named rules alone, as a test of one rule does.
  * @returns One line for each violated rule: the rule and the targets.
  */
-export async function axeViolations(scope: Element): Promise<string[]> {
+export async function axeViolations(
+  scope: Element,
+  options: { readonly only?: readonly string[] } = {},
+): Promise<string[]> {
+  const { only } = options;
   const result = await axe.run(scope, {
-    runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
+    runOnly: only === undefined ? { type: "tag", values: WCAG_TAGS } : { type: "rule", values: [...only] },
     rules: { "label-content-name-mismatch": { enabled: true } },
   });
   return result.violations.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => String(target)).join(" | ")}`);

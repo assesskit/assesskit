@@ -1,10 +1,10 @@
 import { DataError } from "@assesskit/runtime/errors";
-import axe from "axe-core";
 import { describe, expect, inject, it } from "vitest";
 import { EN_MESSAGES } from "../src/index.js";
 import { buildSpeechRequest, createMathTypesetter } from "../src/player/index.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import { mount } from "./css-fixture.js";
+import { axeViolations } from "./renderer-fixture.js";
 
 const { asset } = inject("fixtures");
 
@@ -191,11 +191,7 @@ describe("createMathTypesetter", () => {
   it("leaves no axe violation in a root with typeset mathematics", async () => {
     const content = mount(`${FRACTION}<p><math ${MATHML}><msqrt><mi>x</mi></msqrt></math></p>`);
     await typesetter.typeset(content.root);
-    const result = await axe.run(content.host, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
-      rules: { region: { enabled: false } },
-    });
-    expect(result.violations.map(({ id }) => id)).toEqual([]);
+    expect(await axeViolations(content.host)).toEqual([]);
   });
 
   it("refuses a URL that is not an http or https URL, and a root that is not a root", async () => {

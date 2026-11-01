@@ -1,6 +1,5 @@
 import { AssesskitError, DataError } from "@assesskit/runtime/errors";
 import type { RestrictionType } from "@assesskit/runtime/pnp";
-import axe from "axe-core";
 import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES } from "../src/index.js";
@@ -18,6 +17,7 @@ import {
 } from "../src/player/index.js";
 import { mountContent, wholeRoot } from "./content-fixture.js";
 import type { ContentRoot } from "./css-fixture.js";
+import { axeViolations } from "./renderer-fixture.js";
 import { waitFor } from "./wait.js";
 
 const { asset } = inject("fixtures");
@@ -68,15 +68,6 @@ function textOf(request: SpeechRequest | undefined): string {
 function inner(request: SpeechRequest | undefined): string {
   if (request === undefined) throw new Error("There is no request.");
   return request.ssml.replace(/^[\s\S]*?<speak[^>]*>/u, "").replace(/<\/speak>\s*$/u, "");
-}
-
-/** Runs axe on a content root at WCAG 2.2 A and AA, and returns the rules that it reports. `region` is the page's. */
-async function violations(host: HTMLElement): Promise<string[]> {
-  const result = await axe.run(host, {
-    runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
-    rules: { region: { enabled: false } },
-  });
-  return result.violations.map(({ id, nodes }) => `${id}: ${nodes.map((node) => node.target.join(" ")).join(", ")}`);
 }
 
 /** Builds the request for a range and keeps its SSML to validate. */
@@ -141,7 +132,7 @@ describe("applyReadingType", () => {
     const content = mountContent(markup);
     for (const readingType of ["screen-reader", "computer-read-aloud", undefined] as const) {
       applyReadingType(content.root, readingType);
-      expect(await violations(content.host), String(readingType)).toEqual([]);
+      expect(await axeViolations(content.host), String(readingType)).toEqual([]);
     }
   });
 
@@ -621,7 +612,7 @@ describe("buildSpeechRequest", () => {
       '<qti-prompt>Sigmund <ssml:sub alias="Froyd">Freud</ssml:sub> and <span data-ssml=\'{"emphasis":{"level":"strong"}}\'>Jung</span>.</qti-prompt>',
     );
     expect(read(content)).toBeDefined();
-    expect(await violations(content.host)).toEqual([]);
+    expect(await axeViolations(content.host)).toEqual([]);
   });
 });
 

@@ -33,10 +33,10 @@ import {
   stranger,
   tokenOf,
 } from "./pci-fixture.js";
+import { WCAG_TAGS } from "./renderer-fixture.js";
 import { onSupport } from "./supports-fixture.js";
 import { waitFor } from "./wait.js";
 
-const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const TITLE = "Press the button.";
 const FILE = { cardinality: "single", baseType: "file" } as const;
 

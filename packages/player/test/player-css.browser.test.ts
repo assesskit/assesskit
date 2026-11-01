@@ -1,7 +1,7 @@
-import axe from "axe-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { channels, computed, contrast, mount, nth, PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { axeViolations } from "./renderer-fixture.js";
 
 /** The style of every rule of `player.css` with its selectors, to check the declared values of the large scales against the specification. */
 const rules: { readonly selector: string; readonly style: CSSStyleDeclaration }[] = [];
@@ -987,18 +987,6 @@ const THEMES = new Map<string, Readonly<Record<string, string>>>([
   ["high contrast inverted", { "data-ak-contrast": "high", "data-ak-polarity": "inverted" }],
 ]);
 
-/** Runs axe on a content root, at WCAG 2.2 A and AA, and returns what it reports as a violation. `region` is the page's. */
-async function violations(host: HTMLElement, rules: readonly string[] = []): Promise<string[]> {
-  const result = await axe.run(host, {
-    runOnly:
-      rules.length > 0
-        ? { type: "rule", values: [...rules] }
-        : { type: "tag", values: ["wcag2a", "wcag2aa", "wcag22aa"] },
-    rules: { region: { enabled: false } },
-  });
-  return result.violations.map(({ id, nodes }) => `${id}: ${nodes.map((node) => node.target.join(" ")).join(", ")}`);
-}
-
 /** Returns the color that a token has in a content root, as the engine resolves it. */
 function tokenColor(host: HTMLElement, token: string): string {
   const probe = document.createElement("span");
@@ -1065,12 +1053,12 @@ describe("accessibility of the presentation", () => {
   it("passes axe for hot texts with qti-unselected-hidden", async () => {
     const { host, find } = mount(hottext("qti-unselected-hidden"));
     find<HTMLInputElement>(".ak-control").checked = true;
-    expect(await violations(host)).toEqual([]);
+    expect(await axeViolations(host)).toEqual([]);
   });
 
   it("passes axe in high contrast", async () => {
     const { host } = mount(REPRESENTATIVE, { "data-ak-contrast": "high" });
-    expect(await violations(host)).toEqual([]);
+    expect(await axeViolations(host)).toEqual([]);
   });
 
   it("passes axe with magnified text and the text appearance of a profile", async () => {
@@ -1085,7 +1073,7 @@ describe("accessibility of the presentation", () => {
         "--ak-word-spacing": "0.2em",
       },
     );
-    expect(await violations(host)).toEqual([]);
+    expect(await axeViolations(host)).toEqual([]);
   });
 });
 
@@ -1132,7 +1120,7 @@ describe("WCAG 2.2 visual criteria", () => {
       const { host, findAll } = mount(REPRESENTATIVE, attributes);
       for (const control of findAll<HTMLInputElement>("qti-simple-choice .ak-control, qti-hottext .ak-control"))
         control.checked = true;
-      expect(await violations(host, ["color-contrast"]), name).toEqual([]);
+      expect(await axeViolations(host, { only: ["color-contrast"] }), name).toEqual([]);
     }
   });
 

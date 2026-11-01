@@ -1,7 +1,6 @@
 import type { SupportView } from "@assesskit/runtime/delivery";
 import { DataError } from "@assesskit/runtime/errors";
 import type { CalculatorType, SupportName, SupportState } from "@assesskit/runtime/pnp";
-import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { EN_MESSAGES, ID_MESSAGES, type Messages } from "../src/messages/index.js";
@@ -14,6 +13,7 @@ import {
   type ToolsInput,
 } from "../src/player/index.js";
 import { PLAYER_CSS } from "./css-fixture.js";
+import { axeViolations } from "./renderer-fixture.js";
 import { supportView } from "./supports-fixture.js";
 import {
   calculatorXml,
@@ -280,14 +280,8 @@ function tooSmall(scene: Scene): string[] {
     .map((element) => `${element.tagName} ${element.getAttribute("aria-label") ?? element.textContent}`);
 }
 
-/** Runs axe with the rules of WCAG 2.2 A and AA, and the one for 2.5.3 that axe leaves off by default (d-m8). */
-async function violations(): Promise<string[]> {
-  const result = await axe.run(document.body, {
-    runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
-    rules: { "label-content-name-mismatch": { enabled: true } },
-  });
-  return result.violations.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => String(target)).join(" | ")}`);
-}
+/** Runs axe over the page. */
+const violations = (): Promise<string[]> => axeViolations(document.body);
 
 describe("styles", () => {
   it("adopts its stylesheet into the roots of the toolbar and of the item, and gives it back", () => {
