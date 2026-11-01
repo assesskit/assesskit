@@ -20,7 +20,8 @@ const CHROME_CSS = `
 .ak-nav-item { display: block; width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: 0.25rem 0.75rem; font: inherit;
   text-align: start; color: CanvasText; background: Canvas; border: 1px solid CanvasText; border-radius: 0.375rem; cursor: pointer; }
 .ak-nav-item[aria-current="true"] { border-width: 3px; font-weight: 700; }
-.ak-nav-item[aria-current="true"]::before { content: "\\25B6\\00A0"; }
+.ak-nav-item[aria-current="true"]::before { content: ""; display: inline-block; margin-inline-end: 0.4em;
+  border-style: solid; border-width: 0.35em 0 0.35em 0.6em; border-color: transparent transparent transparent currentColor; }
 .ak-nav-item:disabled { color: GrayText; border-style: dashed; cursor: not-allowed; }
 .ak-nav-status { font-weight: 400; }
 .ak-timers { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border: 2px solid CanvasText;

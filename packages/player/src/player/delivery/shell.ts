@@ -1,5 +1,5 @@
 import type { Messages } from "../../messages/index.js";
-import { html } from "../internal.js";
+import { html, uniqueId } from "../internal.js";
 
 /** The parts of the player that the shell puts in the page. */
 export interface ShellParts {
@@ -21,6 +21,10 @@ export interface ShellParts {
   readonly comment: HTMLElement;
   /** The button that checks whether a paused test continues. */
   readonly resume: HTMLElement;
+  /** The element that holds the player. */
+  readonly landmark: "main" | "region";
+  /** The level of the heading of the item. */
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 /** The elements of the player, which the parts of the chrome and the content fill. */
@@ -55,7 +59,8 @@ export interface Shell {
  */
 export function createShell(parts: ShellParts): Shell {
   const { messages, language, chrome } = parts;
-  const heading = html("h1", { class: "ak-heading", tabindex: "-1" });
+  const headingId = uniqueId("ak-heading");
+  const heading = html(`h${parts.headingLevel}`, { class: "ak-heading", id: headingId, tabindex: "-1" });
   const notices = html("div", { class: "ak-notices" });
   const attempts = html("p", { class: "ak-attempts" });
   const mapSlot = html("div", { class: "ak-map" });
@@ -68,8 +73,8 @@ export function createShell(parts: ShellParts): Shell {
     { class: "ak-layout" },
     mapSlot,
     html(
-      "main",
-      { class: "ak-main" },
+      parts.landmark === "main" ? "main" : "section",
+      { class: "ak-main", ...(parts.landmark === "main" ? {} : { "aria-labelledby": headingId }) },
       heading,
       notices,
       parts.resume,

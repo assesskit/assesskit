@@ -1,8 +1,10 @@
 import {
   checkBoolean,
+  checkChoice,
   checkFunction,
   checkNonEmptyString,
   checkNonNegativeInteger,
+  checkPositiveInteger,
   checkProperties,
   checkRecord,
   checkString,
@@ -151,6 +153,20 @@ export interface DeliveryOptions extends MountOptions {
    * @defaultValue `30000`
    */
   readonly resumeCheckMs?: number;
+  /**
+   * The element that holds the player: `"main"` for a page that is the player, `"region"` for a page that has a `main` of its
+   * own, since a page has one main landmark. A region is named by the heading.
+   *
+   * @defaultValue `"region"`
+   */
+  readonly landmark?: "main" | "region";
+  /**
+   * The level of the heading of the item, 1 to 6: the level of the heading under which the host's page puts the player. A
+   * page that is the player uses 1.
+   *
+   * @defaultValue `2`
+   */
+  readonly headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 /** What `mountItem` needs: the options of `mountDelivery` without the chrome, the tools and the login of an LTI item. */
@@ -241,7 +257,12 @@ type SharedOptions = Omit<ItemMountOptions, "hooks"> & {
   readonly hooks?: unknown;
   readonly chrome?: unknown;
   readonly resumeCheckMs?: unknown;
+  readonly landmark?: unknown;
+  readonly headingLevel?: unknown;
 };
+
+/** The deepest level of a heading in HTML. */
+const MAX_HEADING_LEVEL = 6;
 
 /** Checks the host and the options that `mountDelivery` and `mountItem` share. */
 function checkSharedOptions(
@@ -284,7 +305,16 @@ function checkSharedOptions(
  * type.
  */
 export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
-  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome", "resumeCheckMs"]);
+  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome", "resumeCheckMs", "landmark", "headingLevel"]);
+  if (options.landmark !== undefined) checkChoice(options.landmark, "The option landmark", ["main", "region"]);
+  if (options.headingLevel !== undefined) {
+    checkPositiveInteger(options.headingLevel, "The option headingLevel");
+    if (options.headingLevel > MAX_HEADING_LEVEL) {
+      throw new DataError(
+        `The option headingLevel must be from 1 to ${MAX_HEADING_LEVEL}, found ${options.headingLevel}.`,
+      );
+    }
+  }
   if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
   if (options.resumeCheckMs !== undefined) {
     checkNonNegativeInteger(options.resumeCheckMs, "The option resumeCheckMs");

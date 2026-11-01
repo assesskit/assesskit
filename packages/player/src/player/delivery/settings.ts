@@ -22,6 +22,10 @@ export interface Settings extends Omit<ItemSettings, "hooks"> {
   readonly chrome: boolean;
   /** How often a paused test is checked, in milliseconds; 0 for never. */
   readonly resumeCheckMs: number;
+  /** The element that holds the player. */
+  readonly landmark: "main" | "region";
+  /** The level of the heading of the item. */
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6;
   /** The hooks of the host. */
   readonly hooks: NonNullable<DeliveryOptions["hooks"]>;
 }
@@ -55,6 +59,13 @@ export function resolveItemSettings(options: ItemMountOptions): ItemSettings {
  * @returns The settings.
  */
 export function resolveSettings(options: DeliveryOptions): Settings {
-  const { chrome = true, hooks = {}, resumeCheckMs = DEFAULT_RESUME_CHECK_MS, ...shared } = options;
-  return { ...resolveItemSettings(shared), chrome, hooks, resumeCheckMs };
+  const {
+    chrome = true,
+    hooks = {},
+    resumeCheckMs = DEFAULT_RESUME_CHECK_MS,
+    landmark = "region",
+    headingLevel = 2,
+    ...shared
+  } = options;
+  return { ...resolveItemSettings(shared), chrome, hooks, resumeCheckMs, landmark, headingLevel };
 }

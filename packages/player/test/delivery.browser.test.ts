@@ -50,6 +50,8 @@ async function shell(
     /** Whether the engine allows a review after the end. */
     readonly reviewAfterEnd?: boolean;
     readonly chrome?: boolean;
+    readonly landmark?: "main" | "region";
+    readonly headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
     readonly wrap?: (client: SessionClient) => SessionClient;
     /** The PNP of the candidate, as a document. */
     readonly profile?: string;
@@ -124,6 +126,8 @@ async function shell(
     },
     ...(options.language === undefined ? {} : { language: options.language }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
+    ...(options.landmark === undefined ? {} : { landmark: options.landmark }),
+    ...(options.headingLevel === undefined ? {} : { headingLevel: options.headingLevel }),
   });
   const ui = host.shadowRoot as ShadowRoot;
   return { ...setup, client: shown, page: host, ui, mounted, started, definition };
@@ -594,6 +598,33 @@ describe("mountDelivery", () => {
     expect(moved.view.current?.key.ref).toBe("q2");
   });
 
+  it("holds the player in a region named by a heading of level 2, so that it fits in a page that has a main of its own", async () => {
+    const s = await shell();
+    expect(s.ui.querySelector("main")).toBeNull();
+    const region = s.ui.querySelector<HTMLElement>("section.ak-main");
+    const title = s.ui.querySelector<HTMLElement>(".ak-heading");
+    expect(title?.tagName).toBe("H2");
+    expect(region?.getAttribute("aria-labelledby")).toBe(title?.id);
+    expect(title?.id).not.toBe("");
+  });
+
+  it("holds the player in the main landmark under a heading of level 1 when the page is the player", async () => {
+    const s = await shell({ landmark: "main", headingLevel: 1 });
+    expect(s.ui.querySelector("main.ak-main")).not.toBeNull();
+    expect(s.ui.querySelector("section.ak-main")).toBeNull();
+    expect(s.ui.querySelector(".ak-heading")?.tagName).toBe("H1");
+  });
+
+  it("marks the item presented with a shape, so that no glyph enters the name of its button", async () => {
+    const s = await shell();
+    const current = s.ui.querySelector<HTMLElement>('.ak-nav-item[aria-current="true"]');
+    expect(current).not.toBeNull();
+    const marker = getComputedStyle(current as HTMLElement, "::before");
+    expect(marker.content).toBe('""');
+    expect(marker.borderLeftWidth).not.toBe("0px");
+    expect(current?.textContent).not.toContain("\u25B6");
+  });
+
   /** The options of a second mount over the session of a shell. */
   const remountOptions = (s: Shell) => ({
     client: s.client,
@@ -643,6 +674,9 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { language: "" })).toThrow("The option language must be a non-empty string");
     expect(() => mount(fresh(), { origins: ["ftp://x"] })).toThrow("An origin of the option origins");
     expect(() => mount(fresh(), { chrome: "yes" })).toThrow("The option chrome must be a boolean");
+    expect(() => mount(fresh(), { landmark: "page" })).toThrow('The option landmark must be "main" or "region"');
+    expect(() => mount(fresh(), { headingLevel: 7 })).toThrow("The option headingLevel must be from 1 to 6, found 7.");
+    expect(() => mount(fresh(), { headingLevel: "2" })).toThrow("The option headingLevel must be a positive integer");
     expect(() => mount(fresh(), { resumeCheckMs: -1 })).toThrow(
       "The option resumeCheckMs must be a non-negative integer",
     );
