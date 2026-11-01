@@ -49,7 +49,8 @@ export interface CatEngine {
  * The package's word is not trusted: a reference only selects among the engines that the host configured. A function is an
  * allowlist from known references to configured engines. It never derives an address or a token URL from the reference,
  * and never returns shared credentials for any reference, because the port sends the client secret and the candidate's
- * data to the engine it returns.
+ * data to the engine it returns. A `Map` is read once, when the port is created, and a later change to it is not seen: a
+ * secret that rotates needs the function, which the port calls for every request.
  */
 export type CatEngines = ReadonlyMap<string, CatEngine> | CatEngineResolver;
 
@@ -123,8 +124,9 @@ function checkedMap(engines: ReadonlyMap<string, CatEngine>): ReadonlyMap<string
  * is not trusted. One port serves many engines, and a gateway maps its public reference to the upstream endpoint.
  *
  * - **Authorization.** The port asks the token endpoint of the engine for a bearer token and keeps one for each token URL,
- *   client and scope until the engine answers `401`, then asks again with the current credentials and repeats the request
- *   once. A `403` is a failure and is not repeated. It reads no clock.
+ *   client and scope until the engine answers `401`, then asks again with the credentials that `engines` gives for the
+ *   request and repeats it once. A `403` is a failure and is not repeated. It reads no clock. A failed token request is a
+ *   `ServiceError` that `createCatRestHandler` answers as a fault, whatever its status.
  * - **Requests.** Redirects are errors, and every request, the token request included, is aborted after `timeoutMs`. A
  *   network error or a timeout rejects with the error of `fetch`.
  * - **Personal data.** Create Session sends the personal needs and preferences only to an engine with `sharePnp`.

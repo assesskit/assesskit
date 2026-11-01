@@ -23,8 +23,9 @@ import {
   strictRecord,
 } from "@assesskit/runtime/checks";
 import { DataError } from "@assesskit/runtime/errors";
+import type { QtiMetadata } from "@assesskit/runtime/metadata";
 import * as v from "valibot";
-import { metadataRecordSchema, writeMetadataRecord } from "./metadata-record.js";
+import { metadataRecordAnswerSchema, metadataRecordSchema, writeMetadataRecord } from "./metadata-record.js";
 import { readSectionData } from "./section-data.js";
 
 // The JSON of the bodies of the binding (OpenAPI listing of the binding, Appendix B1.2), in both directions: the client
@@ -114,17 +115,37 @@ export function readCreateSessionBody(json: unknown): CreateSessionRequest {
 
 // The binding's `qtiMetadata` of a section is one QTI metadata record, which `qtiMetadataRecord` carries. It is not the
 // metadata file that `qtiMetadata` of `SectionData` holds, which the binding has no field for and is not sent.
-const bindingSectionSchema: Schema<SectionData> = v.pipe(
-  v.strictObject({
+function sectionEntries(metadata: Schema<QtiMetadata>) {
+  return {
     sectionConfiguration: v.string(),
     qtiUsagedata: v.optional(v.string()),
-    qtiMetadata: v.optional(metadataRecordSchema),
-  }),
-  v.transform(({ sectionConfiguration, qtiUsagedata, qtiMetadata }) => ({
+    qtiMetadata: v.optional(metadata),
+  };
+}
+
+function asSectionData({
+  sectionConfiguration,
+  qtiUsagedata,
+  qtiMetadata,
+}: v.InferOutput<v.ObjectSchema<ReturnType<typeof sectionEntries>, undefined>>): SectionData {
+  return {
     sectionConfiguration,
     ...(qtiUsagedata === undefined ? {} : { qtiUsagedata }),
     ...(qtiMetadata === undefined ? {} : { qtiMetadataRecord: qtiMetadata }),
-  })),
+  };
+}
+
+/** The `SectionDType` of a request, whose schema has `additionalProperties: false`. */
+const bindingSectionSchema: Schema<SectionData> = v.pipe(
+  v.strictObject(sectionEntries(metadataRecordSchema)),
+  v.transform(asSectionData),
+);
+
+/** The `SectionDType` of an answer, which leaves out a property that the schema does not name. */
+const sectionAnswerSchema: Schema<SectionData> = v.pipe(
+  recordSchema,
+  v.object(sectionEntries(metadataRecordAnswerSchema)),
+  v.transform(asSectionData),
 );
 
 /** Returns the body of Create Section, which is also the `section` of the answer to Get Section. */
@@ -155,7 +176,7 @@ export function readCreateSectionAnswer(json: unknown): CreateSectionResponse {
   return parseWith(createSectionSchema, json, "The answer to Create Section");
 }
 
-const getSectionSchema = v.object({ section: bindingSectionSchema, items: v.optional(v.unknown()) });
+const getSectionSchema = v.object({ section: sectionAnswerSchema, items: v.optional(v.unknown()) });
 
 const pooledSchema = v.object({ sectionData: v.unknown(), items: v.unknown() });
 

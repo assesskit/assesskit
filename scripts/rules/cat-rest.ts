@@ -84,6 +84,13 @@ export const CAT_REST_RULES: readonly Rule[] = [
     test: TEST,
   },
   {
+    rule: "A failed request for a token answers 500 and reaches onError, whatever the status of the token endpoint, and never blames the caller.",
+    file: STATUS,
+    find: "if (error instanceof ServiceError && !(error instanceof TokenEndpointError)) {",
+    replace: "if (error instanceof ServiceError) {",
+    test: TEST,
+  },
+  {
     rule: "Every answer of 500 reports its error to onError.",
     file: HANDLER,
     find: "if (failure.fault) report(cause, request, operation);",

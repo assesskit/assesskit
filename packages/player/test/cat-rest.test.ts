@@ -19,6 +19,7 @@ import {
   CAT_SCOPES,
   type CatAuthorizer,
   type CatEngine,
+  type CatEngines,
   type CatFetch,
   type CatFetchRequest,
   type CatOperation,
@@ -161,7 +162,7 @@ describe("createRestCatPort", () => {
         credentials: CREDENTIALS,
       });
       await expect(atToken.getSection(PREFIX, "sec1")).rejects.toMatchObject({
-        name: "ServiceError",
+        name: "TokenEndpointError",
         status: answer.status,
         message: expect.stringContaining(`The token endpoint ${TOKEN_URL} answered with a redirect`),
       });
@@ -484,6 +485,11 @@ describe("createRestCatPort", () => {
       });
       return port.endSection(PREFIX, "sec1").catch((caught: unknown) => caught);
     };
+    const refused = await badToken({ status: 400, body: "invalid_scope" });
+    expect(refused).toBeInstanceOf(ServiceError);
+    expect(refused).toMatchObject({ name: "TokenEndpointError", status: 400, body: "invalid_scope" });
+    expect((refused as Error).message).toBe(`The token endpoint ${TOKEN_URL} answered with the status 400.`);
+    expect((refused as Error).cause).toMatchObject({ name: "ServiceError", status: 400 });
     expect(await badToken({ status: 500, body: "oops" })).toMatchObject({ status: 500, body: "oops" });
     expect(await badToken({ status: 200, body: { token_type: "bearer" } })).toBeInstanceOf(ServiceError);
     expect(await badToken({ status: 200, body: { access_token: "t", token_type: "mac" } })).toBeInstanceOf(
@@ -688,6 +694,26 @@ describe("createRestCatPort", () => {
     ]);
   });
 
+  it("reads a Map of engines once, when the port is created, so that a secret that rotates needs the function", async () => {
+    const reference = "https://a.example/ims/cat/v1p0";
+    let secret = "first";
+    const engine = (): CatEngine => ({ endpoint: reference, credentials: { ...CREDENTIALS, clientSecret: secret } });
+    const basic = (password: string): string => `Basic ${btoa(`player:${password}`)}`;
+    /** The credentials of the token requests when the secret changes and the engine revokes the token in between. */
+    const sent = async (engines: CatEngines): Promise<(string | undefined)[]> => {
+      secret = "first";
+      const service = tokenService();
+      const port = createRestCatPort({ fetch: service.send, engines });
+      await port.endSection(reference, "s1");
+      service.revoked.add("tok1");
+      secret = "second";
+      await port.endSection(reference, "s2");
+      return service.tokenRequests.map(({ authorization }) => authorization);
+    };
+    expect(await sent(new Map([[reference, engine()]]))).toEqual([basic("first"), basic("first")]);
+    expect(await sent(() => engine())).toEqual([basic("first"), basic("second")]);
+  });
+
   it("sends the personal needs and preferences only to the engines that are set to receive them", async () => {
     const service = fakeService(() => ({
       status: 201,
@@ -823,6 +849,49 @@ describe("createRestCatPort", () => {
     expect(await rejection(answer(json("null")))).toBe(
       "The answer to Get Section is invalid at section: expected an object, found null.",
     );
+  });
+
+  it("leaves out a property that the engine adds to a Get Section answer, at every level, and still refuses one in a request", async () => {
+    const answer = (section: unknown): Promise<unknown> =>
+      onePort({
+        fetch: fakeService(() => ({ status: 200, body: { items: { itemIdentifiers: ["i1"] }, section, extra: 1 } }))
+          .fetch,
+        endpoint: PREFIX,
+        credentials: CREDENTIALS,
+      }).getSection(PREFIX, "sec1");
+    expect(
+      await answer({
+        sectionConfiguration: "e30=",
+        added: true,
+        qtiMetadata: {
+          composite: false,
+          added: true,
+          portableCustomInteractionContext: { customTypeIdentifier: "urn:pci", added: true },
+        },
+      }),
+    ).toEqual({
+      sectionData: {
+        sectionConfiguration: "e30=",
+        qtiMetadataRecord: {
+          composite: false,
+          portableCustomInteractionContext: { customTypeIdentifier: "urn:pci" },
+          interactionTypes: [],
+          scoringModes: [],
+        },
+      },
+      items: { itemIdentifiers: ["i1"], stageLength: null },
+    });
+    expect(await rejection(answer({ sectionConfiguration: "e30=", qtiMetadata: [] }))).toBe(
+      "The answer to Get Section is invalid at section.qtiMetadata: expected an object, found an array.",
+    );
+    expect(() => readSectionBody({ sectionConfiguration: "e30=", added: true })).toThrow(DataError);
+    expect(() => readSectionBody({ sectionConfiguration: "e30=", qtiMetadata: { added: true } })).toThrow(DataError);
+    expect(() =>
+      readSectionBody({
+        sectionConfiguration: "e30=",
+        qtiMetadata: { portableCustomInteractionContext: { added: true } },
+      }),
+    ).toThrow(DataError);
   });
 
   it("reads or refuses arbitrary JSON as options with a DataError, and nothing else", () => {
@@ -2360,6 +2429,51 @@ describe("createRestCatPort against createCatRestHandler", () => {
         ["getSection", INTERNAL],
       ]);
     });
+
+    it.each([400, 404, 429, 503])(
+      "answers 500 and tells onError when the token endpoint of the gateway answers %i, and never blames the caller",
+      async (status) => {
+        const tokens = { current: BEARER, issued: 0 };
+        const { port: engine, log } = fakeEngine();
+        const behind = wire(createCatRestHandler(engine, { authorize: authorized }), tokens);
+        const upstream = createRestCatPort({
+          fetch: async (url, request) =>
+            url === TOKEN_URL
+              ? { ok: false, status, text: async () => '{"error":"invalid_scope"}' }
+              : behind(url, request),
+          engines: new Map([[PUBLIC, { endpoint: INTERNAL, credentials: CREDENTIALS }]]),
+        });
+        const faults: unknown[] = [];
+        const gateway = createCatRestHandler(upstream, {
+          authorize: authorized,
+          prefix: PUBLIC,
+          onError: (error) => faults.push(error),
+        });
+        const platform = createRestCatPort({
+          fetch: wire(gateway, tokens),
+          engines: new Map([[PUBLIC, { endpoint: GATEWAY, credentials: CREDENTIALS }]]),
+        });
+        const calls = [
+          () => platform.getSection(PUBLIC, "sec1"),
+          () => platform.createSession(PUBLIC, "sec1", {}),
+          () => platform.endSection(PUBLIC, "sec1"),
+        ];
+        for (const call of calls) {
+          const error = await call().then(
+            () => undefined,
+            (reason: unknown) => reason,
+          );
+          expect(error).toMatchObject({ name: "ServiceError", status: 500 });
+          expect((error as ServiceError).body).not.toMatch(/auth\.example|invalid_scope/);
+        }
+        expect(log).toEqual([]);
+        expect(faults).toHaveLength(calls.length);
+        for (const fault of faults) {
+          expect(fault).toMatchObject({ name: "TokenEndpointError", status });
+          expect((fault as Error).message).toBe(`The token endpoint ${TOKEN_URL} answered with the status ${status}.`);
+        }
+      },
+    );
 
     it("answers 500 without an address when the gateway does not set the prefix, and tells onError why", async () => {
       const { platform, log, faults } = chain(undefined);

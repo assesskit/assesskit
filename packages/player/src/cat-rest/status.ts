@@ -2,6 +2,7 @@
 
 import { DataError } from "@assesskit/runtime/errors";
 import { ServiceError } from "../errors.js";
+import { TokenEndpointError } from "./rest-client.js";
 import type { CatOperation } from "./route.js";
 
 /** The statuses of the answers that succeed (table 2.4 of the binding). */
@@ -67,12 +68,13 @@ export function bodyFailure(error: unknown): Failure {
  * @remarks
  * The port refuses with a `ServiceError`, which is also what `createRestCatPort` throws for the answer of an engine: 404 for
  * an object that is unknown, 400 for a request that the engine refuses, 429 and 503 for an engine that is busy. Create
- * Section names no object, so a 404 there is a fault of the engine or of the endpoint of a gateway. Every other error is a
- * fault of the engine, whatever its class, and nothing of it is shown: a `DataError` of a gateway names the address of the
- * upstream engine, and one of an engine its own state.
+ * Section names no object, so a 404 there is a fault of the engine or of the endpoint of a gateway. A failed request for a
+ * token is a fault of the gateway whatever its status, because its credentials or token URL are wrong and the caller did
+ * nothing. Every other error is a fault of the engine, whatever its class, and nothing of it is shown: a `DataError` of a
+ * gateway names the address of the upstream engine, and one of an engine its own state.
  */
 export function portFailure(error: unknown, operation: CatOperation): Failure {
-  if (error instanceof ServiceError) {
+  if (error instanceof ServiceError && !(error instanceof TokenEndpointError)) {
     if (error.status === 404 && operation !== "createSection") {
       return { status: 404, description: UNKNOWN_OBJECT, fault: false };
     }

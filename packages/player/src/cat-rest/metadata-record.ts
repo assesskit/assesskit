@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: The names of the JSON fields are those of the binding.
 
-import type { Schema } from "@assesskit/runtime/checks";
+import { recordSchema, type Schema } from "@assesskit/runtime/checks";
 import {
   checkQtiMetadata,
   FEEDBACK_TYPES,
@@ -22,31 +22,51 @@ const toolStringSchema = v.pipe(
   ),
 );
 
-const pciContextSchema: Schema<PciContext> = v.strictObject({
+const pciContextEntries = {
   customTypeIdentifier: v.optional(v.string()),
   interactionKind: v.optional(v.string()),
-});
+};
 
-/** The `QTIMetadataDType` of the binding (section 5.3.8), read as a QTI metadata record: a list that it leaves out is empty. */
-export const metadataRecordSchema: Schema<QtiMetadata> = v.pipe(
-  v.strictObject({
+/** The fields of the `QTIMetadataDType` of the binding (section 5.3.8), with the schema of the portable custom interaction context. */
+function metadataEntries(pciContext: Schema<PciContext>) {
+  return {
     itemTemplate: v.optional(v.boolean()),
     timeDependent: v.optional(v.boolean()),
     composite: v.optional(v.boolean()),
     interactionType: v.optional(v.array(v.picklist(INTERACTION_TYPES))),
-    portableCustomInteractionContext: v.optional(pciContextSchema),
+    portableCustomInteractionContext: v.optional(pciContext),
     feedbackType: v.optional(v.picklist(FEEDBACK_TYPES)),
     solutionAvailable: v.optional(v.boolean()),
     scoringMode: v.optional(v.array(v.picklist(SCORING_MODES))),
     toolName: v.optional(toolStringSchema),
     toolVersion: v.optional(toolStringSchema),
     toolVendor: v.optional(toolStringSchema),
-  }),
-  v.transform(({ interactionType, scoringMode, ...fields }) => ({
-    ...fields,
-    interactionTypes: interactionType ?? [],
-    scoringModes: scoringMode ?? [],
-  })),
+  };
+}
+
+/** Reads the lists that the binding leaves out as empty, and names them as the QTI metadata record does. */
+function asRecord({
+  interactionType,
+  scoringMode,
+  ...fields
+}: v.InferOutput<v.ObjectSchema<ReturnType<typeof metadataEntries>, undefined>>): QtiMetadata {
+  return { ...fields, interactionTypes: interactionType ?? [], scoringModes: scoringMode ?? [] };
+}
+
+/**
+ * The `QTIMetadataDType` of the binding, read as a QTI metadata record, in a request: the schema has
+ * `additionalProperties: false`, so a property that it does not name is refused.
+ */
+export const metadataRecordSchema: Schema<QtiMetadata> = v.pipe(
+  v.strictObject(metadataEntries(v.strictObject(pciContextEntries))),
+  v.transform(asRecord),
+);
+
+/** The same record in an answer, in which a property that the schema does not name is left out, as the engine may add one. */
+export const metadataRecordAnswerSchema: Schema<QtiMetadata> = v.pipe(
+  recordSchema,
+  v.object(metadataEntries(v.object(pciContextEntries))),
+  v.transform(asRecord),
 );
 
 /**

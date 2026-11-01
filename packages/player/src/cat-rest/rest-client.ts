@@ -75,7 +75,8 @@ export interface RestClient {
    * @param url - The URL.
    * @param body - The JSON body; none for a request without one.
    * @returns The parsed JSON of the answer.
-   * @throws `ServiceError` when the service answers with another status than 2xx after that, or with a body that is not JSON.
+   * @throws `ServiceError` when the service answers with another status than 2xx after that, or with a body that is not JSON;
+   *   `TokenEndpointError`, a `ServiceError`, when the request for a token fails.
    */
   send(credentials: OAuthClientCredentials, method: string, url: string, body?: unknown): Promise<unknown>;
 }
@@ -86,6 +87,25 @@ export interface RestClientOptions {
   readonly fetch: CatFetch;
   /** The milliseconds after which a request, the token request included, is aborted. */
   readonly timeoutMs: number;
+}
+
+/**
+ * The failure of a request to the token endpoint, with the status and the body that the endpoint answered.
+ *
+ * @remarks
+ * The status describes the token request and not the request of the caller, so a gateway must not pass it on: a token
+ * endpoint that answers 400 or 404 means that the credentials or the token URL of the host are wrong, which is a fault of the
+ * host. `cause` is the error that the request raised.
+ */
+export class TokenEndpointError extends ServiceError {
+  /** Error class name. */
+  override name = "TokenEndpointError";
+
+  /** @param failure - The error that the token request raised. */
+  constructor(failure: ServiceError) {
+    super(failure.message, failure.status, failure.body);
+    this.cause = failure;
+  }
 }
 
 /** Encodes a value as `application/x-www-form-urlencoded` does, which RFC 6749 section 2.3.1 asks for in a Basic credential. */
@@ -125,7 +145,7 @@ function refuseRedirect(response: CatFetchResponse, what: string): void {
  * It keeps the bearer token of each token URL, client and scope, so that a run of requests asks once, and the requests that
  * need a token at the same time share one request for it. It keeps no clock, so it learns that a token expired from the
  * service's `401`, not from `expires_in`; the new token is asked for with the credentials of the call that met the `401`,
- * so that the current secret of the host is used.
+ * so that the current secret of the host is used. A failure of the token request is a `TokenEndpointError`.
  *
  * @param options - The `fetch` function and the timeout.
  * @returns The client.
@@ -173,7 +193,7 @@ export function createRestClient({ fetch, timeoutMs }: RestClientOptions): RestC
     if (token === undefined) {
       token = requestToken(credentials).catch((error: unknown) => {
         tokens.delete(key);
-        throw error;
+        throw error instanceof ServiceError ? new TokenEndpointError(error) : error;
       });
       tokens.set(key, token);
     }
