@@ -51,7 +51,7 @@ The `browserslist` of `packages/player/package.json` names the three browsers fo
 The static checks of `pnpm compat` stay because the smoke test runs only the code paths that its cases reach, and the
 linters read every line of the built JavaScript and every stylesheet.
 
-`pnpm compat` lints `dist/`, so it needs `pnpm build` first. It checks the shared and browser folders only, and every
+`pnpm compat` builds, then lints `dist/`. It checks the shared and browser folders only, and every
 stylesheet of the package. The stylelint plugin reports `text-indent` as partial for its `each-line` and `hanging`
 keywords, which the stylesheet does not use, so `compat/lint.ts` ignores that one feature.
 

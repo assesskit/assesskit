@@ -81,33 +81,33 @@ Use these words with these meanings in code, comments and docs.
 
 ## Commands
 
-| Command                      | Does                                                                                                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install`               | Installs the dependencies and the git hooks                                                                                                                                       |
-| `pnpm lint`                  | Biome and cspell; `pnpm format` fixes formatting                                                                                                                                  |
-| `pnpm check:standards`       | The rules of the engineering standards that a tool can check; `node scripts/check-standards.ts <path>...` reports only the files below the paths                                  |
-| `pnpm typecheck`             | `tsc` over every package and the tooling                                                                                                                                          |
-| `pnpm test`                  | Vitest in Node, offline: no browser, corpus, XSD or benchmark project                                                                                                             |
-| `pnpm test:browser`          | The browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first                                       |
-| `pnpm test:corpus`           | Tests that read the corpus; run `pnpm corpus` first                                                                                                                               |
-| `pnpm test:xsd`              | Tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first                                                                                                     |
-| `pnpm bench`                 | The benchmarks of the runtime and the mount time of the player, in Chromium with the CPU slowed 4 times, against their budgets                                                    |
-| `pnpm schemas`               | Downloads the XSDs into `.cache/schemas`; `pnpm schemas:pin` writes new hashes                                                                                                    |
-| `pnpm unicode`               | Regenerates the Unicode tables of `values` from the pinned files                                                                                                                  |
-| `pnpm asi-table`             | Regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first                                                                                       |
-| `pnpm knip`                  | Unused files, exports and dependencies                                                                                                                                            |
-| `pnpm compat`                | The built JavaScript and the CSS of the player stay inside the browser baseline; run `pnpm build` first                                                                           |
-| `pnpm compat:engines`        | The smoke test in the pinned old browsers, in Docker; run `pnpm build` first                                                                                                      |
-| `pnpm build`                 | `tsc -b` after deleting `dist/`, so that no stale output ships                                                                                                                    |
-| `pnpm check:packages`        | Builds, then publint and Are the Types Wrong on the packed packages                                                                                                               |
-| `pnpm check:release`         | Fails when a package that a changeset releases is private or lacks `publishConfig.access`, so that `changeset publish` would skip it                                              |
-| `pnpm check:tarballs`        | Packs the runtime and the player, installs them into a scratch project, imports every subpath in Node.js and type-checks them with `bundler` and `node16`; run `pnpm build` first |
-| `pnpm check:licenses`        | Fails on a production dependency whose license is not MIT, Apache-2.0, BSD or ISC                                                                                                 |
-| `pnpm check:audit`           | `pnpm audit` of the production dependencies at any severity and of all dependencies at high                                                                                       |
-| `pnpm check:rules`           | Removes each security rule that `scripts/check-rules.ts` lists from a copy of the code and fails when its test still passes; needs Chromium                                       |
-| `pnpm test:coverage`         | The Node tests with the coverage floors of `vitest.config.ts` for the runtime and for the folders of the player that need no page                                                 |
-| `pnpm test:coverage:browser` | The browser tests in Chromium, with the floors of the folders of the player that draw a page and of its client                                                                    |
-| `pnpm docs:api`              | TypeDoc into `docs/api`; fails on undocumented exports                                                                                                                            |
+| Command                      | Does                                                                                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install`               | Installs the dependencies and the git hooks                                                                                                               |
+| `pnpm lint`                  | Biome and cspell; `pnpm format` fixes formatting                                                                                                          |
+| `pnpm check:standards`       | The rules of the engineering standards that a tool can check; `node scripts/check-standards.ts <path>...` reports only the files below the paths          |
+| `pnpm typecheck`             | `tsc` over every package and the tooling                                                                                                                  |
+| `pnpm test`                  | Vitest in Node, offline: no browser, corpus, XSD or benchmark project                                                                                     |
+| `pnpm test:browser`          | The browser tests of the player in Chromium, Firefox and WebKit; run `pnpm exec playwright install`, `pnpm schemas` and `pnpm corpus` first               |
+| `pnpm test:corpus`           | Tests that read the corpus; run `pnpm corpus` first                                                                                                       |
+| `pnpm test:xsd`              | Tests that read the official XSDs; run `pnpm schemas` and `pnpm corpus` first                                                                             |
+| `pnpm bench`                 | The benchmarks of the runtime and the mount time of the player, in Chromium with the CPU slowed 4 times, against their budgets                            |
+| `pnpm schemas`               | Downloads the XSDs into `.cache/schemas`; `pnpm schemas:pin` writes new hashes                                                                            |
+| `pnpm unicode`               | Regenerates the Unicode tables of `values` from the pinned files                                                                                          |
+| `pnpm asi-table`             | Regenerates the element table of `asi` from the pinned ASI schema; run `pnpm schemas` first                                                               |
+| `pnpm knip`                  | Unused files, exports and dependencies                                                                                                                    |
+| `pnpm compat`                | The built JavaScript and the CSS of the player stay inside the browser baseline                                                                           |
+| `pnpm compat:engines`        | The smoke test in the pinned old browsers, in Docker                                                                                                      |
+| `pnpm build`                 | `tsc -b` after deleting `dist/`, so that no stale output ships                                                                                            |
+| `pnpm check:packages`        | Builds, then publint and Are the Types Wrong on the packed packages                                                                                       |
+| `pnpm check:release`         | Fails when a package that a changeset releases is private or lacks `publishConfig.access`, so that `changeset publish` would skip it                      |
+| `pnpm check:tarballs`        | Packs the runtime and the player, installs them into a scratch project, imports every subpath in Node.js and type-checks them with `bundler` and `node16` |
+| `pnpm check:licenses`        | Fails on a production dependency whose license is not MIT, Apache-2.0, BSD or ISC                                                                         |
+| `pnpm check:audit`           | `pnpm audit` of the production dependencies at any severity and of all dependencies at high                                                               |
+| `pnpm check:rules`           | Removes each security rule that `scripts/check-rules.ts` lists from a copy of the code and fails when its test still passes; needs Chromium               |
+| `pnpm test:coverage`         | The Node tests with the coverage floors of `vitest.config.ts` for the runtime and for the folders of the player that need no page                         |
+| `pnpm test:coverage:browser` | The browser tests in Chromium, with the floors of the folders of the player that draw a page and of its client                                            |
+| `pnpm docs:api`              | TypeDoc into `docs/api`; fails on undocumented exports                                                                                                    |
 
 Run all of them before finishing a change. Development needs Node.js 22.18+ and pnpm 12: the scripts in `compat/` and
 `scripts/` are TypeScript that Node runs directly (from 22.18 without a flag), so their relative imports end in `.ts`. The

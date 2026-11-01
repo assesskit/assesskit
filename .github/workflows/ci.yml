@@ -168,7 +168,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
       - run: pnpm compat:engines
 
   # Tests of the runtime and of its examples that read the 1EdTech examples and the W3C regular expression suite, downloaded at the commits and hashes

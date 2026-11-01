@@ -61,25 +61,25 @@ has the full list of who owns what, and [Delivery](docs/runtime/delivery.md#mode
 
 Node.js 22.18+ and pnpm 12 are required. One command sets up the repository: `pnpm install`.
 
-| Command                | Does                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| `pnpm lint`            | Biome and cspell                                                                       |
-| `pnpm check:standards` | The rules of the engineering standards that a tool can check                           |
-| `pnpm typecheck`       | Every package, and the tooling at the root                                             |
-| `pnpm test`            | Vitest, offline                                                                        |
-| `pnpm test:browser`    | The tests of the player that need a browser; run `pnpm exec playwright install` first  |
-| `pnpm test:corpus`     | Tests that read the corpus; run `pnpm corpus` first                                    |
-| `pnpm test:xsd`        | Tests that validate against the XSDs; run `pnpm schemas` first                         |
-| `pnpm bench`           | The benchmarks of the runtime against their budgets                                    |
-| `pnpm knip`            | Unused files, exports and dependencies                                                 |
-| `pnpm build`           | The built packages                                                                     |
-| `pnpm check:packages`  | publint and Are the Types Wrong on the packed packages                                 |
-| `pnpm compat`          | The built code of the player stays inside its browser baseline; run `pnpm build` first |
-| `pnpm compat:engines`  | The smoke test in the pinned old browsers, in Docker; run `pnpm build` first           |
-| `pnpm docs:api`        | TypeDoc into `docs/api`; fails on undocumented exports                                 |
-| `pnpm corpus`          | Downloads the 1EdTech examples and the W3C regular expression suite                    |
-| `pnpm schemas`         | Downloads the official XSDs (about 140 MB) into `.cache/schemas`                       |
-| `pnpm unicode`         | Regenerates the Unicode tables of the regular expressions                              |
+| Command                | Does                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `pnpm lint`            | Biome and cspell                                                                      |
+| `pnpm check:standards` | The rules of the engineering standards that a tool can check                          |
+| `pnpm typecheck`       | Every package, and the tooling at the root                                            |
+| `pnpm test`            | Vitest, offline                                                                       |
+| `pnpm test:browser`    | The tests of the player that need a browser; run `pnpm exec playwright install` first |
+| `pnpm test:corpus`     | Tests that read the corpus; run `pnpm corpus` first                                   |
+| `pnpm test:xsd`        | Tests that validate against the XSDs; run `pnpm schemas` first                        |
+| `pnpm bench`           | The benchmarks of the runtime against their budgets                                   |
+| `pnpm knip`            | Unused files, exports and dependencies                                                |
+| `pnpm build`           | The built packages                                                                    |
+| `pnpm check:packages`  | publint and Are the Types Wrong on the packed packages                                |
+| `pnpm compat`          | The built code of the player stays inside its browser baseline                        |
+| `pnpm compat:engines`  | The smoke test in the pinned old browsers, in Docker                                  |
+| `pnpm docs:api`        | TypeDoc into `docs/api`; fails on undocumented exports                                |
+| `pnpm corpus`          | Downloads the 1EdTech examples and the W3C regular expression suite                   |
+| `pnpm schemas`         | Downloads the official XSDs (about 140 MB) into `.cache/schemas`                      |
+| `pnpm unicode`         | Regenerates the Unicode tables of the regular expressions                             |
 
 [AGENTS.md](AGENTS.md) states the conventions, [CONTRIBUTING.md](CONTRIBUTING.md) the process and
 [SECURITY.md](SECURITY.md) how to report a vulnerability and how to deploy safely.
