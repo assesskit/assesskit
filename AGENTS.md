@@ -169,6 +169,13 @@ The runtime owns everything QTI defines that is not presentation or platform; th
 - Browser folders import from `@assesskit/runtime/delivery` only `viewFromJson`, `actionToJson` and types, because the
   engine holds the answer keys: `client/local.ts` alone loads the engine, with `import()`, for practice on a device.
 
+## Deviations from the engineering standards
+
+| Standard                                                            | What the repository does                                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code that two packages of a family need goes in the family's `core` | The checks of one value that the runtime and the player share are `@assesskit/runtime/checks`, and no `@assesskit/core` exists                                                                                                                              | The family has two packages and the player depends on the runtime already, so a third package would add a release and a boundary for the checks alone. The checks are plain functions and schemas of valibot, a dependency pinned in both packages. |
+| Names of functions are verbs                                        | A pure accessor, and a constructor of a value, is named for what it returns: `partOf`, `timeLimits`, `lomGeneral`, `rubricScoreRange`, `single`, `container`. A function that builds a block or a document has a verb: `buildScoreCoversBlock`, `writeAsi`. | The names are those of the terms of QTI and of the types they return, such as `RubricScoreRange`, and a verb in front of each (`getTimeLimits`) would say nothing more.                                                                             |
+
 ## Naming
 
 - Files: kebab-case. One concept per file, named after it. Group files in folders by module.
