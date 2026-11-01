@@ -12,7 +12,8 @@ flowchart LR
   renderer --> body["DOM of the item,<br/>its stimuli and its feedback"]
   interactions["Interaction renderers<br/>by kind"] --> renderer
   sheets["Item stylesheets<br/>sanitized"] --> root
-  body --> root["ContentRoot<br/>open shadow root with player.css"]
+  body --> behavior["Tabs and sortable tables<br/>roles given their behavior"]
+  behavior --> root["ContentRoot<br/>open shadow root with player.css"]
   root --> math["MathJax, when<br/>the page has it"]
 ```
 
@@ -245,6 +246,47 @@ a page, and an image that can animate (`image/gif`, `apng`, `webp`, `avif`, `svg
 given). Their text alternative stays, and a notice (`div.ak-hazards`) names the hazards. The runtime's engine chooses a
 variant without the hazard where it can; the notice is the fallback for a hazard that remains.
 
+## Tabs and sortable tables
+
+QTI holds the roles and attributes of tabs and of a sortable table and gives them no behavior. `ContentRoot.show` gives both
+their behavior in the body and in the stimuli, so `mountDelivery` and `mountItem` have it, and no option turns it on. The
+markup is what the schema accepts: a tab is a `span`, because `button` is outside the schema.
+
+```xml
+<div role="tablist" aria-label="Sources">
+  <span role="tab" id="tab-email" aria-controls="panel-email" aria-selected="true">Email</span>
+  <span role="tab" id="tab-memo" aria-controls="panel-memo">Memo</span>
+</div>
+<div role="tabpanel" id="panel-email" aria-labelledby="tab-email"><p>...</p></div>
+<div role="tabpanel" id="panel-memo" aria-labelledby="tab-memo"><p>...</p></div>
+
+<table>
+  <thead><tr><th aria-sort="none">Region</th><th aria-sort="none">Revenue</th></tr></thead>
+  <tbody><tr><td>North</td><td data-ak-sort-value="1200">$1,200</td></tr></tbody>
+</table>
+```
+
+| Pattern        | Rule                                                                                                                                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tabs           | A `tablist` whose every `tab` names a `tabpanel` of the root with `aria-controls` is managed. The first tab with `aria-selected="true"`, else the first, is shown; the player sets `aria-selected`, `tabindex` (0 for the selected tab alone) and `hidden` on the other panels.       |
+| Tab keys       | Left and Right move to the next and the previous tab and select it, wrapping at the ends, and the other way round where the tablist runs from right to left. Home and End go to the first and the last tab. A press selects. A key with Shift, Control, Alt or Meta is the browser's. |
+| Keeping a tab  | The root keeps the selection by the `id` of the first tab across `show`, so that a stimulus shared by several items keeps its tab. A reload starts from the default, which no scored response depends on.                                                                             |
+| Sortable table | A `th` of the `thead` with `aria-sort` gets a `button` around its content. A press sorts the rows of the `tbody`, stably, ascending first and then descending, sets `aria-sort` on that header and `none` on the others, and leaves the focus on the button.                          |
+| Sort key       | The `data-ak-sort-value` of the cell, else its text. When every key of the column is a decimal number (`-5`, `.5`, `1e2`) the column is ordered by value; otherwise by `Intl.Collator` with `numeric` in the language of the content, so that "Zone 9" comes before "Zone 10".        |
+| Keeping a sort | None: a sort resets when `show` draws the content again, as a table answers one item.                                                                                                                                                                                                 |
+
+| Case                                                                           | Result                                                                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| A tab that names no panel                                                      | The tablist stays as authored: every panel shows, and the player sets nothing on it.    |
+| A table with a `rowspan` or more than one `tbody`                              | Stays as authored, with no button.                                                      |
+| A table whose rows hold a media, upload, custom or portable custom interaction | Stays as authored: moving a row would stop a recording or load a frame again.           |
+| Other interactions in a panel or a row                                         | They hide or move with it and keep their drafts; no response, action or result changes. |
+| Reading aloud and the line reader                                              | They read what shows: a hidden panel is left out, as `hidden` content is.               |
+
+The player styles a managed tablist (`ak-tablist`), the sort button (`ak-sort`) and its mark (`ak-sort-mark`, hidden from
+assistive technology: `aria-sort` says the state). The selected tab differs by weight and border besides color
+([styling](styling.md)).
+
 ## Interactions
 
 An interaction is drawn by the renderer registered for its kind in the `interactions` map, and as a placeholder when there is
@@ -352,36 +394,38 @@ would give and hostile stylesheets, and checks that the browser asks no other or
 
 Each file of `src/player/content/`, `src/player/roots/`, `src/player/catalogs/`, `src/player/feedback/` holds one concept.
 
-| File                       | Concept                                                                       |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `content/attributes.ts`    | The attributes of an element that the player keeps, and the sizes of media    |
-| `content/context.ts`       | The renderer that interaction renderers use, and the context of one rendering |
-| `content/embed.ts`         | Embedding a file by its media type                                            |
-| `content/foreign.ts`       | MathML, SSML and CML kept as XML, drawn with their namespaces                 |
-| `content/html-elements.ts` | The HTML elements of the schema, and the name of an element in the DOM        |
-| `content/index.ts`         | The public API                                                                |
-| `content/internal.ts`      | Helpers that other folders and tests share, which the package does not export |
-| `content/media.ts`         | The `audio`, `video` and `img` elements                                       |
-| `content/nodes.ts`         | Rendering the nodes of content                                                |
-| `content/object.ts`        | The `qti-object` element                                                      |
-| `content/options.ts`       | The options of the renderer, checked, with their defaults                     |
-| `content/printed.ts`       | The printed variable                                                          |
-| `content/renderer.ts`      | `createBodyRenderer`                                                          |
-| `content/srcset.ts`        | The candidates of a `srcset`                                                  |
-| `content/urls.ts`          | The URL policy for the references of content                                  |
-| `roots/build.ts`           | The DOM of the content of a root, in reading order                            |
-| `roots/content.ts`         | What a root shows, and its check                                              |
-| `roots/hazards.ts`         | The hazards that remain, and their notice                                     |
-| `roots/index.ts`           | The public API                                                                |
-| `roots/internal.ts`        | Helpers that other folders and tests share, which the package does not export |
-| `roots/links.ts`           | Links to an `id` inside a shadow root                                         |
-| `roots/root.ts`            | `createContentRoot`                                                           |
-| `roots/stylesheet.ts`      | Item stylesheets: fetching and sanitizing                                     |
-| `catalogs/cards.ts`        | The card of a catalog for a support                                           |
-| `catalogs/index.ts`        | The public API                                                                |
-| `feedback/dialog.ts`       | Modal feedback in a dialog                                                    |
-| `feedback/index.ts`        | The public API                                                                |
-| `feedback/render.ts`       | Modal and test feedback as elements                                           |
+| File                        | Concept                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `content/attributes.ts`     | The attributes of an element that the player keeps, and the sizes of media    |
+| `content/context.ts`        | The renderer that interaction renderers use, and the context of one rendering |
+| `content/embed.ts`          | Embedding a file by its media type                                            |
+| `content/foreign.ts`        | MathML, SSML and CML kept as XML, drawn with their namespaces                 |
+| `content/html-elements.ts`  | The HTML elements of the schema, and the name of an element in the DOM        |
+| `content/index.ts`          | The public API                                                                |
+| `content/internal.ts`       | Helpers that other folders and tests share, which the package does not export |
+| `content/media.ts`          | The `audio`, `video` and `img` elements                                       |
+| `content/nodes.ts`          | Rendering the nodes of content                                                |
+| `content/object.ts`         | The `qti-object` element                                                      |
+| `content/options.ts`        | The options of the renderer, checked, with their defaults                     |
+| `content/printed.ts`        | The printed variable                                                          |
+| `content/renderer.ts`       | `createBodyRenderer`                                                          |
+| `content/sortable-table.ts` | Sorting a table by a column                                                   |
+| `content/srcset.ts`         | The candidates of a `srcset`                                                  |
+| `content/tabs.ts`           | The tabs of a tablist                                                         |
+| `content/urls.ts`           | The URL policy for the references of content                                  |
+| `roots/build.ts`            | The DOM of the content of a root, in reading order                            |
+| `roots/content.ts`          | What a root shows, and its check                                              |
+| `roots/hazards.ts`          | The hazards that remain, and their notice                                     |
+| `roots/index.ts`            | The public API                                                                |
+| `roots/internal.ts`         | Helpers that other folders and tests share, which the package does not export |
+| `roots/links.ts`            | Links to an `id` inside a shadow root                                         |
+| `roots/root.ts`             | `createContentRoot`                                                           |
+| `roots/stylesheet.ts`       | Item stylesheets: fetching and sanitizing                                     |
+| `catalogs/cards.ts`         | The card of a catalog for a support                                           |
+| `catalogs/index.ts`         | The public API                                                                |
+| `feedback/dialog.ts`        | Modal feedback in a dialog                                                    |
+| `feedback/index.ts`         | The public API                                                                |
+| `feedback/render.ts`        | Modal and test feedback as elements                                           |
 
 ## References
 

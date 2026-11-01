@@ -1,10 +1,26 @@
+// cspell:ignore Ärlig
 import { readAsi } from "@assesskit/runtime/asi";
 import { resolveContent } from "@assesskit/runtime/content";
 import { createItemVariables } from "@assesskit/runtime/processing";
 import { single } from "@assesskit/runtime/values";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
-import { describe, expect, inject, it } from "vitest";
-import { axeViolations, itemBody, renderBody, testRenderer } from "./renderer-fixture.js";
+import { afterEach, describe, expect, inject, it } from "vitest";
+import { userEvent } from "vitest/browser";
+import { createLocalSession } from "../src/client/index.js";
+import { EN_MESSAGES } from "../src/index.js";
+import {
+  buildSpeechRequest,
+  type ContentRoot,
+  createContentRoot,
+  mountItem,
+  mountTools,
+  type RootContent,
+} from "../src/player/index.js";
+import { PLAYER_CSS, stylesheet } from "./css-fixture.js";
+import { NO_RECORDING } from "./files-fixture.js";
+import { axeViolations, ITEM_PATH, itemBody, renderBody, testRenderer } from "./renderer-fixture.js";
+import { supportView } from "./supports-fixture.js";
+import { waitFor } from "./wait.js";
 
 const { asset, other, stranger } = inject("fixtures");
 
@@ -918,5 +934,458 @@ describe("feedback, template content and rubric", () => {
     const block = el(content.root, "qti-rubric-block");
     expect(block.hasAttribute("data-use")).toBe(false);
     expect(block.textContent?.trim()).toBe("Read the passage.");
+  });
+});
+
+// Tabs and sortable tables ------------------------------------------------------------------------------------------------
+
+const hosts: HTMLElement[] = [];
+afterEach(() => {
+  for (const host of hosts.splice(0)) host.remove();
+});
+
+/** A content root and the host element in the page that holds it. */
+type Shown = ContentRoot & { readonly host: HTMLElement };
+
+/** Shows an item body, and the stimuli that the content names, in a new content root of the page or in the one given. */
+async function showBody(
+  body: string,
+  extra: { readonly stimuli?: readonly string[]; readonly language?: string } = {},
+  root?: Shown,
+): Promise<Shown> {
+  const host = document.createElement("div");
+  document.body.append(host);
+  hosts.push(host);
+  const shown =
+    root ??
+    Object.assign(
+      createContentRoot(host, {
+        messages: EN_MESSAGES,
+        assets: (path) => `${ASSETS}${path}`,
+        fetch: () => Promise.reject(new Error("The fixture has no stylesheet.")),
+        stylesheet: stylesheet(PLAYER_CSS),
+      }),
+      { host },
+    );
+  const content: RootContent = {
+    body: { nodes: itemBody(body), base: ITEM_PATH },
+    stimuli: (extra.stimuli ?? []).map((stimulus) => ({ nodes: itemBody(stimulus), base: ITEM_PATH })),
+    ...(extra.language === undefined ? {} : { language: extra.language }),
+  };
+  await shown.show(content);
+  return shown;
+}
+
+const all = (root: Shown, selector: string): HTMLElement[] => [...root.root.querySelectorAll<HTMLElement>(selector)];
+
+describe("tabs", () => {
+  const Tabs = `<div role="tablist" aria-label="Sources">
+    <span role="tab" id="tab-email" aria-controls="panel-email" aria-selected="true">Email</span>
+    <span role="tab" id="tab-memo" aria-controls="panel-memo">Memo</span>
+    <span role="tab" id="tab-notes" aria-controls="panel-notes">Notes</span>
+  </div>
+  <div role="tabpanel" id="panel-email" aria-labelledby="tab-email"><p>Email text.</p></div>
+  <div role="tabpanel" id="panel-memo" aria-labelledby="tab-memo"><p>Memo text.</p></div>
+  <div role="tabpanel" id="panel-notes" aria-labelledby="tab-notes"><p>Notes text.</p></div>`;
+
+  /** The state the player sets: for each tab `aria-selected` and `tabindex`, and for each panel whether it is hidden. */
+  function state(root: Shown) {
+    return {
+      selected: all(root, "[role=tab]").map((tab) => tab.getAttribute("aria-selected")),
+      tabindex: all(root, "[role=tab]").map((tab) => tab.getAttribute("tabindex")),
+      hidden: all(root, "[role=tabpanel]").map((panel) => panel.hidden),
+    };
+  }
+
+  const tab = (root: Shown, id: string): HTMLElement => {
+    const found = root.root.getElementById(id);
+    if (found === null) throw new Error(`The fixture has no tab ${id}.`);
+    return found;
+  };
+
+  it("shows the panel of the tab marked selected, hides the others and gives the selected tab the tab stop", async () => {
+    const root = await showBody(Tabs);
+    expect(state(root)).toEqual({
+      selected: ["true", "false", "false"],
+      tabindex: ["0", "-1", "-1"],
+      hidden: [false, true, true],
+    });
+    for (const panel of all(root, "[role=tabpanel]")) {
+      expect(getComputedStyle(panel).display).toBe(panel.hidden ? "none" : "block");
+    }
+  });
+
+  it("selects the first tab when none is marked, and the marked one when it is not the first", async () => {
+    const unmarked = await showBody(Tabs.replace(' aria-selected="true"', ""));
+    expect(state(unmarked).selected).toEqual(["true", "false", "false"]);
+    const second = await showBody(
+      Tabs.replace(' aria-selected="true"', "").replace('id="tab-memo"', 'id="tab-memo" aria-selected="true"'),
+    );
+    expect(state(second)).toMatchObject({ selected: ["false", "true", "false"], hidden: [true, false, true] });
+  });
+
+  it("selects the tab that a press reaches, with the pointer", async () => {
+    const root = await showBody(Tabs);
+    await userEvent.click(tab(root, "tab-memo"));
+    expect(state(root)).toEqual({
+      selected: ["false", "true", "false"],
+      tabindex: ["-1", "0", "-1"],
+      hidden: [true, false, true],
+    });
+    expect(root.root.activeElement).toBe(tab(root, "tab-memo"));
+  });
+
+  it("moves and selects with Left and Right, wrapping at the ends, and with Home and End", async () => {
+    const root = await showBody(Tabs);
+    tab(root, "tab-email").focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(state(root).selected).toEqual(["false", "true", "false"]);
+    expect(root.root.activeElement).toBe(tab(root, "tab-memo"));
+    await userEvent.keyboard("{End}");
+    expect(root.root.activeElement).toBe(tab(root, "tab-notes"));
+    await userEvent.keyboard("{ArrowRight}");
+    expect(state(root).selected).toEqual(["true", "false", "false"]);
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(root.root.activeElement).toBe(tab(root, "tab-notes"));
+    await userEvent.keyboard("{Home}");
+    expect(state(root)).toMatchObject({ selected: ["true", "false", "false"], hidden: [false, true, true] });
+    expect(root.root.activeElement).toBe(tab(root, "tab-email"));
+  });
+
+  it("leaves the keys with a modifier to the browser", async () => {
+    const root = await showBody(Tabs);
+    tab(root, "tab-email").focus();
+    await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}");
+    expect(state(root).selected).toEqual(["true", "false", "false"]);
+  });
+
+  it("turns the arrows round where the text runs from right to left", async () => {
+    const root = await showBody(Tabs.replace('role="tablist"', 'role="tablist" dir="rtl"'));
+    tab(root, "tab-email").focus();
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(root.root.activeElement).toBe(tab(root, "tab-memo"));
+    await userEvent.keyboard("{ArrowRight}");
+    expect(root.root.activeElement).toBe(tab(root, "tab-email"));
+  });
+
+  it("keeps the tab of a stimulus that the next content shares, and starts a tablist it has not shown from the default", async () => {
+    const root = await showBody("<p>First item.</p>", { stimuli: [Tabs] });
+    await userEvent.click(tab(root, "tab-notes"));
+    await showBody("<p>Second item.</p>", { stimuli: [Tabs] }, root);
+    expect(state(root)).toMatchObject({ selected: ["false", "false", "true"], hidden: [true, true, false] });
+    const other = Tabs.replaceAll("email", "mail").replaceAll("memo", "note").replaceAll("notes", "log");
+    await showBody("<p>Third item.</p>", { stimuli: [other] }, root);
+    expect(state(root).selected).toEqual(["true", "false", "false"]);
+    await showBody("<p>Fourth item.</p>", { stimuli: [Tabs] }, root);
+    expect(state(root).selected).toEqual(["false", "false", "true"]);
+  });
+
+  it("leaves a tablist as authored when a tab names no panel, so that every panel shows", async () => {
+    const root = await showBody(Tabs.replace('aria-controls="panel-notes"', 'aria-controls="missing"'));
+    expect(state(root)).toEqual({
+      selected: ["true", null, null],
+      tabindex: [null, null, null],
+      hidden: [false, false, false],
+    });
+    expect(all(root, "[role=tablist]")[0]?.classList.contains("ak-tablist")).toBe(false);
+  });
+
+  it("is read aloud and followed by the line reader for the panel that shows alone", async () => {
+    const root = await showBody(
+      Tabs.replaceAll("Email text.", "Email text one.").replaceAll("Memo text.", "Memo text two."),
+    );
+    const range = document.createRange();
+    range.selectNodeContents(root.stage);
+    const read = () =>
+      buildSpeechRequest(range, {
+        settings: { readingType: "computer-read-aloud", restrictionTypes: [] },
+        messages: EN_MESSAGES,
+        language: "en",
+      })?.text;
+    expect(read()).toContain("Email text one.");
+    expect(read()).not.toContain("Memo text two.");
+    await userEvent.click(tab(root, "tab-memo"));
+    expect(read()).toContain("Memo text two.");
+    expect(read()).not.toContain("Email text one.");
+
+    const tools = document.createElement("div");
+    document.body.append(tools);
+    hosts.push(tools);
+    const handle = mountTools(tools, {
+      messages: EN_MESSAGES,
+      language: "en",
+      stage: root.stage,
+      assets: (path) => path,
+      slots: {},
+      onSupport: () => undefined,
+    });
+    handle.update({ companion: null, supports: [supportView("line-reader", { state: "active", active: true })] });
+    const band = root.stage.querySelector("[role=slider]");
+    // The tablist and the one paragraph that shows are the lines; the two hidden paragraphs are none.
+    expect(band?.getAttribute("aria-valuemax")).toBe("2");
+    handle.destroy();
+  });
+
+  it("passes axe at WCAG 2.2 AA with the first and with the last tab selected", async () => {
+    const root = await showBody(Tabs);
+    expect(await axeViolations(root.host)).toEqual([]);
+    await userEvent.click(tab(root, "tab-notes"));
+    expect(await axeViolations(root.host)).toEqual([]);
+  });
+});
+
+describe("sortable tables", () => {
+  const Revenue = `<table>
+    <caption>Revenue by region</caption>
+    <thead><tr><th aria-sort="none">Region</th><th aria-sort="none">Revenue</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>North</td><td data-ak-sort-value="1200">$1,200</td><td>a</td></tr>
+      <tr><td>South</td><td data-ak-sort-value="900">$900</td><td>b</td></tr>
+      <tr><td>East</td><td data-ak-sort-value="1200">$1,200</td><td>c</td></tr>
+      <tr><td>West</td><td data-ak-sort-value="50">$50</td><td>d</td></tr>
+    </tbody>
+  </table>`;
+
+  const column = (root: Shown, index: number): string[] =>
+    all(root, "tbody tr").map((row) => row.children[index]?.textContent ?? "");
+  const header = (root: Shown, index: number): HTMLElement => {
+    const found = all(root, "thead th")[index];
+    if (found === undefined) throw new Error(`The fixture has no header ${index}.`);
+    return found;
+  };
+  const press = async (root: Shown, index: number): Promise<void> => {
+    const button = header(root, index).querySelector("button");
+    if (button === null) throw new Error(`The header ${index} has no button.`);
+    await userEvent.click(button);
+  };
+  const sorts = (root: Shown): (string | null)[] => all(root, "thead th").map((cell) => cell.getAttribute("aria-sort"));
+
+  it("puts a button around the content of each header that has aria-sort, and none around the others", async () => {
+    const root = await showBody(Revenue);
+    expect(all(root, "thead th").map((cell) => cell.querySelector("button")?.textContent?.replace(/\W/g, ""))).toEqual([
+      "Region",
+      "Revenue",
+      undefined,
+    ]);
+    expect(all(root, "thead th button").every((button) => button.getAttribute("type") === "button")).toBe(true);
+    expect(header(root, 2).textContent).toBe("Note");
+  });
+
+  it("sorts ascending and then descending by the sort value of the cells, stably, and marks the headers", async () => {
+    const root = await showBody(Revenue);
+    await press(root, 1);
+    expect(column(root, 0)).toEqual(["West", "South", "North", "East"]);
+    expect(sorts(root)).toEqual(["none", "ascending", null]);
+    await press(root, 1);
+    expect(column(root, 0)).toEqual(["North", "East", "South", "West"]);
+    expect(sorts(root)).toEqual(["none", "descending", null]);
+    await press(root, 0);
+    expect(column(root, 0)).toEqual(["East", "North", "South", "West"]);
+    expect(sorts(root)).toEqual(["ascending", "none", null]);
+  });
+
+  it("sorts from the keyboard, keeps the focus on the button that was pressed, and moves the rows themselves", async () => {
+    const root = await showBody(Revenue);
+    const rows = all(root, "tbody tr");
+    const button = header(root, 1).querySelector("button");
+    // Safari leaves a button out of the tab order and does not focus it on a press, so the test focuses it.
+    button?.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(column(root, 0)).toEqual(["West", "South", "North", "East"]);
+    await userEvent.keyboard(" ");
+    expect(column(root, 0)).toEqual(["North", "East", "South", "West"]);
+    expect(root.root.activeElement).toBe(button);
+    expect(new Set(all(root, "tbody tr"))).toEqual(new Set(rows));
+  });
+
+  it("sorts the text of a column in the collation of the language of the content, with numbers inside text in order", async () => {
+    const cities = `<table><thead><tr><th aria-sort="none">City</th></tr></thead>
+      <tbody><tr><td>Zeta</td></tr><tr><td>Ärlig</td></tr><tr><td>Alfa</td></tr><tr><td>Zone 10</td></tr><tr><td>Zone 9</td></tr></tbody></table>`;
+    const swedish = await showBody(cities, { language: "sv" });
+    await press(swedish, 0);
+    expect(column(swedish, 0)).toEqual(["Alfa", "Zeta", "Zone 9", "Zone 10", "Ärlig"]);
+    const german = await showBody(cities, { language: "de" });
+    await press(german, 0);
+    expect(column(german, 0)).toEqual(["Alfa", "Ärlig", "Zeta", "Zone 9", "Zone 10"]);
+    const invalid = await showBody(cities, { language: "xx_YY" });
+    await press(invalid, 0);
+    expect(column(invalid, 0)).toHaveLength(5);
+  });
+
+  it("orders a column by value when every key is a number, and by the text when one is not", async () => {
+    const numbers = (cells: readonly string[]): string =>
+      `<table><thead><tr><th aria-sort="none">N</th></tr></thead><tbody>${cells.map((cell) => `<tr><td>${cell}</td></tr>`).join("")}</tbody></table>`;
+    const values = await showBody(numbers(["99", "1e2", "-5", ".5", "+7"]));
+    await press(values, 0);
+    expect(column(values, 0)).toEqual(["-5", ".5", "+7", "99", "1e2"]);
+    const mixed = await showBody(numbers(["99", "1e2", "n/a"]));
+    await press(mixed, 0);
+    expect(column(mixed, 0)).toEqual(["1e2", "99", "n/a"]);
+  });
+
+  it("starts descending where the author marked the header ascending, and sorts a row that lacks the cell by an empty key", async () => {
+    const root = await showBody(
+      Revenue.replace('<th aria-sort="none">Revenue</th>', '<th aria-sort="ascending">Revenue</th>'),
+    );
+    await press(root, 1);
+    expect(sorts(root)).toEqual(["none", "descending", null]);
+    expect(column(root, 0)).toEqual(["North", "East", "South", "West"]);
+    const short = await showBody(
+      Revenue.replace('<tr><td>West</td><td data-ak-sort-value="50">$50</td><td>d</td></tr>', "<tr><td>West</td></tr>"),
+    );
+    await press(short, 1);
+    expect(column(short, 0)).toEqual(["West", "South", "North", "East"]);
+  });
+
+  it("follows a colspan when it looks for the cell of a column", async () => {
+    const spanning = `<table><thead><tr><th aria-sort="none">A</th><th aria-sort="none">B</th></tr></thead>
+      <tbody><tr><td colspan="2">9</td></tr><tr><td>1</td><td>8</td></tr></tbody></table>`;
+    const root = await showBody(spanning);
+    await press(root, 1);
+    expect(all(root, "tbody tr").map((row) => row.children.length)).toEqual([2, 1]);
+  });
+
+  it("leaves a table as authored when it has a rowspan, several bodies, a restarting interaction or no header to sort by", async () => {
+    const rowspan = Revenue.replace("<td>a</td>", '<td rowspan="2">a</td>');
+    const bodies = Revenue.replace("</tbody>", "</tbody><tbody><tr><td>X</td><td>1</td><td>x</td></tr></tbody>");
+    const media = Revenue.replace(
+      "<td>b</td>",
+      '<td><qti-media-interaction response-identifier="M" autostart="false"><object data="a.mp3" type="audio/mpeg"/></qti-media-interaction></td>',
+    );
+    const plain = Revenue.replaceAll(' aria-sort="none"', "");
+    for (const [table, authored] of [
+      [rowspan, ["none", "none", null]],
+      [bodies, ["none", "none", null]],
+      [media, ["none", "none", null]],
+      [plain, [null, null, null]],
+    ] as const) {
+      const root = await showBody(table);
+      expect(all(root, "button")).toHaveLength(0);
+      expect(sorts(root)).toEqual(authored);
+    }
+  });
+
+  it("draws the table again, unsorted, when the content is shown again", async () => {
+    const root = await showBody(Revenue);
+    await press(root, 1);
+    await showBody(Revenue, {}, root);
+    expect(column(root, 0)).toEqual(["North", "South", "East", "West"]);
+    expect(sorts(root)).toEqual(["none", "none", null]);
+  });
+
+  it("passes axe at WCAG 2.2 AA, unsorted and sorted", async () => {
+    const root = await showBody(Revenue);
+    expect(await axeViolations(root.host)).toEqual([]);
+    await press(root, 1);
+    expect(await axeViolations(root.host)).toEqual([]);
+  });
+});
+
+describe("tabs and sorted tables in a session", () => {
+  const Item = `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="tabs" title="Tabs" adaptive="false" time-dependent="false">
+    <qti-response-declaration identifier="TAB" cardinality="single" base-type="string"/>
+    <qti-response-declaration identifier="ROW1" cardinality="single" base-type="string"/>
+    <qti-response-declaration identifier="ROW2" cardinality="single" base-type="string"/>
+    <qti-item-body>
+      <div role="tablist" aria-label="Parts">
+        <span role="tab" id="t1" aria-controls="p1" aria-selected="true">One</span>
+        <span role="tab" id="t2" aria-controls="p2">Two</span>
+      </div>
+      <div role="tabpanel" id="p1" aria-labelledby="t1"><p>First panel.</p></div>
+      <div role="tabpanel" id="p2" aria-labelledby="t2"><p>Answer <qti-text-entry-interaction response-identifier="TAB" expected-length="6"/></p></div>
+      <table>
+        <caption>Answers by name</caption>
+        <thead><tr><th aria-sort="none">Name</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr><td>b</td><td><qti-text-entry-interaction response-identifier="ROW1" expected-length="6"/></td></tr>
+          <tr><td>a</td><td><qti-text-entry-interaction response-identifier="ROW2" expected-length="6"/></td></tr>
+        </tbody>
+      </table>
+    </qti-item-body>
+  </qti-assessment-item>`;
+
+  it("keeps the drafts of the interactions in a hidden panel and in a sorted row, and sends no action of its own", async () => {
+    const parsed = readAsi(Item);
+    if (parsed.kind !== "item") throw new Error("The fixture is not an item.");
+    const saved = new Map<string, string>();
+    const client = await createLocalSession({
+      definition: { kind: "item", item: parsed.item, base: "items/tabs.xml" },
+      store: {
+        load: async (session) => saved.get(session),
+        save: async (session, { state }) => void saved.set(session, state),
+      },
+      session: "tabs",
+      seed: 1,
+      assets: (path) => `${ASSETS}${path}`,
+    });
+    const sent: string[] = [];
+    const recording = Object.create(client, {
+      dispatch: {
+        value: (action: Parameters<typeof client.dispatch>[0]) => {
+          sent.push(action.type);
+          return client.dispatch(action);
+        },
+      },
+    });
+    const host = document.createElement("div");
+    document.body.append(host);
+    hosts.push(host);
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(PLAYER_CSS);
+    mountItem(host, {
+      client: recording,
+      files: {
+        upload: async () => ({ reference: "f", mimeType: "image/png" }),
+        read: async () => new Uint8Array(),
+        url: () => "",
+        ...NO_RECORDING,
+      },
+      staticUrl: `${ASSETS}static/`,
+      stylesheet: sheet,
+      fetch: async () => ({ ok: false, status: 404, text: async () => "" }),
+    });
+    const content = (): ShadowRoot => {
+      const holder = host.shadowRoot?.querySelector(".ak-content-host");
+      if (holder?.shadowRoot == null) throw new Error("The item is not on screen.");
+      return holder.shadowRoot;
+    };
+    const inputs = (): HTMLInputElement[] => [
+      ...content().querySelectorAll<HTMLInputElement>("qti-text-entry-interaction input"),
+    ];
+    await waitFor(() => expect(inputs()).toHaveLength(3));
+    const [tabEntry, firstRow, secondRow] = inputs();
+    if (tabEntry === undefined || firstRow === undefined || secondRow === undefined) throw new Error("Three inputs.");
+    const tab = (id: string): HTMLElement => {
+      const found = content().getElementById(id);
+      if (found === null) throw new Error(`No ${id}.`);
+      return found;
+    };
+
+    await userEvent.click(tab("t2"));
+    await userEvent.fill(tabEntry, "alpha");
+    await userEvent.fill(firstRow, "beta");
+    await userEvent.fill(secondRow, "gamma");
+    await waitFor(() => expect(recording.view.current?.responses.size).toBe(3));
+    const drafts = new Map(recording.view.current?.responses);
+    const actions = sent.length;
+
+    await userEvent.click(tab("t1"));
+    await userEvent.click(tab("t2"));
+    await userEvent.click(content().querySelector("thead th button") as HTMLElement);
+    expect([...content().querySelectorAll("tbody tr td:first-child")].map((cell) => cell.textContent)).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(
+      inputs()
+        .map((input) => input.value)
+        .sort(),
+    ).toEqual(["alpha", "beta", "gamma"]);
+    expect(inputs()).toContain(tabEntry);
+    expect(tabEntry.value).toBe("alpha");
+    expect(firstRow.value).toBe("beta");
+    expect(secondRow.value).toBe("gamma");
+    expect(sent).toHaveLength(actions);
+    expect(recording.view.current?.responses).toEqual(drafts);
   });
 });

@@ -106,22 +106,24 @@ interaction, which are classes of the player and not of the item:
 
 The content root ([content](content.md)) builds these parts around the content, which the stylesheet lays out:
 
-| Class or attribute               | What it is                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `ak-content`                     | The container of everything the root shows; it carries `lang`.                                                     |
-| `ak-hazards`                     | The notice of a hazard that remains: a border and text, so that it does not rely on color.                         |
-| `ak-rubric`                      | The rubric of the test, above the stimuli.                                                                         |
-| `ak-main`                        | Holds the stimuli and the item. With `data-ak-stimuli` it is two columns from 48rem, and one with a single column. |
-| `ak-stimuli`, `ak-stimulus`      | The column of the stimuli, and one stimulus.                                                                       |
-| `ak-body`                        | The item.                                                                                                          |
-| `ak-test-feedback`               | The region of the test feedback, after the item.                                                                   |
-| `ak-dialog`                      | The dialog of modal feedback, with a backdrop of its own.                                                          |
-| `ak-card`                        | A card of a support beside the content, in a group named after the support ([supports](supports.md)).              |
-| `ak-card-anchor`                 | Holds the button of a card and its popup. The popup is `ak-popup`, with `ak-card-close` and `ak-popup-body`.       |
-| `ak-card-trigger`                | The button that opens the popup of a card.                                                                         |
-| `ak-alternative-text`            | The `alt` of an image shown as text.                                                                               |
-| `data-ak-placeholder`            | An interaction that no renderer has drawn.                                                                         |
-| `data-use` on `qti-rubric-block` | `instructions`, `scoring` or `navigation`.                                                                         |
+| Class or attribute               | What it is                                                                                                                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ak-content`                     | The container of everything the root shows; it carries `lang`.                                                                      |
+| `ak-hazards`                     | The notice of a hazard that remains: a border and text, so that it does not rely on color.                                          |
+| `ak-rubric`                      | The rubric of the test, above the stimuli.                                                                                          |
+| `ak-main`                        | Holds the stimuli and the item. With `data-ak-stimuli` it is two columns from 48rem, and one with a single column.                  |
+| `ak-stimuli`, `ak-stimulus`      | The column of the stimuli, and one stimulus.                                                                                        |
+| `ak-body`                        | The item.                                                                                                                           |
+| `ak-test-feedback`               | The region of the test feedback, after the item.                                                                                    |
+| `ak-tablist`                     | A tablist that the player manages; its panels that are not selected have `hidden` ([content](content.md#tabs-and-sortable-tables)). |
+| `ak-sort`, `ak-sort-mark`        | The button in the header of a sortable column, and its mark; `aria-sort` of the header says the state.                              |
+| `ak-dialog`                      | The dialog of modal feedback, with a backdrop of its own.                                                                           |
+| `ak-card`                        | A card of a support beside the content, in a group named after the support ([supports](supports.md)).                               |
+| `ak-card-anchor`                 | Holds the button of a card and its popup. The popup is `ak-popup`, with `ak-card-close` and `ak-popup-body`.                        |
+| `ak-card-trigger`                | The button that opens the popup of a card.                                                                                          |
+| `ak-alternative-text`            | The `alt` of an image shown as text.                                                                                                |
+| `data-ak-placeholder`            | An interaction that no renderer has drawn.                                                                                          |
+| `data-use` on `qti-rubric-block` | `instructions`, `scoring` or `navigation`.                                                                                          |
 
 ```html
 <qti-choice-interaction class="qti-labels-upper-alpha qti-labels-suffix-period qti-input-control-hidden">

@@ -1365,6 +1365,51 @@ qti-associable-hotspot > .ak-control,
   text-combine-upright: all;
 }
 
+/* Tabs and sortable tables: the player gives the roles of QTI content their behavior (docs/content.md), and styles the
+   tablist and the sort buttons it manages. The selected tab is told by weight and by its border besides its color, and a
+   panel that is not selected stays hidden whatever display class the author gave it. */
+
+.ak-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-block-end: var(--ak-border-width) solid var(--ak-border);
+}
+
+.ak-tablist [role="tab"] {
+  box-sizing: border-box;
+  min-block-size: var(--ak-target-size);
+  padding: 0.5em 1em;
+  border: var(--ak-border-width) solid transparent;
+  border-radius: 0.25rem 0.25rem 0 0;
+  cursor: pointer;
+}
+
+.ak-tablist [role="tab"][aria-selected="true"] {
+  border-color: var(--ak-border);
+  border-block-start-width: calc(var(--ak-border-width) * 3);
+  background-color: var(--ak-surface);
+  font-weight: 700;
+}
+
+[role="tabpanel"][hidden] {
+  display: none;
+}
+
+.ak-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375em;
+  border-color: transparent;
+  background-color: transparent;
+  font-weight: inherit;
+  text-align: inherit;
+}
+
+.ak-sort-mark {
+  font-size: 0.75em;
+}
+
 /* 6. Interaction classes of the vocabulary and of the best practices guide. The stylesheet reads the QTI element names and the parts
    of docs/styling.md. */
 

@@ -11,7 +11,13 @@ import { DataError } from "@assesskit/runtime/errors";
 import type { SupportName } from "@assesskit/runtime/pnp";
 import { renderCard } from "../catalogs/index.js";
 import { type BodyRenderer, type BodyRendererOptions, createBodyRenderer } from "../content/index.js";
-import { readRenderOptions, scaleDeclaredSizes } from "../content/internal.js";
+import {
+  enableSorting,
+  enableTabs,
+  readRenderOptions,
+  type SelectedTabs,
+  scaleDeclaredSizes,
+} from "../content/internal.js";
 import { showFeedbackDialog } from "../feedback/index.js";
 import { html, shadowRootOf } from "../internal.js";
 import type { MathTypesetter } from "../math/index.js";
@@ -155,6 +161,7 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
   const stopLinks = followFragmentLinks(shadow);
   let generation = 0;
   let current: HTMLElement | undefined;
+  const selectedTabs: SelectedTabs = new Map();
   let catalogs: readonly Catalog[] = [];
   let itemRenderer: BodyRenderer = createBodyRenderer(rendererOptions);
   let mediaScale = initialScale;
@@ -182,6 +189,8 @@ export function createContentRoot(host: HTMLElement, options: ContentRootOptions
       catalogs = content.catalogs ?? [];
       current?.remove();
       current = built.container;
+      enableTabs(built.container, selectedTabs);
+      enableSorting(built.container);
       stage.prepend(built.container);
       generation += 1;
       const mine = generation;

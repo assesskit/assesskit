@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { loadSchemaSet, type SchemaSet, validateXmlFiles } from "@assesskit/runtime/node";
 import { parseXml, type XmlElement } from "@assesskit/runtime/xml";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { requireSchemas } from "../../../scripts/schemas.js";
 import { HTML_ELEMENT_NAMES } from "../src/player/content/internal.js";
 
@@ -24,5 +25,39 @@ describe("html-elements", () => {
     );
     const declared = new Set(declaredElements(schema).filter((name) => !name.startsWith("qti-")));
     expect([...HTML_ELEMENT_NAMES].sort()).toEqual([...declared].sort());
+  });
+});
+
+describe("the markup of tabs and sortable tables", () => {
+  const schemas = requireSchemas(resolve(import.meta.dirname, "../../.."));
+  let set: SchemaSet;
+  beforeAll(async () => {
+    set = await loadSchemaSet(schemas);
+  });
+  afterAll(() => set.close());
+
+  const item = (body: string): string =>
+    `<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="item" title="Item" time-dependent="false"><qti-item-body>${body}</qti-item-body></qti-assessment-item>`;
+  const issues = (body: string) => validateXmlFiles(set, [{ path: "item.xml", content: item(body) }]);
+
+  const Tabs = `<div role="tablist" aria-label="Sources">
+    <span role="tab" id="tab-email" aria-controls="panel-email" aria-selected="true">Email</span>
+    <span role="tab" id="tab-memo" aria-controls="panel-memo">Memo</span>
+  </div>
+  <div role="tabpanel" id="panel-email" aria-labelledby="tab-email"><p>Email text.</p></div>
+  <div role="tabpanel" id="panel-memo" aria-labelledby="tab-memo"><p>Memo text.</p></div>`;
+
+  const Table = `<table>
+    <thead><tr><th aria-sort="none">Region</th><th aria-sort="none">Revenue</th></tr></thead>
+    <tbody><tr><td>North</td><td data-ak-sort-value="1200">$1,200</td></tr></tbody>
+  </table>`;
+
+  it("is valid against the ASI schema", async () => {
+    expect(await issues(Tabs)).toEqual([]);
+    expect(await issues(Table)).toEqual([]);
+  });
+
+  it("makes a tab a span, because the schema has no button", async () => {
+    expect(await issues('<div role="tablist"><button role="tab" aria-controls="p">One</button></div>')).not.toEqual([]);
   });
 });
