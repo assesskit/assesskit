@@ -1,11 +1,10 @@
-import { webSpeech } from "../speech/index.js";
+import { mountSupportPanel } from "../supports/index.js";
 import type { Body } from "./body.js";
-import { createLexicons, type Lexicons } from "./lexicons.js";
+import { type ContentAttachments, mountContentAttachments } from "./content-attachments.js";
 import type { Sender } from "./sender.js";
 import type { Settings } from "./settings.js";
 import type { Shell } from "./shell.js";
 import type { MountState } from "./state.js";
-import { type DeliverySupports, mountDeliverySupports } from "./supports.js";
 import { type DeliveryTools, mountDeliveryTools } from "./tools.js";
 
 /** What the parts that follow the content need of the player. */
@@ -22,11 +21,7 @@ export interface AttachmentsContext
 }
 
 /** The parts that follow the item and the profile of the view: the supports, the pronunciation lexicons and the tools. */
-export interface Attachments {
-  /** The panel and the effects of the supports. */
-  readonly supports: DeliverySupports;
-  /** The loader of the lexicons that reading aloud uses. */
-  readonly lexicons: Lexicons;
+export interface Attachments extends ContentAttachments {
   /** The tools, which only a player with chrome has. */
   readonly tools: DeliveryTools | undefined;
 }
@@ -43,23 +38,19 @@ export interface Attachments {
  */
 export function mountAttachments(context: AttachmentsContext): Attachments {
   const { client, messages, language, chrome, hooks, state, sender, shell, body } = context;
-  const assets = (path: string): string => client.assets(path);
-  const supports = mountDeliverySupports({
+  const content = mountContentAttachments({
+    client,
     messages,
     language,
+    hooks,
+    fetch: context.fetch,
+    state,
     slot: shell.supportsSlot,
     contentHost: shell.contentHost,
-    content: body.content,
-    pci: body.pci,
-    voice: hooks.voice ?? webSpeech(),
-    ...(chrome ? { request: sender.request } : {}),
-  });
-  const lexicons = createLexicons({
-    fetch: context.fetch,
-    assets,
-    apply: (loaded) => {
-      if (!state.destroyed) supports.setLexicons(loaded);
-    },
+    body,
+    ...(chrome
+      ? { panel: (slot: HTMLElement) => mountSupportPanel(slot, { messages, onSupport: sender.request }) }
+      : {}),
   });
   const tools = chrome
     ? mountDeliveryTools({
@@ -67,10 +58,10 @@ export function mountAttachments(context: AttachmentsContext): Attachments {
         language,
         slot: shell.toolsSlot,
         stage: body.content.stage,
-        assets,
+        assets: (path) => client.assets(path),
         slots: hooks.tools ?? {},
         request: sender.request,
       })
     : undefined;
-  return { supports, lexicons, tools };
+  return { ...content, tools };
 }

@@ -1,5 +1,4 @@
 import type { CandidateView } from "@assesskit/runtime/delivery";
-import type { SupportName } from "@assesskit/runtime/pnp";
 import type { Messages } from "../../messages/index.js";
 import type { ContentRoot } from "../roots/index.js";
 import type { Lexicon, SpeechHook } from "../speech/index.js";
@@ -8,9 +7,9 @@ import {
   mediaScaleOf,
   mountContentSupports,
   mountSpoken,
-  mountSupportPanel,
   mountVariantNotice,
   presentationOf,
+  type SupportPanel,
 } from "../supports/index.js";
 import type { PciHost } from "./pci.js";
 
@@ -20,7 +19,7 @@ export interface SupportsContext {
   readonly messages: Messages;
   /** The language of the interface, a BCP 47 tag. */
   readonly language: string;
-  /** The element in the chrome that gets the notice of the variant, the panel and the controls of reading aloud. */
+  /** The element that gets the notice of the variant, the panel and the controls of reading aloud. */
   readonly slot: HTMLElement;
   /** The host of the content root, which takes the look of the supports. */
   readonly contentHost: HTMLElement;
@@ -30,11 +29,11 @@ export interface SupportsContext {
   readonly pci: PciHost;
   /** The voice that reads aloud. */
   readonly voice: SpeechHook;
-  /** Asks to turn a support on or off; without it the panel of options is not drawn. */
-  readonly request?: (name: SupportName, active: boolean) => void;
+  /** Mounts the panel of the options in the slot; without it the panel is not drawn. */
+  readonly panel?: (slot: HTMLElement) => SupportPanel;
 }
 
-/** The supports of the candidate, applied to the chrome and the content of the views the player shows. */
+/** The supports of the candidate, applied to the content of the views the player shows and to the player around it. */
 export interface DeliverySupports {
   /**
    * Applies what the supports of a view change outside the content: the look, the scale of media sized in pixels, the
@@ -68,9 +67,8 @@ export interface DeliverySupports {
 }
 
 /**
- * Mounts the parts of the supports in the chrome and the content: the panel of the supports, with a button for each option
- * that sends the `support` action through `request`, and the notice of the variant; the look, the scale of media, the
- * cards and the reading aloud that the supports that are on ask for.
+ * Mounts the parts of the supports in the player and the content: the panel of the supports where the caller gives one, and the
+ * notice of the variant; the look, the scale of media, the cards and the reading aloud that the supports that are on ask for.
  *
  * @remarks
  * The parts decide nothing: they follow `CandidateView.supports`.
@@ -79,9 +77,9 @@ export interface DeliverySupports {
  * @returns The supports.
  */
 export function mountDeliverySupports(context: SupportsContext): DeliverySupports {
-  const { messages, language, slot, contentHost, content, pci, voice, request } = context;
+  const { messages, language, slot, contentHost, content, pci, voice } = context;
   const variant = mountVariantNotice(slot, { messages, language });
-  const panel = request === undefined ? undefined : mountSupportPanel(slot, { messages, onSupport: request });
+  const panel = context.panel?.(slot);
   const spoken = mountSpoken(slot, content, { messages, language, voice });
   const cards = mountContentSupports(content, { messages });
   let look: string | undefined;

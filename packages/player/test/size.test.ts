@@ -21,6 +21,7 @@ const ENTRY_POINTS = {
   protocol: 'export * from "./protocol/index.ts";',
   client: 'export * from "./client/index.ts";',
   player: 'export * from "./player/index.ts";',
+  item: 'export { mountItem } from "./player/index.ts";',
 } as const;
 
 /** What a host's bundler gives an entry point, and the sources it takes the code from. */
@@ -60,6 +61,19 @@ describe("the size of the entry points", () => {
     expect(
       inputs.filter((path) => /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(jose|uuid)\//.test(path)),
     ).toEqual([]);
+  });
+
+  it("holds no server library and no XML parser in the first load of an item", async () => {
+    const { inputs } = await entry("item");
+    expect(
+      inputs.filter((path) => /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(jose|uuid|saxes)\//.test(path)),
+    ).toEqual([]);
+  });
+
+  it("makes an item cost less than the player with its chrome and its tools", async () => {
+    const item = await entry("item");
+    const { output } = await bundle('export { mountDelivery } from "./player/index.ts";', { minify: true, lazy: true });
+    expect(item.gzip, "The gzipped bytes of mountItem against mountDelivery").toBeLessThan(gzipped(output.contents));
   });
 });
 

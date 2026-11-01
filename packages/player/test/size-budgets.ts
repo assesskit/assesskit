@@ -13,6 +13,8 @@ export const SIZE_BUDGETS = {
   client: 25_000,
   /** `@assesskit/player/player`. */
   player: 140_500,
+  /** `mountItem` of `@assesskit/player/player`, with the code that it shares with `mountDelivery` and none of the chrome. */
+  item: 107_500,
   /** `@assesskit/runtime/delivery`, which `createLocalSession` loads for practice on a device. */
   engine: 152_000,
   /** The script of the frame of a portable custom interaction. */

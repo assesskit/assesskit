@@ -11,7 +11,7 @@ import type { SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/in
 import { mountDelivery } from "../src/player/index.js";
 import type { SessionClient } from "../src/protocol/index.js";
 import { computed, PLAYER_CSS } from "./css-fixture.js";
-import { examDefinition, examFiles, examHost, lexiconFiles, packageOf } from "./exam-fixture.js";
+import { examDefinition, examFiles, examHost, lexiconFiles, packageOf, pciFiles } from "./exam-fixture.js";
 import { picture, settle } from "./graphic-fixture.js";
 import { axeViolations } from "./renderer-fixture.js";
 import { calculatorXml, protractorXml, ruleXml } from "./tools-fixture.js";
@@ -626,26 +626,6 @@ describe("mountDelivery", () => {
     expect(() => mount(fresh(), { other: 1 })).toThrow("The options has the properties");
   });
 });
-
-/** The item q3 of the fixture as a portable custom interaction on a module that the fixtures serve. */
-function pciFiles(): Readonly<Record<string, string | Uint8Array>> {
-  const files = { ...examFiles() };
-  files["items/q3/item.xml"] = String(files["items/q3/item.xml"])
-    .replace('module="pci-module"', 'module="simple"')
-    .replace(
-      'custom-interaction-type-identifier="urn:test:pci"',
-      'custom-interaction-type-identifier="urn:test:simple"',
-    )
-    .replace(
-      /<qti-interaction-modules[\s\S]*<\/qti-interaction-modules>/u,
-      '<qti-interaction-modules><qti-interaction-module id="simple" primary-path="modules/simple"/></qti-interaction-modules>',
-    )
-    .replace(
-      "<qti-interaction-markup><p>Tap</p></qti-interaction-markup>",
-      '<qti-prompt>Press the button</qti-prompt><qti-interaction-markup><div id="press" data-role="button">Press</div></qti-interaction-markup>',
-    );
-  return files;
-}
 
 describe("a portable custom interaction in the player", () => {
   it("stores the response and the state of the interaction with the session, so that it restores on another device", async () => {

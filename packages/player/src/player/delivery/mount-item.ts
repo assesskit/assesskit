@@ -1,0 +1,97 @@
+import type { CandidateView } from "@assesskit/runtime/delivery";
+import { DataError } from "@assesskit/runtime/errors";
+import { createAnnouncer } from "./announcer.js";
+import { baseStyles } from "./base-styles.js";
+import { createBody } from "./body.js";
+import { mountContentAttachments } from "./content-attachments.js";
+import { createItemShell } from "./item-shell.js";
+import { checkItemOptions, type ItemMountOptions, type Mounted } from "./options.js";
+import { createSender } from "./sender.js";
+import { resolveItemSettings } from "./settings.js";
+import { createMountState } from "./state.js";
+import { createViewChain } from "./view-chain.js";
+
+/** Refuses a view that presents an item that is a link to an LTI tool, which only `mountDelivery` can start. */
+function checkNoLtiItem(view: CandidateView): void {
+  const item = view.current;
+  if (item?.lti !== undefined) {
+    throw new DataError(
+      `The item ${item.key.ref} is a link to an LTI tool, which needs a login that mountItem does not start. Use mountDelivery.`,
+    );
+  }
+}
+
+/**
+ * Mounts the content of the view that the session client holds and its interactions, and nothing else: for a page that
+ * shows many items, such as a lesson.
+ *
+ * @remarks
+ * It draws the content root with the rubric, the stimuli, the item and the modal feedback, the portable custom interactions,
+ * the supports that are on and the reading aloud with its lexicons. It draws no heading, navigation map, timers, actions,
+ * comment box or tools: the host sends the actions of the session client and shows what the engine refused. It does not load
+ * the code of the chrome, so that a page with many items costs the content only (see the size guide).
+ *
+ * - **Status messages** go to one `role="status"` region and never move the focus.
+ * - **Focus** moves only into a modal dialog of feedback, as a modal must, and back to where it was when the candidate closes
+ *   it. Nothing else takes it from the page.
+ * - **A closed item** stays drawn until `destroy`.
+ * - **Submits** are the host's: it waits for `settled()` before it sends an action that submits or leaves the item.
+ *
+ * @param host - An element that has no shadow root. The player attaches one and draws in it.
+ * @param options - See {@link ItemMountOptions}.
+ * @returns The mounted player.
+ * @throws `DataError` when `host` or an option is not of its type, or when the view presents an item that is a link to an LTI
+ * tool.
+ * @see {@link https://www.w3.org/TR/WCAG22/#status-messages | WCAG 2.2, status messages}
+ * @see {@link https://www.w3.org/TR/WCAG22/#focus-order | WCAG 2.2, focus order}
+ */
+export function mountItem(host: HTMLElement, options: ItemMountOptions): Mounted {
+  checkItemOptions(host, options);
+  const settings = resolveItemSettings(options);
+  const { client, messages, language, hooks } = settings;
+  checkNoLtiItem(client.view);
+  const state = createMountState(client.view);
+  const shadow = host.attachShadow({ mode: "open" });
+  shadow.adoptedStyleSheets = [baseStyles()];
+
+  const status = createAnnouncer("ak-status");
+  const sender = createSender({ client, messages, status, state });
+  const shell = createItemShell(language, status.element);
+  const body = createBody({ ...settings, state, sender, host: shell.contentHost });
+  shadow.append(shell.app);
+  const attachments = mountContentAttachments({
+    client,
+    messages,
+    language,
+    hooks,
+    fetch: settings.fetch,
+    state,
+    slot: shell.supportsSlot,
+    contentHost: shell.contentHost,
+    body,
+  });
+
+  const draw = createViewChain({ client, state, body, attachments, tools: undefined });
+  const update = (view: CandidateView): void => {
+    checkNoLtiItem(view);
+    state.view = view;
+    attachments.supports.update(view);
+    draw(view);
+  };
+  const unsubscribe = client.subscribe(update);
+  update(client.view);
+
+  return {
+    update,
+    settled: body.settled,
+    destroy: () => {
+      if (state.destroyed) return;
+      state.destroyed = true;
+      unsubscribe();
+      attachments.supports.destroy();
+      status.stop();
+      void body.pci.reset().then(() => body.content.destroy());
+      shadow.replaceChildren();
+    },
+  };
+}

@@ -1,6 +1,7 @@
 import { createLtiSlot } from "../lti-frame/index.js";
 import { createAnnouncer } from "./announcer.js";
 import { mountAttachments } from "./attachments.js";
+import { baseStyles } from "./base-styles.js";
 import { createBody } from "./body.js";
 import { createChrome } from "./chrome.js";
 import { createCommentBox } from "./comment.js";
@@ -46,7 +47,7 @@ export function mountDelivery(host: HTMLElement, options: DeliveryOptions): Moun
   const { client, messages, language, chrome, staticUrl, hooks } = settings;
   const state = createMountState(client.view);
   const shadow = host.attachShadow({ mode: "open" });
-  shadow.adoptedStyleSheets = [chromeStyles()];
+  shadow.adoptedStyleSheets = [baseStyles(), chromeStyles()];
 
   const status = createAnnouncer("ak-status");
   const timerStatus = createAnnouncer("ak-timer-status");

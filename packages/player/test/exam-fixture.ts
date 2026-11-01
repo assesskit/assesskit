@@ -160,6 +160,26 @@ export function examFiles(
   };
 }
 
+/** The item q3 of the fixture as a portable custom interaction on a module that the fixtures serve. */
+export function pciFiles(): Readonly<Record<string, string | Uint8Array>> {
+  const files = { ...examFiles() };
+  files["items/q3/item.xml"] = String(files["items/q3/item.xml"])
+    .replace('module="pci-module"', 'module="simple"')
+    .replace(
+      'custom-interaction-type-identifier="urn:test:pci"',
+      'custom-interaction-type-identifier="urn:test:simple"',
+    )
+    .replace(
+      /<qti-interaction-modules[\s\S]*<\/qti-interaction-modules>/u,
+      '<qti-interaction-modules><qti-interaction-module id="simple" primary-path="modules/simple"/></qti-interaction-modules>',
+    )
+    .replace(
+      "<qti-interaction-markup><p>Tap</p></qti-interaction-markup>",
+      '<qti-prompt>Press the button</qti-prompt><qti-interaction-markup><div id="press" data-role="button">Press</div></qti-interaction-markup>',
+    );
+  return files;
+}
+
 /** The correct response of the rated item of {@link ratedFiles}, which only a scorer may see. */
 export const RATED_KEY = "hidden-key";
 

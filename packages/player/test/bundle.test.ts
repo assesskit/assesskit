@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { bundle } from "./bundle.js";
+import { type BundleOptions, bundle } from "./bundle.js";
 
 const SRC = resolve(import.meta.dirname, "../src");
 const RUNTIME = resolve(import.meta.dirname, "../../runtime/src");
@@ -28,8 +28,33 @@ const ENGINE_FILES = [
   "processing/index.ts",
 ];
 
+/**
+ * The files of the chrome: what `mountDelivery` draws around the content, with its tools, its panel of supports and the
+ * frame of an LTI item.
+ */
+const CHROME_FILES = [
+  "player/delivery/action-row.ts",
+  "player/delivery/actions.ts",
+  "player/delivery/attachments.ts",
+  "player/delivery/chrome.ts",
+  "player/delivery/comment.ts",
+  "player/delivery/confirm.ts",
+  "player/delivery/duration.ts",
+  "player/delivery/mount.ts",
+  "player/delivery/navigation.ts",
+  "player/delivery/notices.ts",
+  "player/delivery/shell.ts",
+  "player/delivery/styles.ts",
+  "player/delivery/timers.ts",
+  "player/delivery/tools.ts",
+  "player/delivery/update.ts",
+  "player/supports/panel.ts",
+];
+const CHROME_FOLDERS = ["player/tools", "player/lti-frame"];
+
 /** Bundles a program for a browser, as a host's bundler would, and returns the files that have code in the output. */
-const bundled = async (program: string): Promise<readonly string[]> => (await bundle(program)).inputs;
+const bundled = async (program: string, options: BundleOptions = {}): Promise<readonly string[]> =>
+  (await bundle(program, options)).inputs;
 
 const engineFilesIn = (inputs: readonly string[]): string[] =>
   ENGINE_FILES.filter((file) => inputs.includes(resolve(RUNTIME, file)));
@@ -78,6 +103,58 @@ describe("the exam bundle", () => {
       export { createLocalSession };
     `);
     expect(engineFilesIn(inputs)).toContain("delivery/engine.ts");
+  });
+});
+
+/** The files of the chrome that a bundle holds, as paths below `src/`. */
+const chromeIn = (inputs: readonly string[]): string[] => [
+  ...inputs.map((path) => path.slice(SRC.length + 1)).filter((path) => CHROME_FILES.includes(path)),
+  ...CHROME_FOLDERS.flatMap((folder) => filesOf(inputs, folder)),
+];
+
+describe("the item bundle", () => {
+  const item = `
+    import { mountItem } from "./player/index.ts";
+    import { createRemoteSession } from "./client/index.ts";
+    export { mountItem, createRemoteSession };
+  `;
+
+  it("holds the content and the interactions of an item, with the supports and the reading aloud", async () => {
+    const inputs = await bundled(item);
+    for (const file of [
+      "player/delivery/mount-item.ts",
+      "player/delivery/body.ts",
+      "player/roots/root.ts",
+      "player/elements/renderers.ts",
+      "player/pci/host.ts",
+      "player/supports/spoken.ts",
+    ]) {
+      expect(filesOf(inputs, file.split("/").slice(0, 2).join("/")), file).toContain(file);
+    }
+  });
+
+  it("holds none of the chrome, the tools, the panel of the supports or the frame of an LTI item", async () => {
+    expect(chromeIn(await bundled(item))).toEqual([]);
+  });
+
+  it("holds the chrome in a bundle that mounts the delivery, which is how the check sees it", async () => {
+    const inputs = await bundled('import { mountDelivery } from "./player/index.ts"; export { mountDelivery };');
+    expect(chromeIn(inputs)).toEqual(expect.arrayContaining(CHROME_FILES.slice(0, 3)));
+    expect(filesOf(inputs, "player/tools").length).toBeGreaterThan(0);
+  });
+
+  it("holds none of the engine, the CAT client, the server folders or the rating form", async () => {
+    const inputs = await bundled(item);
+    expect(engineFilesIn(inputs)).toEqual([]);
+    for (const folder of ["cat-rest", "cat", "scoring", "server", "player/rating"]) {
+      expect(filesOf(inputs, folder), folder).toEqual([]);
+    }
+  });
+
+  it("holds none of the XML parser that reads a lexicon, which loads with the first lexicon", async () => {
+    const inputs = await bundled(item, { lazy: true });
+    expect(inputs.filter((path) => path.endsWith("xml/parse.ts"))).toEqual([]);
+    expect(inputs.filter((path) => /\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?saxes\//.test(path))).toEqual([]);
   });
 });
 

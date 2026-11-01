@@ -62,13 +62,13 @@ host.getAttribute("data-ak-contrast"); // => "high"
 
 `mountDelivery` ([delivery](delivery.md)) is a chrome that mounts the parts and feeds them `view.supports` of every view. A
 host that draws its own chrome (`chrome: false`) keeps the parts that act on the content and mounts the panel and the tools
-itself.
+itself. `mountItem` ([items in a page](delivery.md#items-in-a-page)) mounts the same parts, without the panel and the tools.
 
 | Part                   | Where it is                                      | When it is updated                                                                                      |
 | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `applyPresentation`    | The host of the content root, and the PCI frames | When the supports of the view differ from the last view's                                               |
 | `setMediaScale`        | The content root                                 | Together with `applyPresentation`; the content is not drawn again                                       |
-| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false`                                                         |
+| `mountSupportPanel`    | Above the content, in a region named Supports    | With every view. Not drawn with `chrome: false` or in `mountItem`                                       |
 | `mountVariantNotice`   | Above the content                                | With every view                                                                                         |
 | `mountContentSupports` | The content root                                 | When the content was drawn again or the supports of the view differ from the last view's                |
 | `mountSpoken`          | Above the content, and the content root          | Together with `mountContentSupports`                                                                    |

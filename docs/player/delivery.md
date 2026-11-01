@@ -3,6 +3,7 @@
 `mountDelivery` of `@assesskit/player/player` shows a candidate session: the content of the engine's view and the chrome
 around it. It follows a session client ([client](client.md)) and never knows whether the engine runs on a server or on the
 device. It decides nothing of QTI: it sends the actions that the view lists and shows what the engine answers.
+`mountItem` shows the content alone, for a page that has many items ([items in a page](#items-in-a-page)).
 
 ```mermaid
 flowchart TD
@@ -150,6 +151,92 @@ player refuses a tool that is served from the origin of the page or of `staticUr
 The player answers the capabilities request of the tool. Both frames are children of the host element, shown through a slot
 of the shadow root, because a window finds a frame by name only among the frames of its own document; the storage page needs
 that. A page has one player with an LTI item at a time.
+
+## Items in a page
+
+`mountItem` shows the content of one session and nothing around it: a lesson page mounts one for each of its items, each on a
+session client of its own, and the host draws the buttons that send the actions. It takes the options of `mountDelivery`
+without `chrome`, `hooks.tools` and `hooks.ltiLogin`, and returns the same `Mounted`.
+
+```mermaid
+flowchart LR
+  page["Lesson page"] --> a["mountItem"] --> sa["SessionClient"]
+  page --> b["mountItem"] --> sb["SessionClient"]
+  page --> c["mountItem"] --> sc["SessionClient"]
+  sa & sb & sc --> engine["Engine, loaded once"]
+  page -->|"its own buttons"| sa
+```
+
+| Part                                                                 | `mountItem`                                                                                   |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Content root with rubric, stimuli, item, modal feedback              | Drawn, in a shadow root                                                                       |
+| Interactions and portable custom interactions                        | Drawn; they send `set-responses` and `end-attempt` to the session                             |
+| Supports that are on, reading aloud, lexicons, variant notice        | Applied; the panel of the options is not drawn                                                |
+| Status region                                                        | One `role="status"` region per item: answers saved, and why the engine refused (WCAG 4.1.3)   |
+| Heading, map, timers, actions, comment box, attempts, notices, tools | Not drawn. The host sends the actions of the session client and shows what the engine refused |
+| A closed item                                                        | Stays drawn, with its interactions disabled, until `destroy`                                  |
+| An LTI item                                                          | `DataError`: it needs a login, so use `mountDelivery`                                         |
+
+The host waits for `settled()` before it sends an action that submits or leaves the item, as with `chrome: false`.
+
+```ts
+import { readAsi } from "@assesskit/runtime/asi";
+import { createLocalSession } from "@assesskit/player/client";
+import { mountItem } from "@assesskit/player/player";
+import css from "@assesskit/player/player.css?inline"; // any bundler that imports a file as text
+
+const parsed = readAsi(`<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    identifier="q1" title="Question" adaptive="false" time-dependent="false">
+  <qti-item-body><p>Hello</p></qti-item-body>
+</qti-assessment-item>`);
+if (parsed.kind !== "item") throw new Error("The document is not an item.");
+
+const saved = new Map();
+const client = await createLocalSession({
+  definition: { kind: "item", item: parsed.item, base: "items/q1.xml" },
+  store: {
+    load: async (session) => saved.get(session),
+    save: async (session, state) => void saved.set(session, state),
+  },
+  session: "lesson-1-q1",
+  seed: 1,
+  assets: (path) => `/package/${path}`,
+});
+
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(css);
+const host = document.createElement("div");
+document.body.append(host);
+const mounted = mountItem(host, {
+  client,
+  files: {
+    upload: async (bytes, mimeType) => ({ reference: "f1", mimeType }),
+    read: async () => new Uint8Array(),
+    url: (file) => `/files/${file.reference}`,
+  },
+  staticUrl: "https://assets.example/static/",
+  stylesheet,
+  fetch: (url, init) => fetch(url, init),
+});
+host.shadowRoot.querySelector("[role=status]").textContent; // => ""
+host.shadowRoot.querySelector(".ak-actions"); // => null
+mounted.destroy();
+```
+
+`mountItem(host, options)` throws `DataError` when `host` is not an element that can have a shadow root and has none, an option
+is not of its type (`chrome`, `hooks.tools` and `hooks.ltiLogin` are not options of it), or the view presents an LTI item. The
+last also holds for a view that `update` or the client brings later. `destroy()` is the one of `mountDelivery`: a second call
+does nothing, and the session client stays open.
+
+### Focus in a page
+
+A lesson has many items, so none of them takes the focus from the page.
+
+| When                                                            | Where the focus goes                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| An item mounts, answers, changes its view or closes             | Nowhere: the control of the page that has it keeps it.                                                 |
+| Modal feedback opens                                            | The heading of its dialog, as a modal dialog must (WCAG 2.4.3).                                        |
+| The candidate closes the dialog with the Close button or Escape | The control that had the focus when the dialog opened, such as the host's button that sent the submit. |
 
 ## Refusals and status messages
 

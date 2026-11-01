@@ -201,8 +201,7 @@ interface Applied {
  * `host` offers the host side of the session.
  *
  * @remarks
- * It loads the runtime's engine with `import()`, the one place the browser code does, so an exam's bundle holds no
- * engine. The answer keys are on the device, which practice accepts, and its results are never official.
+ * It loads the runtime's engine with `import()`, so an exam's bundle holds no engine. The answer keys are on the device, which practice accepts, and its results are never official.
  *
  * It stamps each action with the clock and saves the state after each step that is accepted, before it applies the step:
  * an action whose save fails is rejected and changes nothing. It fires a `time` action at each maximum time with

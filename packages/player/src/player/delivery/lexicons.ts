@@ -1,6 +1,6 @@
 import { DataError } from "@assesskit/runtime/errors";
 import type { StylesheetFetch } from "../roots/index.js";
-import { type Lexicon, parseLexicon } from "../speech/index.js";
+import type { Lexicon } from "../speech/index.js";
 
 /** What the lexicons of the shell need of the player. */
 export interface LexiconsContext {
@@ -31,7 +31,7 @@ export interface Lexicons {
  *
  * @remarks
  * The lexicons are files of the package, loaded through the gate like the module resolution files of a portable custom
- * interaction.
+ * interaction. The code that reads them loads with the first lexicon.
  *
  * @param context - See {@link LexiconsContext}.
  * @returns The loader.
@@ -44,6 +44,8 @@ export function createLexicons(context: LexiconsContext): Lexicons {
   const read = async (path: string): Promise<Lexicon | undefined> => {
     const response = await fetch(assets(path), { credentials: "omit", referrerPolicy: "no-referrer" });
     if (!response.ok) return undefined;
+    // The reader holds an XML parser, which only an item that depends on a lexicon needs, so it loads when the first one does.
+    const { parseLexicon } = await import("../speech/index.js");
     try {
       return parseLexicon(await response.text());
     } catch (error) {

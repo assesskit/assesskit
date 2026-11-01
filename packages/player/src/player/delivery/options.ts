@@ -139,6 +139,19 @@ export interface DeliveryOptions extends MountOptions {
   readonly client: SessionClient;
 }
 
+/** What `mountItem` needs: the options of `mountDelivery` without the chrome, the tools and the login of an LTI item. */
+export interface ItemMountOptions extends Omit<DeliveryOptions, "chrome" | "hooks"> {
+  /**
+   * Hooks of the host.
+   *
+   * @remarks
+   * An item mounted alone draws no tools and refuses an LTI item, so it has neither the `tools` nor the `ltiLogin` hook.
+   *
+   * @defaultValue None
+   */
+  readonly hooks?: Omit<NonNullable<MountOptions["hooks"]>, "ltiLogin" | "tools">;
+}
+
 /** A player that is mounted. */
 export interface Mounted {
   /**
@@ -165,7 +178,7 @@ export interface Mounted {
   destroy(): void;
 }
 
-const OPTION_NAMES = [
+const ITEM_OPTION_NAMES = [
   "files",
   "staticUrl",
   "stylesheet",
@@ -174,15 +187,14 @@ const OPTION_NAMES = [
   "messages",
   "origins",
   "mathjax",
-  "chrome",
   "hooks",
   "client",
 ];
 
-/** Checks the hooks of the host. */
-function checkHooks(hooks: unknown): void {
-  checkRecord(hooks, "The option hooks must be an object");
-  checkProperties(hooks, "The option hooks", ["customInteraction", "record", "voice", "ltiLogin", "tools"]);
+const ITEM_HOOK_NAMES = ["customInteraction", "record", "voice"];
+
+/** Checks the hooks that every mount has: the custom interaction, the recording and the voice. */
+function checkItemHooks(hooks: Readonly<Record<string, unknown>>): void {
   if (hooks.customInteraction !== undefined) {
     checkFunction(hooks.customInteraction, "The hook customInteraction must be a function");
   }
@@ -192,6 +204,13 @@ function checkHooks(hooks: unknown): void {
     checkFunction(hooks.voice.speak, "The method speak of the hook voice must be a function");
     checkFunction(hooks.voice.stop, "The method stop of the hook voice must be a function");
   }
+}
+
+/** Checks the hooks of the host of a player with chrome: those of every mount, the login of an LTI item and the tools. */
+function checkDeliveryHooks(hooks: unknown): void {
+  checkRecord(hooks, "The option hooks must be an object");
+  checkProperties(hooks, "The option hooks", [...ITEM_HOOK_NAMES, "ltiLogin", "tools"]);
+  checkItemHooks(hooks);
   if (hooks.ltiLogin !== undefined) checkFunction(hooks.ltiLogin, "The hook ltiLogin must be a function");
   if (hooks.tools !== undefined) {
     checkRecord(hooks.tools, "The hook tools must be an object");
@@ -203,19 +222,19 @@ function checkHooks(hooks: unknown): void {
   }
 }
 
-/**
- * Checks the options of `mountDelivery`.
- *
- * @param host - The host element.
- * @param options - The options.
- * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
- * type.
- */
-export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
+/** The options that `mountDelivery` and `mountItem` share, with the two that differ not yet checked. */
+type SharedOptions = Omit<ItemMountOptions, "hooks"> & { readonly hooks?: unknown; readonly chrome?: unknown };
+
+/** Checks the host and the options that `mountDelivery` and `mountItem` share. */
+function checkSharedOptions(
+  host: unknown,
+  options: unknown,
+  names: readonly string[],
+): asserts options is SharedOptions {
   if (!(host instanceof HTMLElement)) throw new DataError(`The host must be an element, found ${describe(host)}.`);
   if (host.shadowRoot !== null) throw new DataError("The host must be an element that has no shadow root.");
   checkRecord(options, "The options must be an object");
-  checkProperties(options, "The options", OPTION_NAMES);
+  checkProperties(options, "The options", names);
   checkRecord(options.files, "The option files must be an object");
   for (const name of ["upload", "read", "url"]) {
     checkFunction(options.files[name], `The function ${name} of the option files must be a function`);
@@ -232,10 +251,38 @@ export function checkDeliveryOptions(host: unknown, options: unknown): asserts o
   if (options.messages !== undefined) checkRecord(options.messages, "The option messages must be an object");
   if (options.origins !== undefined) readOrigins(options.origins);
   if (options.mathjax !== undefined) checkString(options.mathjax, "The option mathjax");
-  if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
-  if (options.hooks !== undefined) checkHooks(options.hooks);
   checkRecord(options.client, "The option client must be a session client");
   for (const name of ["age", "assets", "dispatch", "subscribe", "close"]) {
     checkFunction(options.client[name], `The function ${name} of the option client must be a function`);
   }
+}
+
+/**
+ * Checks the options of `mountDelivery`.
+ *
+ * @param host - The host element.
+ * @param options - The options.
+ * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
+ * type.
+ */
+export function checkDeliveryOptions(host: unknown, options: unknown): asserts options is DeliveryOptions {
+  checkSharedOptions(host, options, [...ITEM_OPTION_NAMES, "chrome"]);
+  if (options.chrome !== undefined) checkBoolean(options.chrome, "The option chrome");
+  if (options.hooks !== undefined) checkDeliveryHooks(options.hooks);
+}
+
+/**
+ * Checks the options of `mountItem`.
+ *
+ * @param host - The host element.
+ * @param options - The options.
+ * @throws `DataError` when the host is not an element that can have a shadow root and has none, or an option is not of its
+ * type.
+ */
+export function checkItemOptions(host: unknown, options: unknown): asserts options is ItemMountOptions {
+  checkSharedOptions(host, options, ITEM_OPTION_NAMES);
+  if (options.hooks === undefined) return;
+  checkRecord(options.hooks, "The option hooks must be an object");
+  checkProperties(options.hooks, "The option hooks", ITEM_HOOK_NAMES);
+  checkItemHooks(options.hooks);
 }
