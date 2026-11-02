@@ -8,7 +8,8 @@ import { afterEach, describe, expect, inject, it, vi } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 import { createLocalSession, createRemoteSession, type Transport } from "../src/client/index.js";
 import { ID_MESSAGES } from "../src/messages/id/index.js";
-import type { Messages } from "../src/messages/index.js";
+import { EN_MESSAGES, type Messages } from "../src/messages/index.js";
+import { confirmAction } from "../src/player/delivery/internal.js";
 import type { MountFiles, SpeechRequest, StylesheetFetch, ToolSlots } from "../src/player/index.js";
 import { mountDelivery } from "../src/player/index.js";
 import { HOST_SHADOW_RULE } from "../src/player/internal.js";
@@ -437,6 +438,36 @@ describe("mountDelivery", () => {
     await waitFor(() => expect(dialogOf(s.ui)).toBeNull());
     expect(s.ui.activeElement).toBe(end);
     expect(s.store.records.get("exam-1")?.version).toBe(version);
+  });
+
+  it("closes a confirmation that is open when the player is destroyed, and sends nothing", async () => {
+    const s = await shell();
+    await shown(s);
+    const version = s.store.records.get("exam-1")?.version;
+    buttonNamed(s.ui, "End the test").click();
+    await waitFor(() => expect(dialogOf(s.ui)?.open).toBe(true));
+    const dialog = dialogOf(s.ui) as HTMLDialogElement;
+    s.mounted.destroy();
+    expect(dialog.open).toBe(false);
+    await real(50);
+    expect(s.store.records.get("exam-1")?.version).toBe(version);
+  });
+
+  it("settles a confirmation with nothing confirmed when its signal aborts", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    hosts.push(host);
+    const root = host.attachShadow({ mode: "open" });
+    const stop = new AbortController();
+    let answered: boolean | undefined;
+    void confirmAction(root, EN_MESSAGES, ["End the test?"], stop.signal).then((confirmed) => {
+      answered = confirmed;
+    });
+    stop.abort();
+    await waitFor(() => expect(answered).toBe(false));
+    expect(root.querySelector("dialog")).toBeNull();
+    await expect(confirmAction(root, EN_MESSAGES, ["End the test?"], stop.signal)).resolves.toBe(false);
+    expect(root.querySelector("dialog")).toBeNull();
   });
 
   it("ends the test when the candidate confirms, and tells that it ended", async () => {

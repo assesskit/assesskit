@@ -112,7 +112,7 @@ It returns a `Mounted`:
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `update(view)` | Shows a view in place of the one before. The player follows the client by itself, so a host calls it only to feed its own view.                                                                |
 | `settled()`    | Resolves when the interactions of the item shown have handed over what the candidate gave. A host with `chrome: false` waits for it before it sends an action that submits or leaves the item. |
-| `destroy()`    | Takes the content, the timers and the listeners away. The session client stays open: it belongs to the host.                                                                                   |
+| `destroy()`    | Takes the content, the timers and the listeners away, and closes an open confirmation with nothing confirmed. The session client stays open: it belongs to the host.                           |
 
 ## What the player draws
 

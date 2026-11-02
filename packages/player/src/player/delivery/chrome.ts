@@ -57,7 +57,8 @@ export function createChrome(context: ChromeContext): Chrome {
 
   const act = async (planned: PlannedAction): Promise<void> => {
     if (planned.confirm !== undefined) {
-      if (!(await confirmAction(shadow, messages, confirmationText(planned.confirm, state.view, messages)))) return;
+      const sentences = confirmationText(planned.confirm, state.view, messages);
+      if (!(await confirmAction(shadow, messages, sentences, state.stop.signal))) return;
     }
     // A mark neither submits nor leaves the item, so it does not wait for the interactions: a recording goes on.
     await (planned.action.type === "mark" ? send : sendSettled)(planned.action);
