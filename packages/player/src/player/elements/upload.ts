@@ -173,6 +173,9 @@ export class UploadInteractionElement extends InteractionElement {
     });
     input.addEventListener("change", () => {
       const [file] = input.files ?? [];
+      // A browser fires no change for the file that the picker holds, so the picker lets go of it: the same file chosen
+      // again after an upload that failed, or after Remove, is sent again. The stored file shows its name.
+      input.value = "";
       if (file !== undefined) void this.#send(file, file.type === "" ? UNKNOWN_TYPE : file.type, file.name);
     });
     this.#input = input;

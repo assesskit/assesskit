@@ -1154,6 +1154,35 @@ describe("upload", () => {
     expect(scene.responses).toEqual([]);
   });
 
+  it("empties the picker after each file, so that a browser takes the same file again after a failed upload or a removal", async () => {
+    let failing = true;
+    const files = fakeFiles();
+    const scene = mountScene(Declaration, Body(""), {
+      options: {
+        files: {
+          ...files,
+          upload: (...args) => (failing ? Promise.reject(new Error("offline")) : files.upload(...args)),
+        },
+      },
+    });
+    // A browser fires no change for the file that the picker holds already, so the file must not stay in it.
+    const input = scene.find<HTMLInputElement>("input[type=file]");
+    const file = new File(["x"], "a.txt", { type: "text/plain" });
+    await userEvent.upload(input, file);
+    await waitFor(() =>
+      expect(scene.find(".ak-upload-status").textContent).toBe("The file could not be uploaded. Try again."),
+    );
+    expect(input.value).toBe("");
+    failing = false;
+    await userEvent.upload(input, file);
+    await waitFor(() => expect(scene.responses).toHaveLength(1));
+    expect(input.value).toBe("");
+    await userEvent.click(scene.find(".ak-stored button"));
+    await userEvent.upload(input, file);
+    await waitFor(() => expect(scene.responses).toHaveLength(3));
+    expect(files.uploads).toHaveLength(2);
+  });
+
   it("plays a recording that the response holds, from the URL that the host gives", () => {
     const scene = mountScene(Declaration, Body(""), { options: { files: fakeFiles() } });
     scene.setValue("R", single("file", { reference: "r1", mimeType: "audio/webm", fileName: "recording.webm" }));
