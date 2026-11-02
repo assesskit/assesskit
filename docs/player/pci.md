@@ -280,6 +280,15 @@ reports, between 48 and 4096 CSS pixels (`MIN_PCI_HEIGHT` and `MAX_PCI_HEIGHT`);
 
 A module is code of the package and its source is visible to the candidate, so it must not hold an answer key.
 
+What the policy and the player leave to the host:
+
+| Risk                                                                                    | What the host does                                                                                                  |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| WebRTC and a DNS prefetch reach the network, which no policy stops                      | Binds no personal data to the variables of an interaction whose package it does not trust                           |
+| A module posts messages at any rate and size, and each new file of a response is stored | Limits the requests and the stored files of a session, and gives the remote client the `limits` of the session host |
+| A frame from another version of the package does not answer `settled`                   | Serves `pci-frame/*` from the version that the page runs; otherwise each leave waits two seconds                    |
+| A module navigates its own frame                                                        | Lists the origin of `staticUrl` in the `frame-src` of the page ([Serving the frame](#serving-the-frame))            |
+
 ## The look
 
 The frame loads `player.css`, which reads the attributes and custom properties of its `html` element

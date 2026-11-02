@@ -111,6 +111,14 @@ origin and the origins the host allows. The frame refuses to start where the bro
   and that directive stops it from going to another site.
 - Allow other origins in `origins` only for hosts that you trust to serve scripts.
 - The code is visible to the candidate: keep answer keys in response processing, which the asset gate never serves.
+- The policy cannot stop WebRTC or a DNS prefetch, so a module can still send out what the frame holds: its response, its
+  state, its markup and the template and context variables bound to it. Bind no personal data to a context variable of an
+  interaction whose package you do not trust.
+- A module may post messages at any rate and size. Each response goes to the session in `set-responses`, and each new file
+  in one goes to `files.upload`: limit the requests and the stored files of a session on the host, and give the remote client
+  the `limits` of the session host, so that it refuses a state above `maxPciStateLength` before it sends it.
+- Serve `pci-frame/*` from the version of the package that the page runs: a frame from another version may not answer a
+  request of the player, which then waits two seconds before an action leaves the item.
 
 ## The player: the interactions
 
@@ -271,6 +279,9 @@ another party, and its frame has `allow-same-origin`, so that the tool keeps its
 - The frame of a tool has `sandbox="allow-scripts allow-forms allow-same-origin"`, `referrerpolicy="no-referrer"`, the `allow`
   list of the registration and no other permission. The player refuses a tool or a storage page that is served from the origin
   of the page or of the assets, because a tool with `allow-same-origin` there would have the player's own origin.
+- The player checks the first URLs of the frames only; where a tool then navigates its frame, its login included, only the
+  `frame-src` of the page limits. Serve the platform's LTI endpoints from an origin other than the page's, as the storage page
+  is, and add to `frame-src` their origin and the tools', not the page's own.
 - `checkLtiFrame` checks what the hook answers: absolute `http` or `https` URLs and an allow list of letters, digits, spaces and
   `; * : / . ' -`. A `javascript:` or `data:` URL is never a frame URL.
 - The hook takes a `signal` that aborts when the candidate leaves the item, and the player drops an answer that comes late.
