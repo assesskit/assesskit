@@ -78,7 +78,7 @@ the item's stylesheets are adopted and the expressions are typeset.
 | `stimuli`      | `readonly { nodes, base? }[]` | The stimuli the item shares, in order. They stand beside the item at 48rem and wider, and above it otherwise. Default: none.     |
 | `rubric`       | `{ nodes, base? }`            | The rubric of the test, its part and its sections for the view, before the stimuli. Default: none.                               |
 | `testFeedback` | `readonly TestFeedback[]`     | The test feedback that is shown, in a region labelled Feedback after the item. Default: none.                                    |
-| `stylesheets`  | `readonly string[]`           | The paths in the package of the stylesheets of the item. Default: none.                                                          |
+| `stylesheets`  | `readonly string[]`           | The paths in the package of the stylesheets of the test and of the item, in that order. Default: none.                           |
 | `catalogs`     | `readonly Catalog[]`          | The catalogs of the item, for `card`. Default: none.                                                                             |
 | `hazards`      | `readonly HazardExposure[]`   | The hazards of the delivered content from the runtime's `hazardExposure`. Default: none.                                         |
 | `language`     | `string`                      | The language of the content, such as that of the delivered variant; it becomes `lang` of the content. Default: that of the host. |
@@ -314,8 +314,10 @@ same rules, so an interaction needs no code of its own for URLs, languages or me
 
 ## Stylesheets
 
-An item's stylesheet is fetched through the `fetch` option, parsed into a constructed `CSSStyleSheet`, and cleaned on the
-parsed rules, which the browser has normalized: a CSS escape cannot hide a function there.
+A stylesheet of the test or of the item is fetched through the `fetch` option, parsed into a constructed `CSSStyleSheet`, and
+cleaned on the parsed rules, which the browser has normalized: a CSS escape cannot hide a function there. `mountDelivery` gives
+the root those of the test first (`view.test.stylesheets`), so that they style the rubric, the feedback and every item, and an
+item's own come after them and win where both set a property.
 
 | Removed                                                                                              | Why                                                                                                                                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

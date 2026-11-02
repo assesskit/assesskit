@@ -16,6 +16,8 @@ export interface TestNode {
   readonly kind: "test";
   /** The test as `readAsi` reads it. */
   readonly model: AssessmentTest;
+  /** The path of the test document, against which its references resolve. */
+  readonly base: string;
   /** The test parts in document order. */
   readonly parts: readonly PartNode[];
 }
@@ -154,7 +156,7 @@ class Builder {
 
   build(test: AssessmentTest, base: string): TestStructure {
     const parts: PartNode[] = [];
-    const root: TestNode = { kind: "test", model: test, parts };
+    const root: TestNode = { kind: "test", model: test, base, parts };
     for (const model of test.testParts) {
       this.claim(model.identifier, "a test part");
       const sections: SectionNode[] = [];

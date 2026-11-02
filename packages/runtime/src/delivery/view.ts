@@ -2,6 +2,7 @@ import type { AssessmentItem, BodyNode, TestFeedback } from "../asi/index.js";
 import { describe } from "../checks.js";
 import { resolveContent, testRubricBlocks, visibleTestFeedback } from "../content/index.js";
 import { DataError } from "../errors.js";
+import { resolveReference } from "../package/index.js";
 import type { CandidateView, SupportView, TimerView } from "./candidate-view.js";
 import { partOfSection } from "./cat-session.js";
 import type { Course } from "./course.js";
@@ -144,7 +145,13 @@ export function candidateView(course: Course, original: DeliveryState, now: numb
   const test = structure.test.model;
   const base = {
     status: state.status,
-    test: { identifier: test.identifier, title: test.title },
+    test: {
+      identifier: test.identifier,
+      title: test.title,
+      stylesheets: [
+        ...new Set(test.stylesheets.map(({ href }) => resolveReference(structure.test.base, href) ?? href)),
+      ],
+    },
     supports: supportViews(state),
   };
   if (state.status === "ended") {

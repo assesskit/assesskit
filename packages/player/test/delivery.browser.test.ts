@@ -704,6 +704,32 @@ describe("mountDelivery", () => {
     expect(moved.view.current?.key.ref).toBe("q2");
   });
 
+  it("styles the rubric and the item with the stylesheet of the test, before the stylesheet of the item", async () => {
+    const files: Record<string, string | Uint8Array> = {
+      ...examFiles(),
+      "styles/exam.css": "p { text-decoration: underline; }\n",
+    };
+    files["tests/exam.xml"] = String(files["tests/exam.xml"]).replace(
+      '<qti-test-part identifier="part"',
+      '<qti-stylesheet href="../styles/exam.css" type="text/css"/><qti-test-part identifier="part"',
+    );
+    const s = await shell({ files });
+    await shown(s);
+    expect(s.client.view.test.stylesheets).toEqual(["styles/exam.css"]);
+    const paragraphs = [...contentOf(s.ui).querySelectorAll("p")];
+    expect(paragraphs.map((p) => p.textContent)).toEqual(expect.arrayContaining(["Read every question."]));
+    await waitFor(() =>
+      expect(paragraphs.map((p) => getComputedStyle(p).textDecorationLine)).toEqual(paragraphs.map(() => "underline")),
+    );
+    const sheets = [...(contentHostOf(s.ui).shadowRoot?.adoptedStyleSheets ?? [])].map((sheet) =>
+      [...sheet.cssRules].map((rule) => rule.cssText).join(" "),
+    );
+    const test = sheets.findIndex((text) => text.includes("underline"));
+    const item = sheets.findIndex((text) => text.includes(".note"));
+    expect(test).toBeGreaterThanOrEqual(0);
+    expect(test).toBeLessThan(item);
+  });
+
   it("aborts the stylesheets that are still loading when the player is destroyed, and reports nothing after", async () => {
     const signals: (AbortSignal | undefined)[] = [];
     const errors: unknown[] = [];

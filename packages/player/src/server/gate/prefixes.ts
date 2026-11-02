@@ -121,7 +121,10 @@ const isPortableInteraction = (node: ModelNode): node is PortableCustomInteracti
 function rootFiles(view: CandidateView, pkg: QtiPackage, documents: ViewDocuments): string[] {
   const { current } = view;
   const present = pathsOf(pkg);
-  const files = referencedPaths(pkg, documents.test, [...view.rubric, ...view.testFeedback]);
+  const files = [
+    ...referencedPaths(pkg, documents.test, [...view.rubric, ...view.testFeedback]),
+    ...view.test.stylesheets,
+  ];
   if (current === undefined) return files.filter((path) => present.has(path));
   const more = [
     [documents.item],
@@ -154,7 +157,7 @@ function interactionsOf(view: CandidateView): PortableCustomInteraction[] {
  *
  * @remarks
  * The prefix of the root is the deepest directory that holds the documents of the root, the files its content references,
- * its stylesheets, and the files the manifest lists for the item's resource and its dependencies. The prefix of an
+ * its stylesheets and those of the test, and the files the manifest lists for the item's resource and its dependencies. The prefix of an
  * interaction is the deepest directory that holds its modules and its module resolution files, since it may keep them
  * apart from the item. A relative URL under a prefix, such as a `define` of RequireJS or a `url()` of a stylesheet, then
  * resolves under the same token.

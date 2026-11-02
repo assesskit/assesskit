@@ -55,3 +55,5 @@ action carries the settings whole, the state keeps them, and the engine refuses 
 `selectCard` takes the candidate's `braille` settings and chooses among the entries of a card by their `data-braille-type`,
 `data-braille-grade` (or `data-grade`) and `data-math-type`, as the best practices guide marks braille and tactile files,
 falling back to the language and the default where no entry fits.
+
+The view carries the stylesheets of the test as package paths (`TestView.stylesheets`), in every status of the session.

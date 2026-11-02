@@ -110,12 +110,13 @@ though the store never answers. `FileStore.put` and `read` take the options afte
 `collectAssetPrefixes(view, pkg)` gives the prefixes that a view needs: one for the content root and one for each portable
 custom interaction in it.
 
-| Prefix                        | The deepest directory that holds                                                                                                                                                                                                                                                                |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The content root              | The documents of the item and its stimuli, the files its content references (`src`, `srcset`, `href`, `data`, `poster`, `longdesc`, `cite`, the card files of catalogs, digital materials), its stylesheets, and the files the manifest lists for its resource and the resources it depends on. |
-| A portable custom interaction | Its module resolution files and its modules.                                                                                                                                                                                                                                                    |
+| Prefix                        | The deepest directory that holds                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The content root              | The documents of the item and its stimuli, the files its content references (`src`, `srcset`, `href`, `data`, `poster`, `longdesc`, `cite`, the card files of catalogs, digital materials), its stylesheets and those of the test, the files that the rubric and the test feedback reference, and the files the manifest lists for its resource and the resources it depends on. |
+| A portable custom interaction | Its module resolution files and its modules.                                                                                                                                                                                                                                                                                                                                     |
 
-The envelope maps each prefix to its base URL. `SessionClient.assets(path)` joins the base of the longest matching prefix with
+A stylesheet of the test or a file of the rubric outside the folder of the item widens the prefix of the root to their common
+folder, the root of the package at worst, so a package keeps them beside the items where it can. The envelope maps each prefix to its base URL. `SessionClient.assets(path)` joins the base of the longest matching prefix with
 the package path.
 
 ## What the gate serves

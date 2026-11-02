@@ -49,7 +49,8 @@ export interface RootContent {
    */
   readonly testFeedback?: readonly TestFeedback[];
   /**
-   * The paths in the package of the stylesheets of the item.
+   * The paths in the package of the stylesheets of the content, adopted in this order after the player's: those of the
+   * test, then those of the item.
    *
    * @defaultValue `[]`
    */

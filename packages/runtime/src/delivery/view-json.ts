@@ -123,7 +123,7 @@ const itemSchema: Schema<CandidateItem> = v.strictObject({
 
 const viewSchema: Schema<CandidateView> = v.strictObject({
   status: v.picklist(DELIVERY_STATUSES),
-  test: v.strictObject({ identifier: v.string(), title: v.string() }),
+  test: v.strictObject({ identifier: v.string(), title: v.string(), stylesheets: v.array(v.string()) }),
   part: v.optional(
     v.strictObject({
       identifier: v.string(),

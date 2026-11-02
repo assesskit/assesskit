@@ -75,3 +75,6 @@ the graphing calculator stays a slot of the host.
 A candidate whose profile has breaks may send `suspend` and `resume` to a session host beside its `clientActions`, so that the
 candidate pauses the exam and returns to every response with the clocks stopped meanwhile; `profileBreaks: false` leaves those
 breaks to the proctor.
+
+`mountDelivery` and `mountItem` adopt the stylesheets of the test before those of the item, in the content root and in the frames
+of portable custom interactions, and the gate signs the folder that holds them.

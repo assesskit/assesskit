@@ -51,8 +51,8 @@ export function modalFeedbackOf(nodes: readonly BodyNode[]): ModalFeedback {
 }
 
 /**
- * Builds what a content root shows for a view: the rubric and the test feedback against the test's document, and the
- * item with its stimuli against theirs.
+ * Builds what a content root shows for a view: the rubric and the test feedback against the test's document, the item with
+ * its stimuli against theirs, and the stylesheets of the test, then those of the item.
  *
  * @remarks
  * Nothing is decided here; the engine resolved the content.
@@ -63,7 +63,9 @@ export function modalFeedbackOf(nodes: readonly BodyNode[]): ModalFeedback {
  */
 export function rootContentOf(view: CandidateView, documents: ViewDocuments): RootContent {
   const { current } = view;
+  const stylesheets = [...new Set([...view.test.stylesheets, ...(current?.stylesheets ?? [])])];
   return {
+    ...(stylesheets.length === 0 ? {} : { stylesheets }),
     ...(view.rubric.length === 0 ? {} : { rubric: { nodes: view.rubric, base: documents.test } }),
     ...(view.testFeedback.length === 0 ? {} : { testFeedback: [testFeedbackOf(view.testFeedback, view.status)] }),
     ...(current === undefined
@@ -74,7 +76,6 @@ export function rootContentOf(view: CandidateView, documents: ViewDocuments): Ro
             base: documents.stimuli[index] ?? "",
           })),
           body: { nodes: current.body, base: documents.item },
-          stylesheets: current.stylesheets,
           catalogs: current.catalogs,
           hazards: current.hazards,
           ...((current.variant?.language ?? current.language) === undefined

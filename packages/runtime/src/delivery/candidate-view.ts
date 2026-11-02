@@ -210,6 +210,13 @@ export interface TestView {
   readonly identifier: string;
   /** Its title. */
   readonly title: string;
+  /**
+   * The package paths of the stylesheets of the test, each once, which apply to everything the view shows, before those of
+   * the item.
+   *
+   * @see {@link https://www.imsglobal.org/spec/qti/v3p0/info/ | QTI 3.0 ASI Information Model, stylesheet}
+   */
+  readonly stylesheets: readonly string[];
 }
 
 /** The test part the candidate is in. */

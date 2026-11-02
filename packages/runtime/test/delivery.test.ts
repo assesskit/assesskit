@@ -1928,7 +1928,7 @@ describe("a review after the end", () => {
       const view = engine.view(state, 7_000);
       expect(view).toEqual({
         status: "ended",
-        test: { identifier: "T", title: "T" },
+        test: { identifier: "T", title: "T", stylesheets: [] },
         supports: [],
         navigation: [],
         rubric: [],
@@ -2306,7 +2306,7 @@ describe("the view of a state", () => {
     const first = engine.view(state, 0);
     expect([first.status, first.test, first.part]).toEqual([
       "in-progress",
-      { identifier: "T", title: "T" },
+      { identifier: "T", title: "T", stylesheets: [] },
       { identifier: "P", navigationMode: "nonlinear", submissionMode: "individual" },
     ]);
     // The invisible section U has no entry of its own; its item stands at the depth of the section above.
@@ -2729,12 +2729,27 @@ describe("the view of a state", () => {
     expect(textOf(view?.stimuli[0]?.body)).toContain("pic.png");
   });
 
+  it("carries the stylesheets of the test as package paths, each once, in every status of the session", () => {
+    const engine = engineOf(
+      '<qti-stylesheet href="styles/test.css" type="text/css"/><qti-stylesheet href="./print.css" type="text/css" media="print"/><qti-stylesheet href="styles/test.css" type="text/css"/>' +
+        part("P", section("S", refs("a", "b")), "nonlinear"),
+    );
+    const { state } = begun(engine);
+    const expected = ["styles/test.css", "print.css"];
+    expect(engine.view(state, 0).test.stylesheets).toEqual(expected);
+    const paused = played(engine, state, { type: "suspend", at: 1 });
+    expect(engine.view(paused.state, 1).test.stylesheets).toEqual(expected);
+    const ended = played(engine, state, { type: "end-test", at: 1 });
+    expect(engine.view(ended.state, 1).test.stylesheets).toEqual(expected);
+    expect(viewFromJson(throughText(viewToJson(engine.view(state, 0)))).test.stylesheets).toEqual(expected);
+  });
+
   it("delivers a standalone item, with the resolver of its stimuli when the host gives one", () => {
     const engine = createEngine({ kind: "item", item: leakyItem(), base: "item.xml" });
     const { state } = begun(engine);
     const view = engine.view(state, 0);
     expect([view.test, view.part?.identifier, view.current?.key]).toEqual([
-      { identifier: "item", title: "item" },
+      { identifier: "item", title: "item", stylesheets: [] },
       "item-part",
       key("item"),
     ]);

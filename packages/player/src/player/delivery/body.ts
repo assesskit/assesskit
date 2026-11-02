@@ -107,6 +107,7 @@ function createPci(context: BodyContext): PciHost {
     fetch: context.fetch,
     assets: (path) => client.assets(path),
     item: () => state.view.current,
+    testStylesheets: () => state.view.test.stylesheets,
     respond: sender.respond,
   });
 }

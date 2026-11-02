@@ -37,6 +37,8 @@ export interface PciContext {
   readonly assets: (path: string) => string;
   /** Returns the item presented, which the interaction belongs to. */
   readonly item: () => CandidateItem | undefined;
+  /** Returns the package paths of the stylesheets of the test, which apply in the frame before those of the item. */
+  readonly testStylesheets: () => readonly string[];
   /** Receives the response and the state of an interaction when they change. */
   readonly respond: (identifier: string, value: Value | null, state: string) => void;
 }
@@ -158,7 +160,9 @@ export function createPciHost(context: PciContext): PciHost {
       assets: context.assets,
       prompt: promptOf(interaction, renderer),
       markup: markupOf(interaction, renderer),
-      stylesheets: item.stylesheets.map((path) => new URL(context.assets(path), document.baseURI).href),
+      stylesheets: [...new Set([...context.testStylesheets(), ...item.stylesheets])].map(
+        (path) => new URL(context.assets(path), document.baseURI).href,
+      ),
       status: statusOf(item),
       state: view?.state ?? null,
       presentation,

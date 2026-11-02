@@ -104,6 +104,22 @@ describe("collectAssetPrefixes", () => {
     expect(Object.keys(moved.assets).sort()).toEqual(["items/q3/", "modules/pci/"]);
   });
 
+  it("widens the prefix of the content root to the stylesheet of the test, after the end too", async () => {
+    const files: Record<string, string | Uint8Array> = {
+      ...examFiles(),
+      "tests/styles/exam.css": "p { color: #123; }\n",
+    };
+    files["tests/exam.xml"] = String(files["tests/exam.xml"]).replace(
+      '<qti-test-part identifier="part"',
+      '<qti-stylesheet href="styles/exam.css" type="text/css"/><qti-test-part identifier="part"',
+    );
+    const { host, pkg } = await examHost({}, files);
+    const started = await host.start(ALICE, { seed: 1 });
+    expect(collectAssetPrefixes(viewOf(started), pkg)).toEqual(new Set([""]));
+    await host.proctor(ALICE.session, { type: "end-test" });
+    expect(collectAssetPrefixes(viewOf(await host.view(ALICE)), pkg)).toEqual(new Set(["tests/styles/"]));
+  });
+
   it("gives no prefix to a view that shows no file", async () => {
     const { host, pkg } = await examHost();
     await host.start(ALICE, { seed: 1 });
